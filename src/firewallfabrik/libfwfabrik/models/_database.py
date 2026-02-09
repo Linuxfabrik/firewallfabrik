@@ -1,0 +1,111 @@
+"""FWObjectDatabase and Library models."""
+
+from __future__ import annotations  # This is needed since SQLAlchemy does not support forward references yet
+
+import typing
+import uuid
+
+import sqlalchemy
+import sqlalchemy.orm
+
+from ._base import Base
+
+
+class FWObjectDatabase(Base):
+    """Root of the object tree / database."""
+
+    __tablename__ = 'fw_databases'
+
+    id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String,
+        default='',
+    )
+    comment: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Text,
+        default='',
+    )
+    last_modified: sqlalchemy.orm.Mapped[float] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Float,
+        default=0.0,
+    )
+    data_file: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String,
+        default='',
+    )
+    predictable_id_tracker: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer,
+        default=0,
+    )
+    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.JSON,
+        default=dict,
+    )
+
+    libraries: sqlalchemy.orm.Mapped[list[Library]] = sqlalchemy.orm.relationship(
+        'Library',
+        back_populates='database',
+    )
+
+
+class Library(Base):
+    """A library is a top-level container directly under the database."""
+
+    __tablename__ = 'libraries'
+
+    id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    database_id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('fw_databases.id'),
+        nullable=False,
+    )
+    name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String,
+        default='',
+    )
+    comment: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Text,
+        default='',
+    )
+    ro: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
+    )
+    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.JSON,
+        default=dict,
+    )
+
+    database: sqlalchemy.orm.Mapped[FWObjectDatabase] = sqlalchemy.orm.relationship(
+        'FWObjectDatabase',
+        back_populates='libraries',
+    )
+    groups: sqlalchemy.orm.Mapped[list['Group']] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='library',
+    )
+    devices: sqlalchemy.orm.Mapped[list['Host']] = sqlalchemy.orm.relationship(
+        'Host',
+        back_populates='library',
+    )
+    services: sqlalchemy.orm.Mapped[list['Service']] = sqlalchemy.orm.relationship(
+        'Service',
+        back_populates='library',
+    )
+    intervals: sqlalchemy.orm.Mapped[list['Interval']] = sqlalchemy.orm.relationship(
+        'Interval',
+        back_populates='library',
+    )
+    addresses: sqlalchemy.orm.Mapped[list['Address']] = sqlalchemy.orm.relationship(
+        'Address',
+        back_populates='library',
+        primaryjoin='Library.id == foreign(Address.library_id)',
+    )
