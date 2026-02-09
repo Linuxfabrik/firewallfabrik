@@ -7,51 +7,55 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
     QDockWidget,
+    QFileDialog,
     QMainWindow,
+    QMessageBox,
     QWidget,
 )
 
 from . import __version__
 
+FILE_FILTERS = 'YAML Files (*.yml *.yaml);;FWB Files (*.fwb);;All Files (*)'
+
 
 # Maps custom widget class names from the .ui file to their Qt base classes.
 # As Python implementations are created, we replace QWidget with the real class.
 CUSTOM_WIDGET_MAP = {
-    'ObjectEditorDockWidget': QDockWidget,
-    'FirewallDialog': QWidget,
-    'UserDialog': QWidget,
-    'InterfaceDialog': QWidget,
-    'RuleSetDialog': QWidget,
-    'LibraryDialog': QWidget,
-    'IPv4Dialog': QWidget,
-    'IPv6Dialog': QWidget,
-    'PhysicalAddressDialog': QWidget,
+    'ActionsDialog': QWidget,
     'AddressRangeDialog': QWidget,
+    'AddressTableDialog': QWidget,
+    'AttachedNetworksDialog': QWidget,
+    'BlankDialog': QWidget,
     'ClusterDialog': QWidget,
     'ClusterGroupDialog': QWidget,
+    'CommentEditorPanel': QWidget,
+    'CompilerOutputPanel': QWidget,
+    'CustomServiceDialog': QWidget,
+    'DNSNameDialog': QWidget,
+    'DynamicGroupDialog': QWidget,
+    'FirewallDialog': QWidget,
+    'GroupObjectDialog': QWidget,
     'HostDialog': QWidget,
+    'ICMPServiceDialog': QWidget,
+    'InterfaceDialog': QWidget,
+    'IPServiceDialog': QWidget,
+    'IPv4Dialog': QWidget,
+    'IPv6Dialog': QWidget,
+    'LibraryDialog': QWidget,
+    'MetricEditorPanel': QWidget,
+    'NATRuleOptionsDialog': QWidget,
     'NetworkDialog': QWidget,
     'NetworkDialogIPv6': QWidget,
-    'CustomServiceDialog': QWidget,
-    'IPServiceDialog': QWidget,
-    'ICMPServiceDialog': QWidget,
-    'TCPServiceDialog': QWidget,
-    'UDPServiceDialog': QWidget,
-    'TagServiceDialog': QWidget,
-    'GroupObjectDialog': QWidget,
-    'TimeDialog': QWidget,
+    'ObjectEditorDockWidget': QDockWidget,
+    'PhysicalAddressDialog': QWidget,
     'RoutingRuleOptionsDialog': QWidget,
     'RuleOptionsDialog': QWidget,
-    'NATRuleOptionsDialog': QWidget,
-    'DNSNameDialog': QWidget,
-    'AddressTableDialog': QWidget,
-    'ActionsDialog': QWidget,
-    'CommentEditorPanel': QWidget,
-    'MetricEditorPanel': QWidget,
-    'CompilerOutputPanel': QWidget,
-    'BlankDialog': QWidget,
-    'AttachedNetworksDialog': QWidget,
-    'DynamicGroupDialog': QWidget,
+    'RuleSetDialog': QWidget,
+    'TagServiceDialog': QWidget,
+    'TCPServiceDialog': QWidget,
+    'TimeDialog': QWidget,
+    'UDPServiceDialog': QWidget,
+    'UserDialog': QWidget,
 }
 
 
@@ -95,6 +99,8 @@ class FWWindow(QMainWindow):
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
+        self._current_file = None
+
         self.setWindowTitle(f'FirewallFabrik {__version__}')
         self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
@@ -110,13 +116,92 @@ class FWWindow(QMainWindow):
             )
         QResource.registerResource(str(rcc))
 
+    def _update_title(self):
+        if self._current_file:
+            self.setWindowTitle(
+                f'{self._current_file.name} - FirewallFabrik {__version__}',
+            )
+        else:
+            self.setWindowTitle(f'FirewallFabrik {__version__}')
+
+    @Slot()
+    def fileNew(self):
+        # Like C++ ProjectPanel::fileNew() / chooseNewFileName():
+        # prompt for a location, enforce .fwb suffix, then create the file.
+        fd = QFileDialog(self)
+        fd.setFileMode(QFileDialog.FileMode.AnyFile)
+        fd.setDefaultSuffix('yml')
+        fd.setNameFilter(FILE_FILTERS)
+        fd.setWindowTitle(self.tr('Create New File'))
+        fd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        if not fd.exec():
+            return
+
+        file_path = Path(fd.selectedFiles()[0]).resolve()
+        if file_path.suffix == '':
+            file_path = file_path.with_suffix('.yml')
+
+        file_path.touch()
+        self._current_file = file_path
+        self._update_title()
+
+    @Slot()
+    def fileOpen(self):
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr('Open File'),
+            '',
+            FILE_FILTERS,
+        )
+        if not file_name:
+            return
+
+        file_path = Path(file_name).resolve()
+        if not file_path.is_file():
+            QMessageBox.warning(
+                self,
+                'FirewallFabrik',
+                self.tr(f"File '{file_path}' does not exist or is not readable"),
+            )
+            return
+
+        self._current_file = file_path
+        self._update_title()
+
+    @Slot()
+    def fileSave(self):
+        if self._current_file:
+            return
+        self.fileSaveAs()
+
+    @Slot()
+    def fileSaveAs(self):
+        fd = QFileDialog(self)
+        fd.setFileMode(QFileDialog.FileMode.AnyFile)
+        fd.setDefaultSuffix('yml')
+        fd.setNameFilter(FILE_FILTERS)
+        fd.setWindowTitle(self.tr('Save File As'))
+        fd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        if self._current_file:
+            fd.setDirectory(str(self._current_file.parent))
+            fd.selectFile(self._current_file.name)
+        if not fd.exec():
+            return
+
+        file_path = Path(fd.selectedFiles()[0]).resolve()
+        if file_path.suffix == '':
+            file_path = file_path.with_suffix('.yml')
+
+        self._current_file = file_path
+        self._update_title()
+
     @Slot()
     def fileExit(self):
         self.close()
 
 
 def main():
-    print(f'FirewallFabrik GUI {__version__}')
+    print(f'FirewallFabrik {__version__}')
 
     app = QApplication(sys.argv)
     app.setOrganizationName('Linuxfabrik')
