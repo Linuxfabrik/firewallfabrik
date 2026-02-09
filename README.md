@@ -5,12 +5,29 @@ FirewallFabrik is a Qt-based GUI tool for managing firewall configurations acros
 
 ## Installation
 
-```bash
-pip --user --requirements requirements.txt
+### From PyPI (Recommended)
+
+FirewallFabrik releases are available from [PyPI](https://pypi.org/project/firewallfabrik/).
+
+Using [pipx](https://pipx.pypa.io):
+
+```shell
+pipx install firewallfabrik
 ```
+
+Using standard pip (user install):
+
+```shell
+pip install --user firewallfabrik
+```
+
+Please note that on certain Linux systems `--break-system-packages`
+might need to be added when using the system's Python/Pip.
 
 
 ## Run FirewallFabrik
+
+Run directly from source:
 
 ```bash
 PYTHONPATH=src python -m firewallfabrik.main
