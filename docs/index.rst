@@ -9,3 +9,4 @@ Firewall Builder User's Guide
    03 - Definitions and Terms
    04 - Firewall Builder GUI
    05 - Working with Objects
+   06 - Network Discovery
