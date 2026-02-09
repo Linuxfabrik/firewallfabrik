@@ -38,11 +38,20 @@ PYTHONPATH=src python -m firewallfabrik.main
 
 User Guide:
 
-.. toctree::
-   :maxdepth: 2
-   :glob:
-
-   docs/*
+* :doc:`docs/01 - Introduction`
+* :doc:`docs/02 - Installing Firewall Builder`
+* :doc:`docs/03 - Definitions and Terms`
+* :doc:`docs/04 - Firewall Builder GUI`
+* :doc:`docs/05 - Working with Objects`
+* :doc:`docs/06 - Network Discovery`
+* :doc:`docs/07 - Firewall Policies`
+* :doc:`docs/08 - Cluster Configuration`
+* :doc:`docs/09 - Configuration of Interfaces`
+* :doc:`docs/10 - Compiling and Installing a Policy`
+* :doc:`docs/11 - Manage your Firewall Remotely`
+* :doc:`docs/12 - Integration with OS Running on the Firewall Machine`
+* :doc:`docs/13 - Configlets`
+* :doc:`docs/14 - Firewall Builder Cookbook`
 
 
 ## PySide6 vs PyQt6
