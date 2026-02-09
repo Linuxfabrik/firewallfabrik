@@ -10,6 +10,13 @@ pip --user --requirements requirements.txt
 ```
 
 
+## Run FirewallFabrik
+
+```bash
+PYTHONPATH=src python -m firewallfabrik.main
+```
+
+
 ## PySide6 vs PyQt6
 
 There's no strong technical reason to choose PySide6 over PyQt6 for this project. Both are viable. We use PySide6 since we're porting from the original Firewall Builder C++ Qt code. When porting to Python, PySide6 code looks almost identical to the original C++ Qt code. The LGPL is a plus since it is more permissive if we ever want to allow proprietary extensions.
