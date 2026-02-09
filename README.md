@@ -6,7 +6,7 @@ FirewallFabrik is a Qt-based GUI tool for managing firewall configurations acros
 ## Installation
 
 ```bash
-pip --user --requirements requiements.txt
+pip --user --requirements requirements.txt
 ```
 
 
