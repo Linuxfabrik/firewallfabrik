@@ -1,7 +1,8 @@
+import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QLocale, QTranslator, QLibraryInfo
+from PySide6.QtCore import QResource, Qt, QLocale, QTranslator, QLibraryInfo, Slot
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
@@ -87,11 +88,31 @@ class FWWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        ui_path = Path(__file__).parent / 'libgui' / 'FWBMainWindow_q.ui'
+        libgui_path = Path(__file__).parent / 'libgui'
+        self._register_resources(libgui_path)
+
+        ui_path = libgui_path / 'FWBMainWindow_q.ui'
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
+        self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+
+    @staticmethod
+    def _register_resources(libgui_path):
+        """Compile MainRes.qrc to a binary .rcc (if needed) and register it."""
+        qrc = libgui_path / 'MainRes.qrc'
+        rcc = libgui_path / 'MainRes.rcc'
+        if not rcc.exists() or rcc.stat().st_mtime < qrc.stat().st_mtime:
+            subprocess.run(
+                ['pyside6-rcc', '--binary', str(qrc), '-o', str(rcc)],
+                check=True,
+            )
+        QResource.registerResource(str(rcc))
+
+    @Slot()
+    def fileExit(self):
+        self.close()
 
 
 def main():
