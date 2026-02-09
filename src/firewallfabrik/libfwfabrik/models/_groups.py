@@ -20,7 +20,6 @@ class Group(Base):
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Uuid,
         primary_key=True,
-        default=uuid.uuid4,
     )
     type: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String(50),

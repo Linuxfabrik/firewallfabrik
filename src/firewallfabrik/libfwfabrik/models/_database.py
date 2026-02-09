@@ -19,7 +19,6 @@ class FWObjectDatabase(Base):
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Uuid,
         primary_key=True,
-        default=uuid.uuid4,
     )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
@@ -60,7 +59,6 @@ class Library(Base):
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Uuid,
         primary_key=True,
-        default=uuid.uuid4,
     )
     database_id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Uuid,
