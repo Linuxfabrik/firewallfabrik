@@ -52,6 +52,8 @@ User Guide:
 * :doc:`docs/12 - Integration with OS Running on the Firewall Machine`
 * :doc:`docs/13 - Configlets`
 * :doc:`docs/14 - Firewall Builder Cookbook`
+* :doc:`docs/15 - Troubleshooting`
+* :doc:`docs/16 - Appendix`
 
 
 ## PySide6 vs PyQt6
