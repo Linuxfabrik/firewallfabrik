@@ -302,9 +302,9 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Shadowing happens because a rule is a superset of 
-a subsequent rule and any packets potentially matched 
-by the subsequent rule have already been matched by 
+             <string>Shadowing happens because a rule is a superset of
+a subsequent rule and any packets potentially matched
+by the subsequent rule have already been matched by
 the prior rule.</string>
             </property>
             <property name="text">
@@ -335,10 +335,10 @@ the prior rule.</string>
             </property>
             <property name="toolTip">
              <string>If the option is deactivated, compiler treats empty groups as
-an error and aborts processing the policy. If this option is 
-activated, compiler removes all empty groups from all rule 
-elements. If rule element becomes 'any' after the last empty 
-group has been removed, the whole rule will be ignored. Use 
+an error and aborts processing the policy. If this option is
+activated, compiler removes all empty groups from all rule
+elements. If rule element becomes 'any' after the last empty
+group has been removed, the whole rule will be ignored. Use
 this option only if you fully understand how it works!</string>
             </property>
             <property name="text">
@@ -880,8 +880,8 @@ values specified to the syslog(3) library routine.
           <item row="2" column="1">
            <widget class="QComboBox" name="pf_state_policy">
             <property name="toolTip">
-             <string>States can be bound to interfaces or match packets 
-on any interface. The latter can be useful in case of 
+             <string>States can be bound to interfaces or match packets
+on any interface. The latter can be useful in case of
 an assymmetric routing.</string>
             </property>
            </widget>

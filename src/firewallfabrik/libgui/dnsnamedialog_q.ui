@@ -102,10 +102,10 @@
            </property>
            <property name="toolTip">
             <string>DNS 'A' record name entered in this input field will be converted to
-IP address using DNS query during policy compilation if checkbox 
-&quot;Compile time&quot; is turned on, or during firewall policy activation if 
-&quot;Run Time&quot; mode is used. This field can be automatically populated 
-using object name, this is controlled by an option in the global 
+IP address using DNS query during policy compilation if checkbox
+&quot;Compile time&quot; is turned on, or during firewall policy activation if
+&quot;Run Time&quot; mode is used. This field can be automatically populated
+using object name, this is controlled by an option in the global
 Preferences dialog, tab &quot;Objects&quot;</string>
            </property>
           </widget>

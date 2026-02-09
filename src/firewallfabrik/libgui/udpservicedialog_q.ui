@@ -135,7 +135,7 @@
 	padding-left: 2px;
 }
 
-QGroupBox::title {  
+QGroupBox::title {
 	subcontrol-origin: margin;
 	subcontrol-position: top left;
 	padding: 0 3px;
@@ -216,7 +216,7 @@ QSpinBox {
 	padding-left: 2px;
 }
 
-QGroupBox::title {  
+QGroupBox::title {
 	subcontrol-origin: margin;
 	subcontrol-position: top left;
 	padding: 0 3px;

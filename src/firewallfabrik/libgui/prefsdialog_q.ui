@@ -1740,9 +1740,9 @@ are never stored permanently)</string>
               <property name="text">
                <string>Firewall Builder may compile your firewalls automaticly
 when you load a file. The generated files will be stored
-in a temporary directory and are deleted when you quit 
-the application. This will enable you to compare the 
-output of the generated files between the current version 
+in a temporary directory and are deleted when you quit
+the application. This will enable you to compare the
+output of the generated files between the current version
 and the unmodified version of the file you loaded.</string>
               </property>
              </widget>

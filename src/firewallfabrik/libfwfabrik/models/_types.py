@@ -7,6 +7,18 @@
 #
 # On Debian systems, the complete text of the GNU General Public License
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
 
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -16,7 +28,6 @@ import dataclasses
 import enum
 import ipaddress
 import socket
-import typing
 
 import sqlalchemy.engine
 import sqlalchemy.types
@@ -43,16 +54,17 @@ class InetAddr:
 class InetAddrMask:
     """Holder of an address / netmask pair."""
 
-    address: typing.Optional[InetAddr] = None
-    netmask: typing.Optional[InetAddr] = None
-    broadcast_address: typing.Optional[InetAddr] = None
-    network_address: typing.Optional[InetAddr] = None
-    last_host: typing.Optional[InetAddr] = None
+    address: InetAddr | None = None
+    netmask: InetAddr | None = None
+    broadcast_address: InetAddr | None = None
+    network_address: InetAddr | None = None
+    last_host: InetAddr | None = None
 
 
 @dataclasses.dataclass
 class Inet6AddrMask(InetAddrMask):
     """IPv6-specific address/mask pair."""
+
     pass
 
 
@@ -151,16 +163,14 @@ class JSONEncodedSet(sqlalchemy.types.TypeDecorator):
     cache_ok = True
 
     def process_bind_param(
-            self,
-            value: set[str] | None, dialect: sqlalchemy.engine.Dialect
+        self, value: set[str] | None, dialect: sqlalchemy.engine.Dialect
     ) -> list[str] | None:
         if value is not None:
             return sorted(value)
         return value
 
     def process_result_value(
-            self,
-            value: list[str] | None, dialect: sqlalchemy.engine.Dialect
+        self, value: list[str] | None, dialect: sqlalchemy.engine.Dialect
     ) -> set[str] | None:
         if value is not None:
             return set(value)

@@ -105,7 +105,7 @@
        <item row="1" column="0" colspan="3">
         <widget class="QLabel" name="label456">
          <property name="text">
-          <string>Specify secunet wall Management settings below. 
+          <string>Specify secunet wall Management settings below.
 Please use commas to separate a list of IP addresses.</string>
          </property>
          <property name="alignment">

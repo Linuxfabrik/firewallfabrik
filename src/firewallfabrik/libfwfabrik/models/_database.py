@@ -7,14 +7,27 @@
 #
 # On Debian systems, the complete text of the GNU General Public License
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
 
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 """FWObjectDatabase and Library models."""
 
-from __future__ import annotations  # This is needed since SQLAlchemy does not support forward references yet
+from __future__ import (
+    annotations,  # This is needed since SQLAlchemy does not support forward references yet
+)
 
-import typing
 import uuid
 
 import sqlalchemy
@@ -52,7 +65,7 @@ class FWObjectDatabase(Base):
         sqlalchemy.Integer,
         default=0,
     )
-    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
@@ -89,7 +102,7 @@ class Library(Base):
         sqlalchemy.Boolean,
         default=False,
     )
-    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
@@ -98,23 +111,23 @@ class Library(Base):
         'FWObjectDatabase',
         back_populates='libraries',
     )
-    groups: sqlalchemy.orm.Mapped[list['Group']] = sqlalchemy.orm.relationship(
+    groups: sqlalchemy.orm.Mapped[list[Group]] = sqlalchemy.orm.relationship(
         'Group',
         back_populates='library',
     )
-    devices: sqlalchemy.orm.Mapped[list['Host']] = sqlalchemy.orm.relationship(
+    devices: sqlalchemy.orm.Mapped[list[Host]] = sqlalchemy.orm.relationship(
         'Host',
         back_populates='library',
     )
-    services: sqlalchemy.orm.Mapped[list['Service']] = sqlalchemy.orm.relationship(
+    services: sqlalchemy.orm.Mapped[list[Service]] = sqlalchemy.orm.relationship(
         'Service',
         back_populates='library',
     )
-    intervals: sqlalchemy.orm.Mapped[list['Interval']] = sqlalchemy.orm.relationship(
+    intervals: sqlalchemy.orm.Mapped[list[Interval]] = sqlalchemy.orm.relationship(
         'Interval',
         back_populates='library',
     )
-    addresses: sqlalchemy.orm.Mapped[list['Address']] = sqlalchemy.orm.relationship(
+    addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(
         'Address',
         back_populates='library',
         primaryjoin='Library.id == foreign(Address.library_id)',

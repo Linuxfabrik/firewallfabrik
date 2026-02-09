@@ -465,7 +465,7 @@ in host settings dialog.
           <widget class="QCheckBox" name="ipv6NeighborDiscovery">
            <property name="toolTip">
             <string>Compiler will automatically generate rules to permit ICMP6 packets used in IPv6
-Neighbor Discovery after the rules that accept ESTABLISHED,RELATE and before 
+Neighbor Discovery after the rules that accept ESTABLISHED,RELATE and before
 the rule that drops packets in state INVALID.</string>
            </property>
            <property name="text">

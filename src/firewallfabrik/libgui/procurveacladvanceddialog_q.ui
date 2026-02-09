@@ -87,7 +87,7 @@
 two for each interface: one for inbound and another for
 outbound. If the policy is written in a such way that no rule
 can possibly be associated with an interface, this interface
-gets no access list at all. Also, interfaces marked as 
+gets no access list at all. Also, interfaces marked as
 &quot;unprotected&quot; never get access list regardless of how the policy
 rules are designed.
 </string>

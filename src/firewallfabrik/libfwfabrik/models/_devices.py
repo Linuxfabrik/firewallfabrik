@@ -7,14 +7,27 @@
 #
 # On Debian systems, the complete text of the GNU General Public License
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
 
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 """Device models (STI): Host, Firewall, Cluster, and Interface."""
 
-from __future__ import annotations  # This is needed since SQLAlchemy does not support forward references yet
+from __future__ import (
+    annotations,  # This is needed since SQLAlchemy does not support forward references yet
+)
 
-import typing
 import uuid
 
 import sqlalchemy
@@ -53,34 +66,34 @@ class Host(Base):
         sqlalchemy.Boolean,
         default=False,
     )
-    keywords: sqlalchemy.orm.Mapped[typing.Optional[set[str]]] = (
-        sqlalchemy.orm.mapped_column(JSONEncodedSet, default=set)
+    keywords: sqlalchemy.orm.Mapped[set[str] | None] = sqlalchemy.orm.mapped_column(
+        JSONEncodedSet, default=set
     )
-    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    options: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    management: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    management: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    id_mapping_for_duplicate: sqlalchemy.orm.Mapped[typing.Optional[dict]] = (
+    id_mapping_for_duplicate: sqlalchemy.orm.Mapped[dict | None] = (
         sqlalchemy.orm.mapped_column(sqlalchemy.JSON, nullable=True, default=None)
     )
 
-    library: sqlalchemy.orm.Mapped['Library'] = sqlalchemy.orm.relationship(
+    library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
         'Library',
         back_populates='devices',
     )
-    interfaces: sqlalchemy.orm.Mapped[list['Interface']] = sqlalchemy.orm.relationship(
+    interfaces: sqlalchemy.orm.Mapped[list[Interface]] = sqlalchemy.orm.relationship(
         'Interface',
         back_populates='device',
     )
-    rule_sets: sqlalchemy.orm.Mapped[list['RuleSet']] = sqlalchemy.orm.relationship(
+    rule_sets: sqlalchemy.orm.Mapped[list[RuleSet]] = sqlalchemy.orm.relationship(
         'RuleSet',
         back_populates='device',
     )
@@ -99,11 +112,13 @@ class Host(Base):
 
 class Firewall(Host):
     """Firewall object."""
+
     __mapper_args__ = {'polymorphic_identity': 'Firewall'}
 
 
 class Cluster(Firewall):
     """High-availability cluster of firewalls."""
+
     __mapper_args__ = {'polymorphic_identity': 'Cluster'}
 
 
@@ -129,14 +144,14 @@ class Interface(Base):
         sqlalchemy.Text,
         default='',
     )
-    keywords: sqlalchemy.orm.Mapped[typing.Optional[set[str]]] = (
-        sqlalchemy.orm.mapped_column(JSONEncodedSet, default=set)
+    keywords: sqlalchemy.orm.Mapped[set[str] | None] = sqlalchemy.orm.mapped_column(
+        JSONEncodedSet, default=set
     )
-    data: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    options: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
@@ -157,7 +172,7 @@ class Interface(Base):
         'Host',
         back_populates='interfaces',
     )
-    addresses: sqlalchemy.orm.Mapped[list['Address']] = sqlalchemy.orm.relationship(
+    addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(
         'Address',
         back_populates='interface',
         primaryjoin='Interface.id == foreign(Address.interface_id)',

@@ -7,6 +7,18 @@
 #
 # On Debian systems, the complete text of the GNU General Public License
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
 
 # SPDX-License-Identifier: GPL-2.0-or-later
 
@@ -108,16 +120,18 @@ _SLOT_NAMES = {
 
 _REF_TAGS = frozenset({'ObjectRef', 'ServiceRef', 'IntervalRef'})
 
-_OPTIONS_TAGS = frozenset({
-    'FirewallOptions',
-    'HostOptions',
-    'ClusterGroupOptions',
-    'InterfaceOptions',
-    'PolicyRuleOptions',
-    'NATRuleOptions',
-    'RoutingRuleOptions',
-    'RuleSetOptions',
-})
+_OPTIONS_TAGS = frozenset(
+    {
+        'FirewallOptions',
+        'HostOptions',
+        'ClusterGroupOptions',
+        'InterfaceOptions',
+        'PolicyRuleOptions',
+        'NATRuleOptions',
+        'RoutingRuleOptions',
+        'RuleSetOptions',
+    }
+)
 
 _POLICY_ACTIONS = {
     'Unknown': 0,
@@ -154,6 +168,7 @@ _COMMON_KNOWN = frozenset({'id', 'name', 'comment', 'ro'})
 @dataclasses.dataclass
 class ParseResult:
     """Holds the parsed object graph and deferred association-table rows."""
+
     database: models.FWObjectDatabase
     memberships: list[dict]
     rule_element_rows: list[dict]
@@ -272,19 +287,19 @@ def _service_type_attrs(svc, elem, known):
         svc.src_range_end = _int(elem.get('src_range_end'))
         svc.dst_range_start = _int(elem.get('dst_range_start'))
         svc.dst_range_end = _int(elem.get('dst_range_end'))
-        known |= {'src_range_start', 'src_range_end',
-                  'dst_range_start', 'dst_range_end'}
+        known |= {
+            'src_range_start',
+            'src_range_end',
+            'dst_range_start',
+            'dst_range_end',
+        }
 
     # TCPService flags
     flag_names = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
     if elem.get('ack_flag') is not None:
-        svc.tcp_flags = {
-            f: _bool(elem.get(f'{f}_flag', 'False'))
-            for f in flag_names
-        }
+        svc.tcp_flags = {f: _bool(elem.get(f'{f}_flag', 'False')) for f in flag_names}
         svc.tcp_flags_masks = {
-            f: _bool(elem.get(f'{f}_flag_mask', 'False'))
-            for f in flag_names
+            f: _bool(elem.get(f'{f}_flag_mask', 'False')) for f in flag_names
         }
         known |= {f'{f}_flag' for f in flag_names}
         known |= {f'{f}_flag_mask' for f in flag_names}
@@ -365,10 +380,12 @@ class XmlReader:
 
     def _add_membership(self, group_id, member_id):
         """Record a group-membership association-table row."""
-        self._memberships.append({
-            'group_id': group_id,
-            'member_id': member_id,
-        })
+        self._memberships.append(
+            {
+                'group_id': group_id,
+                'member_id': member_id,
+            }
+        )
 
     def parse(self, path):
         """Parse a ``.fwb`` file and return a :class:`ParseResult`."""
@@ -399,11 +416,13 @@ class XmlReader:
             if target_id is None:
                 logger.warning('Unresolved rule element reference: %s', ref_id)
                 continue
-            self._rule_element_rows.append({
-                'rule_id': rule_id,
-                'slot': slot,
-                'target_id': target_id,
-            })
+            self._rule_element_rows.append(
+                {
+                    'rule_id': rule_id,
+                    'slot': slot,
+                    'target_id': target_id,
+                }
+            )
 
     def _parse_database(self, elem):
         db = models.FWObjectDatabase()
@@ -436,23 +455,20 @@ class XmlReader:
         if tag in _GROUP_TAGS:
             self._parse_group(elem, _GROUP_TAGS[tag], library, parent_group)
         elif tag in _ADDRESS_TAGS:
-            self._parse_address(elem, library=library,
-                                parent_group=parent_group)
+            self._parse_address(elem, library=library, parent_group=parent_group)
         elif tag in _SERVICE_TAGS:
-            self._parse_service(elem, library=library,
-                                parent_group=parent_group)
+            self._parse_service(elem, library=library, parent_group=parent_group)
         elif tag in ('Interval', 'AnyInterval'):
-            self._parse_interval(elem, library=library,
-                                 parent_group=parent_group)
+            self._parse_interval(elem, library=library, parent_group=parent_group)
         elif tag in _DEVICE_TAGS:
-            self._parse_device(elem, _DEVICE_TAGS[tag], library,
-                               parent_group=parent_group)
+            self._parse_device(
+                elem, _DEVICE_TAGS[tag], library, parent_group=parent_group
+            )
         elif tag in _REF_TAGS:
             if parent_group is not None:
                 ref_id = elem.get('ref', '')
                 if ref_id:
-                    self._deferred_memberships.append(
-                        (parent_group.id, ref_id))
+                    self._deferred_memberships.append((parent_group.id, ref_id))
             else:
                 logger.debug('Skipping top-level %s in library %s', tag, context_name)
         elif tag in ('Interface', 'DummyInterface') and parent_group is None:
@@ -466,7 +482,9 @@ class XmlReader:
                         child_id = child.get('id', '')
                         if child_id:
                             self._register(child_id)
-            logger.debug('Skipping orphaned %s %s in library %s', tag, xml_id, context_name)
+            logger.debug(
+                'Skipping orphaned %s %s in library %s', tag, xml_id, context_name
+            )
         else:
             logger.warning('Unhandled child: %s (in %s)', tag, context_name)
 
@@ -483,7 +501,9 @@ class XmlReader:
             group.parent_group = parent_group
 
         for child in elem:
-            self._dispatch_child(child, library, parent_group=group, context_name=group.name)
+            self._dispatch_child(
+                child, library, parent_group=group, context_name=group.name
+            )
         return group
 
     def _parse_device(self, elem, cls, library, parent_group=None):
@@ -619,13 +639,10 @@ class XmlReader:
 
         # Type-specific columns
         if cls is models.PolicyRule:
-            rule.policy_action = _POLICY_ACTIONS.get(
-                elem.get('action', ''), 0)
-            rule.policy_direction = _DIRECTIONS.get(
-                elem.get('direction', ''), 0)
+            rule.policy_action = _POLICY_ACTIONS.get(elem.get('action', ''), 0)
+            rule.policy_direction = _DIRECTIONS.get(elem.get('direction', ''), 0)
         elif cls is models.NATRule:
-            rule.nat_action = _NAT_ACTIONS.get(
-                elem.get('action', ''), 0)
+            rule.nat_action = _NAT_ACTIONS.get(elem.get('action', ''), 0)
 
         for rule_id, slot, ref_id in _parse_rule_children(rule, elem):
             self._deferred_rule_elements.append((rule_id, slot, ref_id))

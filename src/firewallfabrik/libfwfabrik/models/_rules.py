@@ -7,14 +7,27 @@
 #
 # On Debian systems, the complete text of the GNU General Public License
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
 
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 """RuleSet models (STI), Rule models (STI), and rule_elements association table."""
 
-from __future__ import annotations  # This is needed since SQLAlchemy does not support forward references yet
+from __future__ import (
+    annotations,  # This is needed since SQLAlchemy does not support forward references yet
+)
 
-import typing
 import uuid
 
 import sqlalchemy
@@ -48,7 +61,7 @@ class RuleSet(Base):
         sqlalchemy.Text,
         default='',
     )
-    options: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
@@ -65,11 +78,11 @@ class RuleSet(Base):
         default=False,
     )
 
-    device: sqlalchemy.orm.Mapped['Host'] = sqlalchemy.orm.relationship(
+    device: sqlalchemy.orm.Mapped[Host] = sqlalchemy.orm.relationship(
         'Host',
         back_populates='rule_sets',
     )
-    rules: sqlalchemy.orm.Mapped[list['Rule']] = sqlalchemy.orm.relationship(
+    rules: sqlalchemy.orm.Mapped[list[Rule]] = sqlalchemy.orm.relationship(
         'Rule',
         back_populates='rule_set',
     )
@@ -82,16 +95,19 @@ class RuleSet(Base):
 
 class Policy(RuleSet):
     """Policy (filter) rule set."""
+
     __mapper_args__ = {'polymorphic_identity': 'Policy'}
 
 
 class NAT(RuleSet):
     """NAT rule set."""
+
     __mapper_args__ = {'polymorphic_identity': 'NAT'}
 
 
 class Routing(RuleSet):
     """Routing rule set."""
+
     __mapper_args__ = {'polymorphic_identity': 'Routing'}
 
 
@@ -144,31 +160,31 @@ class Rule(Base):
         sqlalchemy.Boolean,
         default=False,
     )
-    options: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    negations: sqlalchemy.orm.Mapped[typing.Optional[dict]] = sqlalchemy.orm.mapped_column(
+    negations: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
-    policy_action: sqlalchemy.orm.Mapped[typing.Optional[int]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, nullable=True, default=None)
+    policy_action: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    policy_direction: sqlalchemy.orm.Mapped[typing.Optional[int]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, nullable=True, default=None)
+    policy_direction: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    nat_action: sqlalchemy.orm.Mapped[typing.Optional[int]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, nullable=True, default=None)
+    nat_action: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    nat_rule_type: sqlalchemy.orm.Mapped[typing.Optional[int]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, nullable=True, default=None)
+    nat_rule_type: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    routing_rule_type: sqlalchemy.orm.Mapped[typing.Optional[int]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, nullable=True, default=None)
+    routing_rule_type: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    sorted_dst_ids: sqlalchemy.orm.Mapped[typing.Optional[str]] = (
-        sqlalchemy.orm.mapped_column(sqlalchemy.String, nullable=True, default=None)
+    sorted_dst_ids: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
     )
 
     rule_set: sqlalchemy.orm.Mapped[RuleSet] = sqlalchemy.orm.relationship(
@@ -190,16 +206,19 @@ class Rule(Base):
 
 class PolicyRule(Rule):
     """Policy (filter) rule."""
+
     __mapper_args__ = {'polymorphic_identity': 'PolicyRule'}
 
 
 class NATRule(Rule):
     """Network address translation rule."""
+
     __mapper_args__ = {'polymorphic_identity': 'NATRule'}
 
 
 class RoutingRule(Rule):
     """Routing rule."""
+
     __mapper_args__ = {'polymorphic_identity': 'RoutingRule'}
 
 
