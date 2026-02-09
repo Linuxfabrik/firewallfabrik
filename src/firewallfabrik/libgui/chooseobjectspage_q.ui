@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ChooseObjectsPage_q</class>
+ <widget class="QWizardPage" name="ChooseObjectsPage_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>696</width>
+    <height>475</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>WizardPage</string>
+  </property>
+  <property name="title">
+   <string>Choose objects you wish to use</string>
+  </property>
+  <property name="subTitle">
+   <string/>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="ObjectSelectorWidget" name="objectSelector" native="true"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectSelectorWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">ObjectSelectorWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>addFilter()</slot>
+  <slot>removeFilter()</slot>
+  <slot>selectAllResults()</slot>
+  <slot>unselectAllResults()</slot>
+  <slot>selectAllUsed()</slot>
+  <slot>unselectAllUsed()</slot>
+  <slot>addObject()</slot>
+  <slot>removeObject()</slot>
+ </slots>
+</ui>

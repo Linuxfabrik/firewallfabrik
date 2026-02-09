@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>findWhereUsedWidget_q</class>
+ <widget class="QWidget" name="findWhereUsedWidget_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>895</width>
+    <height>201</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Form1</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="dropBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Object:</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_107">
+      <item row="0" column="0">
+       <widget class="FWObjectDropArea" name="dropArea" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="font">
+         <font/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="1" rowspan="3">
+    <widget class="QGroupBox" name="groupBox4">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="title">
+      <string>Object is found in :</string>
+     </property>
+     <layout class="QGridLayout">
+      <property name="margin" stdset="0">
+       <number>6</number>
+      </property>
+      <item row="0" column="0">
+       <widget class="QTreeWidget" name="resListView">
+        <property name="sortingEnabled">
+         <bool>true</bool>
+        </property>
+        <property name="allColumnsShowFocus">
+         <bool>true</bool>
+        </property>
+        <column>
+         <property name="text">
+          <string>Object</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Used by</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Details</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QCheckBox" name="includeChildren">
+     <property name="toolTip">
+      <string>Include children of the object in search. For example, if the object is a firewall, results will include all rules and groups using it, its interfaces and their addresses</string>
+     </property>
+     <property name="text">
+      <string>Include children</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QPushButton" name="pushButton2">
+     <property name="text">
+      <string>Find</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>FWObjectDropArea</class>
+   <extends>QWidget</extends>
+   <header>FWObjectDropArea.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>resListView</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>resListView</sender>
+   <signal>itemClicked(QTreeWidgetItem*,int)</signal>
+   <receiver>findWhereUsedWidget_q</receiver>
+   <slot>itemClicked(QTreeWidgetItem*,int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>457</x>
+     <y>88</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>433</x>
+     <y>81</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton2</sender>
+   <signal>pressed()</signal>
+   <receiver>findWhereUsedWidget_q</receiver>
+   <slot>find()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>76</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>447</x>
+     <y>99</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>itemActivated(QTreeWidgetItem*,int)</slot>
+  <slot>itemClicked(QTreeWidgetItem*,int)</slot>
+  <slot>find()</slot>
+ </slots>
+</ui>

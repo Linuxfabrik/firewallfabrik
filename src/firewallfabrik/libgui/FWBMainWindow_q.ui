@@ -1,0 +1,2304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FWBMainWindow_q</class>
+ <widget class="QMainWindow" name="FWBMainWindow_q">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1124</width>
+    <height>846</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1000</width>
+    <height>500</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Firewall Builder</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="MainRes.qrc">
+    <normaloff>:/Images/fwbuilder3.png</normaloff>:/Images/fwbuilder3.png</iconset>
+  </property>
+  <widget class="QWidget" name="widget">
+   <layout class="QGridLayout" name="gridLayout_4">
+    <property name="margin" stdset="0">
+     <number>2</number>
+    </property>
+    <item row="0" column="0">
+     <widget class="QMdiArea" name="m_space"/>
+    </item>
+    <item row="1" column="0">
+     <widget class="ObjectEditorDockWidget" name="editorDockWidget">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>950</width>
+        <height>285</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>524287</width>
+        <height>524287</height>
+       </size>
+      </property>
+      <property name="allowedAreas">
+       <set>Qt::DockWidgetArea::BottomDockWidgetArea</set>
+      </property>
+      <widget class="QWidget" name="dockWidgetContents">
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="margin" stdset="0">
+         <number>2</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="editorPanelTabWidget">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>200</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>10000</width>
+            <height>10000</height>
+           </size>
+          </property>
+          <property name="tabPosition">
+           <enum>QTabWidget::TabPosition::West</enum>
+          </property>
+          <property name="currentIndex">
+           <number>2</number>
+          </property>
+          <widget class="QWidget" name="tab_output">
+           <attribute name="title">
+            <string>Output</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_43">
+            <property name="margin" stdset="0">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="CompilerOutputPanel" name="output_box" native="true"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_find">
+           <attribute name="title">
+            <string>Find</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <property name="leftMargin">
+             <number>20</number>
+            </property>
+            <property name="topMargin">
+             <number>12</number>
+            </property>
+            <property name="rightMargin">
+             <number>20</number>
+            </property>
+            <property name="bottomMargin">
+             <number>20</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QFrame" name="find_panel">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>160</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>32767</width>
+                <height>32767</height>
+               </size>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::Shape::NoFrame</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Shadow::Plain</enum>
+              </property>
+              <layout class="QHBoxLayout" name="_3">
+               <property name="spacing">
+                <number>0</number>
+               </property>
+               <property name="margin" stdset="0">
+                <number>11</number>
+               </property>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="tab_editor">
+           <attribute name="title">
+            <string>Editor</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_3">
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>0</number>
+            </property>
+            <item row="0" column="0" rowspan="2">
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="objectTypeIcon">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>80</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>80</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="pixmap">
+                 <pixmap resource="MainRes.qrc">:/Icons/Cluster/icon</pixmap>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>58</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="1">
+             <widget class="QStackedWidget" name="objectEditorStack">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>200</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>285</height>
+               </size>
+              </property>
+              <property name="focusPolicy">
+               <enum>Qt::FocusPolicy::StrongFocus</enum>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::Shape::NoFrame</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Shadow::Sunken</enum>
+              </property>
+              <property name="currentIndex">
+               <number>39</number>
+              </property>
+              <widget class="QWidget" name="page">
+               <layout class="QGridLayout" name="gridLayout_6">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="FirewallDialog" name="w_FirewallDialog" native="true">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_2">
+               <layout class="QGridLayout" name="gridLayout_7">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="UserDialog" name="w_UserDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="WStackPage">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <layout class="QGridLayout" name="gridLayout_5">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="InterfaceDialog" name="w_InterfaceDialog" native="true">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_3">
+               <layout class="QGridLayout" name="gridLayout_8">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="RuleSetDialog" name="w_PolicyDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_4">
+               <layout class="QGridLayout" name="gridLayout_9">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="RuleSetDialog" name="w_NATDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_5">
+               <layout class="QGridLayout" name="gridLayout_10">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="RuleSetDialog" name="w_RoutingDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_6">
+               <layout class="QGridLayout" name="gridLayout_11">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="LibraryDialog" name="w_LibraryDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_7">
+               <layout class="QGridLayout" name="gridLayout_12">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="IPv4Dialog" name="w_IPv4Dialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_8">
+               <layout class="QGridLayout" name="gridLayout_13">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="IPv6Dialog" name="w_IPv6Dialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_9">
+               <layout class="QGridLayout" name="gridLayout_14">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="PhysicalAddressDialog" name="w_PhysicalAddressDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_10">
+               <layout class="QGridLayout" name="gridLayout_15">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="AddressRangeDialog" name="w_AddressRangeDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_11">
+               <layout class="QGridLayout" name="gridLayout_16">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ClusterDialog" name="w_ClusterDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_12">
+               <layout class="QGridLayout" name="gridLayout_17">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ClusterGroupDialog" name="w_FailoverClusterGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_13">
+               <layout class="QGridLayout" name="gridLayout_18">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ClusterGroupDialog" name="w_StateSyncClusterGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_14">
+               <layout class="QGridLayout" name="gridLayout_19">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="HostDialog" name="w_HostDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_15">
+               <layout class="QGridLayout" name="gridLayout_20">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="NetworkDialog" name="w_NetworkDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_16">
+               <layout class="QGridLayout" name="gridLayout_21">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="NetworkDialogIPv6" name="w_NetworkDialogIPv6" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_17">
+               <layout class="QGridLayout" name="gridLayout_22">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="CustomServiceDialog" name="w_CustomServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_18">
+               <layout class="QGridLayout" name="gridLayout_23">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="IPServiceDialog" name="w_IPServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_19">
+               <layout class="QGridLayout" name="gridLayout_24">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ICMPServiceDialog" name="w_ICMPServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_20">
+               <layout class="QGridLayout" name="gridLayout_25">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ICMPServiceDialog" name="w_ICMP6ServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_21">
+               <layout class="QGridLayout" name="gridLayout_26">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="TCPServiceDialog" name="w_TCPServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_22">
+               <layout class="QGridLayout" name="gridLayout_27">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="UDPServiceDialog" name="w_UDPServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_23">
+               <layout class="QGridLayout" name="gridLayout_28">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="TagServiceDialog" name="w_TagServiceDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_24">
+               <layout class="QGridLayout" name="gridLayout_29">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="GroupObjectDialog" name="w_ServiceGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_25">
+               <layout class="QGridLayout" name="gridLayout_30">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="GroupObjectDialog" name="w_ObjectGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_26">
+               <layout class="QGridLayout" name="gridLayout_31">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="GroupObjectDialog" name="w_IntervalGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_27">
+               <layout class="QGridLayout" name="gridLayout_32">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="TimeDialog" name="w_TimeDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_28">
+               <layout class="QGridLayout" name="gridLayout_33">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="RoutingRuleOptionsDialog" name="w_RoutingRuleOptionsDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_29">
+               <layout class="QGridLayout" name="gridLayout_34">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="RuleOptionsDialog" name="w_RuleOptionsDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_30">
+               <layout class="QGridLayout" name="gridLayout_35">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="NATRuleOptionsDialog" name="w_NATRuleOptionsDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_31">
+               <layout class="QGridLayout" name="gridLayout_36">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="DNSNameDialog" name="w_DNSNameDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_32">
+               <layout class="QGridLayout" name="gridLayout_37">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="AddressTableDialog" name="w_AddressTableDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_33">
+               <layout class="QGridLayout" name="gridLayout_38">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="ActionsDialog" name="w_ActionsDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_34">
+               <layout class="QGridLayout" name="gridLayout_39">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="CommentEditorPanel" name="w_CommentEditorPanel" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_35">
+               <layout class="QGridLayout" name="gridLayout_40">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <property name="horizontalSpacing">
+                 <number>6</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="MetricEditorPanel" name="w_MetricEditorPanel" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_36">
+               <layout class="QGridLayout" name="gridLayout_41">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="CompilerOutputPanel" name="w_CompilerOutputPanel" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_37">
+               <layout class="QGridLayout" name="gridLayout_42">
+                <property name="margin" stdset="0">
+                 <number>0</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="BlankDialog" name="w_BlankDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_38">
+               <layout class="QGridLayout" name="gridLayout_45">
+                <item row="0" column="0">
+                 <widget class="AttachedNetworksDialog" name="w_AttachedNetworksDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="page_39">
+               <layout class="QGridLayout" name="gridLayout_46">
+                <item row="0" column="0">
+                 <widget class="DynamicGroupDialog" name="w_DynamicGroupDialog" native="true"/>
+                </item>
+               </layout>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="orientation">
+    <enum>Qt::Orientation::Horizontal</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="toolbarFileOpen"/>
+   <addaction name="toolbarFileSave"/>
+   <addaction name="separator"/>
+   <addaction name="newObjectAction"/>
+   <addaction name="findAction"/>
+   <addaction name="separator"/>
+   <addaction name="compileAction"/>
+   <addaction name="installAction"/>
+  </widget>
+  <widget class="QMenuBar" name="MenuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1124</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="editMenu">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="editCutAction"/>
+    <addaction name="editCopyAction"/>
+    <addaction name="editPasteAction"/>
+    <addaction name="separator"/>
+    <addaction name="editDeleteAction"/>
+    <addaction name="separator"/>
+    <addaction name="editPrefsAction"/>
+   </widget>
+   <widget class="QMenu" name="ObjectMenu">
+    <property name="title">
+     <string>Object</string>
+    </property>
+    <addaction name="newObjectAction"/>
+    <addaction name="findAction"/>
+    <addaction name="separator"/>
+    <addaction name="ObjectLockAction"/>
+    <addaction name="ObjectUnlockAction"/>
+   </widget>
+   <widget class="QMenu" name="toolsMenu">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="fileCompareAction"/>
+    <addaction name="ImportAddressesFromFileAction"/>
+    <addaction name="SNMPDiscoveryAction"/>
+   </widget>
+   <widget class="QMenu" name="helpMenu">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="helpAboutAction"/>
+    <addaction name="helpAction"/>
+    <addaction name="release_Notes_Action"/>
+    <addaction name="debugAction"/>
+   </widget>
+   <widget class="QMenu" name="RulesMenu">
+    <property name="title">
+     <string>Rules</string>
+    </property>
+    <addaction name="compileAction"/>
+    <addaction name="installAction"/>
+    <addaction name="inspectAction"/>
+   </widget>
+   <widget class="QMenu" name="fileMenu">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <widget class="QMenu" name="menuOpen_Recent">
+     <property name="title">
+      <string>Open Recent</string>
+     </property>
+    </widget>
+    <addaction name="fileNewAction"/>
+    <addaction name="fileOpenAction"/>
+    <addaction name="menuOpen_Recent"/>
+    <addaction name="separator"/>
+    <addaction name="fileSaveAction"/>
+    <addaction name="fileSaveAsAction"/>
+    <addaction name="fileCloseAction"/>
+    <addaction name="filePropAction"/>
+    <addaction name="separator"/>
+    <addaction name="addToRCSAction"/>
+    <addaction name="fileCommitAction"/>
+    <addaction name="fileDiscardAction"/>
+    <addaction name="separator"/>
+    <addaction name="policyImportAction"/>
+    <addaction name="separator"/>
+    <addaction name="libImportAction"/>
+    <addaction name="libExportAction"/>
+    <addaction name="separator"/>
+    <addaction name="filePrintAction"/>
+    <addaction name="separator"/>
+    <addaction name="fileExitAction"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="viewMenu">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionObject_Tree"/>
+    <addaction name="actionEditor_panel"/>
+    <addaction name="actionUndo_view"/>
+   </widget>
+   <addaction name="fileMenu"/>
+   <addaction name="editMenu"/>
+   <addaction name="viewMenu"/>
+   <addaction name="ObjectMenu"/>
+   <addaction name="RulesMenu"/>
+   <addaction name="toolsMenu"/>
+   <addaction name="menuWindow"/>
+   <addaction name="helpMenu"/>
+  </widget>
+  <widget class="QDockWidget" name="undoDockWidget">
+   <property name="windowTitle">
+    <string>Undo Stack</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <layout class="QGridLayout" name="gridLayout_44">
+     <property name="margin" stdset="0">
+      <number>2</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QUndoView" name="undoView">
+       <property name="alternatingRowColors">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="fileNewAction">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/newfile_25.png</normaloff>:/Icons/newfile_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;New Object File</string>
+   </property>
+   <property name="iconText">
+    <string>New Object File</string>
+   </property>
+  </action>
+  <action name="fileOpenAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/openfile_25.png</normaloff>:/Icons/openfile_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Open...</string>
+   </property>
+   <property name="iconText">
+    <string>Open</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="fileSaveAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/save_25.png</normaloff>:/Icons/save_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Save</string>
+   </property>
+   <property name="iconText">
+    <string>Save</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="fileSaveAsAction">
+   <property name="text">
+    <string>Save &amp;As...</string>
+   </property>
+   <property name="iconText">
+    <string>Save As</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="filePrintAction">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Print...</string>
+   </property>
+   <property name="iconText">
+    <string>Print</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="fileExitAction">
+   <property name="text">
+    <string>E&amp;xit</string>
+   </property>
+   <property name="iconText">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="editCutAction">
+   <property name="text">
+    <string>&amp;Cut</string>
+   </property>
+   <property name="iconText">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="editCopyAction">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>C&amp;opy</string>
+   </property>
+   <property name="iconText">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="editPasteAction">
+   <property name="text">
+    <string>&amp;Paste</string>
+   </property>
+   <property name="iconText">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="editFindAction">
+   <property name="text">
+    <string/>
+   </property>
+   <property name="iconText">
+    <string/>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="helpContentsAction">
+   <property name="text">
+    <string>&amp;Contents...</string>
+   </property>
+   <property name="iconText">
+    <string>Contents</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="helpIndexAction">
+   <property name="text">
+    <string>&amp;Index...</string>
+   </property>
+   <property name="iconText">
+    <string>Index</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="helpAboutAction">
+   <property name="text">
+    <string>&amp;About</string>
+   </property>
+   <property name="iconText">
+    <string>About</string>
+   </property>
+   <property name="shortcut">
+    <string/>
+   </property>
+  </action>
+  <action name="toolbarFileNew">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/newfile_25.png</normaloff>:/Icons/newfile_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="iconText">
+    <string>New</string>
+   </property>
+  </action>
+  <action name="toolbarFileOpen">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/openfile_25.png</normaloff>:/Icons/openfile_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open</string>
+   </property>
+   <property name="iconText">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="toolbarFileSave">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/save_25.png</normaloff>:/Icons/save_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+   <property name="iconText">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="fileCloseAction">
+   <property name="text">
+    <string>&amp;Close</string>
+   </property>
+   <property name="iconText">
+    <string>Close</string>
+   </property>
+  </action>
+  <action name="compileAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/Compile</normaloff>:/Icons/Compile</iconset>
+   </property>
+   <property name="text">
+    <string>Compile</string>
+   </property>
+   <property name="iconText">
+    <string>Compile</string>
+   </property>
+   <property name="toolTip">
+    <string>Compile rules of all firewall and cluster objects</string>
+   </property>
+   <property name="statusTip">
+    <string>Compile rules of all firewall and cluster objects</string>
+   </property>
+   <property name="whatsThis">
+    <string>Compile rules of all firewall and cluster objects</string>
+   </property>
+  </action>
+  <action name="installAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/Install</normaloff>:/Icons/Install</iconset>
+   </property>
+   <property name="text">
+    <string>Install</string>
+   </property>
+   <property name="iconText">
+    <string>Install</string>
+   </property>
+   <property name="toolTip">
+    <string>Install firewall policy of all firewall and cluster objects</string>
+   </property>
+   <property name="statusTip">
+    <string>Install firewall policy of all firewall and cluster objects</string>
+   </property>
+   <property name="whatsThis">
+    <string>Install firewall policy of all firewall and cluster objects</string>
+   </property>
+  </action>
+  <action name="backAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/back_25.png</normaloff>:/Icons/back_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>Back</string>
+   </property>
+   <property name="iconText">
+    <string>Back</string>
+   </property>
+   <property name="toolTip">
+    <string>Move back to the previous object</string>
+   </property>
+   <property name="statusTip">
+    <string>Move back to the previous object</string>
+   </property>
+  </action>
+  <action name="newObjectAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/newobject_25.png</normaloff>:/Icons/newobject_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;New Object</string>
+   </property>
+   <property name="iconText">
+    <string>New Object</string>
+   </property>
+   <property name="toolTip">
+    <string>Create New Object</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="findAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/search_25.png</normaloff>:/Icons/search_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Find Object</string>
+   </property>
+   <property name="iconText">
+    <string>Find Object</string>
+   </property>
+   <property name="toolTip">
+    <string>Find object in the tree</string>
+   </property>
+   <property name="statusTip">
+    <string>Find object in the tree</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="editPrefsAction">
+   <property name="text">
+    <string>P&amp;references...</string>
+   </property>
+   <property name="iconText">
+    <string>Preferences...</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit Preferences</string>
+   </property>
+  </action>
+  <action name="addToRCSAction">
+   <property name="text">
+    <string>Add File to &amp;RCS</string>
+   </property>
+   <property name="iconText">
+    <string>Add File to RCS</string>
+   </property>
+  </action>
+  <action name="editDeleteAction">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="iconText">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="libExportAction">
+   <property name="text">
+    <string>&amp;Export Library</string>
+   </property>
+   <property name="iconText">
+    <string>Export Library To a File</string>
+   </property>
+  </action>
+  <action name="libImportAction">
+   <property name="text">
+    <string>Import &amp;Library</string>
+   </property>
+   <property name="iconText">
+    <string>Import Library From a File</string>
+   </property>
+  </action>
+  <action name="debugAction">
+   <property name="text">
+    <string>&amp;Debug</string>
+   </property>
+   <property name="iconText">
+    <string>Debug</string>
+   </property>
+  </action>
+  <action name="filePropAction">
+   <property name="text">
+    <string>Propert&amp;ies</string>
+   </property>
+   <property name="iconText">
+    <string>Propert&amp;ies</string>
+   </property>
+   <property name="statusTip">
+    <string>Show File Properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="fileDiscardAction">
+   <property name="text">
+    <string>&amp;Discard</string>
+   </property>
+   <property name="iconText">
+    <string>Discard</string>
+   </property>
+   <property name="toolTip">
+    <string>Discard Changes and Overwrite With Clean Copy Of The Head Revision From RCS</string>
+   </property>
+  </action>
+  <action name="fileCommitAction">
+   <property name="text">
+    <string>Co&amp;mmit</string>
+   </property>
+   <property name="iconText">
+    <string>Commit</string>
+   </property>
+   <property name="statusTip">
+    <string>Commit Opened File to RCS and Continue Editing</string>
+   </property>
+  </action>
+  <action name="ObjectLockAction">
+   <property name="text">
+    <string>Lock</string>
+   </property>
+   <property name="iconText">
+    <string>Lock</string>
+   </property>
+  </action>
+  <action name="ObjectUnlockAction">
+   <property name="text">
+    <string>Unlock</string>
+   </property>
+   <property name="iconText">
+    <string>Unlock</string>
+   </property>
+  </action>
+  <action name="DiscoveryDruidAction">
+   <property name="text">
+    <string>Object Discovery</string>
+   </property>
+   <property name="iconText">
+    <string>Object Discovery</string>
+   </property>
+  </action>
+  <action name="new_itemAction">
+   <property name="text">
+    <string>new item</string>
+   </property>
+   <property name="iconText">
+    <string>new item</string>
+   </property>
+  </action>
+  <action name="fileCompareAction">
+   <property name="text">
+    <string>Find Conflicting Objects in Two Files</string>
+   </property>
+   <property name="iconText">
+    <string>Find Conflicting Objects in Two Files</string>
+   </property>
+  </action>
+  <action name="policyImportAction">
+   <property name="text">
+    <string>Import &amp;Firewall</string>
+   </property>
+   <property name="iconText">
+    <string>Import Policy</string>
+   </property>
+  </action>
+  <action name="helpAction">
+   <property name="text">
+    <string>Firewall Builder Help</string>
+   </property>
+  </action>
+  <action name="actionClearRecentFiles">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Clear Menu</string>
+   </property>
+   <property name="iconText">
+    <string>New Object File</string>
+   </property>
+  </action>
+  <action name="release_Notes_Action">
+   <property name="text">
+    <string>Release Notes</string>
+   </property>
+  </action>
+  <action name="actionObject_Tree">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Object Tree</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionRules">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Rules</string>
+   </property>
+  </action>
+  <action name="actionEditor_panel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Editor Panel</string>
+   </property>
+  </action>
+  <action name="actionUndo_view">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Undo Stack</string>
+   </property>
+  </action>
+  <action name="inspectAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/Inspect</normaloff>:/Icons/Inspect</iconset>
+   </property>
+   <property name="text">
+    <string>Inspect</string>
+   </property>
+  </action>
+  <action name="ImportAddressesFromFileAction">
+   <property name="text">
+    <string>Import Addresses From File</string>
+   </property>
+  </action>
+  <action name="SNMPDiscoveryAction">
+   <property name="text">
+    <string>Discover networks and hosts using SNMP</string>
+   </property>
+  </action>
+  <action name="forwardAction">
+   <property name="icon">
+    <iconset resource="MainRes.qrc">
+     <normaloff>:/Icons/forward_25.png</normaloff>:/Icons/forward_25.png</iconset>
+   </property>
+   <property name="text">
+    <string>Forward</string>
+   </property>
+   <property name="toolTip">
+    <string>Move forward to the next object</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="0" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>ObjectEditorDockWidget</class>
+   <extends>QDockWidget</extends>
+   <header>ObjectEditorDockWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>InterfaceDialog</class>
+   <extends>QWidget</extends>
+   <header>InterfaceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>FirewallDialog</class>
+   <extends>QWidget</extends>
+   <header>FirewallDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UserDialog</class>
+   <extends>QWidget</extends>
+   <header>UserDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RuleSetDialog</class>
+   <extends>QWidget</extends>
+   <header>RuleSetDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LibraryDialog</class>
+   <extends>QWidget</extends>
+   <header>LibraryDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>IPv4Dialog</class>
+   <extends>QWidget</extends>
+   <header>IPv4Dialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>IPv6Dialog</class>
+   <extends>QWidget</extends>
+   <header>IPv6Dialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PhysicalAddressDialog</class>
+   <extends>QWidget</extends>
+   <header>PhysicalAddressDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AddressRangeDialog</class>
+   <extends>QWidget</extends>
+   <header>AddressRangeDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ClusterDialog</class>
+   <extends>QWidget</extends>
+   <header>ClusterDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ClusterGroupDialog</class>
+   <extends>QWidget</extends>
+   <header>ClusterGroupDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>HostDialog</class>
+   <extends>QWidget</extends>
+   <header>HostDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NetworkDialog</class>
+   <extends>QWidget</extends>
+   <header>NetworkDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NetworkDialogIPv6</class>
+   <extends>QWidget</extends>
+   <header>NetworkDialogIPv6.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CustomServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>CustomServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>IPServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>IPServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ICMPServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>ICMPServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TCPServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>TCPServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>UDPServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>UDPServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TagServiceDialog</class>
+   <extends>QWidget</extends>
+   <header>TagServiceDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GroupObjectDialog</class>
+   <extends>QWidget</extends>
+   <header>GroupObjectDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>TimeDialog</class>
+   <extends>QWidget</extends>
+   <header>TimeDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RoutingRuleOptionsDialog</class>
+   <extends>QWidget</extends>
+   <header>RoutingRuleOptionsDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RuleOptionsDialog</class>
+   <extends>QWidget</extends>
+   <header>RuleOptionsDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>NATRuleOptionsDialog</class>
+   <extends>QWidget</extends>
+   <header>NATRuleOptionsDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DNSNameDialog</class>
+   <extends>QWidget</extends>
+   <header>DNSNameDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AddressTableDialog</class>
+   <extends>QWidget</extends>
+   <header>AddressTableDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ActionsDialog</class>
+   <extends>QWidget</extends>
+   <header>ActionsDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CommentEditorPanel</class>
+   <extends>QWidget</extends>
+   <header>CommentEditorPanel.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MetricEditorPanel</class>
+   <extends>QWidget</extends>
+   <header>MetricEditorPanel.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CompilerOutputPanel</class>
+   <extends>QWidget</extends>
+   <header>CompilerOutputPanel.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>BlankDialog</class>
+   <extends>QWidget</extends>
+   <header>BlankDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AttachedNetworksDialog</class>
+   <extends>QWidget</extends>
+   <header>AttachedNetworksDialog.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DynamicGroupDialog</class>
+   <extends>QWidget</extends>
+   <header>DynamicGroupDialog.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="MainRes.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>addToRCSAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileAddToRCS()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>compileAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>compile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>debugAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>debug()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editCopyAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editCopy()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editCutAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editCut()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editDeleteAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editDelete()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editFindAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editFind()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editPasteAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editPaste()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editPrefsAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editPrefs()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileCloseAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileClose()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileCommitAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileCommit()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileCompareAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileCompare()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileDiscardAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileDiscard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileExitAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileExit()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileNewAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileNew()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileOpenAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileOpen()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>filePrintAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>filePrint()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>filePropAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileProp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileSaveAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileSave()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>fileSaveAsAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileSaveAs()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>helpAboutAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>helpAbout()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>helpContentsAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>helpContents()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>helpIndexAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>helpIndex()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>installAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>install()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>libExportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileExport()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>libImportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileImport()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>newObjectAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>newObject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ObjectLockAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>lockObject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ObjectUnlockAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>unlockObject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolbarFileNew</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileNew()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolbarFileOpen</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileOpen()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toolbarFileSave</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileSave()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>policyImportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>importPolicy()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>helpAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>help()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClearRecentFiles</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>clearRecentFilesMenu()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>release_Notes_Action</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>showReleaseNotes()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionObject_Tree</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toggleViewObjectTree()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionEditor_panel</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toggleViewEditor()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>editorPanelTabWidget</sender>
+   <signal>currentChanged(int)</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>editorPanelTabChanged(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>511</x>
+     <y>708</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>540</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUndo_view</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toggleViewUndo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>554</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>inspectAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>inspect()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>571</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ImportAddressesFromFileAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toolsImportAddressesFromFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>571</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>SNMPDiscoveryAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toolsSNMPDiscovery()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>571</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>clearRecentFilesMenu()</slot>
+  <slot>showReleaseNotes()</slot>
+  <slot>toggleViewObjectTree()</slot>
+  <slot>toggleViewRules()</slot>
+  <slot>toggleViewEditor()</slot>
+  <slot>toggleViewSearch()</slot>
+  <slot>editorPanelTabChanged(int)</slot>
+  <slot>toggleViewUndo()</slot>
+  <slot>showSummary()</slot>
+  <slot>showTutorial()</slot>
+  <slot>inspect()</slot>
+  <slot>toolsImportAddressesFromFile()</slot>
+  <slot>toolsSNMPDiscovery()</slot>
+  <slot>back()</slot>
+  <slot>forward()</slot>
+ </slots>
+</ui>
