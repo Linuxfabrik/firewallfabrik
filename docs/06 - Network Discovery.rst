@@ -2,7 +2,7 @@ Network Discovery: A Quick Way to Create Objects
 =================================================
 
 .. sectnum::
-   :start: 6
+   :start: 1
 
 .. contents::
    :local:

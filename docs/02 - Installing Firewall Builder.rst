@@ -1,8 +1,8 @@
-.. sectnum::
-   :start: 2
-
 Installing Firewall Builder
 ============================
+
+.. sectnum::
+   :start: 1
 
 .. contents::
    :local:

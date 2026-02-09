@@ -1,8 +1,8 @@
-.. sectnum::
-   :start: 1
-
 Introduction
 ============
+
+.. sectnum::
+   :start: 1
 
 .. contents::
    :local:

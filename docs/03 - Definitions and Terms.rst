@@ -1,8 +1,8 @@
-.. sectnum::
-   :start: 3
-
 Definitions and Terms
 ======================
+
+.. sectnum::
+   :start: 1
 
 This chapter defines common terms that pertain to the Firewall Builder program.
 

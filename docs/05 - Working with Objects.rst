@@ -1,8 +1,8 @@
-.. sectnum::
-   :start: 5
-
 Working with Objects
 ====================
+
+.. sectnum::
+   :start: 1
 
 .. contents::
    :local:

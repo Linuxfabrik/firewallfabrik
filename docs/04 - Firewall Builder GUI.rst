@@ -2,7 +2,7 @@ Firewall Builder GUI
 ====================
 
 .. sectnum::
-   :start: 4
+   :start: 1
 
 .. contents::
    :local:
