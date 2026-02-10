@@ -51,7 +51,7 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 logger = logging.getLogger(__name__)
 
 FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
-_MAX_RECENT_FILES = 5
+_MAX_RECENT_FILES = 20
 
 
 class FWWindow(QMainWindow):
@@ -205,6 +205,7 @@ class FWWindow(QMainWindow):
             )
             return
 
+        original_path = file_path
         try:
             self._db_manager = DatabaseManager()
             file_path = self._db_manager.load(file_path)
@@ -219,7 +220,7 @@ class FWWindow(QMainWindow):
 
         self._current_file = file_path
         self._update_title()
-        self._add_to_recent(str(file_path))
+        self._add_to_recent(str(original_path))
 
         with self._db_manager.session() as session:
             self._object_tree.populate(session)
@@ -243,6 +244,8 @@ class FWWindow(QMainWindow):
         """Refresh the visible recent-file actions from QSettings."""
         settings = QSettings()
         files = settings.value('recentFiles', []) or []
+        if isinstance(files, str):
+            files = [files]
 
         # If two files share the same basename, show the full path for both.
         name_counts = {}
@@ -267,6 +270,8 @@ class FWWindow(QMainWindow):
         """Prepend *file_path* to the persisted recent-files list."""
         settings = QSettings()
         files = settings.value('recentFiles', []) or []
+        if isinstance(files, str):
+            files = [files]
         if file_path in files:
             files.remove(file_path)
         files.insert(0, file_path)
