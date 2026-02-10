@@ -8,3 +8,9 @@ Install `pre-commit <https://pre-commit.com/#install>`_, then configure the hook
 ```bash
 pre-commit install
 ```
+
+## Interacting with the In-Memory Database
+
+- firewallfabrik.core.DatabaseManager's session() vs create_session()
+  - session(): a contextmanager that wraps an SQLAlchemy session for the database. This session runs in a transaction and is automatically committed once the contextmanager exits. Additionally, the current database state is pushed onto the undo stack if any data changes occurred.
+  - create_session(): Returns a new 'manual' SQLAlchemy session. This session needs to be manually committed and, if needed, a undo stack save state needs to be created using save_state()
