@@ -6,7 +6,7 @@ Firewall Builder GUI
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
 
 The Firewall Builder GUI is your workspace for creating and compiling a firewall policy. In the workspace, you create *objects*, which are logical representations of your servers, network services, subnetworks, and other aspects of your network. You then use these objects in your policy.
 

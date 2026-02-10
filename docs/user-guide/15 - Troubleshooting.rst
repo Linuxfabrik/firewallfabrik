@@ -1,12 +1,13 @@
+Troubleshooting
+===============
+
 .. sectnum::
-   :start: 15
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
 
-Troubleshooting
-===============
 
 This chapter provides tips for troubleshooting problems with the program.
 

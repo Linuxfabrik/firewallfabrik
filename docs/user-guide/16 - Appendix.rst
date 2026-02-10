@@ -1,12 +1,13 @@
+Appendix
+========
+
 .. sectnum::
-   :start: 16
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
 
-Appendix
-========
 
 This chapter provides additional information that may be useful to Firewall Builder users.
 

@@ -6,7 +6,8 @@ Firewall Policies
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 This chapter describes working with policies. :doc:`10 - Compiling and Installing` describes compiling and installing a policy.
 

@@ -2,11 +2,12 @@ Manage your Firewall Remotely
 =============================
 
 .. sectnum::
-   :start: 11
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 This chapter explains how to set up a firewall on a small dedicated machine and use a separate workstation to manage it.
 

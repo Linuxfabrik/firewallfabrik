@@ -6,7 +6,8 @@ Network Discovery: A Quick Way to Create Objects
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 One of the distinguishing features that Firewall Builder provides is support for automated object creation. This helps populate the objects tree for large networks with lots of hosts and subnets. What might take hours to do manually, the Discovery Druid wizard can help you do in minutes.
 

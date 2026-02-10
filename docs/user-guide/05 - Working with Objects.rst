@@ -6,7 +6,7 @@ Working with Objects
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
 
 
 Types of Objects

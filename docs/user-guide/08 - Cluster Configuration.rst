@@ -2,11 +2,12 @@ Cluster Configuration
 =====================
 
 .. sectnum::
-   :start: 8
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 Firewall Builder 4.0 introduced support for firewall clusters. Firewall Builder helps you create configuration for iptables, PF, or PIX rules and in some cases cluster configuration as well. The following state synchronization and failover protocols are supported at this time:
 

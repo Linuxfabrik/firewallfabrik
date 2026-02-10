@@ -2,11 +2,12 @@ Configlets
 ==========
 
 .. sectnum::
-   :start: 13
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 Generated firewall scripts are assembled from fragments called "configlets." Each configlet is a template. The program replaces configlet macros with actual strings and values when it generates a firewall configuration. Normally, you don't need to think about them.
 

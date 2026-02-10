@@ -2,11 +2,12 @@ Integration with OS Running on the Firewall Machine
 ====================================================
 
 .. sectnum::
-   :start: 12
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 Firewall Builder can generate a firewall script in the format tailored for a specific OS or for distributions running on the firewall. This helps integrate generated firewall configuration with startup scripts and other parts of the system-wide configuration of the OS running on the firewall. As of v4.0, Firewall Builder comes with this support for OpenWRT, DD-WRT, and Sveasoft firmwares for small firewall appliances (Linksys, DLink, and others), it also has experimental integration with IPCOP and derivatives. Integration with Secunet Wall firewall is provided and supported by Security Networks AG, Germany.
 

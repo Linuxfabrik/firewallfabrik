@@ -2,11 +2,11 @@ Configuration of Interfaces
 ===========================
 
 .. sectnum::
-   :start: 9
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
 
 
 General principles

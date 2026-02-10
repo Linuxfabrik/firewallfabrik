@@ -2,11 +2,12 @@ Firewall Builder Cookbook
 ========================
 
 .. sectnum::
-   :start: 14
+   :start: 1
 
 .. contents::
    :local:
-   :depth: 3
+   :depth: 2
+
 
 The solutions to many security and firewall issues aren't always obvious. This chapter provides cookbook-like examples.
 

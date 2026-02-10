@@ -48,22 +48,22 @@ fwf
 
 User Guide:
 
-* [01 - Introduction](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/01%20-%20Introduction.rst>)
-* [02 - Installing Firewall Builder](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/02%20-%20Installing%20Firewall%20Builder.rst>)
-* [03 - Definitions and Terms](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/03%20-%20Definitions%20and%20Terms.rst>)
-* [04 - Firewall Builder GUI](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/04%20-%20Firewall%20Builder%20GUI.rst>)
-* [05 - Working with Objects](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/05%20-%20Working%20with%20Objects.rst>)
-* [06 - Network Discovery](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/06%20-%20Network%20Discovery.rst)
-* [07 - Firewall Policies](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/07%20-%20Firewall%20Policies.rst)
-* [08 - Cluster Configuration](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/08%20-%20Cluster%20Configuration.rst)
-* [09 - Configuration of Interfaces](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/09%20-%20Configuration%20of%20Interfaces>.rst)
-* [10 - Compiling and Installing a Policy](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/10%20-%20Compiling%20and%20Installing>.rst)
-* [11 - Manage your Firewall Remotely](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/11%20-%20Manage%20your%20Firewall>.rst)
-* [12 - Integration with OS Running on the Firewall Machine](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/12%20-%20Integration%20with%20OS>.rst)
-* [13 - Configlets](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/13%20-%20Configlets.rst)
-* [14 - Firewall Builder Cookbook](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/14%20-%20Firewall%20Builder%20Cookbook>.rst)
-* [15 - Troubleshooting](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/15%20-%20Troubleshooting.rst)
-* [16 - Appendix](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/16%20-%20Appendix.rst)
+* [Introduction](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/01%20-%20Introduction.rst)
+* [Installing Firewall Builder](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/02%20-%20Installing%20Firewall%20Builder.rst)
+* [Definitions and Terms](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/03%20-%20Definitions%20and%20Terms.rst)
+* [Firewall Builder GUI](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/04%20-%20Firewall%20Builder%20GUI.rst)
+* [Working with Objects](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/05%20-%20Working%20with%20Objects.rst)
+* [Network Discovery](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/06%20-%20Network%20Discovery.rst)
+* [Firewall Policies](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/07%20-%20Firewall%20Policies.rst)
+* [Cluster Configuration](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/08%20-%20Cluster%20Configuration.rst)
+* [Configuration of Interfaces](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/09%20-%20Configuration%20of%20Interfaces.rst)
+* [Compiling and Installing a Policy](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/10%20-%20Compiling%20and%20Installing%20a%20Policy.rst)
+* [Manage your Firewall Remotely](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/11%20-%20Manage%20your%20Firewall%20Remotely.rst)
+* [Integration with OS Running on the Firewall Machine](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/12%20-%20Integration%20with%20OS%20Running%20on%20the%20Firewall%20Machine.rst)
+* [Configlets](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/13%20-%20Configlets.rst)
+* [Firewall Builder Cookbook](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/14%20-%20Firewall%20Builder%20Cookbook.rst)
+* [Troubleshooting](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/15%20-%20Troubleshooting.rst)
+* [Appendix](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/16%20-%20Appendix.rst)
 
 
 ## Design Decisions
