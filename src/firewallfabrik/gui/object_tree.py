@@ -156,12 +156,14 @@ class ObjectTree(QWidget):
 
         if firewalls:
             fw_cat = self._make_category('Firewalls', parent_item)
+            # Create folder items first (sorted) so they appear above ungrouped devices.
+            folder_items = self._build_folder_items(firewalls, fw_cat)
             for fw in firewalls:
+                target = self._folder_target(fw, fw_cat, folder_items)
                 fw_item = self._make_item(
-                    _obj_display_name(fw), fw.type, str(fw.id),
+                    _obj_display_name(fw), fw.type, str(fw.id), target,
                     inactive=_is_inactive(fw),
                 )
-                fw_cat.addChild(fw_item)
                 for rs in sorted(fw.rule_sets, key=_obj_sort_key):
                     self._make_item(
                         _obj_display_name(rs), rs.type, str(rs.id), fw_item,
@@ -173,12 +175,14 @@ class ObjectTree(QWidget):
 
         if hosts:
             host_cat = self._make_category('Hosts', parent_item)
-            for host in sorted(hosts, key=_obj_sort_key):
+            # Create folder items first (sorted) so they appear above ungrouped devices.
+            folder_items = self._build_folder_items(hosts, host_cat)
+            for host in hosts:
+                target = self._folder_target(host, host_cat, folder_items)
                 host_item = self._make_item(
-                    _obj_display_name(host), host.type, str(host.id),
+                    _obj_display_name(host), host.type, str(host.id), target,
                     inactive=_is_inactive(host),
                 )
-                host_cat.addChild(host_item)
                 for iface in sorted(host.interfaces, key=_obj_sort_key):
                     self._add_interface(iface, host_item)
 
@@ -200,12 +204,54 @@ class ObjectTree(QWidget):
         if not objects:
             return
         cat = self._make_category(label, parent_item)
-        for obj in sorted(objects, key=_obj_sort_key):
+        self._add_objects_with_folders(objects, cat)
+
+    def _add_objects_with_folders(self, objects, parent_item):
+        """Add objects to parent, grouping into folder sub-items where set."""
+        sorted_objects = sorted(objects, key=_obj_sort_key)
+        # Create folder items first (sorted) so they appear above ungrouped objects.
+        folder_names = sorted({
+            self._get_folder_name(obj) for obj in sorted_objects
+        } - {''}, key=str.casefold)
+        folder_items = {
+            name: self._make_category(name, parent_item)
+            for name in folder_names
+        }
+        for obj in sorted_objects:
+            folder_name = self._get_folder_name(obj)
+            target = folder_items[folder_name] if folder_name else parent_item
             type_str = getattr(obj, 'type', type(obj).__name__)
             self._make_item(
-                _obj_display_name(obj), type_str, str(obj.id), cat,
+                _obj_display_name(obj), type_str, str(obj.id), target,
                 inactive=_is_inactive(obj),
             )
+
+    @staticmethod
+    def _get_folder_name(obj):
+        """Return the folder name for *obj*, or empty string."""
+        data = getattr(obj, 'data', None) or {}
+        return data.get('folder', '')
+
+    def _build_folder_items(self, objects, parent_item):
+        """Pre-create sorted folder items for *objects* under *parent_item*."""
+        folder_names = sorted({
+            self._get_folder_name(obj) for obj in objects
+        } - {''}, key=str.casefold)
+        return {
+            name: self._make_category(name, parent_item)
+            for name in folder_names
+        }
+
+    def _folder_target(self, obj, default_parent, folder_cache):
+        """Return the folder item for *obj*, creating it if needed."""
+        folder_name = self._get_folder_name(obj)
+        if not folder_name:
+            return default_parent
+        if folder_name not in folder_cache:
+            folder_cache[folder_name] = self._make_category(
+                folder_name, default_parent,
+            )
+        return folder_cache[folder_name]
 
     def _make_category(self, label, parent_item):
         """Create a non-selectable category folder item."""
