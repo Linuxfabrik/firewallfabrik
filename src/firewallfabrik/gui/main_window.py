@@ -17,7 +17,7 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QResource, QSettings, Qt, QUrl, Slot
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -260,9 +260,14 @@ class FWWindow(QMainWindow):
             self._recent_actions[i].setText(text)
             self._recent_actions[i].setData(files[i])
             self._recent_actions[i].setVisible(True)
+            if i < 9:
+                self._recent_actions[i].setShortcut(QKeySequence(f'Ctrl+{i + 1}'))
+            else:
+                self._recent_actions[i].setShortcut(QKeySequence())
 
         for i in range(num, _MAX_RECENT_FILES):
             self._recent_actions[i].setVisible(False)
+            self._recent_actions[i].setShortcut(QKeySequence())
 
         self._recent_separator.setVisible(num > 0)
 
