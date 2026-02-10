@@ -67,9 +67,15 @@ User Guide:
 * :doc:`docs/16 - Appendix`
 
 
-## PySide6 vs PyQt6
+## Design Decisions
 
-There's no strong technical reason to choose PySide6 over PyQt6 for this project. Both are viable. We use PySide6 since we're porting from the original Firewall Builder C++ Qt code. When porting to Python, PySide6 code looks almost identical to the original C++ Qt code. The LGPL is a plus since it is more permissive if we ever want to allow proprietary extensions.
+PySide6 vs PyQt6:
+* There's no strong technical reason to choose PySide6 over PyQt6 for this project. Both are viable. We use PySide6 since we're porting from the original Firewall Builder C++ Qt code. When porting to Python, PySide6 code looks almost identical to the original C++ Qt code. The LGPL is a plus since it is more permissive if we ever want to allow proprietary extensions.
+
+"Deleted Objects" feature:
+* It only offers very limited functionality. Once an object is deleted, it instantly loses all its references. This means that even if the object is restored from "Deleted Objects", the references will still be missing.
+* Therefore, we decided against implementing this feature.
+* Instead, we recommended using Git as a version control system. This allows objects to be restored, including all their references.
 
 
 ## License
