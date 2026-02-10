@@ -158,9 +158,18 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def fileSave(self):
-        if self._current_file:
+        if not self._current_file:
+            self.fileSaveAs()
             return
-        self.fileSaveAs()
+        try:
+            self._db_manager.save(self._current_file)
+        except Exception:
+            logger.exception('Failed to save %s', self._current_file)
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr(f"Failed to save '{self._current_file}'"),
+            )
 
     @Slot()
     def fileSaveAs(self):
@@ -180,8 +189,20 @@ class FWWindow(QMainWindow):
         if file_path.suffix == '':
             file_path = file_path.with_suffix('.fwf')
 
+        try:
+            self._db_manager.save(file_path)
+        except Exception:
+            logger.exception('Failed to save %s', file_path)
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr(f"Failed to save '{file_path}'"),
+            )
+            return
+
         self._current_file = file_path
         self._update_title()
+        self._add_to_recent(str(file_path))
 
     @Slot()
     def fileExit(self):
