@@ -136,12 +136,6 @@ The File menu provides standard file management options, and in addition allows 
      - Closes the current object file, but does not exit the program.
    * - Properties
      - Opens a dialog indicating properties of the current file, including revision control information (if applicable.) (Program preferences are in the Edit menu.)
-   * - Add File to RCS
-     - This menu item adds the object file to reversion control. See :doc:`07 - Firewall Policies` for a detailed explanation.
-   * - Commit
-     - Commits current changes to RCS. (This option is grayed out if the file has not already been added to RCS.) See :doc:`07 - Firewall Policies` for a detailed explanation.
-   * - Discard
-     - Discards current changes. (This option is grayed out if the file has not already been added to RCS.) See :doc:`07 - Firewall Policies` for a detailed explanation.
    * - Import Firewall
      - Allows you to import an existing firewall policy into Firewall Builder. See :doc:`06 - Network Discovery` for a detailed explanation.
    * - Import Library
