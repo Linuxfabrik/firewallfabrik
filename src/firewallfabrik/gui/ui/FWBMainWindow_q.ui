@@ -1292,7 +1292,7 @@
   </action>
   <action name="helpAction">
    <property name="text">
-    <string>Firewall Builder Help</string>
+    <string>User Guide</string>
    </property>
   </action>
   <action name="actionClearRecentFiles">
@@ -1308,7 +1308,7 @@
   </action>
   <action name="release_Notes_Action">
    <property name="text">
-    <string>Release Notes</string>
+    <string>Changelog</string>
    </property>
   </action>
   <action name="actionObject_Tree">

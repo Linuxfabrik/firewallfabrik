@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QDockWidget, QWidget
+from PySide6.QtWidgets import QDockWidget, QLabel, QWidget
 
 
 # Maps custom widget class names from the .ui file to their Qt base classes.
@@ -37,6 +37,7 @@ CUSTOM_WIDGET_MAP = {
     'IPServiceDialog': QWidget,
     'IPv4Dialog': QWidget,
     'IPv6Dialog': QWidget,
+    'KUrlLabel': QLabel,
     'LibraryDialog': QWidget,
     'MetricEditorPanel': QWidget,
     'NATRuleOptionsDialog': QWidget,

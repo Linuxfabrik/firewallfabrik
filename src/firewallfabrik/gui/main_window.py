@@ -13,7 +13,8 @@
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QResource, Qt, Slot
+from PySide6.QtCore import QResource, Qt, QUrl, Slot
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from firewallfabrik import __version__
 from firewallfabrik.gui.about_dialog import AboutDialog
+from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 FILE_FILTERS = 'YAML Files (*.yml *.yaml);;FWB Files (*.fwb);;All Files (*)'
@@ -139,6 +141,23 @@ class FWWindow(QMainWindow):
     @Slot()
     def fileExit(self):
         self.close()
+
+    @Slot()
+    def help(self):
+        QDesktopServices.openUrl(
+            QUrl('https://github.com/Linuxfabrik/firewallfabrik/tree/main/docs/user-guide'),
+        )
+
+    @Slot()
+    def showReleaseNotes(self):
+        QDesktopServices.openUrl(
+            QUrl('https://github.com/Linuxfabrik/firewallfabrik/blob/main/CHANGELOG.md'),
+        )
+
+    @Slot()
+    def debug(self):
+        dlg = DebugDialog(self)
+        dlg.exec()
 
     @Slot()
     def helpAbout(self):
