@@ -12,8 +12,6 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl, Slot
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
 from firewallfabrik import __version__
@@ -29,16 +27,9 @@ class AboutDialog(QDialog):
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
-        self.setWindowTitle('FirewallFabrik: About')
-
         # Fill in version info (mirrors C++ FWBAboutDialog.cpp)
         title_text = self.titleLbl.text().replace('%1', __version__)
         self.titleLbl.setText(title_text)
-
-        # KUrlLabel falls back to QLabel — make the URL clickable
-        self._url = self.kurllabel.text()
-        self.kurllabel.setText(f'<a href="#">{self._url}</a>')
-        self.kurllabel.linkActivated.connect(self._open_url)
 
         self.adjustSize()
 
@@ -48,7 +39,3 @@ class AboutDialog(QDialog):
                 parent_center.x() - self.width() // 2,
                 parent_center.y() - self.height() // 2,
             )
-
-    @Slot(str)
-    def _open_url(self, _link):
-        QDesktopServices.openUrl(QUrl(self._url))

@@ -34,8 +34,6 @@ class DebugDialog(QDialog):
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
-        self.setWindowTitle('Debugging Info')
-
         self._populate()
         self.resize(700, 400)
 

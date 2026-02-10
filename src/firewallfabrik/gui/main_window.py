@@ -149,7 +149,7 @@ class FWWindow(QMainWindow):
         )
 
     @Slot()
-    def showReleaseNotes(self):
+    def showChangelog(self):
         QDesktopServices.openUrl(
             QUrl('https://github.com/Linuxfabrik/firewallfabrik/blob/main/CHANGELOG.md'),
         )

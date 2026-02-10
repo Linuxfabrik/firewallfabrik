@@ -762,7 +762,7 @@
     </property>
     <addaction name="helpAboutAction"/>
     <addaction name="helpAction"/>
-    <addaction name="release_Notes_Action"/>
+    <addaction name="ChangelogAction"/>
     <addaction name="debugAction"/>
    </widget>
    <widget class="QMenu" name="RulesMenu">
@@ -1200,7 +1200,7 @@
   </action>
   <action name="debugAction">
    <property name="text">
-    <string>&amp;Debug</string>
+    <string>&amp;Debugging Info</string>
    </property>
    <property name="iconText">
     <string>Debug</string>
@@ -1294,6 +1294,9 @@
    <property name="text">
     <string>User Guide</string>
    </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
   </action>
   <action name="actionClearRecentFiles">
    <property name="enabled">
@@ -1306,7 +1309,7 @@
     <string>New Object File</string>
    </property>
   </action>
-  <action name="release_Notes_Action">
+  <action name="ChangelogAction">
    <property name="text">
     <string>Changelog</string>
    </property>
@@ -2156,10 +2159,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>release_Notes_Action</sender>
+   <sender>ChangelogAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
-   <slot>showReleaseNotes()</slot>
+   <slot>showChangelog()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2286,7 +2289,7 @@
  </connections>
  <slots>
   <slot>clearRecentFilesMenu()</slot>
-  <slot>showReleaseNotes()</slot>
+  <slot>showChangelog()</slot>
   <slot>toggleViewObjectTree()</slot>
   <slot>toggleViewRules()</slot>
   <slot>toggleViewEditor()</slot>

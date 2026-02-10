@@ -375,7 +375,7 @@
    </palette>
   </property>
   <property name="windowTitle">
-   <string>FirewallFabrik</string>
+   <string>FirewallFabrik: About</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -444,6 +444,19 @@
      </property>
      <property name="alignment">
       <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2">
+    <widget class="QLabel" name="urlLbl">
+     <property name="text">
+      <string>&lt;a href=&quot;https://github.com/linuxfabrik/firewallfabrik&quot;&gt;https://github.com/linuxfabrik/firewallfabrik&lt;/a&gt;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -541,26 +554,9 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="KUrlLabel" name="kurllabel">
-     <property name="text">
-      <string>https://github.com/linuxfabrik/firewallfabrik</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignmentFlag::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>KUrlLabel</class>
-   <extends>QLabel</extends>
-   <header>kurllabel.h</header>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="MainRes.qrc"/>
  </resources>
