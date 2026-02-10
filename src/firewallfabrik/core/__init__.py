@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from ._database import DatabaseManager
+from ._database import DatabaseManager, HistorySnapshot
 from ._util import ParseResult
 from ._xml_reader import XmlReader
 from ._yaml_reader import YamlReader
@@ -18,6 +18,7 @@ from ._yaml_writer import YamlWriter
 
 __all__ = [
     'DatabaseManager',
+    'HistorySnapshot',
     'ParseResult',
     'XmlReader',
     'YamlReader',
