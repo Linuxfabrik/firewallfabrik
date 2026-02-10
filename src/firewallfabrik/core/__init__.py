@@ -15,9 +15,13 @@ from ._xml_reader import (
     ParseResult,
     XmlReader,
 )
+from ._yaml_reader import YamlReader
+from ._yaml_writer import YamlWriter
 
 __all__ = [
     'DatabaseManager',
     'ParseResult',
     'XmlReader',
+    'YamlReader',
+    'YamlWriter',
 ]

@@ -23,67 +23,67 @@ import logging
 import uuid
 import xml.etree.ElementTree
 
-from . import models
+from . import objects
 
 logger = logging.getLogger(__name__)
 
 NS = '{http://www.fwbuilder.org/1.0/}'
 
 _ADDRESS_TAGS = {
-    'IPv4': models.IPv4,
-    'IPv6': models.IPv6,
-    'Network': models.Network,
-    'NetworkIPv6': models.NetworkIPv6,
-    'PhysAddress': models.PhysAddress,
-    'AddressRange': models.AddressRange,
-    'MultiAddressRunTime': models.MultiAddressRunTime,
-    'AnyNetwork': models.Network,
-    'DummyNetwork': models.Network,
+    'IPv4': objects.IPv4,
+    'IPv6': objects.IPv6,
+    'Network': objects.Network,
+    'NetworkIPv6': objects.NetworkIPv6,
+    'PhysAddress': objects.PhysAddress,
+    'AddressRange': objects.AddressRange,
+    'MultiAddressRunTime': objects.MultiAddressRunTime,
+    'AnyNetwork': objects.Network,
+    'DummyNetwork': objects.Network,
 }
 
 _SERVICE_TAGS = {
-    'TCPService': models.TCPService,
-    'UDPService': models.UDPService,
-    'ICMPService': models.ICMPService,
-    'ICMP6Service': models.ICMP6Service,
-    'IPService': models.IPService,
-    'CustomService': models.CustomService,
-    'UserService': models.UserService,
-    'TagService': models.TagService,
-    'AnyIPService': models.IPService,
-    'DummyIPService': models.IPService,
+    'TCPService': objects.TCPService,
+    'UDPService': objects.UDPService,
+    'ICMPService': objects.ICMPService,
+    'ICMP6Service': objects.ICMP6Service,
+    'IPService': objects.IPService,
+    'CustomService': objects.CustomService,
+    'UserService': objects.UserService,
+    'TagService': objects.TagService,
+    'AnyIPService': objects.IPService,
+    'DummyIPService': objects.IPService,
 }
 
 _DEVICE_TAGS = {
-    'Host': models.Host,
-    'Firewall': models.Firewall,
-    'Cluster': models.Cluster,
+    'Host': objects.Host,
+    'Firewall': objects.Firewall,
+    'Cluster': objects.Cluster,
 }
 
 _GROUP_TAGS = {
-    'ObjectGroup': models.ObjectGroup,
-    'ServiceGroup': models.ServiceGroup,
-    'IntervalGroup': models.IntervalGroup,
-    'ClusterGroup': models.ClusterGroup,
-    'FailoverClusterGroup': models.FailoverClusterGroup,
-    'StateSyncClusterGroup': models.StateSyncClusterGroup,
-    'DNSName': models.DNSName,
-    'AddressTable': models.AddressTable,
-    'AttachedNetworks': models.AttachedNetworks,
-    'DynamicGroup': models.DynamicGroup,
-    'MultiAddress': models.MultiAddress,
+    'ObjectGroup': objects.ObjectGroup,
+    'ServiceGroup': objects.ServiceGroup,
+    'IntervalGroup': objects.IntervalGroup,
+    'ClusterGroup': objects.ClusterGroup,
+    'FailoverClusterGroup': objects.FailoverClusterGroup,
+    'StateSyncClusterGroup': objects.StateSyncClusterGroup,
+    'DNSName': objects.DNSName,
+    'AddressTable': objects.AddressTable,
+    'AttachedNetworks': objects.AttachedNetworks,
+    'DynamicGroup': objects.DynamicGroup,
+    'MultiAddress': objects.MultiAddress,
 }
 
 _RULESET_TAGS = {
-    'Policy': models.Policy,
-    'NAT': models.NAT,
-    'Routing': models.Routing,
+    'Policy': objects.Policy,
+    'NAT': objects.NAT,
+    'Routing': objects.Routing,
 }
 
 _RULE_TAGS = {
-    'PolicyRule': models.PolicyRule,
-    'NATRule': models.NATRule,
-    'RoutingRule': models.RoutingRule,
+    'PolicyRule': objects.PolicyRule,
+    'NATRule': objects.NATRule,
+    'RoutingRule': objects.RoutingRule,
 }
 
 # Rule element container tag -> slot name
@@ -157,7 +157,7 @@ _COMMON_KNOWN = frozenset({'id', 'name', 'comment', 'ro'})
 class ParseResult:
     """Holds the parsed object graph and deferred association-table rows."""
 
-    database: models.FWObjectDatabase
+    database: objects.FWObjectDatabase
     memberships: list[dict]
     rule_element_rows: list[dict]
 
@@ -375,8 +375,11 @@ class XmlReader:
             }
         )
 
-    def parse(self, path):
-        """Parse a ``.fwb`` file and return a :class:`ParseResult`."""
+    def parse(self, path, exclude_libraries=None):
+        """Parse a ``.fwb`` file and return a :class:`ParseResult`.
+
+        *exclude_libraries* is an optional set of library names to skip.
+        """
         self._id_map.clear()
         self._memberships.clear()
         self._rule_element_rows.clear()
@@ -384,7 +387,7 @@ class XmlReader:
         self._deferred_rule_elements.clear()
 
         tree = xml.etree.ElementTree.parse(path)
-        database = self._parse_database(tree.getroot())
+        database = self._parse_database(tree.getroot(), exclude_libraries or set())
         self._resolve_deferred()
         return ParseResult(
             database=database,
@@ -412,19 +415,21 @@ class XmlReader:
                 }
             )
 
-    def _parse_database(self, elem):
-        db = models.FWObjectDatabase()
+    def _parse_database(self, elem, exclude_libraries):
+        db = objects.FWObjectDatabase()
         db.id = self._register(elem.get('id', 'root'))
         db.last_modified = float(elem.get('lastModified', '0'))
         db.data = _extra_attrs(elem, {'id', 'lastModified'})
 
         for child in elem:
             if _tag(child) == 'Library':
+                if child.get('name', '') in exclude_libraries:
+                    continue
                 self._parse_library(child, db)
         return db
 
     def _parse_library(self, elem, database):
-        lib = models.Library()
+        lib = objects.Library()
         lib.id = self._register(elem.get('id', ''))
         lib.name = elem.get('name', '')
         lib.comment = elem.get('comment', '')
@@ -524,7 +529,7 @@ class XmlReader:
         return device
 
     def _parse_interface(self, elem, device):
-        iface = models.Interface()
+        iface = objects.Interface()
         iface.id = self._register(elem.get('id', ''))
         iface.name = elem.get('name', '')
         iface.comment = elem.get('comment', '')
@@ -543,7 +548,7 @@ class XmlReader:
 
     def _parse_address(self, elem, library=None, parent_group=None, interface=None):
         tag = _tag(elem)
-        cls = _ADDRESS_TAGS.get(tag, models.Address)
+        cls = _ADDRESS_TAGS.get(tag, objects.Address)
 
         addr = cls()
         addr.id = self._register(elem.get('id', ''))
@@ -565,7 +570,7 @@ class XmlReader:
 
     def _parse_service(self, elem, library, parent_group=None):
         tag = _tag(elem)
-        cls = _SERVICE_TAGS.get(tag, models.Service)
+        cls = _SERVICE_TAGS.get(tag, objects.Service)
 
         svc = cls()
         svc.id = self._register(elem.get('id', ''))
@@ -586,7 +591,7 @@ class XmlReader:
         return svc
 
     def _parse_interval(self, elem, library, parent_group=None):
-        itv = models.Interval()
+        itv = objects.Interval()
         itv.id = self._register(elem.get('id', ''))
         itv.name = elem.get('name', '')
         itv.comment = elem.get('comment', '')
@@ -626,10 +631,10 @@ class XmlReader:
         rule.rule_set = rule_set
 
         # Type-specific columns
-        if cls is models.PolicyRule:
+        if cls is objects.PolicyRule:
             rule.policy_action = _POLICY_ACTIONS.get(elem.get('action', ''), 0)
             rule.policy_direction = _DIRECTIONS.get(elem.get('direction', ''), 0)
-        elif cls is models.NATRule:
+        elif cls is objects.NATRule:
             rule.nat_action = _NAT_ACTIONS.get(elem.get('action', ''), 0)
 
         for rule_id, slot, ref_id in _parse_rule_children(rule, elem):

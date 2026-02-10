@@ -12,19 +12,21 @@
 
 import contextlib
 
+import sqlalchemy
 import sqlalchemy.orm
-from sqlalchemy import create_engine
 
+from . import objects
 from ._xml_reader import XmlReader
-from .models import Base, enable_sqlite_fks, group_membership, rule_elements
+from ._yaml_reader import YamlReader
+from ._yaml_writer import YamlWriter
 
 
 class DatabaseManager:
     def __init__(self, connection_string='sqlite:///:memory:'):
-        self.engine = create_engine(connection_string, echo=False)
+        self.engine = sqlalchemy.create_engine(connection_string, echo=False)
         self._session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine)
-        enable_sqlite_fks(self.engine)
-        Base.metadata.create_all(self.engine)
+        objects.enable_sqlite_fks(self.engine)
+        objects.Base.metadata.create_all(self.engine)
 
     @contextlib.contextmanager
     def session(self):
@@ -42,18 +44,52 @@ class DatabaseManager:
         return self._session_factory()
 
     def load(self, path):
-        reader = XmlReader()
-        result = reader.parse(path)
+        match path.rsplit('.', 1)[-1]:
+            case 'fwb':
+                self._load_xml(path, exclude_libraries={'Deleted Objects'})
+            case 'fwf':
+                self._load_yaml(path)
+            case _:
+                raise ValueError(f'Unsupported file extension: {path}')
+
+    def save(self, path):
+        match path.rsplit('.', 1)[-1]:
+            case 'fwf':
+                self._save_yaml(path)
+            case _:
+                raise ValueError(f'Unsupported file extension: {path}')
+
+    def _import(self, data):
         with self.session() as session:
-            session.add(result.database)
+            session.add(data.database)
             session.flush()
-            if result.memberships:
+            if data.memberships:
                 session.execute(
-                    group_membership.insert(),
-                    result.memberships,
+                    objects.group_membership.insert(),
+                    data.memberships,
                 )
-            if result.rule_element_rows:
+            if data.rule_element_rows:
                 session.execute(
-                    rule_elements.insert(),
-                    result.rule_element_rows,
+                    objects.rule_elements.insert(),
+                    data.rule_element_rows,
                 )
+
+    def _load_xml(self, path, exclude_libraries=None):
+        reader = XmlReader()
+        result = reader.parse(path, exclude_libraries=exclude_libraries)
+        self._import(result)
+
+    def _save_yaml(self, output_path):
+        writer = YamlWriter()
+        with self.session() as session:
+            db = session.scalars(
+                sqlalchemy.select(objects.FWObjectDatabase),
+            ).first()
+            if db is None:
+                raise ValueError('No database found')
+            writer.write(session, db.id, output_path)
+
+    def _load_yaml(self, input_path):
+        reader = YamlReader()
+        result = reader.parse(input_path)
+        self._import(result)
