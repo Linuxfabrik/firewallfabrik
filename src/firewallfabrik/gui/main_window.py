@@ -12,6 +12,7 @@
 
 import logging
 import subprocess
+import uuid
 from pathlib import Path
 
 import sqlalchemy
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMdiSubWindow,
     QMessageBox,
+    QSplitter,
 )
 
 from firewallfabrik import __version__
@@ -29,19 +31,19 @@ from firewallfabrik.core import DatabaseManager
 from firewallfabrik.core.objects import (
     Address,
     Direction,
-    Firewall,
     Group,
     Host,
     Interface,
     Interval,
-    Policy,
     PolicyAction,
     PolicyRule,
+    RuleSet,
     Service,
     rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
+from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTableModel
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -70,6 +72,16 @@ class FWWindow(QMainWindow):
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
         self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+
+        # Object tree + splitter layout
+        self._object_tree = ObjectTree()
+        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.gridLayout_4.removeWidget(self.m_space)
+        self._splitter.addWidget(self._object_tree)
+        self._splitter.addWidget(self.m_space)
+        self._splitter.setSizes([250, 800])
+        self.gridLayout_4.addWidget(self._splitter, 0, 0)
+        self._object_tree.rule_set_activated.connect(self._open_rule_set)
 
         self._prepare_recent_menu()
 
@@ -208,7 +220,9 @@ class FWWindow(QMainWindow):
         self._current_file = file_path
         self._update_title()
         self._add_to_recent(str(file_path))
-        self._show_policies()
+
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session)
 
     def _prepare_recent_menu(self):
         """Populate the empty *menuOpen_Recent* with dynamic actions."""
@@ -272,32 +286,32 @@ class FWWindow(QMainWindow):
         settings.setValue('recentFiles', [])
         self._update_recent_actions()
 
-    def _show_policies(self):
-        """Load firewalls from the database and display their policies as MDI sub-windows."""
-        self.m_space.closeAllSubWindows()
-
+    @Slot(str, str, str)
+    def _open_rule_set(self, rule_set_id, fw_name, rs_name):
+        """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
         with self._db_manager.session() as session:
+            rule_set = session.get(RuleSet, uuid.UUID(rule_set_id))
+            if rule_set is None:
+                return
+
             name_map = self._build_name_map(session)
+            rows = self._build_policy_rows(session, rule_set, name_map)
 
-            firewalls = session.scalars(
-                sqlalchemy.select(Firewall),
-            ).all()
+        model = PolicyTableModel(rows)
+        view = PolicyView()
+        view.setModel(model)
 
-            for fw in firewalls:
-                for rule_set in fw.rule_sets:
-                    if not isinstance(rule_set, Policy):
-                        continue
-                    rows = self._build_policy_rows(session, rule_set, name_map)
-                    model = PolicyTableModel(rows)
-                    view = PolicyView()
-                    view.setModel(model)
+        sub = QMdiSubWindow()
+        sub.setWidget(view)
+        sub.setWindowTitle(f'{fw_name} / {rs_name}')
+        sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.m_space.addSubWindow(sub)
+        sub.show()
 
-                    sub = QMdiSubWindow()
-                    sub.setWidget(view)
-                    sub.setWindowTitle(f'{fw.name} / {rule_set.name}')
-                    sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-                    self.m_space.addSubWindow(sub)
-                    sub.show()
+    @Slot()
+    def toggleViewObjectTree(self):
+        """Show or hide the object tree panel."""
+        self._object_tree.setVisible(not self._object_tree.isVisible())
 
     @staticmethod
     def _build_name_map(session):

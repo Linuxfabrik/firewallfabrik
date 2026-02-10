@@ -13,9 +13,25 @@
 """Table model for displaying policy rules in a QTableView."""
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtGui import QColor, QIcon
 
 HEADERS = ['#', 'Source', 'Destination', 'Service', 'Interface',
            'Direction', 'Action', 'Comment']
+
+_COL_DIRECTION = 5
+_COL_ACTION = 6
+
+_ACTION_COLORS = {
+    'Accept': QColor(200, 255, 200),
+    'Deny': QColor(255, 200, 200),
+    'Reject': QColor(255, 230, 200),
+}
+
+_DIRECTION_ICONS = {
+    'Inbound': ':/Icons/Inbound/icon-tree',
+    'Outbound': ':/Icons/Outbound/icon-tree',
+    'Both': ':/Icons/Both/icon-tree',
+}
 
 
 class PolicyTableModel(QAbstractTableModel):
@@ -34,9 +50,33 @@ class PolicyTableModel(QAbstractTableModel):
         return len(HEADERS)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role != Qt.ItemDataRole.DisplayRole or not index.isValid():
+        if not index.isValid():
             return None
-        return self._rows[index.row()].get(self._keys[index.column()], '')
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            return self._rows[index.row()].get(self._keys[index.column()], '')
+
+        row = self._rows[index.row()]
+        col = index.column()
+
+        if role == Qt.ItemDataRole.BackgroundRole:
+            action = row.get('action', '')
+            return _ACTION_COLORS.get(action)
+
+        if role == Qt.ItemDataRole.DecorationRole:
+            if col == _COL_ACTION:
+                action = row.get('action', '')
+                icon_path = f':/Icons/{action}/icon-tree'
+                icon = QIcon(icon_path)
+                if not icon.isNull():
+                    return icon
+            elif col == _COL_DIRECTION:
+                direction = row.get('direction', '')
+                icon_path = _DIRECTION_ICONS.get(direction)
+                if icon_path:
+                    return QIcon(icon_path)
+
+        return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
