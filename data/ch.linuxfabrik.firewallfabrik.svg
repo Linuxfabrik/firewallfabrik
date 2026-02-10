@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff8833"/>
+      <stop offset="100%" stop-color="#d45500"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="0.1" x2="0" y2="0.95">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ede7e3"/>
+    </linearGradient>
+    <filter id="emboss" x="-5%" y="-3%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#6b2400" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <!-- Tux penguin silhouette -->
+  <g filter="url(#emboss)" fill="url(#fg)">
+    <!-- Head -->
+    <ellipse cx="512" cy="250" rx="118" ry="100"/>
+    <!-- Neck bridge -->
+    <ellipse cx="512" cy="370" rx="90" ry="70"/>
+    <!-- Body -->
+    <ellipse cx="512" cy="540" rx="175" ry="240"/>
+    <!-- Right flipper -->
+    <path d="M 650 370 C 700 400, 745 465, 735 530 C 730 555, 705 555, 698 530 C 682 490, 665 440, 655 400 Z"/>
+    <!-- Left flipper -->
+    <path d="M 374 370 C 324 400, 279 465, 289 530 C 294 555, 319 555, 326 530 C 342 490, 359 440, 369 400 Z"/>
+    <!-- Right foot -->
+    <ellipse cx="596" cy="782" rx="70" ry="26" transform="rotate(-5,596,782)"/>
+    <!-- Left foot -->
+    <ellipse cx="428" cy="782" rx="70" ry="26" transform="rotate(5,428,782)"/>
+  </g>
+
+  <!-- Shield on belly -->
+  <path fill="#d45500" d="
+    M 512 400
+    L 600 440
+    C 604 520, 570 592, 512 640
+    C 454 592, 420 520, 424 440
+    Z
+  "/>
+  <path fill="none" stroke="white" stroke-width="4" stroke-opacity="0.35" d="
+    M 512 400
+    L 600 440
+    C 604 520, 570 592, 512 640
+    C 454 592, 420 520, 424 440
+    Z
+  "/>
+
+  <!-- Eyes -->
+  <circle cx="472" cy="234" r="17" fill="#d45500"/>
+  <circle cx="552" cy="234" r="17" fill="#d45500"/>
+  <!-- Eye highlights -->
+  <circle cx="477" cy="228" r="5.5" fill="white" opacity="0.6"/>
+  <circle cx="557" cy="228" r="5.5" fill="white" opacity="0.6"/>
+
+  <!-- Beak -->
+  <path fill="#ffcc33" d="M 498 264 L 512 288 L 526 264 Z"/>
+</svg>

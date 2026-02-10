@@ -1,0 +1,14 @@
+# If fwf is not on your PATH (e.g. installed in a virtual environment),
+# replace "fwf" with the absolute path, for example:
+# Exec=/home/user/venvs/firewallfabrik/bin/fwf %F
+[Desktop Entry]
+Name=FirewallFabrik
+Comment=Qt-based GUI tool for managing firewall configurations
+Exec=fwf %F
+Icon=ch.linuxfabrik.firewallfabrik
+Terminal=false
+Type=Application
+Categories=System;Security;Network;
+Keywords=firewall;network;security;iptables;netfilter;nftables;linuxfabrik;firewallfabrik;
+MimeType=application/x-firewallfabrik;
+StartupWMClass=FirewallFabrik
