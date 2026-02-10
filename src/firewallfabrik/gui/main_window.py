@@ -85,6 +85,7 @@ class FWWindow(QMainWindow):
         self._object_tree.rule_set_activated.connect(self._open_rule_set)
 
         self._prepare_recent_menu()
+        self._restore_view_state()
 
     @staticmethod
     def _register_resources(ui_path):
@@ -97,6 +98,22 @@ class FWWindow(QMainWindow):
                 check=True,
             )
         QResource.registerResource(str(rcc))
+
+    def _restore_view_state(self):
+        """Restore panel visibility from QSettings."""
+        settings = QSettings()
+
+        tree_visible = settings.value('View/ObjectTree', True, type=bool)
+        self._object_tree.setVisible(tree_visible)
+        self.actionObject_Tree.setChecked(tree_visible)
+
+        editor_visible = settings.value('View/EditorPanel', True, type=bool)
+        self.editorDockWidget.setVisible(editor_visible)
+        self.actionEditor_panel.setChecked(editor_visible)
+
+        undo_visible = settings.value('View/UndoStack', False, type=bool)
+        self.undoDockWidget.setVisible(undo_visible)
+        self.actionUndo_view.setChecked(undo_visible)
 
     def _update_title(self):
         if self._current_file:
@@ -327,7 +344,23 @@ class FWWindow(QMainWindow):
     @Slot()
     def toggleViewObjectTree(self):
         """Show or hide the object tree panel."""
-        self._object_tree.setVisible(not self._object_tree.isVisible())
+        visible = self.actionObject_Tree.isChecked()
+        self._object_tree.setVisible(visible)
+        QSettings().setValue('View/ObjectTree', visible)
+
+    @Slot()
+    def toggleViewEditor(self):
+        """Show or hide the editor panel."""
+        visible = self.actionEditor_panel.isChecked()
+        self.editorDockWidget.setVisible(visible)
+        QSettings().setValue('View/EditorPanel', visible)
+
+    @Slot()
+    def toggleViewUndo(self):
+        """Show or hide the undo stack panel."""
+        visible = self.actionUndo_view.isChecked()
+        self.undoDockWidget.setVisible(visible)
+        QSettings().setValue('View/UndoStack', visible)
 
     @staticmethod
     def _build_name_map(session):
