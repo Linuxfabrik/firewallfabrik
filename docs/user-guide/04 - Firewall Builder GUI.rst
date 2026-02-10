@@ -756,3 +756,66 @@ The firewall in the example, "fw", used a host object called "dmz-server" in the
    :alt: dmz-server
 
    dmz-server
+
+
+Keyboard Shortcuts
+------------------
+
+.. list-table::                                                               
+    :header-rows: 1                                                            
+    :widths: 20 20 60
+
+    * - Shortcut
+      - 
+      - Action
+    * - ``Ctrl+1`` .. ``Ctrl+9``
+      - Menu "File"
+      - Open most recent file
+    * - ``Ctrl+O``
+      - Menu "File"
+      - Open file
+    * - ``Ctrl+S``
+      - Menu "File"
+      - Save file
+    * - ``Ctrl+P``
+      - Menu "File"
+      - Print
+    * - ``Ctrl+X``
+      - Menu "Edit"
+      - Cut
+    * - ``Ctrl+C``
+      - Menu "Edit"
+      - Copy
+    * - ``Ctrl+V``
+      - Menu "Edit"
+      - Paste
+    * - ``Ctrl+Z``
+      - Menu "Edit"
+      - Undo
+    * - ``Ctrl+Y``
+      - Menu "Edit"
+      - Redo
+    * - ``Shift+Ctrl+Z``
+      - Menu "Edit"
+      - Redo (alternate)
+    * - ``Ctrl+F``
+      - Menu "Edit"
+      - Find object
+    * - ``Ctrl+N``
+      - Menu "Object"
+      - New object
+    * - ``Ctrl+I``
+      - Menu "View"
+      - File properties
+    * - ``Ctrl+T``
+      - Menu "View"
+      - Toggle object tree view
+    * - ``X``
+      - Policy Editor
+      - Compile rule
+    * - ``Ctrl+PageUp``
+      - Policy Editor
+      - Move rule up
+    * - ``Ctrl+PageDown``
+      - Policy Editor
+      - Move rule down
