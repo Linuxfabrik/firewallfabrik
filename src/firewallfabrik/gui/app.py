@@ -10,9 +10,11 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import os
 import sys
 
 from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
+
 from PySide6.QtWidgets import QApplication
 
 from firewallfabrik import __version__
@@ -21,6 +23,11 @@ from firewallfabrik.gui.main_window import FWWindow
 
 def main():
     print(f'FirewallFabrik {__version__}')
+
+    # Set desktop file name before QApplication construction so the Wayland
+    # platform plugin picks it up during init and doesn't try to register twice.
+    os.environ.setdefault('XDG_ACTIVATION_TOKEN', '')
+    QApplication.setDesktopFileName('ch.linuxfabrik.firewallfabrik')
 
     app = QApplication(sys.argv)
     app.setOrganizationName('Linuxfabrik')
