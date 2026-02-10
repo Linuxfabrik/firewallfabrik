@@ -15,14 +15,20 @@
 import sqlalchemy
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFormLayout,
+    QLineEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QTreeWidgetItemIterator,
+    QVBoxLayout,
+    QWidget,
+)
 
 from firewallfabrik.core.objects import (
     Firewall,
     Library,
-    NAT,
-    Policy,
-    Routing,
 )
 
 # Map ORM type discriminator strings to QRC icon aliases.
@@ -56,27 +62,62 @@ _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
+_ALL_LIBRARIES = 'All'
 
-class ObjectTree(QTreeWidget):
-    """Left-hand object tree replicating fwbuilder's hierarchy."""
+
+class ObjectTree(QWidget):
+    """Left-hand object tree panel with filter field and library selector."""
 
     rule_set_activated = Signal(str, str, str)
     """Emitted when a rule set node is double-clicked: (rule_set_id, firewall_name, rule_set_name)."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setHeaderHidden(True)
-        self.setColumnCount(1)
-        self.itemDoubleClicked.connect(self._on_double_click)
+
+        self._filter = QLineEdit()
+        self._filter.setPlaceholderText('Filter...')
+        self._filter.setClearButtonEnabled(True)
+
+        self._lib_combo = QComboBox()
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow(self.tr('Filter:'), self._filter)
+        form.addRow(self.tr('Library:'), self._lib_combo)
+
+        self._tree = QTreeWidget()
+        self._tree.setHeaderHidden(True)
+        self._tree.setColumnCount(1)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(form)
+        layout.addWidget(self._tree)
+
+        self._tree.itemDoubleClicked.connect(self._on_double_click)
+        self._lib_combo.currentTextChanged.connect(self._on_library_changed)
+        self._filter.textChanged.connect(self._apply_filter)
 
     def populate(self, session):
         """Build the tree from all libraries in *session*."""
-        self.clear()
+        self._tree.clear()
+        self._filter.clear()
 
         libraries = session.scalars(sqlalchemy.select(Library)).all()
+
+        # Populate library combo box.
+        self._lib_combo.blockSignals(True)
+        self._lib_combo.clear()
+        if len(libraries) > 1:
+            self._lib_combo.addItem(_ALL_LIBRARIES)
+        for lib in libraries:
+            self._lib_combo.addItem(lib.name, str(lib.id))
+        self._lib_combo.blockSignals(False)
+
+        # Build tree items for every library.
         for lib in libraries:
             lib_item = self._make_item(lib.name, 'Library', str(lib.id))
-            self.addTopLevelItem(lib_item)
+            self._tree.addTopLevelItem(lib_item)
             self._add_devices(lib, lib_item)
             self._add_category(lib.addresses, 'Addresses', lib_item)
             self._add_category(lib.services, 'Services', lib_item)
@@ -144,6 +185,60 @@ class ObjectTree(QTreeWidget):
         if parent_item is not None:
             parent_item.addChild(item)
         return item
+
+    # ------------------------------------------------------------------
+    # Library selector
+    # ------------------------------------------------------------------
+
+    def _on_library_changed(self, text):
+        """Show only the selected library's subtree, or all."""
+        self._filter.clear()
+        for i in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(i)
+            item.setHidden(text != _ALL_LIBRARIES and item.text(0) != text)
+
+    # ------------------------------------------------------------------
+    # Filter
+    # ------------------------------------------------------------------
+
+    def _apply_filter(self, text):
+        """Hide items whose name does not match *text* (case-insensitive)."""
+        text = text.strip().lower()
+        if not text:
+            self._reset_visibility()
+            return
+
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            # Category items (no UserRole data) stay visible if any child matches.
+            if item.data(0, Qt.ItemDataRole.UserRole) is None:
+                continue
+            match = text in item.text(0).lower()
+            item.setHidden(not match)
+
+        # Ensure parents of visible items are also visible.
+        it = QTreeWidgetItemIterator(
+            self._tree, QTreeWidgetItemIterator.IteratorFlag.NotHidden,
+        )
+        while it.value():
+            item = it.value()
+            it += 1
+            parent = item.parent()
+            while parent:
+                parent.setHidden(False)
+                parent.setExpanded(True)
+                parent = parent.parent()
+
+    def _reset_visibility(self):
+        """Restore all items to visible and respect current library selection."""
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            it.value().setHidden(False)
+            it += 1
+        # Re-apply library filter.
+        self._on_library_changed(self._lib_combo.currentText())
 
     # ------------------------------------------------------------------
     # Signal handling
