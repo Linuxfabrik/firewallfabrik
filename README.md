@@ -44,6 +44,25 @@ fwf
 ```
 
 
+### Desktop Entry (Linux)
+
+To integrate FirewallFabrik with your desktop environment (application icon in dock, app switcher, etc.), install the `.desktop` file and icon:
+
+```bash
+cp data/ch.linuxfabrik.firewallfabrik.desktop $HOME/.local/share/applications/
+mkdir -p $HOME/.local/share/icons/hicolor/scalable/apps/
+cp data/ch.linuxfabrik.firewallfabrik.svg $HOME/.local/share/icons/hicolor/scalable/apps/
+update-desktop-database $HOME/.local/share/applications/ 2>/dev/null
+gtk-update-icon-cache $HOME/.local/share/icons/hicolor/ 2>/dev/null
+```
+
+> **Note:** The `.desktop` file uses `Exec=fwf`, which requires `fwf` to be on your system `PATH`. This works out of the box with `pipx install` or `pip install --user`. If you installed FirewallFabrik in a **virtual environment**, edit the installed `.desktop` file and replace `fwf` with the absolute path:
+>
+> ```bash
+> sed -i "s|Exec=fwf|Exec=$VIRTUAL_ENV/bin/fwf|" $HOME/.local/share/applications/ch.linuxfabrik.firewallfabrik.desktop
+> ```
+
+
 ## Documentation
 
 User Guide:
