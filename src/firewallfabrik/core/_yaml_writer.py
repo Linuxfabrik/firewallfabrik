@@ -142,9 +142,12 @@ class YamlWriter:
         # Build the global ref-path index
         self._build_ref_index(session, libraries)
 
-        # Build single combined document
+        # Build a single combined document
         doc = self._serialize_database(db)
-        doc['libraries'] = [self._serialize_library(session, lib) for lib in libraries]
+        doc['libraries'] = sorted(
+            [self._serialize_library(session, lib) for lib in libraries],
+            key=lambda lib: lib['name'],
+        )
         self._write_yaml(output_path, doc)
 
     def _build_ref_index(self, session, libraries):
