@@ -57,6 +57,18 @@ ICON_MAP = {
 
 _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
 
+# fwbuilder groups services by type into sub-categories.
+_SERVICE_TYPE_CATEGORY = {
+    'CustomService': 'Custom',
+    'ICMP6Service': 'ICMP',
+    'ICMPService': 'ICMP',
+    'IPService': 'IP',
+    'TagService': 'TagServices',
+    'TCPService': 'TCP',
+    'UDPService': 'UDP',
+    'UserService': 'Users',
+}
+
 
 def _obj_sort_key(obj):
     """Sort key: (label, name), case-insensitive."""
@@ -133,7 +145,7 @@ class ObjectTree(QWidget):
             self._tree.addTopLevelItem(lib_item)
             self._add_devices(lib, lib_item)
             self._add_category(lib.addresses, 'Addresses', lib_item)
-            self._add_category(lib.services, 'Services', lib_item)
+            self._add_services(lib.services, lib_item)
             self._add_category(lib.groups, 'Groups', lib_item)
             self._add_category(lib.intervals, 'Time', lib_item)
             # Collapse "Standard" by default, expand everything else.
@@ -185,6 +197,21 @@ class ObjectTree(QWidget):
                 )
                 for iface in sorted(host.interfaces, key=_obj_sort_key):
                     self._add_interface(iface, host_item)
+
+    def _add_services(self, services, parent_item):
+        """Add Services category with type-based sub-categories (TCP, UDP, …)."""
+        if not services:
+            return
+        svc_cat = self._make_category('Services', parent_item)
+        # Group services by type category.
+        by_type_cat = {}
+        for svc in services:
+            type_str = getattr(svc, 'type', type(svc).__name__)
+            cat_name = _SERVICE_TYPE_CATEGORY.get(type_str, type_str)
+            by_type_cat.setdefault(cat_name, []).append(svc)
+        for cat_name in sorted(by_type_cat, key=str.casefold):
+            type_cat = self._make_category(cat_name, svc_cat)
+            self._add_objects_with_folders(by_type_cat[cat_name], type_cat)
 
     def _add_interface(self, iface, parent_item):
         """Add an Interface node with its child addresses."""
