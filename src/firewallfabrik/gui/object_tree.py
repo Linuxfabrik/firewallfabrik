@@ -14,7 +14,7 @@
 
 import sqlalchemy
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -58,6 +58,28 @@ ICON_MAP = {
 }
 
 _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
+
+
+def _obj_sort_key(obj):
+    """Sort key: (label, name), case-insensitive."""
+    data = getattr(obj, 'data', None) or {}
+    label = (data.get('label') or '').lower()
+    return (label, obj.name.lower())
+
+
+def _obj_display_name(obj):
+    """Return 'name : label' when a label exists, else just 'name'."""
+    data = getattr(obj, 'data', None) or {}
+    label = data.get('label') or ''
+    if label:
+        return f'{obj.name} : {label}'
+    return obj.name
+
+
+def _is_inactive(obj):
+    """Return True if the object is marked inactive/disabled."""
+    data = getattr(obj, 'data', None) or {}
+    return data.get('inactive') == 'True'
 
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
@@ -103,11 +125,15 @@ class ObjectTree(QWidget):
 
         libraries = session.scalars(sqlalchemy.select(Library)).all()
 
-        # Populate library combo box: disabled header + indented entries.
+        # Populate library combo box.
         self._lib_combo.blockSignals(True)
         self._lib_combo.clear()
-        for lib in libraries:
+        default_index = 0
+        for i, lib in enumerate(libraries):
             self._lib_combo.addItem(lib.name, lib.name)
+            if lib.name == 'User' or (lib.name == 'Standard' and default_index == 0):
+                default_index = i
+        self._lib_combo.setCurrentIndex(default_index)
         self._lib_combo.blockSignals(False)
 
         # Build tree items for every library.
@@ -130,43 +156,67 @@ class ObjectTree(QWidget):
 
     def _add_devices(self, library, parent_item):
         """Add Firewalls and Hosts categories under *parent_item*."""
-        firewalls = [d for d in library.devices if isinstance(d, Firewall)]
-        hosts = [d for d in library.devices if not isinstance(d, Firewall)]
+        firewalls = sorted(
+            (d for d in library.devices if isinstance(d, Firewall)),
+            key=_obj_sort_key,
+        )
+        hosts = sorted(
+            (d for d in library.devices if not isinstance(d, Firewall)),
+            key=_obj_sort_key,
+        )
 
         if firewalls:
             fw_cat = self._make_category('Firewalls', parent_item)
             for fw in firewalls:
-                fw_item = self._make_item(fw.name, fw.type, str(fw.id))
+                fw_item = self._make_item(
+                    _obj_display_name(fw), fw.type, str(fw.id),
+                    inactive=_is_inactive(fw),
+                )
                 fw_cat.addChild(fw_item)
-                for rs in fw.rule_sets:
-                    self._make_item(rs.name, rs.type, str(rs.id), fw_item)
-                for iface in fw.interfaces:
+                for rs in sorted(fw.rule_sets, key=_obj_sort_key):
+                    self._make_item(
+                        _obj_display_name(rs), rs.type, str(rs.id), fw_item,
+                        inactive=_is_inactive(rs),
+                    )
+                for iface in sorted(fw.interfaces, key=_obj_sort_key):
                     self._add_interface(iface, fw_item)
             fw_cat.setExpanded(True)
 
         if hosts:
             host_cat = self._make_category('Hosts', parent_item)
-            for host in hosts:
-                host_item = self._make_item(host.name, host.type, str(host.id))
+            for host in sorted(hosts, key=_obj_sort_key):
+                host_item = self._make_item(
+                    _obj_display_name(host), host.type, str(host.id),
+                    inactive=_is_inactive(host),
+                )
                 host_cat.addChild(host_item)
-                for iface in host.interfaces:
+                for iface in sorted(host.interfaces, key=_obj_sort_key):
                     self._add_interface(iface, host_item)
 
     def _add_interface(self, iface, parent_item):
         """Add an Interface node with its child addresses."""
-        iface_item = self._make_item(iface.name, 'Interface', str(iface.id))
+        iface_item = self._make_item(
+            _obj_display_name(iface), 'Interface', str(iface.id),
+            inactive=_is_inactive(iface),
+        )
         parent_item.addChild(iface_item)
-        for addr in iface.addresses:
-            self._make_item(addr.name, addr.type, str(addr.id), iface_item)
+        for addr in sorted(iface.addresses, key=_obj_sort_key):
+            self._make_item(
+                _obj_display_name(addr), addr.type, str(addr.id), iface_item,
+                inactive=_is_inactive(addr),
+            )
 
     def _add_category(self, objects, label, parent_item):
         """Add a category folder with child object nodes."""
         if not objects:
             return
         cat = self._make_category(label, parent_item)
-        for obj in objects:
+        for obj in sorted(objects, key=_obj_sort_key):
             type_str = getattr(obj, 'type', type(obj).__name__)
-            self._make_item(obj.name, type_str, str(obj.id), cat)
+            self._make_item(
+                _obj_display_name(obj), type_str, str(obj.id), cat,
+                inactive=_is_inactive(obj),
+            )
 
     def _make_category(self, label, parent_item):
         """Create a non-selectable category folder item."""
@@ -174,7 +224,7 @@ class ObjectTree(QWidget):
         item.setIcon(0, QIcon(_CATEGORY_ICON))
         return item
 
-    def _make_item(self, name, type_str, obj_id, parent_item=None):
+    def _make_item(self, name, type_str, obj_id, parent_item=None, *, inactive=False):
         """Create a tree item storing id and type in user roles."""
         item = QTreeWidgetItem([name])
         item.setData(0, Qt.ItemDataRole.UserRole, obj_id)
@@ -182,6 +232,10 @@ class ObjectTree(QWidget):
         icon_path = ICON_MAP.get(type_str)
         if icon_path:
             item.setIcon(0, QIcon(icon_path))
+        if inactive:
+            font = item.font(0)
+            font.setStrikeOut(True)
+            item.setFont(0, font)
         if parent_item is not None:
             parent_item.addChild(item)
         return item
