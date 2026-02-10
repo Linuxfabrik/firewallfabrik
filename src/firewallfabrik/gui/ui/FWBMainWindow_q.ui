@@ -1165,6 +1165,9 @@
    <property name="toolTip">
     <string>Edit Preferences</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+,</string>
+   </property>
   </action>
   <action name="editDeleteAction">
    <property name="text">

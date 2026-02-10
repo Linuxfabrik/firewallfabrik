@@ -43,6 +43,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
+from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTableModel
 from firewallfabrik.gui.policy_view import PolicyView
@@ -168,6 +169,11 @@ class FWWindow(QMainWindow):
     @Slot()
     def fileExit(self):
         self.close()
+
+    @Slot()
+    def editPrefs(self):
+        dlg = PreferencesDialog(self)
+        dlg.exec()
 
     @Slot()
     def help(self):
