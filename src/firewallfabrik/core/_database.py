@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import contextlib
+import pathlib
 
 import sqlalchemy
 import sqlalchemy.orm
@@ -43,18 +44,18 @@ class DatabaseManager:
     def create_session(self):
         return self._session_factory()
 
-    def load(self, path):
-        match path.rsplit('.', 1)[-1]:
-            case 'fwb':
+    def load(self, path: pathlib.Path):
+        match pathlib.Path(path).suffix:
+            case '.fwb':
                 self._load_xml(path, exclude_libraries={'Deleted Objects'})
-            case 'fwf':
+            case '.fwf':
                 self._load_yaml(path)
             case _:
                 raise ValueError(f'Unsupported file extension: {path}')
 
     def save(self, path):
-        match path.rsplit('.', 1)[-1]:
-            case 'fwf':
+        match pathlib.Path(path).suffix:
+            case '.fwf':
                 self._save_yaml(path)
             case _:
                 raise ValueError(f'Unsupported file extension: {path}')
