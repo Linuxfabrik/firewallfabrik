@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from . import __version__
+from firewallfabrik import __version__
 
 FILE_FILTERS = 'YAML Files (*.yml *.yaml);;FWB Files (*.fwb);;All Files (*)'
 
@@ -104,10 +104,10 @@ class FWWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        libgui_path = Path(__file__).parent / 'libgui'
-        self._register_resources(libgui_path)
+        ui_path = Path(__file__).resolve().parent / 'ui'
+        self._register_resources(ui_path)
 
-        ui_path = libgui_path / 'FWBMainWindow_q.ui'
+        ui_path = ui_path / 'FWBMainWindow_q.ui'
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
@@ -117,10 +117,10 @@ class FWWindow(QMainWindow):
         self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     @staticmethod
-    def _register_resources(libgui_path):
+    def _register_resources(ui_path):
         """Compile MainRes.qrc to a binary .rcc (if needed) and register it."""
-        qrc = libgui_path / 'MainRes.qrc'
-        rcc = libgui_path / 'MainRes.rcc'
+        qrc = ui_path / 'MainRes.qrc'
+        rcc = ui_path / 'MainRes.rcc'
         if not rcc.exists() or rcc.stat().st_mtime < qrc.stat().st_mtime:
             subprocess.run(
                 ['pyside6-rcc', '--binary', str(qrc), '-o', str(rcc)],

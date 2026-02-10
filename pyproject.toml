@@ -19,7 +19,16 @@ readme = "README.md"
 requires-python = ">=3.14"
 
 [project.scripts]
-fwf = "firewallfabrik.main:main"
+fwf = "firewallfabrik.gui.app:main"
+# to be implemented
+# fwf-edit = "firewallfabrik.cli.fwfedit:main"
+# fwf-iosacl = "firewallfabrik.cli.fwf_iosacl:main"
+# fwf-ipt = "firewallfabrik.cli.fwf_ipt:main"
+# fwf-junosacl = "firewallfabrik.cli.fwf_junosacl:main"
+# fwf-nft = "firewallfabrik.cli.fwf_nft:main"
+# fwf-nxosacl = "firewallfabrik.cli.fwf_nxosacl:main"
+# fwf-pf = "firewallfabrik.cli.fwf_pf:main"
+# fwf-pix = "firewallfabrik.cli.fwf_pix:main"
 
 [project.urls]
 Download = "https://github.com/linuxfabrik/firewallfabrik/releases/"
@@ -62,7 +71,7 @@ known-first-party = ["firewallfabrik"]
 [tool.ruff.lint.per-file-ignores]
 # SQLAlchemy models use forward-reference strings resolved at runtime (F821)
 # and require mutable class attributes like __mapper_args__ without ClassVar (RUF012)
-"src/firewallfabrik/libfwfabrik/models/*.py" = ["F821", "RUF012"]
+"src/firewallfabrik/core/objects/*.py" = ["F821", "RUF012"]
 
 [tool.ruff.format]
 quote-style = "single"
