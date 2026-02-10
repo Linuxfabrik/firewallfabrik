@@ -780,6 +780,9 @@ Keyboard Shortcuts
     * - ``Ctrl+P``
       - Menu "File"
       - Print
+    * - ``Ctrl+,``
+      - Menu "Edit"
+      - Preferences
     * - ``Ctrl+X``
       - Menu "Edit"
       - Cut
