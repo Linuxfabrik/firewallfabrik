@@ -62,8 +62,6 @@ _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
-_ALL_LIBRARIES = 'All'
-
 
 class ObjectTree(QWidget):
     """Left-hand object tree panel with filter field and library selector."""
@@ -95,7 +93,7 @@ class ObjectTree(QWidget):
         layout.addWidget(self._tree)
 
         self._tree.itemDoubleClicked.connect(self._on_double_click)
-        self._lib_combo.currentTextChanged.connect(self._on_library_changed)
+        self._lib_combo.currentIndexChanged.connect(self._on_library_changed)
         self._filter.textChanged.connect(self._apply_filter)
 
     def populate(self, session):
@@ -105,13 +103,11 @@ class ObjectTree(QWidget):
 
         libraries = session.scalars(sqlalchemy.select(Library)).all()
 
-        # Populate library combo box.
+        # Populate library combo box: disabled header + indented entries.
         self._lib_combo.blockSignals(True)
         self._lib_combo.clear()
-        if len(libraries) > 1:
-            self._lib_combo.addItem(_ALL_LIBRARIES)
         for lib in libraries:
-            self._lib_combo.addItem(lib.name, str(lib.id))
+            self._lib_combo.addItem(lib.name, lib.name)
         self._lib_combo.blockSignals(False)
 
         # Build tree items for every library.
@@ -124,6 +120,9 @@ class ObjectTree(QWidget):
             self._add_category(lib.groups, 'Groups', lib_item)
             self._add_category(lib.intervals, 'Time', lib_item)
             lib_item.setExpanded(True)
+
+        # Apply initial library selection.
+        self._on_library_changed(self._lib_combo.currentIndex())
 
     # ------------------------------------------------------------------
     # Tree building helpers
@@ -166,7 +165,8 @@ class ObjectTree(QWidget):
             return
         cat = self._make_category(label, parent_item)
         for obj in objects:
-            self._make_item(obj.name, obj.type, str(obj.id), cat)
+            type_str = getattr(obj, 'type', type(obj).__name__)
+            self._make_item(obj.name, type_str, str(obj.id), cat)
 
     def _make_category(self, label, parent_item):
         """Create a non-selectable category folder item."""
@@ -190,12 +190,13 @@ class ObjectTree(QWidget):
     # Library selector
     # ------------------------------------------------------------------
 
-    def _on_library_changed(self, text):
-        """Show only the selected library's subtree, or all."""
+    def _on_library_changed(self, index):
+        """Show only the selected library's subtree."""
         self._filter.clear()
+        lib_name = self._lib_combo.itemData(index)
         for i in range(self._tree.topLevelItemCount()):
             item = self._tree.topLevelItem(i)
-            item.setHidden(text != _ALL_LIBRARIES and item.text(0) != text)
+            item.setHidden(lib_name is not None and item.text(0) != lib_name)
 
     # ------------------------------------------------------------------
     # Filter
@@ -238,7 +239,7 @@ class ObjectTree(QWidget):
             it.value().setHidden(False)
             it += 1
         # Re-apply library filter.
-        self._on_library_changed(self._lib_combo.currentText())
+        self._on_library_changed(self._lib_combo.currentIndex())
 
     # ------------------------------------------------------------------
     # Signal handling
