@@ -10,18 +10,6 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# On Debian systems, the complete text of the GNU General Public License
-# version 2 can be found in /usr/share/common-licenses/GPL-2.
-
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """YAML reader for loading a single YAML file back into the database model."""
 
 import logging
@@ -31,7 +19,16 @@ import uuid
 import yaml
 
 from . import objects
-from ._xml_reader import ParseResult
+from ._util import (
+    ADDRESS_CLASSES,
+    DEVICE_CLASSES,
+    GROUP_CLASSES,
+    RULE_CLASSES,
+    RULESET_CLASSES,
+    SERVICE_CLASSES,
+    SLOT_VALUES,
+    ParseResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,87 +47,19 @@ _ENUM_REVERSE = {
     },
 }
 
-# Map type name -> ORM class
-_ADDRESS_CLASSES = {
-    'Address': objects.Address,
-    'IPv4': objects.IPv4,
-    'IPv6': objects.IPv6,
-    'Network': objects.Network,
-    'NetworkIPv6': objects.NetworkIPv6,
-    'PhysAddress': objects.PhysAddress,
-    'AddressRange': objects.AddressRange,
-    'MultiAddressRunTime': objects.MultiAddressRunTime,
-}
+# YAML reader needs base classes in addition to concrete subclasses.
+_ADDRESS_CLASSES = {**ADDRESS_CLASSES, 'Address': objects.Address}
 
 _SERVICE_CLASSES = {
+    **SERVICE_CLASSES,
     'Service': objects.Service,
-    'TCPService': objects.TCPService,
-    'UDPService': objects.UDPService,
     'TCPUDPService': objects.TCPUDPService,
-    'ICMPService': objects.ICMPService,
-    'ICMP6Service': objects.ICMP6Service,
-    'IPService': objects.IPService,
-    'CustomService': objects.CustomService,
-    'UserService': objects.UserService,
-    'TagService': objects.TagService,
 }
 
-_GROUP_CLASSES = {
-    'Group': objects.Group,
-    'ObjectGroup': objects.ObjectGroup,
-    'ServiceGroup': objects.ServiceGroup,
-    'IntervalGroup': objects.IntervalGroup,
-    'MultiAddress': objects.MultiAddress,
-    'AddressTable': objects.AddressTable,
-    'AttachedNetworks': objects.AttachedNetworks,
-    'DynamicGroup': objects.DynamicGroup,
-    'DNSName': objects.DNSName,
-    'ClusterGroup': objects.ClusterGroup,
-    'FailoverClusterGroup': objects.FailoverClusterGroup,
-    'StateSyncClusterGroup': objects.StateSyncClusterGroup,
-}
-
-_DEVICE_CLASSES = {
-    'Host': objects.Host,
-    'Firewall': objects.Firewall,
-    'Cluster': objects.Cluster,
-}
-
-_RULESET_CLASSES = {
-    'RuleSet': objects.RuleSet,
-    'Policy': objects.Policy,
-    'NAT': objects.NAT,
-    'Routing': objects.Routing,
-}
-
-_RULE_CLASSES = {
-    'Rule': objects.Rule,
-    'PolicyRule': objects.PolicyRule,
-    'NATRule': objects.NATRule,
-    'RoutingRule': objects.RoutingRule,
-}
-
-# Rule element slot names (same as in _xml_reader._SLOT_NAMES values)
-_SLOT_NAMES = frozenset(
-    {
-        'src',
-        'dst',
-        'srv',
-        'itf',
-        'when',
-        'osrc',
-        'odst',
-        'osrv',
-        'tsrc',
-        'tdst',
-        'tsrv',
-        'itf_inb',
-        'itf_outb',
-        'rdst',
-        'rgtw',
-        'ritf',
-    }
-)
+_GROUP_CLASSES = {**GROUP_CLASSES, 'Group': objects.Group}
+_DEVICE_CLASSES = DEVICE_CLASSES
+_RULESET_CLASSES = {**RULESET_CLASSES, 'RuleSet': objects.RuleSet}
+_RULE_CLASSES = {**RULE_CLASSES, 'Rule': objects.Rule}
 
 
 class YamlReader:
@@ -487,7 +416,7 @@ class YamlReader:
                     setattr(rule, orm_col, value)
 
         # Rule elements (slot references)
-        for slot_name in _SLOT_NAMES:
+        for slot_name in SLOT_VALUES:
             refs = data.get(slot_name)
             if refs:
                 for ref_path in refs:

@@ -10,18 +10,6 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# On Debian systems, the complete text of the GNU General Public License
-# version 2 can be found in /usr/share/common-licenses/GPL-2.
-
-# SPDX-License-Identifier: GPL-2.0-or-later
-
 """YAML writer for serializing the database object graph to a single YAML file."""
 
 import logging
@@ -31,6 +19,7 @@ import sqlalchemy
 import yaml
 
 from . import objects
+from ._util import ENUM_FIELDS
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +61,6 @@ _SKIP_ALWAYS = frozenset(
     }
 )
 
-# Enum maps: ORM column name -> (yaml key, IntEnum class)
-_ENUM_MAPS = {
-    'policy_action': ('action', objects.PolicyAction),
-    'policy_direction': ('direction', objects.Direction),
-    'nat_action': ('action', objects.NATAction),
-    'nat_rule_type': ('rule_type', objects.NATRuleType),
-    'routing_rule_type': ('rule_type', objects.RoutingRuleType),
-}
-
 
 def _is_default(value):
     """Return True if value is a default that should be omitted."""
@@ -114,8 +94,8 @@ def _serialize_obj(obj, extra_skip=frozenset()):
         value = getattr(obj, key)
 
         # Enum remapping
-        if key in _ENUM_MAPS:
-            yaml_key, enum_cls = _ENUM_MAPS[key]
+        if key in ENUM_FIELDS:
+            yaml_key, enum_cls = ENUM_FIELDS[key]
             if value is not None:
                 try:
                     result[yaml_key] = enum_cls(value).name

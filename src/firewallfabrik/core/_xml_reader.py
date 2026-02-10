@@ -18,93 +18,43 @@ All XML string IDs are mapped to UUIDs.  Cross-element references
 is parsed.
 """
 
-import dataclasses
 import logging
 import uuid
 import xml.etree.ElementTree
 
 from . import objects
+from ._util import (
+    ADDRESS_CLASSES,
+    DEVICE_CLASSES,
+    GROUP_CLASSES,
+    RULE_CLASSES,
+    RULESET_CLASSES,
+    SERVICE_CLASSES,
+    SLOT_NAMES,
+    ParseResult,
+)
 
 logger = logging.getLogger(__name__)
 
 NS = '{http://www.fwbuilder.org/1.0/}'
 
+# XML-specific aliases on top of the shared canonical dicts.
 _ADDRESS_TAGS = {
-    'IPv4': objects.IPv4,
-    'IPv6': objects.IPv6,
-    'Network': objects.Network,
-    'NetworkIPv6': objects.NetworkIPv6,
-    'PhysAddress': objects.PhysAddress,
-    'AddressRange': objects.AddressRange,
-    'MultiAddressRunTime': objects.MultiAddressRunTime,
+    **ADDRESS_CLASSES,
     'AnyNetwork': objects.Network,
     'DummyNetwork': objects.Network,
 }
 
 _SERVICE_TAGS = {
-    'TCPService': objects.TCPService,
-    'UDPService': objects.UDPService,
-    'ICMPService': objects.ICMPService,
-    'ICMP6Service': objects.ICMP6Service,
-    'IPService': objects.IPService,
-    'CustomService': objects.CustomService,
-    'UserService': objects.UserService,
-    'TagService': objects.TagService,
+    **SERVICE_CLASSES,
     'AnyIPService': objects.IPService,
     'DummyIPService': objects.IPService,
 }
 
-_DEVICE_TAGS = {
-    'Host': objects.Host,
-    'Firewall': objects.Firewall,
-    'Cluster': objects.Cluster,
-}
-
-_GROUP_TAGS = {
-    'ObjectGroup': objects.ObjectGroup,
-    'ServiceGroup': objects.ServiceGroup,
-    'IntervalGroup': objects.IntervalGroup,
-    'ClusterGroup': objects.ClusterGroup,
-    'FailoverClusterGroup': objects.FailoverClusterGroup,
-    'StateSyncClusterGroup': objects.StateSyncClusterGroup,
-    'DNSName': objects.DNSName,
-    'AddressTable': objects.AddressTable,
-    'AttachedNetworks': objects.AttachedNetworks,
-    'DynamicGroup': objects.DynamicGroup,
-    'MultiAddress': objects.MultiAddress,
-}
-
-_RULESET_TAGS = {
-    'Policy': objects.Policy,
-    'NAT': objects.NAT,
-    'Routing': objects.Routing,
-}
-
-_RULE_TAGS = {
-    'PolicyRule': objects.PolicyRule,
-    'NATRule': objects.NATRule,
-    'RoutingRule': objects.RoutingRule,
-}
-
-# Rule element container tag -> slot name
-_SLOT_NAMES = {
-    'Src': 'src',
-    'Dst': 'dst',
-    'Srv': 'srv',
-    'Itf': 'itf',
-    'When': 'when',
-    'OSrc': 'osrc',
-    'ODst': 'odst',
-    'OSrv': 'osrv',
-    'TSrc': 'tsrc',
-    'TDst': 'tdst',
-    'TSrv': 'tsrv',
-    'ItfInb': 'itf_inb',
-    'ItfOutb': 'itf_outb',
-    'RDst': 'rdst',
-    'RGtw': 'rgtw',
-    'RItf': 'ritf',
-}
+_DEVICE_TAGS = DEVICE_CLASSES
+_GROUP_TAGS = GROUP_CLASSES
+_RULESET_TAGS = RULESET_CLASSES
+_RULE_TAGS = RULE_CLASSES
 
 _REF_TAGS = frozenset({'ObjectRef', 'ServiceRef', 'IntervalRef'})
 
@@ -121,45 +71,16 @@ _OPTIONS_TAGS = frozenset(
     }
 )
 
-_POLICY_ACTIONS = {
-    'Unknown': 0,
-    'Accept': 1,
-    'Reject': 2,
-    'Deny': 3,
-    'Scrub': 4,
-    'Return': 5,
-    'Skip': 6,
-    'Continue': 7,
-    'Accounting': 8,
-    'Modify': 9,
-    'Pipe': 10,
-    'Custom': 11,
-    'Branch': 12,
-}
-
-_DIRECTIONS = {
-    'Undefined': 0,
-    'Inbound': 1,
-    'Outbound': 2,
-    'Both': 3,
-}
-
-_NAT_ACTIONS = {
-    'Translate': 0,
-    'Branch': 1,
-}
-
 # Attributes handled explicitly -- everything else goes into ``data``.
 _COMMON_KNOWN = frozenset({'id', 'name', 'comment', 'ro'})
 
 
-@dataclasses.dataclass
-class ParseResult:
-    """Holds the parsed object graph and deferred association-table rows."""
-
-    database: objects.FWObjectDatabase
-    memberships: list[dict]
-    rule_element_rows: list[dict]
+def _enum_value(enum_cls, name, default=0):
+    """Look up an IntEnum member by *name*, returning *default* on miss."""
+    try:
+        return enum_cls[name].value
+    except KeyError:
+        return default
 
 
 def _tag(elem):
@@ -335,8 +256,8 @@ def _parse_rule_children(rule, elem):
 
     for child in elem:
         tag = _tag(child)
-        if tag in _SLOT_NAMES:
-            slot = _SLOT_NAMES[tag]
+        if tag in SLOT_NAMES:
+            slot = SLOT_NAMES[tag]
             negations[slot] = _bool(child.get('neg', 'False'))
             for ref_elem in child:
                 if _tag(ref_elem) in _REF_TAGS:
@@ -632,10 +553,19 @@ class XmlReader:
 
         # Type-specific columns
         if cls is objects.PolicyRule:
-            rule.policy_action = _POLICY_ACTIONS.get(elem.get('action', ''), 0)
-            rule.policy_direction = _DIRECTIONS.get(elem.get('direction', ''), 0)
+            rule.policy_action = _enum_value(
+                objects.PolicyAction,
+                elem.get('action', ''),
+            )
+            rule.policy_direction = _enum_value(
+                objects.Direction,
+                elem.get('direction', ''),
+            )
         elif cls is objects.NATRule:
-            rule.nat_action = _NAT_ACTIONS.get(elem.get('action', ''), 0)
+            rule.nat_action = _enum_value(
+                objects.NATAction,
+                elem.get('action', ''),
+            )
 
         for rule_id, slot, ref_id in _parse_rule_children(rule, elem):
             self._deferred_rule_elements.append((rule_id, slot, ref_id))
