@@ -37,6 +37,7 @@ For example:
 ```bash
 python3.14 -m venv $HOME/venvs/firewallfabrik
 source $HOME/venvs/firewallfabrik/bin/activate
+pip install --upgrade pip
 pip install --editable .
 
 # run
