@@ -339,7 +339,11 @@ class XmlReader:
     def _parse_database(self, elem, exclude_libraries):
         db = objects.FWObjectDatabase()
         db.id = self._register(elem.get('id', 'root'))
-        db.last_modified = float(elem.get('lastModified', '0'))
+        try:
+            db.last_modified = float(elem.get('lastModified', '0'))
+        except ValueError:
+            logger.info('lastModified value empty or not a float, setting it to 0.0')
+            db.last_modified = 0.0
         db.data = _extra_attrs(elem, {'id', 'lastModified'})
 
         for child in elem:
