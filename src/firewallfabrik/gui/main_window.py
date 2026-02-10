@@ -48,7 +48,7 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 logger = logging.getLogger(__name__)
 
-FILE_FILTERS = 'FWF Files (*.fwf);;Legacy FWB Files (*.fwb);;All Files (*)'
+FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
 _MAX_RECENT_FILES = 5
 
 
