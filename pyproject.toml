@@ -7,10 +7,8 @@ authors = [
     { name = "Linuxfabrik GmbH, Zurich, Switzerland", email = "info@linuxfabrik.ch" },
 ]
 description = "FirewallFabrik is a Qt-based GUI tool for managing firewall configurations across multiple platforms (iptables, nftables, etc.)"
-dependencies = [
-    "PySide6",
-]
 dynamic = [
+    "dependencies",
     "version",
 ]
 license-files = ["LICENSE", "COPYRIGHT"]
@@ -37,6 +35,7 @@ Source = "https://github.com/linuxfabrik/firewallfabrik/"
 Tracker = "https://github.com/linuxfabrik/firewallfabrik/issues/"
 
 [tool.setuptools.dynamic]
+dependencies = { file = "requirements.in" }
 version = { attr = "firewallfabrik.__version__" }
 
 [tool.setuptools.packages.find]
