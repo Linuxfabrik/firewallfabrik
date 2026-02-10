@@ -25,6 +25,7 @@ CUSTOM_WIDGET_MAP = {
     'ClusterDialog': QWidget,
     'ClusterGroupDialog': QWidget,
     'CommentEditorPanel': QWidget,
+    'CommentKeywords': QWidget,
     'CompilerOutputPanel': QWidget,
     'CustomServiceDialog': QWidget,
     'DNSNameDialog': QWidget,
@@ -80,3 +81,21 @@ class FWFUiLoader(QUiLoader):
             widget.setObjectName(name)
             return widget
         return super().createWidget(class_name, parent, name)
+
+
+# Late import: address_dialogs imports FWFUiLoader from this module,
+# so we update the map after both modules are fully defined.
+def _register_address_dialogs():
+    from firewallfabrik.gui.address_dialogs import (
+        IPv4Dialog,
+        IPv6Dialog,
+        NetworkDialog,
+        NetworkDialogIPv6,
+    )
+    CUSTOM_WIDGET_MAP['IPv4Dialog'] = IPv4Dialog
+    CUSTOM_WIDGET_MAP['IPv6Dialog'] = IPv6Dialog
+    CUSTOM_WIDGET_MAP['NetworkDialog'] = NetworkDialog
+    CUSTOM_WIDGET_MAP['NetworkDialogIPv6'] = NetworkDialogIPv6
+
+
+_register_address_dialogs()

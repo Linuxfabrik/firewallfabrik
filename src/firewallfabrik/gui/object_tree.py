@@ -89,6 +89,9 @@ class ObjectTree(QWidget):
     rule_set_activated = Signal(str, str, str)
     """Emitted when a rule set node is double-clicked: (rule_set_id, firewall_name, rule_set_name)."""
 
+    object_activated = Signal(str, str)
+    """Emitted when a non-rule-set object is double-clicked: (obj_id, obj_type)."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -272,11 +275,14 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _on_double_click(self, item, _column):
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         type_str = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if type_str not in _RULE_SET_TYPES:
+        if not obj_id or not type_str:
             return
-        rule_set_id = item.data(0, Qt.ItemDataRole.UserRole)
-        # The firewall is the parent of this rule set node.
-        fw_item = item.parent()
-        fw_name = fw_item.text(0) if fw_item else ''
-        self.rule_set_activated.emit(rule_set_id, fw_name, item.text(0))
+        if type_str in _RULE_SET_TYPES:
+            # The firewall is the parent of this rule set node.
+            fw_item = item.parent()
+            fw_name = fw_item.text(0) if fw_item else ''
+            self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
+        else:
+            self.object_activated.emit(obj_id, type_str)

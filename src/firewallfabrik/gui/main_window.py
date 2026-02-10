@@ -17,7 +17,7 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QResource, QSettings, Qt, QUrl, Slot
-from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
+from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -44,7 +44,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
-from firewallfabrik.gui.object_tree import ObjectTree
+from firewallfabrik.gui.object_tree import ICON_MAP, ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTableModel
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -83,6 +83,14 @@ class FWWindow(QMainWindow):
         self._splitter.setSizes([250, 800])
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
         self._object_tree.rule_set_activated.connect(self._open_rule_set)
+        self._object_tree.object_activated.connect(self._open_object_editor)
+
+        self._editor_map = {
+            'IPv4': self.w_IPv4Dialog,
+            'IPv6': self.w_IPv6Dialog,
+            'Network': self.w_NetworkDialog,
+            'NetworkIPv6': self.w_NetworkDialogIPv6,
+        }
 
         self._prepare_recent_menu()
         self._restore_view_state()
@@ -361,6 +369,36 @@ class FWWindow(QMainWindow):
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.m_space.addSubWindow(sub)
         sub.show()
+
+    @Slot(str, str)
+    def _open_object_editor(self, obj_id, obj_type):
+        """Open the editor panel for the given object (triggered by tree double-click)."""
+        dialog_widget = self._editor_map.get(obj_type)
+        if dialog_widget is None:
+            return
+
+        with self._db_manager.session() as session:
+            obj = session.get(Address, uuid.UUID(obj_id))
+            if obj is None:
+                return
+            inet = obj.inet_addr_mask or {}
+            name = obj.name
+            address = inet.get('address', '')
+            netmask = inet.get('netmask', '')
+
+        dialog_widget.load_object(name, address, netmask)
+        # The dialog widget sits inside a page's layout, not as a direct
+        # page of the stacked widget — switch to its parent page instead.
+        self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
+        self.editorPanelTabWidget.setCurrentIndex(2)
+
+        icon_path = ICON_MAP.get(obj_type)
+        if icon_path:
+            self.objectTypeIcon.setPixmap(QIcon(icon_path).pixmap(24, 24))
+
+        if not self.editorDockWidget.isVisible():
+            self.editorDockWidget.setVisible(True)
+            self.actionEditor_panel.setChecked(True)
 
     @Slot()
     def toggleViewObjectTree(self):
