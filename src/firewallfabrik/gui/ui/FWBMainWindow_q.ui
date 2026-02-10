@@ -1166,14 +1166,6 @@
     <string>Edit Preferences</string>
    </property>
   </action>
-  <action name="addToRCSAction">
-   <property name="text">
-    <string>Add File to &amp;RCS</string>
-   </property>
-   <property name="iconText">
-    <string>Add File to RCS</string>
-   </property>
-  </action>
   <action name="editDeleteAction">
    <property name="text">
     <string>Delete</string>
@@ -1218,28 +1210,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
-   </property>
-  </action>
-  <action name="fileDiscardAction">
-   <property name="text">
-    <string>&amp;Discard</string>
-   </property>
-   <property name="iconText">
-    <string>Discard</string>
-   </property>
-   <property name="toolTip">
-    <string>Discard Changes and Overwrite With Clean Copy Of The Head Revision From RCS</string>
-   </property>
-  </action>
-  <action name="fileCommitAction">
-   <property name="text">
-    <string>Co&amp;mmit</string>
-   </property>
-   <property name="iconText">
-    <string>Commit</string>
-   </property>
-   <property name="statusTip">
-    <string>Commit Opened File to RCS and Continue Editing</string>
    </property>
   </action>
   <action name="ObjectLockAction">
