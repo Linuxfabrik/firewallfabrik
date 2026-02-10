@@ -28,6 +28,7 @@ from ._util import (
     SERVICE_CLASSES,
     SLOT_VALUES,
     ParseResult,
+    escape_obj_name,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,8 +113,9 @@ class YamlReader:
 
     def _register_ref(self, type_name, obj_name, obj_id):
         """Register a ref-path -> UUID mapping."""
+        obj_name_escaped = escape_obj_name(obj_name)
         # Try plain ref first, use #N for duplicates
-        ref = f'{type_name}/{obj_name}'
+        ref = f'{type_name}/{obj_name_escaped}'
         if ref not in self._ref_index:
             self._ref_index[ref] = obj_id
         else:

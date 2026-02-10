@@ -19,7 +19,7 @@ import sqlalchemy
 import yaml
 
 from . import objects
-from ._util import ENUM_FIELDS
+from ._util import ENUM_FIELDS, escape_obj_name
 
 logger = logging.getLogger(__name__)
 
@@ -239,19 +239,20 @@ class YamlWriter:
 
     def _register_ref(self, seen, lib_id, lib_name, type_name, obj_name, obj_id):
         """Register a ref-path for an object, handling duplicates with #N."""
-        key = (lib_id, type_name, obj_name)
+        obj_name_escaped = escape_obj_name(obj_name)
+        key = (lib_id, type_name, obj_name_escaped)
         count = seen.get(key, 0)
         seen[key] = count + 1
 
         if count == 0:
-            ref = f'{type_name}/{obj_name}'
+            ref = f'{type_name}/{obj_name_escaped}'
         else:
-            ref = f'{type_name}/{obj_name}#{count + 1}'
+            ref = f'{type_name}/{obj_name_escaped}#{count + 1}'
             # Rename the first entry when the second occurrence appears
             if count == 1:
                 for uid, existing_ref in self._ref_index.items():
-                    if existing_ref == f'{type_name}/{obj_name}':
-                        self._ref_index[uid] = f'{type_name}/{obj_name}#1'
+                    if existing_ref == f'{type_name}/{obj_name_escaped}':
+                        self._ref_index[uid] = f'{type_name}/{obj_name_escaped}#1'
                         break
 
         self._ref_index[obj_id] = ref

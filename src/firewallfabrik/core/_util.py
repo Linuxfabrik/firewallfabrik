@@ -112,3 +112,11 @@ ENUM_FIELDS = {
     'nat_rule_type': ('rule_type', objects.NATRuleType),
     'routing_rule_type': ('rule_type', objects.RoutingRuleType),
 }
+
+
+def escape_obj_name(obj_name):
+    """Escapes an object name to be suitable as an object reference during serialization."""
+    # '\' = escape character
+    # '/' = reference path separator
+    # '#' = reference number for multiple objects with the same name
+    return obj_name.replace('\\', '\\\\').replace('/', '\\/').replace('#', '\\#')
