@@ -25,13 +25,24 @@ Please note that on certain Linux systems `--break-system-packages`
 might need to be added when using the system's Python/Pip.
 
 
-## Run FirewallFabrik
+### From Git (For Development or Power Users)
 
-Run directly from source:
+Clone this repository and run `pip install .` at the root of the repo to install FirewallFabrik.
+
+For development use `--editable` to install FirewallFabrik in
+[Development/Editable Mode](https://setuptools.pypa.io/en/latest/userguide/development_mode.html).
+The usage of a virtual environment is *strongly recommended*.
+For example:
 
 ```bash
-PYTHONPATH=src python -m firewallfabrik.main
+python3.14 -m venv venv
+source venv/bin/activate
+pip install --editable .
+
+# run
+fwf
 ```
+
 
 
 ## Documentation
