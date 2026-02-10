@@ -16,8 +16,8 @@ import uuid
 from pathlib import Path
 
 import sqlalchemy
-from PySide6.QtCore import QResource, QSettings, Qt, QUrl, Slot
-from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
+from PySide6.QtCore import QByteArray, QResource, QSettings, Qt, QTimer, QUrl, Slot
+from PySide6.QtGui import QAction, QDesktopServices, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -25,6 +25,9 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSplitter,
 )
+
+_DEFAULT_WIDTH = 1024
+_DEFAULT_HEIGHT = 768
 
 from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager
@@ -94,6 +97,44 @@ class FWWindow(QMainWindow):
 
         self._prepare_recent_menu()
         self._restore_view_state()
+        self._start_maximized = False
+        self._restore_geometry()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._start_maximized:
+            self._start_maximized = False
+            # Defer maximize so Wayland has finished mapping the window.
+            QTimer.singleShot(0, self.showMaximized)
+
+    def closeEvent(self, event):
+        settings = QSettings()
+        # Save normal (non-maximized) geometry so restore works both ways.
+        if not self.isMaximized():
+            settings.setValue('Window/geometry', self.saveGeometry())
+        settings.setValue('Window/maximized', self.isMaximized())
+        super().closeEvent(event)
+
+    def _restore_geometry(self):
+        """Restore saved window geometry, falling back to centered default."""
+        settings = QSettings()
+        geometry = settings.value('Window/geometry', type=QByteArray)
+        if geometry and self.restoreGeometry(geometry):
+            # Verify the restored rect overlaps at least one screen.
+            rect = self.geometry()
+            for screen in QGuiApplication.screens():
+                if screen.availableGeometry().intersects(rect):
+                    self._start_maximized = settings.value(
+                        'Window/maximized', False, type=bool,
+                    )
+                    return
+        self.resize(_DEFAULT_WIDTH, _DEFAULT_HEIGHT)
+        screen = QGuiApplication.primaryScreen()
+        if screen:
+            center = screen.availableGeometry().center()
+            frame = self.frameGeometry()
+            frame.moveCenter(center)
+            self.move(frame.topLeft())
 
     @staticmethod
     def _register_resources(ui_path):
