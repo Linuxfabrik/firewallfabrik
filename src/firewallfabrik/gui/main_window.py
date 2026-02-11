@@ -584,7 +584,11 @@ class FWWindow(QMainWindow):
         slot_map = {}  # {rule_id: {slot: [name, ...]}}
         if rule_ids:
             re_rows = session.execute(
-                sqlalchemy.select(rule_elements).where(
+                sqlalchemy.select(
+                    rule_elements.c.rule_id,
+                    rule_elements.c.slot,
+                    rule_elements.c.target_id,
+                ).where(
                     rule_elements.c.rule_id.in_(rule_ids),
                 ),
             ).all()
