@@ -1,8 +1,8 @@
 #!/bin/sh
 #
-#  This is automatically generated file. DO NOT MODIFY !
+#  This file is managed by FirewallFabrik - do not edit
 #
-#  Firewall Builder  fwf-ipt v{{$version}}
+#  FirewallFabrik fwf-ipt v{{$version}}
 #
 #  Generated {{$timestamp}} {{$tz}} by {{$user}}
 #
