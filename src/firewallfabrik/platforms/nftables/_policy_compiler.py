@@ -21,7 +21,7 @@ Unlike iptables, nftables does not need:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
@@ -387,7 +387,7 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if len(rule.src) <= 1:
             self.tmp_queue.append(rule)
@@ -417,7 +417,7 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if len(rule.dst) <= 1:
             self.tmp_queue.append(rule)
@@ -447,7 +447,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -477,7 +477,7 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain or rule.is_src_any():
             self.tmp_queue.append(rule)
@@ -511,7 +511,7 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -541,7 +541,7 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain or rule.is_dst_any():
             self.tmp_queue.append(rule)
@@ -575,7 +575,7 @@ class SpecialCaseWithFW2(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
         src_obj = rule.src[0] if rule.src else None
         dst_obj = rule.dst[0] if rule.dst else None
 
@@ -656,7 +656,7 @@ class FinalizeChain(PolicyRuleProcessor):
         src = rule.src[0] if rule.src else None
         dst = rule.dst[0] if rule.dst else None
         direction = rule.direction
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if direction == Direction.Inbound:
             if dst is not None and nft_comp.complex_match(dst, nft_comp.fw):
@@ -695,11 +695,12 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Continue: '.CONTINUE',
             PolicyAction.Custom: '.CUSTOM',
         }
-        target = target_map.get(rule.action)
+        action = rule.action
+        target = target_map.get(action) if isinstance(action, PolicyAction) else None
         if target is not None:
             rule.ipt_target = target
         else:
-            action_name = rule.action.name if rule.action else str(rule.action)
+            action_name = action.name if action else str(action)
             not_yet = {
                 PolicyAction.Accounting,
                 PolicyAction.Branch,
@@ -727,7 +728,7 @@ class RemoveFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        nft_comp = self.compiler
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
         chain = rule.ipt_chain
         fw_id = nft_comp.fw.id
 

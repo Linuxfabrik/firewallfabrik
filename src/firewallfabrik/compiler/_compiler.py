@@ -316,7 +316,7 @@ class Compiler(BaseCompiler):
 
         return False
 
-    def find_address_for(self, obj1, obj2) -> Address | None:
+    def find_address_for(self, obj1, obj2) -> Address | Interface | None:
         """Find address of obj2 that matches network of obj1.
 
         Scans all interfaces of obj2 looking for an address that belongs

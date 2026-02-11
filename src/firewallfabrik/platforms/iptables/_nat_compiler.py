@@ -20,7 +20,7 @@ NAT rules into iptables -t nat commands.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._nat_compiler import NATCompiler
@@ -453,9 +453,11 @@ class DecideOnChain(NATRuleProcessor):
         if rule.ipt_chain:
             return True
 
-        chain = chain_map.get(rule.nat_rule_type, '')
-        if chain:
-            rule.ipt_chain = chain
+        rt = rule.nat_rule_type
+        if rt is not None:
+            chain = chain_map.get(rt, '')
+            if chain:
+                rule.ipt_chain = chain
 
         return True
 
@@ -484,9 +486,11 @@ class DecideOnTarget(NATRuleProcessor):
             NATRuleType.Return: 'RETURN',
         }
 
-        target = target_map.get(rule.nat_rule_type, '')
-        if target:
-            rule.ipt_target = target
+        rt = rule.nat_rule_type
+        if rt is not None:
+            target = target_map.get(rt, '')
+            if target:
+                rule.ipt_target = target
 
         return True
 
@@ -673,8 +677,9 @@ class CountChainUsage(NATRuleProcessor):
             return False
         chain = rule.ipt_chain
         if chain:
-            self.compiler.chain_usage_counter[chain] = (
-                self.compiler.chain_usage_counter.get(chain, 0) + 1
+            nat_comp = cast('NATCompiler_ipt', self.compiler)
+            nat_comp.chain_usage_counter[chain] = (
+                nat_comp.chain_usage_counter.get(chain, 0) + 1
             )
         self.tmp_queue.append(rule)
         return True

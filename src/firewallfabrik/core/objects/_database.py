@@ -17,11 +17,18 @@ from __future__ import (
 )
 
 import uuid
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._base import Base
+
+if TYPE_CHECKING:
+    from ._addresses import Address
+    from ._devices import Host, Interface
+    from ._groups import Group
+    from ._services import Interval, Service
 
 
 class FWObjectDatabase(Base):

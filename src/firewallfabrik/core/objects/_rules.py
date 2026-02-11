@@ -17,11 +17,15 @@ from __future__ import (
 )
 
 import uuid
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._base import Base
+
+if TYPE_CHECKING:
+    from ._devices import Host
 
 
 class RuleSet(Base):
@@ -82,17 +86,21 @@ class RuleSet(Base):
 
     # -- Compiler helper methods --
 
-    def matching_address_family(self, af: str) -> bool:
+    def matching_address_family(self, af: int) -> bool:
         """Check if this rule set should be compiled for the given address family.
 
-        af should be 'ipv4' or 'ipv6'. Returns True if the rule set supports
-        the given family, or if both are False (meaning compile for both).
+        *af* is a :mod:`socket` address-family constant
+        (``socket.AF_INET`` or ``socket.AF_INET6``).
+        Returns True if the rule set supports the given family, or if
+        both are False (meaning compile for both).
         """
+        import socket
+
         if not self.ipv4 and not self.ipv6:
             return True
-        if af == 'ipv4':
+        if af == socket.AF_INET:
             return self.ipv4
-        if af == 'ipv6':
+        if af == socket.AF_INET6:
             return self.ipv6
         return True
 

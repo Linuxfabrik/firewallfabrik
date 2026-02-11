@@ -19,7 +19,7 @@ Generates iptables command strings (shell or iptables-restore format).
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
@@ -41,6 +41,7 @@ from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
+    from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 
 
 def _version_compare(v1: str, v2: str) -> int:
@@ -79,9 +80,8 @@ class PrintRule(PolicyRuleProcessor):
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
-        if self.compiler:
-            self.version = self.compiler.fw.version or ''
-            self.have_m_iprange = _version_compare(self.version, '1.2.11') >= 0
+        self.version = self.compiler.fw.version or ''
+        self.have_m_iprange = _version_compare(self.version, '1.2.11') >= 0
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -89,7 +89,7 @@ class PrintRule(PolicyRuleProcessor):
             return False
 
         chain = rule.ipt_chain
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         if ipt_comp.chain_usage_counter.get(chain, 0) > 0:
             self.tmp_queue.append(rule)
 
@@ -172,9 +172,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def initialize_minus_n_tracker(self) -> None:
         """Mark standard chains as already existing."""
-        if self.compiler is None:
-            return
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         if (
             hasattr(ipt_comp, 'minus_n_commands')
             and ipt_comp.minus_n_commands is not None
@@ -188,9 +186,7 @@ class PrintRule(PolicyRuleProcessor):
         if not chain:
             return ''
 
-        ipt_comp = self.compiler
-        if ipt_comp is None:
-            return ''
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
             self.initialize_minus_n_tracker()
@@ -229,7 +225,7 @@ class PrintRule(PolicyRuleProcessor):
             return ''
 
         res = []
-        if not self.compiler or not self.compiler.single_rule_compile_mode:
+        if not self.compiler.single_rule_compile_mode:
             res.append('# ')
             res.append(f'# Rule {label}')
             res.append('# ')
@@ -242,7 +238,7 @@ class PrintRule(PolicyRuleProcessor):
                 if line:
                     res.append(f'# {line}')
 
-        if self.compiler and rule.compiler_message:
+        if rule.compiler_message:
             res.append(rule.compiler_message)
 
         self.current_rule_label = label
@@ -304,7 +300,7 @@ class PrintRule(PolicyRuleProcessor):
         elif isinstance(srv, UDPService):
             return '-p udp -m udp '
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            if self.compiler and self.compiler.ipv6_policy:
+            if self.compiler.ipv6_policy:
                 return '-p ipv6-icmp '
             return '-p icmp  -m icmp '
         elif isinstance(srv, IPService):
@@ -350,7 +346,7 @@ class PrintRule(PolicyRuleProcessor):
 
         if isinstance(obj, Interface):
             if obj.is_dynamic():
-                ipv6 = self.compiler.ipv6_policy if self.compiler else False
+                ipv6 = self.compiler.ipv6_policy
                 suffix = 'v6' if ipv6 else ''
                 var = get_interface_var_name(obj, suffix=suffix)
                 return f'${var} '
@@ -555,7 +551,10 @@ class PrintRule(PolicyRuleProcessor):
             PolicyAction.Continue: '',
         }
 
-        target_name = action_map.get(rule.action, '')
+        action = rule.action
+        target_name = (
+            action_map.get(action, '') if isinstance(action, PolicyAction) else ''
+        )
         if not target_name:
             return ''
 
@@ -601,17 +600,13 @@ class PrintRule(PolicyRuleProcessor):
 
         log_level = rule.get_option('log_level', '')
         if not log_level:
-            log_level = (
-                self.compiler.fw.get_option('log_level', '') if self.compiler else ''
-            )
+            log_level = self.compiler.fw.get_option('log_level', '')
         if log_level:
             parts.append(f'--log-level {log_level}')
 
         log_prefix = rule.get_option('log_prefix', '')
         if not log_prefix:
-            log_prefix = (
-                self.compiler.fw.get_option('log_prefix', '') if self.compiler else ''
-            )
+            log_prefix = self.compiler.fw.get_option('log_prefix', '')
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]
@@ -638,7 +633,7 @@ class PrintRule(PolicyRuleProcessor):
             iface_name = 'global'
 
         ruleset_name = 'Policy'
-        if self.compiler and self.compiler.source_ruleset:
+        if self.compiler.source_ruleset:
             ruleset_name = self.compiler.source_ruleset.name
 
         result = prefix.replace('%N', rule_num)
@@ -650,9 +645,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def _start_rule_line(self) -> str:
         """Generate rule line prefix: $IPTABLES [-w] [-t table] -A"""
-        ipt_comp = self.compiler
-        if ipt_comp is None:
-            return '$IPTABLES -A'
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         ipv6 = ipt_comp.ipv6_policy
         res = '$IP6TABLES ' if ipv6 else '$IPTABLES '
@@ -680,9 +673,7 @@ class PrintRuleIptRst(PrintRule):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        ipt_comp = self.compiler
-        if ipt_comp is None:
-            return ''
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         if not self.minus_n_tracker_initialized:
             self.initialize_minus_n_tracker()
         if (
@@ -708,7 +699,7 @@ class PrintRuleIptRst(PrintRule):
         return ''
 
     def _declare_table(self) -> str:
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         my_table = getattr(ipt_comp, 'my_table', 'filter') if ipt_comp else 'filter'
         return f"echo '*{my_table}'"
 
@@ -731,9 +722,7 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        ipt_comp = self.compiler
-        if ipt_comp is None:
-            return ''
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         if not self.minus_n_tracker_initialized:
             self.initialize_minus_n_tracker()
         if (
@@ -752,7 +741,7 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
         return '"'
 
     def _declare_table(self) -> str:
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         my_table = getattr(ipt_comp, 'my_table', 'filter') if ipt_comp else 'filter'
         return f'echo "*{my_table}"'
 

@@ -24,6 +24,7 @@ import copy
 import dataclasses
 import uuid
 from collections import defaultdict
+from typing import Any
 
 import sqlalchemy
 
@@ -116,7 +117,7 @@ class CompRule:
         new._extra = dict(self._extra)
         return new
 
-    def get_option(self, key: str, default: object = None) -> object:
+    def get_option(self, key: str, default: Any = None) -> Any:
         if self.options:
             val = self.options.get(key, default)
             if isinstance(val, str):

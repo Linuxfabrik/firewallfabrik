@@ -37,7 +37,6 @@ class Begin(BasicRuleProcessor):
 
     def process_next(self) -> bool:
         if not self._init:
-            assert self.compiler is not None
             for rule in self.compiler.rules:
                 if rule.disabled:
                     continue
@@ -66,7 +65,7 @@ class SimplePrintProgress(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is not None:
             self.tmp_queue.append(rule)
@@ -81,13 +80,12 @@ class SingleRuleFilter(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
         if (
-            self.compiler
-            and self.compiler.single_rule_compile_mode
+            self.compiler.single_rule_compile_mode
             and str(rule.id) != self.compiler.single_rule_id
         ):
             return True  # skip, try next
@@ -102,7 +100,7 @@ class SkipDisabledRules(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -121,7 +119,7 @@ class ExpandGroups(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -147,7 +145,7 @@ class ConvertToAtomic(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -183,7 +181,7 @@ class ConvertToAtomicForAddresses(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -212,7 +210,7 @@ class ConvertToAtomicForInterfaces(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -284,7 +282,7 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         return False
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -328,7 +326,7 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -348,7 +346,7 @@ class EliminateDuplicatesInSRC(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -364,7 +362,7 @@ class EliminateDuplicatesInDST(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -380,7 +378,7 @@ class EliminateDuplicatesInSRV(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -412,7 +410,7 @@ class AssignUniqueRuleId(BasicRuleProcessor):
         self._counter = 0
 
     def process_next(self) -> bool:
-        assert self.prev_processor is not None
+
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False

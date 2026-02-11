@@ -21,7 +21,7 @@ Generates iptables -t nat command strings (shell or iptables-restore format).
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
@@ -43,6 +43,7 @@ from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
+    from firewallfabrik.platforms.iptables._nat_compiler import NATCompiler_ipt
 
 
 def _version_compare(v1: str, v2: str) -> int:
@@ -77,11 +78,10 @@ class NATPrintRule(NATRuleProcessor):
         self.version: str = ''
 
     def initialize(self) -> None:
-        if self.compiler:
-            self.version = self.compiler.fw.version or ''
+        self.version = self.compiler.fw.version or ''
 
     def _initialize_minus_n_tracker(self) -> None:
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
         if (
             hasattr(ipt_comp, 'minus_n_commands')
             and ipt_comp.minus_n_commands is not None
@@ -95,7 +95,7 @@ class NATPrintRule(NATRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
         chain = rule.ipt_chain
         if ipt_comp.chain_usage_counter.get(chain, 0) == 0:
             return True
@@ -124,18 +124,19 @@ class NATPrintRule(NATRuleProcessor):
     def _build_nat_command(self, rule: CompRule) -> str:
         """Build NAT iptables command."""
         cmd = ''
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         cmd += self._start_rule_line()
         cmd += self._print_chain_direction_and_interface(rule)
 
-        osrv = self.compiler.get_first_osrv(rule)
+        osrv = ipt_comp.get_first_osrv(rule)
         if osrv:
             cmd += self._print_protocol(osrv)
 
         cmd += self._print_multiport(rule)
 
         # OSrc
-        osrc = self.compiler.get_first_osrc(rule)
+        osrc = ipt_comp.get_first_osrc(rule)
         if osrc:
             addr_str = self._print_addr(osrc)
             if addr_str:
@@ -149,7 +150,7 @@ class NATPrintRule(NATRuleProcessor):
             cmd += self._print_src_service(rule)
 
         # ODst
-        odst = self.compiler.get_first_odst(rule)
+        odst = ipt_comp.get_first_odst(rule)
         if odst:
             addr_str = self._print_addr(odst)
             if addr_str:
@@ -179,10 +180,11 @@ class NATPrintRule(NATRuleProcessor):
         """Print NAT target-specific arguments."""
         rt = rule.nat_rule_type
         target = rule.ipt_target
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
-        tsrc = self.compiler.get_first_tsrc(rule)
-        tdst = self.compiler.get_first_tdst(rule)
-        tsrv = self.compiler.get_first_tsrv(rule)
+        tsrc = ipt_comp.get_first_tsrc(rule)
+        tdst = ipt_comp.get_first_tdst(rule)
+        tsrv = ipt_comp.get_first_tsrv(rule)
 
         if rt == NATRuleType.Masq:
             if rule.get_option('ipt_nat_random', False):
@@ -265,7 +267,7 @@ class NATPrintRule(NATRuleProcessor):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
             self._initialize_minus_n_tracker()
@@ -284,7 +286,7 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _start_rule_line(self) -> str:
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
         ipt_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
         opt_wait = '-w ' if _version_compare(self.version, '1.4.20') >= 0 else ''
         return f'{ipt_cmd} {opt_wait}-t nat -A '
@@ -353,7 +355,7 @@ class NATPrintRule(NATRuleProcessor):
         elif isinstance(srv, UDPService):
             return '-p udp -m udp '
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            if self.compiler and self.compiler.ipv6_policy:
+            if self.compiler.ipv6_policy:
                 return '-p ipv6-icmp '
             return '-p icmp -m icmp '
         elif isinstance(srv, IPService):
@@ -515,7 +517,7 @@ class NATPrintRule(NATRuleProcessor):
 
         if isinstance(obj, Interface):
             if obj.is_dynamic():
-                ipv6 = self.compiler.ipv6_policy if self.compiler else False
+                ipv6 = self.compiler.ipv6_policy
                 suffix = 'v6' if ipv6 else ''
                 var = get_interface_var_name(obj, suffix=suffix)
                 return f'${var} '
@@ -571,7 +573,7 @@ class NATPrintRuleIptRst(NATPrintRule):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
             self._initialize_minus_n_tracker()
@@ -624,7 +626,7 @@ class NATPrintRuleIptRstEcho(NATPrintRuleIptRst):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        ipt_comp = self.compiler
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
             self._initialize_minus_n_tracker()

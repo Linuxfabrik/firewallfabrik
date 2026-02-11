@@ -24,7 +24,7 @@ separately in _nat_print_rule.py.
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
@@ -45,6 +45,7 @@ from firewallfabrik.core.objects import (
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
+    from firewallfabrik.platforms.nftables._policy_compiler import PolicyCompiler_nft
 
 
 class PrintRule_nft(PolicyRuleProcessor):
@@ -83,10 +84,11 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Write to per-chain collection if available (nftables),
         # otherwise to the output stream (fallback).
-        if hasattr(self.compiler, 'chain_rules') and chain in self.compiler.chain_rules:
-            self.compiler.chain_rules[chain].append(text)
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        if hasattr(nft_comp, 'chain_rules') and chain in nft_comp.chain_rules:
+            nft_comp.chain_rules[chain].append(text)
         else:
-            self.compiler.output.write(text)
+            nft_comp.output.write(text)
         return True
 
     def policy_rule_to_string(self, rule: CompRule) -> str:
@@ -157,7 +159,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _get_af_prefix(self, rule: CompRule, srv) -> str:
         """Get the address family prefix (ip/ip6) for matching."""
-        if self.compiler and self.compiler.ipv6_policy:
+        if self.compiler.ipv6_policy:
             return 'ip6'
         return 'ip'
 
@@ -175,7 +177,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
 
         res = []
-        if not self.compiler or not self.compiler.single_rule_compile_mode:
+        if not self.compiler.single_rule_compile_mode:
             res.append('        # ')
             res.append(f'        # Rule {label}')
             res.append('        # ')
@@ -455,7 +457,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         icmp_type = -1 if raw_type is None else int(raw_type)
         icmp_code = -1 if raw_code is None else int(raw_code)
 
-        proto = 'icmpv6' if self.compiler and self.compiler.ipv6_policy else 'icmp'
+        proto = 'icmpv6' if self.compiler.ipv6_policy else 'icmp'
 
         if icmp_type < 0:
             return f'meta l4proto {proto}'
@@ -490,7 +492,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if log_prefix:
             parts.append(f'prefix "{log_prefix}"')
         log_level = rule.get_option('log_level', '')
-        if not log_level and self.compiler:
+        if not log_level:
             log_level = self.compiler.fw.get_option('log_level', '')
         if log_level:
             parts.append(f'level {log_level}')
@@ -499,7 +501,7 @@ class PrintRule_nft(PolicyRuleProcessor):
     def _get_log_prefix(self, rule: CompRule) -> str:
         """Get log prefix, expanding macros."""
         log_prefix = rule.get_option('log_prefix', '')
-        if not log_prefix and self.compiler:
+        if not log_prefix:
             log_prefix = self.compiler.fw.get_option('log_prefix', '')
         if not log_prefix:
             return ''
@@ -519,7 +521,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             iface_name = 'global'
 
         ruleset_name = 'Policy'
-        if self.compiler and self.compiler.source_ruleset:
+        if self.compiler.source_ruleset:
             ruleset_name = self.compiler.source_ruleset.name
 
         result = log_prefix.replace('%N', pos)
@@ -569,7 +571,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             PolicyAction.Continue: '',
         }
 
-        verdict = action_map.get(rule.action, '')
+        action = rule.action
+        verdict = action_map.get(action, '') if isinstance(action, PolicyAction) else ''
         if verdict == 'reject':
             return self._print_reject(rule)
         return verdict

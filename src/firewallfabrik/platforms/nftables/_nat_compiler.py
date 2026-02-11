@@ -328,7 +328,8 @@ class DecideOnChain(NATRuleProcessor):
         if rule.ipt_chain:
             return True
 
-        chain = chain_map.get(rule.nat_rule_type, '')
+        rt = rule.nat_rule_type
+        chain = chain_map.get(rt, '') if rt is not None else ''
         if chain:
             rule.ipt_chain = chain
         else:

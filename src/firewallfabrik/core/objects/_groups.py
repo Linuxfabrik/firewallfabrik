@@ -17,12 +17,19 @@ from __future__ import (
 )
 
 import uuid
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._base import Base
 from ._types import JSONEncodedSet
+
+if TYPE_CHECKING:
+    from ._addresses import Address
+    from ._database import Library
+    from ._devices import Host
+    from ._services import Interval, Service
 
 
 class Group(Base):

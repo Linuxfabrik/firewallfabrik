@@ -20,7 +20,7 @@ firewall policy rules into iptables commands.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
@@ -639,7 +639,7 @@ class Logging2(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         # Special case: Continue action without tagging/classification/routing
         if (
@@ -786,7 +786,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.get_option('no_output_chain', False):
             self.tmp_queue.append(rule)
@@ -816,7 +816,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.get_option('no_input_chain', False):
             self.tmp_queue.append(rule)
@@ -846,7 +846,7 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if len(rule.src) <= 1:
             self.tmp_queue.append(rule)
@@ -876,7 +876,7 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if len(rule.dst) <= 1:
             self.tmp_queue.append(rule)
@@ -906,7 +906,7 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain or rule.is_src_any():
             self.tmp_queue.append(rule)
@@ -940,7 +940,7 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain or rule.is_dst_any():
             self.tmp_queue.append(rule)
@@ -974,7 +974,7 @@ class SpecialCaseWithFW2(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         src_obj = rule.src[0] if rule.src else None
         dst_obj = rule.dst[0] if rule.dst else None
 
@@ -1011,7 +1011,7 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -1041,7 +1041,7 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -1071,7 +1071,7 @@ class DecideOnChainIfLoopback(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if (
             rule.is_src_any()
@@ -1107,7 +1107,7 @@ class FinalizeChain(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -1165,9 +1165,11 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Continue: '.CONTINUE',
             PolicyAction.Custom: '.CUSTOM',
         }
-        target = target_map.get(rule.action)
-        if target is not None:
-            rule.ipt_target = target
+        action = rule.action
+        if isinstance(action, PolicyAction):
+            target = target_map.get(action)
+            if target is not None:
+                rule.ipt_target = target
 
         return True
 
@@ -1185,7 +1187,7 @@ class RemoveFW(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         chain = rule.ipt_chain
         fw_id = ipt_comp.fw.id
 
@@ -1273,7 +1275,7 @@ class Optimize1(PolicyRuleProcessor):
         if srvany:
             srvn = _MAXSIZE
 
-        ipt_comp = self.compiler
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         # Pick element with fewest objects to optimize by
         if (
@@ -1454,8 +1456,9 @@ class CountChainUsage(PolicyRuleProcessor):
             return False
         chain = rule.ipt_chain
         if chain:
-            self.compiler.chain_usage_counter[chain] = (
-                self.compiler.chain_usage_counter.get(chain, 0) + 1
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+            ipt_comp.chain_usage_counter[chain] = (
+                ipt_comp.chain_usage_counter.get(chain, 0) + 1
             )
         self.tmp_queue.append(rule)
         return True

@@ -32,19 +32,39 @@ class BasicRuleProcessor:
     """Base class for all rule processors in the compilation pipeline."""
 
     def __init__(self, name: str = '') -> None:
-        self.compiler: Compiler | None = None
-        self.prev_processor: BasicRuleProcessor | None = None
+        self._compiler: Compiler | None = None
+        self._prev_processor: BasicRuleProcessor | None = None
         self.tmp_queue: deque[CompRule] = deque()
         self.name: str = name
         self._do_once: bool = False
 
+    @property
+    def compiler(self) -> Compiler:
+        """Return the compiler context; raises if not yet set."""
+        assert self._compiler is not None, 'compiler context not set'
+        return self._compiler
+
+    @compiler.setter
+    def compiler(self, value: Compiler | None) -> None:
+        self._compiler = value
+
+    @property
+    def prev_processor(self) -> BasicRuleProcessor:
+        """Return the upstream processor; raises if not yet set."""
+        assert self._prev_processor is not None, 'prev_processor not set'
+        return self._prev_processor
+
+    @prev_processor.setter
+    def prev_processor(self, value: BasicRuleProcessor | None) -> None:
+        self._prev_processor = value
+
     def set_context(self, compiler: Compiler) -> None:
         """Set the compiler context for this processor."""
-        self.compiler = compiler
+        self._compiler = compiler
 
     def set_data_source(self, src: BasicRuleProcessor) -> None:
         """Link this processor to its upstream data source."""
-        self.prev_processor = src
+        self._prev_processor = src
 
     def get_next_rule(self) -> CompRule | None:
         """Pull-based: keep calling process_next() until queue has data."""
@@ -70,7 +90,6 @@ class BasicRuleProcessor:
         Only executes once (idempotent).
         """
         if not self._do_once:
-            assert self.prev_processor is not None
             rule = self.prev_processor.get_next_rule()
             while rule is not None:
                 self.tmp_queue.append(rule)
@@ -92,9 +111,6 @@ class Debug(BasicRuleProcessor):
     """
 
     def process_next(self) -> bool:
-        assert self.compiler is not None
-        assert self.prev_processor is not None
-
         self.slurp()
         if not self.tmp_queue:
             return False
@@ -115,7 +131,6 @@ class PolicyRuleProcessor(BasicRuleProcessor):
     """Convenience base for processors that handle PolicyRule CompRules."""
 
     def get_next(self) -> CompRule | None:
-        assert self.prev_processor is not None
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return None
@@ -128,7 +143,6 @@ class NATRuleProcessor(BasicRuleProcessor):
     """Convenience base for processors that handle NATRule CompRules."""
 
     def get_next(self) -> CompRule | None:
-        assert self.prev_processor is not None
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return None
@@ -141,7 +155,6 @@ class RoutingRuleProcessor(BasicRuleProcessor):
     """Convenience base for processors that handle RoutingRule CompRules."""
 
     def get_next(self) -> CompRule | None:
-        assert self.prev_processor is not None
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return None

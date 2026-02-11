@@ -21,7 +21,7 @@ Generates nft NAT rule statements like:
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
+    from firewallfabrik.platforms.nftables._nat_compiler import NATCompiler_nft
 
 
 class NATPrintRule_nft(NATRuleProcessor):
@@ -73,22 +74,20 @@ class NATPrintRule_nft(NATRuleProcessor):
             text += cmd
 
         # Write to per-chain collection if available
-        if (
-            text
-            and hasattr(self.compiler, 'chain_rules')
-            and chain in self.compiler.chain_rules
-        ):
-            self.compiler.chain_rules[chain].append(text)
+        nft_comp = cast('NATCompiler_nft', self.compiler)
+        if text and hasattr(nft_comp, 'chain_rules') and chain in nft_comp.chain_rules:
+            nft_comp.chain_rules[chain].append(text)
         elif text:
-            self.compiler.output.write(text)
+            nft_comp.output.write(text)
 
         return True
 
     def _build_nat_rule(self, rule: CompRule) -> str:
         """Build a complete nftables NAT rule line."""
         parts: list[str] = []
+        nft_comp = cast('NATCompiler_nft', self.compiler)
 
-        af_prefix = 'ip6' if (self.compiler and self.compiler.ipv6_policy) else 'ip'
+        af_prefix = 'ip6' if nft_comp.ipv6_policy else 'ip'
 
         # Interface matching
         iface_match = self._print_interface(rule)
@@ -96,7 +95,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             parts.append(iface_match)
 
         # Original source
-        osrc = self.compiler.get_first_osrc(rule)
+        osrc = nft_comp.get_first_osrc(rule)
         if osrc:
             addr = self._print_addr(osrc, rule)
             if addr:
@@ -104,7 +103,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'{af_prefix} saddr {neg}{addr}')
 
         # Original destination
-        odst = self.compiler.get_first_odst(rule)
+        odst = nft_comp.get_first_odst(rule)
         if odst:
             addr = self._print_addr(odst, rule)
             if addr:
@@ -112,7 +111,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'{af_prefix} daddr {neg}{addr}')
 
         # Original service
-        osrv = self.compiler.get_first_osrv(rule)
+        osrv = nft_comp.get_first_osrv(rule)
         if osrv:
             srv_match = self._print_service(osrv, rule)
             if srv_match:
@@ -221,7 +220,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         elif isinstance(srv, UDPService):
             proto = 'udp'
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            if self.compiler and self.compiler.ipv6_policy:
+            if self.compiler.ipv6_policy:
                 return 'meta l4proto icmpv6'
             return 'meta l4proto icmp'
         elif isinstance(srv, IPService):
@@ -284,9 +283,10 @@ class NATPrintRule_nft(NATRuleProcessor):
     def _print_nat_action(self, rule: CompRule) -> str:
         """Print the NAT action (snat/dnat/masquerade/redirect)."""
         rt = rule.nat_rule_type
-        tsrc = self.compiler.get_first_tsrc(rule)
-        tdst = self.compiler.get_first_tdst(rule)
-        tsrv = self.compiler.get_first_tsrv(rule)
+        nft_comp = cast('NATCompiler_nft', self.compiler)
+        tsrc = nft_comp.get_first_tsrc(rule)
+        tdst = nft_comp.get_first_tdst(rule)
+        tsrv = nft_comp.get_first_tsrv(rule)
 
         if rt == NATRuleType.NONAT:
             return 'accept'

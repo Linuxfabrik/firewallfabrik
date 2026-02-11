@@ -18,12 +18,18 @@ from __future__ import (
 
 import ipaddress
 import uuid
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._base import Base
 from ._types import JSONEncodedSet
+
+if TYPE_CHECKING:
+    from ._database import Library
+    from ._devices import Interface
+    from ._groups import Group
 
 
 class Address(Base):

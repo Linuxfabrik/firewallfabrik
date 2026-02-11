@@ -17,12 +17,19 @@ from __future__ import (
 )
 
 import uuid
+from typing import TYPE_CHECKING, Any
 
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._base import Base
 from ._types import JSONEncodedSet
+
+if TYPE_CHECKING:
+    from ._addresses import Address
+    from ._database import Library
+    from ._groups import Group
+    from ._rules import RuleSet
 
 
 class Host(Base):
@@ -111,7 +118,7 @@ class Host(Base):
 
     # -- Compiler helper methods --
 
-    def get_option(self, key: str, default: object = None) -> object:
+    def get_option(self, key: str, default: Any = None) -> Any:
         """Look up a value in the device options dict.
 
         Coerces string ``"True"``/``"False"`` to Python bools so that
@@ -227,7 +234,7 @@ class Interface(Base):
 
     # -- Compiler helper methods --
 
-    def get_option(self, key: str, default: object = None) -> object:
+    def get_option(self, key: str, default: Any = None) -> Any:
         """Look up a value in the interface options dict."""
         if self.options:
             val = self.options.get(key, default)

@@ -43,6 +43,7 @@ class Preprocessor(BaseCompiler):
         self.session: sqlalchemy.orm.Session = session
         self.fw: Firewall = fw
         self.ipv6: bool = ipv6
+        self.single_rule_compile_mode: bool = False
 
     def compile(self) -> None:
         """Run the preprocessor."""

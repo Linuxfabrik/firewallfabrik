@@ -88,11 +88,10 @@ class CompilerDriver_nft(CompilerDriver):
         # -- Look up firewall --
         with self.db.session() as session:
             if fw_id:
-                if isinstance(fw_id, str):
-                    fw_id = uuid.UUID(fw_id)
+                fw_uuid = uuid.UUID(fw_id) if isinstance(fw_id, str) else fw_id
                 fw = session.execute(
                     sqlalchemy.select(Firewall).where(
-                        Firewall.id == fw_id,
+                        Firewall.id == fw_uuid,
                     ),
                 ).scalar_one_or_none()
             else:
