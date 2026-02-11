@@ -16,16 +16,22 @@ import json
 import uuid
 
 from PySide6.QtCore import QModelIndex, Qt
-from PySide6.QtGui import QIcon, QKeySequence
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QInputDialog,
     QMenu,
+    QStyledItemDelegate,
     QTreeView,
 )
 
 from firewallfabrik.core.objects import Direction, PolicyAction
+from firewallfabrik.gui.label_settings import (
+    LABEL_KEYS,
+    get_label_color,
+    get_label_text,
+)
 from firewallfabrik.gui.policy_model import (
     _COL_ACTION,
     _COL_DIRECTION,
@@ -82,6 +88,29 @@ _VALID_TYPES_BY_SLOT = {
 }
 
 
+class _CellBorderDelegate(QStyledItemDelegate):
+    """Delegate that draws lightgray cell borders and adds vertical padding.
+
+    Matches fwbuilder's ``RuleSetViewDelegate`` look (explicit grid
+    lines, ``VERTICAL_MARGIN=2``, ``HORIZONTAL_MARGIN=2``).
+    """
+
+    _BORDER_COLOR = QColor('lightgray')
+    _V_PAD = 2
+
+    def sizeHint(self, option, index):
+        hint = super().sizeHint(option, index)
+        hint.setHeight(hint.height() + 2 * self._V_PAD)
+        return hint
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        painter.save()
+        painter.setPen(self._BORDER_COLOR)
+        painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        painter.restore()
+
+
 class PolicyView(QTreeView):
     """Tree view with context menus, keyboard shortcuts, and drop support."""
 
@@ -91,6 +120,7 @@ class PolicyView(QTreeView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setRootIsDecorated(True)
+        self.setItemDelegate(_CellBorderDelegate(self))
         self.header().setStretchLastSection(True)
         self.header().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents,
@@ -181,45 +211,25 @@ class PolicyView(QTreeView):
         row_data = model.get_row_data(index)
         in_group = row_data is not None and row_data.group
 
+        if in_group:
+            menu.addAction(
+                'Remove From Group',
+                lambda: model.remove_from_group([index]),
+            )
+            menu.addSeparator()
+        elif not in_group:
+            self._add_new_group_action(menu, model, index)
+
+        self._add_color_submenu(menu, model, index)
+        menu.addSeparator()
+
         if col == _COL_ACTION:
-            if in_group:
-                menu.addAction(
-                    'Remove From Group',
-                    lambda: model.remove_from_group([index]),
-                )
-                menu.addSeparator()
-            elif not in_group:
-                self._add_new_group_action(menu, model, index)
             self._build_action_menu(menu, model, index)
         elif col == _COL_DIRECTION:
-            if in_group:
-                menu.addAction(
-                    'Remove From Group',
-                    lambda: model.remove_from_group([index]),
-                )
-                menu.addSeparator()
-            elif not in_group:
-                self._add_new_group_action(menu, model, index)
             self._build_direction_menu(menu, model, index)
         elif col in _ELEMENT_COLS:
-            if in_group:
-                menu.addAction(
-                    'Remove From Group',
-                    lambda: model.remove_from_group([index]),
-                )
-                menu.addSeparator()
-            elif not in_group:
-                self._add_new_group_action(menu, model, index)
             self._build_element_menu(menu, model, index, col)
         else:
-            if in_group:
-                menu.addAction(
-                    'Remove From Group',
-                    lambda: model.remove_from_group([index]),
-                )
-                menu.addSeparator()
-            elif not in_group:
-                self._add_new_group_action(menu, model, index)
             self._build_row_menu(menu, model, index)
 
         menu.exec(self.viewport().mapToGlobal(pos))
@@ -333,6 +343,33 @@ class PolicyView(QTreeView):
                 f'Remove {name}',
                 lambda tid=target_id: model.remove_element(index, slot, tid),
             )
+
+    def _add_color_submenu(self, menu, model, index):
+        """Add a 'Color' submenu with 7 label entries + 'No Color'."""
+        color_menu = menu.addMenu('Change Color')
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+        for key in LABEL_KEYS:
+            pixmap = QPixmap(16, 16)
+            pixmap.fill(QColor(get_label_color(key)))
+            icon = QIcon(pixmap)
+            color_menu.addAction(
+                icon,
+                get_label_text(key),
+                lambda k=key: self._set_label_on_selection(model, selected, k),
+            )
+        color_menu.addSeparator()
+        color_menu.addAction(
+            'No Color',
+            lambda: self._set_label_on_selection(model, selected, ''),
+        )
+
+    @staticmethod
+    def _set_label_on_selection(model, indices, label_key):
+        """Apply *label_key* to all rules in *indices*."""
+        for idx in indices:
+            model.set_label(idx, label_key)
 
     # ------------------------------------------------------------------
     # Selection helpers

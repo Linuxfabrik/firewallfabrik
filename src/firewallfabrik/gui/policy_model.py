@@ -32,6 +32,11 @@ from firewallfabrik.core.objects import (
     Service,
     rule_elements,
 )
+from firewallfabrik.gui.label_settings import (
+    LABEL_KEYS,
+    get_label_color,
+    get_label_text,
+)
 
 FWF_MIME_TYPE = 'application/x-fwf-object'
 _INVALID_INDEX = QModelIndex()
@@ -65,12 +70,6 @@ _COL_TO_SLOT = {
 
 _ELEMENT_COLS = frozenset(_COL_TO_SLOT.keys())
 
-_ACTION_COLORS = {
-    'Accept': QColor(200, 255, 200),
-    'Deny': QColor(255, 200, 200),
-    'Reject': QColor(255, 230, 200),
-}
-
 _DIRECTION_ICONS = {
     'Both': ':/Icons/Both/icon-tree',
     'Inbound': ':/Icons/Inbound/icon-tree',
@@ -95,12 +94,14 @@ class _RowData:
 
     action: str
     action_int: int
+    color_hex: str
     comment: str
     direction: str
     direction_int: int
     dst: list  # list[tuple[uuid.UUID, str]]
     group: str
     itf: list
+    label: str
     position: int
     rule_id: uuid.UUID
     src: list
@@ -190,17 +191,23 @@ class PolicyTreeModel(QAbstractItemModel):
                     action = PolicyAction.Unknown
                     act_name = ''
 
-                group_name = (rule.options or {}).get('group', '')
+                opts = rule.options or {}
+                group_name = opts.get('group', '')
+                color_hex = opts.get('color', '')
+                if not color_hex and rule.label and rule.label in LABEL_KEYS:
+                    color_hex = get_label_color(rule.label)
 
                 row_data = _RowData(
                     action=act_name,
                     action_int=action.value,
+                    color_hex=color_hex,
                     comment=rule.comment or '',
                     direction=dir_name,
                     direction_int=direction.value,
                     dst=slots.get('dst', []),
                     group=group_name,
                     itf=slots.get('itf', []),
+                    label=rule.label or '',
                     position=rule.position,
                     rule_id=rule.id,
                     src=slots.get('src', []),
@@ -396,7 +403,17 @@ class PolicyTreeModel(QAbstractItemModel):
                 return self._display_value(row_data, col)
             return None
         if role == Qt.ItemDataRole.BackgroundRole:
-            return _ACTION_COLORS.get(row_data.action)
+            if row_data.color_hex:
+                return QColor(row_data.color_hex)
+            return None
+        if role == Qt.ItemDataRole.ForegroundRole:
+            if row_data.color_hex:
+                return _contrast_color(QColor(row_data.color_hex))
+            return None
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            if col == _COL_POSITION:
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            return None
         if role == Qt.ItemDataRole.DecorationRole:
             if col == _COL_ACTION:
                 icon_path = f':/Icons/{row_data.action}/icon-tree'
@@ -689,6 +706,33 @@ class PolicyTreeModel(QAbstractItemModel):
                 rule.policy_direction = direction.value
         self.reload()
 
+    def set_label(self, index, label_key):
+        """Set the color label for the rule at *index*.
+
+        *label_key* should be one of ``'color1'`` .. ``'color7'``, or
+        ``''`` to remove the label.
+        """
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        if label_key:
+            desc = (
+                f'Change rule {row_data.position} color to {get_label_text(label_key)}'
+            )
+        else:
+            desc = f'Remove rule {row_data.position} color'
+        with self._db_manager.session(desc) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                rule.label = label_key
+                opts = dict(rule.options or {})
+                if label_key:
+                    opts['color'] = get_label_color(label_key)
+                else:
+                    opts.pop('color', None)
+                rule.options = opts
+        self.reload()
+
     def add_element(self, index, slot, target_id):
         """Add *target_id* to element *slot* of the rule at *index*."""
         row_data = self.get_row_data(index)
@@ -882,6 +926,19 @@ class PolicyTreeModel(QAbstractItemModel):
                     .values(position=PolicyRule.position + 1),
                 )
             rule.position = target_pos
+
+
+_BLACK = QColor('black')
+_WHITE = QColor('white')
+
+
+def _contrast_color(bg):
+    """Return black or white, whichever has more contrast against *bg*.
+
+    Uses the WCAG perceived-luminance formula.
+    """
+    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
+    return _BLACK if luminance > 128 else _WHITE
 
 
 def _format_elements(pairs):
