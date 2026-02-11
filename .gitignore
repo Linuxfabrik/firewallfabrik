@@ -157,3 +157,5 @@ cython_debug/
 
 # Compiled Qt resources (auto-generated from .qrc)
 *.rcc
+
+CLAUDE.md
