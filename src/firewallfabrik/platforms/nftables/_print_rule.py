@@ -579,9 +579,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not action_on_reject:
             return 'reject'
 
-        # Map iptables reject types to nftables
+        # Map reject type names to nftables syntax.
+        # Values come from the GUI ("ICMP host unreachable"),
+        # iptables syntax ("icmp-host-unreachable"), or legacy aliases.
+        # The GUI names are defined in platforms.cpp:actionsOnReject.
         reject_map = {
+            'ICMP host unreachable': 'reject with icmp host-unreachable',
+            'ICMP net unreachable': 'reject with icmp net-unreachable',
+            'ICMP port unreachable': 'reject with icmp port-unreachable',
+            'ICMP protocol unreachable': 'reject with icmp prot-unreachable',
+            'ICMP admin prohibited': 'reject with icmp admin-prohibited',
             'ICMP-unreachable': 'reject with icmp host-unreachable',
+            'TCP RST': 'reject with tcp reset',
             'icmp-host-unreachable': 'reject with icmp host-unreachable',
             'icmp-net-unreachable': 'reject with icmp net-unreachable',
             'icmp-port-unreachable': 'reject with icmp port-unreachable',

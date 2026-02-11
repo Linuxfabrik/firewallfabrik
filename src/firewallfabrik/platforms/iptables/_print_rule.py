@@ -262,6 +262,14 @@ class PrintRule(PolicyRuleProcessor):
             return ''
 
         if rule.is_itf_any():
+            # On FORWARD chain, add wildcard interface match (-i + / -o +)
+            # to indicate traffic direction.  INPUT/OUTPUT chains don't need
+            # this because the chain itself implies direction.
+            if rule.ipt_chain == 'FORWARD':
+                if rule.direction == Direction.Inbound:
+                    return '-i + '
+                if rule.direction == Direction.Outbound:
+                    return '-o + '
             return ''
 
         iface_obj = rule.itf[0] if rule.itf else None
@@ -531,6 +539,10 @@ class PrintRule(PolicyRuleProcessor):
         if target:
             if target.startswith('.'):
                 return ''
+            if target == 'REJECT':
+                reject_opt = self._print_action_on_reject(rule)
+                if reject_opt:
+                    return f' -j REJECT {reject_opt}'
             return f' -j {target}'
 
         action_map = {
@@ -554,9 +566,32 @@ class PrintRule(PolicyRuleProcessor):
 
     def _print_action_on_reject(self, rule: CompRule) -> str:
         reject_with = rule.get_option('action_on_reject', '')
-        if reject_with:
-            return f'--reject-with {reject_with}'
-        return ''
+        if not reject_with:
+            return ''
+
+        # Map GUI display names and aliases to iptables --reject-with values.
+        # The GUI stores human-readable names like "ICMP host unreachable";
+        # the C++ compiler maps these via substring matching (see
+        # PolicyCompiler_PrintRule.cpp:_printActionOnReject).
+        reject_map = {
+            'ICMP host unreachable': 'icmp-host-unreachable',
+            'ICMP net unreachable': 'icmp-net-unreachable',
+            'ICMP port unreachable': 'icmp-port-unreachable',
+            'ICMP protocol unreachable': 'icmp-proto-unreachable',
+            'ICMP admin prohibited': 'icmp-admin-prohibited',
+            'ICMP-unreachable': 'icmp-host-unreachable',
+            'TCP RST': 'tcp-reset',
+        }
+        reject_with = reject_map.get(reject_with, reject_with)
+
+        # icmp-admin-prohibited requires iptables >= 1.2.9
+        if (
+            reject_with == 'icmp-admin-prohibited'
+            and _version_compare(self.version, '1.2.9') < 0
+        ):
+            return ''
+
+        return f'--reject-with {reject_with}'
 
     def _print_log_parameters(self, rule: CompRule) -> str:
         """Print logging parameters."""
