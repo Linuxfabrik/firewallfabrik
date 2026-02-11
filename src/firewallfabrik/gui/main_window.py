@@ -586,7 +586,9 @@ class FWWindow(QMainWindow):
     @Slot(str, str, str)
     def _open_rule_set(self, rule_set_id, fw_name, rs_name):
         """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
-        model = PolicyTreeModel(self._db_manager, uuid.UUID(rule_set_id))
+        model = PolicyTreeModel(
+            self._db_manager, uuid.UUID(rule_set_id), object_name=fw_name
+        )
         view = PolicyView()
         view.setModel(model)
 

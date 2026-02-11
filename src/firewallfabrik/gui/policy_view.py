@@ -280,9 +280,15 @@ class PolicyView(QTreeView):
         menu.addSeparator()
         menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
-        up = menu.addAction('Move Up', lambda: model.move_rule_up(index))
+        up = menu.addAction(
+            'Move Up',
+            lambda: self._move_and_select(model.move_rule_up(index)),
+        )
         up.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp))
-        down = menu.addAction('Move Down', lambda: model.move_rule_down(index))
+        down = menu.addAction(
+            'Move Down',
+            lambda: self._move_and_select(model.move_rule_down(index)),
+        )
         down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
 
     @staticmethod
@@ -391,6 +397,17 @@ class PolicyView(QTreeView):
                 result.append(idx0)
         return result
 
+    def _move_and_select(self, rule_id):
+        """Re-select the moved rule after a move operation."""
+        if rule_id is None:
+            return
+        model = self.model()
+        if model is None:
+            return
+        new_idx = model.index_for_rule(rule_id)
+        if new_idx.isValid():
+            self.setCurrentIndex(new_idx)
+
     # ------------------------------------------------------------------
     # Keyboard shortcuts
     # ------------------------------------------------------------------
@@ -408,12 +425,12 @@ class PolicyView(QTreeView):
             if key == Qt.Key.Key_PageUp:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
-                    model.move_rule_up(idx)
+                    self._move_and_select(model.move_rule_up(idx))
                 return
             if key == Qt.Key.Key_PageDown:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
-                    model.move_rule_down(idx)
+                    self._move_and_select(model.move_rule_down(idx))
                 return
 
         if modifiers == Qt.KeyboardModifier.NoModifier:

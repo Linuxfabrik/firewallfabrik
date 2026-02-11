@@ -130,9 +130,10 @@ class _TreeNode:
 class PolicyTreeModel(QAbstractItemModel):
     """Database-backed tree model for policy rules with group support."""
 
-    def __init__(self, db_manager, rule_set_id, parent=None):
+    def __init__(self, db_manager, rule_set_id, *, object_name='', parent=None):
         super().__init__(parent)
         self._db_manager = db_manager
+        self._object_name = object_name
         self._rule_set_id = rule_set_id
         self._root = _TreeNode(_NodeType.Root)
         self.reload()
@@ -237,6 +238,12 @@ class PolicyTreeModel(QAbstractItemModel):
 
         self.endResetModel()
 
+    def _desc(self, text):
+        """Prefix *text* with the object name for undo descriptions."""
+        if self._object_name:
+            return f'{self._object_name}: {text}'
+        return text
+
     @staticmethod
     def _build_name_map(session):
         """Build a {uuid: name} lookup from all name-bearing tables."""
@@ -316,7 +323,7 @@ class PolicyTreeModel(QAbstractItemModel):
             return False
 
         with self._db_manager.session(
-            f'Edit rule {row_data.position} comment',
+            self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
@@ -459,6 +466,17 @@ class PolicyTreeModel(QAbstractItemModel):
             return node.row_data
         return None
 
+    def index_for_rule(self, rule_id):
+        """Return a :class:`QModelIndex` for the rule with *rule_id*, or invalid."""
+        for i, child in enumerate(self._root.children):
+            if child.node_type == _NodeType.Rule and child.row_data.rule_id == rule_id:
+                return self.createIndex(i, 0, child)
+            if child.node_type == _NodeType.Group:
+                for j, grandchild in enumerate(child.children):
+                    if grandchild.row_data.rule_id == rule_id:
+                        return self.createIndex(j, 0, grandchild)
+        return QModelIndex()
+
     def flat_rule_count(self):
         """Return the total number of rule nodes in the tree."""
         count = 0
@@ -499,7 +517,7 @@ class PolicyTreeModel(QAbstractItemModel):
             else:
                 position = self.flat_rule_count()
 
-        with self._db_manager.session(f'New rule {position}') as session:
+        with self._db_manager.session(self._desc(f'New rule {position}')) as session:
             # Shift existing rules at or after the insertion point.
             session.execute(
                 sqlalchemy.update(PolicyRule)
@@ -537,7 +555,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._db_manager.session('Delete rule(s)') as session:
+        with self._db_manager.session(self._desc('Delete rule(s)')) as session:
             # Remove rule_elements first (FK constraint).
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -563,122 +581,116 @@ class PolicyTreeModel(QAbstractItemModel):
 
         Group boundary behavior:
         - First in group + up → leaves group (placed before group)
-        - Top-level above group + up → normal swap
+        - Top-level above group + up → joins group as last member
+
+        Returns the :pyattr:`rule_id` of the moved rule, or *None*.
         """
         if not index.isValid():
-            return
+            return None
         node = index.internalPointer()
         if node.node_type != _NodeType.Rule:
-            return
+            return None
 
+        pos = node.row_data.position
+        rule_id = node.row_data.rule_id
         parent_node = node.parent
         child_idx = parent_node.children.index(node)
 
         if parent_node is self._root:
-            # Top-level rule.
             if child_idx == 0:
-                return  # Already at top.
+                return None
             prev = parent_node.children[child_idx - 1]
             if prev.node_type == _NodeType.Group and prev.children:
-                # Join the group above at the bottom.
-                self._set_rule_group_in_db(
-                    node.row_data.rule_id,
-                    prev.name,
-                    'Move rule into group',
-                )
-                self._swap_positions_by_id(
-                    node.row_data.rule_id,
-                    prev.children[-1].row_data.rule_id,
+                self._do_move(
+                    rule_id,
+                    new_group=prev.name,
+                    description=f'Move rule {pos} into group',
                 )
             else:
                 prev_data = prev.row_data if prev.node_type == _NodeType.Rule else None
                 if prev_data:
-                    self._swap_positions_by_id(
-                        node.row_data.rule_id,
-                        prev_data.rule_id,
+                    self._do_move(
+                        rule_id,
+                        swap_with=prev_data.rule_id,
+                        description=f'Move rule {pos} > rule {prev_data.position}',
                     )
         else:
-            # Inside a group.
             if child_idx == 0:
-                # Leave group: place before group at root level.
-                self._set_rule_group_in_db(
-                    node.row_data.rule_id,
-                    '',
-                    'Remove from group',
+                first_pos = parent_node.children[0].row_data.position
+                self._do_move(
+                    rule_id,
+                    new_group='',
+                    target_pos=first_pos,
+                    description=f'Move rule {pos} out of group',
                 )
-                # Find position just before the first rule in the group.
-                first_in_group = parent_node.children[0]
-                target_pos = first_in_group.row_data.position
-                self._move_rule_to_position(node.row_data.rule_id, target_pos - 1)
             else:
                 prev = parent_node.children[child_idx - 1]
-                self._swap_positions_by_id(
-                    node.row_data.rule_id,
-                    prev.row_data.rule_id,
+                self._do_move(
+                    rule_id,
+                    swap_with=prev.row_data.rule_id,
+                    description=f'Move rule {pos} > rule {prev.row_data.position}',
                 )
 
         self.reload()
+        return rule_id
 
     def move_rule_down(self, index):
         """Move the rule at *index* down one position.
 
         Group boundary behavior:
         - Last in group + down → leaves group (placed after group)
-        - Top-level below group + down → normal swap
+        - Top-level below group + down → joins group as first member
+
+        Returns the :pyattr:`rule_id` of the moved rule, or *None*.
         """
         if not index.isValid():
-            return
+            return None
         node = index.internalPointer()
         if node.node_type != _NodeType.Rule:
-            return
+            return None
 
+        pos = node.row_data.position
+        rule_id = node.row_data.rule_id
         parent_node = node.parent
         child_idx = parent_node.children.index(node)
 
         if parent_node is self._root:
-            # Top-level rule.
             if child_idx >= len(parent_node.children) - 1:
-                return  # Already at bottom.
+                return None
             nxt = parent_node.children[child_idx + 1]
             if nxt.node_type == _NodeType.Group and nxt.children:
-                # Join the group below at the top.
-                self._set_rule_group_in_db(
-                    node.row_data.rule_id,
-                    nxt.name,
-                    'Move rule into group',
-                )
-                self._swap_positions_by_id(
-                    node.row_data.rule_id,
-                    nxt.children[0].row_data.rule_id,
+                self._do_move(
+                    rule_id,
+                    new_group=nxt.name,
+                    description=f'Move rule {pos} into group',
                 )
             else:
                 nxt_data = nxt.row_data if nxt.node_type == _NodeType.Rule else None
                 if nxt_data:
-                    self._swap_positions_by_id(
-                        node.row_data.rule_id,
-                        nxt_data.rule_id,
+                    self._do_move(
+                        rule_id,
+                        swap_with=nxt_data.rule_id,
+                        description=f'Move rule {pos} > rule {nxt_data.position}',
                     )
         else:
-            # Inside a group.
             if child_idx >= len(parent_node.children) - 1:
-                # Leave group: place after group at root level.
-                self._set_rule_group_in_db(
-                    node.row_data.rule_id,
-                    '',
-                    'Remove from group',
+                last_pos = parent_node.children[-1].row_data.position
+                self._do_move(
+                    rule_id,
+                    new_group='',
+                    target_pos=last_pos,
+                    description=f'Move rule {pos} out of group',
                 )
-                # Find position just after the last rule in the group.
-                last_in_group = parent_node.children[-1]
-                target_pos = last_in_group.row_data.position
-                self._move_rule_to_position(node.row_data.rule_id, target_pos + 1)
             else:
                 nxt = parent_node.children[child_idx + 1]
-                self._swap_positions_by_id(
-                    node.row_data.rule_id,
-                    nxt.row_data.rule_id,
+                self._do_move(
+                    rule_id,
+                    swap_with=nxt.row_data.rule_id,
+                    description=f'Move rule {pos} > rule {nxt.row_data.position}',
                 )
 
         self.reload()
+        return rule_id
 
     def set_action(self, index, action):
         """Set the policy action for the rule at *index*."""
@@ -686,7 +698,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         with self._db_manager.session(
-            f'Edit rule {row_data.position} action',
+            self._desc(f'Edit rule {row_data.position} action'),
         ) as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
@@ -699,7 +711,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         with self._db_manager.session(
-            f'Edit rule {row_data.position} direction',
+            self._desc(f'Edit rule {row_data.position} direction'),
         ) as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
@@ -721,7 +733,7 @@ class PolicyTreeModel(QAbstractItemModel):
             )
         else:
             desc = f'Remove rule {row_data.position} color'
-        with self._db_manager.session(desc) as session:
+        with self._db_manager.session(self._desc(desc)) as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
                 rule.label = label_key
@@ -739,7 +751,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         with self._db_manager.session(
-            f'Edit rule {row_data.position} {slot}',
+            self._desc(f'Edit rule {row_data.position} {slot}'),
         ) as session:
             # Check for duplicate.
             existing = session.execute(
@@ -778,7 +790,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         with self._db_manager.session(
-            f'Edit rule {row_data.position} {slot}',
+            self._desc(f'Edit rule {row_data.position} {slot}'),
         ) as session:
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -806,7 +818,9 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._db_manager.session(f'New group {unique_name}') as session:
+        with self._db_manager.session(
+            self._desc(f'New group {unique_name}')
+        ) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, unique_name)
         self.reload()
@@ -822,7 +836,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if new_name == old_name:
             return
 
-        with self._db_manager.session('Rename group') as session:
+        with self._db_manager.session(self._desc('Rename group')) as session:
             for child in node.children:
                 self._set_rule_group(session, child.row_data.rule_id, new_name)
         self.reload()
@@ -839,7 +853,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._db_manager.session('Remove from group') as session:
+        with self._db_manager.session(self._desc('Remove from group')) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, '')
         self.reload()
@@ -874,58 +888,43 @@ class PolicyTreeModel(QAbstractItemModel):
             opts.pop('group', None)
         rule.options = opts
 
-    def _set_rule_group_in_db(self, rule_id, group_name, description):
-        """Set group in a dedicated session with undo description."""
-        with self._db_manager.session(description) as session:
-            self._set_rule_group(session, rule_id, group_name)
+    def _do_move(
+        self,
+        rule_id,
+        *,
+        description,
+        new_group=None,
+        swap_with=None,
+        target_pos=None,
+    ):
+        """Perform a move in a single session (group change + reposition).
 
-    def _swap_positions_by_id(self, id_a, id_b):
-        """Swap the positions of two rules by their IDs."""
-        with self._db_manager.session('Move rule') as session:
-            rule_a = session.get(PolicyRule, id_a)
-            rule_b = session.get(PolicyRule, id_b)
-            if rule_a is not None and rule_b is not None:
-                rule_a.position, rule_b.position = (
-                    rule_b.position,
-                    rule_a.position,
-                )
-
-    def _move_rule_to_position(self, rule_id, target_pos):
-        """Move a rule to *target_pos*, shifting others as needed."""
-        with self._db_manager.session('Move rule') as session:
+        Exactly one of *swap_with* or *target_pos* may be given (or
+        neither, when only a group change is needed).  After the
+        operation, all positions in the rule set are renumbered
+        sequentially.
+        """
+        with self._db_manager.session(self._desc(description)) as session:
             rule = session.get(PolicyRule, rule_id)
             if rule is None:
                 return
-            old_pos = rule.position
-            if old_pos == target_pos:
-                return
-            if target_pos < 0:
-                target_pos = 0
-            if old_pos < target_pos:
-                # Moving down: shift rules in (old_pos, target_pos] up by 1.
-                session.execute(
-                    sqlalchemy.update(PolicyRule)
-                    .where(
-                        PolicyRule.rule_set_id == self._rule_set_id,
-                        PolicyRule.position > old_pos,
-                        PolicyRule.position <= target_pos,
-                        PolicyRule.id != rule_id,
-                    )
-                    .values(position=PolicyRule.position - 1),
-                )
-            else:
-                # Moving up: shift rules in [target_pos, old_pos) down by 1.
-                session.execute(
-                    sqlalchemy.update(PolicyRule)
-                    .where(
-                        PolicyRule.rule_set_id == self._rule_set_id,
-                        PolicyRule.position >= target_pos,
-                        PolicyRule.position < old_pos,
-                        PolicyRule.id != rule_id,
-                    )
-                    .values(position=PolicyRule.position + 1),
-                )
-            rule.position = target_pos
+            if new_group is not None:
+                self._set_rule_group(session, rule_id, new_group)
+            if swap_with is not None:
+                other = session.get(PolicyRule, swap_with)
+                if other is not None:
+                    rule.position, other.position = other.position, rule.position
+            elif target_pos is not None:
+                rule.position = target_pos
+            # Renumber to keep positions sequential (0, 1, 2, …).
+            session.flush()
+            remaining = session.scalars(
+                sqlalchemy.select(PolicyRule)
+                .where(PolicyRule.rule_set_id == self._rule_set_id)
+                .order_by(PolicyRule.position, PolicyRule.id),
+            ).all()
+            for i, r in enumerate(remaining):
+                r.position = i
 
 
 _BLACK = QColor('black')
