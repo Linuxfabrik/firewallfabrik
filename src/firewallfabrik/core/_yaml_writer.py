@@ -13,6 +13,7 @@
 """YAML writer for serializing the database object graph to a single YAML file."""
 
 import logging
+import os
 import pathlib
 
 import sqlalchemy
@@ -530,7 +531,10 @@ class YamlWriter:
 
     @staticmethod
     def _write_yaml(path, data):
-        with pathlib.Path.open(path, 'w', encoding='utf-8') as f:
+        """Write the provided data as YAML atomically to the file."""
+        path = pathlib.Path(path)
+        tmp_path = path.with_suffix(path.suffix + '.tmp')
+        with pathlib.Path.open(tmp_path, 'w', encoding='utf-8') as f:
             yaml.dump(
                 data,
                 f,
@@ -539,3 +543,6 @@ class YamlWriter:
                 sort_keys=False,
                 allow_unicode=True,
             )
+            f.flush()
+            os.fsync(f.fileno())
+        tmp_path.replace(path)
