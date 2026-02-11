@@ -497,12 +497,25 @@ class ObjectTree(QWidget):
         self._applying_saved_width = False
         self._apply_column_setup()
 
+        # One-time cleanup of stale keys from an earlier implementation.
+        settings = QSettings()
+        if settings.value('TreeState') is not None:
+            settings.remove('TreeState')
+            settings.sync()
+
         self._tree.header().sectionResized.connect(self._on_section_resized)
         self._tree.itemDoubleClicked.connect(self._on_double_click)
         self._filter.textChanged.connect(self._apply_filter)
 
-    def populate(self, session):
-        """Build the tree from all libraries in *session*."""
+    def populate(self, session, file_key=''):
+        """Build the tree from all libraries in *session*.
+
+        *file_key* identifies the loaded file (typically ``str(path)``).
+        When set, the expand/collapse state is restored from QSettings
+        if no in-memory state exists (i.e. first open of this file in
+        the current session).
+        """
+        had_tree = self._tree.topLevelItemCount() > 0
         expanded = self._save_expanded_state()
         self._tree.clear()
         self._filter.clear()
@@ -537,33 +550,46 @@ class ObjectTree(QWidget):
             self._tree.addTopLevelItem(lib_item)
             self._add_children(lib, lib_item)
 
-        if expanded:
+        if had_tree:
+            # In-memory state from a previous populate (e.g. undo/redo).
             self._restore_expanded_state(expanded)
+        elif file_key:
+            # Try QSettings for this file, otherwise use defaults.
+            stored = self._load_tree_state(file_key)
+            if stored is not None:
+                self._restore_expanded_state(stored)
+            else:
+                self._apply_default_expand()
         else:
-            # First populate — collapse "Standard" by default, expand everything else.
-            for i in range(self._tree.topLevelItemCount()):
-                item = self._tree.topLevelItem(i)
-                item.setExpanded(item.text(0) != 'Standard')
+            self._apply_default_expand()
 
         # Defer column setup so Qt has finished layout/painting first;
         # otherwise ResizeToContents computes zero width for column 1.
         QTimer.singleShot(0, self._apply_column_setup)
 
+    @staticmethod
+    def _item_path(item):
+        """Build a stable path key from *item* to the tree root.
+
+        Uses display text at each level (e.g. ``User/Firewalls/fw1``),
+        which is deterministic across file reloads unlike object UUIDs.
+        """
+        parts = []
+        current = item
+        while current:
+            parts.append(current.text(0))
+            current = current.parent()
+        parts.reverse()
+        return '/'.join(parts)
+
     def _save_expanded_state(self):
-        """Collect identifiers for all currently expanded tree items."""
+        """Collect path keys for all currently expanded tree items."""
         expanded = set()
 
         def _walk(item):
             if not item.isExpanded():
                 return
-            obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-            if obj_id:
-                expanded.add(obj_id)
-            else:
-                # Category item — identify by parent ID + label.
-                parent = item.parent()
-                parent_id = parent.data(0, Qt.ItemDataRole.UserRole) if parent else ''
-                expanded.add(f'cat:{parent_id}:{item.text(0)}')
+            expanded.add(self._item_path(item))
             for i in range(item.childCount()):
                 _walk(item.child(i))
 
@@ -572,22 +598,64 @@ class ObjectTree(QWidget):
         return expanded
 
     def _restore_expanded_state(self, expanded_ids):
-        """Re-expand items whose identifiers are in *expanded_ids*."""
+        """Re-expand items whose path keys are in *expanded_ids*."""
 
         def _walk(item):
-            obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-            if obj_id:
-                key = obj_id
-            else:
-                parent = item.parent()
-                parent_id = parent.data(0, Qt.ItemDataRole.UserRole) if parent else ''
-                key = f'cat:{parent_id}:{item.text(0)}'
-            item.setExpanded(key in expanded_ids)
+            item.setExpanded(self._item_path(item) in expanded_ids)
             for i in range(item.childCount()):
                 _walk(item.child(i))
 
         for i in range(self._tree.topLevelItemCount()):
             _walk(self._tree.topLevelItem(i))
+
+    def _apply_default_expand(self):
+        """Collapse "Standard" library, expand everything else."""
+        for i in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(i)
+            item.setExpanded(item.text(0) != 'Standard')
+
+    def save_tree_state(self, file_key):
+        """Persist current tree expand/collapse state to QSettings.
+
+        *file_key* should be the same string passed to :meth:`populate`
+        (typically ``str(file_path)``).
+        """
+        if not file_key or self._tree.topLevelItemCount() == 0:
+            return
+        expanded = self._save_expanded_state()
+        settings = QSettings()
+        all_states = self._read_all_tree_states(settings)
+        all_states[file_key] = sorted(expanded)
+        settings.setValue('UI/TreeExpandState', json.dumps(all_states))
+        settings.sync()
+
+    def _load_tree_state(self, file_key):
+        """Load persisted expand state from QSettings, or *None*."""
+        all_states = self._read_all_tree_states(QSettings())
+        ids = all_states.get(file_key)
+        if ids is not None:
+            return set(ids)
+        return None
+
+    @staticmethod
+    def _read_all_tree_states(settings):
+        """Return the full ``{file_key: [ids]}`` dict from QSettings.
+
+        Handles the QSettings INI-backend quirk where a quoted string
+        containing commas may be returned as a list instead of a str.
+        """
+        raw = settings.value('UI/TreeExpandState')
+        if raw is None:
+            return {}
+        # QSettings may split comma-containing strings into a list.
+        if isinstance(raw, list):
+            raw = ','.join(str(x) for x in raw)
+        if not isinstance(raw, str) or not raw:
+            return {}
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return {}
 
     def set_show_attrs(self, show):
         """Toggle the attribute column visibility."""

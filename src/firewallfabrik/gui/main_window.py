@@ -226,6 +226,10 @@ class FWWindow(QMainWindow):
         if not self._save_if_modified():
             event.ignore()
             return
+        # Save tree state for the current file before closing.
+        display = getattr(self, '_display_file', None)
+        if display:
+            self._object_tree.save_tree_state(str(display))
         self._closing = True
         settings = QSettings()
         # Capture dock visibility *before* saveState() / destruction can
@@ -482,6 +486,11 @@ class FWWindow(QMainWindow):
         if not self._save_if_modified():
             return
 
+        # Save tree state for the current file before switching.
+        display = getattr(self, '_display_file', None)
+        if display:
+            self._object_tree.save_tree_state(str(display))
+
         self._close_editor()
         self.m_space.closeAllSubWindows()
 
@@ -505,7 +514,7 @@ class FWWindow(QMainWindow):
         self._add_to_recent(str(original_path))
 
         with self._db_manager.session() as session:
-            self._object_tree.populate(session)
+            self._object_tree.populate(session, file_key=str(original_path))
 
         self._object_tree.focus_filter()
 
@@ -753,8 +762,11 @@ class FWWindow(QMainWindow):
             ):
                 widget.model().reload()
 
+        file_key = (
+            str(self._display_file) if getattr(self, '_display_file', None) else ''
+        )
         with self._db_manager.session() as session:
-            self._object_tree.populate(session)
+            self._object_tree.populate(session, file_key=file_key)
         if obj_id is not None:
             self._open_object_editor(obj_id, obj_type)
 
