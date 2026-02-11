@@ -1075,98 +1075,140 @@ are never stored permanently)</string>
           <number>20</number>
          </property>
          <item row="0" column="0">
-          <widget class="QPushButton" name="redBtn">
+          <widget class="QPushButton" name="color1Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
+           </property>
            <property name="text">
             <string/>
            </property>
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QLineEdit" name="redText">
+          <widget class="QLineEdit" name="color1Text">
+           <property name="toolTip">
+            <string>Display name for label 1 (shown in the Color context menu on policy rules)</string>
+           </property>
            <property name="text">
-            <string>Red</string>
+            <string>Outbound</string>
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
-          <widget class="QLineEdit" name="blueText">
-           <property name="text">
-            <string>Blue</string>
+         <item row="1" column="0">
+          <widget class="QPushButton" name="color2Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
            </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="yellowText">
-           <property name="text">
-            <string>Yellow</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QPushButton" name="greenBtn">
            <property name="text">
             <string/>
            </property>
           </widget>
          </item>
          <item row="1" column="1">
-          <widget class="QLineEdit" name="orangeText">
-           <property name="text">
-            <string>Orange</string>
+          <widget class="QLineEdit" name="color2Text">
+           <property name="toolTip">
+            <string>Display name for label 2 (shown in the Color context menu on policy rules)</string>
            </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QPushButton" name="orangeBtn">
            <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QPushButton" name="purpleBtn">
-           <property name="text">
-            <string/>
+            <string>Inbound</string>
            </property>
           </widget>
          </item>
          <item row="2" column="0">
-          <widget class="QPushButton" name="yellowBtn">
+          <widget class="QPushButton" name="color3Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
+           </property>
            <property name="text">
             <string/>
            </property>
           </widget>
          </item>
-         <item row="6" column="0">
-          <widget class="QPushButton" name="grayBtn">
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="color3Text">
+           <property name="toolTip">
+            <string>Display name for label 3 (shown in the Color context menu on policy rules)</string>
+           </property>
            <property name="text">
-            <string/>
+            <string>Block</string>
            </property>
           </widget>
          </item>
-         <item row="5" column="1">
-          <widget class="QLineEdit" name="purpleText">
-           <property name="text">
-            <string>Purple</string>
+         <item row="3" column="0">
+          <widget class="QPushButton" name="color4Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
            </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QPushButton" name="blueBtn">
            <property name="text">
             <string/>
            </property>
           </widget>
          </item>
          <item row="3" column="1">
-          <widget class="QLineEdit" name="greenText">
+          <widget class="QLineEdit" name="color4Text">
+           <property name="toolTip">
+            <string>Display name for label 4 (shown in the Color context menu on policy rules)</string>
+           </property>
            <property name="text">
-            <string>Green</string>
+            <string>DNAT/Forward</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QPushButton" name="color5Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="color5Text">
+           <property name="toolTip">
+            <string>Display name for label 5 (shown in the Color context menu on policy rules)</string>
+           </property>
+           <property name="text">
+            <string>SNAT/Forward</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QPushButton" name="color6Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="color6Text">
+           <property name="toolTip">
+            <string>Display name for label 6 (shown in the Color context menu on policy rules)</string>
+           </property>
+           <property name="text">
+            <string>Purple</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0">
+          <widget class="QPushButton" name="color7Btn">
+           <property name="toolTip">
+            <string>Click to choose a color for this label</string>
+           </property>
+           <property name="text">
+            <string/>
            </property>
           </widget>
          </item>
          <item row="6" column="1">
-          <widget class="QLineEdit" name="grayText">
+          <widget class="QLineEdit" name="color7Text">
+           <property name="toolTip">
+            <string>Display name for label 7 (shown in the Color context menu on policy rules)</string>
+           </property>
            <property name="text">
             <string>Gray</string>
            </property>
@@ -1727,20 +1769,20 @@ and the unmodified version of the file you loaded.</string>
   <tabstop>emptyRCSLog</tabstop>
   <tabstop>browseForSSH</tabstop>
   <tabstop>sshPath</tabstop>
-  <tabstop>redBtn</tabstop>
-  <tabstop>redText</tabstop>
-  <tabstop>orangeBtn</tabstop>
-  <tabstop>orangeText</tabstop>
-  <tabstop>yellowBtn</tabstop>
-  <tabstop>yellowText</tabstop>
-  <tabstop>greenBtn</tabstop>
-  <tabstop>greenText</tabstop>
-  <tabstop>blueBtn</tabstop>
-  <tabstop>blueText</tabstop>
-  <tabstop>purpleBtn</tabstop>
-  <tabstop>purpleText</tabstop>
-  <tabstop>grayBtn</tabstop>
-  <tabstop>grayText</tabstop>
+  <tabstop>color1Btn</tabstop>
+  <tabstop>color1Text</tabstop>
+  <tabstop>color2Btn</tabstop>
+  <tabstop>color2Text</tabstop>
+  <tabstop>color3Btn</tabstop>
+  <tabstop>color3Text</tabstop>
+  <tabstop>color4Btn</tabstop>
+  <tabstop>color4Text</tabstop>
+  <tabstop>color5Btn</tabstop>
+  <tabstop>color5Text</tabstop>
+  <tabstop>color6Btn</tabstop>
+  <tabstop>color6Text</tabstop>
+  <tabstop>color7Btn</tabstop>
+  <tabstop>color7Text</tabstop>
  </tabstops>
  <resources>
   <include location="MainRes.qrc"/>
@@ -1827,10 +1869,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>orangeBtn</sender>
+   <sender>color2Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeOrangeColor()</slot>
+   <slot>changeColor2()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -1843,10 +1885,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>blueBtn</sender>
+   <sender>color5Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeBlueColor()</slot>
+   <slot>changeColor5()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -1923,10 +1965,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>redBtn</sender>
+   <sender>color1Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeRedColor()</slot>
+   <slot>changeColor1()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -1939,10 +1981,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>yellowBtn</sender>
+   <sender>color3Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeYellowColor()</slot>
+   <slot>changeColor3()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -1971,10 +2013,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>greenBtn</sender>
+   <sender>color4Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeGreenColor()</slot>
+   <slot>changeColor4()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -1987,10 +2029,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>purpleBtn</sender>
+   <sender>color6Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changePurpleColor()</slot>
+   <slot>changeColor6()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
@@ -2019,10 +2061,10 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>grayBtn</sender>
+   <sender>color7Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
-   <slot>changeGrayColor()</slot>
+   <slot>changeColor7()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>149</x>
