@@ -434,7 +434,7 @@ class XmlReader:
         device.library = library
 
         if parent_group is not None:
-            self._add_membership(parent_group.id, device.id)
+            device.group = parent_group
 
         for child in elem:
             tag = _tag(child)
@@ -490,7 +490,7 @@ class XmlReader:
             addr.library = library
 
         if parent_group is not None:
-            self._add_membership(parent_group.id, addr.id)
+            addr.group = parent_group
         return addr
 
     def _parse_service(self, elem, library, parent_group=None):
@@ -512,7 +512,7 @@ class XmlReader:
             svc.codes = codes
 
         if parent_group is not None:
-            self._add_membership(parent_group.id, svc.id)
+            svc.group = parent_group
         return svc
 
     def _parse_interval(self, elem, library, parent_group=None):
@@ -524,7 +524,7 @@ class XmlReader:
         itv.library = library
 
         if parent_group is not None:
-            self._add_membership(parent_group.id, itv.id)
+            itv.group = parent_group
         return itv
 
     def _parse_ruleset(self, elem, cls, device):

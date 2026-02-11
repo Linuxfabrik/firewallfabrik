@@ -53,6 +53,7 @@ _SKIP_ALWAYS = frozenset(
     {
         'id',
         'library_id',
+        'group_id',
         'interface_id',
         'device_id',
         'rule_set_id',
@@ -295,65 +296,57 @@ class YamlWriter:
         if lib.data:
             d['data'] = lib.data
 
-        # Addresses (library-level only)
-        addresses = session.scalars(
-            sqlalchemy.select(objects.Address)
-            .where(
+        children = []
+
+        # Orphan addresses (group_id IS NULL)
+        for a in session.scalars(
+            sqlalchemy.select(objects.Address).where(
                 objects.Address.library_id == lib.id,
-            )
-            .order_by(objects.Address.name),
-        ).all()
-        if addresses:
-            d['addresses'] = [self._serialize_address(a) for a in addresses]
+                objects.Address.group_id.is_(None),
+            ),
+        ).all():
+            children.append(self._serialize_address(a))
 
-        # Services
-        services = session.scalars(
-            sqlalchemy.select(objects.Service)
-            .where(
+        # Orphan services
+        for s in session.scalars(
+            sqlalchemy.select(objects.Service).where(
                 objects.Service.library_id == lib.id,
-            )
-            .order_by(objects.Service.name),
-        ).all()
-        if services:
-            d['services'] = [_serialize_obj(s) for s in services]
+                objects.Service.group_id.is_(None),
+            ),
+        ).all():
+            children.append(_serialize_obj(s))
 
-        # Intervals
-        intervals = session.scalars(
-            sqlalchemy.select(objects.Interval)
-            .where(
+        # Orphan intervals (Interval has no STI type column)
+        for i in session.scalars(
+            sqlalchemy.select(objects.Interval).where(
                 objects.Interval.library_id == lib.id,
-            )
-            .order_by(objects.Interval.name),
-        ).all()
-        if intervals:
-            d['intervals'] = [_serialize_obj(i) for i in intervals]
+                objects.Interval.group_id.is_(None),
+            ),
+        ).all():
+            d_itv = _serialize_obj(i)
+            d_itv.setdefault('type', 'Interval')
+            children.append(d_itv)
 
-        # Groups (root-level only)
-        root_groups = session.scalars(
-            sqlalchemy.select(objects.Group)
-            .where(
+        # Root groups
+        for g in session.scalars(
+            sqlalchemy.select(objects.Group).where(
                 objects.Group.library_id == lib.id,
                 objects.Group.parent_group_id.is_(None),
-            )
-            .order_by(objects.Group.name),
-        ).all()
-        if root_groups:
-            d['groups'] = [
-                self._serialize_group(session, g, lib.id) for g in root_groups
-            ]
+            ),
+        ).all():
+            children.append(self._serialize_group(session, g, lib.id))
 
-        # Devices
-        devices = session.scalars(
-            sqlalchemy.select(objects.Host)
-            .where(
+        # Orphan devices
+        for dev in session.scalars(
+            sqlalchemy.select(objects.Host).where(
                 objects.Host.library_id == lib.id,
-            )
-            .order_by(objects.Host.name),
-        ).all()
-        if devices:
-            d['devices'] = [
-                self._serialize_device(session, dev, lib.id) for dev in devices
-            ]
+                objects.Host.group_id.is_(None),
+            ),
+        ).all():
+            children.append(self._serialize_device(session, dev, lib.id))
+
+        if children:
+            d['children'] = sorted(children, key=lambda c: c.get('name', ''))
 
         return d
 
@@ -365,7 +358,54 @@ class YamlWriter:
         if grp.ro:
             d['ro'] = True
 
-        # Members from group_membership
+        children = []
+
+        # Child addresses
+        for a in session.scalars(
+            sqlalchemy.select(objects.Address).where(
+                objects.Address.group_id == grp.id,
+            ),
+        ).all():
+            children.append(self._serialize_address(a))
+
+        # Child services
+        for s in session.scalars(
+            sqlalchemy.select(objects.Service).where(
+                objects.Service.group_id == grp.id,
+            ),
+        ).all():
+            children.append(_serialize_obj(s))
+
+        # Child intervals (Interval has no STI type column)
+        for i in session.scalars(
+            sqlalchemy.select(objects.Interval).where(
+                objects.Interval.group_id == grp.id,
+            ),
+        ).all():
+            d_itv = _serialize_obj(i)
+            d_itv.setdefault('type', 'Interval')
+            children.append(d_itv)
+
+        # Child devices
+        for dev in session.scalars(
+            sqlalchemy.select(objects.Host).where(
+                objects.Host.group_id == grp.id,
+            ),
+        ).all():
+            children.append(self._serialize_device(session, dev, lib_id))
+
+        # Child groups
+        for child in session.scalars(
+            sqlalchemy.select(objects.Group).where(
+                objects.Group.parent_group_id == grp.id,
+            ),
+        ).all():
+            children.append(self._serialize_group(session, child, lib_id))
+
+        if children:
+            d['children'] = sorted(children, key=lambda c: c.get('name', ''))
+
+        # Members from group_membership (cross-references only)
         rows = session.execute(
             sqlalchemy.select(objects.group_membership.c.member_id).where(
                 objects.group_membership.c.group_id == grp.id,
@@ -373,19 +413,6 @@ class YamlWriter:
         ).fetchall()
         if rows:
             d['members'] = sorted(self._ref_path(row[0], lib_id) for row in rows)
-
-        # Child groups
-        children = session.scalars(
-            sqlalchemy.select(objects.Group)
-            .where(
-                objects.Group.parent_group_id == grp.id,
-            )
-            .order_by(objects.Group.name),
-        ).all()
-        if children:
-            d['children'] = [
-                self._serialize_group(session, child, lib_id) for child in children
-            ]
 
         return d
 

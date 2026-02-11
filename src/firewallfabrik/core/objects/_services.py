@@ -42,6 +42,12 @@ class Service(Base):
         sqlalchemy.ForeignKey('libraries.id'),
         nullable=False,
     )
+    group_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('groups.id'),
+        nullable=True,
+        default=None,
+    )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
@@ -95,6 +101,11 @@ class Service(Base):
         'Library',
         back_populates='services',
     )
+    group: sqlalchemy.orm.Mapped[Group | None] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='services',
+        primaryjoin='Group.id == foreign(Service.group_id)',
+    )
 
     __mapper_args__ = {
         'polymorphic_on': 'type',
@@ -104,6 +115,7 @@ class Service(Base):
     __table_args__ = (
         sqlalchemy.Index('ix_services_type', 'type'),
         sqlalchemy.Index('ix_services_library_id', 'library_id'),
+        sqlalchemy.Index('ix_services_group_id', 'group_id'),
         sqlalchemy.Index('ix_services_name', 'name'),
     )
 
@@ -176,6 +188,12 @@ class Interval(Base):
         sqlalchemy.ForeignKey('libraries.id'),
         nullable=False,
     )
+    group_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('groups.id'),
+        nullable=True,
+        default=None,
+    )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
@@ -195,4 +213,15 @@ class Interval(Base):
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
         'Library',
         back_populates='intervals',
+    )
+    group: sqlalchemy.orm.Mapped[Group | None] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='intervals',
+        primaryjoin='Group.id == foreign(Interval.group_id)',
+    )
+
+    __table_args__ = (
+        sqlalchemy.Index('ix_intervals_library_id', 'library_id'),
+        sqlalchemy.Index('ix_intervals_group_id', 'group_id'),
+        sqlalchemy.Index('ix_intervals_name', 'name'),
     )

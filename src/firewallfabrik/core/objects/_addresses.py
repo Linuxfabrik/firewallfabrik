@@ -51,6 +51,12 @@ class Address(Base):
             default=None,
         )
     )
+    group_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('groups.id'),
+        nullable=True,
+        default=None,
+    )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
@@ -93,6 +99,11 @@ class Address(Base):
         'Interface',
         back_populates='addresses',
     )
+    group: sqlalchemy.orm.Mapped[Group | None] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='addresses',
+        primaryjoin='Group.id == foreign(Address.group_id)',
+    )
 
     __mapper_args__ = {
         'polymorphic_on': 'type',
@@ -103,6 +114,7 @@ class Address(Base):
         sqlalchemy.Index('ix_addresses_type', 'type'),
         sqlalchemy.Index('ix_addresses_library_id', 'library_id'),
         sqlalchemy.Index('ix_addresses_interface_id', 'interface_id'),
+        sqlalchemy.Index('ix_addresses_group_id', 'group_id'),
         sqlalchemy.Index('ix_addresses_name', 'name'),
     )
 

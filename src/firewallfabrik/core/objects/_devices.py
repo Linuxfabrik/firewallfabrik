@@ -42,6 +42,12 @@ class Host(Base):
         sqlalchemy.ForeignKey('libraries.id'),
         nullable=False,
     )
+    group_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('groups.id'),
+        nullable=True,
+        default=None,
+    )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
@@ -77,6 +83,11 @@ class Host(Base):
         'Library',
         back_populates='devices',
     )
+    group: sqlalchemy.orm.Mapped[Group | None] = sqlalchemy.orm.relationship(
+        'Group',
+        back_populates='devices',
+        primaryjoin='Group.id == foreign(Host.group_id)',
+    )
     interfaces: sqlalchemy.orm.Mapped[list[Interface]] = sqlalchemy.orm.relationship(
         'Interface',
         back_populates='device',
@@ -94,6 +105,7 @@ class Host(Base):
     __table_args__ = (
         sqlalchemy.Index('ix_devices_type', 'type'),
         sqlalchemy.Index('ix_devices_library_id', 'library_id'),
+        sqlalchemy.Index('ix_devices_group_id', 'group_id'),
         sqlalchemy.Index('ix_devices_name', 'name'),
     )
 

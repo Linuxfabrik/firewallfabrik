@@ -172,6 +172,30 @@ class YamlReader:
                 }
             )
 
+    def _dispatch_child(self, data, library, parent_group=None):
+        """Route a child dict by its ``type`` to the correct parse method."""
+        type_name = data.get('type', '')
+        if type_name in _GROUP_CLASSES:
+            self._parse_group(data, library, parent_group=parent_group)
+        elif type_name in _ADDRESS_CLASSES:
+            addr = self._parse_address(data, library=library)
+            if parent_group is not None:
+                addr.group = parent_group
+        elif type_name in _SERVICE_CLASSES:
+            svc = self._parse_service(data, library)
+            if parent_group is not None:
+                svc.group = parent_group
+        elif type_name == 'Interval':
+            itv = self._parse_interval(data, library)
+            if parent_group is not None:
+                itv.group = parent_group
+        elif type_name in _DEVICE_CLASSES:
+            dev = self._parse_device(data, library)
+            if parent_group is not None:
+                dev.group = parent_group
+        else:
+            logger.warning('Unknown child type: %s', type_name)
+
     def _parse_library(self, lib_data, db):
         lib = objects.Library()
         lib.id = uuid.uuid4()
@@ -184,25 +208,8 @@ class YamlReader:
         self._current_lib_name = lib.name
         self._lib_name_by_id[lib.id] = lib.name
 
-        # Addresses
-        for addr_data in lib_data.get('addresses', []):
-            self._parse_address(addr_data, library=lib)
-
-        # Services
-        for svc_data in lib_data.get('services', []):
-            self._parse_service(svc_data, lib)
-
-        # Intervals
-        for itv_data in lib_data.get('intervals', []):
-            self._parse_interval(itv_data, lib)
-
-        # Groups (recursive)
-        for grp_data in lib_data.get('groups', []):
-            self._parse_group(grp_data, lib, parent_group=None)
-
-        # Devices
-        for dev_data in lib_data.get('devices', []):
-            self._parse_device(dev_data, lib)
+        for child_data in lib_data.get('children', []):
+            self._dispatch_child(child_data, lib)
 
         return lib
 
@@ -306,13 +313,13 @@ class YamlReader:
 
         self._register_ref(type_name, grp.name, grp.id)
 
-        # Deferred member references
+        # Children (mixed types: objects + subgroups)
+        for child_data in data.get('children', []):
+            self._dispatch_child(child_data, library, parent_group=grp)
+
+        # Deferred member references (cross-references only)
         for ref_path in data.get('members', []):
             self._deferred_memberships.append((grp.id, ref_path))
-
-        # Child groups
-        for child_data in data.get('children', []):
-            self._parse_group(child_data, library, parent_group=grp)
 
         return grp
 

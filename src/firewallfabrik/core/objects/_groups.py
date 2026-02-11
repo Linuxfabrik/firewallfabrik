@@ -83,6 +83,26 @@ class Group(Base):
         'Group',
         back_populates='parent_group',
     )
+    addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(
+        'Address',
+        back_populates='group',
+        primaryjoin='Group.id == foreign(Address.group_id)',
+    )
+    services: sqlalchemy.orm.Mapped[list[Service]] = sqlalchemy.orm.relationship(
+        'Service',
+        back_populates='group',
+        primaryjoin='Group.id == foreign(Service.group_id)',
+    )
+    intervals: sqlalchemy.orm.Mapped[list[Interval]] = sqlalchemy.orm.relationship(
+        'Interval',
+        back_populates='group',
+        primaryjoin='Group.id == foreign(Interval.group_id)',
+    )
+    devices: sqlalchemy.orm.Mapped[list[Host]] = sqlalchemy.orm.relationship(
+        'Host',
+        back_populates='group',
+        primaryjoin='Group.id == foreign(Host.group_id)',
+    )
 
     __mapper_args__ = {
         'polymorphic_on': 'type',
