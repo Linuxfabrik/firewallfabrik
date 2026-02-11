@@ -9,6 +9,6 @@ Icon=ch.linuxfabrik.firewallfabrik
 Terminal=false
 Type=Application
 Categories=System;Security;Network;
-Keywords=firewall;network;security;iptables;netfilter;nftables;linuxfabrik;firewallfabrik;
+Keywords=network;security;firewalld;iptables;netfilter;nftables;linuxfabrik;firewallfabrik;fwf;
 MimeType=application/x-firewallfabrik;
 StartupWMClass=FirewallFabrik
