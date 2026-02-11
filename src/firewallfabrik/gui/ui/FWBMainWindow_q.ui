@@ -40,662 +40,663 @@
     <item row="0" column="0">
      <widget class="QMdiArea" name="m_space"/>
     </item>
-    <item row="1" column="0">
-     <widget class="ObjectEditorDockWidget" name="editorDockWidget">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>950</width>
-        <height>285</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>524287</width>
-        <height>524287</height>
-       </size>
-      </property>
-      <property name="allowedAreas">
-       <set>Qt::DockWidgetArea::BottomDockWidgetArea</set>
-      </property>
-      <widget class="QWidget" name="dockWidgetContents">
-       <layout class="QGridLayout" name="gridLayout">
-        <property name="margin" stdset="0">
-         <number>2</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QTabWidget" name="editorPanelTabWidget">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>200</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>10000</width>
-            <height>10000</height>
-           </size>
-          </property>
-          <property name="tabPosition">
-           <enum>QTabWidget::TabPosition::West</enum>
-          </property>
-          <property name="currentIndex">
-           <number>2</number>
-          </property>
-          <widget class="QWidget" name="tab_output">
-           <attribute name="title">
-            <string>Output</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_43">
+   </layout>
+  </widget>
+  <widget class="ObjectEditorDockWidget" name="editorDockWidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>950</width>
+     <height>285</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>524287</width>
+     <height>524287</height>
+    </size>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::DockWidgetArea::BottomDockWidgetArea</set>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QGridLayout" name="gridLayout">
+     <property name="margin" stdset="0">
+      <number>2</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QTabWidget" name="editorPanelTabWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>200</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>10000</width>
+         <height>10000</height>
+        </size>
+       </property>
+       <property name="tabPosition">
+        <enum>QTabWidget::TabPosition::West</enum>
+       </property>
+       <property name="currentIndex">
+        <number>2</number>
+       </property>
+       <widget class="QWidget" name="tab_output">
+        <attribute name="title">
+         <string>Output</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_43">
+         <property name="margin" stdset="0">
+          <number>0</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="CompilerOutputPanel" name="output_box" native="true"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_find">
+        <attribute name="title">
+         <string>Find</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_2">
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <property name="topMargin">
+          <number>12</number>
+         </property>
+         <property name="rightMargin">
+          <number>20</number>
+         </property>
+         <property name="bottomMargin">
+          <number>20</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QFrame" name="find_panel">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>160</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>32767</width>
+             <height>32767</height>
+            </size>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::NoFrame</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Plain</enum>
+           </property>
+           <layout class="QHBoxLayout" name="_3">
+            <property name="spacing">
+             <number>0</number>
+            </property>
             <property name="margin" stdset="0">
-             <number>0</number>
+             <number>11</number>
             </property>
-            <item row="0" column="0">
-             <widget class="CompilerOutputPanel" name="output_box" native="true"/>
-            </item>
            </layout>
           </widget>
-          <widget class="QWidget" name="tab_find">
-           <attribute name="title">
-            <string>Find</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <property name="leftMargin">
-             <number>20</number>
-            </property>
-            <property name="topMargin">
-             <number>12</number>
-            </property>
-            <property name="rightMargin">
-             <number>20</number>
-            </property>
-            <property name="bottomMargin">
-             <number>20</number>
-            </property>
-            <item row="0" column="0">
-             <widget class="QFrame" name="find_panel">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>160</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>32767</width>
-                <height>32767</height>
-               </size>
-              </property>
-              <property name="frameShape">
-               <enum>QFrame::Shape::NoFrame</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Shadow::Plain</enum>
-              </property>
-              <layout class="QHBoxLayout" name="_3">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <property name="margin" stdset="0">
-                <number>11</number>
-               </property>
-              </layout>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_editor">
-           <attribute name="title">
-            <string>Editor</string>
-           </attribute>
-           <layout class="QGridLayout" name="gridLayout_3">
-            <property name="topMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>0</number>
-            </property>
-            <property name="verticalSpacing">
-             <number>0</number>
-            </property>
-            <item row="0" column="0" rowspan="2">
-             <layout class="QVBoxLayout" name="verticalLayout">
-              <property name="topMargin">
-               <number>12</number>
-              </property>
-              <property name="bottomMargin">
-               <number>12</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="objectTypeIcon">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>80</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>80</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="pixmap">
-                 <pixmap resource="MainRes.qrc">:/Icons/Cluster/icon</pixmap>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>58</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </item>
-            <item row="0" column="1">
-             <widget class="QStackedWidget" name="objectEditorStack">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>200</width>
-                <height>200</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>285</height>
-               </size>
-              </property>
-              <property name="focusPolicy">
-               <enum>Qt::FocusPolicy::StrongFocus</enum>
-              </property>
-              <property name="frameShape">
-               <enum>QFrame::Shape::NoFrame</enum>
-              </property>
-              <property name="frameShadow">
-               <enum>QFrame::Shadow::Sunken</enum>
-              </property>
-              <property name="currentIndex">
-               <number>39</number>
-              </property>
-              <widget class="QWidget" name="page">
-               <layout class="QGridLayout" name="gridLayout_6">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="FirewallDialog" name="w_FirewallDialog" native="true">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_2">
-               <layout class="QGridLayout" name="gridLayout_7">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="UserDialog" name="w_UserDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="WStackPage">
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_editor">
+        <attribute name="title">
+         <string>Editor</string>
+        </attribute>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>0</number>
+         </property>
+         <item row="0" column="0" rowspan="2">
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <property name="topMargin">
+            <number>12</number>
+           </property>
+           <property name="bottomMargin">
+            <number>12</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="objectTypeIcon">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>80</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>80</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="pixmap">
+              <pixmap>:/Icons/Cluster/icon</pixmap>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Orientation::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>58</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="1">
+          <widget class="QStackedWidget" name="objectEditorStack">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>200</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>285</height>
+            </size>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::FocusPolicy::StrongFocus</enum>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Shape::NoFrame</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Shadow::Sunken</enum>
+           </property>
+           <property name="currentIndex">
+            <number>39</number>
+           </property>
+           <widget class="QWidget" name="page">
+            <layout class="QGridLayout" name="gridLayout_6">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="FirewallDialog" name="w_FirewallDialog" native="true">
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>16777215</height>
-                </size>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_2">
+            <layout class="QGridLayout" name="gridLayout_7">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="UserDialog" name="w_UserDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="WStackPage">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_5">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="InterfaceDialog" name="w_InterfaceDialog" native="true">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
-               <layout class="QGridLayout" name="gridLayout_5">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="InterfaceDialog" name="w_InterfaceDialog" native="true">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
               </widget>
-              <widget class="QWidget" name="page_3">
-               <layout class="QGridLayout" name="gridLayout_8">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="RuleSetDialog" name="w_PolicyDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_4">
-               <layout class="QGridLayout" name="gridLayout_9">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="RuleSetDialog" name="w_NATDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_5">
-               <layout class="QGridLayout" name="gridLayout_10">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="RuleSetDialog" name="w_RoutingDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_6">
-               <layout class="QGridLayout" name="gridLayout_11">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="LibraryDialog" name="w_LibraryDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_7">
-               <layout class="QGridLayout" name="gridLayout_12">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="IPv4Dialog" name="w_IPv4Dialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_8">
-               <layout class="QGridLayout" name="gridLayout_13">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="IPv6Dialog" name="w_IPv6Dialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_9">
-               <layout class="QGridLayout" name="gridLayout_14">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="PhysicalAddressDialog" name="w_PhysicalAddressDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_10">
-               <layout class="QGridLayout" name="gridLayout_15">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="AddressRangeDialog" name="w_AddressRangeDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_11">
-               <layout class="QGridLayout" name="gridLayout_16">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ClusterDialog" name="w_ClusterDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_12">
-               <layout class="QGridLayout" name="gridLayout_17">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ClusterGroupDialog" name="w_FailoverClusterGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_13">
-               <layout class="QGridLayout" name="gridLayout_18">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ClusterGroupDialog" name="w_StateSyncClusterGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_14">
-               <layout class="QGridLayout" name="gridLayout_19">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="HostDialog" name="w_HostDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_15">
-               <layout class="QGridLayout" name="gridLayout_20">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="NetworkDialog" name="w_NetworkDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_16">
-               <layout class="QGridLayout" name="gridLayout_21">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="NetworkDialogIPv6" name="w_NetworkDialogIPv6" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_17">
-               <layout class="QGridLayout" name="gridLayout_22">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="CustomServiceDialog" name="w_CustomServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_18">
-               <layout class="QGridLayout" name="gridLayout_23">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="IPServiceDialog" name="w_IPServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_19">
-               <layout class="QGridLayout" name="gridLayout_24">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ICMPServiceDialog" name="w_ICMPServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_20">
-               <layout class="QGridLayout" name="gridLayout_25">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ICMPServiceDialog" name="w_ICMP6ServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_21">
-               <layout class="QGridLayout" name="gridLayout_26">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="TCPServiceDialog" name="w_TCPServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_22">
-               <layout class="QGridLayout" name="gridLayout_27">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="UDPServiceDialog" name="w_UDPServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_23">
-               <layout class="QGridLayout" name="gridLayout_28">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="TagServiceDialog" name="w_TagServiceDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_24">
-               <layout class="QGridLayout" name="gridLayout_29">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="GroupObjectDialog" name="w_ServiceGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_25">
-               <layout class="QGridLayout" name="gridLayout_30">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="GroupObjectDialog" name="w_ObjectGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_26">
-               <layout class="QGridLayout" name="gridLayout_31">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="GroupObjectDialog" name="w_IntervalGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_27">
-               <layout class="QGridLayout" name="gridLayout_32">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="TimeDialog" name="w_TimeDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_28">
-               <layout class="QGridLayout" name="gridLayout_33">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="RoutingRuleOptionsDialog" name="w_RoutingRuleOptionsDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_29">
-               <layout class="QGridLayout" name="gridLayout_34">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="RuleOptionsDialog" name="w_RuleOptionsDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_30">
-               <layout class="QGridLayout" name="gridLayout_35">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="NATRuleOptionsDialog" name="w_NATRuleOptionsDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_31">
-               <layout class="QGridLayout" name="gridLayout_36">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="DNSNameDialog" name="w_DNSNameDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_32">
-               <layout class="QGridLayout" name="gridLayout_37">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="AddressTableDialog" name="w_AddressTableDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_33">
-               <layout class="QGridLayout" name="gridLayout_38">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="ActionsDialog" name="w_ActionsDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_34">
-               <layout class="QGridLayout" name="gridLayout_39">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="CommentEditorPanel" name="w_CommentEditorPanel" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_35">
-               <layout class="QGridLayout" name="gridLayout_40">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <property name="horizontalSpacing">
-                 <number>6</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="MetricEditorPanel" name="w_MetricEditorPanel" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_36">
-               <layout class="QGridLayout" name="gridLayout_41">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="CompilerOutputPanel" name="w_CompilerOutputPanel" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_37">
-               <layout class="QGridLayout" name="gridLayout_42">
-                <property name="margin" stdset="0">
-                 <number>0</number>
-                </property>
-                <item row="0" column="0">
-                 <widget class="BlankDialog" name="w_BlankDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_38">
-               <layout class="QGridLayout" name="gridLayout_45">
-                <item row="0" column="0">
-                 <widget class="AttachedNetworksDialog" name="w_AttachedNetworksDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-              <widget class="QWidget" name="page_39">
-               <layout class="QGridLayout" name="gridLayout_46">
-                <item row="0" column="0">
-                 <widget class="DynamicGroupDialog" name="w_DynamicGroupDialog" native="true"/>
-                </item>
-               </layout>
-              </widget>
-             </widget>
-            </item>
-           </layout>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_3">
+            <layout class="QGridLayout" name="gridLayout_8">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="RuleSetDialog" name="w_PolicyDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_4">
+            <layout class="QGridLayout" name="gridLayout_9">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="RuleSetDialog" name="w_NATDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_5">
+            <layout class="QGridLayout" name="gridLayout_10">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="RuleSetDialog" name="w_RoutingDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_6">
+            <layout class="QGridLayout" name="gridLayout_11">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="LibraryDialog" name="w_LibraryDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_7">
+            <layout class="QGridLayout" name="gridLayout_12">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="IPv4Dialog" name="w_IPv4Dialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_8">
+            <layout class="QGridLayout" name="gridLayout_13">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="IPv6Dialog" name="w_IPv6Dialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_9">
+            <layout class="QGridLayout" name="gridLayout_14">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="PhysicalAddressDialog" name="w_PhysicalAddressDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_10">
+            <layout class="QGridLayout" name="gridLayout_15">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="AddressRangeDialog" name="w_AddressRangeDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_11">
+            <layout class="QGridLayout" name="gridLayout_16">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ClusterDialog" name="w_ClusterDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_12">
+            <layout class="QGridLayout" name="gridLayout_17">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ClusterGroupDialog" name="w_FailoverClusterGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_13">
+            <layout class="QGridLayout" name="gridLayout_18">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ClusterGroupDialog" name="w_StateSyncClusterGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_14">
+            <layout class="QGridLayout" name="gridLayout_19">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="HostDialog" name="w_HostDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_15">
+            <layout class="QGridLayout" name="gridLayout_20">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="NetworkDialog" name="w_NetworkDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_16">
+            <layout class="QGridLayout" name="gridLayout_21">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="NetworkDialogIPv6" name="w_NetworkDialogIPv6" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_17">
+            <layout class="QGridLayout" name="gridLayout_22">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="CustomServiceDialog" name="w_CustomServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_18">
+            <layout class="QGridLayout" name="gridLayout_23">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="IPServiceDialog" name="w_IPServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_19">
+            <layout class="QGridLayout" name="gridLayout_24">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ICMPServiceDialog" name="w_ICMPServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_20">
+            <layout class="QGridLayout" name="gridLayout_25">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ICMPServiceDialog" name="w_ICMP6ServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_21">
+            <layout class="QGridLayout" name="gridLayout_26">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="TCPServiceDialog" name="w_TCPServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_22">
+            <layout class="QGridLayout" name="gridLayout_27">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="UDPServiceDialog" name="w_UDPServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_23">
+            <layout class="QGridLayout" name="gridLayout_28">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="TagServiceDialog" name="w_TagServiceDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_24">
+            <layout class="QGridLayout" name="gridLayout_29">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="GroupObjectDialog" name="w_ServiceGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_25">
+            <layout class="QGridLayout" name="gridLayout_30">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="GroupObjectDialog" name="w_ObjectGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_26">
+            <layout class="QGridLayout" name="gridLayout_31">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="GroupObjectDialog" name="w_IntervalGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_27">
+            <layout class="QGridLayout" name="gridLayout_32">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="TimeDialog" name="w_TimeDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_28">
+            <layout class="QGridLayout" name="gridLayout_33">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="RoutingRuleOptionsDialog" name="w_RoutingRuleOptionsDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_29">
+            <layout class="QGridLayout" name="gridLayout_34">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="RuleOptionsDialog" name="w_RuleOptionsDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_30">
+            <layout class="QGridLayout" name="gridLayout_35">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="NATRuleOptionsDialog" name="w_NATRuleOptionsDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_31">
+            <layout class="QGridLayout" name="gridLayout_36">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="DNSNameDialog" name="w_DNSNameDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_32">
+            <layout class="QGridLayout" name="gridLayout_37">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="AddressTableDialog" name="w_AddressTableDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_33">
+            <layout class="QGridLayout" name="gridLayout_38">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="ActionsDialog" name="w_ActionsDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_34">
+            <layout class="QGridLayout" name="gridLayout_39">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="CommentEditorPanel" name="w_CommentEditorPanel" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_35">
+            <layout class="QGridLayout" name="gridLayout_40">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <property name="horizontalSpacing">
+              <number>6</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="MetricEditorPanel" name="w_MetricEditorPanel" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_36">
+            <layout class="QGridLayout" name="gridLayout_41">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="CompilerOutputPanel" name="w_CompilerOutputPanel" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_37">
+            <layout class="QGridLayout" name="gridLayout_42">
+             <property name="margin" stdset="0">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="BlankDialog" name="w_BlankDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_38">
+            <layout class="QGridLayout" name="gridLayout_45">
+             <item row="0" column="0">
+              <widget class="AttachedNetworksDialog" name="w_AttachedNetworksDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
+           <widget class="QWidget" name="page_39">
+            <layout class="QGridLayout" name="gridLayout_46">
+             <item row="0" column="0">
+              <widget class="DynamicGroupDialog" name="w_DynamicGroupDialog" native="true"/>
+             </item>
+            </layout>
+           </widget>
           </widget>
-         </widget>
-        </item>
-       </layout>
+         </item>
+        </layout>
+       </widget>
       </widget>
-     </widget>
-    </item>
-   </layout>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <widget class="QToolBar" name="toolBar">
    <property name="movable">
@@ -725,7 +726,7 @@
      <x>0</x>
      <y>0</y>
      <width>1124</width>
-     <height>22</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="editMenu">
@@ -794,9 +795,6 @@
     <addaction name="fileCloseAction"/>
     <addaction name="filePropAction"/>
     <addaction name="separator"/>
-    <addaction name="addToRCSAction"/>
-    <addaction name="fileCommitAction"/>
-    <addaction name="fileDiscardAction"/>
     <addaction name="separator"/>
     <addaction name="policyImportAction"/>
     <addaction name="separator"/>
@@ -1575,22 +1573,6 @@
  </resources>
  <connections>
   <connection>
-   <sender>addToRCSAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileAddToRCS()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>compileAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -1735,42 +1717,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>fileCommitAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileCommit()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>fileCompareAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
    <slot>fileCompare()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>fileDiscardAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileDiscard()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
