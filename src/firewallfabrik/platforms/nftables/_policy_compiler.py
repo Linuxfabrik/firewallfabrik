@@ -216,7 +216,7 @@ class StoreAction(PolicyRuleProcessor):
         if rule is None:
             return False
         action_str = rule.action.name if rule.action else ''
-        rule._extra['stored_action'] = action_str
+        rule.stored_action = action_str
         self.tmp_queue.append(rule)
         return True
 
@@ -235,13 +235,13 @@ class InterfaceAndDirection(PolicyRuleProcessor):
             rule.direction = Direction.Both
 
         if rule.is_itf_any() and rule.direction == Direction.Both:
-            rule._extra['.iface'] = 'nil'
+            rule.iface_label = 'nil'
             return True
 
         if not rule.is_itf_any():
             obj = rule.itf[0] if rule.itf else None
             if isinstance(obj, Interface):
-                rule._extra['.iface'] = obj.name
+                rule.iface_label = obj.name
 
         return True
 
@@ -326,7 +326,7 @@ class Logging_nft(PolicyRuleProcessor):
         # For other actions with log, nftables can do it in one rule:
         #   log prefix "..." accept
         # We mark the rule so PrintRule emits both log and verdict
-        rule._extra['nft_log'] = True
+        rule.nft_log = True
         self.tmp_queue.append(rule)
         return True
 
@@ -344,7 +344,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             return True
 
         if rule.direction != Direction.Inbound and (
-            rule.is_src_any() or rule._extra.get('src_single_object_negation')
+            rule.is_src_any() or rule.src_single_object_negation
         ):
             r = rule.clone()
             r.ipt_chain = 'output'
@@ -368,7 +368,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
             return True
 
         if rule.direction != Direction.Outbound and (
-            rule.is_dst_any() or rule._extra.get('dst_single_object_negation')
+            rule.is_dst_any() or rule.dst_single_object_negation
         ):
             r = rule.clone()
             r.ipt_chain = 'input'
@@ -813,7 +813,7 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         if len(groups) <= 1:
             self.tmp_queue.append(rule)
         elif self._can_merge_tcp_udp(groups):
-            rule._extra['merged_tcp_udp'] = True
+            rule.merged_tcp_udp = True
             self.tmp_queue.append(rule)
         else:
             for _proto, srvs in sorted(groups.items()):

@@ -100,7 +100,34 @@ class CompRule:
     ipt_target: str = ''
     rule_weight: int = 0
     compiler_message: str = ''
-    _extra: dict = dataclasses.field(default_factory=dict)
+
+    # Interface resolution (set by InterfaceAndDirection, read by PrintRule)
+    iface_label: str = ''  # '', 'nil', or interface name
+    nat_iface_in: str = ''
+    nat_iface_out: str = ''
+
+    # Action/logging metadata
+    stored_action: str = ''
+    nft_log: bool = False  # nftables inline log + verdict
+    force_state_check: bool = False
+    upstream_rule_chain: str = ''  # iptables logging chain tracking
+    final: bool = False  # marks terminal logging rule
+    parent_rule_num: str = ''  # parent rule position for log prefix
+    subrule_suffix: str = ''  # label suffix for subrules
+
+    # Negation flags
+    src_single_object_negation: bool = False
+    dst_single_object_negation: bool = False
+    itf_single_object_negation: bool = False
+    osrc_single_object_negation: bool = False
+    odst_single_object_negation: bool = False
+
+    # Optimization flags
+    ipt_multiport: bool = False  # iptables -m multiport
+    merged_tcp_udp: bool = False  # nftables meta l4proto { tcp, udp }
+
+    # Rule validity
+    has_empty_re: bool = False
 
     def clone(self) -> CompRule:
         """Create a deep copy of this rule.
@@ -114,7 +141,6 @@ class CompRule:
             setattr(new, slot, list(getattr(self, slot)))
         new.options = dict(self.options) if self.options else {}
         new.negations = dict(self.negations) if self.negations else {}
-        new._extra = dict(self._extra)
         return new
 
     def get_option(self, key: str, default: Any = None) -> Any:

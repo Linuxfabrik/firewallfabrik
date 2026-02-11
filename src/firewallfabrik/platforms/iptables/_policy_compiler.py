@@ -321,7 +321,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         meta += f' c={rule.ipt_chain}'
         meta += f' t={rule.ipt_target}'
 
-        iface_str = rule._extra.get('.iface', '')
+        iface_str = rule.iface_label
         if iface_str:
             meta += f' .iface={iface_str}'
 
@@ -426,7 +426,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         else:
             parts.append('000')
 
-        suffix = rule._extra.get('subrule_suffix', '')
+        suffix = rule.subrule_suffix
         if suffix:
             parts.append(f'_{suffix}')
 
@@ -622,7 +622,7 @@ class StoreAction(PolicyRuleProcessor):
         if rule is None:
             return False
         action_str = rule.action.name if rule.action else ''
-        rule._extra['stored_action'] = action_str
+        rule.stored_action = action_str
         self.tmp_queue.append(rule)
         return True
 
@@ -673,7 +673,7 @@ class Logging2(PolicyRuleProcessor):
         r2.itf = []
         r2.when = []
         r2.ipt_chain = new_chain
-        r2._extra['upstream_rule_chain'] = this_chain
+        r2.upstream_rule_chain = this_chain
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         r2.ipt_target = 'LOG'
@@ -685,7 +685,7 @@ class Logging2(PolicyRuleProcessor):
         r2.set_option('tagging', False)
         r2.set_option('stateless', True)
         r2.set_option('limit_value', -1)
-        r2._extra['force_state_check'] = False
+        r2.force_state_check = False
         self.tmp_queue.append(r2)
 
         # 3) Action rule in new_chain: all elements reset, inherits action
@@ -696,16 +696,16 @@ class Logging2(PolicyRuleProcessor):
         r3.itf = []
         r3.when = []
         r3.ipt_chain = new_chain
-        r3._extra['upstream_rule_chain'] = this_chain
+        r3.upstream_rule_chain = this_chain
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
-        r3._extra['.iface'] = 'nil'
+        r3.iface_label = 'nil'
         r3.direction = Direction.Both
         r3.set_option('log', False)
-        r3._extra['final'] = True
+        r3.final = True
         r3.set_option('stateless', True)
         r3.set_option('limit_value', -1)
-        r3._extra['force_state_check'] = False
+        r3.force_state_check = False
         self.tmp_queue.append(r3)
 
         return True
@@ -725,13 +725,13 @@ class InterfaceAndDirection(PolicyRuleProcessor):
             rule.direction = Direction.Both
 
         if rule.is_itf_any() and rule.direction == Direction.Both:
-            rule._extra['.iface'] = 'nil'
+            rule.iface_label = 'nil'
             return True
 
         if not rule.is_itf_any():
             obj = rule.itf[0] if rule.itf else None
             if isinstance(obj, Interface):
-                rule._extra['.iface'] = obj.name
+                rule.iface_label = obj.name
 
         return True
 
@@ -797,7 +797,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             return True
 
         if rule.direction != Direction.Inbound and (
-            rule.is_src_any() or rule._extra.get('src_single_object_negation')
+            rule.is_src_any() or rule.src_single_object_negation
         ):
             r = rule.clone()
             ipt_comp.set_chain(r, 'OUTPUT')
@@ -827,7 +827,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
             return True
 
         if rule.direction != Direction.Outbound and (
-            rule.is_dst_any() or rule._extra.get('dst_single_object_negation')
+            rule.is_dst_any() or rule.dst_single_object_negation
         ):
             r = rule.clone()
             ipt_comp.set_chain(r, 'INPUT')
@@ -1327,13 +1327,13 @@ class Optimize1(PolicyRuleProcessor):
 
         # Original rule: moved to temp chain, made stateless
         rule.set_option('stateless', True)
-        rule._extra['force_state_check'] = False
+        rule.force_state_check = False
         rule.ipt_chain = new_chain
-        rule._extra['upstream_rule_chain'] = this_chain
+        rule.upstream_rule_chain = this_chain
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         rule.direction = Direction.Both
-        rule._extra['.iface'] = 'nil'
+        rule.iface_label = 'nil'
         rule.itf = []
         self.tmp_queue.append(rule)
 
@@ -1409,7 +1409,7 @@ class PrepareForMultiport(PolicyRuleProcessor):
                 and isinstance(rule.srv[0], (TCPService, UDPService))
                 and len(rule.srv) <= 15
             ):
-                rule._extra['ipt_multiport'] = True
+                rule.ipt_multiport = True
 
         self.tmp_queue.append(rule)
         return True

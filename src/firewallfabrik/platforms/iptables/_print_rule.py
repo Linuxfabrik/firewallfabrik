@@ -155,7 +155,7 @@ class PrintRule(PolicyRuleProcessor):
     # -- Negation helpers --
 
     def _print_single_object_negation(self, rule: CompRule, slot: str) -> str:
-        if rule._extra.get(f'{slot}_single_object_negation'):
+        if getattr(rule, f'{slot}_single_object_negation'):
             return '! '
         return ''
 
@@ -254,7 +254,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def _print_direction_and_interface(self, rule: CompRule) -> str:
         """Print -i/-o interface matching."""
-        if rule._extra.get('.iface') == 'nil':
+        if rule.iface_label == 'nil':
             return ''
 
         if rule.is_itf_any():
@@ -311,7 +311,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def _print_multiport(self, rule: CompRule) -> str:
         """Print -m multiport if rule has multiple services."""
-        if len(rule.srv) > 1 and rule._extra.get('ipt_multiport'):
+        if len(rule.srv) > 1 and rule.ipt_multiport:
             return ' -m multiport '
         return ''
 
@@ -494,7 +494,7 @@ class PrintRule(PolicyRuleProcessor):
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""
         stateless = rule.get_option('stateless', False)
-        force_state = rule._extra.get('force_state_check', False)
+        force_state = rule.force_state_check
         if not stateless or force_state:
             if _version_compare(self.version, '1.4.4') >= 0:
                 state_module_option = 'conntrack --ctstate'
@@ -616,9 +616,9 @@ class PrintRule(PolicyRuleProcessor):
 
     def _expand_log_prefix(self, rule: CompRule, prefix: str) -> str:
         """Expand log prefix macros (%N, %A, %I, %C, %R)."""
-        action = (rule._extra.get('stored_action', '') or '').upper()
+        action = (rule.stored_action or '').upper()
 
-        ppos = rule._extra.get('parent_rule_num', '')
+        ppos = rule.parent_rule_num
         pos = str(rule.position)
         rule_num = f'{ppos}/{pos}' if ppos else pos
 

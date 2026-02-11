@@ -165,7 +165,7 @@ class DropRuleWithEmptyRE(NATRuleProcessor):
         if rule is None:
             return False
 
-        if rule._extra.get('_has_empty_re'):
+        if rule.has_empty_re:
             return True
 
         self.tmp_queue.append(rule)

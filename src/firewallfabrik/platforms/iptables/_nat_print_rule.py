@@ -252,7 +252,7 @@ class NATPrintRule(NATRuleProcessor):
     # -- Helpers --
 
     def _print_single_object_negation(self, rule: CompRule, slot: str) -> str:
-        if rule._extra.get(f'{slot}_single_object_negation'):
+        if getattr(rule, f'{slot}_single_object_negation'):
             return '! '
         return ''
 
@@ -315,9 +315,9 @@ class NATPrintRule(NATRuleProcessor):
         iface_in_name = self._get_interface_name(rule.itf_inb)
         iface_out_name = self._get_interface_name(rule.itf_outb)
 
-        if rule._extra.get('.iface_in') == 'nil':
+        if rule.nat_iface_in == 'nil':
             iface_in_name = ''
-        if rule._extra.get('.iface_out') == 'nil':
+        if rule.nat_iface_out == 'nil':
             iface_out_name = ''
 
         parts.append(rule.ipt_chain)
@@ -365,7 +365,7 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_multiport(self, rule: CompRule) -> str:
-        if rule._extra.get('ipt_multiport'):
+        if rule.ipt_multiport:
             return '-m multiport '
         return ''
 

@@ -285,7 +285,7 @@ class DropRuleWithEmptyRE(NATRuleProcessor):
         # For NAT rules, check osrc/odst/osrv
         # Empty after expansion = should drop (different from "any" = [])
         # We track this with a special flag set by group expansion
-        if rule._extra.get('_has_empty_re'):
+        if rule.has_empty_re:
             return True
 
         self.tmp_queue.append(rule)
@@ -564,7 +564,7 @@ class PrepareForMultiport(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        rule._extra['ipt_multiport'] = True
+        rule.ipt_multiport = True
 
         if len(rule.osrv) > 15:
             # Split into chunks of 15
@@ -572,7 +572,7 @@ class PrepareForMultiport(NATRuleProcessor):
                 chunk = rule.osrv[i : i + 15]
                 r = rule.clone()
                 r.osrv = chunk
-                r._extra['ipt_multiport'] = True
+                r.ipt_multiport = True
                 self.tmp_queue.append(r)
         else:
             self.tmp_queue.append(rule)

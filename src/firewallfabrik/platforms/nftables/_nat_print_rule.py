@@ -99,7 +99,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         if osrc:
             addr = self._print_addr(osrc, rule)
             if addr:
-                neg = '! ' if rule._extra.get('osrc_single_object_negation') else ''
+                neg = '! ' if rule.osrc_single_object_negation else ''
                 parts.append(f'{af_prefix} saddr {neg}{addr}')
 
         # Original destination
@@ -107,7 +107,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         if odst:
             addr = self._print_addr(odst, rule)
             if addr:
-                neg = '! ' if rule._extra.get('odst_single_object_negation') else ''
+                neg = '! ' if rule.odst_single_object_negation else ''
                 parts.append(f'{af_prefix} daddr {neg}{addr}')
 
         # Original service

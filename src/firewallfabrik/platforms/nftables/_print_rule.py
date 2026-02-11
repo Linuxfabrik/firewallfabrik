@@ -195,7 +195,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_interface(self, rule: CompRule) -> str:
         """Print interface matching: iifname/oifname."""
-        if rule._extra.get('.iface') == 'nil':
+        if rule.iface_label == 'nil':
             return ''
 
         if rule.is_itf_any():
@@ -213,7 +213,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         # and iif/oif for exact interface matching.
         # Use iif/oif for loopback — index-based is faster and safe
         # (loopback is always present with a stable index).
-        neg = '!= ' if rule._extra.get('itf_single_object_negation') else ''
+        neg = '!= ' if rule.itf_single_object_negation else ''
         is_loopback = iface_obj.is_loopback()
 
         direction = rule.direction
@@ -234,7 +234,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not rule.src:
             return ''
 
-        neg = '!= ' if rule._extra.get('src_single_object_negation') else ''
+        neg = '!= ' if rule.src_single_object_negation else ''
         addrs = [self._print_addr(obj, rule) for obj in rule.src]
         addrs = [a for a in addrs if a]
         if not addrs:
@@ -252,7 +252,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not rule.dst:
             return ''
 
-        neg = '!= ' if rule._extra.get('dst_single_object_negation') else ''
+        neg = '!= ' if rule.dst_single_object_negation else ''
         addrs = [self._print_addr(obj, rule) for obj in rule.dst]
         addrs = [a for a in addrs if a]
         if not addrs:
@@ -324,7 +324,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_service(self, rule: CompRule, srv) -> str:
         """Print protocol + port/ICMP matching."""
-        if rule._extra.get('merged_tcp_udp'):
+        if rule.merged_tcp_udp:
             return self._print_merged_tcp_udp_service(rule)
 
         if srv is None:
@@ -468,7 +468,7 @@ class PrintRule_nft(PolicyRuleProcessor):
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""
         stateless = rule.get_option('stateless', False)
-        force_state = rule._extra.get('force_state_check', False)
+        force_state = rule.force_state_check
 
         if not stateless or force_state:
             return 'ct state new'
@@ -484,7 +484,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         - ipt_target == 'LOG': standalone log rule (Continue action)
         - nft_log flag: inline log before verdict (e.g. `log prefix "..." accept`)
         """
-        if rule.ipt_target != 'LOG' and not rule._extra.get('nft_log'):
+        if rule.ipt_target != 'LOG' and not rule.nft_log:
             return ''
 
         parts = ['log']
@@ -508,7 +508,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         log_prefix = str(log_prefix)
 
-        action = (rule._extra.get('stored_action', '') or '').upper()
+        action = rule.stored_action.upper()
         pos = str(rule.position)
         chain = rule.ipt_chain or ''
 
