@@ -39,6 +39,7 @@ from firewallfabrik.compiler.processors._generic import (
     SimplePrintProgress,
 )
 from firewallfabrik.core.objects import (
+    Address,
     Direction,
     Firewall,
     Interface,
@@ -200,6 +201,16 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(FillActionOnReject('fill action_on_reject'))
 
         self.add(Logging2('process logging'))
+
+        # -- Negation processors --
+        self.add(SingleSrvNegation('single srv negation'))
+        self.add(SrvNegation('process negation in Srv'))
+        self.add(SingleSrcNegation('single src negation'))
+        self.add(SingleDstNegation('single dst negation'))
+        self.add(SplitIfSrcNegAndFw('split if src negated and fw'))
+        self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
+        self.add(SrcNegation('process negation in Src'))
+        self.add(DstNegation('process negation in Dst'))
 
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
@@ -707,6 +718,366 @@ class Logging2(PolicyRuleProcessor):
         r3.set_option('limit_value', -1)
         r3.force_state_check = False
         self.tmp_queue.append(r3)
+
+        return True
+
+
+class SingleSrcNegation(PolicyRuleProcessor):
+    """Handle single-object src negation with inline '!' syntax."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('src') and len(rule.src) == 1:
+            obj = rule.src[0]
+            if isinstance(obj, Address) and not self.compiler.complex_match(
+                obj, self.compiler.fw
+            ):
+                rule.src_single_object_negation = True
+                rule.set_neg('src', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleDstNegation(PolicyRuleProcessor):
+    """Handle single-object dst negation with inline '!' syntax."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('dst') and len(rule.dst) == 1:
+            obj = rule.dst[0]
+            if isinstance(obj, Address) and not self.compiler.complex_match(
+                obj, self.compiler.fw
+            ):
+                rule.dst_single_object_negation = True
+                rule.set_neg('dst', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleSrvNegation(PolicyRuleProcessor):
+    """Handle single-object srv negation (TagService/UserService only)."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        # TagService/UserService would get single_object_negation here.
+        # Currently no-op — all common services use temp chain pattern.
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfSrcNegAndFw(PolicyRuleProcessor):
+    """Split rule when src is negated and contains firewall objects."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            not rule.get_neg('src')
+            or rule.ipt_chain
+            or rule.direction == Direction.Inbound
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        fw_likes: list = []
+        not_fw_likes: list = []
+        for obj in rule.src:
+            if ipt_comp.complex_match(obj, ipt_comp.fw):
+                fw_likes.append(obj)
+            else:
+                not_fw_likes.append(obj)
+
+        if not fw_likes:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Rule A: OUTPUT chain with FW objects (still negated)
+        r = rule.clone()
+        r.src = fw_likes
+        ipt_comp.set_chain(r, 'OUTPUT')
+        r.direction = Direction.Outbound
+        self.tmp_queue.append(r)
+
+        # Rule B: original with non-FW objects only
+        rule.src = not_fw_likes
+        if not not_fw_likes:
+            rule.set_neg('src', False)
+        rule.set_option('no_output_chain', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfDstNegAndFw(PolicyRuleProcessor):
+    """Split rule when dst is negated and contains firewall objects."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            not rule.get_neg('dst')
+            or rule.ipt_chain
+            or rule.direction == Direction.Outbound
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        fw_likes: list = []
+        not_fw_likes: list = []
+        for obj in rule.dst:
+            if ipt_comp.complex_match(obj, ipt_comp.fw):
+                fw_likes.append(obj)
+            else:
+                not_fw_likes.append(obj)
+
+        if not fw_likes:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Rule A: INPUT chain with FW objects (still negated)
+        r = rule.clone()
+        r.dst = fw_likes
+        ipt_comp.set_chain(r, 'INPUT')
+        r.direction = Direction.Inbound
+        self.tmp_queue.append(r)
+
+        # Rule B: original with non-FW objects only
+        rule.dst = not_fw_likes
+        if not not_fw_likes:
+            rule.set_neg('dst', False)
+        rule.set_option('no_input_chain', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SrcNegation(PolicyRuleProcessor):
+    """Handle multi-object src negation via temp chain with RETURN rules."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('src'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        rule.set_neg('src', False)
+
+        this_chain = rule.ipt_chain
+        new_chain = ipt_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except src
+        r_jump = rule.clone()
+        r_jump.src = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only src objects
+        r_return = rule.clone()
+        r_return.dst = []
+        r_return.srv = []
+        r_return.itf = []
+        r_return.when = []
+        r_return.ipt_chain = new_chain
+        r_return.upstream_rule_chain = this_chain
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear everything
+        # TODO: C++ preserves "any TCP" service when action_on_reject is TCP RST
+        r_action = rule.clone()
+        r_action.src = []
+        r_action.dst = []
+        r_action.srv = []
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.upstream_rule_chain = this_chain
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class DstNegation(PolicyRuleProcessor):
+    """Handle multi-object dst negation via temp chain with RETURN rules."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('dst'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        rule.set_neg('dst', False)
+
+        this_chain = rule.ipt_chain
+        new_chain = ipt_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except dst
+        r_jump = rule.clone()
+        r_jump.dst = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only dst objects
+        r_return = rule.clone()
+        r_return.src = []
+        r_return.srv = []
+        r_return.itf = []
+        r_return.when = []
+        r_return.ipt_chain = new_chain
+        r_return.upstream_rule_chain = this_chain
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear everything
+        # TODO: C++ preserves "any TCP" service when action_on_reject is TCP RST
+        r_action = rule.clone()
+        r_action.src = []
+        r_action.dst = []
+        r_action.srv = []
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.upstream_rule_chain = this_chain
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class SrvNegation(PolicyRuleProcessor):
+    """Handle service negation via temp chain with RETURN rules."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('srv'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        rule.set_neg('srv', False)
+
+        this_chain = rule.ipt_chain
+        new_chain = ipt_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except srv
+        r_jump = rule.clone()
+        r_jump.srv = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only srv objects
+        r_return = rule.clone()
+        r_return.src = []
+        r_return.dst = []
+        r_return.itf = []
+        r_return.when = []
+        r_return.ipt_chain = new_chain
+        r_return.upstream_rule_chain = this_chain
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear everything
+        r_action = rule.clone()
+        r_action.src = []
+        r_action.dst = []
+        r_action.srv = []
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.upstream_rule_chain = this_chain
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_action)
 
         return True
 
