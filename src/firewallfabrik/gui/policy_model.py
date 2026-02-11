@@ -434,8 +434,8 @@ class PolicyTreeModel(QAbstractItemModel):
             return None
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if col == _COL_POSITION:
-                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-            return None
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
+            return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         if role == Qt.ItemDataRole.DecorationRole:
             suffix = _icon_suffix()
             if col == _COL_ACTION and row_data.action:

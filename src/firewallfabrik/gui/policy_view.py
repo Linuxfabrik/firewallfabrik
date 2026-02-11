@@ -103,6 +103,12 @@ class _CellBorderDelegate(QStyledItemDelegate):
     _ICON_TEXT_GAP = 2
     _V_PAD = 2
 
+    def initStyleOption(self, option, index):
+        super().initStyleOption(option, index)
+        option.decorationAlignment = (
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+
     def _icon_size(self):
         """Return the configured icon size (16 or 25)."""
         return QSettings().value('UI/IconSizeInRules', 25, type=int)
@@ -112,36 +118,23 @@ class _CellBorderDelegate(QStyledItemDelegate):
         return 'icon-tree' if self._icon_size() == 16 else 'icon'
 
     def sizeHint(self, option, index):
-        hint = super().sizeHint(option, index)
+        icon_sz = self._icon_size()
+        fm = option.fontMetrics
+        line_h = max(icon_sz, fm.height())
         elements = index.data(ELEMENTS_ROLE)
         if elements:
-            icon_sz = self._icon_size()
-            line_h = max(icon_sz, hint.height())
-            hint.setHeight(line_h * len(elements) + 2 * self._V_PAD)
-            # Width: icon + gap + longest name + padding.
-            fm = option.fontMetrics
+            height = line_h * len(elements) + 2 * self._V_PAD
             max_text_w = max(fm.horizontalAdvance(name) for _, name, _ in elements)
-            hint.setWidth(icon_sz + self._ICON_TEXT_GAP + max_text_w + 2 * self._H_PAD)
-        else:
-            hint.setHeight(hint.height() + 2 * self._V_PAD)
-        return hint
+            width = icon_sz + self._ICON_TEXT_GAP + max_text_w + 2 * self._H_PAD
+            return QSize(width, height)
+        return QSize(super().sizeHint(option, index).width(), line_h + 2 * self._V_PAD)
 
     def paint(self, painter, option, index):
-        elements = index.data(ELEMENTS_ROLE)
-        if elements:
-            self._paint_elements(painter, option, index, elements)
-        else:
-            super().paint(painter, option, index)
-        # Cell border.
-        painter.save()
-        painter.setPen(self._BORDER_COLOR)
-        painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
-        painter.restore()
-
-    def _paint_elements(self, painter, option, index, elements):
-        """Paint a list of (id, name, type) elements with icons."""
-        # Draw selection/background only — suppress text and icon.
+        # Draw selection/background only — suppress text and icon so we
+        # can render everything ourselves with consistent top-alignment.
         self.initStyleOption(option, index)
+        text = option.text
+        icon = option.icon
         option.text = ''
         option.icon = QIcon()
         style = option.widget.style() if option.widget else None
@@ -153,6 +146,49 @@ class _CellBorderDelegate(QStyledItemDelegate):
                 option.widget,
             )
 
+        elements = index.data(ELEMENTS_ROLE)
+        if elements:
+            self._paint_elements(painter, option, index, elements)
+        else:
+            self._paint_cell(painter, option, index, text, icon)
+
+        # Cell border.
+        painter.save()
+        painter.setPen(self._BORDER_COLOR)
+        painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        painter.restore()
+
+    def _paint_cell(self, painter, option, index, text, icon):
+        """Paint a single-value cell (icon + text) top-aligned."""
+        icon_sz = self._icon_size()
+        rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
+        line_h = max(icon_sz, painter.fontMetrics().height())
+        fg = index.data(Qt.ItemDataRole.ForegroundRole)
+        alignment = index.data(Qt.ItemDataRole.TextAlignmentRole)
+        h_align = Qt.AlignmentFlag.AlignLeft
+        if alignment and alignment & Qt.AlignmentFlag.AlignRight:
+            h_align = Qt.AlignmentFlag.AlignRight
+
+        painter.save()
+        if fg:
+            painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
+
+        x = rect.left()
+        if not icon.isNull():
+            icon.paint(painter, QRect(x, rect.top(), icon_sz, line_h))
+            x += icon_sz + self._ICON_TEXT_GAP
+
+        if text:
+            text_rect = QRect(x, rect.top(), rect.right() - x, line_h)
+            painter.drawText(
+                text_rect,
+                h_align | Qt.AlignmentFlag.AlignVCenter,
+                str(text),
+            )
+        painter.restore()
+
+    def _paint_elements(self, painter, option, index, elements):
+        """Paint a list of (id, name, type) elements with icons."""
         icon_sz = self._icon_size()
         icon_suffix = self._icon_suffix()
         rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
