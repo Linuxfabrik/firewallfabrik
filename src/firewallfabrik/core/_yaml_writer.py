@@ -222,11 +222,28 @@ class YamlWriter:
                 self._register_ref(seen, lib_id, lib_name, dev.type, dev.name, dev.id)
                 self._uuid_to_lib[dev.id] = lib_id
 
-            # Interfaces
+            # Interfaces (device-owned)
             for iface in session.scalars(
                 sqlalchemy.select(objects.Interface)
                 .join(objects.Host)
                 .where(objects.Host.library_id == lib_id),
+            ).all():
+                self._register_ref(
+                    seen,
+                    lib_id,
+                    lib_name,
+                    'Interface',
+                    iface.name,
+                    iface.id,
+                )
+                self._uuid_to_lib[iface.id] = lib_id
+
+            # Standalone interfaces (no device)
+            for iface in session.scalars(
+                sqlalchemy.select(objects.Interface).where(
+                    objects.Interface.library_id == lib_id,
+                    objects.Interface.device_id.is_(None),
+                ),
             ).all():
                 self._register_ref(
                     seen,
@@ -344,6 +361,17 @@ class YamlWriter:
             ),
         ).all():
             children.append(self._serialize_device(session, dev, lib.id))
+
+        # Standalone interfaces (no device)
+        for iface in session.scalars(
+            sqlalchemy.select(objects.Interface).where(
+                objects.Interface.library_id == lib.id,
+                objects.Interface.device_id.is_(None),
+            ),
+        ).all():
+            d_iface = self._serialize_interface(session, iface, lib.id)
+            d_iface.setdefault('type', 'Interface')
+            children.append(d_iface)
 
         if children:
             d['children'] = sorted(children, key=lambda c: c.get('name', ''))

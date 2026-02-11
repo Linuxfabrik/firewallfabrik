@@ -193,6 +193,8 @@ class YamlReader:
             dev = self._parse_device(data, library)
             if parent_group is not None:
                 dev.group = parent_group
+        elif type_name == 'Interface':
+            self._parse_interface(data, library, None)
         else:
             logger.warning('Unknown child type: %s', type_name)
 
@@ -344,7 +346,7 @@ class YamlReader:
 
         # Interfaces
         for iface_data in data.get('interfaces', []):
-            self._parse_interface(iface_data, dev)
+            self._parse_interface(iface_data, None, dev)
 
         # Rule sets
         for rs_data in data.get('rule_sets', []):
@@ -352,7 +354,7 @@ class YamlReader:
 
         return dev
 
-    def _parse_interface(self, data, device):
+    def _parse_interface(self, data, library, device):
         iface = objects.Interface()
         iface.id = uuid.uuid4()
         iface.name = data.get('name', '')
@@ -363,6 +365,7 @@ class YamlReader:
         iface.bcast_bits = data.get('bcast_bits', 0)
         iface.ostatus = data.get('ostatus', False)
         iface.snmp_type = data.get('snmp_type', 0)
+        iface.library = library
         iface.device = device
 
         self._register_ref('Interface', iface.name, iface.id)

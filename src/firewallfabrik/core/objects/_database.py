@@ -115,6 +115,10 @@ class Library(Base):
         'Interval',
         back_populates='library',
     )
+    interfaces: sqlalchemy.orm.Mapped[list[Interface]] = sqlalchemy.orm.relationship(
+        'Interface',
+        back_populates='library',
+    )
     addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(
         'Address',
         back_populates='library',

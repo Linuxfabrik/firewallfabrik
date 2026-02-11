@@ -167,10 +167,17 @@ class Interface(Base):
         sqlalchemy.Uuid,
         primary_key=True,
     )
-    device_id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
+    device_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Uuid,
         sqlalchemy.ForeignKey('devices.id'),
-        nullable=False,
+        nullable=True,
+        default=None,
+    )
+    library_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Uuid,
+        sqlalchemy.ForeignKey('libraries.id'),
+        nullable=True,
+        default=None,
     )
     name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
@@ -204,8 +211,12 @@ class Interface(Base):
         default=0,
     )
 
-    device: sqlalchemy.orm.Mapped[Host] = sqlalchemy.orm.relationship(
+    device: sqlalchemy.orm.Mapped[Host | None] = sqlalchemy.orm.relationship(
         'Host',
+        back_populates='interfaces',
+    )
+    library: sqlalchemy.orm.Mapped[Library | None] = sqlalchemy.orm.relationship(
+        'Library',
         back_populates='interfaces',
     )
     addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(

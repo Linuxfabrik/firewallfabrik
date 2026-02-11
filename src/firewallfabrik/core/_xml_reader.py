@@ -399,19 +399,7 @@ class XmlReader:
             else:
                 logger.debug('Skipping top-level %s in library %s', tag, context_name)
         elif tag in ('Interface', 'DummyInterface') and parent_group is None:
-            # Orphaned interface (Deleted Objects) -- register IDs only
-            xml_id = elem.get('id', '')
-            if xml_id:
-                self._register(xml_id)
-            if tag == 'Interface':
-                for child in elem:
-                    if _tag(child) in _ADDRESS_TAGS:
-                        child_id = child.get('id', '')
-                        if child_id:
-                            self._register(child_id)
-            logger.debug(
-                'Skipping orphaned %s %s in library %s', tag, xml_id, context_name
-            )
+            self._parse_interface(elem, library, None)
         else:
             logger.warning('Unhandled child: %s (in %s)', tag, context_name)
 
@@ -448,7 +436,7 @@ class XmlReader:
         for child in elem:
             tag = _tag(child)
             if tag == 'Interface':
-                self._parse_interface(child, device)
+                self._parse_interface(child, None, device)
             elif tag in _RULESET_TAGS:
                 self._parse_ruleset(child, _RULESET_TAGS[tag], device)
             elif tag == 'Management':
@@ -462,12 +450,13 @@ class XmlReader:
                 logger.warning('Unhandled device child: %s (in %s)', tag, device.name)
         return device
 
-    def _parse_interface(self, elem, device):
+    def _parse_interface(self, elem, library, device):
         iface = objects.Interface()
         iface.id = self._register(elem.get('id', ''))
         iface.name = elem.get('name', '')
         iface.comment = elem.get('comment', '')
         iface.data = _extra_attrs(elem, _COMMON_KNOWN)
+        iface.library = library
         iface.device = device
 
         for child in elem:
