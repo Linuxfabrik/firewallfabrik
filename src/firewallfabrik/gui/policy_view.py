@@ -133,8 +133,6 @@ class _CellBorderDelegate(QStyledItemDelegate):
         # Draw selection/background only — suppress text and icon so we
         # can render everything ourselves with consistent top-alignment.
         self.initStyleOption(option, index)
-        text = option.text
-        icon = option.icon
         option.text = ''
         option.icon = QIcon()
         style = option.widget.style() if option.widget else None
@@ -150,7 +148,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
         if elements:
             self._paint_elements(painter, option, index, elements)
         else:
-            self._paint_cell(painter, option, index, text, icon)
+            self._paint_cell(painter, option, index)
 
         # Cell border.
         painter.save()
@@ -158,7 +156,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
         painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
         painter.restore()
 
-    def _paint_cell(self, painter, option, index, text, icon):
+    def _paint_cell(self, painter, option, index):
         """Paint a single-value cell (icon + text) top-aligned."""
         icon_sz = self._icon_size()
         rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
@@ -174,10 +172,12 @@ class _CellBorderDelegate(QStyledItemDelegate):
             painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
 
         x = rect.left()
-        if not icon.isNull():
+        icon = index.data(Qt.ItemDataRole.DecorationRole)
+        if isinstance(icon, QIcon) and not icon.isNull():
             icon.paint(painter, QRect(x, rect.top(), icon_sz, line_h))
             x += icon_sz + self._ICON_TEXT_GAP
 
+        text = index.data(Qt.ItemDataRole.DisplayRole)
         if text:
             text_rect = QRect(x, rect.top(), rect.right() - x, line_h)
             painter.drawText(
