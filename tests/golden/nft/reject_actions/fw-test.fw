@@ -1,0 +1,75 @@
+#!/usr/sbin/nft -f
+#
+#  This is automatically generated file. DO NOT MODIFY !
+#
+#  Firewall Builder  fwf VERSION
+#
+#  Generated TIMESTAMP
+#
+
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 udp dport 53 reject
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 203.0.113.42 tcp dport 80 reject with icmp host-unreachable
+        #
+        # Rule 2 (global)
+        #
+        ip saddr 203.0.113.42 udp dport 53 reject with icmp net-unreachable
+        #
+        # Rule 3 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 22 reject with icmp admin-prohibited
+        #
+        # Rule 4 (global)
+        #
+        ip saddr 203.0.113.42 tcp dport 22 reject with tcp reset
+        #
+        # Rule 5 (global)
+        #
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 udp dport 53 reject
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 203.0.113.42 tcp dport 80 reject with icmp host-unreachable
+        #
+        # Rule 2 (global)
+        #
+        ip saddr 203.0.113.42 udp dport 53 reject with icmp net-unreachable
+        #
+        # Rule 3 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 22 reject with icmp admin-prohibited
+        #
+        # Rule 4 (global)
+        #
+        ip saddr 203.0.113.42 tcp dport 22 reject with tcp reset
+        #
+        # Rule 5 (global)
+        #
+        drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+    }
+}

@@ -1,0 +1,3344 @@
+last_modified: 1770821875.0
+data:
+  version: '24'
+libraries:
+  - name: 'Standard'
+    comment: 'Standard objects'
+    ro: true
+    data:
+      color: '#d4f8ff'
+    children:
+      - type: 'Network'
+        name: 'Any'
+        comment: 'Any Network'
+        inet_addr_mask:
+          address: '0.0.0.0'
+          netmask: '0.0.0.0'
+      - type: 'IPService'
+        name: 'Any'
+        comment: 'Any IP Service'
+        named_protocols:
+          protocol_num: '0'
+      - name: 'Any'
+        comment: 'Any Interval'
+        data:
+          days_of_week: '0,1,2,3,4,5,6'
+          from_day: '-1'
+          from_hour: '-1'
+          from_minute: '-1'
+          from_month: '-1'
+          from_weekday: '-1'
+          from_year: '-1'
+          to_day: '-1'
+          to_hour: '-1'
+          to_minute: '-1'
+          to_month: '-1'
+          to_weekday: '-1'
+          to_year: '-1'
+        type: 'Interval'
+      - type: 'ObjectGroup'
+        name: 'Clusters'
+      - type: 'Network'
+        name: 'Dummy'
+        comment: 'Dummy Network'
+        inet_addr_mask:
+          address: '255.255.255.255'
+          netmask: '255.255.255.255'
+      - type: 'IPService'
+        name: 'Dummy'
+        comment: 'Dummy IP Service'
+        named_protocols:
+          protocol_num: '0'
+      - name: 'Dummy'
+        comment: 'Dummy Interface'
+        data:
+          dedicated_failover: 'False'
+          dyn: 'False'
+          security_level: '0'
+          unnum: 'True'
+          unprotected: 'False'
+        type: 'Interface'
+      - type: 'ObjectGroup'
+        name: 'Firewalls'
+      - type: 'ObjectGroup'
+        name: 'Objects'
+        children:
+          - type: 'ObjectGroup'
+            name: 'Address Ranges'
+            children:
+              - type: 'AddressRange'
+                name: 'broadcast'
+                start_address:
+                  address: '255.255.255.255'
+                end_address:
+                  address: '255.255.255.255'
+              - type: 'AddressRange'
+                name: 'old-broadcast'
+                start_address:
+                  address: '0.0.0.0'
+                end_address:
+                  address: '0.0.0.0'
+          - type: 'ObjectGroup'
+            name: 'Address Tables'
+          - type: 'ObjectGroup'
+            name: 'Addresses'
+            children:
+              - type: 'IPv4'
+                name: 'DHCP server, relay agent'
+                comment: 'RFC 1884'
+                inet_addr_mask:
+                  address: '224.0.0.12'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'EIGRP'
+                inet_addr_mask:
+                  address: '224.0.0.10'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'HSRP'
+                inet_addr_mask:
+                  address: '224.0.0.102'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'IGMP'
+                inet_addr_mask:
+                  address: '224.0.0.22'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'LLMNR'
+                comment: 'Link-Local Multicast Name Resolution, RFC4795'
+                inet_addr_mask:
+                  address: '224.0.0.252'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'OSPF (all routers)'
+                comment: 'RFC2328'
+                inet_addr_mask:
+                  address: '224.0.0.5'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'OSPF (designated routers)'
+                comment: 'RFC2328'
+                inet_addr_mask:
+                  address: '224.0.0.6'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'OSPFIGP-TE'
+                comment: 'RFC4973'
+                inet_addr_mask:
+                  address: '224.0.0.24'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'PIM'
+                inet_addr_mask:
+                  address: '224.0.0.13'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'RIP'
+                comment: 'RFC1723'
+                inet_addr_mask:
+                  address: '224.0.0.9'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'RSVP'
+                inet_addr_mask:
+                  address: '224.0.0.14'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'Teredo'
+                inet_addr_mask:
+                  address: '224.0.0.253'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'VRRP'
+                comment: 'RFC3768'
+                inet_addr_mask:
+                  address: '224.0.0.18'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'all DVMRP'
+                inet_addr_mask:
+                  address: '224.0.0.4'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'all-hosts'
+                inet_addr_mask:
+                  address: '224.0.0.1'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'all-routers'
+                inet_addr_mask:
+                  address: '224.0.0.2'
+                  netmask: '0.0.0.0'
+              - type: 'IPv4'
+                name: 'mDNS'
+                inet_addr_mask:
+                  address: '224.0.0.251'
+                  netmask: '0.0.0.0'
+          - type: 'ObjectGroup'
+            name: 'DNS Names'
+          - type: 'ObjectGroup'
+            name: 'Groups'
+            children:
+              - type: 'ObjectGroup'
+                name: 'ipv6 private'
+                comment: 'These are various ipv6 networks that should not be routed
+                  on the Internet
+
+                  '
+                members:
+                  - 'NetworkIPv6/documentation net'
+                  - 'NetworkIPv6/experimental ipv6'
+                  - 'NetworkIPv6/link-local ipv6'
+              - type: 'ObjectGroup'
+                name: 'rfc1918-nets'
+                members:
+                  - 'Network/net-10.0.0.0'
+                  - 'Network/net-172.16.0.0'
+                  - 'Network/net-192.168.0.0'
+          - type: 'ObjectGroup'
+            name: 'Hosts'
+            children:
+              - type: 'Host'
+                name: 'internal server'
+                comment: 'This host is used in examples and template objects'
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
+                management:
+                  address: '192.168.1.10'
+                  snmp:
+                    enabled: false
+                    read_community: ''
+                    write_community: ''
+                  fwbd:
+                    enabled: false
+                    identity: ''
+                    port: -1
+                  install_script:
+                    enabled: false
+                    command: ''
+                    arguments: ''
+                interfaces:
+                  - name: 'eth0'
+                    data:
+                      dedicated_failover: 'False'
+                      dyn: 'False'
+                      security_level: '0'
+                      unnum: 'False'
+                      unprotected: 'False'
+                    addresses:
+                      - type: 'IPv4'
+                        name: 'ip'
+                        inet_addr_mask:
+                          address: '192.168.1.10'
+                          netmask: '255.255.255.0'
+              - type: 'Host'
+                name: 'server on dmz'
+                comment: 'This host is used in examples and template objects'
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
+                management:
+                  address: '192.168.2.10'
+                  snmp:
+                    enabled: false
+                    read_community: ''
+                    write_community: ''
+                  fwbd:
+                    enabled: false
+                    identity: ''
+                    port: -1
+                  install_script:
+                    enabled: false
+                    command: ''
+                    arguments: ''
+                interfaces:
+                  - name: 'eth0'
+                    data:
+                      dedicated_failover: 'False'
+                      dyn: 'False'
+                      security_level: '0'
+                      unnum: 'False'
+                      unprotected: 'False'
+                    addresses:
+                      - type: 'IPv4'
+                        name: 'ip'
+                        inet_addr_mask:
+                          address: '192.168.2.10'
+                          netmask: '255.255.255.0'
+          - type: 'ObjectGroup'
+            name: 'Networks'
+            children:
+              - type: 'Network'
+                name: 'Benchmark tests network'
+                comment: 'RFC 5735'
+                inet_addr_mask:
+                  address: '198.18.0.0'
+                  netmask: '255.254.0.0'
+              - type: 'Network'
+                name: 'TEST-NET-2'
+                comment: 'RFC 5735
+
+                  RFC 5737
+
+                  '
+                inet_addr_mask:
+                  address: '198.51.100.0'
+                  netmask: '255.255.255.0'
+              - type: 'Network'
+                name: 'TEST-NET-3'
+                comment: 'RFC 5735
+
+                  RFC 5737'
+                inet_addr_mask:
+                  address: '203.0.113.0'
+                  netmask: '255.255.255.0'
+              - type: 'NetworkIPv6'
+                name: 'Teredo'
+                inet_addr_mask:
+                  address: '2001::'
+                  netmask: '32'
+              - type: 'Network'
+                name: 'all multicasts'
+                comment: '224.0.0.0/4 - This block, formerly known as the Class D
+                  address
+
+                  space, is allocated for use in IPv4 multicast address assignments.
+
+                  The IANA guidelines for assignments from this space are described
+                  in
+
+                  [RFC3171].
+
+                  '
+                inet_addr_mask:
+                  address: '224.0.0.0'
+                  netmask: '240.0.0.0'
+              - type: 'NetworkIPv6'
+                name: 'documentation net'
+                comment: 'RFC3849'
+                inet_addr_mask:
+                  address: '2001:db8::'
+                  netmask: '32'
+              - type: 'NetworkIPv6'
+                name: 'experimental ipv6'
+                comment: "RFC2928, RFC4773 \n\n\"The block of Sub-TLA IDs assigned\
+                  \ to the IANA\n(i.e., 2001:0000::/29 - 2001:01F8::/29) is for\n\
+                  assignment for testing and experimental usage to\nsupport activities\
+                  \ such as the 6bone, and\nfor new approaches like exchanges.\" \
+                  \ [RFC2928]\n\n"
+                inet_addr_mask:
+                  address: '2001::'
+                  netmask: '23'
+              - type: 'Network'
+                name: 'link-local'
+                comment: '169.254.0.0/16 - This is the "link local" block.  It is
+                  allocated for
+
+                  communication between hosts on a single link.  Hosts obtain these
+
+                  addresses by auto-configuration, such as when a DHCP server may
+                  not
+
+                  be found.
+
+                  '
+                inet_addr_mask:
+                  address: '169.254.0.0'
+                  netmask: '255.255.0.0'
+              - type: 'NetworkIPv6'
+                name: 'link-local ipv6'
+                comment: 'RFC4291   Link-local unicast net'
+                inet_addr_mask:
+                  address: 'fe80::'
+                  netmask: '10'
+              - type: 'Network'
+                name: 'loopback-net'
+                comment: '127.0.0.0/8 - This block is assigned for use as the Internet
+                  host
+
+                  loopback address.  A datagram sent by a higher level protocol to
+                  an
+
+                  address anywhere within this block should loop back inside the host.
+
+                  This is ordinarily implemented using only 127.0.0.1/32 for loopback,
+
+                  but no addresses within this block should ever appear on any network
+
+                  anywhere [RFC1700, page 5].
+
+                  '
+                inet_addr_mask:
+                  address: '127.0.0.0'
+                  netmask: '255.0.0.0'
+              - type: 'NetworkIPv6'
+                name: 'mapped-ipv4'
+                inet_addr_mask:
+                  address: '::ffff:0.0.0.0'
+                  netmask: '96'
+              - type: 'NetworkIPv6'
+                name: 'multicast ipv6'
+                comment: 'RFC4291  ipv6 multicast addresses'
+                inet_addr_mask:
+                  address: 'ff00::'
+                  netmask: '8'
+              - type: 'Network'
+                name: 'net-10.0.0.0'
+                comment: '10.0.0.0/8 - This block is set aside for use in private
+                  networks.
+
+                  Its intended use is documented in [RFC1918].  Addresses within this
+
+                  block should not appear on the public Internet.'
+                inet_addr_mask:
+                  address: '10.0.0.0'
+                  netmask: '255.0.0.0'
+              - type: 'Network'
+                name: 'net-172.16.0.0'
+                comment: '172.16.0.0/12 - This block is set aside for use in private
+                  networks.
+
+                  Its intended use is documented in [RFC1918].  Addresses within this
+
+                  block should not appear on the public Internet.
+
+                  '
+                inet_addr_mask:
+                  address: '172.16.0.0'
+                  netmask: '255.240.0.0'
+              - type: 'Network'
+                name: 'net-192.168.0.0'
+                comment: '192.168.0.0/16 - This block is set aside for use in private
+                  networks.
+
+                  Its intended use is documented in [RFC1918].  Addresses within this
+
+                  block should not appear on the public Internet.
+
+                  '
+                inet_addr_mask:
+                  address: '192.168.0.0'
+                  netmask: '255.255.0.0'
+              - type: 'Network'
+                name: 'net-192.168.1.0'
+                comment: '192.168.1.0/24 - Address often used for home and small office
+                  networks.
+
+                  '
+                inet_addr_mask:
+                  address: '192.168.1.0'
+                  netmask: '255.255.255.0'
+              - type: 'Network'
+                name: 'net-192.168.2.0'
+                comment: '192.168.2.0/24 - Address often used for home and small office
+                  networks.
+
+                  '
+                inet_addr_mask:
+                  address: '192.168.2.0'
+                  netmask: '255.255.255.0'
+              - type: 'Network'
+                name: 'test-net'
+                comment: '192.0.2.0/24 - This block is assigned as "TEST-NET" for
+                  use in
+
+                  documentation and example code.  It is often used in conjunction
+                  with
+
+                  domain names example.com or example.net in vendor and protocol
+
+                  documentation.  Addresses within this block should not appear on
+                  the
+
+                  public Internet.
+
+                  '
+                inet_addr_mask:
+                  address: '192.0.2.0'
+                  netmask: '255.255.255.0'
+              - type: 'Network'
+                name: 'this-net'
+                comment: '0.0.0.0/8 - Addresses in this block refer to source hosts
+                  on "this"
+
+                  network.  Address 0.0.0.0/32 may be used as a source address for
+                  this
+
+                  host on this network; other addresses within 0.0.0.0/8 may be used
+                  to
+
+                  refer to specified hosts on this network [RFC1700, page 4].'
+                inet_addr_mask:
+                  address: '0.0.0.0'
+                  netmask: '255.0.0.0'
+              - type: 'NetworkIPv6'
+                name: 'translated-ipv4'
+                inet_addr_mask:
+                  address: '::ffff:0:0:0'
+                  netmask: '96'
+              - type: 'NetworkIPv6'
+                name: 'unique-local'
+                inet_addr_mask:
+                  address: 'fc00::'
+                  netmask: '7'
+      - type: 'ServiceGroup'
+        name: 'Services'
+        children:
+          - type: 'ServiceGroup'
+            name: 'Custom'
+            children:
+              - type: 'CustomService'
+                name: 'Fragment IPv4 UDP'
+                comment: 'Only implemented for Junos ACL.'
+                codes:
+                  fwsm: ''
+                  iosacl: ''
+                  ipf: ''
+                  ipfw: ''
+                  iptables: ''
+                  junosacl: 'fragment-offset 6-8191'
+                  nxosacl: ''
+                  pf: ''
+                  pix: ''
+                  procurve_acl: ''
+                  unknown: ''
+                protocol: 'udp'
+              - type: 'CustomService'
+                name: 'Fragment IPv6 UDP'
+                comment: 'Only implemented for Junos ACL.'
+                codes:
+                  fwsm: ''
+                  iosacl: ''
+                  ipf: ''
+                  ipfw: ''
+                  iptables: ''
+                  junosacl: 'payload-protocol udp'
+                  nxosacl: ''
+                  pf: ''
+                  pix: ''
+                  procurve_acl: ''
+                  unknown: ''
+                protocol: 'fragment'
+              - type: 'CustomService'
+                name: 'Fragment Small Offset IPv4 UDP'
+                comment: 'Only implemented for Junos ACL.'
+                codes:
+                  fwsm: ''
+                  iosacl: ''
+                  ipf: ''
+                  ipfw: ''
+                  iptables: ''
+                  junosacl: 'fragment-offset 1-5'
+                  nxosacl: ''
+                  pf: ''
+                  pix: ''
+                  procurve_acl: ''
+                  unknown: ''
+                protocol: 'udp'
+              - type: 'CustomService'
+                name: 'irc-conn'
+                comment: 'IRC connection tracker, supports DCC.
+
+                  Works on iptables and requires patch-o-matic.
+
+                  For more information look for patch-o-matic on http://www.netfilter.org/
+
+                  '
+                codes:
+                  Undefined: ''
+                  ipf: ''
+                  ipfilter: ''
+                  ipfw: ''
+                  iptables: '-m irc'
+                  pf: ''
+                  pix: ''
+                  unknown: ''
+                protocol: 'any'
+              - type: 'CustomService'
+                name: 'psd'
+                comment: "Port scan detector, works only on iptables and  requires\
+                  \ patch-o-matic \nFor more information look for patch-o-matic on\
+                  \ http://www.netfilter.org/"
+                codes:
+                  Undefined: ''
+                  ipf: ''
+                  ipfilter: ''
+                  ipfw: ''
+                  iptables: '-m psd --psd-weight-threshold 5 --psd-delay-threshold
+                    10000'
+                  pf: ''
+                  pix: ''
+                  unknown: ''
+                protocol: 'any'
+              - type: 'CustomService'
+                name: 'rpc'
+                comment: 'works in iptables and requires patch-o-matic.
+
+                  For more information look for patch-o-matic on http://www.netfilter.org/'
+                codes:
+                  Undefined: ''
+                  ipf: ''
+                  ipfilter: ''
+                  ipfw: ''
+                  iptables: '-m record_rpc'
+                  pf: ''
+                  pix: ''
+                  unknown: ''
+                protocol: 'any'
+              - type: 'CustomService'
+                name: 'string'
+                comment: 'Matches a string in a whole packet, works in iptables and
+                  requires patch-o-matic.
+
+                  For more information look for patch-o-matic on http://www.netfilter.org/'
+                codes:
+                  Undefined: ''
+                  ipf: ''
+                  ipfilter: ''
+                  ipfw: ''
+                  iptables: '-m string --string test_pattern'
+                  pf: ''
+                  pix: ''
+                  unknown: ''
+                protocol: 'any'
+              - type: 'CustomService'
+                name: 'talk'
+                comment: 'Talk protocol support. Works in iptables and requires patch-o-matic.
+
+                  For more information look for patch-o-matic on http://www.netfilter.org/'
+                codes:
+                  Undefined: ''
+                  ipf: ''
+                  ipfilter: ''
+                  ipfw: ''
+                  iptables: '-m talk'
+                  pf: ''
+                  pix: ''
+                  unknown: ''
+                protocol: 'any'
+          - type: 'CustomService'
+            name: 'ESTABLISHED'
+            comment: 'This service matches all packets which are part of network connections
+              established through the firewall, or connections ''related'' to those
+              established through the firewall. Term ''established'' refers to the
+              state tracking mechanism which exists inside iptables and other stateful
+              firewalls and does not mean any particular combination of packet header
+              options. Packet is considered to correspond to the state ''ESTABLISHED''
+              if it belongs to the network session, for which proper initiation has
+              been seen by the firewall, so its stateful inspection module made appropriate
+              record in the state table. Usually stateful firewalls keep track of
+              network connections using not only tcp protocol, but also udp and sometimes
+              even icmp protocols. ''RELATED'' describes packet belonging to a separate
+              network connection, related to the session firewall is keeping track
+              of. One example is FTP command and FTP data sessions.'
+            codes:
+              Undefined: ''
+              iosacl: 'established'
+              ipfilter: ''
+              ipfw: 'established'
+              iptables: '-m state --state ESTABLISHED,RELATED'
+              junosacl: 'tcp-established'
+              nxosacl: 'established'
+              procurve_acl: 'established'
+            protocol: 'any'
+          - type: 'CustomService'
+            name: 'ESTABLISHED ipv6'
+            comment: 'This service matches all packets which are part of network connections
+              established through the firewall, or connections ''related'' to those
+              established through the firewall. Term ''established'' refers to the
+              state tracking mechanism which exists inside iptables and other stateful
+              firewalls and does not mean any particular combination of packet header
+              options. Packet is considered to correspond to the state ''ESTABLISHED''
+              if it belongs to the network session, for which proper initiation has
+              been seen by the firewall, so its stateful inspection module made appropriate
+              record in the state table. Usually stateful firewalls keep track of
+              network connections using not only tcp protocol, but also udp and sometimes
+              even icmp protocols. ''RELATED'' describes packet belonging to a separate
+              network connection, related to the session firewall is keeping track
+              of. One example is FTP command and FTP data sessions.'
+            codes:
+              Undefined: ''
+              iosacl: 'established'
+              ipfilter: ''
+              ipfw: 'established'
+              iptables: '-m state --state ESTABLISHED,RELATED'
+              junosacl: 'tcp-established'
+              nxosacl: 'established'
+              procurve_acl: 'established'
+            protocol: 'any'
+          - type: 'ServiceGroup'
+            name: 'Groups'
+            children:
+              - type: 'ServiceGroup'
+                name: 'DHCP'
+                members:
+                  - 'UDPService/bootpc'
+                  - 'UDPService/bootps'
+              - type: 'ServiceGroup'
+                name: 'DNS'
+                members:
+                  - 'TCPService/domain'
+                  - 'UDPService/domain'
+              - type: 'ServiceGroup'
+                name: 'IPSEC'
+                members:
+                  - 'IPService/AH'
+                  - 'IPService/ESP'
+              - type: 'ServiceGroup'
+                name: 'Ipv6 unreachable messages'
+                members:
+                  - 'ICMP6Service/ipv6 all dest unreachable'
+                  - 'ICMP6Service/ipv6 packet too big'
+                  - 'ICMP6Service/ipv6 parameter problem'
+                  - 'ICMP6Service/ipv6 time exceeded'
+              - type: 'ServiceGroup'
+                name: 'NETBIOS'
+                members:
+                  - 'TCPService/netbios-ssn'
+                  - 'UDPService/netbios-dgm'
+                  - 'UDPService/netbios-ns'
+              - type: 'ServiceGroup'
+                name: 'PCAnywhere'
+                members:
+                  - 'TCPService/PCAnywhere-data'
+                  - 'UDPService/PCAnywhere-status'
+              - type: 'ServiceGroup'
+                name: 'Real Player'
+                members:
+                  - 'TCPService/Real-Audio'
+                  - 'TCPService/rtsp'
+              - type: 'ServiceGroup'
+                name: 'UPnP'
+                members:
+                  - 'TCPService/icslap'
+                  - 'TCPService/upnp'
+                  - 'TCPService/upnp-5431'
+                  - 'UDPService/SSDP'
+              - type: 'ServiceGroup'
+                name: 'Useful_ICMP'
+                members:
+                  - 'ICMPService/all ICMP unreachables'
+                  - 'ICMPService/ping reply'
+                  - 'ICMPService/time exceeded'
+                  - 'ICMPService/time exceeded in transit'
+              - type: 'ServiceGroup'
+                name: 'Win2000'
+                members:
+                  - 'ServiceGroup/WinNT'
+                  - 'TCPService/LDAP GC'
+                  - 'TCPService/LDAP GC SSL'
+                  - 'TCPService/SMB'
+                  - 'TCPService/domain'
+                  - 'TCPService/kerberos'
+                  - 'TCPService/ldap'
+                  - 'TCPService/ldaps'
+                  - 'UDPService/domain'
+                  - 'UDPService/kerberos'
+              - type: 'ServiceGroup'
+                name: 'WinNT'
+                members:
+                  - 'ServiceGroup/NETBIOS'
+                  - 'TCPService/WINS replication'
+                  - 'TCPService/microsoft-rpc'
+              - type: 'ServiceGroup'
+                name: 'kerberos'
+                members:
+                  - 'TCPService/eklogin'
+                  - 'TCPService/kerberos'
+                  - 'TCPService/klogin'
+                  - 'TCPService/ksh'
+                  - 'UDPService/kerberos'
+                  - 'UDPService/kerberos-adm'
+                  - 'UDPService/kpasswd'
+                  - 'UDPService/krb524'
+              - type: 'ServiceGroup'
+                name: 'nfs'
+                members:
+                  - 'TCPService/nfs'
+                  - 'UDPService/nfs'
+              - type: 'ServiceGroup'
+                name: 'quake'
+                members:
+                  - 'TCPService/quake'
+                  - 'UDPService/quake'
+          - type: 'ServiceGroup'
+            name: 'ICMP'
+            children:
+              - type: 'ICMPService'
+                name: 'all ICMP unreachables'
+                data:
+                  code: '-1'
+                  type: '3'
+              - type: 'ICMPService'
+                name: 'any ICMP'
+                data:
+                  code: '-1'
+                  type: '-1'
+              - type: 'ICMPService'
+                name: 'host_unreach'
+                data:
+                  code: '1'
+                  type: '3'
+              - type: 'ICMP6Service'
+                name: 'ipv6 all dest unreachable'
+                comment: 'All icmpv6 codes for type "destination unreachable"
+
+                  '
+                data:
+                  code: '-1'
+                  type: '1'
+              - type: 'ICMP6Service'
+                name: 'ipv6 any ICMP6'
+                comment: 'any ICMPv6'
+                data:
+                  code: '-1'
+                  type: '-1'
+              - type: 'ICMP6Service'
+                name: 'ipv6 neighbradv'
+                comment: 'IPv6 neighbor advertisement'
+                data:
+                  code: '0'
+                  type: '136'
+              - type: 'ICMP6Service'
+                name: 'ipv6 neighbrsol'
+                comment: 'IPv6 neighbor solicitation'
+                data:
+                  code: '0'
+                  type: '135'
+              - type: 'ICMP6Service'
+                name: 'ipv6 packet too big'
+                data:
+                  code: '-1'
+                  type: '2'
+              - type: 'ICMP6Service'
+                name: 'ipv6 parameter problem'
+                comment: 'IPv6 Parameter Problem: RFC4443'
+                data:
+                  code: '-1'
+                  type: '4'
+              - type: 'ICMP6Service'
+                name: 'ipv6 ping reply'
+                comment: 'IPv6 ping reply'
+                data:
+                  code: '0'
+                  type: '129'
+              - type: 'ICMP6Service'
+                name: 'ipv6 ping request'
+                comment: 'IPv6 ping request'
+                data:
+                  code: '0'
+                  type: '128'
+              - type: 'ICMP6Service'
+                name: 'ipv6 redir'
+                comment: 'IPv6 redirect: shorter route exists'
+                data:
+                  code: '0'
+                  type: '137'
+              - type: 'ICMP6Service'
+                name: 'ipv6 routeradv'
+                comment: 'IPv6 router advertisement'
+                data:
+                  code: '0'
+                  type: '134'
+              - type: 'ICMP6Service'
+                name: 'ipv6 routersol'
+                comment: 'IPv6 router solicitation'
+                data:
+                  code: '0'
+                  type: '133'
+              - type: 'ICMP6Service'
+                name: 'ipv6 time exceeded'
+                comment: 'Time exceeded in transit'
+                data:
+                  code: '0'
+                  type: '3'
+              - type: 'ICMP6Service'
+                name: 'ipv6 time exceeded in reassembly'
+                comment: 'Time exceeded in reassembly'
+                data:
+                  code: '1'
+                  type: '3'
+              - type: 'ICMPService'
+                name: 'ping reply'
+                data:
+                  code: '0'
+                  type: '0'
+              - type: 'ICMPService'
+                name: 'ping request'
+                data:
+                  code: '0'
+                  type: '8'
+              - type: 'ICMPService'
+                name: 'port unreach'
+                comment: 'Port unreachable'
+                data:
+                  code: '3'
+                  type: '3'
+              - type: 'ICMPService'
+                name: 'time exceeded'
+                comment: 'ICMP messages of this type are needed for traceroute'
+                data:
+                  code: '0'
+                  type: '11'
+              - type: 'ICMPService'
+                name: 'time exceeded in transit'
+                data:
+                  code: '1'
+                  type: '11'
+          - type: 'ServiceGroup'
+            name: 'IP'
+            children:
+              - type: 'IPService'
+                name: 'AH'
+                comment: 'IPSEC Authentication Header Protocol'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '51'
+              - type: 'IPService'
+                name: 'ESP'
+                comment: 'IPSEC Encapsulating Security Payload Protocol'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '50'
+              - type: 'IPService'
+                name: 'GRE'
+                comment: 'Generic Routing Encapsulation
+
+                  '
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '47'
+              - type: 'IPService'
+                name: 'IGMP'
+                comment: 'Internet Group Management Protocol, Version 3, RFC 3376'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  rtralt: 'True'
+                  rtralt_value: '0'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '2'
+              - type: 'IPService'
+                name: 'PIM'
+                comment: 'Protocol Independent Multicast - Dense Mode (PIM-DM), RFC
+                  3973, or Protocol Independent Multicast-Sparse Mode (PIM-SM) RFC
+                  2362'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  rtralt: 'False'
+                  rtralt_value: '0'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '103'
+              - type: 'IPService'
+                name: 'RR'
+                comment: 'Route recording packets'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'True'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '0'
+              - type: 'IPService'
+                name: 'SKIP'
+                comment: 'IPSEC Simple Key Management for Internet Protocols'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '57'
+              - type: 'IPService'
+                name: 'SRR'
+                comment: 'All sorts of Source Routing Packets'
+                data:
+                  fragm: 'False'
+                  lsrr: 'True'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'True'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '0'
+              - type: 'IPService'
+                name: 'ip_fragments'
+                comment: '''Short'' fragments'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'True'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '0'
+              - type: 'IPService'
+                name: 'vrrp'
+                comment: 'Virtual Router Redundancy Protocol'
+                data:
+                  fragm: 'False'
+                  lsrr: 'False'
+                  rr: 'False'
+                  short_fragm: 'False'
+                  ssrr: 'False'
+                  ts: 'False'
+                named_protocols:
+                  protocol_num: '112'
+          - type: 'ServiceGroup'
+            name: 'TCP'
+            children:
+              - type: 'TCPService'
+                name: 'ALL TCP Masqueraded'
+                comment: 'ipchains used to use this range of port numbers for masquerading. '
+                src_range_start: 61000
+                src_range_end: 65095
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'AOL'
+                dst_range_start: 5190
+                dst_range_end: 5190
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'All TCP'
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'All TCP established'
+                comment: 'Some firewall platforms can match TCP packets with flags
+                  ACK or RST set; the option is usually called "established".
+
+
+                  Note that you can use this object only in the policy rules of the
+                  firewall that supports this option.
+
+
+                  If you need to match reply packets for a specific TCP service and
+                  wish to use option "established", make a copy of this object and
+                  set source port range to match the service.
+
+                  '
+                data:
+                  established: 'True'
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'Citrix-ICA'
+                dst_range_start: 1494
+                dst_range_end: 1494
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'Entrust-Admin'
+                comment: 'Entrust CA Administration Service'
+                dst_range_start: 709
+                dst_range_end: 709
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'Entrust-KeyMgmt'
+                comment: 'Entrust CA Key Management Service'
+                dst_range_start: 710
+                dst_range_end: 710
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'H323'
+                dst_range_start: 1720
+                dst_range_end: 1720
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'LDAP GC'
+                dst_range_start: 3268
+                dst_range_end: 3268
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'LDAP GC SSL'
+                dst_range_start: 3269
+                dst_range_end: 3269
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'OpenWindows'
+                comment: 'Open Windows'
+                dst_range_start: 2000
+                dst_range_end: 2000
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'PCAnywhere-data'
+                comment: 'data channel for PCAnywhere v7.52 and later '
+                dst_range_start: 5631
+                dst_range_end: 5631
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'Real-Audio'
+                comment: 'RealNetworks PNA Protocol'
+                dst_range_start: 7070
+                dst_range_end: 7070
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'RealSecure'
+                dst_range_start: 2998
+                dst_range_end: 2998
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'SMB'
+                comment: 'SMB over TCP (without NETBIOS)
+
+                  '
+                dst_range_start: 445
+                dst_range_end: 445
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'TACACSplus'
+                dst_range_start: 49
+                dst_range_end: 49
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'TCP high ports'
+                comment: 'TCP high ports'
+                dst_range_start: 1024
+                dst_range_end: 65535
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'WINS replication'
+                dst_range_start: 42
+                dst_range_end: 42
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'X11'
+                comment: 'X Window System'
+                dst_range_start: 6000
+                dst_range_end: 6063
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'afp'
+                comment: 'AFP (Apple file sharing) over TCP'
+                dst_range_start: 548
+                dst_range_end: 548
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'auth'
+                dst_range_start: 113
+                dst_range_end: 113
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'bgp'
+                dst_range_start: 179
+                dst_range_end: 179
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'cvspserver'
+                comment: 'CVS client/server operations'
+                dst_range_start: 2401
+                dst_range_end: 2401
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'cvsup'
+                comment: 'CVSup file transfer/John Polstra/FreeBSD'
+                dst_range_start: 5999
+                dst_range_end: 5999
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'daytime'
+                dst_range_start: 13
+                dst_range_end: 13
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'distcc'
+                comment: 'distributed compiler'
+                dst_range_start: 3632
+                dst_range_end: 3632
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'domain'
+                dst_range_start: 53
+                dst_range_end: 53
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'eklogin'
+                dst_range_start: 2105
+                dst_range_end: 2105
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'finger'
+                dst_range_start: 79
+                dst_range_end: 79
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ftp'
+                dst_range_start: 21
+                dst_range_end: 21
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ftp data'
+                comment: "FTP data channel.\n  Note: FTP protocol does not really\
+                  \ require server to use source port 20 for the data channel, \n\
+                  \  but many ftp server implementations do so."
+                src_range_start: 20
+                src_range_end: 20
+                dst_range_start: 1024
+                dst_range_end: 65535
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ftp data passive'
+                comment: 'FTP data channel for passive mode transfers
+
+                  '
+                dst_range_start: 20
+                dst_range_end: 20
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'http'
+                dst_range_start: 80
+                dst_range_end: 80
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'https'
+                dst_range_start: 443
+                dst_range_end: 443
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'icslap'
+                comment: 'Sometimes this protocol is called icslap, but Microsoft
+                  does not call it that and just says that DSPP uses port 2869 in
+                  Windows XP SP2'
+                dst_range_start: 2869
+                dst_range_end: 2869
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'imap'
+                dst_range_start: 143
+                dst_range_end: 143
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'imaps'
+                dst_range_start: 993
+                dst_range_end: 993
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'irc'
+                dst_range_start: 6667
+                dst_range_end: 6667
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'kerberos'
+                dst_range_start: 88
+                dst_range_end: 88
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'klogin'
+                dst_range_start: 543
+                dst_range_end: 543
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ksh'
+                dst_range_start: 544
+                dst_range_end: 544
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ldap'
+                dst_range_start: 389
+                dst_range_end: 389
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ldaps'
+                comment: 'Lightweight Directory Access Protocol over TLS/SSL'
+                dst_range_start: 636
+                dst_range_end: 636
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'linuxconf'
+                dst_range_start: 98
+                dst_range_end: 98
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'lpr'
+                dst_range_start: 515
+                dst_range_end: 515
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'microsoft-rpc'
+                dst_range_start: 135
+                dst_range_end: 135
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ms-sql'
+                comment: 'Microsoft SQL Server'
+                dst_range_start: 1433
+                dst_range_end: 1433
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'mysql'
+                dst_range_start: 3306
+                dst_range_end: 3306
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'netbios-ssn'
+                dst_range_start: 139
+                dst_range_end: 139
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'nfs'
+                dst_range_start: 2049
+                dst_range_end: 2049
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'nntp'
+                dst_range_start: 119
+                dst_range_end: 119
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'nntps'
+                comment: 'NNTP over SSL'
+                dst_range_start: 563
+                dst_range_end: 563
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'nrpe'
+                comment: 'NRPE add-on for Nagios  http://www.nagios.org/
+
+                  '
+                data:
+                  established: 'False'
+                dst_range_start: 5666
+                dst_range_end: 5666
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'pop3'
+                dst_range_start: 110
+                dst_range_end: 110
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'pop3s'
+                comment: 'POP-3 over SSL'
+                dst_range_start: 995
+                dst_range_end: 995
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'postgres'
+                dst_range_start: 5432
+                dst_range_end: 5432
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'printer'
+                dst_range_start: 515
+                dst_range_end: 515
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'quake'
+                dst_range_start: 26000
+                dst_range_end: 26000
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'radius'
+                comment: 'Radius protocol'
+                dst_range_start: 1812
+                dst_range_end: 1812
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'radius acct'
+                comment: 'Radius Accounting'
+                dst_range_start: 1813
+                dst_range_end: 1813
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rexec'
+                dst_range_start: 512
+                dst_range_end: 512
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rlogin'
+                dst_range_start: 513
+                dst_range_end: 513
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rshell'
+                dst_range_start: 514
+                dst_range_end: 514
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rsync'
+                dst_range_start: 873
+                dst_range_end: 873
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rtmp'
+                comment: 'Real Time Messaging Protocol'
+                data:
+                  established: 'False'
+                dst_range_start: 1935
+                dst_range_end: 1935
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rtsp'
+                comment: 'Real Time Streaming Protocol'
+                dst_range_start: 554
+                dst_range_end: 554
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'rwhois'
+                dst_range_start: 4321
+                dst_range_end: 4321
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'securidprop'
+                dst_range_start: 5510
+                dst_range_end: 5510
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'smtp'
+                dst_range_start: 25
+                dst_range_end: 25
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'smtps'
+                dst_range_start: 465
+                dst_range_end: 465
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'socks'
+                dst_range_start: 1080
+                dst_range_end: 1080
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'sqlnet1'
+                dst_range_start: 1521
+                dst_range_end: 1521
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'squid'
+                dst_range_start: 3128
+                dst_range_end: 3128
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'ssh'
+                dst_range_start: 22
+                dst_range_end: 22
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'sunrpc'
+                dst_range_start: 111
+                dst_range_end: 111
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'tcp-syn'
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: true
+                  fin: false
+                tcp_flags_masks:
+                  urg: true
+                  ack: true
+                  psh: true
+                  rst: true
+                  syn: true
+                  fin: true
+              - type: 'TCPService'
+                name: 'telnet'
+                dst_range_start: 23
+                dst_range_end: 23
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'upnp'
+                dst_range_start: 5000
+                dst_range_end: 5000
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'upnp-5431'
+                comment: 'Although UPnP specification say it should use TCP port 5000,
+                  Linksys running Sveasoft firmware listens on port 5431'
+                dst_range_start: 5431
+                dst_range_end: 5431
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'uucp'
+                dst_range_start: 540
+                dst_range_end: 540
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'vnc-0'
+                comment: 'Regular VNC viewer, display 0'
+                dst_range_start: 5900
+                dst_range_end: 5900
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'vnc-1'
+                comment: 'Regular VNC viewer, display 1'
+                dst_range_start: 5901
+                dst_range_end: 5901
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'vnc-java-0'
+                comment: 'Java VNC viewer, display 0'
+                dst_range_start: 5800
+                dst_range_end: 5800
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'vnc-java-1'
+                comment: 'Java VNC viewer, display 1'
+                dst_range_start: 5801
+                dst_range_end: 5801
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'whois'
+                dst_range_start: 43
+                dst_range_end: 43
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'winterm'
+                comment: 'Windows Terminal Services'
+                dst_range_start: 3389
+                dst_range_end: 3389
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'xfs'
+                dst_range_start: 7100
+                dst_range_end: 7100
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'xmas scan'
+                comment: 'This service object matches TCP packet with flags FIN, PSH
+                  and URG set and other flags cleared. This is a  "christmas scan"
+                  as defined in snort rules. Nmap can generate this scan, too.'
+                tcp_flags:
+                  urg: true
+                  ack: false
+                  psh: true
+                  rst: false
+                  syn: false
+                  fin: true
+                tcp_flags_masks:
+                  urg: true
+                  ack: true
+                  psh: true
+                  rst: true
+                  syn: true
+                  fin: true
+              - type: 'TCPService'
+                name: 'xmas scan - full'
+                comment: 'This service object matches TCP packet with all six flags
+                  set.'
+                tcp_flags:
+                  urg: true
+                  ack: true
+                  psh: true
+                  rst: true
+                  syn: true
+                  fin: true
+                tcp_flags_masks:
+                  urg: true
+                  ack: true
+                  psh: true
+                  rst: true
+                  syn: true
+                  fin: true
+              - type: 'TCPService'
+                name: 'xmpp-client'
+                comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
+
+                  '
+                data:
+                  established: 'False'
+                dst_range_start: 5222
+                dst_range_end: 5222
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'xmpp-client-ssl'
+                comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
+
+                  '
+                data:
+                  established: 'False'
+                dst_range_start: 5223
+                dst_range_end: 5223
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'xmpp-server'
+                comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
+
+                  '
+                data:
+                  established: 'False'
+                dst_range_start: 5269
+                dst_range_end: 5269
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'xmpp-server-ssl'
+                comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
+
+                  '
+                data:
+                  established: 'False'
+                dst_range_start: 5270
+                dst_range_end: 5270
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+          - type: 'ServiceGroup'
+            name: 'TagServices'
+          - type: 'ServiceGroup'
+            name: 'UDP'
+            children:
+              - type: 'UDPService'
+                name: 'ALL UDP Masqueraded'
+                comment: 'ipchains used to use this port range for masqueraded packets'
+                src_range_start: 61000
+                src_range_end: 65095
+              - type: 'UDPService'
+                name: 'All UDP'
+              - type: 'UDPService'
+                name: 'ICQ'
+                dst_range_start: 4000
+                dst_range_end: 4000
+              - type: 'UDPService'
+                name: 'IKE'
+                dst_range_start: 500
+                dst_range_end: 500
+              - type: 'UDPService'
+                name: 'OpenVPN'
+                dst_range_start: 1194
+                dst_range_end: 1194
+              - type: 'UDPService'
+                name: 'PCAnywhere-status'
+                comment: 'status channel for PCAnywhere v7.52 and later'
+                dst_range_start: 5632
+                dst_range_end: 5632
+              - type: 'UDPService'
+                name: 'RIP'
+                comment: 'routing protocol RIP'
+                dst_range_start: 520
+                dst_range_end: 520
+              - type: 'UDPService'
+                name: 'Radius'
+                dst_range_start: 1645
+                dst_range_end: 1645
+              - type: 'UDPService'
+                name: 'SSDP'
+                comment: 'Simple Service Discovery Protocol (used for UPnP)'
+                dst_range_start: 1900
+                dst_range_end: 1900
+              - type: 'UDPService'
+                name: 'UDP high ports'
+                dst_range_start: 1024
+                dst_range_end: 65535
+              - type: 'UDPService'
+                name: 'Who'
+                dst_range_start: 513
+                dst_range_end: 513
+              - type: 'UDPService'
+                name: 'afs'
+                dst_range_start: 7000
+                dst_range_end: 7009
+              - type: 'UDPService'
+                name: 'bootpc'
+                dst_range_start: 68
+                dst_range_end: 68
+              - type: 'UDPService'
+                name: 'bootps'
+                dst_range_start: 67
+                dst_range_end: 67
+              - type: 'UDPService'
+                name: 'daytime'
+                dst_range_start: 13
+                dst_range_end: 13
+              - type: 'UDPService'
+                name: 'domain'
+                dst_range_start: 53
+                dst_range_end: 53
+              - type: 'UDPService'
+                name: 'interphone'
+                comment: 'VocalTec Internet Phone'
+                dst_range_start: 22555
+                dst_range_end: 22555
+              - type: 'UDPService'
+                name: 'kerberos'
+                dst_range_start: 88
+                dst_range_end: 88
+              - type: 'UDPService'
+                name: 'kerberos-adm'
+                dst_range_start: 749
+                dst_range_end: 750
+              - type: 'UDPService'
+                name: 'kpasswd'
+                dst_range_start: 464
+                dst_range_end: 464
+              - type: 'UDPService'
+                name: 'krb524'
+                dst_range_start: 4444
+                dst_range_end: 4444
+              - type: 'UDPService'
+                name: 'microsoft-rpc'
+                dst_range_start: 135
+                dst_range_end: 135
+              - type: 'UDPService'
+                name: 'netbios-dgm'
+                dst_range_start: 138
+                dst_range_end: 138
+              - type: 'UDPService'
+                name: 'netbios-ns'
+                dst_range_start: 137
+                dst_range_end: 137
+              - type: 'UDPService'
+                name: 'netbios-ssn'
+                dst_range_start: 139
+                dst_range_end: 139
+              - type: 'UDPService'
+                name: 'nfs'
+                dst_range_start: 2049
+                dst_range_end: 2049
+              - type: 'UDPService'
+                name: 'ntp'
+                dst_range_start: 123
+                dst_range_end: 123
+              - type: 'UDPService'
+                name: 'quake'
+                dst_range_start: 26000
+                dst_range_end: 26000
+              - type: 'UDPService'
+                name: 'rsync'
+                dst_range_start: 873
+                dst_range_end: 873
+              - type: 'UDPService'
+                name: 'secureid-udp'
+                dst_range_start: 1024
+                dst_range_end: 1024
+              - type: 'UDPService'
+                name: 'snmp'
+                dst_range_start: 161
+                dst_range_end: 161
+              - type: 'UDPService'
+                name: 'snmp-trap'
+                dst_range_start: 162
+                dst_range_end: 162
+              - type: 'UDPService'
+                name: 'sunrpc'
+                dst_range_start: 111
+                dst_range_end: 111
+              - type: 'UDPService'
+                name: 'syslog'
+                dst_range_start: 514
+                dst_range_end: 514
+              - type: 'UDPService'
+                name: 'tftp'
+                dst_range_start: 69
+                dst_range_end: 69
+              - type: 'UDPService'
+                name: 'traceroute'
+                dst_range_start: 33434
+                dst_range_end: 33524
+          - type: 'ServiceGroup'
+            name: 'UserServices'
+      - type: 'IntervalGroup'
+        name: 'Time'
+        children:
+          - name: 'Sat'
+            data:
+              days_of_week: '6'
+              from_day: '-1'
+              from_hour: '0'
+              from_minute: '0'
+              from_month: '-1'
+              from_weekday: '6'
+              from_year: '-1'
+              to_day: '-1'
+              to_hour: '23'
+              to_minute: '59'
+              to_month: '-1'
+              to_weekday: '6'
+              to_year: '-1'
+            type: 'Interval'
+          - name: 'Sun'
+            data:
+              days_of_week: '0'
+              from_day: '-1'
+              from_hour: '0'
+              from_minute: '0'
+              from_month: '-1'
+              from_weekday: '0'
+              from_year: '-1'
+              to_day: '-1'
+              to_hour: '23'
+              to_minute: '59'
+              to_month: '-1'
+              to_weekday: '0'
+              to_year: '-1'
+            type: 'Interval'
+          - name: 'afterhours'
+            comment: 'any day 6:00pm - 12:00am'
+            data:
+              days_of_week: '0,1,2,3,4,5,6'
+              from_day: '-1'
+              from_hour: '18'
+              from_minute: '0'
+              from_month: '-1'
+              from_weekday: '-1'
+              from_year: '-1'
+              to_day: '-1'
+              to_hour: '23'
+              to_minute: '59'
+              to_month: '-1'
+              to_weekday: '-1'
+              to_year: '-1'
+            type: 'Interval'
+          - name: 'weekends'
+            comment: 'weekends: Saturday 0:00 through Sunday 23:59 '
+            data:
+              days_of_week: '6,0'
+              from_day: '-1'
+              from_hour: '0'
+              from_minute: '0'
+              from_month: '-1'
+              from_weekday: '6'
+              from_year: '-1'
+              to_day: '-1'
+              to_hour: '23'
+              to_minute: '59'
+              to_month: '-1'
+              to_weekday: '0'
+              to_year: '-1'
+            type: 'Interval'
+          - name: 'workhours'
+            comment: 'any day, 9:00am through 5:00pm'
+            data:
+              days_of_week: '1,2,3,4,5'
+              from_day: '-1'
+              from_hour: '9'
+              from_minute: '0'
+              from_month: '-1'
+              from_weekday: '1'
+              from_year: '-1'
+              to_day: '-1'
+              to_hour: '17'
+              to_minute: '0'
+              to_month: '-1'
+              to_weekday: '5'
+              to_year: '-1'
+            type: 'Interval'
+  - name: 'User'
+    data:
+      color: '#d2ffd0'
+    children:
+      - type: 'ObjectGroup'
+        name: 'Clusters'
+      - type: 'ObjectGroup'
+        name: 'Firewalls'
+        children:
+          - type: 'Firewall'
+            name: 'fw-test'
+            data:
+              host_OS: 'linux24'
+              lastCompiled: '0'
+              lastInstalled: '0'
+              lastModified: '1770822325'
+              platform: 'iptables'
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: false
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: false
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: false
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: 'False'
+                  dyn: 'False'
+                  label: 'outside'
+                  security_level: '0'
+                  unnum: 'False'
+                  unprotected: 'False'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-test:eth0:ip'
+                    inet_addr_mask:
+                      address: '203.0.113.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: 'False'
+                  dyn: 'False'
+                  label: 'inside'
+                  security_level: '100'
+                  unnum: 'False'
+                  unprotected: 'False'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-test:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: 'False'
+                  dyn: 'False'
+                  label: ''
+                  security_level: '0'
+                  unnum: 'False'
+                  unprotected: 'False'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-test:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'Network/internal-net'
+                    srv:
+                      - 'Standard/UDPService/domain'
+                    when:
+                      - 'Standard/Interval/Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      action_on_reject: 'ICMP host unreachable'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'IPv4/external-host'
+                    srv:
+                      - 'Standard/TCPService/http'
+                    when:
+                      - 'Standard/Interval/Any'
+                  - type: 'PolicyRule'
+                    position: 2
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      action_on_reject: 'ICMP net unreachable'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'IPv4/external-host'
+                    srv:
+                      - 'Standard/UDPService/domain'
+                    when:
+                      - 'Standard/Interval/Any'
+                  - type: 'PolicyRule'
+                    position: 3
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      action_on_reject: 'ICMP admin prohibited'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'Network/internal-net'
+                    srv:
+                      - 'Standard/TCPService/ssh'
+                    when:
+                      - 'Standard/Interval/Any'
+                  - type: 'PolicyRule'
+                    position: 4
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      action_on_reject: 'TCP RST'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'IPv4/external-host'
+                    srv:
+                      - 'Standard/TCPService/ssh'
+                    when:
+                      - 'Standard/Interval/Any'
+                  - type: 'PolicyRule'
+                    position: 5
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Standard/Network/Any'
+                    itf:
+                      - 'Standard/Network/Any'
+                    src:
+                      - 'Standard/Network/Any'
+                    srv:
+                      - 'Standard/IPService/Any'
+                    when:
+                      - 'Standard/Interval/Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+      - type: 'ObjectGroup'
+        name: 'Objects'
+        children:
+          - type: 'ObjectGroup'
+            name: 'Address Ranges'
+          - type: 'ObjectGroup'
+            name: 'Address Tables'
+          - type: 'ObjectGroup'
+            name: 'Addresses'
+            children:
+              - type: 'IPv4'
+                name: 'external-host'
+                inet_addr_mask:
+                  address: '203.0.113.42'
+                  netmask: '0.0.0.0'
+          - type: 'ObjectGroup'
+            name: 'DNS Names'
+          - type: 'ObjectGroup'
+            name: 'Groups'
+          - type: 'ObjectGroup'
+            name: 'Hosts'
+          - type: 'ObjectGroup'
+            name: 'Networks'
+            children:
+              - type: 'Network'
+                name: 'internal-net'
+                inet_addr_mask:
+                  address: '192.168.1.0'
+                  netmask: '255.255.255.0'
+      - type: 'ServiceGroup'
+        name: 'Services'
+        children:
+          - type: 'ServiceGroup'
+            name: 'Custom'
+          - type: 'ServiceGroup'
+            name: 'Groups'
+          - type: 'ServiceGroup'
+            name: 'ICMP'
+          - type: 'ServiceGroup'
+            name: 'IP'
+          - type: 'ServiceGroup'
+            name: 'TCP'
+          - type: 'ServiceGroup'
+            name: 'TagServices'
+          - type: 'ServiceGroup'
+            name: 'UDP'
+          - type: 'ServiceGroup'
+            name: 'Users'
+      - type: 'IntervalGroup'
+        name: 'Time'
