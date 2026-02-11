@@ -522,7 +522,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     'not_using_iptables_restore', 0 if use_ipt_restore else 1
                 )
 
-                reset_buf = 'nft flush ruleset\n'
+                reset_buf = ''
                 if have_ipv4:
                     reset_buf += '    reset_iptables_v4\n'
                 if have_ipv6:
