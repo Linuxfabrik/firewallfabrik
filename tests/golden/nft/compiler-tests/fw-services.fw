@@ -32,7 +32,11 @@ table ip filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto icmp ct state new accept
+        icmp type 8 code 0 ct state new accept
+        #
+        # Rule 6 (global)
+        #
+        icmp type 11 code 0 ct state new accept
         #
         # Rule 7 (global)
         #
@@ -54,7 +58,7 @@ table ip filter {
         #
         # Rule 5 (global)
         #
-        meta l4proto icmp ct state new accept
+        icmp type 0 code 0 ct state new accept
         #
         # Rule 7 (global)
         #

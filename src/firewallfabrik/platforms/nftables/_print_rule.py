@@ -449,9 +449,11 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_icmp_service(self, srv) -> str:
         """Print ICMP type/code matching."""
-        data = srv.data or {}
-        icmp_type = int(data.get('type', -1) or -1)
-        icmp_code = int(data.get('code', -1) or -1)
+        codes = getattr(srv, 'codes', None) or srv.data or {}
+        raw_type = codes.get('type', -1)
+        raw_code = codes.get('code', -1)
+        icmp_type = -1 if raw_type is None else int(raw_type)
+        icmp_code = -1 if raw_code is None else int(raw_code)
 
         proto = 'icmpv6' if self.compiler and self.compiler.ipv6_policy else 'icmp'
 

@@ -456,9 +456,11 @@ class PrintRule(PolicyRuleProcessor):
         return f'{flag} {start}:{end} '
 
     def _print_icmp(self, srv) -> str:
-        data = srv.data or {}
-        icmp_type = int(data.get('type', -1) or -1)
-        icmp_code = int(data.get('code', -1) or -1)
+        codes = getattr(srv, 'codes', None) or srv.data or {}
+        raw_type = codes.get('type', -1)
+        raw_code = codes.get('code', -1)
+        icmp_type = -1 if raw_type is None else int(raw_type)
+        icmp_code = -1 if raw_code is None else int(raw_code)
 
         flag = '--icmpv6-type' if self.compiler.ipv6_policy else '--icmp-type'
         if icmp_type < 0:
