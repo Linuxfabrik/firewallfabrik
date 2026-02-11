@@ -491,7 +491,8 @@ class FWWindow(QMainWindow):
             self._editor_session = None
             return
 
-        dialog_widget.load_object(obj)
+        all_tags = self._gather_all_tags(self._editor_session)
+        dialog_widget.load_object(obj, all_tags=all_tags)
         self._current_editor = dialog_widget
 
         # The dialog widget sits inside a page's layout, not as a direct
@@ -515,9 +516,17 @@ class FWWindow(QMainWindow):
         session = getattr(self, '_editor_session', None)
         if editor is None or session is None:
             return
-        editor._apply_changes()
+        editor.apply_all()
         session.commit()
         self._db_manager.save_state('Editor change')
+
+        # Keep the tree's cached tags in sync with the editor.
+        obj = getattr(editor, '_obj', None)
+        if obj is not None:
+            self._object_tree.update_item_tags(
+                str(obj.id),
+                getattr(obj, 'keywords', None),
+            )
 
     @Slot()
     def toggleViewObjectTree(self):
@@ -539,6 +548,16 @@ class FWWindow(QMainWindow):
         visible = self.actionUndo_view.isChecked()
         self.undoDockWidget.setVisible(visible)
         QSettings().setValue('View/UndoStack', visible)
+
+    @staticmethod
+    def _gather_all_tags(session):
+        """Collect every tag used across all object tables."""
+        all_tags = set()
+        for cls in (Address, Group, Host, Interface, Interval, Service):
+            for (tag_set,) in session.execute(sqlalchemy.select(cls.keywords)):
+                if tag_set:
+                    all_tags.update(tag_set)
+        return all_tags
 
     @staticmethod
     def _build_name_map(session):

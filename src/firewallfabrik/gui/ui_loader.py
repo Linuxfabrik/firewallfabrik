@@ -24,7 +24,7 @@ CUSTOM_WIDGET_MAP = {
     'ClusterDialog': QWidget,
     'ClusterGroupDialog': QWidget,
     'CommentEditorPanel': QWidget,
-    'CommentKeywords': QWidget,
+    'CommentKeywords': QWidget,  # replaced by CommentTags at module bottom
     'CompilerOutputPanel': QWidget,
     'CustomServiceDialog': QWidget,
     'DNSNameDialog': QWidget,
@@ -140,8 +140,15 @@ def _register_time_dialog():
     CUSTOM_WIDGET_MAP['TimeDialog'] = TimeDialog
 
 
+def _register_comment_tags():
+    from firewallfabrik.gui.comment_tags import CommentTags
+
+    CUSTOM_WIDGET_MAP['CommentKeywords'] = CommentTags
+
+
 _register_address_dialogs()
+_register_comment_tags()
 _register_device_dialogs()
-_register_service_dialogs()
 _register_group_dialog()
+_register_service_dialogs()
 _register_time_dialog()

@@ -92,6 +92,18 @@ def _is_inactive(obj):
     return data.get('inactive') == 'True'
 
 
+def _obj_tags(obj):
+    """Return the tags (keywords) of *obj* as a set, or empty set."""
+    return getattr(obj, 'keywords', None) or set()
+
+
+def _tags_to_str(tags):
+    """Convert a tag set to a lowercased, space-joined string for filtering."""
+    if not tags:
+        return ''
+    return ' '.join(t.lower() for t in sorted(tags))
+
+
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
@@ -179,6 +191,7 @@ class ObjectTree(QWidget):
                     str(fw.id),
                     target,
                     inactive=_is_inactive(fw),
+                    tags=_obj_tags(fw),
                 )
                 for rs in sorted(fw.rule_sets, key=_obj_sort_key):
                     self._make_item(
@@ -204,6 +217,7 @@ class ObjectTree(QWidget):
                     str(host.id),
                     target,
                     inactive=_is_inactive(host),
+                    tags=_obj_tags(host),
                 )
                 for iface in sorted(host.interfaces, key=lambda o: o.name.lower()):
                     self._add_interface(iface, host_item)
@@ -230,6 +244,7 @@ class ObjectTree(QWidget):
             'Interface',
             str(iface.id),
             inactive=_is_inactive(iface),
+            tags=_obj_tags(iface),
         )
         parent_item.addChild(iface_item)
         for addr in sorted(iface.addresses, key=_obj_sort_key):
@@ -239,6 +254,7 @@ class ObjectTree(QWidget):
                 str(addr.id),
                 iface_item,
                 inactive=_is_inactive(addr),
+                tags=_obj_tags(addr),
             )
 
     def _add_category(self, objects, label, parent_item):
@@ -269,6 +285,7 @@ class ObjectTree(QWidget):
                 str(obj.id),
                 target,
                 inactive=_is_inactive(obj),
+                tags=_obj_tags(obj),
             )
 
     @staticmethod
@@ -302,11 +319,14 @@ class ObjectTree(QWidget):
         item.setIcon(0, QIcon(_CATEGORY_ICON))
         return item
 
-    def _make_item(self, name, type_str, obj_id, parent_item=None, *, inactive=False):
-        """Create a tree item storing id and type in user roles."""
+    def _make_item(
+        self, name, type_str, obj_id, parent_item=None, *, inactive=False, tags=None
+    ):
+        """Create a tree item storing id, type, and tags in user roles."""
         item = QTreeWidgetItem([name])
         item.setData(0, Qt.ItemDataRole.UserRole, obj_id)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, type_str)
+        item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(tags))
         icon_path = ICON_MAP.get(type_str)
         if icon_path:
             item.setIcon(0, QIcon(icon_path))
@@ -317,6 +337,17 @@ class ObjectTree(QWidget):
         if parent_item is not None:
             parent_item.addChild(item)
         return item
+
+    def update_item_tags(self, obj_id, tags):
+        """Update the stored tags for the tree item matching *obj_id*."""
+        tags_str = _tags_to_str(tags)
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            if item.data(0, Qt.ItemDataRole.UserRole) == obj_id:
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, tags_str)
+                return
 
     # ------------------------------------------------------------------
     # Filter
@@ -336,7 +367,8 @@ class ObjectTree(QWidget):
             # Category items (no UserRole data) stay visible if any child matches.
             if item.data(0, Qt.ItemDataRole.UserRole) is None:
                 continue
-            match = text in item.text(0).lower()
+            tags_str = item.data(0, Qt.ItemDataRole.UserRole + 2) or ''
+            match = text in item.text(0).lower() or text in tags_str
             item.setHidden(not match)
 
         # Ensure parents of visible items are also visible.

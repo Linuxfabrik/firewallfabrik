@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from firewallfabrik.gui.comment_tags import CommentTags
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_DIR = Path(__file__).resolve().parent / 'ui'
@@ -48,12 +49,19 @@ class BaseObjectDialog(QWidget):
         loader = FWFUiLoader(self)
         loader.load(str(_UI_DIR / ui_filename))
 
-    def load_object(self, obj):
+    def load_object(self, obj, *, all_tags=None):
         """Load *obj* into the editor: populate widgets and connect signals."""
         self._obj = obj
         self._loading = True
         try:
             self._populate()
+            comment_widget = self.findChild(CommentTags, 'commentKeywords')
+            if comment_widget is not None:
+                comment_widget.load(
+                    getattr(obj, 'comment', None),
+                    tags=getattr(obj, 'keywords', None),
+                    all_tags=all_tags,
+                )
         finally:
             self._loading = False
         if not self._signals_connected:
@@ -68,10 +76,20 @@ class BaseObjectDialog(QWidget):
         """Write widget values back to ``self._obj``. Must be overridden."""
         raise NotImplementedError
 
+    def apply_all(self):
+        """Apply subclass-specific changes *and* comment/keywords."""
+        self._apply_changes()
+        comment_widget = self.findChild(CommentTags, 'commentKeywords')
+        if comment_widget is not None and self._obj is not None:
+            self._obj.comment = comment_widget.get_comment()
+            self._obj.keywords = comment_widget.get_tags()
+
     def _connect_change_signals(self):
         """Auto-connect child widget edit signals to ``_on_changed``."""
         for child in self.findChildren(QWidget):
-            if isinstance(child, QLineEdit):
+            if isinstance(child, CommentTags):
+                child.changed.connect(self._on_changed)
+            elif isinstance(child, QLineEdit):
                 child.editingFinished.connect(self._on_changed)
             elif isinstance(child, QCheckBox):
                 child.stateChanged.connect(self._on_changed)
