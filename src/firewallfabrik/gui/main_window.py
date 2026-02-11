@@ -63,6 +63,17 @@ _DEFAULT_WIDTH = 1024
 _DEFAULT_HEIGHT = 768
 
 
+def _undo_desc(action, obj_type, name, old_name=None):
+    """Build a short undo description.
+
+    Supported *action* values: ``Delete``, ``Edit``, ``New``, ``Rename``.
+    For ``Rename``, *old_name* must be provided.
+    """
+    if action == 'Rename':
+        return f'Rename {obj_type} {old_name} > {name}'
+    return f'{action} {obj_type} {name}'
+
+
 def _build_editor_path(obj):
     """Build a ``" / "``-separated path from *obj* up to its Library.
 
@@ -215,6 +226,9 @@ class FWWindow(QMainWindow):
             QTimer.singleShot(0, self.showMaximized)
 
     def closeEvent(self, event):
+        if not self._save_if_modified():
+            event.ignore()
+            return
         settings = QSettings()
         # Save normal (non-maximized) geometry so restore works both ways.
         if not self.isMaximized():
@@ -284,6 +298,32 @@ class FWWindow(QMainWindow):
         undo_visible = settings.value('View/UndoStack', False, type=bool)
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
+
+    def _save_if_modified(self):
+        """Prompt the user to save unsaved changes.
+
+        Returns ``True`` if the caller may proceed (saved or discarded),
+        ``False`` if the user chose Cancel.
+        """
+        if not self._db_manager.is_dirty:
+            return True
+        display = getattr(self, '_display_file', None) or self._current_file
+        name = display.name if display else 'Untitled'
+        result = QMessageBox.information(
+            self,
+            'FirewallFabrik',
+            self.tr(
+                f'Some objects have been modified but not saved.\n'
+                f'Do you want to save {name} now?'
+            ),
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+        )
+        if result == QMessageBox.StandardButton.Save:
+            self.fileSave()
+            return True
+        return result == QMessageBox.StandardButton.Discard
 
     def _update_title(self):
         display = getattr(self, '_display_file', None) or self._current_file
@@ -436,6 +476,9 @@ class FWWindow(QMainWindow):
             )
             return
 
+        if not self._save_if_modified():
+            return
+
         self._close_editor()
         self.m_space.closeAllSubWindows()
 
@@ -576,6 +619,7 @@ class FWWindow(QMainWindow):
         dialog_widget.load_object(obj, all_tags=all_tags)
         self._current_editor = dialog_widget
         self._editor_obj_id = obj_id
+        self._editor_obj_name = obj.name
         self._editor_obj_type = obj_type
 
         # The dialog widget sits inside a page's layout, not as a direct
@@ -606,10 +650,23 @@ class FWWindow(QMainWindow):
             return
         editor.apply_all()
         session.commit()
-        self._db_manager.save_state('Editor change')
+
+        # Build a human-readable undo description.
+        obj = getattr(editor, '_obj', None)
+        if obj is not None:
+            obj_type = getattr(obj, 'type', type(obj).__name__)
+            old_name = getattr(self, '_editor_obj_name', '')
+            new_name = obj.name
+            if old_name and new_name != old_name:
+                desc = _undo_desc('Rename', obj_type, new_name, old_name=old_name)
+            else:
+                desc = _undo_desc('Edit', obj_type, new_name)
+            self._editor_obj_name = new_name
+        else:
+            desc = 'Editor change'
+        self._db_manager.save_state(desc)
 
         # Keep the tree in sync with the editor.
-        obj = getattr(editor, '_obj', None)
         if obj is not None:
             self._object_tree.update_item(obj)
 

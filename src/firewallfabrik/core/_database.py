@@ -53,6 +53,7 @@ class DatabaseManager:
         self._session_factory = sqlalchemy.orm.sessionmaker(self.engine)
         self._history = []
         self._current_index = -1
+        self._saved_index = -1
         self.on_history_changed = None
         objects.enable_sqlite_fks(self.engine)
         self._reset_db(True)
@@ -64,6 +65,11 @@ class DatabaseManager:
     @property
     def can_redo(self):
         return self._current_index < len(self._history) - 1
+
+    @property
+    def is_dirty(self):
+        """True when the database has unsaved changes."""
+        return self._current_index != self._saved_index
 
     def _notify_history_changed(self):
         if self.on_history_changed is not None:
@@ -179,7 +185,8 @@ class DatabaseManager:
                 self._load_yaml(path)
             case _:
                 raise ValueError(f'Unsupported file extension: {path}')
-        self.save_state('Loaded from file')
+        self.save_state('Load file')
+        self._saved_index = self._current_index
         return path
 
     def save(self, path):
@@ -190,6 +197,7 @@ class DatabaseManager:
                 self._save_yaml(path)
             case _:
                 raise ValueError(f'Unsupported file extension: {path}')
+        self._saved_index = self._current_index
 
     def _import(self, data):
         with self.session() as session:
