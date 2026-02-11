@@ -71,17 +71,6 @@ def _version_compare(v1: str, v2: str) -> int:
     return 0
 
 
-# TODO: do we need this? i think this should be done during loading of the fwb/fwf file
-def _coerce_bool(value):
-    """Coerce XML string booleans to Python bools."""
-    if isinstance(value, str):
-        if value.lower() == 'true':
-            return True
-        if value.lower() == 'false':
-            return False
-    return value
-
-
 def _indent(n: int, text: str) -> str:
     """Indent every line of text by n spaces."""
     if not text:
@@ -151,6 +140,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     ),
                 ).scalar_one_or_none()
             else:
+                self.error('No firewall ID provided')
                 return ''
 
             if fw is None:
@@ -162,7 +152,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
             try:
                 fw_version = fw.version or '(any version)'
-                options = {k: _coerce_bool(v) for k, v in (fw.options or {}).items()}
+                options = fw.options or {}
 
                 # Validate prolog placement with iptables-restore
                 prolog_place = options.get('prolog_place', '')

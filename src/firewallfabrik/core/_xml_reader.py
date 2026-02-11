@@ -106,14 +106,29 @@ def _extra_attrs(elem, known):
     return {k: v for k, v in elem.attrib.items() if k not in known}
 
 
+def _coerce_bool(value):
+    """Coerce ``"True"``/``"False"`` strings to Python bools."""
+    if isinstance(value, str):
+        low = value.lower()
+        if low == 'true':
+            return True
+        if low == 'false':
+            return False
+    return value
+
+
 def _parse_options_children(elem):
-    """Parse ``<Option name="k">v</Option>`` children into a dict."""
+    """Parse ``<Option name="k">v</Option>`` children into a dict.
+
+    String booleans are coerced to Python bools so downstream code
+    does not need to handle the conversion.
+    """
     result = {}
     for child in elem:
         if _tag(child) == 'Option':
             name = child.get('name', '')
             if name:
-                result[name] = child.text or ''
+                result[name] = _coerce_bool(child.text or '')
     return result
 
 

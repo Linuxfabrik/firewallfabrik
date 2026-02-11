@@ -51,16 +51,6 @@ AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
 
 
-def _coerce_bool(value):
-    """Coerce XML string booleans to Python bools."""
-    if isinstance(value, str):
-        if value.lower() == 'true':
-            return True
-        if value.lower() == 'false':
-            return False
-    return value
-
-
 class CompilerDriver_nft(CompilerDriver):
     """Orchestrates full nftables compilation.
 
@@ -116,7 +106,7 @@ class CompilerDriver_nft(CompilerDriver):
             self.fw = fw
 
             try:
-                options = {k: _coerce_bool(v) for k, v in (fw.options or {}).items()}
+                options = fw.options or {}
 
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)
@@ -154,7 +144,7 @@ class CompilerDriver_nft(CompilerDriver):
                     .all()
                 )
 
-                # Determine IPv4/IPv6 run order
+                # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
                 ipv4_6_order = options.get('ipv4_6_order', '')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
