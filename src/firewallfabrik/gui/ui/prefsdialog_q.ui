@@ -1419,6 +1419,10 @@ are never stored permanently)</string>
           </item>
           <item row="0" column="1">
            <widget class="QRadioButton" name="rb16">
+            <property name="toolTip">
+             <string>Use small 16x16 pixel icons for objects in rule set cells.
+Saves vertical space when rules contain many objects.</string>
+            </property>
             <property name="text">
              <string>16x16</string>
             </property>
@@ -1426,6 +1430,10 @@ are never stored permanently)</string>
           </item>
           <item row="1" column="1">
            <widget class="QRadioButton" name="rb25">
+            <property name="toolTip">
+             <string>Use larger 25x25 pixel icons for objects in rule set cells.
+Easier to distinguish object types at a glance.</string>
+            </property>
             <property name="text">
              <string>25x25</string>
             </property>

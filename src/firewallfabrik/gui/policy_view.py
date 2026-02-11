@@ -15,13 +15,14 @@
 import json
 import uuid
 
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, QRect, QSettings, Qt
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QInputDialog,
     QMenu,
+    QStyle,
     QStyledItemDelegate,
     QTreeView,
 )
@@ -37,6 +38,7 @@ from firewallfabrik.gui.policy_model import (
     _COL_DIRECTION,
     _COL_TO_SLOT,
     _ELEMENT_COLS,
+    ELEMENTS_ROLE,
     FWF_MIME_TYPE,
 )
 
@@ -89,25 +91,94 @@ _VALID_TYPES_BY_SLOT = {
 
 
 class _CellBorderDelegate(QStyledItemDelegate):
-    """Delegate that draws lightgray cell borders and adds vertical padding.
+    """Delegate that draws lightgray cell borders, vertical padding, and
+    renders element columns with per-object icons stacked vertically.
 
-    Matches fwbuilder's ``RuleSetViewDelegate`` look (explicit grid
-    lines, ``VERTICAL_MARGIN=2``, ``HORIZONTAL_MARGIN=2``).
+    Matches fwbuilder's ``RuleSetViewDelegate`` look.
     """
 
     _BORDER_COLOR = QColor('lightgray')
+    _H_PAD = 2
+    _ICON_TEXT_GAP = 2
     _V_PAD = 2
+
+    def _icon_size(self):
+        """Return the configured icon size (16 or 25)."""
+        return QSettings().value('UI/IconSizeInRules', 25, type=int)
+
+    def _icon_suffix(self):
+        """Return the QRC alias suffix for the configured size."""
+        return 'icon-tree' if self._icon_size() == 16 else 'icon'
 
     def sizeHint(self, option, index):
         hint = super().sizeHint(option, index)
-        hint.setHeight(hint.height() + 2 * self._V_PAD)
+        elements = index.data(ELEMENTS_ROLE)
+        if elements:
+            icon_sz = self._icon_size()
+            line_h = max(icon_sz, hint.height())
+            hint.setHeight(line_h * len(elements) + 2 * self._V_PAD)
+            # Width: icon + gap + longest name + padding.
+            fm = option.fontMetrics
+            max_text_w = max(fm.horizontalAdvance(name) for _, name, _ in elements)
+            hint.setWidth(icon_sz + self._ICON_TEXT_GAP + max_text_w + 2 * self._H_PAD)
+        else:
+            hint.setHeight(hint.height() + 2 * self._V_PAD)
         return hint
 
     def paint(self, painter, option, index):
-        super().paint(painter, option, index)
+        elements = index.data(ELEMENTS_ROLE)
+        if elements:
+            self._paint_elements(painter, option, index, elements)
+        else:
+            super().paint(painter, option, index)
+        # Cell border.
         painter.save()
         painter.setPen(self._BORDER_COLOR)
         painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        painter.restore()
+
+    def _paint_elements(self, painter, option, index, elements):
+        """Paint a list of (id, name, type) elements with icons."""
+        # Draw selection/background only — suppress text and icon.
+        self.initStyleOption(option, index)
+        option.text = ''
+        option.icon = QIcon()
+        style = option.widget.style() if option.widget else None
+        if style:
+            style.drawControl(
+                QStyle.ControlElement.CE_ItemViewItem,
+                option,
+                painter,
+                option.widget,
+            )
+
+        icon_sz = self._icon_size()
+        icon_suffix = self._icon_suffix()
+        rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
+        line_h = max(icon_sz, painter.fontMetrics().height())
+        fg = index.data(Qt.ItemDataRole.ForegroundRole)
+
+        painter.save()
+        if fg:
+            painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
+        for _target_id, name, obj_type in elements:
+            icon_path = f':/Icons/{obj_type}/{icon_suffix}' if obj_type else ''
+            x = rect.left()
+            if icon_path:
+                icon = QIcon(icon_path)
+                if not icon.isNull():
+                    icon.paint(
+                        painter,
+                        QRect(x, rect.top(), icon_sz, line_h),
+                    )
+                x += icon_sz + self._ICON_TEXT_GAP
+            text_rect = QRect(x, rect.top(), rect.right() - x, line_h)
+            painter.drawText(
+                text_rect,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                name,
+            )
+            rect.setTop(rect.top() + line_h)
         painter.restore()
 
 
@@ -123,7 +194,10 @@ class PolicyView(QTreeView):
         self.setItemDelegate(_CellBorderDelegate(self))
         self.header().setStretchLastSection(True)
         self.header().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents,
+            QHeaderView.ResizeMode.Interactive,
+        )
+        self.header().sectionHandleDoubleClicked.connect(
+            self.resizeColumnToContents,
         )
 
         # Context menu.
@@ -149,7 +223,7 @@ class PolicyView(QTreeView):
             self._configure_groups()
 
     def _configure_groups(self):
-        """Mark group rows as first-column-spanned and expand all."""
+        """Mark group rows as first-column-spanned, expand, and fit columns."""
         model = self.model()
         if model is None:
             return
@@ -158,6 +232,8 @@ class PolicyView(QTreeView):
             if model.is_group(idx):
                 self.setFirstColumnSpanned(row, QModelIndex(), True)
         self.expandAll()
+        for col in range(model.columnCount()):
+            self.resizeColumnToContents(col)
 
     # ------------------------------------------------------------------
     # Double-click to rename group
@@ -344,7 +420,7 @@ class PolicyView(QTreeView):
         if not elements:
             menu.addAction('(empty)').setEnabled(False)
             return
-        for target_id, name in elements:
+        for target_id, name, _type in elements:
             menu.addAction(
                 f'Remove {name}',
                 lambda tid=target_id: model.remove_element(index, slot, tid),

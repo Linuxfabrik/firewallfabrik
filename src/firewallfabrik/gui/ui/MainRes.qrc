@@ -50,6 +50,40 @@
     <file alias="Icons/UDPService/icon-tree">Icons/service-udp_16.png</file>
     <file alias="Icons/UserService/icon-tree">Icons/user_16.png</file>
 
+    <!-- Rule-set icons 25x25 (:/Icons/Type/icon) -->
+    <file alias="Icons/Accept/icon">Icons/accept_25.png</file>
+    <file alias="Icons/AddressRange/icon">Icons/rangeaddress_25.png</file>
+    <file alias="Icons/AddressTable/icon">Icons/addresstable_25.png</file>
+    <file alias="Icons/Both/icon">Icons/both_25.png</file>
+    <file alias="Icons/Cluster/icon">Icons/cluster_25.png</file>
+    <file alias="Icons/CustomService/icon">Icons/service-custom_25.png</file>
+    <file alias="Icons/DNSName/icon">Icons/domainname_25.png</file>
+    <file alias="Icons/Deny/icon">Icons/deny_25.png</file>
+    <file alias="Icons/Firewall/icon">Icons/firewall_25.png</file>
+    <file alias="Icons/Host/icon">Icons/host_25.png</file>
+    <file alias="Icons/ICMP6Service/icon">Icons/service-icmp6_25.png</file>
+    <file alias="Icons/ICMPService/icon">Icons/service-icmp_25.png</file>
+    <file alias="Icons/IPService/icon">Icons/service-ip_25.png</file>
+    <file alias="Icons/IPv4/icon">Icons/address_25.png</file>
+    <file alias="Icons/IPv6/icon">Icons/address6_25.png</file>
+    <file alias="Icons/Inbound/icon">Icons/inbound_25.png</file>
+    <file alias="Icons/Interface/icon">Icons/interface_25.png</file>
+    <file alias="Icons/Interval/icon">Icons/clock_25.png</file>
+    <file alias="Icons/IntervalGroup/icon">Icons/clock-group_25.png</file>
+    <file alias="Icons/Network/icon">Icons/network_25.png</file>
+    <file alias="Icons/NetworkIPv6/icon">Icons/network6_25.png</file>
+    <file alias="Icons/ObjectGroup/icon">Icons/object-group_25.png</file>
+    <file alias="Icons/Outbound/icon">Icons/outbound_25.png</file>
+    <file alias="Icons/PhysAddress/icon">Icons/physaddress_25.png</file>
+    <file alias="Icons/Policy/icon">Icons/ruleset_25.png</file>
+    <file alias="Icons/Reject/icon">Icons/reject_25.png</file>
+    <file alias="Icons/Routing/icon">Icons/routing_25.png</file>
+    <file alias="Icons/ServiceGroup/icon">Icons/service-group_25.png</file>
+    <file alias="Icons/TCPService/icon">Icons/service-tcp_25.png</file>
+    <file alias="Icons/TagService/icon">Icons/service-tag_25.png</file>
+    <file alias="Icons/UDPService/icon">Icons/service-udp_25.png</file>
+    <file alias="Icons/UserService/icon">Icons/user_25.png</file>
+
     <!-- Editor/dialog big icons (:/Icons/Type/icon-big) -->
     <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>
     <file alias="Icons/AddressTable/icon-big">Icons/addresstable_64.png</file>

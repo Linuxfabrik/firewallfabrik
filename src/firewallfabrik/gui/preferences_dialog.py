@@ -54,6 +54,13 @@ class PreferencesDialog(QDialog):
         )
         self.objTooltips.setChecked(settings.value('UI/ObjTooltips', True, type=bool))
 
+        # Icon size in rules: 25 (default) or 16.
+        icon_size = settings.value('UI/IconSizeInRules', 25, type=int)
+        if icon_size == 16:
+            self.rb16.setChecked(True)
+        else:
+            self.rb25.setChecked(True)
+
         # Label colors: store current hex values so we can save on accept.
         self._label_colors = {}
         for key in LABEL_KEYS:
@@ -65,6 +72,18 @@ class PreferencesDialog(QDialog):
             text_field.setText(get_label_text(key))
 
         self.accepted.connect(self._save_settings)
+
+    # ------------------------------------------------------------------
+    # Icon size slots (connected via .ui signal/slot)
+    # ------------------------------------------------------------------
+
+    @Slot()
+    def changeIconSize16(self):
+        pass
+
+    @Slot()
+    def changeIconSize25(self):
+        pass
 
     # ------------------------------------------------------------------
     # Label color picker slots (connected via .ui signal/slot)
@@ -121,6 +140,11 @@ class PreferencesDialog(QDialog):
         settings.setValue(
             'UI/ShowObjectsAttributesInTree',
             self.attributesInTree.isChecked(),
+        )
+
+        settings.setValue(
+            'UI/IconSizeInRules',
+            16 if self.rb16.isChecked() else 25,
         )
 
         # Persist label colors and texts.

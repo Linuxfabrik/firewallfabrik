@@ -38,6 +38,7 @@ from firewallfabrik.gui.label_settings import (
     get_label_text,
 )
 
+ELEMENTS_ROLE = Qt.ItemDataRole.UserRole + 1
 FWF_MIME_TYPE = 'application/x-fwf-object'
 _INVALID_INDEX = QModelIndex()
 
@@ -98,7 +99,7 @@ class _RowData:
     comment: str
     direction: str
     direction_int: int
-    dst: list  # list[tuple[uuid.UUID, str]]
+    dst: list  # list[tuple[uuid.UUID, str, str]]  (id, name, type)
     group: str
     itf: list
     label: str
@@ -171,8 +172,9 @@ class PolicyTreeModel(QAbstractItemModel):
                 ).where(rule_elements.c.rule_id.in_(rule_ids)),
             ).all()
             for rule_id, slot, target_id in re_rows:
-                pair = (target_id, name_map.get(target_id, str(target_id)))
-                slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(pair)
+                name, obj_type = name_map.get(target_id, (str(target_id), ''))
+                triple = (target_id, name, obj_type)
+                slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(triple)
 
             # Build tree: group nodes created on first occurrence.
             group_nodes: dict[str, _TreeNode] = {}
@@ -246,13 +248,21 @@ class PolicyTreeModel(QAbstractItemModel):
 
     @staticmethod
     def _build_name_map(session):
-        """Build a {uuid: name} lookup from all name-bearing tables."""
+        """Build a {uuid: (name, type)} lookup from all name-bearing tables."""
         name_map = {}
         for cls in _NAME_CLASSES:
-            for obj_id, name in session.execute(
-                sqlalchemy.select(cls.id, cls.name),
-            ):
-                name_map[obj_id] = name
+            if hasattr(cls, 'type'):
+                for obj_id, name, obj_type in session.execute(
+                    sqlalchemy.select(cls.id, cls.name, cls.type),
+                ):
+                    name_map[obj_id] = (name, obj_type)
+            else:
+                # Interface, Interval — fixed type name.
+                type_name = cls.__name__
+                for obj_id, name in session.execute(
+                    sqlalchemy.select(cls.id, cls.name),
+                ):
+                    name_map[obj_id] = (name, type_name)
         return name_map
 
     # ------------------------------------------------------------------
@@ -431,6 +441,9 @@ class PolicyTreeModel(QAbstractItemModel):
                 icon_path = _DIRECTION_ICONS.get(row_data.direction)
                 if icon_path:
                     return QIcon(icon_path)
+        if role == ELEMENTS_ROLE and col in _ELEMENT_COLS:
+            slot = _COL_TO_SLOT[col]
+            return getattr(row_data, slot)
         return None
 
     @staticmethod
@@ -940,8 +953,8 @@ def _contrast_color(bg):
     return _BLACK if luminance > 128 else _WHITE
 
 
-def _format_elements(pairs):
-    """Format a list of (uuid, name) pairs for display."""
-    if not pairs:
+def _format_elements(triples):
+    """Format a list of (uuid, name, type) triples for display."""
+    if not triples:
         return 'Any'
-    return ', '.join(name for _, name in pairs)
+    return '\n'.join(name for _, name, _ in triples)
