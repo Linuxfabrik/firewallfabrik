@@ -274,7 +274,7 @@ The Context Menu for a particular object provides a short-cut to menu commands f
    * - Group
      - Only active if multiple objects are selected. This operation will open a dialog for you to enter a group name and select the Library the group should be created in.
    * - Keywords
-     - Add or remove a keyword from the selected object(s). To apply a keyword that doesn't exist yet select Add -> New Keyword.
+     - Add or remove a tag from the selected object(s). To apply a tag that doesn't exist yet select Add -> New Keyword.
    * - Lock and Unlock
      - Lock makes an object read-only, which prevents accidental modification. Unlock places the object back into read/write mode.
 
@@ -386,7 +386,7 @@ Firewall Builder understands and uses the object and service types described in 
    * - Object Group
      - A collection of addressable objects (objects that have or contain IP addresses) such as network, interface, and hosts objects. A group is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule.
    * - Dynamic Group
-     - Dynamic Groups include filters based on the object type and keywords in order to build a dynamic list of objects that will be included in the group. Dynamic Groups are used in rules in the same way that standard Object Groups are. When a firewall is compiled the Dynamic Group is expanded to include all the object matching the filter rules when the compile is run.
+     - Dynamic Groups include filters based on the object type and tags in order to build a dynamic list of objects that will be included in the group. Dynamic Groups are used in rules in the same way that standard Object Groups are. When a firewall is compiled the Dynamic Group is expanded to include all the object matching the filter rules when the compile is run.
    * - Custom Service
      - An object that can be used to inject arbitrary code into the generated firewall script.
    * - ESTABLISHED and ESTABLISHED IPv6 Services

@@ -1698,7 +1698,7 @@ The group of objects holds references to hosts, networks, address ranges, firewa
 Dynamic Object Groups
 ~~~~~~~~~~~~~~~~~~~~~
 
-Dynamic Groups allow you to define filter criteria to match objects based on their *Object Type* and *Keywords*. When a Dynamic Group is used in a rule the compiler automatically expands the group to include all the objects that match the filter criteria at the time the compiler is run.
+Dynamic Groups allow you to define filter criteria to match objects based on their *Object Type* and *Tags*. When a Dynamic Group is used in a rule the compiler automatically expands the group to include all the objects that match the filter criteria at the time the compiler is run.
 
 To create a Dynamic Group right-click on the Groups system folder in the object tree and select "New Dynamic Group". Figure 5.90 shows the new group in the Editor Panel with the default values set.
 
@@ -1709,7 +1709,7 @@ To create a Dynamic Group right-click on the Groups system folder in the object 
 
 Click Add Match to create filter rules that will be used to determine which objects will be included in the Dynamic Group. Multiple filter rules can be created in a single group. The logic used between rules is "OR" where an object that matches *any* of the rules will be included in the group.
 
-Within a filter rule, the logic between the Object Type and Keyword fields is "AND" logic where both elements need to match in order for an object to be included in the group. For example, a filter rule with the Object Type set to Network and the Keyword set to "New York" will only match Network objects that have the keyword set to New York.
+Within a filter rule, the logic between the Object Type and Tag fields is "AND" logic where both elements need to match in order for an object to be included in the group. For example, a filter rule with the Object Type set to Network and the Tag set to "New York" will only match Network objects that have the keyword set to New York.
 
 
 Dynamic Group Example
@@ -1724,7 +1724,7 @@ To create a rule that matches all the network objects that are associated with N
 
    Example of Dynamic Group
 
-From the preview window you can see that there are four networks that have Keywords that include New York (remember that an object can have more than one Keyword defined).
+From the preview window you can see that there are four networks that have Tags that include New York (remember that an object can have more than one Tag defined).
 
 Figure 5.92 shows a rule that includes the Dynamic Group object in the Source column of the rule.
 
@@ -1733,21 +1733,21 @@ Figure 5.92 shows a rule that includes the Dynamic Group object in the Source co
 
    Dynamic Group Used in a Rule
 
-Running a single rule compile, shown in Section 10.2, for this rule will result in all the objects that match the current filter rules in the "New York Networks" Dynamic Group getting expanded to match the four network elements that have Keywords that include New York. The single rule compile output is shown in Figure 5.93.
+Running a single rule compile, shown in Section 10.2, for this rule will result in all the objects that match the current filter rules in the "New York Networks" Dynamic Group getting expanded to match the four network elements that have Tags that include New York. The single rule compile output is shown in Figure 5.93.
 
 .. figure:: img/obj-dynamic-group-compile-output.png
    :alt: Compile Output of a Rule That Uses Dynamic Group
 
    Compile Output of a Rule That Uses Dynamic Group
 
-Adding a new filter rule to the "New York Networks" Dynamic Group to include any Address Ranges that include the Keyword of New York will result in the group shown in Figure 5.94.
+Adding a new filter rule to the "New York Networks" Dynamic Group to include any Address Ranges that include the Tag of New York will result in the group shown in Figure 5.94.
 
 .. figure:: img/obj-dynamic-group-updated.png
    :alt: Updated Dynamic Group
 
    Updated Dynamic Group
 
-Recompiling a rule that uses the "New York Networks" Dynamic Group object will automatically detect the additional Address Ranges that include the Keyword of New York. Figure 5.95 shows the updated compiler output.
+Recompiling a rule that uses the "New York Networks" Dynamic Group object will automatically detect the additional Address Ranges that include the Tag of New York. Figure 5.95 shows the updated compiler output.
 
 .. figure:: img/obj-dynamic-group-updated-compile.png
    :alt: Updated Dynamic Group Compile Output
@@ -2544,12 +2544,12 @@ Another possibility is to limit recreational activities to non-work hours.
 In this rule, the "quake" protocol is allowed from the internal network after hours and during weekends. Otherwise, the final "deny all" rule in the rule set would prevent it during other times (during work hours).
 
 
-Object Keywords
+Object Tags
 ---------------
 
-Keywords can be added to all object types and help you quickly find and organize the objects in your object tree. To set the keywords for an individual object open the object for editing and then click on the Keywords button in the lower right corner of the Editor panel.
+Tags can be added to all object types and help you quickly find and organize the objects in your object tree. To set the keywords for an individual object open the object for editing and then click on the Tags button in the lower right corner of the Editor panel.
 
-For an example of how you could use Keywords, let's assume that you have two datacenters, one in New York (NY) and one in London (LON). For objects that represent items in the datacenter you could add a keyword, called "datacenter", to each of the objects. You could also add another keyword, for example "trusted" or "DMZ", to identify the security zone of the object.
+For an example of how you could use Tags, let's assume that you have two datacenters, one in New York (NY) and one in London (LON). For objects that represent items in the datacenter you could add a keyword, called "datacenter", to each of the objects. You could also add another keyword, for example "trusted" or "DMZ", to identify the security zone of the object.
 
 Figure 5.131 shows the editor panel for an object called NY Datacenter-Net-1.
 
@@ -2558,50 +2558,50 @@ Figure 5.131 shows the editor panel for an object called NY Datacenter-Net-1.
 
    Figure 5.131. Datacenter Network Object
 
-Click the Keywords button to set the keywords for the active object. This will bring up the dialog window shown in Figure 5.132.
+Click the Tags button to set the keywords for the active object. This will bring up the dialog window shown in Figure 5.132.
 
 .. figure:: img/obj-keywords-dialog-empty.png
-   :alt: Keywords Dialog
+   :alt: Tags Dialog
 
-   Figure 5.132. Keywords Dialog
+   Figure 5.132. Tags Dialog
 
-As you can see no Keywords have been configured yet, so there are no existing keywords that can be assigned to the object. To create a new keyword type the name of the keyword in the text box labeled "New Keyword:".
+As you can see no Tags have been configured yet, so there are no existing keywords that can be assigned to the object. To create a new keyword type the name of the keyword in the text box labeled "New Tag:".
 
 In this example we want to add the "datacenter" and "trusted" keywords to the network object. Figure 5.133 shows the dialog after the keywords have been entered. Click OK to apply the keywords to the object.
 
 .. figure:: img/obj-keywords-dialog-populated.png
-   :alt: Keywords Dialog After Creating Some Keywords
+   :alt: Tags Dialog After Creating Some Tags
 
-   Figure 5.133. Keywords Dialog After Creating Some Keywords
+   Figure 5.133. Tags Dialog After Creating Some Tags
 
 .. note::
 
-   After you apply keywords to an object the keywords will be displayed in the Editor panel next to the Keywords button.
+   After you apply keywords to an object the keywords will be displayed in the Editor panel next to the Tags button.
 
-What if you have a lot of objects that need to have the same keywords applied? To apply a keyword to multiple objects at the same time select the objects in the tree, remember to use the CTRL or Shift keys to select more than one object, right-click on the selected objects and select Keywords, then Add and then select the keyword you want to apply. Figure 5.134 shows applying the "datacenter" keyword to multiple Network objects.
+What if you have a lot of objects that need to have the same keywords applied? To apply a keyword to multiple objects at the same time select the objects in the tree, remember to use the CTRL or Shift keys to select more than one object, right-click on the selected objects and select Tags, then Add and then select the keyword you want to apply. Figure 5.134 shows applying the "datacenter" keyword to multiple Network objects.
 
 .. figure:: img/obj-keywords-multiple-objects.png
-   :alt: Applying Keywords to Multiple Objects at Once
+   :alt: Applying Tags to Multiple Objects at Once
 
-   Figure 5.134. Applying Keywords to Multiple Objects at Once
+   Figure 5.134. Applying Tags to Multiple Objects at Once
 
-You can also remove keywords from multiple objects by selecting multiple objects, right-clicking and selecting Keywords -> Remove and then selecting the keyword that you want to remove.
+You can also remove keywords from multiple objects by selecting multiple objects, right-clicking and selecting Tags -> Remove and then selecting the keyword that you want to remove.
 
 After you have configured keywords for your objects you can type the keyword into the filter box at the top of the object tree and only the objects that match that keyword, or have an object name that matches the keyword, will be displayed.
 
 Figure 5.135 shows the filtered view after the "datacenter" keyword has been typed into the filter box.
 
 .. figure:: img/obj-keywords-filter-datacenter.png
-   :alt: Filtering Based on Keyword - datacenter
+   :alt: Filtering Based on Tag - datacenter
 
-   Figure 5.135. Filtering Based on Keyword - datacenter
+   Figure 5.135. Filtering Based on Tag - datacenter
 
 Another example is shown in Figure 5.136 where all the objects are being filtered for the "trusted" keyword. Only objects that have had the "trusted" keyword applied will be displayed. In this example only one of the two networks at each datacenter is considered trusted.
 
 .. figure:: img/obj-keywords-filter-trusted.png
-   :alt: Filtering Based on Keyword - trusted
+   :alt: Filtering Based on Tag - trusted
 
-   Figure 5.136. Filtering Based on Keyword - trusted
+   Figure 5.136. Filtering Based on Tag - trusted
 
 
 Creating and Using a User-Defined Library of Objects
