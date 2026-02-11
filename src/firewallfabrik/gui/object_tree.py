@@ -900,17 +900,23 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _apply_filter(self, text):
-        """Hide items whose name does not match *text* (case-insensitive)."""
+        """Hide items whose name does not match *text* (case-insensitive).
+
+        When an item matches, all its descendants are shown too so the
+        user can interact with children (e.g. double-click a Policy
+        child of a matched Firewall).
+        """
         text = text.strip().lower()
         if not text:
             self._reset_visibility()
             return
 
+        # First pass: determine direct match per item.
+        matched = set()
         it = QTreeWidgetItemIterator(self._tree)
         while it.value():
             item = it.value()
             it += 1
-            # Category items (no UserRole data) stay visible if any child matches.
             if item.data(0, Qt.ItemDataRole.UserRole) is None:
                 continue
             tags_str = item.data(0, Qt.ItemDataRole.UserRole + 2) or ''
@@ -918,7 +924,20 @@ class ObjectTree(QWidget):
             if self._show_attrs:
                 attrs_str = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
                 match = match or text in attrs_str.lower()
-            item.setHidden(not match)
+            if match:
+                matched.add(id(item))
+
+        # Second pass: hide non-matching items, show children of matches.
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            if item.data(0, Qt.ItemDataRole.UserRole) is None:
+                continue
+            if id(item) in matched or self._has_matched_ancestor(item, matched):
+                item.setHidden(False)
+            else:
+                item.setHidden(True)
 
         # Ensure parents of visible items are also visible.
         it = QTreeWidgetItemIterator(
@@ -933,6 +952,16 @@ class ObjectTree(QWidget):
                 parent.setHidden(False)
                 parent.setExpanded(True)
                 parent = parent.parent()
+
+    @staticmethod
+    def _has_matched_ancestor(item, matched):
+        """Return True if any ancestor of *item* is in *matched*."""
+        parent = item.parent()
+        while parent:
+            if id(parent) in matched:
+                return True
+            parent = parent.parent()
+        return False
 
     def _reset_visibility(self):
         """Restore all items to visible."""
