@@ -375,6 +375,7 @@ class FWWindow(QMainWindow):
 
     def _prepare_recent_menu(self):
         """Populate the empty *menuOpen_Recent* with dynamic actions."""
+        self.menuOpen_Recent.setToolTipsVisible(True)
         self._recent_actions = []
         for _ in range(_MAX_RECENT_FILES):
             action = QAction(self)
@@ -406,6 +407,7 @@ class FWWindow(QMainWindow):
             name = Path(files[i]).name
             text = files[i] if name_counts.get(name, 0) > 1 else name
             self._recent_actions[i].setText(text)
+            self._recent_actions[i].setToolTip(files[i])
             self._recent_actions[i].setData(files[i])
             self._recent_actions[i].setVisible(True)
             if i < 9:
