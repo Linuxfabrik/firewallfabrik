@@ -25,8 +25,10 @@ from PySide6.QtWidgets import (
 )
 
 from firewallfabrik.core.objects import (
-    Firewall,
+    Group,
+    Host,
     Library,
+    group_membership,
 )
 
 # Map ORM type discriminator strings to QRC icon aliases.
@@ -57,18 +59,6 @@ ICON_MAP = {
 
 _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
 
-# fwbuilder groups services by type into sub-categories.
-_SERVICE_TYPE_CATEGORY = {
-    'CustomService': 'Custom',
-    'ICMP6Service': 'ICMP',
-    'ICMPService': 'ICMP',
-    'IPService': 'IP',
-    'TagService': 'TagServices',
-    'TCPService': 'TCP',
-    'UDPService': 'UDP',
-    'UserService': 'Users',
-}
-
 
 def _obj_sort_key(obj):
     """Sort key: (label, name), case-insensitive."""
@@ -90,6 +80,7 @@ def _is_inactive(obj):
     """Return True if the object is marked inactive/disabled."""
     data = getattr(obj, 'data', None) or {}
     return data.get('inactive') == 'True'
+
 
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
@@ -140,145 +131,99 @@ class ObjectTree(QWidget):
 
         libraries.sort(key=_lib_order)
 
+        self._groups_with_members = set(
+            session.scalars(
+                sqlalchemy.select(group_membership.c.group_id).distinct(),
+            ).all()
+        )
+
         for lib in libraries:
             lib_item = self._make_item(lib.name, 'Library', str(lib.id))
             self._tree.addTopLevelItem(lib_item)
-            self._add_devices(lib, lib_item)
-            self._add_category(lib.addresses, 'Addresses', lib_item)
-            self._add_services(lib.services, lib_item)
-            self._add_category(lib.groups, 'Groups', lib_item)
-            self._add_category(lib.intervals, 'Time', lib_item)
-            # Collapse "Standard" by default, expand everything else.
+            self._add_children(lib, lib_item)
             lib_item.setExpanded(lib.name != 'Standard')
 
     # ------------------------------------------------------------------
     # Tree building helpers
     # ------------------------------------------------------------------
 
-    def _add_devices(self, library, parent_item):
-        """Add Firewalls and Hosts categories under *parent_item*."""
-        firewalls = sorted(
-            (d for d in library.devices if isinstance(d, Firewall)),
-            key=_obj_sort_key,
+    def _add_children(self, lib, parent_item):
+        """Add orphan objects and root groups from *lib* under *parent_item*."""
+        children = [
+            obj
+            for obj in (
+                list(lib.addresses)
+                + list(lib.services)
+                + list(lib.intervals)
+                + list(lib.devices)
+            )
+            if obj.group_id is None
+        ]
+        children += [g for g in lib.groups if g.parent_group_id is None]
+        children.sort(key=_obj_sort_key)
+        for obj in children:
+            self._add_object(obj, parent_item)
+
+    def _add_object(self, obj, parent_item):
+        """Create a tree item for *obj* and recurse into groups / devices."""
+        type_str = getattr(obj, 'type', None) or type(obj).__name__
+        item = self._make_item(
+            _obj_display_name(obj),
+            type_str,
+            str(obj.id),
+            parent_item,
+            inactive=_is_inactive(obj),
         )
-        hosts = sorted(
-            (d for d in library.devices if not isinstance(d, Firewall)),
-            key=_obj_sort_key,
+        if isinstance(obj, Group):
+            self._add_group_children(obj, item)
+            if obj.id not in self._groups_with_members:
+                item.setIcon(0, QIcon(_CATEGORY_ICON))
+        elif isinstance(obj, Host):
+            self._add_device_children(obj, item)
+
+    def _add_group_children(self, group, parent_item):
+        """Add child objects and sub-groups of *group*."""
+        children = (
+            list(group.addresses)
+            + list(group.services)
+            + list(group.intervals)
+            + list(group.devices)
+            + list(group.child_groups)
         )
+        children.sort(key=_obj_sort_key)
+        for obj in children:
+            self._add_object(obj, parent_item)
 
-        if firewalls:
-            fw_cat = self._make_category('Firewalls', parent_item)
-            # Create folder items first (sorted) so they appear above ungrouped devices.
-            folder_items = self._build_folder_items(firewalls, fw_cat)
-            for fw in firewalls:
-                target = self._folder_target(fw, fw_cat, folder_items)
-                fw_item = self._make_item(
-                    _obj_display_name(fw), fw.type, str(fw.id), target,
-                    inactive=_is_inactive(fw),
-                )
-                for rs in sorted(fw.rule_sets, key=_obj_sort_key):
-                    self._make_item(
-                        _obj_display_name(rs), rs.type, str(rs.id), fw_item,
-                        inactive=_is_inactive(rs),
-                    )
-                for iface in sorted(fw.interfaces, key=lambda o: o.name.lower()):
-                    self._add_interface(iface, fw_item)
-            fw_cat.setExpanded(True)
-
-        if hosts:
-            host_cat = self._make_category('Hosts', parent_item)
-            # Create folder items first (sorted) so they appear above ungrouped devices.
-            folder_items = self._build_folder_items(hosts, host_cat)
-            for host in hosts:
-                target = self._folder_target(host, host_cat, folder_items)
-                host_item = self._make_item(
-                    _obj_display_name(host), host.type, str(host.id), target,
-                    inactive=_is_inactive(host),
-                )
-                for iface in sorted(host.interfaces, key=lambda o: o.name.lower()):
-                    self._add_interface(iface, host_item)
-
-    def _add_services(self, services, parent_item):
-        """Add Services category with type-based sub-categories (TCP, UDP, …)."""
-        if not services:
-            return
-        svc_cat = self._make_category('Services', parent_item)
-        # Group services by type category.
-        by_type_cat = {}
-        for svc in services:
-            type_str = getattr(svc, 'type', type(svc).__name__)
-            cat_name = _SERVICE_TYPE_CATEGORY.get(type_str, type_str)
-            by_type_cat.setdefault(cat_name, []).append(svc)
-        for cat_name in sorted(by_type_cat, key=str.casefold):
-            type_cat = self._make_category(cat_name, svc_cat)
-            self._add_objects_with_folders(by_type_cat[cat_name], type_cat)
+    def _add_device_children(self, device, parent_item):
+        """Add rule sets and interfaces of *device*."""
+        for rs in sorted(device.rule_sets, key=_obj_sort_key):
+            self._make_item(
+                _obj_display_name(rs),
+                rs.type,
+                str(rs.id),
+                parent_item,
+                inactive=_is_inactive(rs),
+            )
+        for iface in sorted(device.interfaces, key=lambda o: o.name.lower()):
+            self._add_interface(iface, parent_item)
 
     def _add_interface(self, iface, parent_item):
         """Add an Interface node with its child addresses."""
         iface_item = self._make_item(
-            _obj_display_name(iface), 'Interface', str(iface.id),
+            _obj_display_name(iface),
+            'Interface',
+            str(iface.id),
             inactive=_is_inactive(iface),
         )
         parent_item.addChild(iface_item)
         for addr in sorted(iface.addresses, key=_obj_sort_key):
             self._make_item(
-                _obj_display_name(addr), addr.type, str(addr.id), iface_item,
+                _obj_display_name(addr),
+                addr.type,
+                str(addr.id),
+                iface_item,
                 inactive=_is_inactive(addr),
             )
-
-    def _add_category(self, objects, label, parent_item):
-        """Add a category folder with child object nodes."""
-        if not objects:
-            return
-        cat = self._make_category(label, parent_item)
-        self._add_objects_with_folders(objects, cat)
-
-    def _add_objects_with_folders(self, objects, parent_item):
-        """Add objects to parent, grouping into folder sub-items where set."""
-        sorted_objects = sorted(objects, key=_obj_sort_key)
-        # Create folder items first (sorted) so they appear above ungrouped objects.
-        folder_names = sorted({
-            self._get_folder_name(obj) for obj in sorted_objects
-        } - {''}, key=str.casefold)
-        folder_items = {
-            name: self._make_category(name, parent_item)
-            for name in folder_names
-        }
-        for obj in sorted_objects:
-            folder_name = self._get_folder_name(obj)
-            target = folder_items[folder_name] if folder_name else parent_item
-            type_str = getattr(obj, 'type', type(obj).__name__)
-            self._make_item(
-                _obj_display_name(obj), type_str, str(obj.id), target,
-                inactive=_is_inactive(obj),
-            )
-
-    @staticmethod
-    def _get_folder_name(obj):
-        """Return the folder name for *obj*, or empty string."""
-        data = getattr(obj, 'data', None) or {}
-        return data.get('folder', '')
-
-    def _build_folder_items(self, objects, parent_item):
-        """Pre-create sorted folder items for *objects* under *parent_item*."""
-        folder_names = sorted({
-            self._get_folder_name(obj) for obj in objects
-        } - {''}, key=str.casefold)
-        return {
-            name: self._make_category(name, parent_item)
-            for name in folder_names
-        }
-
-    def _folder_target(self, obj, default_parent, folder_cache):
-        """Return the folder item for *obj*, creating it if needed."""
-        folder_name = self._get_folder_name(obj)
-        if not folder_name:
-            return default_parent
-        if folder_name not in folder_cache:
-            folder_cache[folder_name] = self._make_category(
-                folder_name, default_parent,
-            )
-        return folder_cache[folder_name]
 
     def _make_category(self, label, parent_item):
         """Create a non-selectable category folder item."""
@@ -325,7 +270,8 @@ class ObjectTree(QWidget):
 
         # Ensure parents of visible items are also visible.
         it = QTreeWidgetItemIterator(
-            self._tree, QTreeWidgetItemIterator.IteratorFlag.NotHidden,
+            self._tree,
+            QTreeWidgetItemIterator.IteratorFlag.NotHidden,
         )
         while it.value():
             item = it.value()
