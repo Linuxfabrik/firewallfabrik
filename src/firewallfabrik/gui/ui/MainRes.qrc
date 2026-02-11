@@ -14,9 +14,11 @@
 
     <!-- Object-tree icons (:/Icons/Type/icon-tree) -->
     <file alias="Icons/Accept/icon-tree">Icons/accept_16.png</file>
+    <file alias="Icons/Accounting/icon-tree">Icons/accounting_16.png</file>
     <file alias="Icons/AddressRange/icon-tree">Icons/rangeaddress_16.png</file>
     <file alias="Icons/AddressTable/icon-tree">Icons/addresstable_16.png</file>
     <file alias="Icons/Both/icon-tree">Icons/both_16.png</file>
+    <file alias="Icons/Classify/icon-tree">Icons/classify_16.png</file>
     <file alias="Icons/Cluster/icon-tree">Icons/cluster_16.png</file>
     <file alias="Icons/CustomService/icon-tree">Icons/service-custom_16.png</file>
     <file alias="Icons/DNSName/icon-tree">Icons/domainname_16.png</file>
@@ -33,15 +35,18 @@
     <file alias="Icons/Interval/icon-tree">Icons/clock_16.png</file>
     <file alias="Icons/IntervalGroup/icon-tree">Icons/clock-group_16.png</file>
     <file alias="Icons/Library/icon-tree">Icons/library_16.png</file>
+    <file alias="Icons/Log/icon-tree">Icons/log_16.png</file>
     <file alias="Icons/lock">Icons/lock_16.png</file>
     <file alias="Icons/NAT/icon-tree">Icons/nat_16.png</file>
     <file alias="Icons/Network/icon-tree">Icons/network_16.png</file>
     <file alias="Icons/NetworkIPv6/icon-tree">Icons/network6_16.png</file>
     <file alias="Icons/ObjectGroup/icon-tree">Icons/object-group_16.png</file>
+    <file alias="Icons/Options/icon-tree">Icons/options_16.png</file>
     <file alias="Icons/Outbound/icon-tree">Icons/outbound_16.png</file>
     <file alias="Icons/PhysAddress/icon-tree">Icons/physaddress_16.png</file>
     <file alias="Icons/Policy/icon-tree">Icons/ruleset_16.png</file>
     <file alias="Icons/Reject/icon-tree">Icons/reject_16.png</file>
+    <file alias="Icons/Route/icon-tree">Icons/route_16.png</file>
     <file alias="Icons/Routing/icon-tree">Icons/routing_16.png</file>
     <file alias="Icons/ServiceGroup/icon-tree">Icons/service-group_16.png</file>
     <file alias="Icons/SystemGroup/icon-tree">Icons/folder_16.png</file>
@@ -52,9 +57,11 @@
 
     <!-- Rule-set icons 25x25 (:/Icons/Type/icon) -->
     <file alias="Icons/Accept/icon">Icons/accept_25.png</file>
+    <file alias="Icons/Accounting/icon">Icons/accounting_25.png</file>
     <file alias="Icons/AddressRange/icon">Icons/rangeaddress_25.png</file>
     <file alias="Icons/AddressTable/icon">Icons/addresstable_25.png</file>
     <file alias="Icons/Both/icon">Icons/both_25.png</file>
+    <file alias="Icons/Classify/icon">Icons/classify_25.png</file>
     <file alias="Icons/Cluster/icon">Icons/cluster_25.png</file>
     <file alias="Icons/CustomService/icon">Icons/service-custom_25.png</file>
     <file alias="Icons/DNSName/icon">Icons/domainname_25.png</file>
@@ -70,13 +77,16 @@
     <file alias="Icons/Interface/icon">Icons/interface_25.png</file>
     <file alias="Icons/Interval/icon">Icons/clock_25.png</file>
     <file alias="Icons/IntervalGroup/icon">Icons/clock-group_25.png</file>
+    <file alias="Icons/Log/icon">Icons/log_25.png</file>
     <file alias="Icons/Network/icon">Icons/network_25.png</file>
     <file alias="Icons/NetworkIPv6/icon">Icons/network6_25.png</file>
     <file alias="Icons/ObjectGroup/icon">Icons/object-group_25.png</file>
+    <file alias="Icons/Options/icon">Icons/options_25.png</file>
     <file alias="Icons/Outbound/icon">Icons/outbound_25.png</file>
     <file alias="Icons/PhysAddress/icon">Icons/physaddress_25.png</file>
     <file alias="Icons/Policy/icon">Icons/ruleset_25.png</file>
     <file alias="Icons/Reject/icon">Icons/reject_25.png</file>
+    <file alias="Icons/Route/icon">Icons/route_25.png</file>
     <file alias="Icons/Routing/icon">Icons/routing_25.png</file>
     <file alias="Icons/ServiceGroup/icon">Icons/service-group_25.png</file>
     <file alias="Icons/TCPService/icon">Icons/service-tcp_25.png</file>

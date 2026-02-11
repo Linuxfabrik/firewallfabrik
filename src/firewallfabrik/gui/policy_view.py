@@ -15,7 +15,7 @@
 import json
 import uuid
 
-from PySide6.QtCore import QModelIndex, QRect, QSettings, Qt
+from PySide6.QtCore import QModelIndex, QRect, QSettings, QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -87,6 +87,7 @@ _VALID_TYPES_BY_SLOT = {
             'UserService',
         }
     ),
+    'when': frozenset({'Interval', 'IntervalGroup'}),
 }
 
 
@@ -192,6 +193,7 @@ class PolicyView(QTreeView):
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setRootIsDecorated(True)
         self.setItemDelegate(_CellBorderDelegate(self))
+        self._apply_icon_size()
         self.header().setStretchLastSection(True)
         self.header().setSectionResizeMode(
             QHeaderView.ResizeMode.Interactive,
@@ -222,11 +224,17 @@ class PolicyView(QTreeView):
             model.modelReset.connect(self._configure_groups)
             self._configure_groups()
 
+    def _apply_icon_size(self):
+        """Set the view's icon size from the user preference."""
+        sz = QSettings().value('UI/IconSizeInRules', 25, type=int)
+        self.setIconSize(QSize(sz, sz))
+
     def _configure_groups(self):
         """Mark group rows as first-column-spanned, expand, and fit columns."""
         model = self.model()
         if model is None:
             return
+        self._apply_icon_size()
         for row in range(model.rowCount(QModelIndex())):
             idx = model.index(row, 0, QModelIndex())
             if model.is_group(idx):

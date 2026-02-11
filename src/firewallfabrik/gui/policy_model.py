@@ -50,32 +50,33 @@ HEADERS = [
     'Interface',
     'Direction',
     'Action',
+    'Time',
+    'Options',
     'Comment',
 ]
 
 _COL_ACTION = 6
-_COL_COMMENT = 7
+_COL_COMMENT = 9
 _COL_DIRECTION = 5
 _COL_DST = 2
 _COL_ITF = 4
+_COL_OPTIONS = 8
 _COL_POSITION = 0
 _COL_SRC = 1
 _COL_SRV = 3
+_COL_TIME = 7
 
 _COL_TO_SLOT = {
     _COL_DST: 'dst',
     _COL_ITF: 'itf',
     _COL_SRC: 'src',
     _COL_SRV: 'srv',
+    _COL_TIME: 'when',
 }
 
 _ELEMENT_COLS = frozenset(_COL_TO_SLOT.keys())
 
-_DIRECTION_ICONS = {
-    'Both': ':/Icons/Both/icon-tree',
-    'Inbound': ':/Icons/Inbound/icon-tree',
-    'Outbound': ':/Icons/Outbound/icon-tree',
-}
+_DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})
 
 _GROUP_BG = QColor('lightgray')
 
@@ -103,10 +104,12 @@ class _RowData:
     group: str
     itf: list
     label: str
+    options_display: list  # list[tuple[None, str, str]]  (None, label, icon-type)
     position: int
     rule_id: uuid.UUID
     src: list
     srv: list
+    when: list  # list[tuple[uuid.UUID, str, str]]  (id, name, type)
 
 
 class _TreeNode:
@@ -211,10 +214,12 @@ class PolicyTreeModel(QAbstractItemModel):
                     group=group_name,
                     itf=slots.get('itf', []),
                     label=rule.label or '',
+                    options_display=_build_options_display(opts),
                     position=rule.position,
                     rule_id=rule.id,
                     src=slots.get('src', []),
                     srv=slots.get('srv', []),
+                    when=slots.get('when', []),
                 )
 
                 rule_node = _TreeNode(
@@ -432,18 +437,19 @@ class PolicyTreeModel(QAbstractItemModel):
                 return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             return None
         if role == Qt.ItemDataRole.DecorationRole:
-            if col == _COL_ACTION:
-                icon_path = f':/Icons/{row_data.action}/icon-tree'
-                icon = QIcon(icon_path)
+            suffix = _icon_suffix()
+            if col == _COL_ACTION and row_data.action:
+                icon = QIcon(f':/Icons/{row_data.action}/{suffix}')
                 if not icon.isNull():
                     return icon
-            elif col == _COL_DIRECTION:
-                icon_path = _DIRECTION_ICONS.get(row_data.direction)
-                if icon_path:
-                    return QIcon(icon_path)
-        if role == ELEMENTS_ROLE and col in _ELEMENT_COLS:
-            slot = _COL_TO_SLOT[col]
-            return getattr(row_data, slot)
+            elif col == _COL_DIRECTION and row_data.direction in _DIRECTION_NAMES:
+                return QIcon(f':/Icons/{row_data.direction}/{suffix}')
+        if role == ELEMENTS_ROLE:
+            if col in _ELEMENT_COLS:
+                slot = _COL_TO_SLOT[col]
+                return getattr(row_data, slot)
+            if col == _COL_OPTIONS:
+                return row_data.options_display or None
         return None
 
     @staticmethod
@@ -462,6 +468,14 @@ class PolicyTreeModel(QAbstractItemModel):
             return row_data.direction
         if col == _COL_ACTION:
             return row_data.action
+        if col == _COL_TIME:
+            return _format_elements(row_data.when)
+        if col == _COL_OPTIONS:
+            return (
+                _format_elements(row_data.options_display)
+                if row_data.options_display
+                else ''
+            )
         if col == _COL_COMMENT:
             return row_data.comment
         return ''
@@ -942,6 +956,75 @@ class PolicyTreeModel(QAbstractItemModel):
 
 _BLACK = QColor('black')
 _WHITE = QColor('white')
+
+
+def _build_options_display(opts):
+    """Build a list of (None, label, icon_type) triples from rule options.
+
+    Matches fwbuilder's ``PolicyModel::getRuleOptions()`` display logic.
+    """
+    if not opts:
+        return []
+    result = []
+    if _opt_str(opts, 'counter_name') or _opt_str(opts, 'rule_name_accounting'):
+        result.append((None, 'accounting', 'Accounting'))
+    if _opt_bool(opts, 'classification'):
+        label = _opt_str(opts, 'classify_str') or 'classify'
+        result.append((None, label, 'Classify'))
+    if _opt_bool(opts, 'log'):
+        result.append((None, 'log', 'Log'))
+    if _has_nondefault_options(opts):
+        result.append((None, 'options', 'Options'))
+    if _opt_bool(opts, 'routing'):
+        result.append((None, 'route', 'Route'))
+    if _opt_bool(opts, 'tagging'):
+        result.append((None, 'tag', 'TagService'))
+    return result
+
+
+def _opt_bool(opts, key):
+    """Return a boolean for *key*, coercing ``'True'``/``'False'`` strings."""
+    val = opts.get(key)
+    if isinstance(val, str):
+        return val.lower() == 'true'
+    return bool(val)
+
+
+def _opt_str(opts, key):
+    """Return a non-empty string for *key*, or ``''``."""
+    val = opts.get(key, '')
+    return str(val) if val else ''
+
+
+def _opt_int(opts, key):
+    """Return an int for *key*, or 0."""
+    val = opts.get(key, 0)
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _has_nondefault_options(opts):
+    """Check whether any non-default iptables rule options are set.
+
+    Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
+    """
+    if _opt_str(opts, 'log_prefix'):
+        return True
+    if _opt_str(opts, 'log_level'):
+        return True
+    if _opt_int(opts, 'limit_value') > 0:
+        return True
+    if _opt_int(opts, 'connlimit_value') > 0:
+        return True
+    return _opt_int(opts, 'hashlimit_value') > 0
+
+
+def _icon_suffix():
+    """Return the QRC icon alias suffix for the configured rule icon size."""
+    size = QSettings().value('UI/IconSizeInRules', 25, type=int)
+    return 'icon-tree' if size == 16 else 'icon'
 
 
 def _contrast_color(bg):
