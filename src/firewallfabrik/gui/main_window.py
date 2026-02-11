@@ -196,6 +196,12 @@ class FWWindow(QMainWindow):
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
         self._db_manager.on_history_changed = self._on_history_changed
 
+        # Sync View menu checkboxes when dock widgets are closed via their X button.
+        self.editorDockWidget.visibilityChanged.connect(
+            self._on_editor_visibility_changed
+        )
+        self.undoDockWidget.visibilityChanged.connect(self._on_undo_visibility_changed)
+
         self._prepare_recent_menu()
         self._restore_view_state()
         self._start_maximized = False
@@ -626,6 +632,18 @@ class FWWindow(QMainWindow):
         """Show or hide the undo stack panel."""
         visible = self.actionUndo_view.isChecked()
         self.undoDockWidget.setVisible(visible)
+        QSettings().setValue('View/UndoStack', visible)
+
+    @Slot(bool)
+    def _on_editor_visibility_changed(self, visible):
+        """Sync the View menu checkbox when the editor dock is closed via X."""
+        self.actionEditor_panel.setChecked(visible)
+        QSettings().setValue('View/EditorPanel', visible)
+
+    @Slot(bool)
+    def _on_undo_visibility_changed(self, visible):
+        """Sync the View menu checkbox when the undo dock is closed via X."""
+        self.actionUndo_view.setChecked(visible)
         QSettings().setValue('View/UndoStack', visible)
 
     # ------------------------------------------------------------------
