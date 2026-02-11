@@ -10,7 +10,9 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import argparse
 import os
+import pathlib
 import sys
 
 try:
@@ -28,14 +30,39 @@ from firewallfabrik.gui.main_window import FWWindow
 
 
 def main():
-    print(f'FirewallFabrik {__version__}')
+    parser = argparse.ArgumentParser(
+        prog='fwf',
+        description='FirewallFabrik — firewall configuration manager',
+    )
+    parser.add_argument(
+        '-v',
+        '--version',
+        action='version',
+        version=f'FirewallFabrik {__version__}',
+    )
+    parser.add_argument(
+        '-f',
+        '--file',
+        metavar='FILE',
+        help='database file to load on startup',
+    )
+    parser.add_argument(
+        'file_positional',
+        nargs='?',
+        metavar='FILE',
+        help='database file to load on startup',
+    )
+
+    # Use parse_known_args so Qt-specific flags (e.g. -platform) pass through.
+    args, remaining = parser.parse_known_args()
+    filename = args.file or args.file_positional
 
     # Set desktop file name before QApplication construction so the Wayland
     # platform plugin picks it up during init and doesn't try to register twice.
     os.environ.setdefault('XDG_ACTIVATION_TOKEN', '')
     QApplication.setDesktopFileName('ch.linuxfabrik.firewallfabrik')
 
-    app = QApplication(sys.argv)
+    app = QApplication(remaining)
     app.setOrganizationName('Linuxfabrik')
     app.setApplicationName('FirewallFabrik')
 
@@ -48,6 +75,9 @@ def main():
 
     mw = FWWindow()
     mw.show()
+
+    if filename:
+        mw._load_file(pathlib.Path(filename).resolve())
 
     sys.exit(app.exec())
 
