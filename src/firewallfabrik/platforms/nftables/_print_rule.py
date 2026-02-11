@@ -233,9 +233,10 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
 
         neg = '!= ' if rule._extra.get('src_single_object_negation') else ''
-        addrs = [self._print_addr(obj) for obj in rule.src]
+        addrs = [self._print_addr(obj, rule) for obj in rule.src]
         addrs = [a for a in addrs if a]
         if not addrs:
+            self.compiler.error(rule, 'Could not resolve any source addresses')
             return ''
         if len(addrs) == 1:
             return f'{af_prefix} saddr {neg}{addrs[0]}'
@@ -250,15 +251,16 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
 
         neg = '!= ' if rule._extra.get('dst_single_object_negation') else ''
-        addrs = [self._print_addr(obj) for obj in rule.dst]
+        addrs = [self._print_addr(obj, rule) for obj in rule.dst]
         addrs = [a for a in addrs if a]
         if not addrs:
+            self.compiler.error(rule, 'Could not resolve any destination addresses')
             return ''
         if len(addrs) == 1:
             return f'{af_prefix} daddr {neg}{addrs[0]}'
         return f'{af_prefix} daddr {neg}{{ {", ".join(addrs)} }}'
 
-    def _print_addr(self, obj) -> str:
+    def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""
         if isinstance(obj, AddressRange):
             start = obj.get_start_address()
@@ -268,11 +270,15 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         if isinstance(obj, Interface):
             if obj.is_dynamic():
-                # Dynamic interfaces need runtime address resolution
-                # For now, skip — nftables doesn't have shell variable substitution
+                self.compiler.error(
+                    rule,
+                    f'Dynamic interface address not yet supported by nftables compiler'
+                    f' (interface: {obj.name})',
+                )
                 return ''
             for addr in getattr(obj, 'addresses', []):
-                return self._print_addr_basic(addr)
+                return self._print_addr_basic(addr, rule)
+            self.compiler.error(rule, f'Interface "{obj.name}" has no addresses')
             return ''
 
         if isinstance(obj, Host):
@@ -283,13 +289,18 @@ class PrintRule_nft(PolicyRuleProcessor):
                     addr_str = addr.get_address()
                     if addr_str:
                         return addr_str
+            self.compiler.error(rule, f'Host "{obj.name}" has no addresses')
             return ''
 
-        return self._print_addr_basic(obj)
+        return self._print_addr_basic(obj, rule)
 
-    def _print_addr_basic(self, obj) -> str:
+    def _print_addr_basic(self, obj, rule: CompRule) -> str:
         """Print basic address in CIDR notation."""
         if not isinstance(obj, Address):
+            self.compiler.error(
+                rule,
+                f'Cannot resolve address for object type {type(obj).__name__}',
+            )
             return ''
 
         addr_str = obj.get_address()
@@ -327,6 +338,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             proto = srv.get_protocol_number()
             if proto >= 0:
                 return f'meta l4proto {proto}'
+
+        self.compiler.error(
+            rule,
+            f'Service type {type(srv).__name__} not yet supported by nftables compiler',
+        )
         return ''
 
     def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
@@ -536,6 +552,10 @@ class PrintRule_nft(PolicyRuleProcessor):
                     return self._print_reject(rule)
                 return verdict
             # Custom chain jump
+            self.compiler.warning(
+                rule,
+                f'Custom chain jump not yet supported by nftables compiler: {target}',
+            )
             return f'jump {target}'
 
         # Fall back to action
@@ -571,4 +591,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             'TCP-RST': 'reject with tcp reset',
         }
 
-        return reject_map.get(action_on_reject, 'reject')
+        nft_reject = reject_map.get(action_on_reject)
+        if nft_reject:
+            return nft_reject
+        self.compiler.warning(
+            rule,
+            f'Unknown reject type "{action_on_reject}", falling back to generic reject',
+        )
+        return 'reject'

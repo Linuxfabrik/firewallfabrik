@@ -246,13 +246,15 @@ def main(argv=None):
 
     if driver.all_errors:
         for err in driver.all_errors:
-            print(err, file=sys.stderr)
+            print(f'Error: {err}', file=sys.stderr)
 
     elapsed = time.monotonic() - t_start
     hours, remainder = divmod(int(elapsed), 3600)
     minutes, seconds = divmod(remainder, 60)
     print(f'Compile time: {hours:02d}:{minutes:02d}:{seconds:02d}', file=sys.stderr)
 
+    if driver.all_errors:
+        return 1
     return 0
 
 

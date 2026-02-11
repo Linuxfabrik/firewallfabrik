@@ -597,7 +597,10 @@ class CompilerDriver_ipt(CompilerDriver):
                         out_p.parent.mkdir(parents=True, exist_ok=True)
                         out_p.write_text(script_skeleton.expand(), encoding='utf-8')
                         out_p.chmod(0o755)
-                        self.info(' Compiled successfully')
+                        if self.all_errors:
+                            self.info(' Compiled with errors')
+                        else:
+                            self.info(' Compiled successfully')
                     except OSError as ex:
                         self.error(
                             f'Failed to open file {output_path} for writing: {ex}'

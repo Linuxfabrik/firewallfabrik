@@ -98,7 +98,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         # Original source
         osrc = self.compiler.get_first_osrc(rule)
         if osrc:
-            addr = self._print_addr(osrc)
+            addr = self._print_addr(osrc, rule)
             if addr:
                 neg = '! ' if rule._extra.get('osrc_single_object_negation') else ''
                 parts.append(f'{af_prefix} saddr {neg}{addr}')
@@ -106,7 +106,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         # Original destination
         odst = self.compiler.get_first_odst(rule)
         if odst:
-            addr = self._print_addr(odst)
+            addr = self._print_addr(odst, rule)
             if addr:
                 neg = '! ' if rule._extra.get('odst_single_object_negation') else ''
                 parts.append(f'{af_prefix} daddr {neg}{addr}')
@@ -164,7 +164,7 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         return ' '.join(parts)
 
-    def _print_addr(self, obj) -> str:
+    def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""
         if isinstance(obj, AddressRange):
             start = obj.get_start_address()
@@ -177,6 +177,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 addr_str = addr.get_address()
                 if addr_str:
                     return addr_str
+            self.compiler.error(rule, f'Interface "{obj.name}" has no addresses')
             return ''
 
         if isinstance(obj, Host):
@@ -187,9 +188,14 @@ class NATPrintRule_nft(NATRuleProcessor):
                     addr_str = addr.get_address()
                     if addr_str:
                         return addr_str
+            self.compiler.error(rule, f'Host "{obj.name}" has no addresses')
             return ''
 
         if not isinstance(obj, Address):
+            self.compiler.error(
+                rule,
+                f'Cannot resolve address for object type {type(obj).__name__}',
+            )
             return ''
 
         addr_str = obj.get_address()
@@ -224,6 +230,10 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return f'meta l4proto {p}'
             return ''
         else:
+            self.compiler.error(
+                rule,
+                f'Service type {type(srv).__name__} not yet supported by nftables compiler',
+            )
             return ''
 
         parts = []
@@ -286,7 +296,7 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
             if tsrc:
-                addr = self._print_addr(tsrc)
+                addr = self._print_addr(tsrc, rule)
                 if addr:
                     ports = self._print_translated_ports(tsrv, src=True)
                     if ports:
@@ -296,12 +306,13 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
             if tdst:
-                addr = self._print_addr(tdst)
+                addr = self._print_addr(tdst, rule)
                 if addr:
                     ports = self._print_translated_ports(tsrv, src=False)
                     if ports:
                         return f'dnat to {addr}:{ports}'
                     return f'dnat to {addr}'
+            self.compiler.error(rule, 'DNAT rule has no translated destination address')
             return ''
 
         if rt == NATRuleType.Redirect:
@@ -311,12 +322,10 @@ class NATPrintRule_nft(NATRuleProcessor):
             return 'redirect'
 
         if rt == NATRuleType.SDNAT:
-            # Both src and dst translation — need two separate rules
-            # For simplicity, emit as dnat (the more common case)
-            if tdst:
-                addr = self._print_addr(tdst)
-                if addr:
-                    return f'dnat to {addr}'
+            self.compiler.error(
+                rule,
+                'Simultaneous SNAT+DNAT (SDNAT) not yet supported by nftables compiler',
+            )
             return ''
 
         if rt == NATRuleType.Return:

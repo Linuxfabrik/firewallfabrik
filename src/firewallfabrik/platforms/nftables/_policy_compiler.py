@@ -306,12 +306,19 @@ class Logging_nft(PolicyRuleProcessor):
             return True
 
         # For Continue+log, set target to LOG
-        if (
-            rule.action == PolicyAction.Continue
-            and not rule.get_option('tagging', False)
-            and not rule.get_option('classification', False)
-            and not rule.get_option('routing', False)
-        ):
+        if rule.action == PolicyAction.Continue:
+            if rule.get_option('tagging', False):
+                self.compiler.error(
+                    rule, 'Tagging not yet supported by nftables compiler'
+                )
+            if rule.get_option('classification', False):
+                self.compiler.error(
+                    rule, 'Classification not yet supported by nftables compiler'
+                )
+            if rule.get_option('routing', False):
+                self.compiler.error(
+                    rule, 'Policy routing not yet supported by nftables compiler'
+                )
             rule.ipt_target = 'LOG'
             self.tmp_queue.append(rule)
             return True
@@ -685,13 +692,29 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Deny: 'DROP',
             PolicyAction.Reject: 'REJECT',
             PolicyAction.Return: 'RETURN',
-            PolicyAction.Pipe: 'QUEUE',
             PolicyAction.Continue: '.CONTINUE',
             PolicyAction.Custom: '.CUSTOM',
         }
         target = target_map.get(rule.action)
         if target is not None:
             rule.ipt_target = target
+        else:
+            action_name = rule.action.name if rule.action else str(rule.action)
+            not_yet = {
+                PolicyAction.Accounting,
+                PolicyAction.Branch,
+                PolicyAction.Modify,
+                PolicyAction.Pipe,
+            }
+            if rule.action in not_yet:
+                self.compiler.error(
+                    rule,
+                    f'{action_name} action not yet supported by nftables compiler',
+                )
+            else:
+                self.compiler.error(
+                    rule, f'{action_name} action not supported in nftables'
+                )
 
         return True
 

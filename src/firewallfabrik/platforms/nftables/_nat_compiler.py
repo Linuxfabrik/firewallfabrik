@@ -331,6 +331,13 @@ class DecideOnChain(NATRuleProcessor):
         chain = chain_map.get(rule.nat_rule_type, '')
         if chain:
             rule.ipt_chain = chain
+        else:
+            no_chain_types = {NATRuleType.NONAT, NATRuleType.Return, NATRuleType.SDNAT}
+            if rule.nat_rule_type not in no_chain_types:
+                self.compiler.error(
+                    rule,
+                    f'No chain assignment for NAT rule type: {rule.nat_rule_type}',
+                )
 
         return True
 

@@ -106,6 +106,7 @@ class CompilerDriver_nft(CompilerDriver):
                     ),
                 ).scalar_one_or_none()
             else:
+                self.error('No firewall ID provided')
                 return ''
 
             if fw is None:
@@ -313,7 +314,10 @@ class CompilerDriver_nft(CompilerDriver):
                         out_p.parent.mkdir(parents=True, exist_ok=True)
                         out_p.write_text(script, encoding='utf-8')
                         out_p.chmod(0o755)
-                        self.info(' Compiled successfully')
+                        if self.all_errors:
+                            self.info(' Compiled with errors')
+                        else:
+                            self.info(' Compiled successfully')
                     except OSError as ex:
                         self.error(
                             f'Failed to open file {output_path} for writing: {ex}'
