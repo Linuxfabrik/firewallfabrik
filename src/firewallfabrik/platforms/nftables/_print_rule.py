@@ -355,6 +355,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         parts = []
 
+        neg = '!= ' if rule.srv_single_object_negation else ''
+
         # Source ports
         src_start = srv.src_range_start or 0
         src_end = srv.src_range_end or 0
@@ -376,20 +378,20 @@ class PrintRule_nft(PolicyRuleProcessor):
                         all_dst_ports.append(p)
 
             if src_ports:
-                parts.append(f'{proto} sport {src_ports}')
+                parts.append(f'{proto} sport {neg}{src_ports}')
 
             if all_dst_ports:
                 if len(all_dst_ports) == 1:
-                    parts.append(f'{proto} dport {all_dst_ports[0]}')
+                    parts.append(f'{proto} dport {neg}{all_dst_ports[0]}')
                 else:
-                    parts.append(f'{proto} dport {{ {", ".join(all_dst_ports)} }}')
+                    parts.append(f'{proto} dport {neg}{{ {", ".join(all_dst_ports)} }}')
         else:
             dst_ports = self._format_port_range(dst_start, dst_end)
 
             if src_ports:
-                parts.append(f'{proto} sport {src_ports}')
+                parts.append(f'{proto} sport {neg}{src_ports}')
             if dst_ports:
-                parts.append(f'{proto} dport {dst_ports}')
+                parts.append(f'{proto} dport {neg}{dst_ports}')
             elif not src_ports:
                 # Just the protocol, no ports
                 parts.append(f'meta l4proto {proto}')

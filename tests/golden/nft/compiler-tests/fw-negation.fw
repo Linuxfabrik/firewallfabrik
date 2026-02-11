@@ -16,15 +16,15 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 22 drop
+        ip saddr != 192.168.1.0/24 tcp dport 22 drop
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
         #
         # Rule 2 (global)
         #
-        tcp dport 22 drop
+        tcp dport != 22 drop
         #
         # Rule 3 (global)
         #
@@ -34,6 +34,10 @@ table ip filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new accept
         #
         # Rule 3 (global)
         #

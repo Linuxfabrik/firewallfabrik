@@ -121,6 +121,7 @@ class CompRule:
     itf_single_object_negation: bool = False
     osrc_single_object_negation: bool = False
     odst_single_object_negation: bool = False
+    srv_single_object_negation: bool = False
 
     # Optimization flags
     ipt_multiport: bool = False  # iptables -m multiport

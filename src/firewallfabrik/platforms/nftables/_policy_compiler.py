@@ -138,6 +138,11 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Logging — inline in nftables, no temp chain needed
         self.add(Logging_nft('process logging'))
 
+        # Negation processors
+        self.add(SplitIfSrcNegAndFw('split if src negated and fw'))
+        self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
+        self.add(NftNegation('process negation'))
+
         # Chain assignment
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
@@ -331,6 +336,120 @@ class Logging_nft(PolicyRuleProcessor):
         return True
 
 
+class NftNegation(PolicyRuleProcessor):
+    """Convert negation flags to single_object_negation flags.
+
+    nftables has native != support for both single and multi-object,
+    so we just convert all negation flags directly — no temp chains needed.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('src'):
+            rule.src_single_object_negation = True
+            rule.set_neg('src', False)
+        if rule.get_neg('dst'):
+            rule.dst_single_object_negation = True
+            rule.set_neg('dst', False)
+        if rule.get_neg('srv'):
+            rule.srv_single_object_negation = True
+            rule.set_neg('srv', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfSrcNegAndFw(PolicyRuleProcessor):
+    """Split rule when src is negated and contains firewall objects."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            not rule.get_neg('src')
+            or rule.ipt_chain
+            or rule.direction == Direction.Inbound
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        fw_likes: list = []
+        not_fw_likes: list = []
+        for obj in rule.src:
+            if nft_comp.complex_match(obj, nft_comp.fw):
+                fw_likes.append(obj)
+            else:
+                not_fw_likes.append(obj)
+
+        if not fw_likes:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Rule A: OUTPUT chain with FW objects (still negated)
+        r = rule.clone()
+        r.src = fw_likes
+        r.ipt_chain = 'output'
+        r.direction = Direction.Outbound
+        self.tmp_queue.append(r)
+
+        # Rule B: original with non-FW objects only
+        rule.src = not_fw_likes
+        if not not_fw_likes:
+            rule.set_neg('src', False)
+        rule.set_option('no_output_chain', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfDstNegAndFw(PolicyRuleProcessor):
+    """Split rule when dst is negated and contains firewall objects."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            not rule.get_neg('dst')
+            or rule.ipt_chain
+            or rule.direction == Direction.Outbound
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        fw_likes: list = []
+        not_fw_likes: list = []
+        for obj in rule.dst:
+            if nft_comp.complex_match(obj, nft_comp.fw):
+                fw_likes.append(obj)
+            else:
+                not_fw_likes.append(obj)
+
+        if not fw_likes:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Rule A: INPUT chain with FW objects (still negated)
+        r = rule.clone()
+        r.dst = fw_likes
+        r.ipt_chain = 'input'
+        r.direction = Direction.Inbound
+        self.tmp_queue.append(r)
+
+        # Rule B: original with non-FW objects only
+        rule.dst = not_fw_likes
+        if not not_fw_likes:
+            rule.set_neg('dst', False)
+        rule.set_option('no_input_chain', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
 class SplitIfSrcAny(PolicyRuleProcessor):
     """Split rule if src is 'any' — may need INPUT and OUTPUT chains."""
 
@@ -338,6 +457,10 @@ class SplitIfSrcAny(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        if rule.get_option('no_output_chain', False):
+            self.tmp_queue.append(rule)
+            return True
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -362,6 +485,10 @@ class SplitIfDstAny(PolicyRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+
+        if rule.get_option('no_input_chain', False):
+            self.tmp_queue.append(rule)
+            return True
 
         if rule.ipt_chain:
             self.tmp_queue.append(rule)
@@ -721,7 +848,11 @@ class DecideOnTarget(PolicyRuleProcessor):
 
 
 class RemoveFW(PolicyRuleProcessor):
-    """Remove firewall object from src/dst after chain decision."""
+    """Remove firewall object from src/dst after chain decision.
+
+    When dst/src is negated, we must keep the fw addresses so that
+    ``daddr != { addr1, addr2 }`` / ``saddr != { ... }`` is emitted.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -732,9 +863,9 @@ class RemoveFW(PolicyRuleProcessor):
         chain = rule.ipt_chain
         fw_id = nft_comp.fw.id
 
-        if chain == 'input':
+        if chain == 'input' and not rule.dst_single_object_negation:
             rule.dst = [obj for obj in rule.dst if obj.id != fw_id]
-        elif chain == 'output':
+        elif chain == 'output' and not rule.src_single_object_negation:
             rule.src = [obj for obj in rule.src if obj.id != fw_id]
 
         self.tmp_queue.append(rule)
