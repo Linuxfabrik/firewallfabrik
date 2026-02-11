@@ -353,6 +353,7 @@ class ObjectTree(QWidget):
 
     def populate(self, session):
         """Build the tree from all libraries in *session*."""
+        expanded = self._save_expanded_state()
         self._tree.clear()
         self._filter.clear()
 
@@ -385,12 +386,58 @@ class ObjectTree(QWidget):
             )
             self._tree.addTopLevelItem(lib_item)
             self._add_children(lib, lib_item)
-            # Collapse "Standard" by default, expand everything else.
-            lib_item.setExpanded(lib.name != 'Standard')
+
+        if expanded:
+            self._restore_expanded_state(expanded)
+        else:
+            # First populate — collapse "Standard" by default, expand everything else.
+            for i in range(self._tree.topLevelItemCount()):
+                item = self._tree.topLevelItem(i)
+                item.setExpanded(item.text(0) != 'Standard')
 
         # Defer column setup so Qt has finished layout/painting first;
         # otherwise ResizeToContents computes zero width for column 1.
         QTimer.singleShot(0, self._apply_column_setup)
+
+    def _save_expanded_state(self):
+        """Collect identifiers for all currently expanded tree items."""
+        expanded = set()
+
+        def _walk(item):
+            if not item.isExpanded():
+                return
+            obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+            if obj_id:
+                expanded.add(obj_id)
+            else:
+                # Category item — identify by parent ID + label.
+                parent = item.parent()
+                parent_id = parent.data(0, Qt.ItemDataRole.UserRole) if parent else ''
+                expanded.add(f'cat:{parent_id}:{item.text(0)}')
+            for i in range(item.childCount()):
+                _walk(item.child(i))
+
+        for i in range(self._tree.topLevelItemCount()):
+            _walk(self._tree.topLevelItem(i))
+        return expanded
+
+    def _restore_expanded_state(self, expanded_ids):
+        """Re-expand items whose identifiers are in *expanded_ids*."""
+
+        def _walk(item):
+            obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+            if obj_id:
+                key = obj_id
+            else:
+                parent = item.parent()
+                parent_id = parent.data(0, Qt.ItemDataRole.UserRole) if parent else ''
+                key = f'cat:{parent_id}:{item.text(0)}'
+            item.setExpanded(key in expanded_ids)
+            for i in range(item.childCount()):
+                _walk(item.child(i))
+
+        for i in range(self._tree.topLevelItemCount()):
+            _walk(self._tree.topLevelItem(i))
 
     def set_show_attrs(self, show):
         """Toggle the attribute column visibility."""

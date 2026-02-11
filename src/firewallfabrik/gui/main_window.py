@@ -174,6 +174,28 @@ class FWWindow(QMainWindow):
             if isinstance(widget, BaseObjectDialog):
                 widget.changed.connect(self._on_editor_changed)
 
+        self._current_editor = None
+        self._editor_session = None
+
+        # Undo / redo actions in the Edit menu.
+        self._undo_action = QAction('&Undo', self)
+        self._undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        self._undo_action.setEnabled(False)
+        self._undo_action.triggered.connect(self._do_undo)
+        self._redo_action = QAction('&Redo', self)
+        self._redo_action.setShortcuts(
+            [QKeySequence.StandardKey.Redo, QKeySequence('Ctrl+Y')]
+        )
+        self._redo_action.setEnabled(False)
+        self._redo_action.triggered.connect(self._do_redo)
+        first_action = self.editMenu.actions()[0] if self.editMenu.actions() else None
+        self.editMenu.insertAction(first_action, self._undo_action)
+        self.editMenu.insertAction(first_action, self._redo_action)
+
+        # History list and callback.
+        self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
+        self._db_manager.on_history_changed = self._on_history_changed
+
         self._prepare_recent_menu()
         self._restore_view_state()
         self._start_maximized = False
@@ -408,9 +430,13 @@ class FWWindow(QMainWindow):
             )
             return
 
+        self._close_editor()
+        self.m_space.closeAllSubWindows()
+
         original_path = file_path
         try:
             self._db_manager = DatabaseManager()
+            self._db_manager.on_history_changed = self._on_history_changed
             file_path = self._db_manager.load(file_path)
         except Exception:
             logger.exception('Failed to load %s', file_path)
@@ -530,9 +556,8 @@ class FWWindow(QMainWindow):
             return
 
         # Close any previous editor session to avoid leaks.
-        old_session = getattr(self, '_editor_session', None)
-        if old_session is not None:
-            old_session.close()
+        if self._editor_session is not None:
+            self._editor_session.close()
 
         self._editor_session = self._db_manager.create_session()
         obj = self._editor_session.get(model_cls, uuid.UUID(obj_id))
@@ -544,6 +569,8 @@ class FWWindow(QMainWindow):
         all_tags = self._gather_all_tags(self._editor_session)
         dialog_widget.load_object(obj, all_tags=all_tags)
         self._current_editor = dialog_widget
+        self._editor_obj_id = obj_id
+        self._editor_obj_type = obj_type
 
         # The dialog widget sits inside a page's layout, not as a direct
         # page of the stacked widget — switch to its parent page instead.
@@ -567,8 +594,8 @@ class FWWindow(QMainWindow):
     @Slot()
     def _on_editor_changed(self):
         """Handle a change in the active editor: apply and commit."""
-        editor = getattr(self, '_current_editor', None)
-        session = getattr(self, '_editor_session', None)
+        editor = self._current_editor
+        session = self._editor_session
         if editor is None or session is None:
             return
         editor.apply_all()
@@ -600,6 +627,61 @@ class FWWindow(QMainWindow):
         visible = self.actionUndo_view.isChecked()
         self.undoDockWidget.setVisible(visible)
         QSettings().setValue('View/UndoStack', visible)
+
+    # ------------------------------------------------------------------
+    # Undo / redo
+    # ------------------------------------------------------------------
+
+    @Slot()
+    def _do_undo(self):
+        if self._db_manager.undo():
+            self._refresh_after_history_change()
+
+    @Slot()
+    def _do_redo(self):
+        if self._db_manager.redo():
+            self._refresh_after_history_change()
+
+    @Slot(int)
+    def _on_undo_list_clicked(self, row):
+        if row < 0:
+            return
+        if self._db_manager.jump_to(row):
+            self._refresh_after_history_change()
+
+    def _on_history_changed(self):
+        self._update_undo_actions()
+        self._update_undo_list()
+
+    def _update_undo_actions(self):
+        self._undo_action.setEnabled(self._db_manager.can_undo)
+        self._redo_action.setEnabled(self._db_manager.can_redo)
+
+    def _update_undo_list(self):
+        self.undoView.blockSignals(True)
+        self.undoView.clear()
+        for snap in self._db_manager.get_history():
+            self.undoView.addItem(snap.description or f'State {snap.index}')
+            if snap.is_current:
+                self.undoView.setCurrentRow(snap.index)
+        self.undoView.blockSignals(False)
+
+    def _refresh_after_history_change(self):
+        obj_id = getattr(self, '_editor_obj_id', None)
+        obj_type = getattr(self, '_editor_obj_type', None)
+        self._close_editor()
+        self.m_space.closeAllSubWindows()
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session)
+        if obj_id is not None:
+            self._open_object_editor(obj_id, obj_type)
+
+    def _close_editor(self):
+        if self._editor_session is not None:
+            self._editor_session.close()
+        self._editor_session = None
+        self._current_editor = None
+        self.editorDockWidget.setWindowTitle('Editor')
 
     @staticmethod
     def _gather_all_tags(session):

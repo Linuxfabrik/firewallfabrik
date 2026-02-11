@@ -842,7 +842,7 @@
       <number>2</number>
      </property>
      <item row="0" column="0">
-      <widget class="QUndoView" name="undoView">
+      <widget class="QListWidget" name="undoView">
        <property name="alternatingRowColors">
         <bool>false</bool>
        </property>

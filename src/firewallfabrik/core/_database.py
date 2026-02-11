@@ -53,8 +53,21 @@ class DatabaseManager:
         self._session_factory = sqlalchemy.orm.sessionmaker(self.engine)
         self._history = []
         self._current_index = -1
+        self.on_history_changed = None
         objects.enable_sqlite_fks(self.engine)
         self._reset_db(True)
+
+    @property
+    def can_undo(self):
+        return self._current_index > 0
+
+    @property
+    def can_redo(self):
+        return self._current_index < len(self._history) - 1
+
+    def _notify_history_changed(self):
+        if self.on_history_changed is not None:
+            self.on_history_changed()
 
     @contextlib.contextmanager
     def session(self, description=''):
@@ -93,6 +106,7 @@ class DatabaseManager:
             len(self._history),
             self._current_index,
         )
+        self._notify_history_changed()
 
     def undo(self):
         """Undo the last database state change."""
@@ -115,6 +129,7 @@ class DatabaseManager:
         logger.debug('Clearing all saved database states')
         self._history.clear()
         self._current_index = -1
+        self._notify_history_changed()
 
     def jump_to(self, index):
         """Jump to a specific history state by index.
@@ -134,6 +149,7 @@ class DatabaseManager:
         self._current_index = index
         self._restore_db(self._history[self._current_index].state)
         logger.debug('Jumped to history index %d', self._current_index)
+        self._notify_history_changed()
         return True
 
     def get_history(self):
