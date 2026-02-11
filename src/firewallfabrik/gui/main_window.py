@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
     Host,
     Interface,
     Interval,
+    Library,
     PolicyAction,
     PolicyRule,
     RuleSet,
@@ -60,6 +61,35 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_WIDTH = 1024
 _DEFAULT_HEIGHT = 768
+
+
+def _build_editor_path(obj):
+    """Build a ``" / "``-separated path from *obj* up to its Library.
+
+    Mirrors fwbuilder's ``buildEditorTitleAndIcon()`` — walk up the ORM
+    parent chain, collect names, and join them root-first.
+    """
+    parts = []
+    current = obj
+    while current is not None:
+        parts.append(current.name)
+        if isinstance(current, Library):
+            break
+        # Determine the parent depending on object type.
+        if isinstance(current, Address):
+            current = current.interface or current.group or current.library
+        elif isinstance(current, Interface):
+            current = current.device or current.library
+        elif isinstance(current, (Host, Service, Interval)):
+            current = current.group or current.library
+        elif isinstance(current, Group):
+            current = current.parent_group or current.library
+        else:
+            break
+    parts.reverse()
+    return ' / '.join(parts)
+
+
 FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
 _MAX_RECENT_FILES = 20
 
@@ -162,6 +192,8 @@ class FWWindow(QMainWindow):
         if not self.isMaximized():
             settings.setValue('Window/geometry', self.saveGeometry())
         settings.setValue('Window/maximized', self.isMaximized())
+        settings.setValue('Window/state', self.saveState())
+        settings.setValue('Window/splitter', self._splitter.saveState())
         super().closeEvent(event)
 
     def _restore_geometry(self):
@@ -200,8 +232,18 @@ class FWWindow(QMainWindow):
         QResource.registerResource(str(rcc))
 
     def _restore_view_state(self):
-        """Restore panel visibility from QSettings."""
+        """Restore panel visibility and layout from QSettings."""
         settings = QSettings()
+
+        # Restore dock widget / toolbar layout (sizes & positions).
+        state = settings.value('Window/state', type=QByteArray)
+        if state:
+            self.restoreState(state)
+
+        # Restore splitter proportions (object tree vs. MDI area).
+        splitter_state = settings.value('Window/splitter', type=QByteArray)
+        if splitter_state:
+            self._splitter.restoreState(splitter_state)
 
         tree_visible = settings.value('View/ObjectTree', True, type=bool)
         self._object_tree.setVisible(tree_visible)
@@ -375,6 +417,8 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as session:
             self._object_tree.populate(session)
 
+        self._object_tree.focus_filter()
+
     def _prepare_recent_menu(self):
         """Populate the empty *menuOpen_Recent* with dynamic actions."""
         self.menuOpen_Recent.setToolTipsVisible(True)
@@ -501,6 +545,11 @@ class FWWindow(QMainWindow):
         # page of the stacked widget — switch to its parent page instead.
         self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
         self.editorPanelTabWidget.setCurrentIndex(2)
+
+        path = _build_editor_path(obj)
+        if self._current_file:
+            path = f'[{self._current_file}] / {path}'
+        self.editorDockWidget.setWindowTitle(path)
 
         icon_path = f':/Icons/{obj_type}/icon-big'
         pixmap = QIcon(icon_path).pixmap(64, 64)
