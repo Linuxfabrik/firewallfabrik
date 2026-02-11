@@ -30,6 +30,7 @@
     <file alias="Icons/Interval/icon-tree">Icons/clock_16.png</file>
     <file alias="Icons/IntervalGroup/icon-tree">Icons/clock-group_16.png</file>
     <file alias="Icons/Library/icon-tree">Icons/library_16.png</file>
+    <file alias="Icons/lock">Icons/lock_16.png</file>
     <file alias="Icons/NAT/icon-tree">Icons/nat_16.png</file>
     <file alias="Icons/Network/icon-tree">Icons/network_16.png</file>
     <file alias="Icons/NetworkIPv6/icon-tree">Icons/network6_16.png</file>

@@ -56,6 +56,7 @@ ICON_MAP = {
 }
 
 _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
+_LOCK_ICON = ':/Icons/lock'
 
 # fwbuilder groups services by type into sub-categories.
 _SERVICE_TYPE_CATEGORY = {
@@ -154,7 +155,9 @@ class ObjectTree(QWidget):
         libraries.sort(key=_lib_order)
 
         for lib in libraries:
-            lib_item = self._make_item(lib.name, 'Library', str(lib.id))
+            lib_item = self._make_item(
+                lib.name, 'Library', str(lib.id), readonly=getattr(lib, 'ro', False)
+            )
             self._tree.addTopLevelItem(lib_item)
             self._add_devices(lib, lib_item)
             self._add_category(lib.addresses, 'Addresses', lib_item)
@@ -320,16 +323,27 @@ class ObjectTree(QWidget):
         return item
 
     def _make_item(
-        self, name, type_str, obj_id, parent_item=None, *, inactive=False, tags=None
+        self,
+        name,
+        type_str,
+        obj_id,
+        parent_item=None,
+        *,
+        inactive=False,
+        readonly=False,
+        tags=None,
     ):
         """Create a tree item storing id, type, and tags in user roles."""
         item = QTreeWidgetItem([name])
         item.setData(0, Qt.ItemDataRole.UserRole, obj_id)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, type_str)
         item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(tags))
-        icon_path = ICON_MAP.get(type_str)
-        if icon_path:
-            item.setIcon(0, QIcon(icon_path))
+        if readonly:
+            item.setIcon(0, QIcon(_LOCK_ICON))
+        else:
+            icon_path = ICON_MAP.get(type_str)
+            if icon_path:
+                item.setIcon(0, QIcon(icon_path))
         if inactive:
             font = item.font(0)
             font.setStrikeOut(True)

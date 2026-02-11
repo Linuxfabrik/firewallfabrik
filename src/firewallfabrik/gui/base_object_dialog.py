@@ -67,6 +67,7 @@ class BaseObjectDialog(QWidget):
         if not self._signals_connected:
             self._connect_change_signals()
             self._signals_connected = True
+        self._set_read_only(self._is_read_only())
 
     def _populate(self):
         """Fill widgets from ``self._obj``. Must be overridden."""
@@ -78,11 +79,42 @@ class BaseObjectDialog(QWidget):
 
     def apply_all(self):
         """Apply subclass-specific changes *and* comment/keywords."""
+        if self._is_read_only():
+            return
         self._apply_changes()
         comment_widget = self.findChild(CommentTags, 'commentKeywords')
         if comment_widget is not None and self._obj is not None:
             self._obj.comment = comment_widget.get_comment()
             self._obj.keywords = comment_widget.get_tags()
+
+    def _is_read_only(self):
+        """Return ``True`` if the current object must not be modified."""
+        obj = self._obj
+        if obj is None:
+            return False
+        return getattr(obj, 'ro', False) or getattr(
+            getattr(obj, 'library', None),
+            'ro',
+            False,
+        )
+
+    def _set_read_only(self, read_only):
+        """Enable or disable all editable child widgets."""
+        editable_types = (
+            CommentTags,
+            QCheckBox,
+            QComboBox,
+            QDateEdit,
+            QDateTimeEdit,
+            QLineEdit,
+            QRadioButton,
+            QSpinBox,
+            QTimeEdit,
+        )
+        enabled = not read_only
+        for child in self.findChildren(QWidget):
+            if isinstance(child, editable_types):
+                child.setEnabled(enabled)
 
     def _connect_change_signals(self):
         """Auto-connect child widget edit signals to ``_on_changed``."""
