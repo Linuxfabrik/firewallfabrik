@@ -312,6 +312,8 @@ class FWWindow(QMainWindow):
     def editPrefs(self):
         dlg = PreferencesDialog(self)
         dlg.exec()
+        show = QSettings().value('UI/ShowObjectsAttributesInTree', True, type=bool)
+        self._object_tree.set_show_attrs(show)
 
     @Slot()
     def help(self):

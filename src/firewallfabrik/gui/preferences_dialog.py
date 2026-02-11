@@ -12,6 +12,7 @@
 
 from pathlib import Path
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QDialog
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -31,3 +32,17 @@ class PreferencesDialog(QDialog):
                 parent_center.x() - self.width() // 2,
                 parent_center.y() - self.height() // 2,
             )
+
+        settings = QSettings()
+        self.attributesInTree.setChecked(
+            settings.value('UI/ShowObjectsAttributesInTree', True, type=bool)
+        )
+        self.accepted.connect(self._save_settings)
+
+    def _save_settings(self):
+        """Persist preference values to QSettings."""
+        settings = QSettings()
+        settings.setValue(
+            'UI/ShowObjectsAttributesInTree',
+            self.attributesInTree.isChecked(),
+        )

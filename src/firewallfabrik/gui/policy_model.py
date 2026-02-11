@@ -12,7 +12,7 @@
 
 """Table model for displaying policy rules in a QTableView."""
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractTableModel, Qt
 from PySide6.QtGui import QColor, QIcon
 
 HEADERS = [
@@ -59,10 +59,10 @@ class PolicyTableModel(QAbstractTableModel):
             'comment',
         ]
 
-    def rowCount(self, parent=QModelIndex()):
+    def rowCount(self, parent=None):
         return len(self._rows)
 
-    def columnCount(self, parent=QModelIndex()):
+    def columnCount(self, parent=None):
         return len(HEADERS)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):

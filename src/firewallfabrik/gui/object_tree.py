@@ -13,9 +13,10 @@
 """Object tree panel for the main window."""
 
 import sqlalchemy
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QHeaderView,
     QLineEdit,
     QTreeWidget,
     QTreeWidgetItem,
@@ -105,6 +106,106 @@ def _tags_to_str(tags):
     return ' '.join(t.lower() for t in sorted(tags))
 
 
+def _obj_brief_attrs(obj, under_interface=False):
+    """Return a display-friendly attribute string for the tree's second column.
+
+    Matches the format of fwbuilder's ``getObjectPropertiesBrief()``.
+    The same string serves as visible column text **and** filter search text.
+    """
+    type_str = getattr(obj, 'type', type(obj).__name__)
+
+    # -- Addresses --
+    if type_str in ('IPv4', 'IPv6'):
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        addr = iam.get('address', '')
+        if under_interface:
+            mask = iam.get('netmask', '')
+            return f'{addr}/{mask}' if addr else ''
+        return addr or ''
+
+    if type_str in ('Network', 'NetworkIPv6'):
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        addr = iam.get('address', '')
+        mask = iam.get('netmask', '')
+        return f'{addr}/{mask}' if addr else ''
+
+    if type_str == 'AddressRange':
+        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
+        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
+        if start or end:
+            return f'{start} - {end}'
+        return ''
+
+    if type_str == 'PhysAddress':
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        return iam.get('address', '') or ''
+
+    # -- Devices --
+    if type_str in ('Cluster', 'Firewall'):
+        data = getattr(obj, 'data', None) or {}
+        platform = data.get('platform', '')
+        version = data.get('version', '')
+        host_os = data.get('host_OS', '')
+        if platform:
+            return f'{platform}({version}) / {host_os}'
+        return ''
+
+    # -- Services --
+    if type_str in ('TCPService', 'UDPService'):
+        ss = getattr(obj, 'src_range_start', None) or 0
+        se = getattr(obj, 'src_range_end', None) or 0
+        ds = getattr(obj, 'dst_range_start', None) or 0
+        de = getattr(obj, 'dst_range_end', None) or 0
+        return f'{ss}:{se} / {ds}:{de}'
+
+    if type_str in ('ICMP6Service', 'ICMPService'):
+        codes = getattr(obj, 'codes', None) or {}
+        icmp_type = codes.get('type', -1)
+        code = codes.get('code', -1)
+        return f'type: {icmp_type}  code: {code}'
+
+    if type_str == 'IPService':
+        protocol = getattr(obj, 'protocol', None)
+        if protocol is not None:
+            return f'protocol: {protocol}'
+        return ''
+
+    # -- Interface --
+    if type_str == 'Interface':
+        data = getattr(obj, 'data', None) or {}
+        label = data.get('label', '')
+        flags = []
+        if getattr(obj, 'is_dynamic', lambda: False)():
+            flags.append('dyn')
+        if getattr(obj, 'is_unnumbered', lambda: False)():
+            flags.append('unnum')
+        if getattr(obj, 'is_bridge_port', lambda: False)():
+            flags.append('bridge port')
+        if getattr(obj, 'is_slave', lambda: False)():
+            flags.append('slave')
+        parts = [label] if label else []
+        if flags:
+            parts.append(','.join(flags))
+        return ' '.join(parts)
+
+    # -- Groups --
+    if type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+        count = 0
+        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
+            val = getattr(obj, attr, None)
+            if val:
+                count += len(val)
+        return f'{count} objects'
+
+    # -- Library --
+    if type_str == 'Library':
+        if getattr(obj, 'ro', False):
+            return '(read only)'
+        return ''
+
+    return ''
+
+
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
@@ -126,14 +227,20 @@ class ObjectTree(QWidget):
         self._filter.setClearButtonEnabled(True)
 
         self._tree = QTreeWidget()
-        self._tree.setHeaderHidden(True)
-        self._tree.setColumnCount(1)
+        self._tree.setHeaderLabels(['Object', 'Attribute'])
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._filter)
         layout.addWidget(self._tree)
 
+        self._show_attrs = QSettings().value(
+            'UI/ShowObjectsAttributesInTree', True, type=bool
+        )
+        self._applying_saved_width = False
+        self._apply_column_setup()
+
+        self._tree.header().sectionResized.connect(self._on_section_resized)
         self._tree.itemDoubleClicked.connect(self._on_double_click)
         self._filter.textChanged.connect(self._apply_filter)
 
@@ -156,7 +263,11 @@ class ObjectTree(QWidget):
 
         for lib in libraries:
             lib_item = self._make_item(
-                lib.name, 'Library', str(lib.id), readonly=getattr(lib, 'ro', False)
+                lib.name,
+                'Library',
+                str(lib.id),
+                attrs=_obj_brief_attrs(lib),
+                readonly=getattr(lib, 'ro', False),
             )
             self._tree.addTopLevelItem(lib_item)
             self._add_devices(lib, lib_item)
@@ -166,6 +277,37 @@ class ObjectTree(QWidget):
             self._add_category(lib.intervals, 'Time', lib_item)
             # Collapse "Standard" by default, expand everything else.
             lib_item.setExpanded(lib.name != 'Standard')
+
+        # Defer column setup so Qt has finished layout/painting first;
+        # otherwise ResizeToContents computes zero width for column 1.
+        QTimer.singleShot(0, self._apply_column_setup)
+
+    def set_show_attrs(self, show):
+        """Toggle the attribute column visibility."""
+        self._show_attrs = show
+        self._apply_column_setup()
+
+    def _apply_column_setup(self):
+        """Apply the current column count / resize mode."""
+        if self._show_attrs:
+            self._tree.setColumnCount(2)
+            self._tree.setHeaderHidden(False)
+            header = self._tree.header()
+            header.setStretchLastSection(True)
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+            saved = QSettings().value('UI/ObjectTreeCol0Width', 0, type=int)
+            if saved > 0:
+                self._applying_saved_width = True
+                header.resizeSection(0, saved)
+                self._applying_saved_width = False
+        else:
+            self._tree.setColumnCount(1)
+            self._tree.setHeaderHidden(True)
+
+    def _on_section_resized(self, index, _old_size, new_size):
+        """Persist column width when the user drags the header."""
+        if index == 0 and not self._applying_saved_width:
+            QSettings().setValue('UI/ObjectTreeCol0Width', new_size)
 
     # ------------------------------------------------------------------
     # Tree building helpers
@@ -193,6 +335,7 @@ class ObjectTree(QWidget):
                     fw.type,
                     str(fw.id),
                     target,
+                    attrs=_obj_brief_attrs(fw),
                     inactive=_is_inactive(fw),
                     tags=_obj_tags(fw),
                 )
@@ -219,6 +362,7 @@ class ObjectTree(QWidget):
                     host.type,
                     str(host.id),
                     target,
+                    attrs=_obj_brief_attrs(host),
                     inactive=_is_inactive(host),
                     tags=_obj_tags(host),
                 )
@@ -246,6 +390,7 @@ class ObjectTree(QWidget):
             _obj_display_name(iface),
             'Interface',
             str(iface.id),
+            attrs=_obj_brief_attrs(iface),
             inactive=_is_inactive(iface),
             tags=_obj_tags(iface),
         )
@@ -256,6 +401,7 @@ class ObjectTree(QWidget):
                 addr.type,
                 str(addr.id),
                 iface_item,
+                attrs=_obj_brief_attrs(addr, under_interface=True),
                 inactive=_is_inactive(addr),
                 tags=_obj_tags(addr),
             )
@@ -287,6 +433,7 @@ class ObjectTree(QWidget):
                 type_str,
                 str(obj.id),
                 target,
+                attrs=_obj_brief_attrs(obj),
                 inactive=_is_inactive(obj),
                 tags=_obj_tags(obj),
             )
@@ -329,15 +476,19 @@ class ObjectTree(QWidget):
         obj_id,
         parent_item=None,
         *,
+        attrs=None,
         inactive=False,
         readonly=False,
         tags=None,
     ):
-        """Create a tree item storing id, type, and tags in user roles."""
+        """Create a tree item storing id, type, tags, and attrs in user roles."""
         item = QTreeWidgetItem([name])
         item.setData(0, Qt.ItemDataRole.UserRole, obj_id)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, type_str)
         item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(tags))
+        item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs or '')
+        if attrs:
+            item.setText(1, attrs)
         if readonly:
             item.setIcon(0, QIcon(_LOCK_ICON))
         else:
@@ -383,6 +534,9 @@ class ObjectTree(QWidget):
                 continue
             tags_str = item.data(0, Qt.ItemDataRole.UserRole + 2) or ''
             match = text in item.text(0).lower() or text in tags_str
+            if self._show_attrs:
+                attrs_str = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
+                match = match or text in attrs_str.lower()
             item.setHidden(not match)
 
         # Ensure parents of visible items are also visible.
