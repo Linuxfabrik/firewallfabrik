@@ -12,12 +12,14 @@
 
 """Object tree panel for the main window."""
 
+import json
 from datetime import UTC, datetime
 
 import sqlalchemy
-from PySide6.QtCore import QSettings, Qt, QTimer, Signal
+from PySide6.QtCore import QMimeData, QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QHeaderView,
     QLineEdit,
     QTreeWidget,
@@ -33,6 +35,7 @@ from firewallfabrik.core.objects import (
     Library,
     group_membership,
 )
+from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 
 # Map ORM type discriminator strings to QRC icon aliases.
 ICON_MAP = {
@@ -421,6 +424,42 @@ def _obj_tooltip(obj):
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
+# Types that cannot be dragged (structural / container items).
+_NON_DRAGGABLE_TYPES = frozenset(
+    {
+        'Library',
+        'NAT',
+        'Policy',
+        'Routing',
+    }
+)
+
+
+class _DraggableTree(QTreeWidget):
+    """QTreeWidget subclass that provides drag MIME data for object items."""
+
+    def mimeTypes(self):
+        return [FWF_MIME_TYPE]
+
+    def mimeData(self, items):
+        if not items:
+            return None
+        item = items[0]
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not obj_id or not obj_type or obj_type in _NON_DRAGGABLE_TYPES:
+            return None
+        payload = json.dumps(
+            {
+                'id': obj_id,
+                'name': item.text(0),
+                'type': obj_type,
+            }
+        ).encode()
+        mime = QMimeData()
+        mime.setData(FWF_MIME_TYPE, payload)
+        return mime
+
 
 class ObjectTree(QWidget):
     """Left-hand object tree panel with filter field and library selector."""
@@ -441,8 +480,10 @@ class ObjectTree(QWidget):
         shortcut = QShortcut(QKeySequence('Ctrl+F'), self)
         shortcut.activated.connect(self._filter.setFocus)
 
-        self._tree = QTreeWidget()
+        self._tree = _DraggableTree()
         self._tree.setHeaderLabels(['Object', 'Attribute'])
+        self._tree.setDragEnabled(True)
+        self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

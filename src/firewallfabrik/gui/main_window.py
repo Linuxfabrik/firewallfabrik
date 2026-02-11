@@ -36,17 +36,12 @@ from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager
 from firewallfabrik.core.objects import (
     Address,
-    Direction,
     Group,
     Host,
     Interface,
     Interval,
     Library,
-    PolicyAction,
-    PolicyRule,
-    RuleSet,
     Service,
-    rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
@@ -141,6 +136,7 @@ class FWWindow(QMainWindow):
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
 
+        self._closing = False
         self._current_file = None
         self._db_manager = DatabaseManager()
 
@@ -207,16 +203,17 @@ class FWWindow(QMainWindow):
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
         self._db_manager.on_history_changed = self._on_history_changed
 
-        # Sync View menu checkboxes when dock widgets are closed via their X button.
-        self.editorDockWidget.visibilityChanged.connect(
-            self._on_editor_visibility_changed
-        )
-        self.undoDockWidget.visibilityChanged.connect(self._on_undo_visibility_changed)
-
         self._prepare_recent_menu()
         self._restore_view_state()
         self._start_maximized = False
         self._restore_geometry()
+
+        # Connect *after* restoring state so that restoreState() toggling
+        # dock visibility during init doesn't overwrite saved settings.
+        self.editorDockWidget.visibilityChanged.connect(
+            self._on_editor_visibility_changed
+        )
+        self.undoDockWidget.visibilityChanged.connect(self._on_undo_visibility_changed)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -229,7 +226,13 @@ class FWWindow(QMainWindow):
         if not self._save_if_modified():
             event.ignore()
             return
+        self._closing = True
         settings = QSettings()
+        # Capture dock visibility *before* saveState() / destruction can
+        # change it.  These explicit keys are what _restore_view_state()
+        # reads after restoreState().
+        settings.setValue('View/EditorPanel', self.editorDockWidget.isVisible())
+        settings.setValue('View/UndoStack', self.undoDockWidget.isVisible())
         # Save normal (non-maximized) geometry so restore works both ways.
         if not self.isMaximized():
             settings.setValue('Window/geometry', self.saveGeometry())
@@ -574,15 +577,7 @@ class FWWindow(QMainWindow):
     @Slot(str, str, str)
     def _open_rule_set(self, rule_set_id, fw_name, rs_name):
         """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
-        with self._db_manager.session() as session:
-            rule_set = session.get(RuleSet, uuid.UUID(rule_set_id))
-            if rule_set is None:
-                return
-
-            name_map = self._build_name_map(session)
-            rows = self._build_policy_rows(session, rule_set, name_map)
-
-        model = PolicyTableModel(rows)
+        model = PolicyTableModel(self._db_manager, uuid.UUID(rule_set_id))
         view = PolicyView()
         view.setModel(model)
 
@@ -591,7 +586,7 @@ class FWWindow(QMainWindow):
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.m_space.addSubWindow(sub)
-        sub.show()
+        sub.showMaximized()
 
     @Slot(str, str)
     def _open_object_editor(self, obj_id, obj_type):
@@ -694,12 +689,16 @@ class FWWindow(QMainWindow):
     @Slot(bool)
     def _on_editor_visibility_changed(self, visible):
         """Sync the View menu checkbox when the editor dock is closed via X."""
+        if self._closing:
+            return
         self.actionEditor_panel.setChecked(visible)
         QSettings().setValue('View/EditorPanel', visible)
 
     @Slot(bool)
     def _on_undo_visibility_changed(self, visible):
         """Sync the View menu checkbox when the undo dock is closed via X."""
+        if self._closing:
+            return
         self.actionUndo_view.setChecked(visible)
         QSettings().setValue('View/UndoStack', visible)
 
@@ -745,7 +744,15 @@ class FWWindow(QMainWindow):
         obj_id = getattr(self, '_editor_obj_id', None)
         obj_type = getattr(self, '_editor_obj_type', None)
         self._close_editor()
-        self.m_space.closeAllSubWindows()
+
+        # Reload open rule set models instead of closing all subwindows.
+        for sub in self.m_space.subWindowList():
+            widget = sub.widget()
+            if isinstance(widget, PolicyView) and isinstance(
+                widget.model(), PolicyTableModel
+            ):
+                widget.model().reload()
+
         with self._db_manager.session() as session:
             self._object_tree.populate(session)
         if obj_id is not None:
@@ -767,67 +774,3 @@ class FWWindow(QMainWindow):
                 if tag_set:
                     all_tags.update(tag_set)
         return all_tags
-
-    @staticmethod
-    def _build_name_map(session):
-        """Build a {uuid: name} lookup from all name-bearing tables."""
-        name_map = {}
-        for cls in (Address, Service, Group, Host, Interface, Interval):
-            for obj_id, name in session.execute(
-                sqlalchemy.select(cls.id, cls.name),
-            ):
-                name_map[obj_id] = name
-        return name_map
-
-    @staticmethod
-    def _build_policy_rows(session, policy, name_map):
-        """Build a list of row dicts for a Policy rule set."""
-        rules = session.scalars(
-            sqlalchemy.select(PolicyRule)
-            .where(PolicyRule.rule_set_id == policy.id)
-            .order_by(PolicyRule.position),
-        ).all()
-
-        # Gather all rule_elements for this policy's rules in one query.
-        rule_ids = [r.id for r in rules]
-        slot_map = {}  # {rule_id: {slot: [name, ...]}}
-        if rule_ids:
-            re_rows = session.execute(
-                sqlalchemy.select(
-                    rule_elements.c.rule_id,
-                    rule_elements.c.slot,
-                    rule_elements.c.target_id,
-                ).where(
-                    rule_elements.c.rule_id.in_(rule_ids),
-                ),
-            ).all()
-            for rule_id, slot, target_id in re_rows:
-                slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(
-                    name_map.get(target_id, str(target_id)),
-                )
-
-        rows = []
-        for rule in rules:
-            slots = slot_map.get(rule.id, {})
-            try:
-                direction = Direction(rule.policy_direction).name
-            except (ValueError, TypeError):
-                direction = ''
-            try:
-                action = PolicyAction(rule.policy_action).name
-            except (ValueError, TypeError):
-                action = ''
-
-            rows.append(
-                {
-                    'position': rule.position,
-                    'src': ', '.join(slots.get('src', [])),
-                    'dst': ', '.join(slots.get('dst', [])),
-                    'srv': ', '.join(slots.get('srv', [])),
-                    'itf': ', '.join(slots.get('itf', [])),
-                    'direction': direction,
-                    'action': action,
-                    'comment': rule.comment or '',
-                }
-            )
-        return rows
