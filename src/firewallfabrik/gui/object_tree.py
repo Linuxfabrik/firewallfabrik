@@ -160,6 +160,7 @@ class ObjectTree(QWidget):
             if obj.group_id is None
         ]
         children += [g for g in lib.groups if g.parent_group_id is None]
+        children += [i for i in lib.interfaces if i.device_id is None]
         children.sort(key=_obj_sort_key)
         for obj in children:
             self._add_object(obj, parent_item)
