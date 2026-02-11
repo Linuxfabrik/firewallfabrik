@@ -14,7 +14,7 @@
 
 import sqlalchemy
 from PySide6.QtCore import QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QHeaderView,
     QLineEdit,
@@ -223,8 +223,11 @@ class ObjectTree(QWidget):
         super().__init__(parent)
 
         self._filter = QLineEdit()
-        self._filter.setPlaceholderText('Filter...')
+        self._filter.setPlaceholderText('Filter... (Ctrl+F)')
         self._filter.setClearButtonEnabled(True)
+
+        shortcut = QShortcut(QKeySequence('Ctrl+F'), self)
+        shortcut.activated.connect(self._filter.setFocus)
 
         self._tree = QTreeWidget()
         self._tree.setHeaderLabels(['Object', 'Attribute'])
@@ -513,6 +516,10 @@ class ObjectTree(QWidget):
             if item.data(0, Qt.ItemDataRole.UserRole) == obj_id:
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, tags_str)
                 return
+
+    def focus_filter(self):
+        """Set keyboard focus to the filter input field."""
+        self._filter.setFocus()
 
     # ------------------------------------------------------------------
     # Filter

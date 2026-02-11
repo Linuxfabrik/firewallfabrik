@@ -1152,7 +1152,7 @@
     <string>Find object in the tree</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+F</string>
+    <string>Ctrl+Shift+F</string>
    </property>
   </action>
   <action name="editPrefsAction">

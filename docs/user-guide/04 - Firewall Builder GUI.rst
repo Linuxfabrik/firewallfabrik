@@ -802,6 +802,9 @@ Keyboard Shortcuts
       - Menu "Edit"
       - Redo (alternate)
     * - ``Ctrl+F``
+      - Object tree view
+      - Filter object
+    * - ``Shift+Ctrl+F``
       - Menu "Edit"
       - Find object
     * - ``Ctrl+N``
