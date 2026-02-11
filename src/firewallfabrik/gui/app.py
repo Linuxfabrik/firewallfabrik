@@ -13,8 +13,15 @@
 import os
 import sys
 
-from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
-from PySide6.QtWidgets import QApplication
+try:
+    from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
+    from PySide6.QtWidgets import QApplication
+except ImportError:
+    print(
+        'Python module "PySide6" is not installed; this module is required to run FirewallFabrik in GUI mode.',
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 from firewallfabrik import __version__
 from firewallfabrik.gui.main_window import FWWindow
