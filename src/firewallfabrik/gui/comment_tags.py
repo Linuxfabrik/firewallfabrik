@@ -12,18 +12,15 @@
 
 """Comment & tags editor widget (replaces the C++ CommentKeywords widget)."""
 
-from PySide6.QtCore import Signal
-from PySide6.QtWidgets import (
-    QDialog,
-    QGridLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QTextEdit,
-    QWidget,
-)
+from pathlib import Path
+
+from PySide6.QtCore import Signal, Slot
+from PySide6.QtWidgets import QDialog, QWidget
 
 from firewallfabrik.gui.tags_dialog import TagsDialog
+from firewallfabrik.gui.ui_loader import FWFUiLoader
+
+_UI_DIR = Path(__file__).resolve().parent / 'ui'
 
 
 class CommentTags(QWidget):
@@ -40,42 +37,17 @@ class CommentTags(QWidget):
         self._tags = set()
         self._all_tags = set()
 
-        layout = QGridLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        # Row 0: comment text edit (spans 2 columns)
-        self._text_edit = QTextEdit()
-        self._text_edit.setPlaceholderText('Enter comment here')
-        self._text_edit.setTabChangesFocus(True)
-        self._text_edit.setMinimumWidth(200)
-        self._text_edit.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding,
-        )
-        layout.addWidget(self._text_edit, 0, 0, 1, 2)
-
-        # Row 1, col 0: tags button
-        self._tags_button = QPushButton('Tags...')
-        self._tags_button.setSizePolicy(
-            QSizePolicy.Policy.Fixed,
-            QSizePolicy.Policy.Fixed,
-        )
-        layout.addWidget(self._tags_button, 1, 0)
-
-        # Row 1, col 1: tags label
-        self._tags_label = QLabel()
-        self._tags_label.setWordWrap(True)
-        layout.addWidget(self._tags_label, 1, 1)
+        loader = FWFUiLoader(self)
+        loader.load(str(_UI_DIR / 'commenttags_q.ui'))
 
         self._update_tags_label()
-        self._text_edit.textChanged.connect(self._on_text_changed)
-        self._tags_button.clicked.connect(self._on_tags_clicked)
+        self.comment.textChanged.connect(self._on_text_changed)
 
     def load(self, text, tags=None, all_tags=None):
         """Load comment text and tags, suppressing the ``changed`` signal."""
         self._suppressing = True
         try:
-            self._text_edit.setPlainText(text or '')
+            self.comment.setPlainText(text or '')
             self._tags = set(tags) if tags else set()
             self._all_tags = set(all_tags) if all_tags else set()
             self._all_tags |= self._tags
@@ -85,7 +57,7 @@ class CommentTags(QWidget):
 
     def get_comment(self):
         """Return the current comment as plain text."""
-        return self._text_edit.toPlainText()
+        return self.comment.toPlainText()
 
     def get_tags(self):
         """Return the current tags as a set."""
@@ -93,15 +65,16 @@ class CommentTags(QWidget):
 
     def _update_tags_label(self):
         if self._tags:
-            self._tags_label.setText(', '.join(sorted(self._tags)))
+            self.tagsLabel.setText(', '.join(sorted(self._tags)))
         else:
-            self._tags_label.setText('<i>No tags</i>')
+            self.tagsLabel.setText('<i>No tags</i>')
 
     def _on_text_changed(self):
         if not self._suppressing:
             self.changed.emit()
 
-    def _on_tags_clicked(self):
+    @Slot()
+    def tagsClicked(self):
         dialog = TagsDialog(self._tags, self._all_tags, parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._tags = set(dialog.get_tags())
