@@ -249,8 +249,11 @@ class Interface(Base):
         return bool(self.get_option('type', '') == 'unnumbered')
 
     def is_regular(self) -> bool:
-        itype = self.get_option('type', '')
-        return itype == '' or itype == 'regular'
+        return (
+            not self.is_dynamic()
+            and not self.is_unnumbered()
+            and not self.is_bridge_port()
+        )
 
     def is_bridge_port(self) -> bool:
         return bool(self.get_option('bridge_port', False))

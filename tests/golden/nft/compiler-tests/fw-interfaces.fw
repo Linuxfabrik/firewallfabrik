@@ -44,6 +44,10 @@ table ip filter {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 1 (eth0)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        #
         # Rule 2 (global)
         #
         udp dport 53 ct state new accept
