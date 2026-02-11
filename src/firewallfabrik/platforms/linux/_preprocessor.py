@@ -10,9 +10,9 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""IPTables preprocessor.
+"""Linux preprocessor.
 
-Handles AttachedNetworks objects for iptables compilation.
+Handles AttachedNetworks objects for Linux firewall compilation.
 Corresponds to fwbuilder's iptlib/preprocessor_ipt.py.
 """
 
@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     import sqlalchemy.orm
 
 
-class PreprocessorIpt(Preprocessor):
-    """IPTables preprocessor: expands AttachedNetworks objects.
+class PreprocessorLinux(Preprocessor):
+    """Linux preprocessor: expands AttachedNetworks objects.
 
     For each AttachedNetworks object used in rules, determines the
     networks attached to the referenced interface and creates network

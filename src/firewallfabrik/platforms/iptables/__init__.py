@@ -17,7 +17,6 @@ from firewallfabrik.platforms.iptables._mangle_compiler import MangleTableCompil
 from firewallfabrik.platforms.iptables._nat_compiler import NATCompiler_ipt
 from firewallfabrik.platforms.iptables._os_configurator import OSConfigurator_linux24
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
-from firewallfabrik.platforms.iptables._routing_compiler import RoutingCompiler_ipt
 
 __all__ = [
     'CompilerDriver_ipt',
@@ -25,5 +24,4 @@ __all__ = [
     'NATCompiler_ipt',
     'OSConfigurator_linux24',
     'PolicyCompiler_ipt',
-    'RoutingCompiler_ipt',
 ]

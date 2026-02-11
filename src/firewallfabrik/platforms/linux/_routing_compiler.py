@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""IPTables routing compiler: generates 'ip route' commands.
+"""Linux routing compiler: generates 'ip route' commands.
 
 Corresponds to fwbuilder's iptlib/routing_compiler_ipt.py.
 """
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     import sqlalchemy.orm
 
 
-class RoutingCompiler_ipt(RoutingCompiler):
+class RoutingCompilerLinux(RoutingCompiler):
     """Compiles routing rules into 'ip route' commands for Linux."""
 
     def __init__(

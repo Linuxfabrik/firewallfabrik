@@ -261,11 +261,11 @@ class CompilerDriver_ipt(CompilerDriver):
                     )
 
                     if nat_count or policy_count:
-                        from firewallfabrik.platforms.iptables._preprocessor import (
-                            PreprocessorIpt,
+                        from firewallfabrik.platforms.linux._preprocessor import (
+                            PreprocessorLinux,
                         )
 
-                        prep = PreprocessorIpt(session, fw, ipv6_policy)
+                        prep = PreprocessorLinux(session, fw, ipv6_policy)
                         if single_rule_id:
                             prep.single_rule_compile_mode = True
                         prep.compile()
@@ -368,8 +368,8 @@ class CompilerDriver_ipt(CompilerDriver):
                         generated_script += '\n\n'
 
                 # --- Routing compilation ---
-                from firewallfabrik.platforms.iptables._routing_compiler import (
-                    RoutingCompiler_ipt,
+                from firewallfabrik.platforms.linux._routing_compiler import (
+                    RoutingCompilerLinux,
                 )
 
                 routing_output = ''
@@ -384,7 +384,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 if routing_rs:
-                    routing_compiler = RoutingCompiler_ipt(session, fw, False)
+                    routing_compiler = RoutingCompilerLinux(session, fw, False)
                     routing_compiler.set_source_ruleset(routing_rs)
                     routing_compiler.source_ruleset = routing_rs
 
