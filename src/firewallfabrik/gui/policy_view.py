@@ -10,18 +10,19 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""QTableView wrapper for policy rule display with editing support."""
+"""QTreeView wrapper for policy rule display with group and editing support."""
 
 import json
 import uuid
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
+    QInputDialog,
     QMenu,
-    QTableView,
+    QTreeView,
 )
 
 from firewallfabrik.core.objects import Direction, PolicyAction
@@ -81,28 +82,70 @@ _VALID_TYPES_BY_SLOT = {
 }
 
 
-class PolicyView(QTableView):
-    """Table view with context menus, keyboard shortcuts, and drop support."""
+class PolicyView(QTreeView):
+    """Tree view with context menus, keyboard shortcuts, and drop support."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAlternatingRowColors(True)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setSectionResizeMode(
+        self.setRootIsDecorated(True)
+        self.header().setStretchLastSection(True)
+        self.header().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents,
         )
-        self.verticalHeader().setVisible(False)
 
         # Context menu.
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
 
+        # Double-click on group header → rename.
+        self.doubleClicked.connect(self._on_double_clicked)
+
         # Drop support.
         self.setAcceptDrops(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
         self.setDropIndicatorShown(True)
+
+    # ------------------------------------------------------------------
+    # Model setup
+    # ------------------------------------------------------------------
+
+    def setModel(self, model):
+        super().setModel(model)
+        if model is not None:
+            model.modelReset.connect(self._configure_groups)
+            self._configure_groups()
+
+    def _configure_groups(self):
+        """Mark group rows as first-column-spanned and expand all."""
+        model = self.model()
+        if model is None:
+            return
+        for row in range(model.rowCount(QModelIndex())):
+            idx = model.index(row, 0, QModelIndex())
+            if model.is_group(idx):
+                self.setFirstColumnSpanned(row, QModelIndex(), True)
+        self.expandAll()
+
+    # ------------------------------------------------------------------
+    # Double-click to rename group
+    # ------------------------------------------------------------------
+
+    def _on_double_clicked(self, index):
+        model = self.model()
+        if model is None or not model.is_group(index):
+            return
+        old_name = model.group_name(index)
+        new_name, ok = QInputDialog.getText(
+            self,
+            'Rename Group',
+            'Group name:',
+            text=old_name,
+        )
+        if ok and new_name and new_name != old_name:
+            model.rename_group(index, new_name)
 
     # ------------------------------------------------------------------
     # Context menu
@@ -127,39 +170,140 @@ class PolicyView(QTableView):
             menu.exec(self.viewport().mapToGlobal(pos))
             return
 
-        row = index.row()
+        if model.is_group(index):
+            self._build_group_header_menu(menu, model, index)
+            menu.exec(self.viewport().mapToGlobal(pos))
+            return
+
         col = index.column()
 
+        # Check if this rule is inside a group or at top level.
+        row_data = model.get_row_data(index)
+        in_group = row_data is not None and row_data.group
+
         if col == _COL_ACTION:
-            self._build_action_menu(menu, model, row)
+            if in_group:
+                menu.addAction(
+                    'Remove From Group',
+                    lambda: model.remove_from_group([index]),
+                )
+                menu.addSeparator()
+            elif not in_group:
+                self._add_new_group_action(menu, model, index)
+            self._build_action_menu(menu, model, index)
         elif col == _COL_DIRECTION:
-            self._build_direction_menu(menu, model, row)
+            if in_group:
+                menu.addAction(
+                    'Remove From Group',
+                    lambda: model.remove_from_group([index]),
+                )
+                menu.addSeparator()
+            elif not in_group:
+                self._add_new_group_action(menu, model, index)
+            self._build_direction_menu(menu, model, index)
         elif col in _ELEMENT_COLS:
-            self._build_element_menu(menu, model, row, col)
+            if in_group:
+                menu.addAction(
+                    'Remove From Group',
+                    lambda: model.remove_from_group([index]),
+                )
+                menu.addSeparator()
+            elif not in_group:
+                self._add_new_group_action(menu, model, index)
+            self._build_element_menu(menu, model, index, col)
         else:
-            self._build_row_menu(menu, model, row)
+            if in_group:
+                menu.addAction(
+                    'Remove From Group',
+                    lambda: model.remove_from_group([index]),
+                )
+                menu.addSeparator()
+            elif not in_group:
+                self._add_new_group_action(menu, model, index)
+            self._build_row_menu(menu, model, index)
 
         menu.exec(self.viewport().mapToGlobal(pos))
 
-    def _build_row_menu(self, menu, model, row):
+    def _add_new_group_action(self, menu, model, index):
+        """Add 'New Group' action + separator for top-level rules."""
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+
+        def _do_create():
+            name, ok = QInputDialog.getText(
+                self,
+                'New Group',
+                'Group name:',
+            )
+            if ok and name:
+                model.create_group(name, selected)
+
+        menu.addAction('New Group', _do_create)
+        menu.addSeparator()
+
+    def _build_group_header_menu(self, menu, model, group_index):
+        """Build context menu for a group header row."""
+        menu.addAction(
+            'Rename Group',
+            lambda: self._rename_group_dialog(model, group_index),
+        )
+
+    def _rename_group_dialog(self, model, group_index):
+        old_name = model.group_name(group_index)
+        new_name, ok = QInputDialog.getText(
+            self,
+            'Rename Group',
+            'Group name:',
+            text=old_name,
+        )
+        if ok and new_name and new_name != old_name:
+            model.rename_group(group_index, new_name)
+
+    def _build_row_menu(self, menu, model, index):
         """Build standard row-level context menu (# and Comment columns)."""
-        menu.addAction('Insert Rule Above', lambda: model.insert_rule(row))
-        menu.addAction('Insert Rule Below', lambda: model.insert_rule(row + 1))
+        menu.addAction('Insert Rule Above', lambda: model.insert_rule(index))
+        menu.addAction(
+            'Insert Rule Below',
+            lambda: self._insert_below(model, index),
+        )
         menu.addSeparator()
-        menu.addAction('Remove Rule', lambda: model.delete_rules([row]))
+        menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
-        up = menu.addAction('Move Up', lambda: model.move_rule_up(row))
+        up = menu.addAction('Move Up', lambda: model.move_rule_up(index))
         up.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp))
-        down = menu.addAction('Move Down', lambda: model.move_rule_down(row))
+        down = menu.addAction('Move Down', lambda: model.move_rule_down(index))
         down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
 
-    def _build_action_menu(self, menu, model, row):
+    @staticmethod
+    def _insert_below(model, index):
+        """Insert a rule below *index* by creating a sibling index at row+1."""
+        parent = index.parent()
+        next_row = index.row() + 1
+        # Create an index at the next row if it exists, otherwise pass None.
+        if next_row < model.rowCount(parent):
+            next_idx = model.index(next_row, 0, parent)
+        else:
+            next_idx = index
+        # Use a position-based insert: the new rule goes at position + 1.
+        rd = model.get_row_data(index)
+        if rd is not None:
+            # Directly insert at the rule's position + 1 via a temporary index.
+            model.insert_rule(next_idx)
+        else:
+            model.insert_rule(at_bottom=True)
+
+    def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu."""
         for action in (PolicyAction.Accept, PolicyAction.Deny, PolicyAction.Reject):
             icon = QIcon(f':/Icons/{action.name}/icon-tree')
-            menu.addAction(icon, action.name, lambda a=action: model.set_action(row, a))
+            menu.addAction(
+                icon,
+                action.name,
+                lambda a=action: model.set_action(index, a),
+            )
 
-    def _build_direction_menu(self, menu, model, row):
+    def _build_direction_menu(self, menu, model, index):
         """Build direction-selection context menu."""
         icons = {
             Direction.Both: ':/Icons/Both/icon-tree',
@@ -171,13 +315,13 @@ class PolicyView(QTableView):
             menu.addAction(
                 icon,
                 direction.name,
-                lambda d=direction: model.set_direction(row, d),
+                lambda d=direction: model.set_direction(index, d),
             )
 
-    def _build_element_menu(self, menu, model, row, col):
+    def _build_element_menu(self, menu, model, index, col):
         """Build element column context menu with remove actions."""
         slot = _COL_TO_SLOT[col]
-        row_data = model.get_row_data(row)
+        row_data = model.get_row_data(index)
         if row_data is None:
             return
         elements = getattr(row_data, slot, [])
@@ -187,8 +331,28 @@ class PolicyView(QTableView):
         for target_id, name in elements:
             menu.addAction(
                 f'Remove {name}',
-                lambda tid=target_id: model.remove_element(row, slot, tid),
+                lambda tid=target_id: model.remove_element(index, slot, tid),
             )
+
+    # ------------------------------------------------------------------
+    # Selection helpers
+    # ------------------------------------------------------------------
+
+    def _selected_rule_indices(self):
+        """Return unique QModelIndex list for selected rule rows."""
+        seen = set()
+        result = []
+        for idx in self.selectedIndexes():
+            model = self.model()
+            if model is None:
+                continue
+            # Normalize to column 0.
+            idx0 = model.index(idx.row(), 0, idx.parent())
+            key = (idx0.row(), idx0.internalPointer())
+            if key not in seen and not model.is_group(idx0):
+                seen.add(key)
+                result.append(idx0)
+        return result
 
     # ------------------------------------------------------------------
     # Keyboard shortcuts
@@ -205,44 +369,31 @@ class PolicyView(QTableView):
 
         if modifiers == Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_PageUp:
-                row = self._current_row()
-                if row >= 0:
-                    model.move_rule_up(row)
-                    self._select_row(max(row - 1, 0))
+                idx = self.currentIndex()
+                if idx.isValid() and not model.is_group(idx):
+                    model.move_rule_up(idx)
                 return
             if key == Qt.Key.Key_PageDown:
-                row = self._current_row()
-                if row >= 0:
-                    model.move_rule_down(row)
-                    self._select_row(min(row + 1, model.rowCount() - 1))
+                idx = self.currentIndex()
+                if idx.isValid() and not model.is_group(idx):
+                    model.move_rule_down(idx)
                 return
 
         if modifiers == Qt.KeyboardModifier.NoModifier:
             if key == Qt.Key.Key_Delete:
-                rows = sorted({idx.row() for idx in self.selectedIndexes()})
-                if rows:
-                    model.delete_rules(rows)
+                indices = self._selected_rule_indices()
+                if indices:
+                    model.delete_rules(indices)
                 return
             if key == Qt.Key.Key_Insert:
-                row = self._current_row()
-                if row >= 0:
-                    model.insert_rule(row + 1)
+                idx = self.currentIndex()
+                if idx.isValid() and not model.is_group(idx):
+                    model.insert_rule(idx)
                 else:
                     model.insert_rule(at_bottom=True)
                 return
 
         super().keyPressEvent(event)
-
-    def _current_row(self):
-        idx = self.currentIndex()
-        return idx.row() if idx.isValid() else -1
-
-    def _select_row(self, row):
-        model = self.model()
-        if model is not None and 0 <= row < model.rowCount():
-            idx = model.index(row, 0)
-            self.setCurrentIndex(idx)
-            self.selectRow(row)
 
     # ------------------------------------------------------------------
     # Drop support
@@ -259,7 +410,13 @@ class PolicyView(QTableView):
             event.ignore()
             return
         index = self.indexAt(event.position().toPoint())
-        if index.isValid() and index.column() in _ELEMENT_COLS:
+        model = self.model()
+        if (
+            index.isValid()
+            and index.column() in _ELEMENT_COLS
+            and model is not None
+            and not model.is_group(index)
+        ):
             event.acceptProposedAction()
         else:
             event.ignore()
@@ -271,7 +428,13 @@ class PolicyView(QTableView):
             return
 
         index = self.indexAt(event.position().toPoint())
-        if not index.isValid() or index.column() not in _ELEMENT_COLS:
+        model = self.model()
+        if (
+            not index.isValid()
+            or index.column() not in _ELEMENT_COLS
+            or model is None
+            or model.is_group(index)
+        ):
             event.ignore()
             return
 
@@ -293,7 +456,5 @@ class PolicyView(QTableView):
             event.ignore()
             return
 
-        model = self.model()
-        if model is not None:
-            model.add_element(index.row(), slot, uuid.UUID(obj_id))
+        model.add_element(index, slot, uuid.UUID(obj_id))
         event.acceptProposedAction()

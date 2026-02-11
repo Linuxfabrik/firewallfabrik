@@ -10,13 +10,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Database-backed table model for policy rules with full editing support."""
+"""Database-backed tree model for policy rules with group support."""
 
 import dataclasses
+import enum
 import uuid
 
 import sqlalchemy
-from PySide6.QtCore import QAbstractTableModel, QSettings, Qt
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt
 from PySide6.QtGui import QColor, QIcon
 
 from firewallfabrik.core.objects import (
@@ -33,6 +34,7 @@ from firewallfabrik.core.objects import (
 )
 
 FWF_MIME_TYPE = 'application/x-fwf-object'
+_INVALID_INDEX = QModelIndex()
 
 HEADERS = [
     '#',
@@ -75,8 +77,16 @@ _DIRECTION_ICONS = {
     'Outbound': ':/Icons/Outbound/icon-tree',
 }
 
+_GROUP_BG = QColor('lightgray')
+
 # Classes used to resolve target names from the database.
 _NAME_CLASSES = (Address, Group, Host, Interface, Interval, Service)
+
+
+class _NodeType(enum.IntEnum):
+    Group = 0
+    Root = 1
+    Rule = 2
 
 
 @dataclasses.dataclass
@@ -89,6 +99,7 @@ class _RowData:
     direction: str
     direction_int: int
     dst: list  # list[tuple[uuid.UUID, str]]
+    group: str
     itf: list
     position: int
     rule_id: uuid.UUID
@@ -96,14 +107,33 @@ class _RowData:
     srv: list
 
 
-class PolicyTableModel(QAbstractTableModel):
-    """Database-backed table model for policy rules with mutation support."""
+class _TreeNode:
+    """Lightweight tree node used by the model."""
+
+    __slots__ = ('children', 'name', 'node_type', 'parent', 'row_data')
+
+    def __init__(self, node_type, *, name='', parent=None, row_data=None):
+        self.children: list[_TreeNode] = []
+        self.name = name
+        self.node_type = node_type
+        self.parent = parent
+        self.row_data = row_data
+
+    def row_index(self):
+        """Return this node's index among its parent's children."""
+        if self.parent is not None:
+            return self.parent.children.index(self)
+        return 0
+
+
+class PolicyTreeModel(QAbstractItemModel):
+    """Database-backed tree model for policy rules with group support."""
 
     def __init__(self, db_manager, rule_set_id, parent=None):
         super().__init__(parent)
         self._db_manager = db_manager
         self._rule_set_id = rule_set_id
-        self._rows: list[_RowData] = []
+        self._root = _TreeNode(_NodeType.Root)
         self.reload()
 
     # ------------------------------------------------------------------
@@ -111,9 +141,9 @@ class PolicyTableModel(QAbstractTableModel):
     # ------------------------------------------------------------------
 
     def reload(self):
-        """Re-query the database and rebuild all rows."""
+        """Re-query the database and rebuild the tree."""
         self.beginResetModel()
-        self._rows.clear()
+        self._root = _TreeNode(_NodeType.Root)
 
         with self._db_manager.session() as session:
             rules = session.scalars(
@@ -142,6 +172,9 @@ class PolicyTableModel(QAbstractTableModel):
                 pair = (target_id, name_map.get(target_id, str(target_id)))
                 slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(pair)
 
+            # Build tree: group nodes created on first occurrence.
+            group_nodes: dict[str, _TreeNode] = {}
+
             for rule in rules:
                 slots = slot_map.get(rule.id, {})
                 try:
@@ -157,21 +190,43 @@ class PolicyTableModel(QAbstractTableModel):
                     action = PolicyAction.Unknown
                     act_name = ''
 
-                self._rows.append(
-                    _RowData(
-                        action=act_name,
-                        action_int=action.value,
-                        comment=rule.comment or '',
-                        direction=dir_name,
-                        direction_int=direction.value,
-                        dst=slots.get('dst', []),
-                        itf=slots.get('itf', []),
-                        position=rule.position,
-                        rule_id=rule.id,
-                        src=slots.get('src', []),
-                        srv=slots.get('srv', []),
-                    )
+                group_name = (rule.options or {}).get('group', '')
+
+                row_data = _RowData(
+                    action=act_name,
+                    action_int=action.value,
+                    comment=rule.comment or '',
+                    direction=dir_name,
+                    direction_int=direction.value,
+                    dst=slots.get('dst', []),
+                    group=group_name,
+                    itf=slots.get('itf', []),
+                    position=rule.position,
+                    rule_id=rule.id,
+                    src=slots.get('src', []),
+                    srv=slots.get('srv', []),
                 )
+
+                rule_node = _TreeNode(
+                    _NodeType.Rule,
+                    row_data=row_data,
+                )
+
+                if group_name:
+                    if group_name not in group_nodes:
+                        gnode = _TreeNode(
+                            _NodeType.Group,
+                            name=group_name,
+                            parent=self._root,
+                        )
+                        self._root.children.append(gnode)
+                        group_nodes[group_name] = gnode
+                    parent_node = group_nodes[group_name]
+                else:
+                    parent_node = self._root
+
+                rule_node.parent = parent_node
+                parent_node.children.append(rule_node)
 
         self.endResetModel()
 
@@ -187,18 +242,44 @@ class PolicyTableModel(QAbstractTableModel):
         return name_map
 
     # ------------------------------------------------------------------
-    # Qt model interface
+    # Qt model interface (QAbstractItemModel overrides)
     # ------------------------------------------------------------------
 
-    def rowCount(self, parent=None):
-        return len(self._rows)
+    def index(self, row, column, parent=_INVALID_INDEX):
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+        parent_node = self._node_from_index(parent)
+        if row < len(parent_node.children):
+            child = parent_node.children[row]
+            return self.createIndex(row, column, child)
+        return QModelIndex()
 
-    def columnCount(self, parent=None):
+    def parent(self, index):
+        if not index.isValid():
+            return QModelIndex()
+        node = index.internalPointer()
+        parent_node = node.parent
+        if parent_node is None or parent_node is self._root:
+            return QModelIndex()
+        return self.createIndex(parent_node.row_index(), 0, parent_node)
+
+    def rowCount(self, parent=_INVALID_INDEX):
+        node = self._node_from_index(parent)
+        return len(node.children)
+
+    def columnCount(self, parent=_INVALID_INDEX):
         return len(HEADERS)
 
+    def hasChildren(self, parent=_INVALID_INDEX):
+        node = self._node_from_index(parent)
+        return node.node_type != _NodeType.Rule
+
     def flags(self, index):
-        base = super().flags(index)
         if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        node = index.internalPointer()
+        base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if node.node_type == _NodeType.Group:
             return base
         col = index.column()
         if col == _COL_COMMENT:
@@ -210,41 +291,19 @@ class PolicyTableModel(QAbstractTableModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-
-        row_data = self._rows[index.row()]
-        col = index.column()
-
-        if role == Qt.ItemDataRole.DisplayRole:
-            return self._display_value(row_data, col)
-
-        if role == Qt.ItemDataRole.ToolTipRole:
-            if QSettings().value('UI/ObjTooltips', True, type=bool):
-                return self._display_value(row_data, col)
-            return None
-
-        if role == Qt.ItemDataRole.BackgroundRole:
-            return _ACTION_COLORS.get(row_data.action)
-
-        if role == Qt.ItemDataRole.DecorationRole:
-            if col == _COL_ACTION:
-                icon_path = f':/Icons/{row_data.action}/icon-tree'
-                icon = QIcon(icon_path)
-                if not icon.isNull():
-                    return icon
-            elif col == _COL_DIRECTION:
-                icon_path = _DIRECTION_ICONS.get(row_data.direction)
-                if icon_path:
-                    return QIcon(icon_path)
-
-        return None
+        node = index.internalPointer()
+        if node.node_type == _NodeType.Group:
+            return self._group_data(node, index.column(), role)
+        return self._rule_data(node.row_data, index.column(), role)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
-        if index.column() != _COL_COMMENT:
+        node = index.internalPointer()
+        if node.node_type != _NodeType.Rule or index.column() != _COL_COMMENT:
             return False
 
-        row_data = self._rows[index.row()]
+        row_data = node.row_data
         new_comment = str(value).strip()
         if new_comment == row_data.comment:
             return False
@@ -285,8 +344,70 @@ class PolicyTableModel(QAbstractTableModel):
         return Qt.DropAction.CopyAction
 
     # ------------------------------------------------------------------
+    # Node helpers
+    # ------------------------------------------------------------------
+
+    def _node_from_index(self, index):
+        """Return the _TreeNode for *index*, or the root node."""
+        if index.isValid():
+            return index.internalPointer()
+        return self._root
+
+    def is_group(self, index):
+        """Return True if *index* points to a group header row."""
+        if not index.isValid():
+            return False
+        node = index.internalPointer()
+        return node.node_type == _NodeType.Group
+
+    def group_name(self, index):
+        """Return the group name for a group index, or '' otherwise."""
+        if not index.isValid():
+            return ''
+        node = index.internalPointer()
+        if node.node_type == _NodeType.Group:
+            return node.name
+        return ''
+
+    # ------------------------------------------------------------------
     # Display helpers
     # ------------------------------------------------------------------
+
+    def _group_data(self, node, col, role):
+        """Return data for a group header row."""
+        if role == Qt.ItemDataRole.DisplayRole and col == _COL_POSITION:
+            if node.children:
+                first = node.children[0].row_data.position
+                last = node.children[-1].row_data.position
+                return f'{node.name} ({first} - {last})'
+            return node.name
+        if role == Qt.ItemDataRole.BackgroundRole:
+            return _GROUP_BG
+        if role == Qt.ItemDataRole.ToolTipRole and col == _COL_POSITION:
+            return f'Rule group: {node.name}'
+        return None
+
+    def _rule_data(self, row_data, col, role):
+        """Return data for a rule row."""
+        if role == Qt.ItemDataRole.DisplayRole:
+            return self._display_value(row_data, col)
+        if role == Qt.ItemDataRole.ToolTipRole:
+            if QSettings().value('UI/ObjTooltips', True, type=bool):
+                return self._display_value(row_data, col)
+            return None
+        if role == Qt.ItemDataRole.BackgroundRole:
+            return _ACTION_COLORS.get(row_data.action)
+        if role == Qt.ItemDataRole.DecorationRole:
+            if col == _COL_ACTION:
+                icon_path = f':/Icons/{row_data.action}/icon-tree'
+                icon = QIcon(icon_path)
+                if not icon.isNull():
+                    return icon
+            elif col == _COL_DIRECTION:
+                icon_path = _DIRECTION_ICONS.get(row_data.direction)
+                if icon_path:
+                    return QIcon(icon_path)
+        return None
 
     @staticmethod
     def _display_value(row_data, col):
@@ -309,15 +430,57 @@ class PolicyTableModel(QAbstractTableModel):
         return ''
 
     # ------------------------------------------------------------------
+    # Public accessors
+    # ------------------------------------------------------------------
+
+    def get_row_data(self, index):
+        """Return the :class:`_RowData` for *index*, or None."""
+        if not index.isValid():
+            return None
+        node = index.internalPointer()
+        if node.node_type == _NodeType.Rule:
+            return node.row_data
+        return None
+
+    def flat_rule_count(self):
+        """Return the total number of rule nodes in the tree."""
+        count = 0
+        for child in self._root.children:
+            if child.node_type == _NodeType.Group:
+                count += len(child.children)
+            else:
+                count += 1
+        return count
+
+    # ------------------------------------------------------------------
     # Mutation methods
     # ------------------------------------------------------------------
 
-    def insert_rule(self, position=None, *, at_top=False, at_bottom=False):
-        """Insert a new rule at the given position (or top/bottom)."""
+    def insert_rule(self, index=None, *, at_top=False, at_bottom=False):
+        """Insert a new rule.
+
+        If *index* points inside a group, the new rule inherits that group.
+        """
+        # Determine insertion position and group.
+        group_name = ''
         if at_top:
             position = 0
-        elif at_bottom or position is None:
-            position = len(self._rows)
+        elif at_bottom or index is None:
+            position = self.flat_rule_count()
+        else:
+            node = self._node_from_index(index)
+            if node.node_type == _NodeType.Group:
+                # Insert at end of group.
+                if node.children:
+                    position = node.children[-1].row_data.position + 1
+                else:
+                    position = 0
+                group_name = node.name
+            elif node.node_type == _NodeType.Rule:
+                position = node.row_data.position + 1
+                group_name = node.row_data.group
+            else:
+                position = self.flat_rule_count()
 
         with self._db_manager.session(f'New rule {position}') as session:
             # Shift existing rules at or after the insertion point.
@@ -329,22 +492,33 @@ class PolicyTableModel(QAbstractTableModel):
                 )
                 .values(position=PolicyRule.position + 1),
             )
+            opts = {'group': group_name} if group_name else None
             new_rule = PolicyRule(
                 id=uuid.uuid4(),
                 rule_set_id=self._rule_set_id,
                 position=position,
                 policy_action=PolicyAction.Deny.value,
                 policy_direction=Direction.Both.value,
+                options=opts,
             )
             session.add(new_rule)
 
         self.reload()
 
-    def delete_rules(self, row_indices):
-        """Delete rules at the given row indices."""
-        if not row_indices:
+    def delete_rules(self, indices):
+        """Delete rules at the given QModelIndex list."""
+        if not indices:
             return
-        rule_ids = [self._rows[r].rule_id for r in sorted(row_indices)]
+        rule_ids = []
+        for idx in indices:
+            node = self._node_from_index(idx)
+            if node.node_type == _NodeType.Rule:
+                rule_ids.append(node.row_data.rule_id)
+            elif node.node_type == _NodeType.Group:
+                for child in node.children:
+                    rule_ids.append(child.row_data.rule_id)
+        if not rule_ids:
+            return
 
         with self._db_manager.session('Delete rule(s)') as session:
             # Remove rule_elements first (FK constraint).
@@ -367,37 +541,133 @@ class PolicyTableModel(QAbstractTableModel):
 
         self.reload()
 
-    def move_rule_up(self, row):
-        """Swap the rule at *row* with the one above it."""
-        if row <= 0 or row >= len(self._rows):
-            return
-        self._swap_positions(row, row - 1)
+    def move_rule_up(self, index):
+        """Move the rule at *index* up one position.
 
-    def move_rule_down(self, row):
-        """Swap the rule at *row* with the one below it."""
-        if row < 0 or row >= len(self._rows) - 1:
+        Group boundary behavior:
+        - First in group + up → leaves group (placed before group)
+        - Top-level above group + up → normal swap
+        """
+        if not index.isValid():
             return
-        self._swap_positions(row, row + 1)
+        node = index.internalPointer()
+        if node.node_type != _NodeType.Rule:
+            return
 
-    def _swap_positions(self, row_a, row_b):
-        a = self._rows[row_a]
-        b = self._rows[row_b]
-        with self._db_manager.session('Move rule') as session:
-            rule_a = session.get(PolicyRule, a.rule_id)
-            rule_b = session.get(PolicyRule, b.rule_id)
-            if rule_a is not None and rule_b is not None:
-                rule_a.position, rule_b.position = (
-                    rule_b.position,
-                    rule_a.position,
+        parent_node = node.parent
+        child_idx = parent_node.children.index(node)
+
+        if parent_node is self._root:
+            # Top-level rule.
+            if child_idx == 0:
+                return  # Already at top.
+            prev = parent_node.children[child_idx - 1]
+            if prev.node_type == _NodeType.Group and prev.children:
+                # Join the group above at the bottom.
+                self._set_rule_group_in_db(
+                    node.row_data.rule_id,
+                    prev.name,
+                    'Move rule into group',
                 )
+                self._swap_positions_by_id(
+                    node.row_data.rule_id,
+                    prev.children[-1].row_data.rule_id,
+                )
+            else:
+                prev_data = prev.row_data if prev.node_type == _NodeType.Rule else None
+                if prev_data:
+                    self._swap_positions_by_id(
+                        node.row_data.rule_id,
+                        prev_data.rule_id,
+                    )
+        else:
+            # Inside a group.
+            if child_idx == 0:
+                # Leave group: place before group at root level.
+                self._set_rule_group_in_db(
+                    node.row_data.rule_id,
+                    '',
+                    'Remove from group',
+                )
+                # Find position just before the first rule in the group.
+                first_in_group = parent_node.children[0]
+                target_pos = first_in_group.row_data.position
+                self._move_rule_to_position(node.row_data.rule_id, target_pos - 1)
+            else:
+                prev = parent_node.children[child_idx - 1]
+                self._swap_positions_by_id(
+                    node.row_data.rule_id,
+                    prev.row_data.rule_id,
+                )
+
         self.reload()
 
-    def set_action(self, row, action):
-        """Set the policy action for the rule at *row*.
+    def move_rule_down(self, index):
+        """Move the rule at *index* down one position.
 
-        *action* is a :class:`PolicyAction` member.
+        Group boundary behavior:
+        - Last in group + down → leaves group (placed after group)
+        - Top-level below group + down → normal swap
         """
-        row_data = self._rows[row]
+        if not index.isValid():
+            return
+        node = index.internalPointer()
+        if node.node_type != _NodeType.Rule:
+            return
+
+        parent_node = node.parent
+        child_idx = parent_node.children.index(node)
+
+        if parent_node is self._root:
+            # Top-level rule.
+            if child_idx >= len(parent_node.children) - 1:
+                return  # Already at bottom.
+            nxt = parent_node.children[child_idx + 1]
+            if nxt.node_type == _NodeType.Group and nxt.children:
+                # Join the group below at the top.
+                self._set_rule_group_in_db(
+                    node.row_data.rule_id,
+                    nxt.name,
+                    'Move rule into group',
+                )
+                self._swap_positions_by_id(
+                    node.row_data.rule_id,
+                    nxt.children[0].row_data.rule_id,
+                )
+            else:
+                nxt_data = nxt.row_data if nxt.node_type == _NodeType.Rule else None
+                if nxt_data:
+                    self._swap_positions_by_id(
+                        node.row_data.rule_id,
+                        nxt_data.rule_id,
+                    )
+        else:
+            # Inside a group.
+            if child_idx >= len(parent_node.children) - 1:
+                # Leave group: place after group at root level.
+                self._set_rule_group_in_db(
+                    node.row_data.rule_id,
+                    '',
+                    'Remove from group',
+                )
+                # Find position just after the last rule in the group.
+                last_in_group = parent_node.children[-1]
+                target_pos = last_in_group.row_data.position
+                self._move_rule_to_position(node.row_data.rule_id, target_pos + 1)
+            else:
+                nxt = parent_node.children[child_idx + 1]
+                self._swap_positions_by_id(
+                    node.row_data.rule_id,
+                    nxt.row_data.rule_id,
+                )
+
+        self.reload()
+
+    def set_action(self, index, action):
+        """Set the policy action for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
         with self._db_manager.session(
             f'Edit rule {row_data.position} action',
         ) as session:
@@ -406,12 +676,11 @@ class PolicyTableModel(QAbstractTableModel):
                 rule.policy_action = action.value
         self.reload()
 
-    def set_direction(self, row, direction):
-        """Set the policy direction for the rule at *row*.
-
-        *direction* is a :class:`Direction` member.
-        """
-        row_data = self._rows[row]
+    def set_direction(self, index, direction):
+        """Set the policy direction for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
         with self._db_manager.session(
             f'Edit rule {row_data.position} direction',
         ) as session:
@@ -420,9 +689,11 @@ class PolicyTableModel(QAbstractTableModel):
                 rule.policy_direction = direction.value
         self.reload()
 
-    def add_element(self, row, slot, target_id):
-        """Add *target_id* to element *slot* of the rule at *row*."""
-        row_data = self._rows[row]
+    def add_element(self, index, slot, target_id):
+        """Add *target_id* to element *slot* of the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
         with self._db_manager.session(
             f'Edit rule {row_data.position} {slot}',
         ) as session:
@@ -457,9 +728,11 @@ class PolicyTableModel(QAbstractTableModel):
             )
         self.reload()
 
-    def remove_element(self, row, slot, target_id):
-        """Remove *target_id* from element *slot* of the rule at *row*."""
-        row_data = self._rows[row]
+    def remove_element(self, index, slot, target_id):
+        """Remove *target_id* from element *slot* of the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
         with self._db_manager.session(
             f'Edit rule {row_data.position} {slot}',
         ) as session:
@@ -472,11 +745,143 @@ class PolicyTableModel(QAbstractTableModel):
             )
         self.reload()
 
-    def get_row_data(self, row):
-        """Return the :class:`_RowData` for *row*."""
-        if 0 <= row < len(self._rows):
-            return self._rows[row]
-        return None
+    # ------------------------------------------------------------------
+    # Group management methods
+    # ------------------------------------------------------------------
+
+    def create_group(self, name, indices):
+        """Group the rules at *indices* under a new group named *name*."""
+        if not name or not indices:
+            return
+        unique_name = self._find_unique_group_name(name)
+        rule_ids = []
+        for idx in indices:
+            rd = self.get_row_data(idx)
+            if rd is not None:
+                rule_ids.append(rd.rule_id)
+        if not rule_ids:
+            return
+
+        with self._db_manager.session(f'New group {unique_name}') as session:
+            for rid in rule_ids:
+                self._set_rule_group(session, rid, unique_name)
+        self.reload()
+
+    def rename_group(self, group_index, new_name):
+        """Rename the group at *group_index* to *new_name*."""
+        if not group_index.isValid() or not new_name:
+            return
+        node = group_index.internalPointer()
+        if node.node_type != _NodeType.Group:
+            return
+        old_name = node.name
+        if new_name == old_name:
+            return
+
+        with self._db_manager.session('Rename group') as session:
+            for child in node.children:
+                self._set_rule_group(session, child.row_data.rule_id, new_name)
+        self.reload()
+
+    def remove_from_group(self, indices):
+        """Remove the rules at *indices* from their groups."""
+        if not indices:
+            return
+        rule_ids = []
+        for idx in indices:
+            rd = self.get_row_data(idx)
+            if rd is not None and rd.group:
+                rule_ids.append(rd.rule_id)
+        if not rule_ids:
+            return
+
+        with self._db_manager.session('Remove from group') as session:
+            for rid in rule_ids:
+                self._set_rule_group(session, rid, '')
+        self.reload()
+
+    def _find_unique_group_name(self, base):
+        """Return *base* if unused, otherwise append -1, -2, etc."""
+        existing = set()
+        for child in self._root.children:
+            if child.node_type == _NodeType.Group:
+                existing.add(child.name)
+        if base not in existing:
+            return base
+        counter = 1
+        while f'{base}-{counter}' in existing:
+            counter += 1
+        return f'{base}-{counter}'
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _set_rule_group(session, rule_id, group_name):
+        """Persist the group name into a rule's options JSON."""
+        rule = session.get(PolicyRule, rule_id)
+        if rule is None:
+            return
+        opts = dict(rule.options or {})
+        if group_name:
+            opts['group'] = group_name
+        else:
+            opts.pop('group', None)
+        rule.options = opts
+
+    def _set_rule_group_in_db(self, rule_id, group_name, description):
+        """Set group in a dedicated session with undo description."""
+        with self._db_manager.session(description) as session:
+            self._set_rule_group(session, rule_id, group_name)
+
+    def _swap_positions_by_id(self, id_a, id_b):
+        """Swap the positions of two rules by their IDs."""
+        with self._db_manager.session('Move rule') as session:
+            rule_a = session.get(PolicyRule, id_a)
+            rule_b = session.get(PolicyRule, id_b)
+            if rule_a is not None and rule_b is not None:
+                rule_a.position, rule_b.position = (
+                    rule_b.position,
+                    rule_a.position,
+                )
+
+    def _move_rule_to_position(self, rule_id, target_pos):
+        """Move a rule to *target_pos*, shifting others as needed."""
+        with self._db_manager.session('Move rule') as session:
+            rule = session.get(PolicyRule, rule_id)
+            if rule is None:
+                return
+            old_pos = rule.position
+            if old_pos == target_pos:
+                return
+            if target_pos < 0:
+                target_pos = 0
+            if old_pos < target_pos:
+                # Moving down: shift rules in (old_pos, target_pos] up by 1.
+                session.execute(
+                    sqlalchemy.update(PolicyRule)
+                    .where(
+                        PolicyRule.rule_set_id == self._rule_set_id,
+                        PolicyRule.position > old_pos,
+                        PolicyRule.position <= target_pos,
+                        PolicyRule.id != rule_id,
+                    )
+                    .values(position=PolicyRule.position - 1),
+                )
+            else:
+                # Moving up: shift rules in [target_pos, old_pos) down by 1.
+                session.execute(
+                    sqlalchemy.update(PolicyRule)
+                    .where(
+                        PolicyRule.rule_set_id == self._rule_set_id,
+                        PolicyRule.position >= target_pos,
+                        PolicyRule.position < old_pos,
+                        PolicyRule.id != rule_id,
+                    )
+                    .values(position=PolicyRule.position + 1),
+                )
+            rule.position = target_pos
 
 
 def _format_elements(pairs):

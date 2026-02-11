@@ -47,7 +47,7 @@ from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.object_tree import ObjectTree
-from firewallfabrik.gui.policy_model import PolicyTableModel
+from firewallfabrik.gui.policy_model import PolicyTreeModel
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -577,7 +577,7 @@ class FWWindow(QMainWindow):
     @Slot(str, str, str)
     def _open_rule_set(self, rule_set_id, fw_name, rs_name):
         """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
-        model = PolicyTableModel(self._db_manager, uuid.UUID(rule_set_id))
+        model = PolicyTreeModel(self._db_manager, uuid.UUID(rule_set_id))
         view = PolicyView()
         view.setModel(model)
 
@@ -749,7 +749,7 @@ class FWWindow(QMainWindow):
         for sub in self.m_space.subWindowList():
             widget = sub.widget()
             if isinstance(widget, PolicyView) and isinstance(
-                widget.model(), PolicyTableModel
+                widget.model(), PolicyTreeModel
             ):
                 widget.model().reload()
 
