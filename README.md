@@ -5,20 +5,32 @@ FirewallFabrik is a Qt-based GUI tool for managing firewall configurations acros
 
 ## Installation
 
+> **Note:** If you only want to run the CLI tools, use `firewallfabrik` instead of `firewallfabrik[gui]` in the following commands to avoid pulling in any GUI dependencies.
+
 ### From PyPI (Recommended)
 
 FirewallFabrik releases are available from [PyPI](https://pypi.org/project/firewallfabrik/).
 
+Using [uv](https://docs.astral.sh/uv/):
+
+```shell
+# Run FirewallFabrik without installing
+uvx firewallfabrik[gui]
+
+# Install FirewallFabrik
+uv tool install firewallfabrik[gui]
+```
+
 Using [pipx](https://pipx.pypa.io):
 
 ```shell
-pipx install firewallfabrik
+pipx install firewallfabrik[gui]
 ```
 
 Using standard pip (user install):
 
 ```shell
-pip install --user firewallfabrik
+pip install --user firewallfabrik[gui]
 ```
 
 Please note that on certain Linux systems `--break-system-packages`
@@ -62,6 +74,19 @@ gtk-update-icon-cache $HOME/.local/share/icons/hicolor/ 2>/dev/null
 > ```bash
 > sed -i "s|Exec=fwf|Exec=$VIRTUAL_ENV/bin/fwf|" $HOME/.local/share/applications/ch.linuxfabrik.firewallfabrik.desktop
 > ```
+
+
+### Linux Native Themes
+
+Some Linux distros provide a native PySide6 package. This package can be used for a more modern and integrated theme.
+
+To use the native PySide6, the respective package needs to be installed using the native package manager and firewallfabrik needs to be installed without the `gui` 'extra' (just `pip install firewallfabrik` instead of `pip install firewallfabrik[gui]`).
+
+When using tools such as `pipx` and `uv tool` or a virtual environment they must be initialised using the `--system-site-packages` to inherit the native PySide6 package. A user installation with standard pip should pick up the system package automatically.
+
+Native Packages:
+- Fedora: `dnf install python3-pyside6`
+- Other Distros: Check your distro's package manager for PySide6
 
 
 ## Documentation
