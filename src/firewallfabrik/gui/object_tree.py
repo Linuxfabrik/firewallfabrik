@@ -78,11 +78,11 @@ def _obj_sort_key(obj):
 
 
 def _obj_display_name(obj):
-    """Return 'name : label' when a label exists, else just 'name'."""
+    """Return 'name (label)' when a label exists, else just 'name'."""
     data = getattr(obj, 'data', None) or {}
     label = data.get('label') or ''
     if label:
-        return f'{obj.name} : {label}'
+        return f'{obj.name} ({label})'
     return obj.name
 
 
@@ -181,7 +181,7 @@ class ObjectTree(QWidget):
                         _obj_display_name(rs), rs.type, str(rs.id), fw_item,
                         inactive=_is_inactive(rs),
                     )
-                for iface in sorted(fw.interfaces, key=_obj_sort_key):
+                for iface in sorted(fw.interfaces, key=lambda o: o.name.lower()):
                     self._add_interface(iface, fw_item)
             fw_cat.setExpanded(True)
 
@@ -195,7 +195,7 @@ class ObjectTree(QWidget):
                     _obj_display_name(host), host.type, str(host.id), target,
                     inactive=_is_inactive(host),
                 )
-                for iface in sorted(host.interfaces, key=_obj_sort_key):
+                for iface in sorted(host.interfaces, key=lambda o: o.name.lower()):
                     self._add_interface(iface, host_item)
 
     def _add_services(self, services, parent_item):
