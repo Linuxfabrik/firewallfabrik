@@ -19,7 +19,6 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 
 class AboutDialog(QDialog):
-
     def __init__(self, parent=None):
         super().__init__(parent)
 

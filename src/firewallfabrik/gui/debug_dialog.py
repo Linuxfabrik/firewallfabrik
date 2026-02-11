@@ -11,7 +11,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import getpass
-import os
 import platform
 import sys
 from pathlib import Path
@@ -26,7 +25,6 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 
 class DebugDialog(QDialog):
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -52,7 +50,9 @@ class DebugDialog(QDialog):
         t.append('')
         t.append(f'Path to resources:\n  {ui_dir}')
         t.append('')
-        t.append(f'Path to locale:\n  {QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)}')
+        t.append(
+            f'Path to locale:\n  {QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)}'
+        )
         t.append('')
 
         try:

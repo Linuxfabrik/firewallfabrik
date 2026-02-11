@@ -14,7 +14,6 @@ import os
 import sys
 
 from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
-
 from PySide6.QtWidgets import QApplication
 
 from firewallfabrik import __version__

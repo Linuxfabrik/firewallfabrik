@@ -18,7 +18,6 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 
 class PreferencesDialog(QDialog):
-
     def __init__(self, parent=None):
         super().__init__(parent)
 

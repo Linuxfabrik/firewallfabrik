@@ -190,7 +190,7 @@
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   <header>CommentKeywords.h</header>
+   
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -15,8 +15,16 @@
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QIcon
 
-HEADERS = ['#', 'Source', 'Destination', 'Service', 'Interface',
-           'Direction', 'Action', 'Comment']
+HEADERS = [
+    '#',
+    'Source',
+    'Destination',
+    'Service',
+    'Interface',
+    'Direction',
+    'Action',
+    'Comment',
+]
 
 _COL_DIRECTION = 5
 _COL_ACTION = 6
@@ -40,8 +48,16 @@ class PolicyTableModel(QAbstractTableModel):
     def __init__(self, rows, parent=None):
         super().__init__(parent)
         self._rows = rows
-        self._keys = ['position', 'src', 'dst', 'srv', 'itf',
-                      'direction', 'action', 'comment']
+        self._keys = [
+            'position',
+            'src',
+            'dst',
+            'srv',
+            'itf',
+            'direction',
+            'action',
+            'comment',
+        ]
 
     def rowCount(self, parent=QModelIndex()):
         return len(self._rows)
@@ -79,6 +95,9 @@ class PolicyTableModel(QAbstractTableModel):
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
             return HEADERS[section]
         return None

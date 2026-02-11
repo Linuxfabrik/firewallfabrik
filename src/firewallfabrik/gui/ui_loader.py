@@ -13,7 +13,6 @@
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QDockWidget, QWidget
 
-
 # Maps custom widget class names from the .ui file to their Qt base classes.
 # As Python implementations are created, replace QWidget with the real class.
 CUSTOM_WIDGET_MAP = {
@@ -83,19 +82,66 @@ class FWFUiLoader(QUiLoader):
         return super().createWidget(class_name, parent, name)
 
 
-# Late import: address_dialogs imports FWFUiLoader from this module,
+# Late imports: dialog modules import FWFUiLoader from this module,
 # so we update the map after both modules are fully defined.
 def _register_address_dialogs():
     from firewallfabrik.gui.address_dialogs import (
+        AddressRangeDialog,
         IPv4Dialog,
         IPv6Dialog,
         NetworkDialog,
         NetworkDialogIPv6,
+        PhysAddressDialog,
     )
+
     CUSTOM_WIDGET_MAP['IPv4Dialog'] = IPv4Dialog
     CUSTOM_WIDGET_MAP['IPv6Dialog'] = IPv6Dialog
     CUSTOM_WIDGET_MAP['NetworkDialog'] = NetworkDialog
     CUSTOM_WIDGET_MAP['NetworkDialogIPv6'] = NetworkDialogIPv6
+    CUSTOM_WIDGET_MAP['AddressRangeDialog'] = AddressRangeDialog
+    CUSTOM_WIDGET_MAP['PhysicalAddressDialog'] = PhysAddressDialog
+
+
+def _register_device_dialogs():
+    from firewallfabrik.gui.device_dialogs import (
+        FirewallDialog,
+        HostDialog,
+        InterfaceDialog,
+    )
+
+    CUSTOM_WIDGET_MAP['HostDialog'] = HostDialog
+    CUSTOM_WIDGET_MAP['FirewallDialog'] = FirewallDialog
+    CUSTOM_WIDGET_MAP['InterfaceDialog'] = InterfaceDialog
+
+
+def _register_service_dialogs():
+    from firewallfabrik.gui.service_dialogs import (
+        ICMPServiceDialog,
+        IPServiceDialog,
+        TCPServiceDialog,
+        UDPServiceDialog,
+    )
+
+    CUSTOM_WIDGET_MAP['TCPServiceDialog'] = TCPServiceDialog
+    CUSTOM_WIDGET_MAP['UDPServiceDialog'] = UDPServiceDialog
+    CUSTOM_WIDGET_MAP['ICMPServiceDialog'] = ICMPServiceDialog
+    CUSTOM_WIDGET_MAP['IPServiceDialog'] = IPServiceDialog
+
+
+def _register_group_dialog():
+    from firewallfabrik.gui.group_dialog import GroupObjectDialog
+
+    CUSTOM_WIDGET_MAP['GroupObjectDialog'] = GroupObjectDialog
+
+
+def _register_time_dialog():
+    from firewallfabrik.gui.time_dialog import TimeDialog
+
+    CUSTOM_WIDGET_MAP['TimeDialog'] = TimeDialog
 
 
 _register_address_dialogs()
+_register_device_dialogs()
+_register_service_dialogs()
+_register_group_dialog()
+_register_time_dialog()

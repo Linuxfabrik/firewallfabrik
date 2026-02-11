@@ -17,7 +17,13 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QByteArray, QResource, QSettings, Qt, QTimer, QUrl, Slot
-from PySide6.QtGui import QAction, QDesktopServices, QGuiApplication, QIcon, QKeySequence
+from PySide6.QtGui import (
+    QAction,
+    QDesktopServices,
+    QGuiApplication,
+    QIcon,
+    QKeySequence,
+)
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -25,9 +31,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QSplitter,
 )
-
-_DEFAULT_WIDTH = 1024
-_DEFAULT_HEIGHT = 768
 
 from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager
@@ -45,17 +48,43 @@ from firewallfabrik.core.objects import (
     rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
+from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
-from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.object_tree import ICON_MAP, ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTableModel
 from firewallfabrik.gui.policy_view import PolicyView
+from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_WIDTH = 1024
+_DEFAULT_HEIGHT = 768
 FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
 _MAX_RECENT_FILES = 20
+
+# Map object type discriminator strings to their SQLAlchemy model class.
+_MODEL_MAP = {
+    'IPv4': Address,
+    'IPv6': Address,
+    'Network': Address,
+    'NetworkIPv6': Address,
+    'AddressRange': Address,
+    'PhysAddress': Address,
+    'Host': Host,
+    'Firewall': Host,
+    'Cluster': Host,
+    'Interface': Interface,
+    'TCPService': Service,
+    'UDPService': Service,
+    'ICMPService': Service,
+    'ICMP6Service': Service,
+    'IPService': Service,
+    'ObjectGroup': Group,
+    'ServiceGroup': Group,
+    'IntervalGroup': Group,
+    'Interval': Interval,
+}
 
 
 class FWWindow(QMainWindow):
@@ -93,7 +122,27 @@ class FWWindow(QMainWindow):
             'IPv6': self.w_IPv6Dialog,
             'Network': self.w_NetworkDialog,
             'NetworkIPv6': self.w_NetworkDialogIPv6,
+            'AddressRange': self.w_AddressRangeDialog,
+            'PhysAddress': self.w_PhysicalAddressDialog,
+            'Host': self.w_HostDialog,
+            'Firewall': self.w_FirewallDialog,
+            'Cluster': self.w_FirewallDialog,
+            'Interface': self.w_InterfaceDialog,
+            'TCPService': self.w_TCPServiceDialog,
+            'UDPService': self.w_UDPServiceDialog,
+            'ICMPService': self.w_ICMPServiceDialog,
+            'ICMP6Service': self.w_ICMP6ServiceDialog,
+            'IPService': self.w_IPServiceDialog,
+            'ObjectGroup': self.w_ObjectGroupDialog,
+            'ServiceGroup': self.w_ServiceGroupDialog,
+            'IntervalGroup': self.w_IntervalGroupDialog,
+            'Interval': self.w_TimeDialog,
         }
+
+        # Connect changed signal on all editor dialogs for auto-save.
+        for widget in self._editor_map.values():
+            if isinstance(widget, BaseObjectDialog):
+                widget.changed.connect(self._on_editor_changed)
 
         self._prepare_recent_menu()
         self._restore_view_state()
@@ -125,7 +174,9 @@ class FWWindow(QMainWindow):
             for screen in QGuiApplication.screens():
                 if screen.availableGeometry().intersects(rect):
                     self._start_maximized = settings.value(
-                        'Window/maximized', False, type=bool,
+                        'Window/maximized',
+                        False,
+                        type=bool,
                     )
                     return
         self.resize(_DEFAULT_WIDTH, _DEFAULT_HEIGHT)
@@ -265,13 +316,17 @@ class FWWindow(QMainWindow):
     @Slot()
     def help(self):
         QDesktopServices.openUrl(
-            QUrl('https://github.com/Linuxfabrik/firewallfabrik/tree/main/docs/user-guide'),
+            QUrl(
+                'https://github.com/Linuxfabrik/firewallfabrik/tree/main/docs/user-guide'
+            ),
         )
 
     @Slot()
     def showChangelog(self):
         QDesktopServices.openUrl(
-            QUrl('https://github.com/Linuxfabrik/firewallfabrik/blob/main/CHANGELOG.md'),
+            QUrl(
+                'https://github.com/Linuxfabrik/firewallfabrik/blob/main/CHANGELOG.md'
+            ),
         )
 
     @Slot()
@@ -418,16 +473,25 @@ class FWWindow(QMainWindow):
         if dialog_widget is None:
             return
 
-        with self._db_manager.session() as session:
-            obj = session.get(Address, uuid.UUID(obj_id))
-            if obj is None:
-                return
-            inet = obj.inet_addr_mask or {}
-            name = obj.name
-            address = inet.get('address', '')
-            netmask = inet.get('netmask', '')
+        model_cls = _MODEL_MAP.get(obj_type)
+        if model_cls is None:
+            return
 
-        dialog_widget.load_object(name, address, netmask)
+        # Close any previous editor session to avoid leaks.
+        old_session = getattr(self, '_editor_session', None)
+        if old_session is not None:
+            old_session.close()
+
+        self._editor_session = self._db_manager.create_session()
+        obj = self._editor_session.get(model_cls, uuid.UUID(obj_id))
+        if obj is None:
+            self._editor_session.close()
+            self._editor_session = None
+            return
+
+        dialog_widget.load_object(obj)
+        self._current_editor = dialog_widget
+
         # The dialog widget sits inside a page's layout, not as a direct
         # page of the stacked widget — switch to its parent page instead.
         self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
@@ -440,6 +504,17 @@ class FWWindow(QMainWindow):
         if not self.editorDockWidget.isVisible():
             self.editorDockWidget.setVisible(True)
             self.actionEditor_panel.setChecked(True)
+
+    @Slot()
+    def _on_editor_changed(self):
+        """Handle a change in the active editor: apply and commit."""
+        editor = getattr(self, '_current_editor', None)
+        session = getattr(self, '_editor_session', None)
+        if editor is None or session is None:
+            return
+        editor._apply_changes()
+        session.commit()
+        self._db_manager.save_state('Editor change')
 
     @Slot()
     def toggleViewObjectTree(self):
@@ -508,14 +583,16 @@ class FWWindow(QMainWindow):
             except (ValueError, TypeError):
                 action = ''
 
-            rows.append({
-                'position': rule.position,
-                'src': ', '.join(slots.get('src', [])),
-                'dst': ', '.join(slots.get('dst', [])),
-                'srv': ', '.join(slots.get('srv', [])),
-                'itf': ', '.join(slots.get('itf', [])),
-                'direction': direction,
-                'action': action,
-                'comment': rule.comment or '',
-            })
+            rows.append(
+                {
+                    'position': rule.position,
+                    'src': ', '.join(slots.get('src', [])),
+                    'dst': ', '.join(slots.get('dst', [])),
+                    'srv': ', '.join(slots.get('srv', [])),
+                    'itf': ', '.join(slots.get('itf', [])),
+                    'direction': direction,
+                    'action': action,
+                    'comment': rule.comment or '',
+                }
+            )
         return rows

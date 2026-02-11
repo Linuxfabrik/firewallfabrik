@@ -10,55 +10,80 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Editor panel dialogs for address objects (IPv4, IPv6, Network, NetworkIPv6)."""
+"""Editor panel dialogs for address objects."""
 
-from pathlib import Path
-
-from PySide6.QtWidgets import QWidget
-
-from firewallfabrik.gui.ui_loader import FWFUiLoader
-
-_UI_DIR = Path(__file__).resolve().parent / 'ui'
+from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
-class _BaseAddressDialog(QWidget):
-    """Base class for address editor dialogs.
+class _BaseAddressDialog(BaseObjectDialog):
+    """Base for IPv4/IPv6/Network/NetworkIPv6 dialogs (name + address + netmask)."""
 
-    Loads the given .ui file via ``FWFUiLoader`` and provides a common
-    ``load_object`` method to populate the Name / Address / Netmask fields.
-    """
+    def _populate(self):
+        inet = self._obj.inet_addr_mask or {}
+        self.obj_name.setText(self._obj.name or '')
+        self.address.setText(inet.get('address', ''))
+        self.netmask.setText(inet.get('netmask', ''))
 
-    def __init__(self, ui_filename, parent=None):
-        super().__init__(parent)
-        loader = FWFUiLoader(self)
-        loader.load(str(_UI_DIR / ui_filename))
-
-    def load_object(self, name, address, netmask):
-        """Fill the editor fields with values from the database object."""
-        self.obj_name.setText(name or '')
-        self.address.setText(address or '')
-        self.netmask.setText(netmask or '')
+    def _apply_changes(self):
+        self._obj.name = self.obj_name.text()
+        inet = self._obj.inet_addr_mask or {}
+        inet['address'] = self.address.text()
+        inet['netmask'] = self.netmask.text()
+        self._obj.inet_addr_mask = inet
 
 
 class IPv4Dialog(_BaseAddressDialog):
-
     def __init__(self, parent=None):
         super().__init__('ipv4dialog_q.ui', parent)
 
 
 class IPv6Dialog(_BaseAddressDialog):
-
     def __init__(self, parent=None):
         super().__init__('ipv6dialog_q.ui', parent)
 
 
 class NetworkDialog(_BaseAddressDialog):
-
     def __init__(self, parent=None):
         super().__init__('networkdialog_q.ui', parent)
 
 
 class NetworkDialogIPv6(_BaseAddressDialog):
-
     def __init__(self, parent=None):
         super().__init__('networkdialogipv6_q.ui', parent)
+
+
+class AddressRangeDialog(BaseObjectDialog):
+    def __init__(self, parent=None):
+        super().__init__('addressrangedialog_q.ui', parent)
+
+    def _populate(self):
+        self.obj_name.setText(self._obj.name or '')
+        start = self._obj.start_address or {}
+        end = self._obj.end_address or {}
+        self.rangeStart.setText(start.get('address', ''))
+        self.rangeEnd.setText(end.get('address', ''))
+
+    def _apply_changes(self):
+        self._obj.name = self.obj_name.text()
+        start = self._obj.start_address or {}
+        start['address'] = self.rangeStart.text()
+        self._obj.start_address = start
+        end = self._obj.end_address or {}
+        end['address'] = self.rangeEnd.text()
+        self._obj.end_address = end
+
+
+class PhysAddressDialog(BaseObjectDialog):
+    def __init__(self, parent=None):
+        super().__init__('physaddressdialog_q.ui', parent)
+
+    def _populate(self):
+        self.obj_name.setText(self._obj.name or '')
+        inet = self._obj.inet_addr_mask or {}
+        self.pAddress.setText(inet.get('address', ''))
+
+    def _apply_changes(self):
+        self._obj.name = self.obj_name.text()
+        inet = self._obj.inet_addr_mask or {}
+        inet['address'] = self.pAddress.text()
+        self._obj.inet_addr_mask = inet
