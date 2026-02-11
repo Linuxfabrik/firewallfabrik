@@ -81,6 +81,11 @@
       <layout class="QGridLayout" name="prefs_gridLayout_2">
        <item row="2" column="0">
         <widget class="QCheckBox" name="deletedObj">
+         <property name="toolTip">
+          <string>When enabled, objects that have been marked as deleted
+are still shown in the object tree. This can be useful
+for reviewing or restoring recently removed items.</string>
+         </property>
          <property name="text">
           <string>Show deleted objects</string>
          </property>
@@ -88,6 +93,11 @@
        </item>
        <item row="1" column="0">
         <widget class="QCheckBox" name="advTooltipMode">
+         <property name="toolTip">
+          <string>When enabled, tooltips show only essential information
+such as name and type, omitting detailed attributes
+like addresses, ports and flags.</string>
+         </property>
          <property name="text">
           <string>Advanced User Mode, only show minimal tooltips</string>
          </property>
@@ -100,6 +110,10 @@
            <width>0</width>
            <height>25</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>Show detailed tooltips when hovering over objects
+in the tree and rule set views.</string>
          </property>
          <property name="text">
           <string>Enable object tooltips in the tree and rule sets</string>

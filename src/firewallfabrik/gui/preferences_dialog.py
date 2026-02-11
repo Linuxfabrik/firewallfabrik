@@ -37,11 +37,16 @@ class PreferencesDialog(QDialog):
         self.attributesInTree.setChecked(
             settings.value('UI/ShowObjectsAttributesInTree', True, type=bool)
         )
+        self.objTooltips.setChecked(settings.value('UI/ObjTooltips', True, type=bool))
         self.accepted.connect(self._save_settings)
 
     def _save_settings(self):
         """Persist preference values to QSettings."""
         settings = QSettings()
+        settings.setValue(
+            'UI/ObjTooltips',
+            self.objTooltips.isChecked(),
+        )
         settings.setValue(
             'UI/ShowObjectsAttributesInTree',
             self.attributesInTree.isChecked(),

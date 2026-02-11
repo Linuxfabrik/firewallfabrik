@@ -196,6 +196,119 @@ def _obj_brief_attrs(obj, under_interface=False):
     return ''
 
 
+def _obj_tooltip(obj):
+    """Return an HTML tooltip string for *obj*, similar to fwbuilder's detailed properties."""
+    type_str = getattr(obj, 'type', type(obj).__name__)
+    name = getattr(obj, 'name', '')
+    lines = [f'<b>{name}</b>', f'Type: {type_str}']
+
+    # -- Addresses --
+    if type_str in ('IPv4', 'IPv6'):
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        addr = iam.get('address', '')
+        mask = iam.get('netmask', '')
+        if addr:
+            lines.append(f'Address: {addr}/{mask}' if mask else f'Address: {addr}')
+
+    elif type_str in ('Network', 'NetworkIPv6'):
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        addr = iam.get('address', '')
+        mask = iam.get('netmask', '')
+        if addr:
+            lines.append(f'Network: {addr}/{mask}' if mask else f'Network: {addr}')
+
+    elif type_str == 'AddressRange':
+        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
+        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
+        if start or end:
+            lines.append(f'Range: {start} \u2013 {end}')
+
+    elif type_str == 'PhysAddress':
+        iam = getattr(obj, 'inet_addr_mask', None) or {}
+        mac = iam.get('address', '')
+        if mac:
+            lines.append(f'MAC: {mac}')
+
+    # -- Devices --
+    elif type_str in ('Cluster', 'Firewall'):
+        data = getattr(obj, 'data', None) or {}
+        platform = data.get('platform', '')
+        version = data.get('version', '')
+        host_os = data.get('host_OS', '')
+        if platform:
+            lines.append(f'Platform: {platform} ({version})')
+        if host_os:
+            lines.append(f'Host OS: {host_os}')
+
+    elif type_str == 'Host':
+        pass  # name + type are sufficient
+
+    elif type_str == 'Interface':
+        data = getattr(obj, 'data', None) or {}
+        label = data.get('label', '')
+        if label:
+            lines.append(f'Label: {label}')
+        flags = []
+        if getattr(obj, 'is_dynamic', lambda: False)():
+            flags.append('dynamic')
+        if getattr(obj, 'is_unnumbered', lambda: False)():
+            flags.append('unnumbered')
+        if getattr(obj, 'is_bridge_port', lambda: False)():
+            flags.append('bridge port')
+        if getattr(obj, 'is_slave', lambda: False)():
+            flags.append('slave')
+        if flags:
+            lines.append(f'Flags: {", ".join(flags)}')
+
+    # -- Services --
+    elif type_str in ('TCPService', 'UDPService'):
+        ss = getattr(obj, 'src_range_start', None) or 0
+        se = getattr(obj, 'src_range_end', None) or 0
+        ds = getattr(obj, 'dst_range_start', None) or 0
+        de = getattr(obj, 'dst_range_end', None) or 0
+        lines.append(f'Src ports: {ss}\u2013{se}')
+        lines.append(f'Dst ports: {ds}\u2013{de}')
+
+    elif type_str in ('ICMP6Service', 'ICMPService'):
+        codes = getattr(obj, 'codes', None) or {}
+        icmp_type = codes.get('type', -1)
+        code = codes.get('code', -1)
+        lines.append(f'ICMP type: {icmp_type}')
+        lines.append(f'ICMP code: {code}')
+
+    elif type_str == 'IPService':
+        protocol = getattr(obj, 'protocol', None)
+        if protocol is not None:
+            lines.append(f'Protocol: {protocol}')
+
+    # -- Groups --
+    elif type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+        count = 0
+        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
+            val = getattr(obj, attr, None)
+            if val:
+                count += len(val)
+        lines.append(f'Members: {count}')
+
+    # -- Library --
+    elif type_str == 'Library':
+        if getattr(obj, 'ro', False):
+            lines.append('Read-only')
+
+    # -- Comment --
+    comment = getattr(obj, 'comment', None) or ''
+    if comment:
+        # Truncate long comments and escape HTML.
+        if len(comment) > 200:
+            comment = comment[:200] + '\u2026'
+        comment = (
+            comment.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        )
+        lines.append(f'<br/><i>{comment}</i>')
+
+    return '<br/>'.join(lines)
+
+
 # Rule set types that can be opened via double-click.
 _RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
 
@@ -230,6 +343,7 @@ class ObjectTree(QWidget):
         self._show_attrs = QSettings().value(
             'UI/ShowObjectsAttributesInTree', True, type=bool
         )
+        self._tooltips_enabled = QSettings().value('UI/ObjTooltips', True, type=bool)
         self._applying_saved_width = False
         self._apply_column_setup()
 
@@ -266,6 +380,7 @@ class ObjectTree(QWidget):
                 'Library',
                 str(lib.id),
                 attrs=_obj_brief_attrs(lib),
+                obj=lib,
                 readonly=getattr(lib, 'ro', False),
             )
             self._tree.addTopLevelItem(lib_item)
@@ -281,6 +396,25 @@ class ObjectTree(QWidget):
         """Toggle the attribute column visibility."""
         self._show_attrs = show
         self._apply_column_setup()
+
+    def set_tooltips_enabled(self, enabled):
+        """Enable or disable tooltips on all existing tree items."""
+        self._tooltips_enabled = enabled
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            if not enabled:
+                item.setToolTip(0, '')
+                item.setToolTip(1, '')
+            else:
+                # Re-derive tooltip from stored data; only object items
+                # (those with an id in UserRole) carry tooltips.
+                tip = item.data(0, Qt.ItemDataRole.UserRole + 4) or ''
+                if tip:
+                    item.setToolTip(0, tip)
+                    if self._show_attrs:
+                        item.setToolTip(1, tip)
 
     def _apply_column_setup(self):
         """Apply the current column count / resize mode."""
@@ -322,9 +456,7 @@ class ObjectTree(QWidget):
         ]
         children += [g for g in lib.groups if g.parent_group_id is None]
         children += [i for i in lib.interfaces if i.device_id is None]
-        children.sort(key=_obj_sort_key)
-        for obj in children:
-            self._add_object(obj, parent_item)
+        self._add_objects_with_folders(children, parent_item)
 
     def _add_object(self, obj, parent_item):
         """Create a tree item for *obj* and recurse into groups / devices."""
@@ -334,7 +466,10 @@ class ObjectTree(QWidget):
             type_str,
             str(obj.id),
             parent_item,
+            attrs=_obj_brief_attrs(obj),
             inactive=_is_inactive(obj),
+            obj=obj,
+            tags=_obj_tags(obj),
         )
         if isinstance(obj, Group):
             self._add_group_children(obj, item)
@@ -352,9 +487,29 @@ class ObjectTree(QWidget):
             + list(group.devices)
             + list(group.child_groups)
         )
-        children.sort(key=_obj_sort_key)
-        for obj in children:
-            self._add_object(obj, parent_item)
+        self._add_objects_with_folders(children, parent_item)
+
+    def _add_objects_with_folders(self, objects, parent_item):
+        """Add *objects* under *parent_item*, grouping by ``data.folder``."""
+        sorted_objects = sorted(objects, key=_obj_sort_key)
+        # Pre-create folder items (sorted) so they appear above ungrouped objects.
+        folder_names = sorted(
+            {self._get_folder_name(obj) for obj in sorted_objects} - {''},
+            key=str.casefold,
+        )
+        folder_items = {
+            name: self._make_category(name, parent_item) for name in folder_names
+        }
+        for obj in sorted_objects:
+            folder_name = self._get_folder_name(obj)
+            target = folder_items[folder_name] if folder_name else parent_item
+            self._add_object(obj, target)
+
+    @staticmethod
+    def _get_folder_name(obj):
+        """Return the folder name for *obj*, or empty string."""
+        data = getattr(obj, 'data', None) or {}
+        return data.get('folder', '')
 
     def _add_device_children(self, device, parent_item):
         """Add rule sets and interfaces of *device*."""
@@ -365,6 +520,7 @@ class ObjectTree(QWidget):
                 str(rs.id),
                 parent_item,
                 inactive=_is_inactive(rs),
+                obj=rs,
             )
         for iface in sorted(device.interfaces, key=lambda o: o.name.lower()):
             self._add_interface(iface, parent_item)
@@ -375,11 +531,12 @@ class ObjectTree(QWidget):
             _obj_display_name(iface),
             'Interface',
             str(iface.id),
+            parent_item,
             attrs=_obj_brief_attrs(iface),
             inactive=_is_inactive(iface),
+            obj=iface,
             tags=_obj_tags(iface),
         )
-        parent_item.addChild(iface_item)
         for addr in sorted(iface.addresses, key=_obj_sort_key):
             self._make_item(
                 _obj_display_name(addr),
@@ -388,6 +545,7 @@ class ObjectTree(QWidget):
                 iface_item,
                 attrs=_obj_brief_attrs(addr, under_interface=True),
                 inactive=_is_inactive(addr),
+                obj=addr,
                 tags=_obj_tags(addr),
             )
 
@@ -406,6 +564,7 @@ class ObjectTree(QWidget):
         *,
         attrs=None,
         inactive=False,
+        obj=None,
         readonly=False,
         tags=None,
     ):
@@ -427,20 +586,45 @@ class ObjectTree(QWidget):
             font = item.font(0)
             font.setStrikeOut(True)
             item.setFont(0, font)
+        if obj is not None:
+            tip = _obj_tooltip(obj)
+            item.setData(0, Qt.ItemDataRole.UserRole + 4, tip)
+            if self._tooltips_enabled:
+                item.setToolTip(0, tip)
+                if self._show_attrs:
+                    item.setToolTip(1, tip)
         if parent_item is not None:
             parent_item.addChild(item)
         return item
 
-    def update_item_tags(self, obj_id, tags):
-        """Update the stored tags for the tree item matching *obj_id*."""
-        tags_str = _tags_to_str(tags)
+    def update_item(self, obj):
+        """Refresh the tree item for *obj* (name, attrs, tooltip, tags)."""
+        obj_id = str(obj.id)
         it = QTreeWidgetItemIterator(self._tree)
         while it.value():
             item = it.value()
             it += 1
-            if item.data(0, Qt.ItemDataRole.UserRole) == obj_id:
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, tags_str)
-                return
+            if item.data(0, Qt.ItemDataRole.UserRole) != obj_id:
+                continue
+
+            item.setText(0, _obj_display_name(obj))
+
+            attrs = _obj_brief_attrs(obj)
+            item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs)
+            item.setText(1, attrs)
+
+            item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(_obj_tags(obj)))
+
+            tip = _obj_tooltip(obj)
+            item.setData(0, Qt.ItemDataRole.UserRole + 4, tip)
+            if self._tooltips_enabled:
+                item.setToolTip(0, tip)
+                if self._show_attrs:
+                    item.setToolTip(1, tip)
+            else:
+                item.setToolTip(0, '')
+                item.setToolTip(1, '')
+            return
 
     def focus_filter(self):
         """Set keyboard focus to the filter input field."""

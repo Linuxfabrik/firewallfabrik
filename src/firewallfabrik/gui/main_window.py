@@ -258,9 +258,10 @@ class FWWindow(QMainWindow):
         self.actionUndo_view.setChecked(undo_visible)
 
     def _update_title(self):
-        if self._current_file:
+        display = getattr(self, '_display_file', None) or self._current_file
+        if display:
             self.setWindowTitle(
-                f'{self._current_file.name} - FirewallFabrik {__version__}',
+                f'{display.name} - FirewallFabrik {__version__}',
             )
         else:
             self.setWindowTitle(f'FirewallFabrik {__version__}')
@@ -284,6 +285,7 @@ class FWWindow(QMainWindow):
 
         file_path.touch()
         self._current_file = file_path
+        self._display_file = file_path
         self._update_title()
 
     @Slot()
@@ -312,6 +314,11 @@ class FWWindow(QMainWindow):
                 'FirewallFabrik',
                 self.tr(f"Failed to save '{self._current_file}'"),
             )
+            return
+        if self._display_file != self._current_file:
+            self._display_file = self._current_file
+            self._update_title()
+            self._add_to_recent(str(self._current_file))
 
     @Slot()
     def fileSaveAs(self):
@@ -343,6 +350,7 @@ class FWWindow(QMainWindow):
             return
 
         self._current_file = file_path
+        self._display_file = file_path
         self._update_title()
         self._add_to_recent(str(file_path))
 
@@ -354,8 +362,11 @@ class FWWindow(QMainWindow):
     def editPrefs(self):
         dlg = PreferencesDialog(self)
         dlg.exec()
-        show = QSettings().value('UI/ShowObjectsAttributesInTree', True, type=bool)
+        settings = QSettings()
+        show = settings.value('UI/ShowObjectsAttributesInTree', True, type=bool)
         self._object_tree.set_show_attrs(show)
+        tooltips = settings.value('UI/ObjTooltips', True, type=bool)
+        self._object_tree.set_tooltips_enabled(tooltips)
 
     @Slot()
     def help(self):
@@ -411,6 +422,7 @@ class FWWindow(QMainWindow):
             return
 
         self._current_file = file_path
+        self._display_file = original_path
         self._update_title()
         self._add_to_recent(str(original_path))
 
@@ -442,17 +454,9 @@ class FWWindow(QMainWindow):
         if isinstance(files, str):
             files = [files]
 
-        # If two files share the same basename, show the full path for both.
-        name_counts = {}
-        for f in files:
-            name = Path(f).name
-            name_counts[name] = name_counts.get(name, 0) + 1
-
         num = min(len(files), _MAX_RECENT_FILES)
         for i in range(num):
-            name = Path(files[i]).name
-            text = files[i] if name_counts.get(name, 0) > 1 else name
-            self._recent_actions[i].setText(text)
+            self._recent_actions[i].setText(Path(files[i]).name)
             self._recent_actions[i].setToolTip(files[i])
             self._recent_actions[i].setData(files[i])
             self._recent_actions[i].setVisible(True)
@@ -571,13 +575,10 @@ class FWWindow(QMainWindow):
         session.commit()
         self._db_manager.save_state('Editor change')
 
-        # Keep the tree's cached tags in sync with the editor.
+        # Keep the tree in sync with the editor.
         obj = getattr(editor, '_obj', None)
         if obj is not None:
-            self._object_tree.update_item_tags(
-                str(obj.id),
-                getattr(obj, 'keywords', None),
-            )
+            self._object_tree.update_item(obj)
 
     @Slot()
     def toggleViewObjectTree(self):

@@ -12,7 +12,7 @@
 
 """Table model for displaying policy rules in a QTableView."""
 
-from PySide6.QtCore import QAbstractTableModel, Qt
+from PySide6.QtCore import QAbstractTableModel, QSettings, Qt
 from PySide6.QtGui import QColor, QIcon
 
 HEADERS = [
@@ -71,6 +71,11 @@ class PolicyTableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             return self._rows[index.row()].get(self._keys[index.column()], '')
+
+        if role == Qt.ItemDataRole.ToolTipRole:
+            if QSettings().value('UI/ObjTooltips', True, type=bool):
+                return self._rows[index.row()].get(self._keys[index.column()], '')
+            return None
 
         row = self._rows[index.row()]
         col = index.column()
