@@ -18,10 +18,10 @@ requires-python = ">=3.14"
 
 [project.scripts]
 fwf = "firewallfabrik.gui.app:main"
+fwf-ipt = "firewallfabrik.cli.fwf_ipt:main"
 # to be implemented
 # fwf-edit = "firewallfabrik.cli.fwfedit:main"
 # fwf-iosacl = "firewallfabrik.cli.fwf_iosacl:main"
-# fwf-ipt = "firewallfabrik.cli.fwf_ipt:main"
 # fwf-junosacl = "firewallfabrik.cli.fwf_junosacl:main"
 # fwf-nft = "firewallfabrik.cli.fwf_nft:main"
 # fwf-nxosacl = "firewallfabrik.cli.fwf_nxosacl:main"

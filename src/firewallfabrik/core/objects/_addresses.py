@@ -16,6 +16,7 @@ from __future__ import (
     annotations,  # This is needed since SQLAlchemy does not support forward references yet
 )
 
+import ipaddress
 import uuid
 
 import sqlalchemy
@@ -117,6 +118,61 @@ class Address(Base):
         sqlalchemy.Index('ix_addresses_group_id', 'group_id'),
         sqlalchemy.Index('ix_addresses_name', 'name'),
     )
+
+    # -- Compiler helper methods --
+
+    def get_address(self) -> str:
+        """Return the address string from inet_addr_mask JSON."""
+        if self.inet_addr_mask:
+            return self.inet_addr_mask.get('address', '')
+        return ''
+
+    def get_netmask(self) -> str:
+        """Return the netmask string from inet_addr_mask JSON."""
+        if self.inet_addr_mask:
+            return self.inet_addr_mask.get('netmask', '')
+        return ''
+
+    def get_start_address(self) -> str:
+        """Return start address string (for AddressRange)."""
+        if self.start_address:
+            return self.start_address.get('address', '')
+        return ''
+
+    def get_end_address(self) -> str:
+        """Return end address string (for AddressRange)."""
+        if self.end_address:
+            return self.end_address.get('address', '')
+        return ''
+
+    def is_v4(self) -> bool:
+        """True if this address is an IPv4-family address."""
+        return isinstance(self, (IPv4, Network))
+
+    def is_v6(self) -> bool:
+        """True if this address is an IPv6-family address."""
+        return isinstance(self, (IPv6, NetworkIPv6))
+
+    def is_any(self) -> bool:
+        """True if this represents the 'any' address (0.0.0.0/0 or ::/0)."""
+        addr = self.get_address()
+        mask = self.get_netmask()
+        if not addr:
+            return True
+        try:
+            ip = ipaddress.ip_address(addr)
+            if int(ip) != 0:
+                return False
+            if mask:
+                nm = ipaddress.ip_address(mask)
+                return int(nm) == 0
+            return True
+        except ValueError:
+            return False
+
+    def is_broadcast(self) -> bool:
+        """True if this is a broadcast address (255.255.255.255)."""
+        return self.get_address() == '255.255.255.255'
 
 
 class IPv4(Address):

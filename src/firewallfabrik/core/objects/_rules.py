@@ -80,6 +80,22 @@ class RuleSet(Base):
         'polymorphic_identity': 'RuleSet',
     }
 
+    # -- Compiler helper methods --
+
+    def matching_address_family(self, af: str) -> bool:
+        """Check if this rule set should be compiled for the given address family.
+
+        af should be 'ipv4' or 'ipv6'. Returns True if the rule set supports
+        the given family, or if both are False (meaning compile for both).
+        """
+        if not self.ipv4 and not self.ipv6:
+            return True
+        if af == 'ipv4':
+            return self.ipv4
+        if af == 'ipv6':
+            return self.ipv6
+        return True
+
 
 class Policy(RuleSet):
     """Policy (filter) rule set."""
@@ -228,6 +244,11 @@ rule_elements = sqlalchemy.Table(
         'target_id',
         sqlalchemy.Uuid,
         primary_key=True,
+    ),
+    sqlalchemy.Column(
+        'position',
+        sqlalchemy.Integer,
+        default=0,
     ),
     sqlalchemy.Index('ix_rule_elements_rule_id', 'rule_id'),
     sqlalchemy.Index('ix_rule_elements_slot', 'rule_id', 'slot'),

@@ -197,5 +197,10 @@ group_membership = sqlalchemy.Table(
         sqlalchemy.Uuid,
         primary_key=True,
     ),
+    sqlalchemy.Column(
+        'position',
+        sqlalchemy.Integer,
+        default=0,
+    ),
     sqlalchemy.Index('ix_group_membership_group_id', 'group_id'),
 )

@@ -109,6 +109,42 @@ class Host(Base):
         sqlalchemy.Index('ix_devices_name', 'name'),
     )
 
+    # -- Compiler helper methods --
+
+    def get_option(self, key: str, default: object = None) -> object:
+        """Look up a value in the device options dict.
+
+        Coerces string ``"True"``/``"False"`` to Python bools so that
+        values loaded from XML work correctly with ``bool()`` / ``if``.
+        """
+        if self.options:
+            val = self.options.get(key, default)
+            if isinstance(val, str):
+                if val.lower() == 'true':
+                    return True
+                if val.lower() == 'false':
+                    return False
+            return val
+        return default
+
+    @property
+    def platform(self) -> str:
+        if self.data:
+            return self.data.get('platform', '')
+        return ''
+
+    @property
+    def host_os(self) -> str:
+        if self.data:
+            return self.data.get('host_OS', '')
+        return ''
+
+    @property
+    def version(self) -> str:
+        if self.data:
+            return self.data.get('version', '')
+        return ''
+
 
 class Firewall(Host):
     """Firewall object."""
@@ -177,3 +213,36 @@ class Interface(Base):
         back_populates='interface',
         primaryjoin='Interface.id == foreign(Address.interface_id)',
     )
+
+    # -- Compiler helper methods --
+
+    def get_option(self, key: str, default: object = None) -> object:
+        """Look up a value in the interface options dict."""
+        if self.options:
+            val = self.options.get(key, default)
+            if isinstance(val, str):
+                if val.lower() == 'true':
+                    return True
+                if val.lower() == 'false':
+                    return False
+            return val
+        return default
+
+    def is_loopback(self) -> bool:
+        return self.name == 'lo'
+
+    def is_dynamic(self) -> bool:
+        return bool(self.get_option('type', '') == 'dynamic')
+
+    def is_unnumbered(self) -> bool:
+        return bool(self.get_option('type', '') == 'unnumbered')
+
+    def is_regular(self) -> bool:
+        itype = self.get_option('type', '')
+        return itype == '' or itype == 'regular'
+
+    def is_bridge_port(self) -> bool:
+        return bool(self.get_option('bridge_port', False))
+
+    def is_slave(self) -> bool:
+        return bool(self.get_option('slave', False))

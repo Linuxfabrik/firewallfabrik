@@ -9,5 +9,3 @@
 # version 2 can be found in /usr/share/common-licenses/GPL-2.
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-
-"""Rule processors for the compilation pipeline."""

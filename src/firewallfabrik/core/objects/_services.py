@@ -119,6 +119,49 @@ class Service(Base):
         sqlalchemy.Index('ix_services_name', 'name'),
     )
 
+    # -- Compiler helper methods --
+
+    PROTOCOL_MAP = {
+        'TCPService': ('tcp', 6),
+        'UDPService': ('udp', 17),
+        'ICMPService': ('icmp', 1),
+        'ICMP6Service': ('ipv6-icmp', 58),
+    }
+
+    def get_protocol_name(self) -> str:
+        """Return the protocol name string for this service type."""
+        if isinstance(self, IPService) and self.protocol:
+            return self.protocol
+        entry = self.PROTOCOL_MAP.get(self.type)
+        if entry:
+            return entry[0]
+        return ''
+
+    def get_protocol_number(self) -> int:
+        """Return the IP protocol number for this service type."""
+        if isinstance(self, IPService) and self.protocol:
+            try:
+                return int(self.protocol)
+            except ValueError:
+                pass
+        entry = self.PROTOCOL_MAP.get(self.type)
+        if entry:
+            return entry[1]
+        return -1
+
+    def is_any(self) -> bool:
+        """True if this service matches any protocol/port."""
+        if isinstance(self, IPService):
+            return not self.protocol or self.protocol == '0'
+        if isinstance(self, (TCPService, UDPService)):
+            return (
+                (self.src_range_start or 0) == 0
+                and (self.src_range_end or 0) == 0
+                and (self.dst_range_start or 0) == 0
+                and (self.dst_range_end or 0) == 0
+            )
+        return False
+
 
 class TCPUDPService(Service):
     """Base for TCP and UDP services, carrying port ranges."""

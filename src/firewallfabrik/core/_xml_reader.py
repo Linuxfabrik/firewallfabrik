@@ -287,12 +287,13 @@ class XmlReader:
         self._id_map[xml_id] = new_uuid
         return new_uuid
 
-    def _add_membership(self, group_id, member_id):
+    def _add_membership(self, group_id, member_id, position=0):
         """Record a group-membership association-table row."""
         self._memberships.append(
             {
                 'group_id': group_id,
                 'member_id': member_id,
+                'position': position,
             }
         )
 
@@ -317,24 +318,32 @@ class XmlReader:
         )
 
     def _resolve_deferred(self):
+        group_positions: dict = {}
         for group_id, ref_id in self._deferred_memberships:
             target_id = self._id_map.get(ref_id)
             if target_id is None:
                 logger.warning('Unresolved group member reference: %s', ref_id)
                 continue
-            self._add_membership(group_id, target_id)
+            pos = group_positions.get(group_id, 0)
+            self._add_membership(group_id, target_id, position=pos)
+            group_positions[group_id] = pos + 1
+        re_positions: dict = {}
         for rule_id, slot, ref_id in self._deferred_rule_elements:
             target_id = self._id_map.get(ref_id)
             if target_id is None:
                 logger.warning('Unresolved rule element reference: %s', ref_id)
                 continue
+            key = (rule_id, slot)
+            pos = re_positions.get(key, 0)
             self._rule_element_rows.append(
                 {
                     'rule_id': rule_id,
                     'slot': slot,
                     'target_id': target_id,
+                    'position': pos,
                 }
             )
+            re_positions[key] = pos + 1
 
     def _parse_database(self, elem, exclude_libraries):
         db = objects.FWObjectDatabase()
