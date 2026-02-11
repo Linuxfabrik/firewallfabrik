@@ -50,7 +50,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
-from firewallfabrik.gui.object_tree import ICON_MAP, ObjectTree
+from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTableModel
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
@@ -497,9 +497,10 @@ class FWWindow(QMainWindow):
         self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
         self.editorPanelTabWidget.setCurrentIndex(2)
 
-        icon_path = ICON_MAP.get(obj_type)
-        if icon_path:
-            self.objectTypeIcon.setPixmap(QIcon(icon_path).pixmap(24, 24))
+        icon_path = f':/Icons/{obj_type}/icon-big'
+        pixmap = QIcon(icon_path).pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
 
         if not self.editorDockWidget.isVisible():
             self.editorDockWidget.setVisible(True)

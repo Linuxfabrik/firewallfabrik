@@ -43,12 +43,29 @@
     <file alias="Icons/TCPService/icon-tree">Icons/service-tcp_16.png</file>
     <file alias="Icons/UDPService/icon-tree">Icons/service-udp_16.png</file>
 
-    <!-- Editor/dialog big icons (:/Icons/Type/icon-big, :/Icons/Type/icon) -->
+    <!-- Editor/dialog big icons (:/Icons/Type/icon-big) -->
+    <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>
     <file alias="Icons/AddressTable/icon-big">Icons/addresstable_64.png</file>
-    <file alias="Icons/Cluster/icon">Icons/cluster_25.png</file>
+    <file alias="Icons/Cluster/icon-big">Icons/cluster_64.png</file>
     <file alias="Icons/DNSName/icon-big">Icons/domainname_64.png</file>
+    <file alias="Icons/Firewall/icon-big">Icons/firewall_64.png</file>
+    <file alias="Icons/Host/icon-big">Icons/host_64.png</file>
+    <file alias="Icons/ICMP6Service/icon-big">Icons/service-icmp6_64.png</file>
+    <file alias="Icons/ICMPService/icon-big">Icons/service-icmp_64.png</file>
+    <file alias="Icons/IPService/icon-big">Icons/service-ip_64.png</file>
+    <file alias="Icons/IPv4/icon-big">Icons/address_64.png</file>
+    <file alias="Icons/IPv6/icon-big">Icons/address6_64.png</file>
     <file alias="Icons/Interface/icon-big">Icons/interface_64.png</file>
+    <file alias="Icons/Interval/icon-big">Icons/clock_64.png</file>
+    <file alias="Icons/IntervalGroup/icon-big">Icons/clock-group_64.png</file>
+    <file alias="Icons/Network/icon-big">Icons/network_64.png</file>
+    <file alias="Icons/NetworkIPv6/icon-big">Icons/network6_64.png</file>
+    <file alias="Icons/ObjectGroup/icon-big">Icons/object-group_64.png</file>
+    <file alias="Icons/PhysAddress/icon-big">Icons/physaddress_64.png</file>
     <file alias="Icons/Policy/icon-big">Icons/ruleset_64.png</file>
+    <file alias="Icons/ServiceGroup/icon-big">Icons/service-group_64.png</file>
+    <file alias="Icons/TCPService/icon-big">Icons/service-tcp_64.png</file>
+    <file alias="Icons/UDPService/icon-big">Icons/service-udp_64.png</file>
 
     <!-- Window icon -->
     <file>Images/fwbuilder3.png</file>
