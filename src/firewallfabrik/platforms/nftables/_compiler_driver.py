@@ -291,6 +291,11 @@ class CompilerDriver_nft(CompilerDriver):
                     fw_has_ipv6,
                 )
 
+                # Single-rule compile mode
+                if self.single_rule_compile_on:
+                    errors_str = '\n'.join(self.all_errors)
+                    return errors_str + script + routing_output
+
                 # --- Write output file ---
                 cluster_name = ''
                 self.determine_output_file_names(fw, cluster_name)
