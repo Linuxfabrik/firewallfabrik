@@ -15,8 +15,11 @@
     <!-- Object-tree icons (:/Icons/Type/icon-tree) -->
     <file alias="Icons/Accept/icon-tree">Icons/accept_16.png</file>
     <file alias="Icons/AddressRange/icon-tree">Icons/rangeaddress_16.png</file>
+    <file alias="Icons/AddressTable/icon-tree">Icons/addresstable_16.png</file>
     <file alias="Icons/Both/icon-tree">Icons/both_16.png</file>
     <file alias="Icons/Cluster/icon-tree">Icons/cluster_16.png</file>
+    <file alias="Icons/CustomService/icon-tree">Icons/service-custom_16.png</file>
+    <file alias="Icons/DNSName/icon-tree">Icons/domainname_16.png</file>
     <file alias="Icons/Deny/icon-tree">Icons/deny_16.png</file>
     <file alias="Icons/Firewall/icon-tree">Icons/firewall_16.png</file>
     <file alias="Icons/Host/icon-tree">Icons/host_16.png</file>
@@ -36,18 +39,22 @@
     <file alias="Icons/NetworkIPv6/icon-tree">Icons/network6_16.png</file>
     <file alias="Icons/ObjectGroup/icon-tree">Icons/object-group_16.png</file>
     <file alias="Icons/Outbound/icon-tree">Icons/outbound_16.png</file>
+    <file alias="Icons/PhysAddress/icon-tree">Icons/physaddress_16.png</file>
     <file alias="Icons/Policy/icon-tree">Icons/ruleset_16.png</file>
     <file alias="Icons/Reject/icon-tree">Icons/reject_16.png</file>
     <file alias="Icons/Routing/icon-tree">Icons/routing_16.png</file>
     <file alias="Icons/ServiceGroup/icon-tree">Icons/service-group_16.png</file>
     <file alias="Icons/SystemGroup/icon-tree">Icons/folder_16.png</file>
     <file alias="Icons/TCPService/icon-tree">Icons/service-tcp_16.png</file>
+    <file alias="Icons/TagService/icon-tree">Icons/service-tag_16.png</file>
     <file alias="Icons/UDPService/icon-tree">Icons/service-udp_16.png</file>
+    <file alias="Icons/UserService/icon-tree">Icons/user_16.png</file>
 
     <!-- Editor/dialog big icons (:/Icons/Type/icon-big) -->
     <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>
     <file alias="Icons/AddressTable/icon-big">Icons/addresstable_64.png</file>
     <file alias="Icons/Cluster/icon-big">Icons/cluster_64.png</file>
+    <file alias="Icons/CustomService/icon-big">Icons/service-custom_64.png</file>
     <file alias="Icons/DNSName/icon-big">Icons/domainname_64.png</file>
     <file alias="Icons/Firewall/icon-big">Icons/firewall_64.png</file>
     <file alias="Icons/Host/icon-big">Icons/host_64.png</file>
@@ -66,7 +73,9 @@
     <file alias="Icons/Policy/icon-big">Icons/ruleset_64.png</file>
     <file alias="Icons/ServiceGroup/icon-big">Icons/service-group_64.png</file>
     <file alias="Icons/TCPService/icon-big">Icons/service-tcp_64.png</file>
+    <file alias="Icons/TagService/icon-big">Icons/service-tag_64.png</file>
     <file alias="Icons/UDPService/icon-big">Icons/service-udp_64.png</file>
+    <file alias="Icons/UserService/icon-big">Icons/user_64.png</file>
 
     <!-- Window icon -->
     <file>Images/fwbuilder3.png</file>

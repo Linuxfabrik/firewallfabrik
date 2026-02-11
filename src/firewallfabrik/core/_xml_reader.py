@@ -187,8 +187,8 @@ def _service_type_attrs(svc, elem, known):
     """Parse type-specific service attributes into *svc*.
 
     Handles port ranges (TCP/UDP), TCP flags, IPService protocol_num,
-    CustomService protocol/address_family, and UserService userid.
-    Adds consumed attribute names to *known*.
+    ICMP/ICMP6 type/code, CustomService protocol/address_family, and
+    UserService userid.  Adds consumed attribute names to *known*.
     """
     # TCPUDPService port ranges
     if elem.get('src_range_start') is not None:
@@ -226,6 +226,15 @@ def _service_type_attrs(svc, elem, known):
         known.add('protocol')
     if elem.get('address_family') is not None:
         known.add('address_family')
+
+    # ICMPService / ICMP6Service
+    tag = _tag(elem)
+    if tag in ('ICMPService', 'ICMP6Service'):
+        svc.codes = {
+            'type': _int(elem.get('type', '-1')),
+            'code': _int(elem.get('code', '-1')),
+        }
+        known |= {'type', 'code'}
 
     # UserService
     if elem.get('userid') is not None:
