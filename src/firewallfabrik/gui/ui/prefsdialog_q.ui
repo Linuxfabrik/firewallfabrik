@@ -121,6 +121,13 @@
        </item>
        <item row="3" column="0">
         <widget class="QCheckBox" name="attributesInTree">
+         <property name="toolTip">
+          <string>Display a second column in the object tree showing brief
+attribute summaries such as IP addresses, port ranges and
+protocols. When enabled, the tree filter also searches
+these attributes; when disabled, only object names and
+tags are matched.</string>
+         </property>
          <property name="text">
           <string>Show object attributes in the tree</string>
          </property>
