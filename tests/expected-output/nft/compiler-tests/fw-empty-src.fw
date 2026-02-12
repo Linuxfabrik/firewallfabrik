@@ -1,0 +1,31 @@
+#!/usr/sbin/nft -f
+#
+#  This is automatically generated file. DO NOT MODIFY !
+#
+#  Firewall Builder  fwf VERSION
+#
+#  Generated TIMESTAMP
+#
+
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth1)
+        #
+        iifname "eth1" ip saddr { 192.168.1.1, 198.51.100.1 } tcp dport 22 ct state new accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+    }
+}

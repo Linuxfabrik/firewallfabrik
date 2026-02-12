@@ -1,0 +1,59 @@
+#!/usr/sbin/nft -f
+#
+#  This is automatically generated file. DO NOT MODIFY !
+#
+#  Firewall Builder  fwf VERSION
+#
+#  Generated TIMESTAMP
+#
+
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (global)
+        #
+        tcp dport 22 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (global)
+        #
+        ip daddr { 192.168.1.1, 198.51.100.1 } tcp dport 22 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+    }
+}
