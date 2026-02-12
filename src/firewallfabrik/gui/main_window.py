@@ -16,7 +16,16 @@ import uuid
 from pathlib import Path
 
 import sqlalchemy
-from PySide6.QtCore import QByteArray, QResource, QSettings, Qt, QTimer, QUrl, Slot
+from PySide6.QtCore import (
+    QByteArray,
+    QModelIndex,
+    QResource,
+    QSettings,
+    Qt,
+    QTimer,
+    QUrl,
+    Slot,
+)
 from PySide6.QtGui import (
     QAction,
     QDesktopServices,
@@ -41,11 +50,13 @@ from firewallfabrik.core.objects import (
     Interface,
     Interval,
     Library,
+    RuleSet,
     Service,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
+from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTreeModel
 from firewallfabrik.gui.policy_view import PolicyView
@@ -184,6 +195,17 @@ class FWWindow(QMainWindow):
 
         self._current_editor = None
         self._editor_session = None
+
+        # Find panel — embedded in the "Find" tab of the editor dock.
+        self._find_panel = FindPanel()
+        self._find_panel.set_tree(self._object_tree._tree)
+        self._find_panel.set_db_manager(self._db_manager)
+        self._find_panel.set_reload_callback(self._reload_rule_set_views)
+        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self.find_panel.layout().addWidget(self._find_panel)
+        self._find_panel.object_found.connect(self._open_object_editor)
+        self._find_panel.navigate_to_rule.connect(self._navigate_to_rule_match)
+        self.findAction.triggered.connect(self._show_find_panel)
 
         # Undo / redo actions in the Edit menu.
         self._undo_action = QAction('&Undo', self)
@@ -517,6 +539,11 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=str(original_path))
 
+        self._find_panel.set_tree(self._object_tree._tree)
+        self._find_panel.set_db_manager(self._db_manager)
+        self._find_panel.set_reload_callback(self._reload_rule_set_views)
+        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self._find_panel.reset()
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):
@@ -698,6 +725,94 @@ class FWWindow(QMainWindow):
         self.undoDockWidget.setVisible(visible)
         QSettings().setValue('View/UndoStack', visible)
 
+    @Slot()
+    def _show_find_panel(self):
+        """Show the editor dock and switch to the Find tab."""
+        if not self.editorDockWidget.isVisible():
+            self.editorDockWidget.setVisible(True)
+            self.actionEditor_panel.setChecked(True)
+        self.editorPanelTabWidget.setCurrentIndex(1)
+        self._find_panel.focus_input()
+
+    def _reload_rule_set_views(self):
+        """Reload all open PolicyTreeModel views (after replace)."""
+        for sub in self.m_space.subWindowList():
+            widget = sub.widget()
+            if isinstance(widget, PolicyView) and isinstance(
+                widget.model(), PolicyTreeModel
+            ):
+                widget.model().reload()
+
+    def _get_open_rule_set_ids(self) -> set[uuid.UUID]:
+        """Return the set of rule set IDs currently open in MDI sub-windows."""
+        ids = set()
+        for sub in self.m_space.subWindowList():
+            widget = sub.widget()
+            if isinstance(widget, PolicyView) and isinstance(
+                widget.model(), PolicyTreeModel
+            ):
+                ids.add(widget.model().rule_set_id)
+        return ids
+
+    @Slot(str, str, str)
+    def _navigate_to_rule_match(self, rule_set_id, rule_id, slot):
+        """Navigate to a rule element match in a policy view."""
+        rs_uuid = uuid.UUID(rule_set_id)
+        r_uuid = uuid.UUID(rule_id)
+
+        # Look for an existing sub-window with this rule set.
+        for sub in self.m_space.subWindowList():
+            widget = sub.widget()
+            if (
+                isinstance(widget, PolicyView)
+                and isinstance(widget.model(), PolicyTreeModel)
+                and widget.model().rule_set_id == rs_uuid
+            ):
+                self.m_space.setActiveSubWindow(sub)
+                self._scroll_to_rule(widget, widget.model(), r_uuid, slot)
+                return
+
+        # Open a new sub-window for this rule set.
+        with self._db_manager.session() as session:
+            rs = session.get(RuleSet, rs_uuid)
+            if rs is None:
+                return
+            fw_name = rs.device.name if rs.device else ''
+            rs_name = rs.name
+
+        model = PolicyTreeModel(self._db_manager, rs_uuid)
+        view = PolicyView()
+        view.setModel(model)
+
+        sub = QMdiSubWindow()
+        sub.setWidget(view)
+        sub.setWindowTitle(f'{fw_name} / {rs_name}')
+        sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.m_space.addSubWindow(sub)
+        sub.showMaximized()
+
+        self._scroll_to_rule(view, model, r_uuid, slot)
+
+    @staticmethod
+    def _scroll_to_rule(view, model, rule_id, slot):
+        """Scroll *view* to the rule node matching *rule_id*."""
+
+        def _walk(parent_index, row_count):
+            for row in range(row_count):
+                idx = model.index(row, 0, parent_index)
+                rd = model.get_row_data(idx)
+                if rd is not None and rd.rule_id == rule_id:
+                    view.setCurrentIndex(idx)
+                    view.scrollTo(idx)
+                    return True
+                # Check children (group nodes).
+                child_count = model.rowCount(idx)
+                if child_count > 0 and _walk(idx, child_count):
+                    return True
+            return False
+
+        _walk(QModelIndex(), model.rowCount(QModelIndex()))
+
     @Slot(bool)
     def _on_editor_visibility_changed(self, visible):
         """Sync the View menu checkbox when the editor dock is closed via X."""
@@ -770,6 +885,7 @@ class FWWindow(QMainWindow):
         )
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
+        self._find_panel.reset()
         if obj_id is not None:
             self._open_object_editor(obj_id, obj_type)
 

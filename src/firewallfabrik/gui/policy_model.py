@@ -530,6 +530,11 @@ class PolicyTreeModel(QAbstractItemModel):
     # Public accessors
     # ------------------------------------------------------------------
 
+    @property
+    def rule_set_id(self):
+        """Return the UUID of the rule set this model represents."""
+        return self._rule_set_id
+
     def get_row_data(self, index):
         """Return the :class:`_RowData` for *index*, or None."""
         if not index.isValid():
