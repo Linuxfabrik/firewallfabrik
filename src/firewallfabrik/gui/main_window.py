@@ -314,11 +314,11 @@ class FWWindow(QMainWindow):
         self.addAction(self._redo_action)
 
         # Clipboard and delete actions — route based on focus.
-        self.editCopyAction.triggered.connect(self.editCopy)
-        self.editCutAction.triggered.connect(self.editCut)
-        self.editPasteAction.triggered.connect(self.editPaste)
+        # NOTE: editCopyAction, editCutAction, editPasteAction, and
+        # editDeleteAction are already connected to their slots via the
+        # .ui file's <connections> section.  Do NOT add .connect() calls
+        # here — that would fire each slot twice per keypress.
         self.editDeleteAction.setShortcut(QKeySequence.StandardKey.Delete)
-        self.editDeleteAction.triggered.connect(self.editDelete)
 
         # History list and callback.
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
@@ -1331,7 +1331,8 @@ class FWWindow(QMainWindow):
         if row < 0:
             return
         self._close_editor()
-        if self._db_manager.jump_to(row):
+        # List rows are offset by 1 because State 0 is hidden.
+        if self._db_manager.jump_to(row + 1):
             self._refresh_after_history_change()
 
     def _on_history_changed(self):
@@ -1346,9 +1347,11 @@ class FWWindow(QMainWindow):
         self.undoView.blockSignals(True)
         self.undoView.clear()
         for snap in self._db_manager.get_history():
+            if snap.index == 0:
+                continue
             self.undoView.addItem(snap.description or f'State {snap.index}')
             if snap.is_current:
-                self.undoView.setCurrentRow(snap.index)
+                self.undoView.setCurrentRow(snap.index - 1)
         self.undoView.blockSignals(False)
 
     def _refresh_after_history_change(self):

@@ -170,9 +170,20 @@ class DatabaseManager:
     def session(self, description=''):
         """Create a new database session. This session automatically commits the transaction exits and saves changes to the undo stack (if necessary) when the contextmanager exits."""
         session = self._session_factory()
+        _core_dml = False
+
+        def _track_dml(orm_execute_state):
+            nonlocal _core_dml
+            if not orm_execute_state.is_select:
+                _core_dml = True
+
+        sqlalchemy.event.listen(session, 'do_orm_execute', _track_dml)
         try:
             yield session
-            is_dirty = len(session.new) + len(session.dirty) + len(session.deleted) > 0
+            is_dirty = (
+                len(session.new) + len(session.dirty) + len(session.deleted) > 0
+                or _core_dml
+            )
             session.commit()
             if is_dirty:
                 logger.debug('Database state changed, saving to undo stack')
@@ -181,6 +192,7 @@ class DatabaseManager:
             session.rollback()
             raise
         finally:
+            sqlalchemy.event.remove(session, 'do_orm_execute', _track_dml)
             session.close()
 
     def create_session(self):

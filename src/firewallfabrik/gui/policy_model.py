@@ -1133,9 +1133,13 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
-            self._desc(f'Edit rule {row_data.position} {slot}'),
-        ) as session:
+        elem_name = ''
+        for eid, ename, _etype in getattr(row_data, slot, []):
+            if eid == target_id:
+                elem_name = ename
+                break
+        desc = f'Delete rule {row_data.position} {slot} {elem_name}'.rstrip()
+        with self._db_manager.session(self._desc(desc)) as session:
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
                     rule_elements.c.rule_id == row_data.rule_id,
