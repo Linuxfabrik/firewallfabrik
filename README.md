@@ -91,6 +91,14 @@ Native Packages:
 
 ## Documentation
 
+Source Code Documentation:
+
+```shell
+pdoc --output-dir docs/source-code src/firewallfabrik
+```
+
+This generates browsable HTML documentation for all Python modules into `docs/source-code/`. Open `docs/source-code/index.html` in a browser to view it.
+
 User Guide:
 
 * [Introduction](https://github.com/Linuxfabrik/firewallfabrik/blob/main/docs/user-guide/01%20-%20Introduction.rst)
