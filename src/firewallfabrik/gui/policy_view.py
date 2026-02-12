@@ -29,15 +29,19 @@ from PySide6.QtGui import QColor, QDrag, QIcon, QKeySequence, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QHBoxLayout,
     QHeaderView,
     QInputDialog,
     QMenu,
     QStyle,
     QStyledItemDelegate,
+    QToolButton,
     QTreeView,
+    QVBoxLayout,
+    QWidget,
 )
 
-from firewallfabrik.core.objects import Direction, PolicyAction
+from firewallfabrik.core.objects import Direction, NATAction, PolicyAction
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
     get_label_color,
@@ -58,51 +62,52 @@ from firewallfabrik.gui.policy_model import (
     PolicyTreeModel,
 )
 
+_ADDRESS_TYPES = frozenset(
+    {
+        'AddressRange',
+        'Cluster',
+        'Firewall',
+        'Host',
+        'IPv4',
+        'IPv6',
+        'Interface',
+        'Network',
+        'NetworkIPv6',
+        'ObjectGroup',
+        'PhysAddress',
+    }
+)
+
+_SERVICE_TYPES = frozenset(
+    {
+        'CustomService',
+        'ICMP6Service',
+        'ICMPService',
+        'IPService',
+        'ServiceGroup',
+        'TCPService',
+        'TagService',
+        'UDPService',
+        'UserService',
+    }
+)
+
 _VALID_TYPES_BY_SLOT = {
-    'dst': frozenset(
-        {
-            'AddressRange',
-            'Cluster',
-            'Firewall',
-            'Host',
-            'IPv4',
-            'IPv6',
-            'Interface',
-            'Network',
-            'NetworkIPv6',
-            'ObjectGroup',
-            'PhysAddress',
-        }
-    ),
+    'dst': _ADDRESS_TYPES,
     'itf': frozenset({'Interface'}),
-    'src': frozenset(
-        {
-            'AddressRange',
-            'Cluster',
-            'Firewall',
-            'Host',
-            'IPv4',
-            'IPv6',
-            'Interface',
-            'Network',
-            'NetworkIPv6',
-            'ObjectGroup',
-            'PhysAddress',
-        }
-    ),
-    'srv': frozenset(
-        {
-            'CustomService',
-            'ICMP6Service',
-            'ICMPService',
-            'IPService',
-            'ServiceGroup',
-            'TCPService',
-            'TagService',
-            'UDPService',
-            'UserService',
-        }
-    ),
+    'itf_inb': frozenset({'Interface'}),
+    'itf_outb': frozenset({'Interface'}),
+    'odst': _ADDRESS_TYPES,
+    'osrc': _ADDRESS_TYPES,
+    'osrv': _SERVICE_TYPES,
+    'rdst': _ADDRESS_TYPES,
+    'rgtw': _ADDRESS_TYPES,
+    'ritf': frozenset({'Interface'}),
+    'src': _ADDRESS_TYPES,
+    'srv': _SERVICE_TYPES,
+    'tdst': _ADDRESS_TYPES,
+    'tsrc': _ADDRESS_TYPES,
+    'tsrv': _SERVICE_TYPES,
     'when': frozenset({'Interval', 'IntervalGroup'}),
 }
 
@@ -303,6 +308,27 @@ class _CellBorderDelegate(QStyledItemDelegate):
         painter.restore()
 
 
+def _model_col_to_slot(model, col):
+    """Return the slot name for *col* using model config, falling back to Policy constants."""
+    if model is not None and hasattr(model, 'col_to_slot'):
+        return model.col_to_slot.get(col)
+    return _COL_TO_SLOT.get(col)
+
+
+def _model_element_cols(model):
+    """Return the element column frozenset from the model or Policy default."""
+    if model is not None and hasattr(model, 'element_cols'):
+        return model.element_cols
+    return _ELEMENT_COLS
+
+
+def _model_selectable_cols(model):
+    """Return the selectable column frozenset from the model or Policy default."""
+    if model is not None and hasattr(model, 'selectable_cols'):
+        return model.selectable_cols
+    return _SELECTABLE_COLS
+
+
 class PolicyView(QTreeView):
     """Tree view with context menus, keyboard shortcuts, and drop support."""
 
@@ -327,7 +353,7 @@ class PolicyView(QTreeView):
 
         # Context menu (handled via contextMenuEvent override).
 
-        # Double-click on group header → rename.
+        # Double-click on group header -> rename.
         self.doubleClicked.connect(self._on_double_clicked)
 
         # Drop support.
@@ -416,6 +442,9 @@ class PolicyView(QTreeView):
             return
 
         sel_model = self.selectionModel()
+        slot_to_col = (
+            model.slot_to_col if hasattr(model, 'slot_to_col') else _SLOT_TO_COL
+        )
 
         # Restore current index (needed for keyboard shortcuts like X to compile).
         saved_current = getattr(self, '_saved_current_rule_id', None)
@@ -447,7 +476,7 @@ class PolicyView(QTreeView):
             rule_id, slot, _target_id = saved_elem
             idx = model.index_for_rule(rule_id)
             if idx.isValid():
-                col = _SLOT_TO_COL.get(slot)
+                col = slot_to_col.get(slot)
                 if col is not None:
                     cell_idx = model.index(idx.row(), col, idx.parent())
                     self._selected_element = saved_elem
@@ -480,26 +509,23 @@ class PolicyView(QTreeView):
     def _select_element_at(self, index, vp_pos, model):
         """Select the element at *vp_pos* for any selectable column."""
         col = index.column()
+        col_to_slot = (
+            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+        )
+        element_cols = _model_element_cols(model)
+        slot = col_to_slot.get(col)
+        if not slot:
+            return
         elem = self._element_at_pos(index, vp_pos)
         if elem is not None:
             tid, _n, _t = elem
             rd = model.get_row_data(index)
             if rd is not None:
-                self._select_element(
-                    index,
-                    tid,
-                    _COL_TO_SLOT[col],
-                    rd.rule_id,
-                )
-        elif col not in _ELEMENT_COLS:
+                self._select_element(index, tid, slot, rd.rule_id)
+        elif col not in element_cols:
             rd = model.get_row_data(index)
             if rd is not None:
-                self._select_element(
-                    index,
-                    f'__{_COL_TO_SLOT[col]}__',
-                    _COL_TO_SLOT[col],
-                    rd.rule_id,
-                )
+                self._select_element(index, f'__{slot}__', slot, rd.rule_id)
 
     def _element_at_pos(self, index, viewport_pos):
         """Return the ``(target_id, name, type)`` element at *viewport_pos*, or ``None``."""
@@ -531,19 +557,26 @@ class PolicyView(QTreeView):
             pos = event.position().toPoint()
             index = self.indexAt(pos)
             model = self.model()
+            selectable = _model_selectable_cols(model)
+            element_cols = _model_element_cols(model)
+            col_to_slot = (
+                model.col_to_slot
+                if model is not None and hasattr(model, 'col_to_slot')
+                else _COL_TO_SLOT
+            )
             if (
                 index.isValid()
                 and model is not None
                 and not model.is_group(index)
-                and index.column() in _SELECTABLE_COLS
+                and index.column() in selectable
             ):
                 col = index.column()
                 elem = self._element_at_pos(index, pos)
                 if elem is not None:
                     target_id, _name, _obj_type = elem
-                    slot = _COL_TO_SLOT[col]
+                    slot = col_to_slot.get(col)
                     row_data = model.get_row_data(index)
-                    if row_data is not None:
+                    if row_data is not None and slot:
                         self._select_element(
                             index,
                             target_id,
@@ -551,19 +584,20 @@ class PolicyView(QTreeView):
                             row_data.rule_id,
                         )
                         # Only start drag for true element columns.
-                        if col in _ELEMENT_COLS:
+                        if col in element_cols:
                             self._drag_start_pos = pos
                     else:
                         self._clear_element_selection()
-                elif col not in _ELEMENT_COLS:
+                elif col not in element_cols:
                     # Non-element columns (Action, Direction, Options)
                     # are always selectable even when the cell is empty.
+                    slot = col_to_slot.get(col)
                     row_data = model.get_row_data(index)
-                    if row_data is not None:
+                    if row_data is not None and slot:
                         self._select_element(
                             index,
-                            f'__{_COL_TO_SLOT[col]}__',
-                            _COL_TO_SLOT[col],
+                            f'__{slot}__',
+                            slot,
                             row_data.rule_id,
                         )
                     else:
@@ -655,8 +689,25 @@ class PolicyView(QTreeView):
         if row_data is None:
             return
 
-        if col in _ELEMENT_COLS:
-            slot = _COL_TO_SLOT[col]
+        element_cols = _model_element_cols(model)
+        col_to_slot = (
+            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+        )
+        action_col = model.action_col if hasattr(model, 'action_col') else _COL_ACTION
+        comment_col = (
+            model.comment_col if hasattr(model, 'comment_col') else _COL_COMMENT
+        )
+        direction_col = (
+            model.direction_col if hasattr(model, 'direction_col') else _COL_DIRECTION
+        )
+        options_col = (
+            model.options_col if hasattr(model, 'options_col') else _COL_OPTIONS
+        )
+
+        if col in element_cols:
+            slot = col_to_slot.get(col)
+            if not slot:
+                return
             elements = getattr(row_data, slot, [])
             if elements:
                 target = None
@@ -674,13 +725,13 @@ class PolicyView(QTreeView):
                 else:
                     self._open_element_editor(str(target[0]), target[2])
                     self._reveal_in_tree(str(target[0]))
-        elif col == _COL_ACTION:
+        elif col == action_col:
             self._open_action_editor(model, index)
-        elif col == _COL_COMMENT:
+        elif col == comment_col:
             self._open_comment_editor(model, index)
-        elif col == _COL_DIRECTION:
+        elif col == direction_col:
             self._open_direction_editor(model, index)
-        elif col == _COL_OPTIONS:
+        elif col == options_col:
             self._open_rule_options_dialog(model, index)
 
     # ------------------------------------------------------------------
@@ -724,47 +775,58 @@ class PolicyView(QTreeView):
                 return
 
         col = index.column()
+        element_cols = _model_element_cols(model)
+        col_to_slot = (
+            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+        )
+        selectable = _model_selectable_cols(model)
+        action_col = model.action_col if hasattr(model, 'action_col') else _COL_ACTION
+        comment_col = (
+            model.comment_col if hasattr(model, 'comment_col') else _COL_COMMENT
+        )
+        direction_col = (
+            model.direction_col if hasattr(model, 'direction_col') else _COL_DIRECTION
+        )
+        options_col = (
+            model.options_col if hasattr(model, 'options_col') else _COL_OPTIONS
+        )
 
         # Element and comment columns get their own self-contained menus
         # without group/color actions.
-        if col in _ELEMENT_COLS:
+        if col in element_cols:
             # Hit-test for per-element selection on right-click.
             elem = self._element_at_pos(index, vp_pos)
             if elem is not None:
                 tid, _n, _t = elem
                 rd = model.get_row_data(index)
-                if rd is not None:
-                    self._select_element(
-                        index,
-                        tid,
-                        _COL_TO_SLOT[col],
-                        rd.rule_id,
-                    )
+                slot = col_to_slot.get(col)
+                if rd is not None and slot:
+                    self._select_element(index, tid, slot, rd.rule_id)
             self._build_element_menu(menu, model, index, col)
             menu.exec(global_pos)
             return
 
-        if col == _COL_COMMENT:
+        if col == comment_col:
             self._build_comment_menu(menu, model, index)
             menu.exec(global_pos)
             return
 
         # Columns with self-contained menus (no group/color).
         # Select the element on right-click for visual feedback.
-        if col in _SELECTABLE_COLS and col not in _ELEMENT_COLS:
+        if col in selectable and col not in element_cols:
             self._select_element_at(index, vp_pos, model)
 
-        if col == _COL_ACTION:
+        if col == action_col:
             self._build_action_menu(menu, model, index)
             menu.exec(global_pos)
             return
 
-        if col == _COL_DIRECTION:
+        if col == direction_col:
             self._build_direction_menu(menu, model, index)
             menu.exec(global_pos)
             return
 
-        if col == _COL_OPTIONS:
+        if col == options_col:
             self._build_options_menu(menu, model, index)
             menu.exec(global_pos)
             return
@@ -997,33 +1059,57 @@ class PolicyView(QTreeView):
         (PolicyAction.Continue, 'Continue', 'Continue'),
     )
 
+    _NAT_ACTION_MENU_ENTRIES = (
+        (NATAction.Translate, 'Translate', 'Translate'),
+        (NATAction.Branch, 'Branch', 'Branch'),
+    )
+
     def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu matching fwbuilder."""
-        for action, label, icon_name in self._ACTION_MENU_ENTRIES:
-            icon = QIcon(f':/Icons/{icon_name}/icon-tree')
-            menu.addAction(
-                icon,
-                label,
-                lambda a=action: self._change_action_and_edit(model, index, a),
+        rs_type = model.rule_set_type if hasattr(model, 'rule_set_type') else 'Policy'
+
+        if rs_type == 'NAT':
+            for action, label, icon_name in self._NAT_ACTION_MENU_ENTRIES:
+                icon = QIcon(f':/Icons/{icon_name}/icon-tree')
+                menu.addAction(
+                    icon,
+                    label,
+                    lambda a=action: self._change_action_and_edit(model, index, a),
+                )
+        elif rs_type == 'Routing':
+            # Routing has no action menu entries.
+            pass
+        else:
+            for action, label, icon_name in self._ACTION_MENU_ENTRIES:
+                icon = QIcon(f':/Icons/{icon_name}/icon-tree')
+                menu.addAction(
+                    icon,
+                    label,
+                    lambda a=action: self._change_action_and_edit(model, index, a),
+                )
+
+        if rs_type == 'Policy':
+            menu.addSeparator()
+            row_data = model.get_row_data(index)
+            current_action = None
+            if row_data is not None:
+                with contextlib.suppress(TypeError, ValueError):
+                    current_action = PolicyAction(row_data.action_int)
+            params_act = menu.addAction(
+                'Parameters',
+                lambda: self._open_action_editor(model, index),
             )
-        menu.addSeparator()
+            params_act.setEnabled(current_action in self._ACTIONS_WITH_PARAMS)
 
-        row_data = model.get_row_data(index)
-        current_action = None
-        if row_data is not None:
-            with contextlib.suppress(TypeError, ValueError):
-                current_action = PolicyAction(row_data.action_int)
-        params_act = menu.addAction(
-            'Parameters',
-            lambda: self._open_action_editor(model, index),
-        )
-        params_act.setEnabled(current_action in self._ACTIONS_WITH_PARAMS)
         menu.addSeparator()
-
         self._add_compile_action(menu, model, index)
 
     def _build_direction_menu(self, menu, model, index):
         """Build direction-selection context menu."""
+        rs_type = model.rule_set_type if hasattr(model, 'rule_set_type') else 'Policy'
+        if rs_type != 'Policy':
+            return  # Direction is Policy-only.
+
         icons = {
             Direction.Both: ':/Icons/Both/icon-tree',
             Direction.Inbound: ':/Icons/Inbound/icon-tree',
@@ -1039,7 +1125,12 @@ class PolicyView(QTreeView):
 
     def _build_element_menu(self, menu, model, index, col):
         """Build element column context menu matching fwbuilder's layout."""
-        slot = _COL_TO_SLOT[col]
+        col_to_slot = (
+            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+        )
+        slot = col_to_slot.get(col)
+        if not slot:
+            return
         row_data = model.get_row_data(index)
         if row_data is None:
             return
@@ -1148,7 +1239,9 @@ class PolicyView(QTreeView):
         """Show the 'Any' object description in the editor pane."""
         main_win = self.window()
         if hasattr(main_win, 'show_any_editor'):
-            main_win.show_any_editor(col)
+            model = self.model()
+            slot = model.col_to_slot.get(col, '') if model else ''
+            main_win.show_any_editor(slot)
 
     def _reveal_in_tree(self, obj_id):
         """Select and reveal the object in the object tree."""
@@ -1338,7 +1431,7 @@ class PolicyView(QTreeView):
             model.cut_rules(indices)
 
     def copy_object(self):
-        """Copy element or rules — context-aware like fwbuilder.
+        """Copy element or rules -- context-aware like fwbuilder.
 
         If a single element is selected in an element column, copy that
         element to the object clipboard.  Otherwise copy whole rules.
@@ -1346,7 +1439,9 @@ class PolicyView(QTreeView):
         if self._selected_element is not None:
             _rule_id, _slot, target_id = self._selected_element
             idx = self._selected_index
-            if idx.isValid() and idx.column() in _ELEMENT_COLS:
+            model = self.model()
+            element_cols = _model_element_cols(model)
+            if idx.isValid() and idx.column() in element_cols:
                 elements = idx.data(ELEMENTS_ROLE) or []
                 for eid, ename, etype in elements:
                     if eid == target_id:
@@ -1355,7 +1450,7 @@ class PolicyView(QTreeView):
         self.copy_selection()
 
     def cut_object(self):
-        """Cut element or rules — context-aware like fwbuilder.
+        """Cut element or rules -- context-aware like fwbuilder.
 
         If a single element is selected in an element column, cut that
         element.  Otherwise cut whole rules.
@@ -1364,7 +1459,8 @@ class PolicyView(QTreeView):
             _rule_id, slot, target_id = self._selected_element
             idx = self._selected_index
             model = self.model()
-            if idx.isValid() and idx.column() in _ELEMENT_COLS and model is not None:
+            element_cols = _model_element_cols(model)
+            if idx.isValid() and idx.column() in element_cols and model is not None:
                 elements = idx.data(ELEMENTS_ROLE) or []
                 for eid, ename, etype in elements:
                     if eid == target_id:
@@ -1373,7 +1469,7 @@ class PolicyView(QTreeView):
         self.cut_selection()
 
     def delete_selection(self):
-        """Delete element or rules — context-aware like fwbuilder.
+        """Delete element or rules -- context-aware like fwbuilder.
 
         If a single element is selected in an element column, remove
         that element from the cell.  If the current cell is in an
@@ -1382,21 +1478,21 @@ class PolicyView(QTreeView):
         delete whole rules when the current cell is outside element
         columns (e.g. Position or Comment).
         """
+        model = self.model()
+        element_cols = _model_element_cols(model)
         if self._selected_element is not None:
             _rule_id, slot, target_id = self._selected_element
             idx = self._selected_index
-            model = self.model()
-            if idx.isValid() and idx.column() in _ELEMENT_COLS and model is not None:
+            if idx.isValid() and idx.column() in element_cols and model is not None:
                 model.remove_element(idx, slot, target_id)
                 self._clear_element_selection()
                 return
         # Guard: if the current cell is in an element column, don't
-        # fall through to deleting the whole rule — the user intended
+        # fall through to deleting the whole rule -- the user intended
         # to remove an element, not the row.
         cur = self.currentIndex()
-        if cur.isValid() and cur.column() in _ELEMENT_COLS:
+        if cur.isValid() and cur.column() in element_cols:
             return
-        model = self.model()
         if model is None:
             return
         indices = self._selected_rule_indices()
@@ -1413,7 +1509,7 @@ class PolicyView(QTreeView):
             self._paste_and_scroll(model, idx)
 
     def paste_object(self):
-        """Paste clipboard content — object into cell or rules below.
+        """Paste clipboard content -- object into cell or rules below.
 
         Mimics fwbuilder's ``RuleSetView::pasteObject()``: if the
         object clipboard holds a regular object and the current cell
@@ -1430,15 +1526,20 @@ class PolicyView(QTreeView):
         # If the object clipboard has a compatible object for the
         # current cell's slot, paste the object into that cell.
         col = idx.column()
-        if col in _ELEMENT_COLS:
-            slot = _COL_TO_SLOT[col]
-            valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
-            if (
-                PolicyView._object_clipboard is not None
-                and PolicyView._object_clipboard.get('type', '') in valid_types
-            ):
-                self._paste_element(model, index=idx, slot=slot)
-                return
+        element_cols = _model_element_cols(model)
+        col_to_slot = (
+            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+        )
+        if col in element_cols:
+            slot = col_to_slot.get(col)
+            if slot:
+                valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
+                if (
+                    PolicyView._object_clipboard is not None
+                    and PolicyView._object_clipboard.get('type', '') in valid_types
+                ):
+                    self._paste_element(model, index=idx, slot=slot)
+                    return
 
         # Fall back to rule paste.
         self._paste_and_scroll(model, idx)
@@ -1558,9 +1659,10 @@ class PolicyView(QTreeView):
             return
         index = self.indexAt(event.position().toPoint())
         model = self.model()
+        element_cols = _model_element_cols(model)
         if (
             index.isValid()
-            and index.column() in _ELEMENT_COLS
+            and index.column() in element_cols
             and model is not None
             and not model.is_group(index)
         ):
@@ -1580,9 +1682,15 @@ class PolicyView(QTreeView):
 
         index = self.indexAt(event.position().toPoint())
         model = self.model()
+        element_cols = _model_element_cols(model)
+        col_to_slot = (
+            model.col_to_slot
+            if model is not None and hasattr(model, 'col_to_slot')
+            else _COL_TO_SLOT
+        )
         if (
             not index.isValid()
-            or index.column() not in _ELEMENT_COLS
+            or index.column() not in element_cols
             or model is None
             or model.is_group(index)
         ):
@@ -1601,7 +1709,10 @@ class PolicyView(QTreeView):
             event.ignore()
             return
 
-        slot = _COL_TO_SLOT[index.column()]
+        slot = col_to_slot.get(index.column())
+        if not slot:
+            event.ignore()
+            return
         valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
         if obj_type not in valid_types:
             event.ignore()
@@ -1616,7 +1727,7 @@ class PolicyView(QTreeView):
             if row_data is None:
                 event.ignore()
                 return
-            # Same cell → no-op.
+            # Same cell -> no-op.
             if str(row_data.rule_id) == source_rule_id and source_slot == slot:
                 event.ignore()
                 return
@@ -1637,3 +1748,37 @@ class PolicyView(QTreeView):
             model.add_element(index, slot, uuid.UUID(obj_id))
 
         event.acceptProposedAction()
+
+
+class RuleSetPanel(QWidget):
+    """Container with an 'Insert Rule' button and a :class:`PolicyView`."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        toolbar = QHBoxLayout()
+        toolbar.setContentsMargins(2, 2, 2, 2)
+        add_btn = QToolButton()
+        add_btn.setIcon(QIcon(':/Icons/Add'))
+        add_btn.setIconSize(QSize(25, 25))
+        add_btn.setToolTip('Insert rule')
+        add_btn.clicked.connect(self._insert_rule)
+        toolbar.addWidget(add_btn)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
+
+        self.policy_view = PolicyView()
+        layout.addWidget(self.policy_view)
+
+    def _insert_rule(self):
+        model = self.policy_view.model()
+        if model is None:
+            return
+        idx = self.policy_view.currentIndex()
+        if idx.isValid() and not model.is_group(idx):
+            self.policy_view._insert_and_scroll(model, index=idx, before=True)
+        else:
+            self.policy_view._insert_and_scroll(model, at_bottom=True)

@@ -695,8 +695,8 @@ class _DraggableTree(QTreeWidget):
 class ObjectTree(QWidget):
     """Left-hand object tree panel with filter field and library selector."""
 
-    rule_set_activated = Signal(str, str, str)
-    """Emitted when a rule set node is double-clicked: (rule_set_id, firewall_name, rule_set_name)."""
+    rule_set_activated = Signal(str, str, str, str)
+    """Emitted when a rule set node is double-clicked: (rule_set_id, firewall_name, rule_set_name, rule_set_type)."""
 
     object_activated = Signal(str, str)
     """Emitted when a non-rule-set object is double-clicked: (obj_id, obj_type)."""
@@ -1271,7 +1271,7 @@ class ObjectTree(QWidget):
             # The firewall is the parent of this rule set node.
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
-            self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
+            self.rule_set_activated.emit(obj_id, fw_name, item.text(0), type_str)
         else:
             self.object_activated.emit(obj_id, type_str)
 
@@ -1465,7 +1465,7 @@ class ObjectTree(QWidget):
         if obj_type in _RULE_SET_TYPES:
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
-            self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
+            self.rule_set_activated.emit(obj_id, fw_name, item.text(0), obj_type)
         else:
             self.object_activated.emit(obj_id, obj_type)
 

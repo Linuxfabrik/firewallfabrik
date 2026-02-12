@@ -65,15 +65,10 @@ from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
 from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import (
-    _COL_DST,
-    _COL_SRC,
-    _COL_SRV,
-    _COL_TIME,
-    _SLOT_TO_COL,
     PolicyTreeModel,
     _action_label,
 )
-from firewallfabrik.gui.policy_view import PolicyView
+from firewallfabrik.gui.policy_view import PolicyView, RuleSetPanel
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
@@ -82,36 +77,74 @@ logger = logging.getLogger(__name__)
 _DEFAULT_WIDTH = 1024
 _DEFAULT_HEIGHT = 768
 
-# Messages shown when double-clicking an "Any" element in a policy rule.
+# Messages shown when double-clicking an "Any" element in a rule cell.
+# Keyed by slot name so they work for Policy, NAT and Routing rule sets.
+_ANY_MSG_ADDRESS = (
+    'When used in the Source or Destination field of a rule, '
+    'the Any object will match all IP addresses. '
+    'To update your rule to match only specific IP addresses, '
+    'drag-and-drop an object from the Object tree into the field '
+    'in the rule.'
+)
+_ANY_MSG_INTERFACE = (
+    'When used in an Interface field of a rule, '
+    'the Any object will match all interfaces. '
+    'To update your rule to match only a specific interface, '
+    'drag-and-drop an object from the Object tree into the field '
+    'in the rule.'
+)
+_ANY_MSG_SERVICE = (
+    'When used in the Service field of a rule, '
+    'the Any object will match all IP, ICMP, TCP or UDP services. '
+    'To update your rule to match only specific service, '
+    'drag-and-drop an object from the Object tree into the field '
+    'in the rule.'
+)
+_ANY_MSG_TIME = (
+    'When used in the Time Interval field of a rule, '
+    'the Any object will match any time of the day or day '
+    'of the week. To update your rule to match only specific '
+    'service, drag-and-drop an object from the Object tree into '
+    'the field in the rule.'
+)
 _ANY_MESSAGES = {
-    _COL_DST: (
-        'When used in the Source or Destination field of a rule, '
-        'the Any object will match all IP addresses. '
-        'To update your rule to match only specific IP addresses, '
-        'drag-and-drop an object from the Object tree into the field '
-        'in the rule.'
-    ),
-    _COL_SRC: (
-        'When used in the Source or Destination field of a rule, '
-        'the Any object will match all IP addresses. '
-        'To update your rule to match only specific IP addresses, '
-        'drag-and-drop an object from the Object tree into the field '
-        'in the rule.'
-    ),
-    _COL_SRV: (
-        'When used in the Service field of a rule, '
-        'the Any object will match all IP, ICMP, TCP or UDP services. '
-        'To update your rule to match only specific service, '
-        'drag-and-drop an object from the Object tree into the field '
-        'in the rule.'
-    ),
-    _COL_TIME: (
-        'When used in the Time Interval field of a rule, '
-        'the Any object will match any time of the day or day '
-        'of the week. To update your rule to match only specific '
-        'service, drag-and-drop an object from the Object tree into '
-        'the field in the rule.'
-    ),
+    # Policy
+    'dst': _ANY_MSG_ADDRESS,
+    'itf': _ANY_MSG_INTERFACE,
+    'src': _ANY_MSG_ADDRESS,
+    'srv': _ANY_MSG_SERVICE,
+    'when': _ANY_MSG_TIME,
+    # NAT
+    'itf_inb': _ANY_MSG_INTERFACE,
+    'itf_outb': _ANY_MSG_INTERFACE,
+    'odst': _ANY_MSG_ADDRESS,
+    'osrc': _ANY_MSG_ADDRESS,
+    'osrv': _ANY_MSG_SERVICE,
+    'tdst': _ANY_MSG_ADDRESS,
+    'tsrc': _ANY_MSG_ADDRESS,
+    'tsrv': _ANY_MSG_SERVICE,
+    # Routing
+    'rdst': _ANY_MSG_ADDRESS,
+    'rgtw': _ANY_MSG_ADDRESS,
+    'ritf': _ANY_MSG_INTERFACE,
+}
+_ANY_ICON_TYPE = {
+    'dst': 'Network',
+    'itf': 'Interface',
+    'itf_inb': 'Interface',
+    'itf_outb': 'Interface',
+    'odst': 'Network',
+    'osrc': 'Network',
+    'osrv': 'IPService',
+    'rdst': 'Network',
+    'rgtw': 'Network',
+    'ritf': 'Interface',
+    'src': 'Network',
+    'srv': 'IPService',
+    'tdst': 'Network',
+    'tsrc': 'Network',
+    'tsrv': 'IPService',
+    'when': 'Interval',
 }
 
 
@@ -776,17 +809,20 @@ class FWWindow(QMainWindow):
         settings.setValue('recentFiles', [])
         self._update_recent_actions()
 
-    @Slot(str, str, str)
-    def _open_rule_set(self, rule_set_id, fw_name, rs_name):
+    @Slot(str, str, str, str)
+    def _open_rule_set(self, rule_set_id, fw_name, rs_name, rs_type='Policy'):
         """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
         model = PolicyTreeModel(
-            self._db_manager, uuid.UUID(rule_set_id), object_name=fw_name
+            self._db_manager,
+            uuid.UUID(rule_set_id),
+            rule_set_type=rs_type,
+            object_name=fw_name,
         )
-        view = PolicyView()
-        view.setModel(model)
+        panel = RuleSetPanel()
+        panel.policy_view.setModel(model)
 
         sub = QMdiSubWindow()
-        sub.setWidget(view)
+        sub.setWidget(panel)
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.m_space.addSubWindow(sub)
@@ -1102,11 +1138,11 @@ class FWWindow(QMainWindow):
         if not pixmap.isNull():
             self.objectTypeIcon.setPixmap(pixmap)
 
-    def show_any_editor(self, col):
+    def show_any_editor(self, slot):
         """Show the 'Any' object description in the editor pane."""
         self._close_editor()
 
-        msg = _ANY_MESSAGES.get(col, '')
+        msg = _ANY_MESSAGES.get(slot, '')
         self._blank_label.setText(msg)
         self.objectEditorStack.setCurrentWidget(
             self.w_BlankDialog.parentWidget(),
@@ -1114,12 +1150,7 @@ class FWWindow(QMainWindow):
         self._show_editor_panel()
         self.editorDockWidget.setWindowTitle('Any')
 
-        icon_type = {
-            _COL_SRC: 'Network',
-            _COL_DST: 'Network',
-            _COL_SRV: 'IPService',
-            _COL_TIME: 'Interval',
-        }.get(col, 'Policy')
+        icon_type = _ANY_ICON_TYPE.get(slot, 'Policy')
         pixmap = QIcon(f':/Icons/{icon_type}/icon-big').pixmap(64, 64)
         if not pixmap.isNull():
             self.objectTypeIcon.setPixmap(pixmap)
@@ -1129,13 +1160,20 @@ class FWWindow(QMainWindow):
         self._show_where_used_panel()
         self._where_used_panel.find_object(obj_id, name, obj_type)
 
+    @staticmethod
+    def _policy_view_from_widget(widget):
+        """Extract a :class:`PolicyView` from a sub-window widget."""
+        if isinstance(widget, RuleSetPanel):
+            return widget.policy_view
+        if isinstance(widget, PolicyView):
+            return widget
+        return None
+
     def _active_policy_view(self):
         """Return the active :class:`PolicyView`, or *None*."""
         sub = self.m_space.activeSubWindow()
         if sub is not None:
-            widget = sub.widget()
-            if isinstance(widget, PolicyView):
-                return widget
+            return self._policy_view_from_widget(sub.widget())
         return None
 
     def _tree_has_focus(self):
@@ -1211,21 +1249,17 @@ class FWWindow(QMainWindow):
     def _reload_rule_set_views(self):
         """Reload all open PolicyTreeModel views (after replace)."""
         for sub in self.m_space.subWindowList():
-            widget = sub.widget()
-            if isinstance(widget, PolicyView) and isinstance(
-                widget.model(), PolicyTreeModel
-            ):
-                widget.model().reload()
+            view = self._policy_view_from_widget(sub.widget())
+            if view is not None and isinstance(view.model(), PolicyTreeModel):
+                view.model().reload()
 
     def _get_open_rule_set_ids(self) -> set[uuid.UUID]:
         """Return the set of rule set IDs currently open in MDI sub-windows."""
         ids = set()
         for sub in self.m_space.subWindowList():
-            widget = sub.widget()
-            if isinstance(widget, PolicyView) and isinstance(
-                widget.model(), PolicyTreeModel
-            ):
-                ids.add(widget.model().rule_set_id)
+            view = self._policy_view_from_widget(sub.widget())
+            if view is not None and isinstance(view.model(), PolicyTreeModel):
+                ids.add(view.model().rule_set_id)
         return ids
 
     @Slot(str, str, str)
@@ -1236,14 +1270,14 @@ class FWWindow(QMainWindow):
 
         # Look for an existing sub-window with this rule set.
         for sub in self.m_space.subWindowList():
-            widget = sub.widget()
+            view = self._policy_view_from_widget(sub.widget())
             if (
-                isinstance(widget, PolicyView)
-                and isinstance(widget.model(), PolicyTreeModel)
-                and widget.model().rule_set_id == rs_uuid
+                view is not None
+                and isinstance(view.model(), PolicyTreeModel)
+                and view.model().rule_set_id == rs_uuid
             ):
                 self.m_space.setActiveSubWindow(sub)
-                self._scroll_to_rule(widget, widget.model(), r_uuid, slot)
+                self._scroll_to_rule(view, view.model(), r_uuid, slot)
                 return
 
         # Open a new sub-window for this rule set.
@@ -1253,24 +1287,29 @@ class FWWindow(QMainWindow):
                 return
             fw_name = rs.device.name if rs.device else ''
             rs_name = rs.name
+            rs_type = rs.type
 
-        model = PolicyTreeModel(self._db_manager, rs_uuid)
-        view = PolicyView()
-        view.setModel(model)
+        model = PolicyTreeModel(
+            self._db_manager,
+            rs_uuid,
+            rule_set_type=rs_type,
+        )
+        panel = RuleSetPanel()
+        panel.policy_view.setModel(model)
 
         sub = QMdiSubWindow()
-        sub.setWidget(view)
+        sub.setWidget(panel)
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.m_space.addSubWindow(sub)
         sub.showMaximized()
 
-        self._scroll_to_rule(view, model, r_uuid, slot)
+        self._scroll_to_rule(panel.policy_view, model, r_uuid, slot)
 
     @staticmethod
     def _scroll_to_rule(view, model, rule_id, slot):
         """Scroll *view* to the rule node matching *rule_id*."""
-        col = _SLOT_TO_COL.get(slot, 0) if slot else 0
+        col = model.slot_to_col.get(slot, 0) if slot else 0
 
         def _walk(parent_index, row_count):
             for row in range(row_count):
@@ -1361,11 +1400,9 @@ class FWWindow(QMainWindow):
 
         # Reload open rule set models instead of closing all subwindows.
         for sub in self.m_space.subWindowList():
-            widget = sub.widget()
-            if isinstance(widget, PolicyView) and isinstance(
-                widget.model(), PolicyTreeModel
-            ):
-                widget.model().reload()
+            view = self._policy_view_from_widget(sub.widget())
+            if view is not None and isinstance(view.model(), PolicyTreeModel):
+                view.model().reload()
 
         file_key = (
             str(self._display_file) if getattr(self, '_display_file', None) else ''

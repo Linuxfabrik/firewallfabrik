@@ -10,13 +10,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Database-backed tree model for policy rules with group support."""
+"""Database-backed tree model for policy/NAT/routing rules with group support."""
 
 from __future__ import annotations
 
 import dataclasses
 import enum
 import uuid
+from collections import namedtuple
 from typing import ClassVar
 
 import sqlalchemy
@@ -30,8 +31,12 @@ from firewallfabrik.core.objects import (
     Host,
     Interface,
     Interval,
+    NATAction,
+    NATRule,
     PolicyAction,
     PolicyRule,
+    RoutingRule,
+    Rule,
     Service,
     rule_elements,
 )
@@ -46,18 +51,128 @@ NEGATED_ROLE = Qt.ItemDataRole.UserRole + 2
 FWF_MIME_TYPE = 'application/x-fwf-object'
 _INVALID_INDEX = QModelIndex()
 
-HEADERS = [
-    '#',
-    'Source',
-    'Destination',
-    'Service',
-    'Interface',
-    'Direction',
-    'Action',
-    'Time',
-    'Options',
-    'Comment',
-]
+# ---------------------------------------------------------------------------
+# Column configuration per rule set type
+# ---------------------------------------------------------------------------
+
+_ColDesc = namedtuple('_ColDesc', ['header', 'slot', 'col_type'])
+# col_type: 'position' | 'element' | 'action' | 'direction' | 'metric' | 'options' | 'comment'
+
+_POLICY_COLS = (
+    _ColDesc('#', None, 'position'),
+    _ColDesc('Source', 'src', 'element'),
+    _ColDesc('Destination', 'dst', 'element'),
+    _ColDesc('Service', 'srv', 'element'),
+    _ColDesc('Interface', 'itf', 'element'),
+    _ColDesc('Direction', 'direction', 'direction'),
+    _ColDesc('Action', 'action', 'action'),
+    _ColDesc('Time', 'when', 'element'),
+    _ColDesc('Options', 'options', 'options'),
+    _ColDesc('Comment', None, 'comment'),
+)
+
+_NAT_COLS = (
+    _ColDesc('#', None, 'position'),
+    _ColDesc('Original Src', 'osrc', 'element'),
+    _ColDesc('Original Dst', 'odst', 'element'),
+    _ColDesc('Original Srv', 'osrv', 'element'),
+    _ColDesc('Translated Src', 'tsrc', 'element'),
+    _ColDesc('Translated Dst', 'tdst', 'element'),
+    _ColDesc('Translated Srv', 'tsrv', 'element'),
+    _ColDesc('Itf Inbound', 'itf_inb', 'element'),
+    _ColDesc('Itf Outbound', 'itf_outb', 'element'),
+    _ColDesc('Action', 'action', 'action'),
+    _ColDesc('Options', 'options', 'options'),
+    _ColDesc('Comment', None, 'comment'),
+)
+
+_ROUTING_COLS = (
+    _ColDesc('#', None, 'position'),
+    _ColDesc('Destination', 'rdst', 'element'),
+    _ColDesc('Gateway', 'rgtw', 'element'),
+    _ColDesc('Interface', 'ritf', 'element'),
+    _ColDesc('Metric', None, 'metric'),
+    _ColDesc('Options', 'options', 'options'),
+    _ColDesc('Comment', None, 'comment'),
+)
+
+_COLS_BY_TYPE = {
+    'NAT': _NAT_COLS,
+    'Policy': _POLICY_COLS,
+    'Routing': _ROUTING_COLS,
+}
+
+_RULE_CLASS = {
+    'NAT': NATRule,
+    'Policy': PolicyRule,
+    'Routing': RoutingRule,
+}
+
+
+def _build_col_config(cols):
+    """Derive helper dicts from a column config tuple."""
+    headers = [c.header for c in cols]
+    col_to_slot = {}
+    slot_to_col = {}
+    element_cols = set()
+    action_col = None
+    comment_col = None
+    direction_col = None
+    metric_col = None
+    options_col = None
+    position_col = None
+    for i, desc in enumerate(cols):
+        if desc.slot:
+            col_to_slot[i] = desc.slot
+            slot_to_col[desc.slot] = i
+        if desc.col_type == 'element':
+            element_cols.add(i)
+        elif desc.col_type == 'action':
+            action_col = i
+            col_to_slot[i] = 'action'
+            slot_to_col['action'] = i
+        elif desc.col_type == 'comment':
+            comment_col = i
+        elif desc.col_type == 'direction':
+            direction_col = i
+            col_to_slot[i] = 'direction'
+            slot_to_col['direction'] = i
+        elif desc.col_type == 'metric':
+            metric_col = i
+        elif desc.col_type == 'options':
+            options_col = i
+            col_to_slot[i] = 'options'
+            slot_to_col['options'] = i
+        elif desc.col_type == 'position':
+            position_col = i
+    selectable_cols = set(element_cols)
+    if action_col is not None:
+        selectable_cols.add(action_col)
+    if direction_col is not None:
+        selectable_cols.add(direction_col)
+    if options_col is not None:
+        selectable_cols.add(options_col)
+    return {
+        'action_col': action_col,
+        'col_to_slot': col_to_slot,
+        'comment_col': comment_col,
+        'direction_col': direction_col,
+        'element_cols': frozenset(element_cols),
+        'headers': headers,
+        'metric_col': metric_col,
+        'options_col': options_col,
+        'position_col': position_col,
+        'selectable_cols': frozenset(selectable_cols),
+        'slot_to_col': slot_to_col,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible module-level constants (correct for Policy only).
+# View code will progressively switch to model-level config.
+# ---------------------------------------------------------------------------
+
+HEADERS = [c.header for c in _POLICY_COLS]
 
 _COL_ACTION = 6
 _COL_COMMENT = 9
@@ -88,6 +203,8 @@ _ELEMENT_COLS = frozenset({_COL_DST, _COL_ITF, _COL_SRC, _COL_SRV, _COL_TIME})
 # All columns that support single-click element selection / highlighting.
 _SELECTABLE_COLS = _ELEMENT_COLS | {_COL_ACTION, _COL_DIRECTION, _COL_OPTIONS}
 
+# ---------------------------------------------------------------------------
+
 _DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})
 
 _GROUP_BG = QColor('lightgray')
@@ -113,7 +230,7 @@ class _NodeType(enum.IntEnum):
 
 @dataclasses.dataclass
 class _RowData:
-    """Structured data for one policy rule row."""
+    """Structured data for one rule row (Policy, NAT, or Routing)."""
 
     action: str
     action_int: int
@@ -126,7 +243,7 @@ class _RowData:
     group: str
     itf: list
     label: str
-    negations: dict  # slot → bool, e.g. {'src': True, 'dst': False}
+    negations: dict  # slot -> bool, e.g. {'src': True, 'dst': False}
     options: dict  # raw rule options dict for tooltip generation
     options_display: list  # list[tuple[str, str, str]]  (sentinel_id, label, icon-type)
     position: int
@@ -134,6 +251,21 @@ class _RowData:
     src: list
     srv: list
     when: list  # list[tuple[uuid.UUID, str, str]]  (id, name, type)
+    # NAT-specific
+    itf_inb: list = dataclasses.field(default_factory=list)
+    itf_outb: list = dataclasses.field(default_factory=list)
+    metric: int = 0
+    nat_action: str = ''
+    nat_action_int: int = 0
+    odst: list = dataclasses.field(default_factory=list)
+    osrc: list = dataclasses.field(default_factory=list)
+    osrv: list = dataclasses.field(default_factory=list)
+    rdst: list = dataclasses.field(default_factory=list)
+    rgtw: list = dataclasses.field(default_factory=list)
+    ritf: list = dataclasses.field(default_factory=list)
+    tdst: list = dataclasses.field(default_factory=list)
+    tsrc: list = dataclasses.field(default_factory=list)
+    tsrv: list = dataclasses.field(default_factory=list)
 
 
 class _TreeNode:
@@ -156,17 +288,91 @@ class _TreeNode:
 
 
 class PolicyTreeModel(QAbstractItemModel):
-    """Database-backed tree model for policy rules with group support."""
+    """Database-backed tree model for policy/NAT/routing rules with group support."""
 
     _clipboard: ClassVar[list[uuid.UUID]] = []
 
-    def __init__(self, db_manager, rule_set_id, *, object_name='', parent=None):
+    def __init__(
+        self,
+        db_manager,
+        rule_set_id,
+        *,
+        object_name='',
+        parent=None,
+        rule_set_type='Policy',
+    ):
         super().__init__(parent)
         self._db_manager = db_manager
         self._object_name = object_name
         self._rule_set_id = rule_set_id
+        self._rule_set_type = rule_set_type
+        self._rule_cls = _RULE_CLASS.get(rule_set_type, PolicyRule)
+
+        # Column configuration derived from type.
+        self._cols = _COLS_BY_TYPE.get(rule_set_type, _POLICY_COLS)
+        cfg = _build_col_config(self._cols)
+        self._action_col = cfg['action_col']
+        self._col_to_slot = cfg['col_to_slot']
+        self._comment_col = cfg['comment_col']
+        self._direction_col = cfg['direction_col']
+        self._element_cols = cfg['element_cols']
+        self._headers = cfg['headers']
+        self._metric_col = cfg['metric_col']
+        self._options_col = cfg['options_col']
+        self._position_col = cfg['position_col']
+        self._selectable_cols = cfg['selectable_cols']
+        self._slot_to_col = cfg['slot_to_col']
+
         self._root = _TreeNode(_NodeType.Root)
         self.reload()
+
+    # ------------------------------------------------------------------
+    # Public column config accessors (used by the view)
+    # ------------------------------------------------------------------
+
+    @property
+    def action_col(self):
+        return self._action_col
+
+    @property
+    def col_to_slot(self):
+        return self._col_to_slot
+
+    @property
+    def comment_col(self):
+        return self._comment_col
+
+    @property
+    def direction_col(self):
+        return self._direction_col
+
+    @property
+    def element_cols(self):
+        return self._element_cols
+
+    @property
+    def metric_col(self):
+        return self._metric_col
+
+    @property
+    def options_col(self):
+        return self._options_col
+
+    @property
+    def position_col(self):
+        return self._position_col
+
+    @property
+    def rule_set_type(self):
+        return self._rule_set_type
+
+    @property
+    def selectable_cols(self):
+        return self._selectable_cols
+
+    @property
+    def slot_to_col(self):
+        return self._slot_to_col
 
     # ------------------------------------------------------------------
     # Data loading
@@ -179,9 +385,9 @@ class PolicyTreeModel(QAbstractItemModel):
 
         with self._db_manager.session() as session:
             rules = session.scalars(
-                sqlalchemy.select(PolicyRule)
-                .where(PolicyRule.rule_set_id == self._rule_set_id)
-                .order_by(PolicyRule.position),
+                sqlalchemy.select(self._rule_cls)
+                .where(self._rule_cls.rule_set_id == self._rule_set_id)
+                .order_by(self._rule_cls.position),
             ).all()
 
             if not rules:
@@ -210,52 +416,14 @@ class PolicyTreeModel(QAbstractItemModel):
 
             for rule in rules:
                 slots = slot_map.get(rule.id, {})
-                try:
-                    direction = Direction(rule.policy_direction)
-                    dir_name = direction.name
-                except (TypeError, ValueError):
-                    direction = Direction.Undefined
-                    dir_name = ''
-                try:
-                    action = PolicyAction(rule.policy_action)
-                    act_name = action.name
-                except (TypeError, ValueError):
-                    action = PolicyAction.Unknown
-                    act_name = ''
-
-                opts = rule.options or {}
-                group_name = opts.get('group', '')
-                color_hex = opts.get('color', '')
-                if not color_hex and rule.label and rule.label in LABEL_KEYS:
-                    color_hex = get_label_color(rule.label)
-
-                row_data = _RowData(
-                    action=act_name,
-                    action_int=action.value,
-                    color_hex=color_hex,
-                    comment=rule.comment or '',
-                    direction=dir_name,
-                    direction_int=direction.value,
-                    disabled=_opt_bool(opts, 'disabled'),
-                    dst=slots.get('dst', []),
-                    group=group_name,
-                    itf=slots.get('itf', []),
-                    label=rule.label or '',
-                    negations=rule.negations or {},
-                    options=opts,
-                    options_display=_build_options_display(opts),
-                    position=rule.position,
-                    rule_id=rule.id,
-                    src=slots.get('src', []),
-                    srv=slots.get('srv', []),
-                    when=slots.get('when', []),
-                )
+                row_data = self._build_row_data(rule, slots)
 
                 rule_node = _TreeNode(
                     _NodeType.Rule,
                     row_data=row_data,
                 )
 
+                group_name = row_data.group
                 if group_name:
                     if group_name not in group_nodes:
                         gnode = _TreeNode(
@@ -273,6 +441,82 @@ class PolicyTreeModel(QAbstractItemModel):
                 parent_node.children.append(rule_node)
 
         self.endResetModel()
+
+    def _build_row_data(self, rule, slots):
+        """Build a _RowData from a Rule ORM object and its slot elements."""
+        # Parse Policy action/direction.
+        dir_name = ''
+        direction_int = 0
+        act_name = ''
+        action_int = 0
+        nat_action_name = ''
+        nat_action_int = 0
+
+        if self._rule_set_type == 'Policy':
+            try:
+                direction = Direction(rule.policy_direction)
+                dir_name = direction.name
+                direction_int = direction.value
+            except (TypeError, ValueError):
+                pass
+            try:
+                action = PolicyAction(rule.policy_action)
+                act_name = action.name
+                action_int = action.value
+            except (TypeError, ValueError):
+                pass
+        elif self._rule_set_type == 'NAT':
+            try:
+                nat_act = NATAction(rule.nat_action)
+                nat_action_name = nat_act.name
+                nat_action_int = nat_act.value
+                # Also set the generic action fields so Action column works.
+                act_name = nat_act.name
+                action_int = nat_act.value
+            except (TypeError, ValueError):
+                pass
+
+        opts = rule.options or {}
+        group_name = opts.get('group', '')
+        color_hex = opts.get('color', '')
+        if not color_hex and rule.label and rule.label in LABEL_KEYS:
+            color_hex = get_label_color(rule.label)
+
+        return _RowData(
+            action=act_name,
+            action_int=action_int,
+            color_hex=color_hex,
+            comment=rule.comment or '',
+            direction=dir_name,
+            direction_int=direction_int,
+            disabled=_opt_bool(opts, 'disabled'),
+            dst=slots.get('dst', []),
+            group=group_name,
+            itf=slots.get('itf', []),
+            itf_inb=slots.get('itf_inb', []),
+            itf_outb=slots.get('itf_outb', []),
+            label=rule.label or '',
+            metric=_opt_int(opts, 'metric'),
+            nat_action=nat_action_name,
+            nat_action_int=nat_action_int,
+            negations=rule.negations or {},
+            odst=slots.get('odst', []),
+            options=opts,
+            options_display=_build_options_display(opts),
+            osrc=slots.get('osrc', []),
+            osrv=slots.get('osrv', []),
+            position=rule.position,
+            rdst=slots.get('rdst', []),
+            rgtw=slots.get('rgtw', []),
+            ritf=slots.get('ritf', []),
+            rule_id=rule.id,
+            src=slots.get('src', []),
+            srv=slots.get('srv', []),
+            tdst=slots.get('tdst', []),
+            tsrc=slots.get('tsrc', []),
+            tsrv=slots.get('tsrv', []),
+            when=slots.get('when', []),
+        )
 
     def _desc(self, text):
         """Prefix *text* with the object name for undo descriptions."""
@@ -326,7 +570,7 @@ class PolicyTreeModel(QAbstractItemModel):
         return len(node.children)
 
     def columnCount(self, parent=_INVALID_INDEX):
-        return len(HEADERS)
+        return len(self._headers)
 
     def hasChildren(self, parent=_INVALID_INDEX):
         node = self._node_from_index(parent)
@@ -340,7 +584,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if node.node_type == _NodeType.Group:
             return base
         col = index.column()
-        if col in _ELEMENT_COLS:
+        if col in self._element_cols:
             return base | Qt.ItemFlag.ItemIsDropEnabled
         return base
 
@@ -356,7 +600,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
         node = index.internalPointer()
-        if node.node_type != _NodeType.Rule or index.column() != _COL_COMMENT:
+        if node.node_type != _NodeType.Rule or index.column() != self._comment_col:
             return False
 
         row_data = node.row_data
@@ -367,7 +611,7 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.comment = new_comment
 
@@ -380,7 +624,7 @@ class PolicyTreeModel(QAbstractItemModel):
             role == Qt.ItemDataRole.DisplayRole
             and orientation == Qt.Orientation.Horizontal
         ):
-            return HEADERS[section]
+            return self._headers[section]
         return None
 
     def mimeTypes(self):
@@ -390,7 +634,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not data.hasFormat(FWF_MIME_TYPE):
             return False
         col = parent.column() if parent.isValid() else column
-        return col in _ELEMENT_COLS
+        return col in self._element_cols
 
     def dropMimeData(self, data, action, row, column, parent):
         # Handled by the view's dropEvent instead.
@@ -469,7 +713,7 @@ class PolicyTreeModel(QAbstractItemModel):
 
     def _group_data(self, node, col, role):
         """Return data for a group header row."""
-        if role == Qt.ItemDataRole.DisplayRole and col == _COL_POSITION:
+        if role == Qt.ItemDataRole.DisplayRole and col == self._position_col:
             if node.children:
                 first = node.children[0].row_data.position
                 last = node.children[-1].row_data.position
@@ -477,7 +721,7 @@ class PolicyTreeModel(QAbstractItemModel):
             return node.name
         if role == Qt.ItemDataRole.BackgroundRole:
             return _GROUP_BG
-        if role == Qt.ItemDataRole.ToolTipRole and col == _COL_POSITION:
+        if role == Qt.ItemDataRole.ToolTipRole and col == self._position_col:
             return f'Rule group: {node.name}'
         return None
 
@@ -488,7 +732,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.ToolTipRole:
             if not QSettings().value('UI/ObjTooltips', True, type=bool):
                 return None
-            if col == _COL_OPTIONS:
+            if col == self._options_col:
                 return _options_tooltip(row_data)
             return self._display_value(row_data, col)
         if role == Qt.ItemDataRole.BackgroundRole:
@@ -500,24 +744,78 @@ class PolicyTreeModel(QAbstractItemModel):
                 return _contrast_color(QColor(row_data.color_hex))
             return None
         if role == Qt.ItemDataRole.TextAlignmentRole:
-            if col == _COL_POSITION:
+            if col == self._position_col:
                 return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         if role == Qt.ItemDataRole.DecorationRole:
-            suffix = _icon_suffix()
-            if col == _COL_POSITION and row_data.disabled:
-                return QIcon(f':/Icons/Neg/{suffix}')
-            if col == _COL_ACTION and row_data.action:
+            return self._decoration_value(row_data, col)
+        if role == ELEMENTS_ROLE:
+            return self._elements_value(row_data, col)
+        if role == NEGATED_ROLE:
+            if col in self._element_cols:
+                slot = self._col_to_slot.get(col)
+                if slot:
+                    return bool(row_data.negations.get(slot))
+            return False
+        return None
+
+    def _display_value(self, row_data, col):
+        """Return the display string for *col* of *row_data*."""
+        if col >= len(self._cols):
+            return ''
+        desc = self._cols[col]
+        if desc.col_type == 'position':
+            return row_data.position
+        if desc.col_type == 'element':
+            return _format_elements(getattr(row_data, desc.slot, []))
+        if desc.col_type == 'action':
+            if self._rule_set_type == 'NAT':
+                return row_data.nat_action or ''
+            return _action_label(row_data.action)
+        if desc.col_type == 'direction':
+            return row_data.direction
+        if desc.col_type == 'metric':
+            return str(row_data.metric) if row_data.metric else ''
+        if desc.col_type == 'options':
+            return (
+                _format_elements(row_data.options_display)
+                if row_data.options_display
+                else ''
+            )
+        if desc.col_type == 'comment':
+            return row_data.comment
+        return ''
+
+    def _decoration_value(self, row_data, col):
+        """Return the icon for *col* of *row_data*, or None."""
+        suffix = _icon_suffix()
+        if col == self._position_col and row_data.disabled:
+            return QIcon(f':/Icons/Neg/{suffix}')
+        if col == self._action_col:
+            if self._rule_set_type == 'NAT' and row_data.nat_action:
+                icon = QIcon(f':/Icons/{row_data.nat_action}/{suffix}')
+                if not icon.isNull():
+                    return icon
+            elif row_data.action:
                 icon = QIcon(f':/Icons/{row_data.action}/{suffix}')
                 if not icon.isNull():
                     return icon
-            elif col == _COL_DIRECTION and row_data.direction in _DIRECTION_NAMES:
-                return QIcon(f':/Icons/{row_data.direction}/{suffix}')
-        if role == ELEMENTS_ROLE:
-            if col in _ELEMENT_COLS:
-                slot = _COL_TO_SLOT[col]
+        if col == self._direction_col and row_data.direction in _DIRECTION_NAMES:
+            return QIcon(f':/Icons/{row_data.direction}/{suffix}')
+        return None
+
+    def _elements_value(self, row_data, col):
+        """Return the ELEMENTS_ROLE data for *col* of *row_data*."""
+        if col in self._element_cols:
+            slot = self._col_to_slot.get(col)
+            if slot:
                 return getattr(row_data, slot)
-            if col == _COL_ACTION and row_data.action:
+        if col == self._action_col:
+            if self._rule_set_type == 'NAT' and row_data.nat_action:
+                return [
+                    ('__action__', row_data.nat_action, row_data.nat_action),
+                ]
+            if row_data.action:
                 return [
                     (
                         '__action__',
@@ -525,46 +823,13 @@ class PolicyTreeModel(QAbstractItemModel):
                         row_data.action,
                     ),
                 ]
-            if col == _COL_DIRECTION and row_data.direction:
-                return [
-                    ('__direction__', row_data.direction, row_data.direction),
-                ]
-            if col == _COL_OPTIONS:
-                return row_data.options_display or None
-        if role == NEGATED_ROLE:
-            if col in _ELEMENT_COLS:
-                slot = _COL_TO_SLOT[col]
-                return bool(row_data.negations.get(slot))
-            return False
+        if col == self._direction_col and row_data.direction:
+            return [
+                ('__direction__', row_data.direction, row_data.direction),
+            ]
+        if col == self._options_col:
+            return row_data.options_display or None
         return None
-
-    @staticmethod
-    def _display_value(row_data, col):
-        if col == _COL_POSITION:
-            return row_data.position
-        if col == _COL_SRC:
-            return _format_elements(row_data.src)
-        if col == _COL_DST:
-            return _format_elements(row_data.dst)
-        if col == _COL_SRV:
-            return _format_elements(row_data.srv)
-        if col == _COL_ITF:
-            return _format_elements(row_data.itf)
-        if col == _COL_DIRECTION:
-            return row_data.direction
-        if col == _COL_ACTION:
-            return _action_label(row_data.action)
-        if col == _COL_TIME:
-            return _format_elements(row_data.when)
-        if col == _COL_OPTIONS:
-            return (
-                _format_elements(row_data.options_display)
-                if row_data.options_display
-                else ''
-            )
-        if col == _COL_COMMENT:
-            return row_data.comment
-        return ''
 
     # ------------------------------------------------------------------
     # Public accessors
@@ -645,25 +910,31 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(self._desc(f'New rule {position}')) as session:
             # Shift existing rules at or after the insertion point.
             session.execute(
-                sqlalchemy.update(PolicyRule)
+                sqlalchemy.update(self._rule_cls)
                 .where(
-                    PolicyRule.rule_set_id == self._rule_set_id,
-                    PolicyRule.position >= position,
+                    self._rule_cls.rule_set_id == self._rule_set_id,
+                    self._rule_cls.position >= position,
                 )
-                .values(position=PolicyRule.position + 1),
+                .values(position=self._rule_cls.position + 1),
             )
-            # Deny defaults to stateless (matching fwbuilder).
-            opts = {'stateless': True}
+            # Defaults per type.
+            opts = {}
+            kwargs = {}
+            if self._rule_set_type == 'Policy':
+                opts['stateless'] = True
+                kwargs['policy_action'] = PolicyAction.Deny.value
+                kwargs['policy_direction'] = Direction.Both.value
+            elif self._rule_set_type == 'NAT':
+                kwargs['nat_action'] = NATAction.Translate.value
             if group_name:
                 opts['group'] = group_name
             new_id = uuid.uuid4()
-            new_rule = PolicyRule(
+            new_rule = self._rule_cls(
                 id=new_id,
                 rule_set_id=self._rule_set_id,
                 position=position,
-                policy_action=PolicyAction.Deny.value,
-                policy_direction=Direction.Both.value,
                 options=opts,
+                **kwargs,
             )
             session.add(new_rule)
 
@@ -693,13 +964,15 @@ class PolicyTreeModel(QAbstractItemModel):
                 ),
             )
             session.execute(
-                sqlalchemy.delete(PolicyRule).where(PolicyRule.id.in_(rule_ids)),
+                sqlalchemy.delete(self._rule_cls).where(
+                    self._rule_cls.id.in_(rule_ids)
+                ),
             )
             # Renumber remaining rules.
             remaining = session.scalars(
-                sqlalchemy.select(PolicyRule)
-                .where(PolicyRule.rule_set_id == self._rule_set_id)
-                .order_by(PolicyRule.position),
+                sqlalchemy.select(self._rule_cls)
+                .where(self._rule_cls.rule_set_id == self._rule_set_id)
+                .order_by(self._rule_cls.position),
             ).all()
             for i, rule in enumerate(remaining):
                 rule.position = i
@@ -753,18 +1026,19 @@ class PolicyTreeModel(QAbstractItemModel):
         session = self._db_manager.create_session()
         try:
             for i, src_id in enumerate(PolicyTreeModel._clipboard):
-                src_rule = session.get(PolicyRule, src_id)
+                # Use base Rule for lookup — clipboard may hold any type.
+                src_rule = session.get(Rule, src_id)
                 if src_rule is None:
                     continue
 
                 # Shift existing rules to make room.
                 session.execute(
-                    sqlalchemy.update(PolicyRule)
+                    sqlalchemy.update(self._rule_cls)
                     .where(
-                        PolicyRule.rule_set_id == self._rule_set_id,
-                        PolicyRule.position >= position + i,
+                        self._rule_cls.rule_set_id == self._rule_set_id,
+                        self._rule_cls.position >= position + i,
                     )
-                    .values(position=PolicyRule.position + 1),
+                    .values(position=self._rule_cls.position + 1),
                 )
 
                 new_id = uuid.uuid4()
@@ -774,17 +1048,26 @@ class PolicyTreeModel(QAbstractItemModel):
                 else:
                     opts.pop('group', None)
 
-                new_rule = PolicyRule(
-                    id=new_id,
-                    rule_set_id=self._rule_set_id,
-                    position=position + i,
-                    comment=src_rule.comment or '',
-                    label=src_rule.label or '',
-                    negations=dict(src_rule.negations or {}),
-                    options=opts,
-                    policy_action=src_rule.policy_action,
-                    policy_direction=src_rule.policy_direction,
-                )
+                kwargs = {
+                    'comment': src_rule.comment or '',
+                    'id': new_id,
+                    'label': src_rule.label or '',
+                    'negations': dict(src_rule.negations or {}),
+                    'options': opts,
+                    'position': position + i,
+                    'rule_set_id': self._rule_set_id,
+                }
+                # Copy type-specific fields.
+                if self._rule_set_type == 'Policy':
+                    kwargs['policy_action'] = src_rule.policy_action
+                    kwargs['policy_direction'] = src_rule.policy_direction
+                elif self._rule_set_type == 'NAT':
+                    kwargs['nat_action'] = src_rule.nat_action
+                    kwargs['nat_rule_type'] = src_rule.nat_rule_type
+                elif self._rule_set_type == 'Routing':
+                    kwargs['routing_rule_type'] = src_rule.routing_rule_type
+
+                new_rule = self._rule_cls(**kwargs)
                 session.add(new_rule)
                 session.flush()
 
@@ -825,8 +1108,8 @@ class PolicyTreeModel(QAbstractItemModel):
         """Move the rule at *index* up one position.
 
         Group boundary behavior:
-        - First in group + up → leaves group (placed before group)
-        - Top-level above group + up → joins group as last member
+        - First in group + up -> leaves group (placed before group)
+        - Top-level above group + up -> joins group as last member
 
         Returns the :pyattr:`rule_id` of the moved rule, or *None*.
         """
@@ -883,8 +1166,8 @@ class PolicyTreeModel(QAbstractItemModel):
         """Move the rule at *index* down one position.
 
         Group boundary behavior:
-        - Last in group + down → leaves group (placed after group)
-        - Top-level below group + down → joins group as first member
+        - Last in group + down -> leaves group (placed after group)
+        - Top-level below group + down -> joins group as first member
 
         Returns the :pyattr:`rule_id` of the moved rule, or *None*.
         """
@@ -938,11 +1221,14 @@ class PolicyTreeModel(QAbstractItemModel):
         return rule_id
 
     def set_action(self, index, action):
-        """Set the policy action for the rule at *index*.
+        """Set the action for the rule at *index*.
 
-        Also updates the ``stateless`` flag: Accept defaults to stateful,
-        all other actions default to stateless (matching fwbuilder's
-        ``getStatelessFlagForAction``).
+        For Policy rules, *action* is a :class:`PolicyAction`.
+        For NAT rules, *action* is a :class:`NATAction`.
+
+        Also updates the ``stateless`` flag for Policy rules: Accept
+        defaults to stateful, all other actions default to stateless
+        (matching fwbuilder's ``getStatelessFlagForAction``).
         """
         row_data = self.get_row_data(index)
         if row_data is None:
@@ -950,15 +1236,18 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(
             self._desc(f'Edit rule {row_data.position} action'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                rule.policy_action = action.value
-                opts = dict(rule.options or {})
-                if action == PolicyAction.Accept:
-                    opts.pop('stateless', None)
+                if self._rule_set_type == 'NAT':
+                    rule.nat_action = action.value
                 else:
-                    opts['stateless'] = True
-                rule.options = opts
+                    rule.policy_action = action.value
+                    opts = dict(rule.options or {})
+                    if action == PolicyAction.Accept:
+                        opts.pop('stateless', None)
+                    else:
+                        opts['stateless'] = True
+                    rule.options = opts
         self.reload()
 
     def set_comment(self, index, comment):
@@ -972,7 +1261,7 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.comment = new_comment
         self.reload()
@@ -988,7 +1277,7 @@ class PolicyTreeModel(QAbstractItemModel):
             else f'Enable rule {row_data.position}'
         )
         with self._db_manager.session(self._desc(desc)) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 opts = dict(rule.options or {})
                 if disabled:
@@ -999,14 +1288,19 @@ class PolicyTreeModel(QAbstractItemModel):
         self.reload()
 
     def set_direction(self, index, direction):
-        """Set the policy direction for the rule at *index*."""
+        """Set the policy direction for the rule at *index*.
+
+        Only meaningful for Policy rules; no-op for NAT/Routing.
+        """
+        if self._rule_set_type != 'Policy':
+            return
         row_data = self.get_row_data(index)
         if row_data is None:
             return
         with self._db_manager.session(
             self._desc(f'Edit rule {row_data.position} direction'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.policy_direction = direction.value
         self.reload()
@@ -1027,7 +1321,7 @@ class PolicyTreeModel(QAbstractItemModel):
         else:
             desc = f'Remove rule {row_data.position} color'
         with self._db_manager.session(self._desc(desc)) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.label = label_key
                 opts = dict(rule.options or {})
@@ -1160,7 +1454,7 @@ class PolicyTreeModel(QAbstractItemModel):
             else f'Disable logging rule {row_data.position}'
         )
         with self._db_manager.session(self._desc(desc)) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 opts = dict(rule.options or {})
                 if enabled:
@@ -1183,7 +1477,7 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(
             self._desc(f'Edit rule {row_data.position} options'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 old = dict(rule.options or {})
                 merged = dict(options)
@@ -1204,13 +1498,13 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(
             self._desc(f'Negate rule {row_data.position} {slot}'),
         ) as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
+            rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 negs = dict(rule.negations or {})
                 negs[slot] = new_val
                 rule.negations = negs
         row_data.negations[slot] = new_val
-        col = next((c for c, s in _COL_TO_SLOT.items() if s == slot), None)
+        col = self._slot_to_col.get(slot)
         if col is not None:
             cell_index = self.index(index.row(), col, index.parent())
             self.dataChanged.emit(
@@ -1326,10 +1620,9 @@ class PolicyTreeModel(QAbstractItemModel):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _set_rule_group(session, rule_id, group_name):
+    def _set_rule_group(self, session, rule_id, group_name):
         """Persist the group name into a rule's options JSON."""
-        rule = session.get(PolicyRule, rule_id)
+        rule = session.get(self._rule_cls, rule_id)
         if rule is None:
             return
         opts = dict(rule.options or {})
@@ -1356,23 +1649,23 @@ class PolicyTreeModel(QAbstractItemModel):
         sequentially.
         """
         with self._db_manager.session(self._desc(description)) as session:
-            rule = session.get(PolicyRule, rule_id)
+            rule = session.get(self._rule_cls, rule_id)
             if rule is None:
                 return
             if new_group is not None:
                 self._set_rule_group(session, rule_id, new_group)
             if swap_with is not None:
-                other = session.get(PolicyRule, swap_with)
+                other = session.get(self._rule_cls, swap_with)
                 if other is not None:
                     rule.position, other.position = other.position, rule.position
             elif target_pos is not None:
                 rule.position = target_pos
-            # Renumber to keep positions sequential (0, 1, 2, …).
+            # Renumber to keep positions sequential (0, 1, 2, ...).
             session.flush()
             remaining = session.scalars(
-                sqlalchemy.select(PolicyRule)
-                .where(PolicyRule.rule_set_id == self._rule_set_id)
-                .order_by(PolicyRule.position, PolicyRule.id),
+                sqlalchemy.select(self._rule_cls)
+                .where(self._rule_cls.rule_set_id == self._rule_set_id)
+                .order_by(self._rule_cls.position, self._rule_cls.id),
             ).all()
             for i, r in enumerate(remaining):
                 r.position = i
