@@ -1,4 +1,4 @@
-last_modified: 1770914314.0
+last_modified: 1770916435.0
 data:
   version: '24'
 libraries:
@@ -3043,6 +3043,366 @@ libraries:
         name: 'Firewalls'
         children:
           - type: 'Firewall'
+            name: 'fw-empty-groups'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770916520'
+              lastInstalled: '0'
+              lastModified: '1770916395'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: true
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-empty-groups'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Groups/ObjectGroup:empty-group'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-empty-groups'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-empty-groups-abort'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770882452'
+              lastInstalled: '0'
+              lastModified: '1770916422'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups-abort:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups-abort:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-empty-groups-abort:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-empty-groups-abort'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Groups/ObjectGroup:empty-group'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-empty-groups-abort'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
             name: 'fw-empty-src'
             data:
               host_OS: 'linux24'
@@ -3358,6 +3718,377 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'True'
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-local-nat'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770916520'
+              lastInstalled: '0'
+              lastModified: '1770916040'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: true
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-local-nat:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-local-nat:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth2'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'dmz'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-local-nat:eth2:ip'
+                    inet_addr_mask:
+                      address: '10.0.0.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-local-nat:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+                rules:
+                  - type: 'NATRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat/Interface:eth0'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat/Interface:eth0'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 2
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 3
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http
+                        8080'
+                  - type: 'NATRule'
+                    position: 4
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 5
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 6
+                    options:
+                      disabled: 'False'
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat/Interface:eth2'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-local-nat'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 2
                     options:
                       disabled: 'False'
                       group: ''
@@ -4319,6 +5050,164 @@ libraries:
                 name: 'Routing'
                 top: true
           - type: 'Firewall'
+            name: 'fw-part-of-any'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770916520'
+              lastInstalled: '0'
+              lastModified: '1770915904'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: '1'
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-part-of-any:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-part-of-any:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-part-of-any:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-part-of-any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 2
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'True'
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
             name: 'fw-services'
             data:
               host_OS: 'linux24'
@@ -4573,6 +5462,186 @@ libraries:
               - type: 'Routing'
                 name: 'Routing'
                 top: true
+          - type: 'Firewall'
+            name: 'fw-shadowing'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770882452'
+              lastInstalled: '0'
+              lastModified: '1770916504'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-shadowing:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-shadowing:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-shadowing:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:external-host'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
       - type: 'ObjectGroup'
         name: 'Objects'
         children:
@@ -4594,6 +5663,8 @@ libraries:
           - type: 'ObjectGroup'
             name: 'Groups'
             children:
+              - type: 'ObjectGroup'
+                name: 'empty-group'
               - type: 'ObjectGroup'
                 name: 'host-group-1'
                 members:
