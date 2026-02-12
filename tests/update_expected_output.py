@@ -130,6 +130,7 @@ def compile_and_update(
             with tempfile.TemporaryDirectory() as tmp_dir:
                 driver = driver_cls(db)
                 driver.wdir = tmp_dir
+                driver.source_dir = str(fwf_path.parent)
                 driver.file_name_setting = f'{fw_name}.fw'
 
                 result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
