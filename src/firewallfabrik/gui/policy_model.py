@@ -1033,6 +1033,74 @@ class PolicyTreeModel(QAbstractItemModel):
             )
         self.reload()
 
+    def set_logging(self, index, enabled):
+        """Toggle the logging flag for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        desc = (
+            f'Enable logging rule {row_data.position}'
+            if enabled
+            else f'Disable logging rule {row_data.position}'
+        )
+        with self._db_manager.session(self._desc(desc)) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                opts = dict(rule.options or {})
+                if enabled:
+                    opts['log'] = True
+                else:
+                    opts.pop('log', None)
+                rule.options = opts
+        self.reload()
+
+    def set_options(self, index, options):
+        """Replace rule options for the rule at *index*.
+
+        *options* is a dict that replaces the non-structural keys in the
+        rule's ``options`` JSON (``group``, ``disabled``, and ``color``
+        are preserved from the existing options).
+        """
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        with self._db_manager.session(
+            self._desc(f'Edit rule {row_data.position} options'),
+        ) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                old = dict(rule.options or {})
+                merged = dict(options)
+                # Preserve structural keys managed elsewhere.
+                for key in ('color', 'disabled', 'group'):
+                    if key in old:
+                        merged[key] = old[key]
+                rule.options = merged
+        self.reload()
+
+    def toggle_negation(self, index, slot):
+        """Flip the negation flag for *slot* of the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        current = bool(row_data.negations.get(slot))
+        new_val = not current
+        with self._db_manager.session(
+            self._desc(f'Negate rule {row_data.position} {slot}'),
+        ) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                negs = dict(rule.negations or {})
+                negs[slot] = new_val
+                rule.negations = negs
+        row_data.negations[slot] = new_val
+        col = next((c for c, s in _COL_TO_SLOT.items() if s == slot), None)
+        if col is not None:
+            cell_index = self.index(index.row(), col, index.parent())
+            self.dataChanged.emit(
+                cell_index, cell_index, [Qt.ItemDataRole.DisplayRole, NEGATED_ROLE]
+            )
+
     # ------------------------------------------------------------------
     # Group management methods
     # ------------------------------------------------------------------

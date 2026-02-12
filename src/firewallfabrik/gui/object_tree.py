@@ -895,6 +895,27 @@ class ObjectTree(QWidget):
         """Set keyboard focus to the filter input field."""
         self._filter.setFocus()
 
+    def select_object(self, obj_id):
+        """Find, expand, scroll to, and select the item with *obj_id*.
+
+        Returns True if the item was found, False otherwise.
+        """
+        obj_id_str = str(obj_id)
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            if item.data(0, Qt.ItemDataRole.UserRole) == obj_id_str:
+                # Expand all ancestors so the item is visible.
+                parent = item.parent()
+                while parent:
+                    parent.setExpanded(True)
+                    parent = parent.parent()
+                self._tree.scrollToItem(item)
+                self._tree.setCurrentItem(item)
+                return True
+        return False
+
     # ------------------------------------------------------------------
     # Filter
     # ------------------------------------------------------------------

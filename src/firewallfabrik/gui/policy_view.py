@@ -35,7 +35,9 @@ from firewallfabrik.gui.label_settings import (
 )
 from firewallfabrik.gui.policy_model import (
     _COL_ACTION,
+    _COL_COMMENT,
     _COL_DIRECTION,
+    _COL_OPTIONS,
     _COL_TO_SLOT,
     _ELEMENT_COLS,
     ELEMENTS_ROLE,
@@ -279,17 +281,34 @@ class PolicyView(QTreeView):
 
     def _on_double_clicked(self, index):
         model = self.model()
-        if model is None or not model.is_group(index):
+        if model is None:
             return
-        old_name = model.group_name(index)
-        new_name, ok = QInputDialog.getText(
-            self,
-            'Rename Group',
-            'Group name:',
-            text=old_name,
-        )
-        if ok and new_name and new_name != old_name:
-            model.rename_group(index, new_name)
+        if model.is_group(index):
+            old_name = model.group_name(index)
+            new_name, ok = QInputDialog.getText(
+                self,
+                'Rename Group',
+                'Group name:',
+                text=old_name,
+            )
+            if ok and new_name and new_name != old_name:
+                model.rename_group(index, new_name)
+            return
+
+        col = index.column()
+        row_data = model.get_row_data(index)
+        if row_data is None:
+            return
+
+        if col in _ELEMENT_COLS:
+            slot = _COL_TO_SLOT[col]
+            elements = getattr(row_data, slot, [])
+            if elements:
+                first_id, _name, first_type = elements[0]
+                self._open_element_editor(str(first_id), first_type)
+                self._reveal_in_tree(str(first_id))
+        elif col == _COL_OPTIONS:
+            self._open_rule_options_dialog(model, index)
 
     # ------------------------------------------------------------------
     # Context menu
@@ -366,8 +385,12 @@ class PolicyView(QTreeView):
 
         if col == _COL_ACTION:
             self._build_action_menu(menu, model, index)
+        elif col == _COL_COMMENT:
+            self._build_comment_menu(menu, model, index)
         elif col == _COL_DIRECTION:
             self._build_direction_menu(menu, model, index)
+        elif col == _COL_OPTIONS:
+            self._build_options_menu(menu, model, index)
         elif col in _ELEMENT_COLS:
             self._build_element_menu(menu, model, index, col)
         else:
@@ -572,7 +595,7 @@ class PolicyView(QTreeView):
             )
 
     def _build_element_menu(self, menu, model, index, col):
-        """Build element column context menu with remove actions."""
+        """Build element column context menu with edit, remove, negate, and navigation."""
         slot = _COL_TO_SLOT[col]
         row_data = model.get_row_data(index)
         if row_data is None:
@@ -581,11 +604,105 @@ class PolicyView(QTreeView):
         if not elements:
             menu.addAction('(empty)').setEnabled(False)
             return
+
+        # Edit: open first element in the editor panel.
+        first_id, first_name, first_type = elements[0]
+        menu.addAction(
+            'Edit',
+            lambda oid=first_id, otype=first_type: self._open_element_editor(
+                str(oid), otype
+            ),
+        )
+        menu.addSeparator()
+
+        # Remove actions (one per element).
         for target_id, name, _type in elements:
             menu.addAction(
                 f'Remove {name}',
                 lambda tid=target_id: model.remove_element(index, slot, tid),
             )
+        menu.addSeparator()
+
+        # Negate toggle.
+        negated = bool(row_data.negations.get(slot))
+        negate_action = menu.addAction(
+            'Negate',
+            lambda: model.toggle_negation(index, slot),
+        )
+        negate_action.setCheckable(True)
+        negate_action.setChecked(negated)
+        menu.addSeparator()
+
+        # Where Used.
+        menu.addAction(
+            'Where Used',
+            lambda oid=first_id, n=first_name, ot=first_type: self._show_where_used(
+                str(oid), n, ot
+            ),
+        )
+
+        # Reveal in Tree.
+        menu.addAction(
+            'Reveal in Tree',
+            lambda oid=first_id: self._reveal_in_tree(str(oid)),
+        )
+
+    def _open_element_editor(self, obj_id, obj_type):
+        """Open the object editor for the given element."""
+        main_win = self.window()
+        if hasattr(main_win, '_open_object_editor'):
+            main_win._open_object_editor(obj_id, obj_type)
+
+    def _reveal_in_tree(self, obj_id):
+        """Select and reveal the object in the object tree."""
+        main_win = self.window()
+        if hasattr(main_win, '_object_tree'):
+            main_win._object_tree.select_object(obj_id)
+
+    def _show_where_used(self, obj_id, name, obj_type):
+        """Show where-used results for the given object."""
+        main_win = self.window()
+        if hasattr(main_win, 'show_where_used'):
+            main_win.show_where_used(obj_id, name, obj_type)
+
+    def _build_comment_menu(self, menu, model, index):
+        """Build Comment column context menu with inline edit trigger."""
+        menu.addAction('Edit', lambda: self.edit(index))
+        menu.addSeparator()
+        self._build_row_menu(menu, model, index)
+
+    def _build_options_menu(self, menu, model, index):
+        """Build Options column context menu."""
+        menu.addAction(
+            'Rule Options',
+            lambda: self._open_rule_options_dialog(model, index),
+        )
+        menu.addSeparator()
+        row_data = model.get_row_data(index)
+        log_on = row_data is not None and bool(
+            (row_data.options_display or [])
+            and any(label == 'log' for _, label, _ in row_data.options_display)
+        )
+        on_action = menu.addAction(
+            'Logging On',
+            lambda: model.set_logging(index, True),
+        )
+        off_action = menu.addAction(
+            'Logging Off',
+            lambda: model.set_logging(index, False),
+        )
+        on_action.setEnabled(not log_on)
+        off_action.setEnabled(log_on)
+
+    def _open_rule_options_dialog(self, model, index):
+        """Open the Rule Options dialog for the rule at *index*."""
+        from firewallfabrik.gui.rule_options_dialog import RuleOptionsDialog
+
+        row_data = model.get_row_data(index)
+        if row_data is None:
+            return
+        dialog = RuleOptionsDialog(self, model, index)
+        dialog.exec()
 
     def _add_disable_action(self, menu, model, index):
         """Add 'Disable Rule' or 'Enable Rule' action to the menu."""

@@ -1,0 +1,848 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RuleOptionsDialog_q</class>
+ <widget class="QDialog" name="RuleOptionsDialog_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>380</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Rule Options</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabGeneral">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
+      <layout class="QGridLayout" name="generalLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="fwPartOfAnyLabel">
+         <property name="text">
+          <string>Assume firewall is part of "any" for this rule only:</string>
+         </property>
+         <property name="toolTip">
+          <string>Override the global "Assume firewall is part of any" compiler setting for this rule only. "Follow global setting" uses the firewall-level default.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="ipt_assume_fw_is_part_of_any">
+         <property name="toolTip">
+          <string>Override the global "Assume firewall is part of any" compiler setting for this rule only.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string>Follow global setting</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>On</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Off</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <spacer name="generalHSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QLabel" name="statelessHint">
+         <property name="text">
+          <string>Normally the policy compiler uses stateful inspection in each rule. Activating this option makes this rule stateless.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="ipt_stateless">
+         <property name="text">
+          <string>Stateless rule</string>
+         </property>
+         <property name="toolTip">
+          <string>Generate this rule without connection tracking (no "-m state --state NEW" or conntrack match). Useful for high-throughput rules that do not need stateful inspection.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <spacer name="generalVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabLogging">
+      <attribute name="title">
+       <string>Logging</string>
+      </attribute>
+      <layout class="QGridLayout" name="loggingLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="logPrefixLabel">
+         <property name="text">
+          <string>Log prefix:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="ipt_logPrefix">
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>String prepended to the log message. Maximum 29 characters for iptables LOG target. Helps identify which rule generated the log entry.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2" colspan="2">
+        <spacer name="logRow0Spacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="logLevelLabel">
+         <property name="text">
+          <string>Log level:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="ipt_logLevel">
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Syslog level for log messages generated by this rule. Leave empty to use the system default. Maps to iptables "--log-level" option.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string></string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>alert</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>crit</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>debug</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>error</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>info</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>notice</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>warning</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLabel" name="ulogLabel">
+         <property name="text">
+          <string>Netlink group (if using ULOG):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QSpinBox" name="ipt_nlgroup">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>32</number>
+         </property>
+         <property name="toolTip">
+          <string>ULOG netlink multicast group number (1-32). Only used when the logging target is ULOG instead of LOG.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="4">
+        <spacer name="logRow1Spacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="2" column="0">
+        <spacer name="logVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabLimit">
+      <attribute name="title">
+       <string>limit</string>
+      </attribute>
+      <layout class="QGridLayout" name="limitLayout">
+       <item row="0" column="0" colspan="7">
+        <widget class="QLabel" name="limitTitle">
+         <property name="text">
+          <string>Module limit</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QLabel" name="limitRateLabel">
+         <property name="text">
+          <string>Rate (rule matches if it hits this often or less):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QSpinBox" name="ipt_limit">
+         <property name="maximum">
+          <number>99999</number>
+         </property>
+         <property name="toolTip">
+          <string>Maximum average matching rate. When the rate is exceeded, the rule stops matching. Set to 0 to disable rate limiting.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QComboBox" name="ipt_limitSuffix">
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Time unit for the rate limit value. Determines how the rate is measured (/second, /minute, /hour, or /day).</string>
+         </property>
+         <item>
+          <property name="text">
+           <string></string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>/day</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>/hour</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>/minute</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>/second</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="4">
+        <spacer name="limitNegSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Policy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="5">
+        <widget class="QCheckBox" name="ipt_limit_not">
+         <property name="text">
+          <string>Negate</string>
+         </property>
+         <property name="toolTip">
+          <string>Invert the limit match: the rule matches when the rate exceeds the configured limit instead of when it is below.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="6">
+        <spacer name="limitHSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="burstLabel">
+         <property name="text">
+          <string>Burst:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="ipt_burst">
+         <property name="maximum">
+          <number>10000</number>
+         </property>
+         <property name="toolTip">
+          <string>Maximum initial number of packets to match before rate limiting kicks in. A higher burst allows short traffic spikes.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2" colspan="5">
+        <spacer name="burstHSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0">
+        <spacer name="limitVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabConnlimit">
+      <attribute name="title">
+       <string>connlimit</string>
+      </attribute>
+      <layout class="QGridLayout" name="connlimitLayout">
+       <item row="0" column="0" colspan="6">
+        <widget class="QLabel" name="connlimitTitle">
+         <property name="text">
+          <string>Module connlimit</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QLabel" name="connlimitAboveLabel">
+         <property name="text">
+          <string>Match if the number of existing connections is above this (translates into option --connlimit-above):</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="3">
+        <widget class="QSpinBox" name="ipt_connlimit">
+         <property name="maximum">
+          <number>99999</number>
+         </property>
+         <property name="toolTip">
+          <string>Connection count threshold. The rule matches when the number of connections from a source exceeds this value. Set to 0 to disable.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="4">
+        <widget class="QCheckBox" name="ipt_connlimit_above_not">
+         <property name="text">
+          <string>Negate</string>
+         </property>
+         <property name="toolTip">
+          <string>Invert the connlimit match: match when the number of connections is below (not above) the threshold.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="5">
+        <spacer name="connlimitRow1Spacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="connlimitMaskLabel">
+         <property name="text">
+          <string>per network with netmask of</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="ipt_connlimit_masklen">
+         <property name="maximum">
+          <number>128</number>
+         </property>
+         <property name="toolTip">
+          <string>Group connections by source network using this prefix length. For example, 24 groups all connections from the same /24 subnet. Set to 0 to count per individual source address.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLabel" name="connlimitBitLabel">
+         <property name="text">
+          <string>bit</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="3" colspan="3">
+        <spacer name="connlimitRow2Spacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0">
+        <spacer name="connlimitVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabHashlimit">
+      <attribute name="title">
+       <string>hashlimit</string>
+      </attribute>
+      <layout class="QGridLayout" name="hashlimitLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="hashlimitTitle">
+         <property name="text">
+          <string>Module hashlimit</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="hashlimitNameLabel">
+         <property name="text">
+          <string>Name:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="ipt_hashlimit_name">
+         <property name="toolTip">
+          <string>Unique name for this hashlimit entry in /proc/net/ipt_hashlimit/. Must be set when using hashlimit.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QCheckBox" name="ipt_hashlimit_dstlimit">
+         <property name="text">
+          <string>On some older systems this module has name 'dstlimit'. Check here if you need to use this name.</string>
+         </property>
+         <property name="toolTip">
+          <string>Use the older "dstlimit" module name instead of "hashlimit". Required for some legacy kernels (before 2.6.22).</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="3">
+        <layout class="QHBoxLayout" name="hashlimitRateLayout">
+         <item>
+          <widget class="QLabel" name="hashlimitRateLabel">
+           <property name="text">
+            <string>Rate:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit">
+           <property name="maximum">
+            <number>99999</number>
+           </property>
+           <property name="toolTip">
+            <string>Maximum average matching rate per hash bucket. Packets exceeding this rate are not matched.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="ipt_hashlimit_suffix">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Time unit for the hashlimit rate value.</string>
+           </property>
+           <item>
+            <property name="text">
+             <string></string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>/day</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>/hour</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>/minute</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>/second</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="hashlimitBurstLabel">
+           <property name="text">
+            <string>Burst:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit_burst">
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="toolTip">
+            <string>Maximum initial burst size before rate limiting kicks in.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="hashlimitModeSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="hashlimitModeLabel">
+           <property name="text">
+            <string>Mode:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="cb_srcip">
+           <property name="text">
+            <string>srcip</string>
+           </property>
+           <property name="toolTip">
+            <string>Hash by source IP address.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="cb_dstip">
+           <property name="text">
+            <string>dstip</string>
+           </property>
+           <property name="toolTip">
+            <string>Hash by destination IP address.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="cb_srcport">
+           <property name="text">
+            <string>srcport</string>
+           </property>
+           <property name="toolTip">
+            <string>Hash by source port.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="cb_dstport">
+           <property name="text">
+            <string>dstport</string>
+           </property>
+           <property name="toolTip">
+            <string>Hash by destination port.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <widget class="Line" name="hashlimitSep">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="3">
+        <widget class="QLabel" name="hashlimitTableHint">
+         <property name="text">
+          <string>Options below control size of the hash table and expiration time. They will be omitted from the generated script if set to zero.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="3">
+        <layout class="QHBoxLayout" name="hashlimitTableLayout">
+         <item>
+          <widget class="QLabel" name="htSizeLabel">
+           <property name="text">
+            <string>htable-size:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit_size">
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+           <property name="toolTip">
+            <string>The number of buckets of the hash table (omit this option in generated script if set to 0).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="htMaxLabel">
+           <property name="text">
+            <string>htable-max:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit_max">
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+           <property name="toolTip">
+            <string>Maximum number of entries in the hash (omit this option in generated script if set to 0).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="htExpireLabel">
+           <property name="text">
+            <string>htable-expire:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit_expire">
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+           <property name="toolTip">
+            <string>After how many milliseconds do hash entries expire (omit this option in the generated script if set to 0).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="htGcLabel">
+           <property name="text">
+            <string>htable-gcinterval:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="ipt_hashlimit_gcinterval">
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+           <property name="toolTip">
+            <string>How many milliseconds between garbage collection intervals (omit this option in generated script if set to 0).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="htTableSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item row="6" column="0">
+        <spacer name="hashlimitVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>RuleOptionsDialog_q</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>320</x>
+     <y>360</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>190</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>RuleOptionsDialog_q</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>320</x>
+     <y>360</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>320</x>
+     <y>190</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
