@@ -38,8 +38,8 @@ from firewallfabrik.core.objects import Firewall
 TESTS_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = TESTS_DIR / 'fixtures'
 EXPECTED_OUTPUT_DIR = TESTS_DIR / 'expected-output'
-FIXTURES_PRIVATE_DIR = TESTS_DIR / 'fixtures-private'
-EXPECTED_OUTPUT_PRIVATE_DIR = TESTS_DIR / 'expected-output-private'
+FIXTURES_PRIVATE_DIR = TESTS_DIR / 'private' / 'fixtures'
+EXPECTED_OUTPUT_PRIVATE_DIR = TESTS_DIR / 'private' / 'expected-output'
 
 PLATFORMS = {
     'ipt': {
@@ -186,7 +186,7 @@ def main():
         '--private',
         action='store_true',
         default=False,
-        help='Operate on private fixtures (tests/fixtures-private/ and tests/expected-output-private/).',
+        help='Operate on private fixtures (tests/private/fixtures/ and tests/private/expected-output/).',
     )
     args = parser.parse_args()
 

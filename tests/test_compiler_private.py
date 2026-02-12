@@ -12,10 +12,10 @@
 
 """Private fixture compiler tests (compile-only + optional expected output regression).
 
-Place .fwb/.fwf files in tests/fixtures-private/.  Tests auto-discover
+Place .fwb/.fwf files in tests/private/fixtures/.  Tests auto-discover
 all firewalls and compile each for both ipt and nft.
 
-If an expected output file exists in tests/expected-output-private/{ipt,nft}/<fixture>/<fw>.fw,
+If an expected output file exists in tests/private/expected-output/{ipt,nft}/<fixture>/<fw>.fw,
 output is compared.  Otherwise, the test passes on successful compilation.
 
 Generate expected output files:  python tests/update_expected_output.py --private

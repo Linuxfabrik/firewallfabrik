@@ -22,8 +22,8 @@ from firewallfabrik.core.objects import Firewall
 
 FIXTURES_DIR = Path(__file__).parent / 'fixtures'
 EXPECTED_OUTPUT_DIR = Path(__file__).parent / 'expected-output'
-FIXTURES_PRIVATE_DIR = Path(__file__).parent / 'fixtures-private'
-EXPECTED_OUTPUT_PRIVATE_DIR = Path(__file__).parent / 'expected-output-private'
+FIXTURES_PRIVATE_DIR = Path(__file__).parent / 'private' / 'fixtures'
+EXPECTED_OUTPUT_PRIVATE_DIR = Path(__file__).parent / 'private' / 'expected-output'
 
 
 FIXTURE_EXTENSIONS = ('.fwf', '.fwb')
@@ -151,7 +151,7 @@ def discover_test_cases(platform: str) -> list[tuple[str, str]]:
 def discover_private_test_cases() -> list[tuple[str, str]]:
     """Discover (fixture_name, fw_name) pairs from private fixtures.
 
-    Loads each .fwf/.fwb in tests/fixtures-private/ and enumerates
+    Loads each .fwf/.fwb in tests/private/fixtures/ and enumerates
     all Firewall objects.  Returns [] if the directory doesn't exist.
     """
     if not FIXTURES_PRIVATE_DIR.exists():

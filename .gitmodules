@@ -1,0 +1,3 @@
+[submodule "tests/private"]
+	path = tests/private
+	url = ./tests/private
