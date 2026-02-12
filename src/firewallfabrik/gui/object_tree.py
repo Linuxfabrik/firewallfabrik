@@ -17,11 +17,12 @@ from datetime import UTC, datetime
 
 import sqlalchemy
 from PySide6.QtCore import QMimeData, QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QDrag, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
     QLineEdit,
+    QMenu,
     QTreeWidget,
     QTreeWidgetItem,
     QTreeWidgetItemIterator,
@@ -460,6 +461,24 @@ class _DraggableTree(QTreeWidget):
         mime.setData(FWF_MIME_TYPE, payload)
         return mime
 
+    def startDrag(self, supported_actions):
+        """Start a drag with the object's type icon as cursor pixmap."""
+        items = self.selectedItems()
+        mime = self.mimeData(items)
+        if mime is None:
+            return
+        item = items[0]
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        icon_path = ICON_MAP.get(obj_type)
+        if icon_path:
+            drag.setPixmap(QIcon(icon_path).pixmap(25, 25))
+
+        drag.exec(supported_actions)
+
 
 class ObjectTree(QWidget):
     """Left-hand object tree panel with filter field and library selector."""
@@ -484,6 +503,10 @@ class ObjectTree(QWidget):
         self._tree.setHeaderLabels(['Object', 'Attribute'])
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._tree.customContextMenuRequested.connect(self._on_context_menu)
+
+        self._db_manager = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -532,6 +555,9 @@ class ObjectTree(QWidget):
 
         libraries.sort(key=_lib_order)
 
+        self._building_device_ro = False
+        self._building_lib_ro = False
+
         self._groups_with_members = set(
             session.scalars(
                 sqlalchemy.select(group_membership.c.group_id).distinct(),
@@ -539,13 +565,16 @@ class ObjectTree(QWidget):
         )
 
         for lib in libraries:
+            self._building_lib_ro = getattr(lib, 'ro', False)
+            self._building_device_ro = False
             lib_item = self._make_item(
                 lib.name,
                 'Library',
                 str(lib.id),
                 attrs=_obj_brief_attrs(lib),
+                effective_readonly=self._building_lib_ro,
                 obj=lib,
-                readonly=getattr(lib, 'ro', False),
+                readonly=self._building_lib_ro,
             )
             self._tree.addTopLevelItem(lib_item)
             self._add_children(lib, lib_item)
@@ -662,6 +691,10 @@ class ObjectTree(QWidget):
         self._show_attrs = show
         self._apply_column_setup()
 
+    def set_db_manager(self, db_manager):
+        """Set the database manager for context menu operations."""
+        self._db_manager = db_manager
+
     def set_tooltips_enabled(self, enabled):
         """Enable or disable tooltips on all existing tree items."""
         self._tooltips_enabled = enabled
@@ -726,12 +759,15 @@ class ObjectTree(QWidget):
     def _add_object(self, obj, parent_item):
         """Create a tree item for *obj* and recurse into groups / devices."""
         type_str = getattr(obj, 'type', None) or type(obj).__name__
+        obj_ro = getattr(obj, 'ro', False)
+        effective_ro = self._building_lib_ro or obj_ro
         item = self._make_item(
             _obj_display_name(obj),
             type_str,
             str(obj.id),
             parent_item,
             attrs=_obj_brief_attrs(obj),
+            effective_readonly=effective_ro,
             inactive=_is_inactive(obj),
             obj=obj,
             tags=_obj_tags(obj),
@@ -741,7 +777,10 @@ class ObjectTree(QWidget):
             if obj.id not in self._groups_with_members:
                 item.setIcon(0, QIcon(_CATEGORY_ICON))
         elif isinstance(obj, Host):
+            saved_device_ro = self._building_device_ro
+            self._building_device_ro = obj_ro
             self._add_device_children(obj, item)
+            self._building_device_ro = saved_device_ro
 
     def _add_group_children(self, group, parent_item):
         """Add child objects and sub-groups of *group*."""
@@ -778,12 +817,14 @@ class ObjectTree(QWidget):
 
     def _add_device_children(self, device, parent_item):
         """Add rule sets and interfaces of *device*."""
+        effective_ro = self._building_lib_ro or self._building_device_ro
         for rs in sorted(device.rule_sets, key=_obj_sort_key):
             self._make_item(
                 _obj_display_name(rs),
                 rs.type,
                 str(rs.id),
                 parent_item,
+                effective_readonly=effective_ro,
                 inactive=_is_inactive(rs),
                 obj=rs,
             )
@@ -792,12 +833,14 @@ class ObjectTree(QWidget):
 
     def _add_interface(self, iface, parent_item):
         """Add an Interface node with its child addresses."""
+        effective_ro = self._building_lib_ro or self._building_device_ro
         iface_item = self._make_item(
             _obj_display_name(iface),
             'Interface',
             str(iface.id),
             parent_item,
             attrs=_obj_brief_attrs(iface),
+            effective_readonly=effective_ro,
             inactive=_is_inactive(iface),
             obj=iface,
             tags=_obj_tags(iface),
@@ -809,6 +852,7 @@ class ObjectTree(QWidget):
                 str(addr.id),
                 iface_item,
                 attrs=_obj_brief_attrs(addr, under_interface=True),
+                effective_readonly=effective_ro,
                 inactive=_is_inactive(addr),
                 obj=addr,
                 tags=_obj_tags(addr),
@@ -828,6 +872,7 @@ class ObjectTree(QWidget):
         parent_item=None,
         *,
         attrs=None,
+        effective_readonly=False,
         inactive=False,
         obj=None,
         readonly=False,
@@ -839,6 +884,7 @@ class ObjectTree(QWidget):
         item.setData(0, Qt.ItemDataRole.UserRole + 1, type_str)
         item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(tags))
         item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs or '')
+        item.setData(0, Qt.ItemDataRole.UserRole + 5, effective_readonly)
         if attrs:
             item.setText(1, attrs)
         if readonly:
@@ -1007,3 +1053,39 @@ class ObjectTree(QWidget):
             self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
         else:
             self.object_activated.emit(obj_id, type_str)
+
+    # ------------------------------------------------------------------
+    # Context menu
+    # ------------------------------------------------------------------
+
+    def _on_context_menu(self, pos):
+        """Build and show the context menu for the right-clicked tree item."""
+        item = self._tree.itemAt(pos)
+        if item is None:
+            return
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not obj_id or not obj_type:
+            return
+
+        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+
+        menu = QMenu(self)
+
+        # Edit / Inspect
+        label = 'Inspect' if effective_ro else 'Edit'
+        edit_action = menu.addAction(label)
+        edit_action.triggered.connect(lambda: self._ctx_edit(item))
+
+        menu.exec(self._tree.viewport().mapToGlobal(pos))
+
+    def _ctx_edit(self, item):
+        """Open the editor for the context-menu item (Edit / Inspect)."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_type in _RULE_SET_TYPES:
+            fw_item = item.parent()
+            fw_name = fw_item.text(0) if fw_item else ''
+            self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
+        else:
+            self.object_activated.emit(obj_id, obj_type)

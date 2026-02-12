@@ -210,6 +210,7 @@ class FWWindow(QMainWindow):
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
         self._object_tree.rule_set_activated.connect(self._open_rule_set)
         self._object_tree.object_activated.connect(self._open_object_editor)
+        self._object_tree.set_db_manager(self._db_manager)
 
         self._editor_map = {
             'IPv4': self.w_IPv4Dialog,
@@ -624,6 +625,7 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=str(original_path))
 
+        self._object_tree.set_db_manager(self._db_manager)
         self._find_panel.set_tree(self._object_tree._tree)
         self._find_panel.set_db_manager(self._db_manager)
         self._find_panel.set_reload_callback(self._reload_rule_set_views)
