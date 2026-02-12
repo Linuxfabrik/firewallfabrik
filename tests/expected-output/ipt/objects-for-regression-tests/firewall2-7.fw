@@ -297,11 +297,11 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 192.168.1.1/24" ""
- update_addresses_of_interface "eth3 33.33.33.25/29" ""
- update_addresses_of_interface "eth2 33.33.33.3/29 33.33.33.4/29" ""
- update_addresses_of_interface "lo 127.0.0.1/8" ""
  update_addresses_of_interface "bridge0 10.1.1.1/24" ""
+ update_addresses_of_interface "eth0 192.168.1.1/24" ""
+ update_addresses_of_interface "eth2 33.33.33.3/29 33.33.33.4/29" ""
+ update_addresses_of_interface "eth3 33.33.33.25/29" ""
+ update_addresses_of_interface "lo 127.0.0.1/8" ""
  update_addresses_of_interface "vlan101 222.222.222.222/24 222.222.222.40/24" ""
 }
 

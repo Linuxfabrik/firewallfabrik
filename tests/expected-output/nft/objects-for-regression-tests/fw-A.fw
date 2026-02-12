@@ -194,8 +194,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5"
-    for i in bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5 ; do
+    echo "Verifying interfaces: bond0 bond0.1 bond0.2 bond1 eth0 eth1 eth2 eth2.201 eth2.202 eth3 eth4 eth5 eth6 lo"
+    for i in bond0 bond0.1 bond0.2 bond1 eth0 eth1 eth2 eth2.201 eth2.202 eth3 eth4 eth5 eth6 lo ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -220,15 +220,15 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth3 192.0.2.11/24" ""
-    update_addresses_of_interface "bond1 192.168.11.11/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
-    update_addresses_of_interface "eth6 192.168.6.11/24" ""
-    update_addresses_of_interface "bond0.2 192.168.2.11/24" ""
+    clear_addresses_except_known_interfaces "bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5"
     update_addresses_of_interface "bond0.1 192.168.1.11/24" ""
+    update_addresses_of_interface "bond0.2 192.168.2.11/24" ""
+    update_addresses_of_interface "bond1 192.168.11.11/24" ""
     update_addresses_of_interface "eth2.201 192.168.201.11/24" ""
     update_addresses_of_interface "eth2.202 192.168.202.11/24" ""
-    clear_addresses_except_known_interfaces "bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5"
+    update_addresses_of_interface "eth3 192.0.2.11/24" ""
+    update_addresses_of_interface "eth6 192.168.6.11/24" ""
+    update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {

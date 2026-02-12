@@ -579,8 +579,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 bond1 lo eth2 eth3 eth0.100 bond1.123"
- for i in eth0 bond1 lo eth2 eth3 eth0.100 bond1.123 ; do
+ echo "Verifying interfaces: bond1 bond1.123 eth0 eth0.100 eth2 eth3 lo"
+ for i in bond1 bond1.123 eth0 eth0.100 eth2 eth3 lo ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -613,11 +613,11 @@ configure_interfaces() {
  update_vlans_of_interface "bond1 bond1.123"
  clear_vlans_except_known eth0.100@eth0 bond1.123@bond1
  sync_bridge_interfaces
- update_addresses_of_interface "eth0 172.24.0.2/16" ""
  update_addresses_of_interface "bond1 192.168.1.2/24" ""
- update_addresses_of_interface "lo 127.0.0.1/8" ""
- update_addresses_of_interface "eth0.100 172.16.1.1/24" ""
  update_addresses_of_interface "bond1.123 172.16.2.1/24" ""
+ update_addresses_of_interface "eth0 172.24.0.2/16" ""
+ update_addresses_of_interface "eth0.100 172.16.1.1/24" ""
+ update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {

@@ -308,12 +308,12 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth1 192.168.1.1/24" ""
- update_addresses_of_interface "lo 127.0.0.1/8" ""
  getaddr eth0 i_eth0
  getaddr6 eth0 i_eth0_v6
  getnet eth0 i_eth0_network
  getnet6 eth0 i_eth0_v6_network
+ update_addresses_of_interface "eth1 192.168.1.1/24" ""
+ update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {

@@ -330,9 +330,9 @@ script_body() {
  #
  $IPTABLES -A INPUT -i eth0 -p tcp -m tcp --dport 22 -j ACCEPT
  #
- # Rule 2 (eth1,eth0)
+ # Rule 2 (eth0,eth1)
  #
- echo "Rule 2 (eth1,eth0)"
+ echo "Rule 2 (eth0,eth1)"
  #
  $IPTABLES -A INPUT -i eth0 -p tcp -m tcp --dport 22 -j ACCEPT
 
@@ -352,9 +352,9 @@ script_body() {
  #
  $IP6TABLES -A INPUT -i eth1 -p tcp -m tcp --dport 22 -j ACCEPT
  #
- # Rule 2 (eth1,eth0)
+ # Rule 2 (eth0,eth1)
  #
- echo "Rule 2 (eth1,eth0)"
+ echo "Rule 2 (eth0,eth1)"
  #
  $IP6TABLES -A INPUT -i eth1 -p tcp -m tcp --dport 22 -j ACCEPT
 }

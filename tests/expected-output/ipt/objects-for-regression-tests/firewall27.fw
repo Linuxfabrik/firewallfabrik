@@ -272,8 +272,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: ppp eth0 eth2"
- for i in ppp eth0 eth2 ; do
+ echo "Verifying interfaces: eth0 eth2 ppp"
+ for i in eth0 eth2 ppp ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -299,9 +299,9 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "ppp 192.0.2.1/24" ""
  update_addresses_of_interface "eth0 192.168.1.1/24" ""
  update_addresses_of_interface "eth2 192.168.2.1/24" ""
+ update_addresses_of_interface "ppp 192.0.2.1/24" ""
 }
 
 script_body() {

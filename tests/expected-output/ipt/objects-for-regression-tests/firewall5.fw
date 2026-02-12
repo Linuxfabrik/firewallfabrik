@@ -389,9 +389,9 @@ script_body() {
  $IPTABLES -A In_RULE_1_3 -j LOG
  $IPTABLES -A In_RULE_1_3 -j DROP
  #
- # Rule 2 (ppp1,ppp0)
+ # Rule 2 (ppp0,ppp1)
  #
- echo "Rule 2 (ppp1,ppp0)"
+ echo "Rule 2 (ppp0,ppp1)"
  #
  $IPTABLES -N CHAIN
  $IPTABLES -A INPUT -i ppp0 -j CHAIN

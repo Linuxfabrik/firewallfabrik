@@ -280,8 +280,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 ppp0 ppp-dsl"
- for i in eth0 ppp0 ppp-dsl ; do
+ echo "Verifying interfaces: eth0 ppp-dsl ppp0"
+ for i in eth0 ppp-dsl ppp0 ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -314,7 +314,6 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 fe80::20c:29ff:fe28:c078/64 192.0.2.1/24" ""
  getaddr ppp0 i_ppp0
  getaddr6 ppp0 i_ppp0_v6
  getnet ppp0 i_ppp0_network
@@ -323,6 +322,7 @@ configure_interfaces() {
  getaddr6 ppp-dsl i_ppp_dsl_v6
  getnet ppp-dsl i_ppp_dsl_network
  getnet6 ppp-dsl i_ppp_dsl_v6_network
+ update_addresses_of_interface "eth0 fe80::20c:29ff:fe28:c078/64 192.0.2.1/24" ""
 }
 
 script_body() {

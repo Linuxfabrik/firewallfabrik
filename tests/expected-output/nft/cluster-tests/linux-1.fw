@@ -196,8 +196,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo eth0.100"
-    for i in eth0 eth1 lo eth0.100 ; do
+    echo "Verifying interfaces: eth0 eth0.100 eth1 lo"
+    for i in eth0 eth0.100 eth1 lo ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -223,9 +223,9 @@ run_epilog_and_exit() {
 configure_interfaces() {
     :
     update_addresses_of_interface "eth0 172.24.0.2/16" ""
+    update_addresses_of_interface "eth0.100 192.168.100.1/24" ""
     update_addresses_of_interface "eth1 192.168.1.2/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
-    update_addresses_of_interface "eth0.100 192.168.100.1/24" ""
 }
 
 script_body() {

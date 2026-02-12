@@ -280,8 +280,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth2 eth0 eth1 lo ppp0"
- for i in eth2 eth0 eth1 lo ppp0 ; do
+ echo "Verifying interfaces: eth0 eth1 eth2 lo ppp0"
+ for i in eth0 eth1 eth2 lo ppp0 ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -307,14 +307,14 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth2 66.66.66.1/25" ""
- update_addresses_of_interface "eth0 192.168.1.1/24" ""
- update_addresses_of_interface "eth1 66.66.66.130/25" ""
- update_addresses_of_interface "lo 127.0.0.1/8" ""
  getaddr ppp0 i_ppp0
  getaddr6 ppp0 i_ppp0_v6
  getnet ppp0 i_ppp0_network
  getnet6 ppp0 i_ppp0_v6_network
+ update_addresses_of_interface "eth0 192.168.1.1/24" ""
+ update_addresses_of_interface "eth1 66.66.66.130/25" ""
+ update_addresses_of_interface "eth2 66.66.66.1/25" ""
+ update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {

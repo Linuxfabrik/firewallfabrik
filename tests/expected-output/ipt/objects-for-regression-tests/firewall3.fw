@@ -526,9 +526,9 @@ script_body() {
  $IPTABLES -A Cid440D880417760.0 -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
- # Rule 23 (eth1,eth0,eth2)
+ # Rule 23 (eth0,eth1,eth2)
  #
- echo "Rule 23 (eth1,eth0,eth2)"
+ echo "Rule 23 (eth0,eth1,eth2)"
  #
  # this rule should go only to the FORWARD
  # chain but should have "-i eth" clause

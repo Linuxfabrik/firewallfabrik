@@ -321,11 +321,11 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
  getaddr eth1 i_eth1
  getaddr6 eth1 i_eth1_v6
  getnet eth1 i_eth1_network
  getnet6 eth1 i_eth1_v6_network
+ update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
 }
 
 script_body() {
