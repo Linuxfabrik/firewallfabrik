@@ -240,7 +240,7 @@ class Compiler(BaseCompiler):
         try:
             infos = socket.getaddrinfo(dnsrec, None, af, socket.SOCK_STREAM)
         except socket.gaierror:
-            self.warning(
+            self.abort(
                 f'DNSName "{obj.name}" cannot resolve "{dnsrec}": DNS lookup failed'
             )
             return []
