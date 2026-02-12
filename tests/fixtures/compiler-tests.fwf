@@ -3323,9 +3323,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3342,9 +3342,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3503,9 +3503,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3522,9 +3522,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3642,9 +3642,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3763,9 +3763,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3782,9 +3782,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
@@ -3801,9 +3801,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
@@ -3820,9 +3820,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
@@ -3839,9 +3839,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 4
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
@@ -3858,9 +3858,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 5
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -4033,7 +4033,7 @@ libraries:
                 rules:
                   - type: 'NATRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4055,7 +4055,7 @@ libraries:
                   - type: 'NATRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4077,7 +4077,7 @@ libraries:
                   - type: 'NATRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4099,7 +4099,7 @@ libraries:
                   - type: 'NATRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4122,7 +4122,7 @@ libraries:
                   - type: 'NATRule'
                     position: 4
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4144,7 +4144,7 @@ libraries:
                   - type: 'NATRule'
                     position: 5
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4166,7 +4166,7 @@ libraries:
                   - type: 'NATRule'
                     position: 6
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4191,9 +4191,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4210,9 +4210,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4229,9 +4229,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -4349,9 +4349,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       classification: false
                       classify_str: ''
                       connlimit_above_not: false
@@ -4403,9 +4403,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       classification: false
                       classify_str: ''
                       connlimit_above_not: false
@@ -4457,9 +4457,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -4591,7 +4591,7 @@ libraries:
                 rules:
                   - type: 'NATRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4613,7 +4613,7 @@ libraries:
                   - type: 'NATRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4635,7 +4635,7 @@ libraries:
                   - type: 'NATRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4657,7 +4657,7 @@ libraries:
                   - type: 'NATRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4680,7 +4680,7 @@ libraries:
                   - type: 'NATRule'
                     position: 4
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4702,7 +4702,7 @@ libraries:
                   - type: 'NATRule'
                     position: 5
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4724,7 +4724,7 @@ libraries:
                   - type: 'NATRule'
                     position: 6
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     itf_inb:
@@ -4749,9 +4749,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4768,9 +4768,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4787,9 +4787,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -4921,7 +4921,7 @@ libraries:
                 rules:
                   - type: 'NATRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
                     action: 'Translate'
                     negations:
@@ -4948,9 +4948,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4967,9 +4967,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -4986,9 +4986,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -5106,9 +5106,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
@@ -5127,9 +5127,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5148,9 +5148,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
@@ -5169,9 +5169,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -5289,9 +5289,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Both'
@@ -5308,9 +5308,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Both'
@@ -5327,9 +5327,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -5445,9 +5445,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5464,9 +5464,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5484,9 +5484,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5503,9 +5503,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5522,9 +5522,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 4
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5542,9 +5542,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 5
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
@@ -5562,9 +5562,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 6
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5582,9 +5582,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 7
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'True'
+                      log: true
                       stateless: true
                     action: 'Deny'
                     direction: 'Both'
@@ -5743,9 +5743,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -5762,9 +5762,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
