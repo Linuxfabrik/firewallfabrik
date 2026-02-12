@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing rule shadowing with run-time objects, rules with such objects should be ignored
+#
 
 FWBDEBUG=""
 
@@ -83,28 +85,35 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        ip saddr { 1.1.1.1, 2.2.2.2 } ct state new log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
+        ip saddr { 1.1.1.1, 2.2.2.2 } ct state new log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 3 (global)
         #
         log prefix "RULE 3 -- DENY " level info drop
+        #
+        # Rule 4 (global)
+        #
+        # testing for bug #1086
+        # when two run-time objects are used in the rule, compiler adds blank command that blocks (permits) any to any
+        ip saddr { 1.1.1.1, 2.2.2.2 } ct state new log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        # there should be warning saying the table could not be found
+        ip saddr { 1.1.1.1, 2.2.2.2 } log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        ip saddr { 1.1.1.1, 2.2.2.2 } log prefix "RULE 6 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ct state new accept
         #
         # Rule 3 (global)
         #
@@ -115,9 +124,36 @@ table ip filter {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ct state new log prefix "RULE 0 -- ACCEPT " level info accept
+        #
+        # Rule 1 (global)
+        #
+        ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        #
+        # Rule 2 (global)
+        #
+        ip daddr 1.1.1.1 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
+        #
         # Rule 3 (global)
         #
         log prefix "RULE 3 -- DENY " level info drop
+        #
+        # Rule 4 (global)
+        #
+        # testing for bug #1086
+        # when two run-time objects are used in the rule, compiler adds blank command that blocks (permits) any to any
+        ct state new log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        # there should be warning saying the table could not be found
+        log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
     }
 }
 

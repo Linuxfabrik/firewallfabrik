@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  Testing empty groups thing
+#
 
 FWBDEBUG=""
 
@@ -81,43 +83,61 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
-        #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
         # Rule 2 (global)
         #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ip daddr 192.168.1.10 tcp dport 8080 ct state new accept
+        #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip daddr 192.168.1.10 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
         #
-        # Rule 3 (global)
+        # Rule 2 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip daddr 192.168.1.10 tcp dport 8080 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        ip daddr 192.168.1.10 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        #
+        # Rule 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
+        ip daddr 22.22.22.22 tcp dport 70 dnat to 192.168.1.10
+        #
+        # Rule 1 (NAT)
+        #
+        ip daddr 22.22.22.22 tcp dport 70 dnat to 192.168.1.10
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
     }
 }
 
@@ -126,7 +146,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 # See how we were called.

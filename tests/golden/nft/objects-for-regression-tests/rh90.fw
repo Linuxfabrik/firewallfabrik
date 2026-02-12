@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  This is an example of a firewall protecting a host ( a server or a workstation). Only SSH access to the host is permitted. Host has dynamic address.
+#
 
 FWBDEBUG=""
 
@@ -81,43 +83,67 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        # anti spoofing rule
+        iifname "eth0" ip saddr 10.3.14.58 log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 1 (global)
+        # Rule 1 (lo)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        iif "lo" ct state new accept
         #
         # Rule 2 (global)
         #
-        tcp dport != 22 drop
+        # SSH Access to the host; useful ICMP
+        # types; ping request
+        icmp type 3 ct state new accept
+        tcp dport 22 ct state new accept
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr 10.3.14.58 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        # anti spoofing rule
+        iifname "eth0" ip saddr 10.3.14.58 log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 3 (global)
+        # Rule 4 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 1 (lo)
+        #
+        oif "lo" ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        # SSH Access to the host; useful ICMP
+        # types; ping request
+        ip daddr 10.3.14.58 icmp type 3 ct state new accept
+        ip daddr 10.3.14.58 tcp dport 22 ct state new accept
+        #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        log prefix "RULE 4 -- DENY " level info drop
     }
 }
 

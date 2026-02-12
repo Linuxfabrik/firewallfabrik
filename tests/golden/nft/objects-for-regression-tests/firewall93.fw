@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing shell code generated for dynamic interface with "-" in the name
+#
 
 FWBDEBUG=""
 
@@ -76,48 +78,68 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
+table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (ppp0)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        iifname "ppp0" ip saddr 192.0.2.1 ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 1 (ppp-dsl)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new accept
         #
-        # Rule 2 (global)
+        # Rule Policy_v6 0 (ppp-dsl)
         #
-        tcp dport != 22 drop
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
         #
-        # Rule 3 (global)
+        # Rule Policy_v6 1 (ppp0)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        #
+        # Rule 0 (ppp0)
+        #
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        #
+        # Rule 1 (ppp-dsl)
+        #
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule 0 (ppp0)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        iifname "ppp0" ip saddr 192.0.2.1 ct state new accept
         #
-        # Rule 3 (global)
+        # Rule 1 (ppp-dsl)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new accept
+        #
+        # Rule Policy_v6 0 (ppp-dsl)
+        #
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        #
+        # Rule Policy_v6 1 (ppp0)
+        #
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        #
+        # Rule 0 (ppp0)
+        #
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        #
+        # Rule 1 (ppp-dsl)
+        #
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
     }
 }
 

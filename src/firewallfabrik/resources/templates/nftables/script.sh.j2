@@ -2,17 +2,25 @@
 #
 #  This file is managed by FirewallFabrik - do not edit
 #
-#  FirewallFabrik fwf-nft VERSION
+#  FirewallFabrik fwf-nft v{{ version }}
 #
-#  Generated TIMESTAMP
+#  Generated {{ timestamp }} {{ tz }} by {{ user }}
 #
+{% if comment %}
+{{ comment }}
+#
+{% endif %}
+{% if errors_and_warnings %}
+{{ errors_and_warnings }}
+{% endif %}
 
+{{ shell_debug }}
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
-NFT="/usr/sbin/nft"
+NFT="{{ nft_path }}"
 
 log() {
     echo "$1"
@@ -28,12 +36,12 @@ check_nft() {
 
 prolog_commands() {
     echo "Running prolog script"
-
+    {{ prolog_script }}
 }
 
 epilog_commands() {
     echo "Running epilog script"
-
+    {{ epilog_script }}
 }
 
 run_epilog_and_exit() {
@@ -52,6 +60,11 @@ block_action() {
     $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
     $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
     $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+{% if mgmt_access %}
+    # backup ssh access
+    $NFT add rule inet block input tcp dport 22 ip saddr {{ ssh_management_address }} ct state new,established accept
+    $NFT add rule inet block output tcp sport 22 ip daddr {{ ssh_management_address }} ct state established accept
+{% endif %}
 }
 
 check_nft_status() {
@@ -74,59 +87,19 @@ status_action() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-flush ruleset
-
-table ip filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-}
-
+{{ nft_rules_body }}
 NFT_RULES
 }
 
+{% if routing_output %}
+routing_script() {
+    {{ routing_output }}
+}
+
+{% endif %}
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    {{ ip_forward_commands }}
 }
 
 # See how we were called.
@@ -139,11 +112,22 @@ test -z "$cmd" && {
 
 case "$cmd" in
     start)
-        log "Activating firewall script generated TIMESTAMP"
+        log "Activating firewall script generated {{ timestamp }} by {{ user }}"
         check_nft
+{% if prolog_place == 'top' %}
         prolog_commands
+{% endif %}
+{% if prolog_place == 'after_interfaces' %}
+        prolog_commands
+{% endif %}
         stop_action
+{% if prolog_place == 'after_flush' %}
+        prolog_commands
+{% endif %}
         script_body
+{% if routing_output %}
+        routing_script
+{% endif %}
         ip_forward
         epilog_commands
         RETVAL=$?

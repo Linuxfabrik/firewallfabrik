@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  used to test time matching rules
+#
 
 FWBDEBUG=""
 
@@ -83,41 +85,97 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        ip saddr 192.168.1.0/24 log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
-        tcp dport != 22 drop
+        ip saddr 192.168.1.0/24 ct state new accept
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        #
+        # Rule 4 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 5 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 log prefix "RULE 0 -- DENY " level info drop
+        #
         # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        #
+        # Rule 2 (global)
         #
         ip saddr 192.168.1.0/24 ct state new accept
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        #
+        # Rule 4 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 5 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 log prefix "RULE 0 -- DENY " level info drop
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        #
+        # Rule 2 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        #
+        # Rule 4 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new log prefix "RULE 5 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
     }
 }
 
@@ -126,7 +184,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 # See how we were called.

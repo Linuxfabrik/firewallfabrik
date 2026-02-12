@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  This firewall has no "top" rule set objects.
+#
 
 FWBDEBUG=""
 
@@ -83,41 +85,56 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 0 -- DENY on interface global " level debug drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule NAT_2 0 (NAT)
+        #
+        # Branch rule with actual translation.
+        # Translation is ignored and warning should be issued
+        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        #
+        # Rule NAT_1 0 (NAT)
+        #
+        # DNAT Rule
+        ip daddr 192.0.2.1 dnat to 192.168.1.10
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule NAT_2 1 (NAT)
+        #
+        # DNAT Rule
+        accept
+        #
+        # Rule NAT_1 1 (NAT)
+        #
+        # SNAT rule
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
     }
 }
 
@@ -126,7 +143,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 # See how we were called.

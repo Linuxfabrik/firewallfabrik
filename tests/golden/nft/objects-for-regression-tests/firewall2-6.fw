@@ -1,0 +1,281 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+#  tests for nat rules with inbound and outbound interfaces
+#
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    which logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+stop_action() {
+    $NFT flush ruleset
+}
+
+block_action() {
+    $NFT flush ruleset
+    # block all traffic by default
+    $NFT add table inet block
+    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if [ -n "$tables" ]; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 0 (global)
+        #
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 0 (global)
+        #
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 0 (global)
+        #
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 13 (NAT)
+        #
+        ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 14 (NAT)
+        #
+        iifname "eth1" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 15 (NAT)
+        #
+        iifname "eth3" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 16 (NAT)
+        #
+        iifname "eth1" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 17 (NAT)
+        #
+        oifname "eth0" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 18 (NAT)
+        #
+        oifname "eth0" iifname "eth1" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 19 (NAT)
+        #
+        oifname "eth0" iifname "eth3" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 20 (NAT)
+        #
+        oifname "eth0" iifname "eth1" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 21 (NAT)
+        #
+        oifname "eth0" iifname "eth1" ip daddr 222.222.222.40 dnat to 192.168.1.10
+        #
+        # Rule 22 (NAT)
+        #
+        # rule for SF feature request 1954286
+        iifname "eth2" tcp dport 3996-4000 dnat to 192.168.1.10
+        #
+        # Rule 23 (NAT)
+        #
+        # REDIRECT
+        iifname "eth0" tcp dport 80 redirect to :3128
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # NETMAP and no -o itf
+        ip saddr 192.168.1.0/24 snat to 22.22.22.0/24
+        #
+        # Rule 1 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 2 (NAT)
+        #
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 3 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 4 (NAT)
+        #
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 5 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 6 (NAT)
+        #
+        iifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 7 (NAT)
+        #
+        iifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 8 (NAT)
+        #
+        # should be -i eth2 -o eth1
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 9 (NAT)
+        #
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 10 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 11 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 12 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        stop_action
+        prolog_commands
+        script_body
+        ip_forward
+        epilog_commands
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"

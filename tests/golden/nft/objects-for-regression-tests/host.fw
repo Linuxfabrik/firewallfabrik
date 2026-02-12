@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  firewall protects host it is running on
+#
 
 FWBDEBUG=""
 
@@ -81,43 +83,64 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        iifname "eth0" ip saddr 22.22.22.22 log level debug drop
         #
-        # Rule 1 (global)
+        # Rule 1 (lo)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        # allow everything on loopback
+        iif "lo" ct state new accept
         #
-        # Rule 2 (global)
+        # Rule 3 (lo)
         #
-        tcp dport != 22 drop
+        iif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new log level debug accept
         #
-        # Rule 3 (global)
+        # Rule 7 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr 22.22.22.22 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        # 'catch all' rule
+        log prefix "CATCH ALL RULE" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip saddr 22.22.22.22 log level debug drop
         #
-        # Rule 3 (global)
+        # Rule 8 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        # 'catch all' rule
+        log prefix "CATCH ALL RULE" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule 2 (lo)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        # allow everything on loopback
+        oif "lo" ct state new accept
+        #
+        # Rule 3 (lo)
+        #
+        oif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new log level debug accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        # 'catch all' rule
+        log prefix "CATCH ALL RULE" level debug drop
     }
 }
 
@@ -126,7 +149,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 # See how we were called.

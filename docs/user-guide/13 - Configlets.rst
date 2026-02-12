@@ -9,17 +9,29 @@ Configlets
    :depth: 2
 
 
-Generated firewall scripts are assembled from fragments called "configlets." Each configlet is a template. The program replaces configlet macros with actual strings and values when it generates a firewall configuration. Normally, you don't need to think about them.
+Generated firewall scripts are assembled from fragments called "configlets" (iptables) or Jinja2 templates (nftables). Each configlet or template contains placeholders that the compiler replaces with actual strings and values when it generates a firewall configuration. Normally, you don't need to think about them.
 
-However, if you have the need, you can use your own configlets or modify the existing ones. Using your own configlets, you can change virtually all aspects of generated configuration files.
-
-Default configlets are stored in ``/usr/share/fwbuilder-4.0.0/configlets`` on Linux, ``C:\FWBuilder40\resources\configlets`` on Windows, and ``fwbuilder400.app/Contents/Resources/configlets`` on a Mac. If you create a ``fwbuilder/configlets`` directory in your home directory and place files with the same name there, Firewall Builder will use those configlets instead. You need to retain the structure of subdirectories inside this directory. For example, Linux configlets stored in ``$HOME/fwbuilder/configlets/linux24`` will override the configlets installed in ``/usr/share/fwbuilder/configlets/linux24``.
-
-Configlets provide the commands the built-in policy installer needs to install the policy on the firewall. Two configlets are used for Unix-based firewalls (Linux, OpenWRT, Sveasoft, IPCOP and its variants, OpenBSD, FreeBSD, MacOSX, Solaris): ``installer_commands_reg_user`` and ``installer_commands_root``. You can change the behavior of the installer without having to touch C++ code: just create a copy of the configlet file in ``$HOME/fwbuilder/configlets`` and modify it.
+However, if you have the need, you can use your own configlets or templates, or modify the existing ones. This lets you change virtually all aspects of generated configuration files.
 
 
-Configlet Example
------------------
+Configlets (iptables)
+---------------------
+
+Default configlets are bundled with the FirewallFabrik package under ``resources/configlets/``. If you create a ``firewallfabrik/configlets`` directory in your home directory and place files with the same name there, FirewallFabrik will use those configlets instead. You need to retain the structure of subdirectories inside this directory. For example, Linux configlets stored in ``$HOME/firewallfabrik/configlets/linux24`` will override the bundled configlets in ``resources/configlets/linux24``.
+
+Configlets provide the commands the built-in policy installer needs to install the policy on the firewall. Two configlets are used for Unix-based firewalls: ``installer_commands_reg_user`` and ``installer_commands_root``. You can change the behavior of the installer by creating a copy of the configlet file in ``$HOME/firewallfabrik/configlets`` and modifying it.
+
+
+Jinja2 Templates (nftables)
+----------------------------
+
+The nftables compiler uses Jinja2 templates instead of configlets. The default templates are bundled under ``resources/templates/nftables/``. The same override mechanism applies: place custom templates in ``$HOME/firewallfabrik/templates/nftables/`` and they will take precedence over the bundled ones.
+
+For example, to customize the nftables shell script wrapper, copy ``resources/templates/nftables/script.sh.j2`` to ``$HOME/firewallfabrik/templates/nftables/script.sh.j2`` and modify it. Jinja2 templates use ``{{ variable }}`` for variable substitution and ``{% if condition %}...{% endif %}`` for conditional blocks.
+
+
+Configlet Example (iptables)
+----------------------------
 
 In this section, we'll show how modifying a configlet lets you tailor your generated configuration file.
 
@@ -49,7 +61,7 @@ We then save and compile the firewall. If we look into the generated .fw file, w
 
 Now suppose we want to limit SSH access from the management workstation so that it can only connect to the management interface of the firewall.
 
-First, we copy ``/usr/share/fwbuilder-4.0.0/configlets/linux24/automatic_rules`` to ``$HOME/fwbuilder/configlets/linux24/automatic_rules``.
+First, we copy the bundled ``resources/configlets/linux24/automatic_rules`` to ``$HOME/firewallfabrik/configlets/linux24/automatic_rules``.
 
 Then, we open our copy of automatic_rules in a text editor and look for this section of the code:
 

@@ -6,6 +6,10 @@
 #
 #  Generated TIMESTAMP
 #
+#  Testing "Accept TCP sessions opened prior to firewall restart flag"
+#  in combination with "Assume firewall is part of any" - both
+#  flags are OFF here
+#
 
 FWBDEBUG=""
 
@@ -81,21 +85,16 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (lo)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        # option 'assume firewall is part of any'
+        # is off, but this rule should go into
+        # INPUT/OUTPUT chains anyway
+        iif "lo" ct state new accept
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 1 -- DENY " level info drop
     }
 
     chain forward {
@@ -104,20 +103,23 @@ table ip filter {
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 1 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule 0 (lo)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        # option 'assume firewall is part of any'
+        # is off, but this rule should go into
+        # INPUT/OUTPUT chains anyway
+        oif "lo" ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
     }
 }
 
@@ -126,7 +128,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 # See how we were called.

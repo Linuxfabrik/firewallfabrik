@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  tests for nat rules with inbound and outbound interfaces with complex interface configuration
+#
 
 FWBDEBUG=""
 
@@ -80,44 +82,74 @@ table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
-        # Rule 3 (global)
+        # Rule 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 4 (NAT)
+        #
+        # REDIRECT
+        iifname "eth0" tcp dport 80 redirect to :3128
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # NETMAP and no -o itf
+        ip saddr 192.168.1.0/24 snat to 22.22.22.0/24
+        #
+        # Rule 1 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth4" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "bridge0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 2 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth4" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "bridge0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 3 (NAT)
+        #
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
     }
 }
 
@@ -141,8 +173,8 @@ case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
         check_nft
-        prolog_commands
         stop_action
+        prolog_commands
         script_body
         ip_forward
         epilog_commands

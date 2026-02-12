@@ -6,6 +6,10 @@
 #
 #  Generated TIMESTAMP
 #
+#  this firewall translates outgoing connections using address of the particular interface (not external one). Also testing different cmbinations of objects in the policy rules on loopback interface. Finally, testing for a situation when dynamic interface "shades" a rule with old broadcast
+
+#  Also the name of the script on the firewall is different
+#
 
 FWBDEBUG=""
 
@@ -81,43 +85,35 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 1 (global)
+        # Rule not_quite_long_ruleset_name 0 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } ip daddr != { 66.66.66.130, 192.168.1.1 } log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 3 (global)
+        # Rule not_quite_long_ruleset_name 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

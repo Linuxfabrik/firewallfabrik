@@ -6,6 +6,9 @@
 #
 #  Generated TIMESTAMP
 #
+#  fw is part of any is OFF
+#  ip forwarding is OFF
+#
 
 FWBDEBUG=""
 
@@ -81,43 +84,37 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        # this rule generates no iptables commands
+        iifname "eth0" ip saddr 192.168.1.1 drop
         #
-        # Rule 1 (global)
+        # Rule 2 (eth0)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        iifname "eth0" ip saddr { 127.0.0.1, 192.168.1.1 } ip daddr { 127.0.0.1, 192.168.1.1 } drop
         #
-        # Rule 2 (global)
+        # Rule 3 (eth0)
         #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        iifname "eth0" ip saddr 192.168.1.1 ip daddr 192.168.1.1 drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        # this rule generates no iptables commands
+        iifname "eth0" ip saddr 192.168.1.1 drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
     }
 }
 
@@ -126,7 +123,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 # See how we were called.

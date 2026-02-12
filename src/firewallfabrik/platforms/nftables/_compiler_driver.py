@@ -16,8 +16,8 @@ This is the main entry point for nftables compilation. The run() method
 orchestrates: preprocessor -> NAT compilation -> policy compilation ->
 routing compilation -> nft script assembly -> file writing.
 
-Output is a single `nft -f` compatible script with table/chain
-declarations and inline rules.
+Output is a Bash shell script wrapper that applies the compiled nft
+rules via a heredoc piped to ``nft -f``.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 
+import firewallfabrik
 from firewallfabrik.compiler._base import CompilerStatus
 from firewallfabrik.core.objects import (
     NAT,
@@ -41,6 +42,7 @@ from firewallfabrik.core.objects import (
     RuleSet,
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
+from firewallfabrik.driver._jinja2_template import Jinja2Template
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -51,11 +53,19 @@ AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
 
 
+def _prepend(prefix: str, text: str) -> str:
+    """Prepend a string to every non-empty line."""
+    if not text:
+        return text
+    lines = text.split('\n')
+    return '\n'.join(prefix + line if line else '' for line in lines)
+
+
 class CompilerDriver_nft(CompilerDriver):
     """Orchestrates full nftables compilation.
 
     Creates and runs NAT and policy compilers, then assembles the
-    output into an nft -f compatible script.
+    output into a Bash shell script wrapper.
     """
 
     def __init__(self, db: DatabaseManager) -> None:
@@ -78,7 +88,7 @@ class CompilerDriver_nft(CompilerDriver):
            a. Compile NAT rules
            b. Compile policy rules
         4. Compile routing rules
-        5. Assemble nft script
+        5. Assemble shell script with embedded nft rules
         6. Write output file
         """
         from firewallfabrik.platforms.nftables._os_configurator import (
@@ -285,20 +295,26 @@ class CompilerDriver_nft(CompilerDriver):
                         self.all_errors.extend(routing_compiler.get_errors())
                         self.all_errors.extend(routing_compiler.get_warnings())
 
-                # --- Assemble nft script ---
-                script = self._assemble_nft_script(
+                # --- Assemble nft rules body ---
+                nft_rules_body = self._assemble_nft_rules_body(
                     fw,
                     oscnf,
                     filter_chains,
                     nat_chains,
-                    routing_output,
                     fw_has_ipv6,
                 )
 
-                # Single-rule compile mode
+                # Single-rule compile mode: return raw rules (no shell wrapper)
                 if self.single_rule_compile_on:
                     errors_str = '\n'.join(self.all_errors)
-                    return errors_str + script + routing_output
+                    return errors_str + nft_rules_body + routing_output
+
+                # --- Assemble shell script ---
+                script = self._assemble_shell_script(
+                    fw,
+                    nft_rules_body,
+                    routing_output,
+                )
 
                 # --- Write output file ---
                 cluster_name = ''
@@ -418,44 +434,22 @@ class CompilerDriver_nft(CompilerDriver):
             self.all_errors.extend(policy_compiler.get_errors())
             self.all_errors.extend(policy_compiler.get_warnings())
 
-    def _assemble_nft_script(
+    def _assemble_nft_rules_body(
         self,
         fw: Firewall,
         oscnf,
         filter_chains: dict[str, list[str]],
         nat_chains: dict[str, list[str]],
-        routing_output: str,
         have_ipv6: bool,
     ) -> str:
-        """Assemble the complete nft script."""
+        """Assemble the nft rules body for embedding in a heredoc.
+
+        Returns only the nft-format content (flush ruleset, table/chain
+        declarations and inline rules) without any shebang, header
+        comments, or routing commands.
+        """
         out = io.StringIO()
 
-        timestr = time.strftime('%c')
-        tz = time.strftime('%Z')
-        user_name = os.environ.get('USER', 'unknown')
-
-        # Header comment
-        out.write('#!/usr/sbin/nft -f\n')
-        out.write('#\n')
-        out.write('#  This is automatically generated file. DO NOT MODIFY !\n')
-        out.write('#\n')
-        out.write('#  Firewall Builder  fwf v0.1.0 \n')
-        out.write('#\n')
-        out.write(f'#  Generated {timestr} {tz} by {user_name}\n')
-        out.write('#\n')
-
-        comment_text = (fw.comment or '').rstrip('\n')
-        if comment_text:
-            for line in comment_text.split('\n'):
-                out.write(f'#  {line}\n')
-            out.write('#\n')
-
-        # Errors and warnings
-        if self.all_errors:
-            for err in self.all_errors:
-                out.write(f'# {err}\n')
-
-        out.write('\n')
         out.write('flush ruleset\n')
         out.write('\n')
 
@@ -561,13 +555,83 @@ class CompilerDriver_nft(CompilerDriver):
             out.write('}\n')
             out.write('\n')
 
-        # --- Routing ---
-        if routing_output:
-            out.write('# Routing\n')
-            out.write(routing_output)
-            out.write('\n')
-
         return out.getvalue()
+
+    def _assemble_shell_script(
+        self,
+        fw: Firewall,
+        nft_rules_body: str,
+        routing_output: str,
+    ) -> str:
+        """Assemble the complete shell script using the Jinja2 template."""
+        options = fw.options or {}
+
+        timestr = time.strftime('%c')
+        tz = time.strftime('%Z')
+        user_name = os.environ.get('USER', 'unknown')
+
+        debug = options.get('debug', False)
+        shell_debug = 'set -x' if debug else ''
+
+        prolog_script = options.get('prolog_script', '')
+        epilog_script = options.get('epilog_script', '')
+        prolog_place = options.get('prolog_place', '') or 'top'
+
+        nft_path = options.get('nft_path', '') or '/usr/sbin/nft'
+
+        # Build comment block
+        comment_text = (fw.comment or '').rstrip('\n')
+        comment = _prepend('#  ', comment_text) if comment_text else ''
+
+        # Build errors/warnings block
+        errors_and_warnings = ''
+        if self.all_errors:
+            errors_and_warnings = '\n'.join(f'# {err}' for err in self.all_errors)
+
+        # Management access for block action
+        mgmt_access = bool(options.get('mgmt_access', False))
+        ssh_management_address = options.get('mgmt_addr', '')
+
+        # IP forwarding commands
+        ip_forward_commands = self._get_ip_forward_commands(fw)
+
+        context = {
+            'version': firewallfabrik.__version__,
+            'timestamp': timestr,
+            'tz': tz,
+            'user': user_name,
+            'comment': comment,
+            'errors_and_warnings': errors_and_warnings,
+            'shell_debug': shell_debug,
+            'nft_path': nft_path,
+            'prolog_script': prolog_script,
+            'epilog_script': epilog_script,
+            'prolog_place': prolog_place,
+            'nft_rules_body': nft_rules_body,
+            'routing_output': routing_output,
+            'ip_forward_commands': ip_forward_commands,
+            'mgmt_access': mgmt_access,
+            'ssh_management_address': ssh_management_address,
+        }
+
+        template = Jinja2Template('nftables', 'script.sh.j2')
+        return template.render(context)
+
+    def _get_ip_forward_commands(self, fw: Firewall) -> str:
+        """Generate IP forwarding sysctl commands."""
+        lines = []
+
+        ipv4_fwd = str(fw.get_option('linux24_ip_forward', '') or '')
+        if ipv4_fwd:
+            val = 1 if ipv4_fwd in ('1', 'On', 'on') else 0
+            lines.append(f'echo {val} > /proc/sys/net/ipv4/ip_forward')
+
+        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward', '') or '')
+        if ipv6_fwd:
+            val = 1 if ipv6_fwd in ('1', 'On', 'on') else 0
+            lines.append(f'echo {val} > /proc/sys/net/ipv6/conf/all/forwarding')
+
+        return '\n'.join(lines)
 
     # -- Utility methods --
 

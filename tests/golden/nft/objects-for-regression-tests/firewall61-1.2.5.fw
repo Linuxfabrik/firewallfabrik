@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing time litmiting for iptables 1.2.5
+#
 
 FWBDEBUG=""
 
@@ -81,43 +83,123 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule fw61-Policy 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 1 (global)
+        # Rule fw61-Policy 1 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        log prefix "RULE 1 -- DENY " level info drop
         #
-        # Rule 2 (global)
+        # Rule fw61-Policy 2 (global)
         #
-        tcp dport != 22 drop
+        log prefix "RULE 2 -- DENY " level info drop
         #
-        # Rule 3 (global)
+        # Rule fw61-Policy 3 (global)
         #
         log prefix "RULE 3 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 4 (global)
+        #
+        log prefix "RULE 4 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 5 (global)
+        #
+        log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 7 (global)
+        #
+        log prefix "RULE 7 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 1 (global)
+        # Rule fw61-Policy 0 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 3 (global)
+        # Rule fw61-Policy 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 3 (global)
         #
         log prefix "RULE 3 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 4 (global)
+        #
+        log prefix "RULE 4 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 5 (global)
+        #
+        log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 7 (global)
+        #
+        log prefix "RULE 7 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 3 (global)
+        # Rule fw61-Policy 0 (global)
+        #
+        log prefix "RULE 0 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 2 (global)
+        #
+        log prefix "RULE 2 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 3 (global)
         #
         log prefix "RULE 3 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 4 (global)
+        #
+        log prefix "RULE 4 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 5 (global)
+        #
+        log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 6 (global)
+        #
+        log prefix "RULE 6 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 7 (global)
+        #
+        log prefix "RULE 7 -- DENY " level info drop
+        #
+        # Rule fw61-Policy 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
     }
 }
 

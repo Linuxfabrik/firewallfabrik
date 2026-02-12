@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing rules with  action-on-reject "TCP reset"
+#
 
 FWBDEBUG=""
 
@@ -83,41 +85,61 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
         #
         # Rule 2 (global)
         #
-        tcp dport != 22 drop
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type 3 reject with tcp reset
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
+        #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
+        #
+        # Rule 2 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type 3 reject with tcp reset
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
+        #
+        # Rule 1 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
+        #
+        # Rule 2 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type 3 reject with tcp reset
+        #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
     }
 }
 
@@ -126,7 +148,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 # See how we were called.

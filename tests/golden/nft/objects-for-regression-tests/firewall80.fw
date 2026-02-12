@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  Branch rules in NAT
+#
 
 FWBDEBUG=""
 
@@ -76,48 +78,43 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
         #
-        # Rule 0 (global)
+        # Rule NAT_1 0 (NAT)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        # DNAT Rule
+        ip daddr 192.0.2.1 dnat to 192.168.1.10
         #
-        # Rule 1 (global)
+        # Rule 0 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        # Branch rule with actual translation. Translation is ignored and warning should be issued
+        ip daddr 192.0.2.1 dnat to 192.168.1.10
     }
 
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
         #
-        # Rule 1 (global)
+        # Rule NAT_1 1 (NAT)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        # SNAT rule
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
         #
-        # Rule 3 (global)
+        # Rule 1 (NAT)
         #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        # DNAT Rule
+        accept
         #
-        # Rule 3 (global)
+        # Rule 2 (NAT)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        # for #1686
+        ip saddr 192.0.2.1 tcp dport 10000-11000 accept
+        #
+        # Rule 3 (NAT)
+        #
+        # for #1686
+        ip saddr 192.0.2.1 tcp dport 10000-11000 accept
     }
 }
 
@@ -126,7 +123,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 # See how we were called.

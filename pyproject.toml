@@ -8,6 +8,7 @@ authors = [
 ]
 description = "FirewallFabrik is a Qt-based GUI tool for managing firewall configurations across multiple platforms (iptables, nftables, etc.)"
 dependencies = [
+    "jinja2~=3.1",
     "pyyaml~=6.0.3",
     "sqlalchemy~=2.0.46",
 ]

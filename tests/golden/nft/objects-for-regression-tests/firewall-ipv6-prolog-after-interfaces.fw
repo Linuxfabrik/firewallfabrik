@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  Policy is configured as dual address family. Prolog is after configuration of interfaces
+#
 
 FWBDEBUG=""
 
@@ -28,6 +30,7 @@ check_nft() {
 
 prolog_commands() {
     echo "Running prolog script"
+    echo "This is prolog"
 
 }
 
@@ -76,48 +79,59 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
+table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
+        ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ct state new accept
         #
-        # Rule 3 (global)
+        # Rule 0 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
         #
-        # Rule 3 (global)
+        # Rule 0 (NAT)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        oifname "eth0" ip saddr 1.1.1.0/24 snat to 1.1.1.1
+        oifname "eth1" ip saddr 1.1.1.0/24 snat to 1.1.1.1
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth0" ip6 saddr fe80::/64 snat to 1.1.1.1
+        oifname "eth1" ip6 saddr fe80::/64 snat to 1.1.1.1
     }
 }
 
@@ -127,6 +141,7 @@ NFT_RULES
 ip_forward() {
     :
     echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 # See how we were called.

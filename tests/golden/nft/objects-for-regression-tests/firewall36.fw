@@ -6,6 +6,11 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing routing rules
+#  routing ruleset installs ECMP default
+
+#  ROUTE target is deprecated in 4.3.0
+#
 
 FWBDEBUG=""
 
@@ -76,52 +81,17 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
+NFT_RULES
 }
 
-NFT_RULES
+routing_script() {
+    ip route add default dev eth0
+ip route add default dev eth2
+ip route add 192.168.2.0/24 via 192.168.1.254 dev eth1
+ip route add default via 192.168.1.254 dev eth1
+ip route add 2001:db8::/32 dev eth1
+ip route add default dev eth1
+
 }
 
 ip_forward() {
@@ -144,6 +114,7 @@ case "$cmd" in
         prolog_commands
         stop_action
         script_body
+        routing_script
         ip_forward
         epilog_commands
         RETVAL=$?

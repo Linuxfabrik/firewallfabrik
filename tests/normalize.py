@@ -81,7 +81,7 @@ def normalize_ipt(text: str) -> str:
 
 def normalize_nft(text: str) -> str:
     """Normalize nftables compiler output for expected output comparison."""
-    # Replace generated timestamp line
+    # Replace generated timestamp line (header comment)
     text = re.sub(
         r'^(# +Generated ).*$',
         r'\1TIMESTAMP',
@@ -90,11 +90,19 @@ def normalize_nft(text: str) -> str:
     )
     # Replace version header
     text = re.sub(
-        r'^(# +Firewall Builder +fwf )v.*$',
+        r'^(#  FirewallFabrik fwf-nft )v.*$',
         r'\1VERSION',
         text,
         flags=re.MULTILINE,
     )
+    # Replace activation log line
+    text = re.sub(
+        r'(log "Activating firewall script generated ).*(")',
+        r'\1TIMESTAMP\2',
+        text,
+    )
+    # Collapse multiple consecutive blank lines into one
+    text = re.sub(r'\n{3,}', '\n\n', text)
     # Strip trailing whitespace per line
     text = re.sub(r'[ \t]+$', '', text, flags=re.MULTILINE)
     # Ensure exactly one trailing newline (end-of-file-fixer compatibility)

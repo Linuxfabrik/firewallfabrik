@@ -1,0 +1,361 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+#  Policy is configured as dual address family. Using iptables-restore. Firewall is NOT part of any
+#
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    which logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+stop_action() {
+    $NFT flush ruleset
+}
+
+block_action() {
+    $NFT flush ruleset
+    # block all traffic by default
+    $NFT add table inet block
+    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if [ -n "$tables" ]; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 0 (global)
+        #
+        ct state new log prefix "RULE 0 -- ACCEPT " level info accept
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 1.1.1.1 icmp type 8 code 0 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto icmp ct state new accept
+        #
+        # Rule 3 (global)
+        #
+        icmp type 8 code 0 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+        #
+        # Rule 0 (global)
+        #
+        ct state new log prefix "RULE 0 -- ACCEPT " level info accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto icmp ct state new accept
+        #
+        # Rule 3 (global)
+        #
+        icmp type 8 code 0 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip daddr 192.168.1.1-192.168.1.100 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip daddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+        #
+        # Rule 7 (global)
+        #
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip6 daddr 192.168.1.1-192.168.1.100 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip6 daddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 1 (global)
+        #
+        ip saddr 1.1.1.1 icmp type 8 code 0 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto icmp ct state new accept
+        #
+        # Rule 3 (global)
+        #
+        icmp type 8 code 0 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new accept
+        #
+        # Rule 6 (global)
+        #
+        # for bug 2047082
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip daddr 192.168.1.1-192.168.1.100 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip daddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        # for bug 2047082
+        ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip6 daddr 192.168.1.1-192.168.1.100 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip6 daddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth0" ip saddr 1.1.1.0/24 snat to 1.1.1.1
+        oifname "eth1" ip saddr 1.1.1.0/24 snat to 1.1.1.1
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth0" ip6 saddr fe80::/64 snat to 1.1.1.1
+        oifname "eth1" ip6 saddr fe80::/64 snat to 1.1.1.1
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body
+        ip_forward
+        epilog_commands
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"

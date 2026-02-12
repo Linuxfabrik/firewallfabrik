@@ -76,52 +76,17 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        tcp dport != 22 drop
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
-    }
+NFT_RULES
 }
 
-NFT_RULES
+routing_script() {
+    ip route add default via 200.200.200.200 dev eth3
+ip route add 192.168.101.0/24 via 192.168.1.200
+ip route add 192.168.102.0/24 via 192.168.2.200
+ip route add 192.168.111.0/24 via 192.168.11.200 dev bond1
+ip route add 192.168.211.0/24 via 192.168.201.200
+ip route add 192.168.212.0/24 via 192.168.202.200
+
 }
 
 ip_forward() {
@@ -144,6 +109,7 @@ case "$cmd" in
         prolog_commands
         stop_action
         script_body
+        routing_script
         ip_forward
         epilog_commands
         RETVAL=$?

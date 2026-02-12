@@ -6,6 +6,10 @@
 #
 #  Generated TIMESTAMP
 #
+#  two interfaces, one has ipv4 address, another ipv6
+#  Combined ipv6+ipv6 ruleset. Only interface with address
+#  that matches address family should be used in generated rule
+#
 
 FWBDEBUG=""
 
@@ -76,48 +80,36 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
+table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr != 192.168.1.0/24 tcp dport 22 drop
+        iifname "eth0" tcp dport 22 accept
         #
-        # Rule 1 (global)
+        # Rule 1 (eth1)
         #
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 198.51.100.1 } ct state new accept
+        iifname "eth1" tcp dport 22 accept
         #
-        # Rule 2 (global)
+        # Rule 0 (eth0)
         #
-        tcp dport != 22 drop
+        iifname "eth0" tcp dport 22 accept
         #
-        # Rule 3 (global)
+        # Rule 1 (eth1)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        iifname "eth1" tcp dport 22 accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 3 (global)
-        #
-        log prefix "RULE 3 -- DENY " level info drop
     }
 }
 
@@ -127,6 +119,7 @@ NFT_RULES
 ip_forward() {
     :
     echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 # See how we were called.
