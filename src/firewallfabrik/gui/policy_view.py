@@ -361,7 +361,6 @@ class PolicyView(QTreeView):
             self._add_new_group_action(menu, model, index)
             self._add_to_adjacent_group_actions(menu, model, index)
 
-        self._add_disable_action(menu, model, index)
         self._add_color_submenu(menu, model, index)
         menu.addSeparator()
 
@@ -519,6 +518,8 @@ class PolicyView(QTreeView):
         )
         paste_above.setEnabled(clipboard_count > 0)
         paste_below.setEnabled(clipboard_count > 0)
+        menu.addSeparator()
+        self._add_disable_action(menu, model, index)
 
     def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu."""
