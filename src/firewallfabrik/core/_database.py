@@ -145,6 +145,7 @@ class DatabaseManager:
         self._current_index = -1
         self._saved_index = -1
         self.on_history_changed = None
+        self.ref_index = {}
         objects.enable_sqlite_fks(self.engine)
         self._reset_db(True)
 
@@ -290,6 +291,7 @@ class DatabaseManager:
         self._saved_index = self._current_index
 
     def _import(self, data):
+        self.ref_index = data.ref_index
         # Build UUID-hex-to-name maps so that IntegrityError messages can
         # include context (the transaction is rolled back before callers see
         # the exception, so a DB lookup is not possible).

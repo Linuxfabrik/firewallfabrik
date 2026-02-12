@@ -128,6 +128,7 @@ class YamlReader:
             database=db,
             memberships=self._memberships[:],
             rule_element_rows=self._rule_element_rows[:],
+            ref_index=self._ref_index.copy(),
         )
 
     def _register_ref(self, path, obj_id):

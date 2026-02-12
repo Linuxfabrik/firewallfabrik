@@ -29,6 +29,7 @@ class ParseResult:
     database: objects.FWObjectDatabase
     memberships: list[dict]
     rule_element_rows: list[dict]
+    ref_index: dict = dataclasses.field(default_factory=dict)
 
 
 ADDRESS_CLASSES = {
