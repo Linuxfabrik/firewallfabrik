@@ -322,7 +322,6 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A INPUT -m state --state NEW -j DROP
  $IPTABLES -A FORWARD -i + -m state --state NEW -j DROP
  #
  # Rule 3 (global)

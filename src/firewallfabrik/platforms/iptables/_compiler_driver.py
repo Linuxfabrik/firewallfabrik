@@ -164,6 +164,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     )
                     return ''
 
+                self._warn_unsupported_options(options)
+
                 debug = options.get('debug', False)
                 shell_dbg = 'set -x' if debug else ''
 

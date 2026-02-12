@@ -29,12 +29,14 @@ from firewallfabrik.compiler.processors._generic import (
     Begin,
     ConvertToAtomicForAddresses,
     ConvertToAtomicForInterfaces,
+    DetectShadowing,
     DropIPv4Rules,
     DropIPv6Rules,
     DropRuleWithEmptyRE,
     EliminateDuplicatesInDST,
     EliminateDuplicatesInSRC,
     EliminateDuplicatesInSRV,
+    EmptyGroupsInRE,
     ExpandGroups,
     SimplePrintProgress,
 )
@@ -192,6 +194,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
             SplitIfIfaceAndDirectionBoth('split interface rule with direction both')
         )
 
+        self.add(EmptyGroupsInRE('check for empty groups in SRC', 'src'))
+        self.add(EmptyGroupsInRE('check for empty groups in DST', 'dst'))
+        self.add(EmptyGroupsInRE('check for empty groups in SRV', 'srv'))
+        self.add(EmptyGroupsInRE('check for empty groups in ITF', 'itf'))
+
         self.add(ExpandGroups('expand all groups'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
         self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
@@ -271,6 +278,13 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(Optimize3('optimization 3'))
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
+
+        if (
+            self.fw.get_option('check_shading', False)
+            and not self.single_rule_compile_mode
+        ):
+            self.add(DetectShadowing('detect rule shadowing'))
+
         self.add(CountChainUsage('count chain usage'))
 
         # Print rule
@@ -1157,6 +1171,16 @@ class SplitIfSrcAny(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # Check per-rule option first, then fall back to global firewall option
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option(
+                'firewall_is_part_of_any_and_networks', False
+            )
+        if not afpa:
+            self.tmp_queue.append(rule)
+            return True
+
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.get_option('no_output_chain', False):
@@ -1167,9 +1191,14 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if rule.direction != Direction.Inbound and (
-            rule.is_src_any() or rule.src_single_object_negation
-        ):
+        # C++ also splits when single_object_negation is set, but only if
+        # the single negated object does NOT match the firewall itself.
+        src_neg_split = (
+            rule.src_single_object_negation
+            and len(rule.src) == 1
+            and not ipt_comp.complex_match(rule.src[0], ipt_comp.fw)
+        )
+        if rule.direction != Direction.Inbound and (rule.is_src_any() or src_neg_split):
             r = rule.clone()
             ipt_comp.set_chain(r, 'OUTPUT')
             r.direction = Direction.Outbound
@@ -1187,6 +1216,16 @@ class SplitIfDstAny(PolicyRuleProcessor):
         if rule is None:
             return False
 
+        # Check per-rule option first, then fall back to global firewall option
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option(
+                'firewall_is_part_of_any_and_networks', False
+            )
+        if not afpa:
+            self.tmp_queue.append(rule)
+            return True
+
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.get_option('no_input_chain', False):
@@ -1197,8 +1236,15 @@ class SplitIfDstAny(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        # C++ also splits when single_object_negation is set, but only if
+        # the single negated object does NOT match the firewall itself.
+        dst_neg_split = (
+            rule.dst_single_object_negation
+            and len(rule.dst) == 1
+            and not ipt_comp.complex_match(rule.dst[0], ipt_comp.fw)
+        )
         if rule.direction != Direction.Outbound and (
-            rule.is_dst_any() or rule.dst_single_object_negation
+            rule.is_dst_any() or dst_neg_split
         ):
             r = rule.clone()
             ipt_comp.set_chain(r, 'INPUT')

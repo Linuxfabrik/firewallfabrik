@@ -29,6 +29,7 @@ from firewallfabrik.compiler.processors._generic import (
     Begin,
     DropIPv4Rules,
     DropIPv6Rules,
+    EmptyGroupsInRE,
     ExpandGroups,
     SimplePrintProgress,
 )
@@ -184,6 +185,13 @@ class NATCompiler_ipt(NATCompiler):
             )
         )
 
+        self.add(EmptyGroupsInRE('check for empty groups in OSRC', 'osrc'))
+        self.add(EmptyGroupsInRE('check for empty groups in ODST', 'odst'))
+        self.add(EmptyGroupsInRE('check for empty groups in OSRV', 'osrv'))
+        self.add(EmptyGroupsInRE('check for empty groups in TSRC', 'tsrc'))
+        self.add(EmptyGroupsInRE('check for empty groups in TDST', 'tdst'))
+        self.add(EmptyGroupsInRE('check for empty groups in TSRV', 'tsrv'))
+
         self.add(ExpandGroups('Expand groups'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
@@ -209,7 +217,13 @@ class NATCompiler_ipt(NATCompiler):
             )
         )
 
+        if self.fw.get_option('local_nat', False):
+            if self.fw.get_option('firewall_is_part_of_any_and_networks', False):
+                self.add(SplitIfOSrcAny('split rule if OSrc is any'))
+            self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
+
         self.add(SplitNONATRule('NAT rules that request no translation'))
+        self.add(LocalNATRule('local NAT rule'))
         self.add(DecideOnChain('decide on chain'))
         self.add(DecideOnTarget('decide on target'))
 
@@ -1175,6 +1189,112 @@ class AssignInterface(NATRuleProcessor):
         if n == 0:
             self.tmp_queue.append(rule)
 
+        return True
+
+
+class SplitIfOSrcAny(NATRuleProcessor):
+    """Split DNAT rule if OSrc is 'any' and local_nat + firewall_is_part_of_any are on.
+
+    Corresponds to C++ NATCompiler_ipt::splitIfOSrcAny.
+    For DNAT rules where OSrc is "any" (empty) or has single_object_negation,
+    and the inbound interface is "any", creates a copy with OSrc set to the
+    firewall object.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        # Always push the original rule first
+        self.tmp_queue.append(rule)
+
+        # Do not split if user nailed inbound interface
+        if rule.itf_inb:
+            return True
+
+        # Skip rules added to handle negation
+        if rule.get_option('rule_added_for_osrc_neg', False):
+            return True
+        if rule.get_option('rule_added_for_odst_neg', False):
+            return True
+        if rule.get_option('rule_added_for_osrv_neg', False):
+            return True
+
+        if rule.nat_rule_type == NATRuleType.DNAT and (
+            rule.is_osrc_any() or rule.osrc_single_object_negation
+        ):
+            r = rule.clone()
+            r.osrc = [self.compiler.fw]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class SplitIfOSrcMatchesFw(NATRuleProcessor):
+    """Split rule if OSrc contains the firewall among other objects.
+
+    Corresponds to C++ NATCompiler_ipt::splitIfOSrcMatchesFw.
+    When OSrc has multiple objects and some match the firewall,
+    extract those into separate rules.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.osrc) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        fw_likes: list = []
+        not_fw_likes: list = []
+        for obj in rule.osrc:
+            if nat_comp.complex_match(obj, nat_comp.fw):
+                fw_likes.append(obj)
+            else:
+                not_fw_likes.append(obj)
+
+        if fw_likes and not_fw_likes:
+            for obj in fw_likes:
+                r = rule.clone()
+                r.osrc = [obj]
+                self.tmp_queue.append(r)
+            rule.osrc = not_fw_likes
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class LocalNATRule(NATRuleProcessor):
+    """Assign OUTPUT chain for DNAT/DNetnat/Redirect rules where OSrc matches FW.
+
+    Corresponds to C++ NATCompiler_ipt::localNATRule.
+    For DNAT/DNetnat/Redirect rules: if OSrc matches the firewall, set chain
+    to OUTPUT. If OSrc IS the firewall object itself, clear OSrc to "any".
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+
+        if rule.nat_rule_type in (
+            NATRuleType.DNAT,
+            NATRuleType.DNetnat,
+            NATRuleType.Redirect,
+        ):
+            osrc = rule.osrc[0] if rule.osrc else None
+            if osrc is not None and nat_comp.complex_match(osrc, nat_comp.fw):
+                rule.ipt_chain = 'OUTPUT'
+                if isinstance(osrc, Firewall) and osrc.id == nat_comp.fw.id:
+                    rule.osrc = []
+
+        self.tmp_queue.append(rule)
         return True
 
 

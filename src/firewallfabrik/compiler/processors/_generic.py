@@ -18,13 +18,25 @@ rewritten for CompRule dataclasses.
 
 from __future__ import annotations
 
-from firewallfabrik.compiler._comp_rule import CompRule
+import ipaddress as _ipa
+
+from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
+    Direction,
+    Group,
     ICMP6Service,
     ICMPService,
+    IPService,
+    Network,
+    NetworkIPv6,
+    PolicyAction,
+    Service,
+    TCPService,
+    TCPUDPService,
 )
 
 
@@ -106,6 +118,93 @@ class SkipDisabledRules(BasicRuleProcessor):
             return False
         if not rule.disabled:
             self.tmp_queue.append(rule)
+        return True
+
+
+class EmptyGroupsInRE(BasicRuleProcessor):
+    """Check for empty groups in a specific rule element slot.
+
+    Corresponds to C++ ``Compiler::emptyGroupsInRE``.  Runs **before**
+    ``ExpandGroups``.  For each Group in the slot that has zero effective
+    members (recursively counting through nested groups):
+
+    - If ``ignore_empty_groups`` is **true**: remove the empty group from
+      the element and warn.  If the element becomes "any" (empty) after
+      all removals, drop the rule.
+    - If ``ignore_empty_groups`` is **false** (default): abort compilation.
+
+    Each platform compiler adds one instance per slot it cares about
+    (C++: src, dst, srv, itf for policy; osrc, odst, osrv, tsrc, tdst,
+    tsrv for NAT).
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    @staticmethod
+    def _count_children(session, obj) -> int:
+        """Count effective leaf members of a group recursively."""
+        if not isinstance(obj, Group):
+            return 1
+        members = expand_group(session, obj)
+        return len(members)
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            # Element is "any" — nothing to check
+            self.tmp_queue.append(rule)
+            return True
+
+        # Find empty groups in this slot
+        empty_groups: list = []
+        for obj in elements:
+            if (
+                isinstance(obj, Group)
+                and self._count_children(self.compiler.session, obj) == 0
+            ):
+                empty_groups.append(obj)
+
+        if not empty_groups:
+            self.tmp_queue.append(rule)
+            return True
+
+        if self.compiler.fw.get_option('ignore_empty_groups', False):
+            # Remove empty groups and warn
+            for obj in empty_groups:
+                name = getattr(obj, 'name', str(obj))
+                self.compiler.warning(
+                    rule,
+                    f"Empty group or address table object '{name}'",
+                )
+            remaining = [o for o in elements if o not in empty_groups]
+            setattr(rule, self._slot, remaining)
+            if not remaining:
+                # Element became "any" after removal — drop the rule
+                self.compiler.warning(
+                    rule,
+                    f'After removal of all empty groups rule element'
+                    f" {self._slot} becomes 'any'; dropping rule"
+                    f' {rule.label} because option'
+                    f" 'Ignore rules with empty groups' is in effect",
+                )
+                return True  # drop rule
+        else:
+            names = ', '.join(getattr(o, 'name', str(o)) for o in empty_groups)
+            self.compiler.abort(
+                rule,
+                f"Empty group or address table object '{names}'"
+                f' is used in the rule but option'
+                f" 'Ignore rules with empty groups' is off",
+            )
+            return True  # abort was set
+
+        self.tmp_queue.append(rule)
         return True
 
 
@@ -316,10 +415,13 @@ class DropIPv6Rules(DropRulesByAddressFamily):
 
 
 class DropRuleWithEmptyRE(BasicRuleProcessor):
-    """Drop rules that have empty rule elements that shouldn't be empty.
+    """Drop rules where a required rule element became empty (size==0).
 
-    After group expansion, if an element that previously contained
-    objects is now empty, the rule should be dropped.
+    Corresponds to C++ ``Compiler::dropRuleWithEmptyRE``.
+    After group expansion and address processing, checks if src or dst
+    (for policy rules) became literally empty.  An empty element is
+    different from "any" — "any" is the initial default, while an empty
+    element results from all objects being removed by earlier processors.
     """
 
     def __init__(self, name: str = 'Drop rules with empty RE') -> None:
@@ -331,10 +433,14 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
         if rule is None:
             return False
 
-        # For policy rules, check src, dst, srv
-        # Empty means "any" which is valid — we only drop if the rule
-        # was explicitly cleared by a previous processor (which would
-        # set a special flag). For now, pass through.
+        # Check if any required element became empty after processing.
+        # In our CompRule model, [] means "any" initially, but if a slot
+        # was non-empty and became empty due to filtering (address family,
+        # etc.), it should be dropped.  The has_empty_re flag is set by
+        # processors that remove objects from elements.
+        if getattr(rule, 'has_empty_re', False):
+            return True  # drop
+
         self.tmp_queue.append(rule)
         return True
 
@@ -388,18 +494,298 @@ class EliminateDuplicatesInSRV(BasicRuleProcessor):
 
 
 class DetectShadowing(BasicRuleProcessor):
-    """Detect rule shadowing (uses slurp).
+    """Detect rule shadowing — abort if an earlier rule completely covers a later one.
 
-    Passes all rules through — shadowing detection is advisory only.
+    Corresponds to C++ PolicyCompiler::DetectShadowing.
+    Accumulates rules and for each new rule checks whether any previously
+    seen rule is more general (shadows it).  Aborts compilation on the
+    first match.
+
+    Rules with negation, Branch/Continue/Return/Accounting actions,
+    fallback, or hidden flags are excluded from the check.
     """
 
     def __init__(self, name: str = 'Detect shadowing') -> None:
         super().__init__(name)
+        self._rules_seen: list[CompRule] = []
 
     def process_next(self) -> bool:
-        if self.slurp():
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        # Skip rules that shouldn't participate in shadowing checks
+        if rule.fallback or rule.hidden:
             return True
-        return bool(self.tmp_queue)
+        if rule.get_neg('src') or rule.get_neg('dst') or rule.get_neg('srv'):
+            return True
+        if rule.action in (
+            PolicyAction.Branch,
+            PolicyAction.Continue,
+            PolicyAction.Return,
+            PolicyAction.Accounting,
+        ):
+            return True
+
+        for prev in self._rules_seen:
+            if prev.abs_rule_number == rule.abs_rule_number:
+                continue
+            if self._rule_shadows(prev, rule):
+                self.compiler.abort(
+                    prev,
+                    f"Rule '{prev.label}' shadows rule '{rule.label}' below it",
+                )
+                break
+
+        self._rules_seen.append(rule)
+        return True
+
+    def _rule_shadows(self, r1: CompRule, r2: CompRule) -> bool:
+        """Return True if r1 is more general than r2 (r1 shadows r2)."""
+        # Skip r1 candidates with special properties
+        if r1.get_neg('src') or r1.get_neg('dst') or r1.get_neg('srv'):
+            return False
+        if r1.action in (
+            PolicyAction.Branch,
+            PolicyAction.Continue,
+            PolicyAction.Return,
+            PolicyAction.Accounting,
+        ):
+            return False
+        # Routing rules may or may not be terminal — skip
+        if r1.get_option('routing', False) or r2.get_option('routing', False):
+            return False
+        # r2 with Continue action is non-terminating, can't be shadowed
+        if r2.action == PolicyAction.Continue:
+            return False
+
+        # Chain check: rules in different chains can't shadow each other
+        if r1.ipt_chain and r2.ipt_chain and r1.ipt_chain != r2.ipt_chain:
+            return False
+
+        # Interface check (matches C++ checkInterfacesForShadowing):
+        # r1=above, r2=below. If above is "any" interface → can shadow.
+        # If above is specific and below is "any" → can't shadow.
+        # If both specific → must match.
+        r1_itf = r1.itf[0] if r1.itf else None  # above rule
+        r2_itf = r2.itf[0] if r2.itf else None  # below rule
+        if r1_itf is None:
+            pass  # r1 is "any" interface → can shadow anything
+        elif r2_itf is None:
+            return False  # r1 specific, r2 "any" → can't shadow
+        else:
+            r1_id = getattr(r1_itf, 'id', None)
+            r2_id = getattr(r2_itf, 'id', None)
+            if r1_id is not None and r2_id is not None and r1_id != r2_id:
+                return False
+
+        # Direction check: normalize Both to match the other rule's direction
+        # (matches C++ PolicyCompiler::checkForShadowing)
+        d1 = r1.direction or Direction.Both
+        d2 = r2.direction or Direction.Both
+        if d1 == Direction.Both:
+            d1 = d2
+        if d2 == Direction.Both:
+            d2 = d1
+        if d1 != d2:
+            return False
+
+        # All three rule elements must satisfy containment
+        return (
+            self._element_shadows(r1.src, r2.src)
+            and self._element_shadows(r1.dst, r2.dst)
+            and self._srv_element_shadows(r1.srv, r2.srv)
+        )
+
+    @staticmethod
+    def _element_shadows(e1: list, e2: list) -> bool:
+        """Return True if address element e1 is a superset of e2.
+
+        e1 shadows e2 when every object in e2 is "contained by" at
+        least one object in e1.  An empty element (= "any") contains
+        everything.
+        """
+        if not e1:  # e1 is "any" → contains everything
+            return True
+        if not e2:  # e2 is "any" → only contained by "any"
+            return False
+        return all(any(_addr_contains(a1, a2) for a1 in e1) for a2 in e2)
+
+    @staticmethod
+    def _srv_element_shadows(e1: list, e2: list) -> bool:
+        """Return True if service element e1 is a superset of e2."""
+        if not e1 and not e2:  # both "any" → no shadowing (C++ semantics)
+            return False
+        if not e1:  # e1 is "any" → contains everything
+            return True
+        if not e2:  # e2 is "any" → only contained by "any"
+            return False
+        return all(any(_srv_contains(s1, s2) for s1 in e1) for s2 in e2)
+
+
+def _addr_contains(a1, a2) -> bool:
+    """Return True if address a1 contains (is a superset of) a2.
+
+    Uses the ipaddress module for network/host containment checks.
+    """
+    if a1 is a2 or a1.id == a2.id:
+        return True
+
+    # "any" address contains everything
+    if isinstance(a1, Address) and a1.is_any():
+        return True
+    if isinstance(a2, Address) and a2.is_any():
+        return False
+
+    try:
+        r1 = _addr_range(a1)
+        r2 = _addr_range(a2)
+    except (ValueError, TypeError):
+        return False
+
+    if r1 is None or r2 is None:
+        return False
+
+    return r1[0] <= r2[0] and r2[1] <= r1[1]
+
+
+def _addr_range(obj) -> tuple | None:
+    """Return (first_addr, last_addr) for an address object."""
+    if isinstance(obj, AddressRange):
+        start = obj.get_start_address()
+        end = obj.get_end_address()
+        if start and end:
+            return (_ipa.ip_address(start), _ipa.ip_address(end))
+        return None
+
+    if isinstance(obj, (Network, NetworkIPv6)):
+        addr_s = obj.get_address()
+        mask_s = obj.get_netmask()
+        if addr_s and mask_s:
+            try:
+                net = _ipa.ip_network(f'{addr_s}/{mask_s}', strict=False)
+                return (net.network_address, net.broadcast_address)
+            except ValueError:
+                return None
+        return None
+
+    # Single host / IPv4 / IPv6 / Interface address
+    if isinstance(obj, Address):
+        addr_s = obj.get_address()
+        if addr_s:
+            addr = _ipa.ip_address(addr_s)
+            return (addr, addr)
+    return None
+
+
+def _srv_data_val(srv, key: str) -> str:
+    """Get a service data-dict value as a string for comparison.
+
+    Matches C++ ``FWObject::getStr()`` semantics: missing/None → empty string.
+    """
+    if not srv.data:
+        return ''
+    val = srv.data.get(key)
+    if val is None or val == '':
+        return ''
+    return str(val)
+
+
+_IP_FLAGS = ('fragm', 'short_fragm', 'lsrr', 'ssrr', 'rr', 'ts')
+
+
+def _srv_contains(s1, s2) -> bool:
+    """Return True if service s1 contains (is a superset of) s2."""
+    if s1 is s2 or s1.id == s2.id:
+        return True
+
+    s1_any = isinstance(s1, Service) and s1.is_any()
+    s2_any = isinstance(s2, Service) and s2.is_any()
+    # C++: both "any" → false (no shadowing between identical "any" services)
+    if s1_any and s2_any:
+        return False
+    # "any" service contains specific
+    if s1_any:
+        return True
+    # specific cannot contain "any"
+    if s2_any:
+        return False
+
+    # IPService: check IP flags + TOS/DSCP before protocol comparison
+    # (C++ Compiler_ops.cpp:373-400)
+    if isinstance(s1, IPService) and isinstance(s2, IPService):
+        # All six IP option flags must match
+        for flag in _IP_FLAGS:
+            if _srv_data_val(s1, flag) != _srv_data_val(s2, flag):
+                return False
+        # TOS and DSCP codes must match
+        if _srv_data_val(s1, 'tos_code') != _srv_data_val(s2, 'tos_code'):
+            return False
+        if _srv_data_val(s1, 'dscp_code') != _srv_data_val(s2, 'dscp_code'):
+            return False
+        p1 = s1.get_protocol_number()
+        p2 = s2.get_protocol_number()
+        if p1 == p2:
+            return True
+        # proto 0 (any IP) in s1 shadows specific proto in s2
+        return p1 == 0
+
+    # TCP/UDP port range containment
+    if isinstance(s1, TCPUDPService) and isinstance(s2, TCPUDPService):
+        if s1.get_protocol_number() != s2.get_protocol_number():
+            return False
+        # TCP flag check: flags and masks must match (C++ Compiler_ops.cpp:406-415)
+        if isinstance(s1, TCPService) and isinstance(s2, TCPService):
+            if (s1.tcp_flags or {}) != (s2.tcp_flags or {}):
+                return False
+            if (s1.tcp_flags_masks or {}) != (s2.tcp_flags_masks or {}):
+                return False
+        srs1 = s1.src_range_start or 0
+        sre1 = s1.src_range_end or 0
+        drs1 = s1.dst_range_start or 0
+        dre1 = s1.dst_range_end or 0
+        srs2 = s2.src_range_start or 0
+        sre2 = s2.src_range_end or 0
+        drs2 = s2.dst_range_start or 0
+        dre2 = s2.dst_range_end or 0
+        # Normalize: 0 means "any" → full range (C++ uses 65536)
+        if srs1 == 0 and sre1 == 0:
+            srs1, sre1 = 0, 65536
+        if drs1 == 0 and dre1 == 0:
+            drs1, dre1 = 0, 65536
+        if srs2 == 0 and sre2 == 0:
+            srs2, sre2 = 0, 65536
+        if drs2 == 0 and dre2 == 0:
+            drs2, dre2 = 0, 65536
+        return srs1 <= srs2 and sre2 <= sre1 and drs1 <= drs2 and dre2 <= dre1
+
+    # ICMP: type -1 (any) in s1 shadows specific type in s2
+    # C++: returns (o1.type != -1 && o2.type == -1) where o1=below, o2=above
+    # Python: s1=above, s2=below, so: (s2.type != -1 && s1.type == -1)
+    if isinstance(s1, ICMPService) and isinstance(s2, ICMPService):
+        if type(s1) is not type(s2):  # ICMPv4 vs ICMPv6
+            return False
+        codes1 = s1.codes or {}
+        codes2 = s2.codes or {}
+        t1 = codes1.get('type', -1)
+        t2 = codes2.get('type', -1)
+        return t2 != -1 and t1 == -1
+
+    # Cross-type: IPService with proto=0 and all IP flags cleared
+    # can shadow any other service type (C++ Compiler_ops.cpp:453-474)
+    if isinstance(s1, IPService) and not isinstance(s2, IPService):
+        if s1.get_protocol_number() != 0:
+            return False
+        data = s1.data or {}
+        for flag in _IP_FLAGS:
+            val = data.get(flag)
+            if val is not None and str(val) == 'True':
+                return False
+        return True
+
+    return False
 
 
 class AssignUniqueRuleId(BasicRuleProcessor):
