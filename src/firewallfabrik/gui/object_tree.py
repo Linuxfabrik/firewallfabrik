@@ -1295,12 +1295,16 @@ class ObjectTree(QWidget):
 
         # Expand / Collapse (only for items with children)
         if item.childCount() > 0:
-            if self._tree.isItemExpanded(item):
+            if item.isExpanded():
                 collapse_action = menu.addAction('Collapse')
-                collapse_action.triggered.connect(lambda: self._tree.collapseItem(item))
+                collapse_action.triggered.connect(
+                    lambda: item.setExpanded(False),
+                )
             else:
                 expand_action = menu.addAction('Expand')
-                expand_action.triggered.connect(lambda: self._tree.expandItem(item))
+                expand_action.triggered.connect(
+                    lambda: item.setExpanded(True),
+                )
             menu.addSeparator()
 
         # Edit / Inspect
@@ -1418,12 +1422,16 @@ class ObjectTree(QWidget):
 
         # Expand / Collapse
         if item.childCount() > 0:
-            if self._tree.isItemExpanded(item):
+            if item.isExpanded():
                 collapse_action = menu.addAction('Collapse')
-                collapse_action.triggered.connect(lambda: self._tree.collapseItem(item))
+                collapse_action.triggered.connect(
+                    lambda: item.setExpanded(False),
+                )
             else:
                 expand_action = menu.addAction('Expand')
-                expand_action.triggered.connect(lambda: self._tree.expandItem(item))
+                expand_action.triggered.connect(
+                    lambda: item.setExpanded(True),
+                )
             menu.addSeparator()
 
         for type_name, display_name in new_types:
