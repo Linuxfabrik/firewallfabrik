@@ -15,6 +15,7 @@
 import argparse
 import sys
 import time
+from pathlib import Path
 
 import sqlalchemy
 
@@ -184,6 +185,7 @@ def main(argv=None):
 
     driver = CompilerDriver_nft(db)
     driver.wdir = args.DESTDIR
+    driver.source_dir = str(Path(args.FILE).parent)
     driver.verbose = args.VERBOSE
 
     if args.OUTPUT:

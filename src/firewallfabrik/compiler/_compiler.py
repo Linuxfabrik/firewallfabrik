@@ -22,6 +22,7 @@ import io
 import ipaddress
 import socket
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._base import BaseCompiler, CompilerStatus
@@ -29,6 +30,7 @@ from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
 from firewallfabrik.core.objects import (
     Address,
+    AddressTable,
     DNSName,
     Firewall,
     Group,
@@ -71,6 +73,7 @@ class Compiler(BaseCompiler):
         self.rule_debug_on: bool = False
         self.debug_rule: int = -1
         self.verbose: bool = False
+        self.source_dir: str = '.'
 
         self._current_rule_label: str = ''
         self._rule_counter: int = 0
@@ -222,6 +225,8 @@ class Compiler(BaseCompiler):
 
         if isinstance(obj, DNSName):
             return self._resolve_dns_name(obj)
+        if isinstance(obj, AddressTable):
+            return self._load_address_table(obj)
 
         return []
 
@@ -260,6 +265,83 @@ class Compiler(BaseCompiler):
                 inet_addr_mask={'address': ip_str, 'netmask': netmask},
             )
             results.append(addr)
+        return results
+
+    def _load_address_table(self, obj: AddressTable) -> list:
+        """Load addresses from a file referenced by an AddressTable object.
+
+        Matches C++ AddressTable::loadFromSource().
+        File format: one address or network (CIDR) per line; lines starting
+        with '#' or empty lines are ignored.
+        """
+        filename = (obj.data or {}).get('filename', '')
+        if not filename:
+            return []
+
+        # C++ AddressTable::getFilename() substitutes %DATADIR%
+        if '%DATADIR%' in filename:
+            filename = filename.replace('%DATADIR%', self.source_dir)
+
+        # Search: source_dir first, then CWD
+        path = Path(self.source_dir) / filename
+        if not path.is_file():
+            path = Path(filename)
+        if not path.is_file():
+            # C++ always throws here; Preprocessor catches and calls abort()
+            self.abort(f'AddressTable "{obj.name}": file not found ({filename})')
+            return []
+
+        results: list[Address] = []
+        line_num = 0
+        for line in path.read_text().splitlines():
+            line_num += 1
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            # C++ keeps only valid address chars: 0-9 a-f : / .
+            addr_str = ''
+            for ch in line:
+                if ch in '0123456789abcdef:/.':
+                    addr_str += ch
+                else:
+                    break
+            if not addr_str:
+                continue
+
+            # Determine if IPv4 or IPv6 and filter by address family
+            if '.' in addr_str and not self.ipv6_policy:
+                try:
+                    net = ipaddress.ip_network(addr_str, strict=False)
+                except ValueError:
+                    # C++ throws with file:line and value
+                    self.abort(f'Invalid address: {path}:{line_num} "{addr_str}"')
+                    return results
+                addr = Network(
+                    id=uuid.uuid4(),
+                    type='Network',
+                    name=addr_str,
+                    inet_addr_mask={
+                        'address': str(net.network_address),
+                        'netmask': str(net.netmask),
+                    },
+                )
+                results.append(addr)
+            elif ':' in addr_str and self.ipv6_policy:
+                try:
+                    net = ipaddress.ip_network(addr_str, strict=False)
+                except ValueError:
+                    self.abort(f'Invalid address: {path}:{line_num} "{addr_str}"')
+                    return results
+                addr = NetworkIPv6(
+                    id=uuid.uuid4(),
+                    type='NetworkIPv6',
+                    name=addr_str,
+                    inet_addr_mask={
+                        'address': str(net.network_address),
+                        'netmask': str(net.netmask),
+                    },
+                )
+                results.append(addr)
         return results
 
     def expand_addr(self, comp_rule: CompRule, slot: str) -> None:

@@ -15,6 +15,7 @@
 import argparse
 import sys
 import time
+from pathlib import Path
 
 import sqlalchemy
 
@@ -215,6 +216,7 @@ def main(argv=None):
 
     driver = CompilerDriver_ipt(db)
     driver.wdir = args.DESTDIR
+    driver.source_dir = str(Path(args.FILE).parent)
     driver.verbose = args.VERBOSE
     driver.prepend_cluster_name = args.DEBUG_CLUSTER_NAME
     driver.test_mode = args.TEST_MODE

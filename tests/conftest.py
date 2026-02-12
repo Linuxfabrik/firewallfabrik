@@ -88,6 +88,7 @@ def _compile(fixture_path: Path, fw_name: str, tmp_path: Path, platform: str) ->
         raise ValueError(msg)
 
     driver.wdir = str(tmp_path)
+    driver.source_dir = str(fixture_path.parent)
     driver.file_name_setting = f'{fw_name}.fw'
 
     result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')

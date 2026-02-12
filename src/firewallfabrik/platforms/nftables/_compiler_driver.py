@@ -268,6 +268,7 @@ class CompilerDriver_nft(CompilerDriver):
                     if single_rule_id:
                         routing_compiler.single_rule_compile_mode = True
                     routing_compiler.verbose = self.verbose > 0
+                    routing_compiler.source_dir = self.source_dir
 
                     routing_rules_count = routing_compiler.prolog()
                     if routing_rules_count > 0:
@@ -348,6 +349,7 @@ class CompilerDriver_nft(CompilerDriver):
         if single_rule_id:
             nat_compiler.single_rule_compile_mode = True
         nat_compiler.verbose = self.verbose > 0
+        nat_compiler.source_dir = self.source_dir
         nat_compiler.debug_rule = self.debug_rule_nat
         nat_compiler.rule_debug_on = self.debug_rule_nat >= 0
 
@@ -391,6 +393,7 @@ class CompilerDriver_nft(CompilerDriver):
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True
         policy_compiler.verbose = self.verbose > 0
+        policy_compiler.source_dir = self.source_dir
         policy_compiler.debug_rule = self.debug_rule_policy
         policy_compiler.rule_debug_on = self.debug_rule_policy >= 0
 

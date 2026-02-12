@@ -63,6 +63,7 @@ class CompilerDriver(BaseCompiler):
         self.debug_rule_routing: int = -1
         self.file_name_setting: str = ''
         self.prepend_cluster_name: bool = False
+        self.source_dir: str = '.'
 
         # Output
         self.file_names: dict[str, str] = {}
