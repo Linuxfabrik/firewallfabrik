@@ -153,11 +153,29 @@ class Address(Base):
 
     def is_v4(self) -> bool:
         """True if this address is an IPv4-family address."""
-        return isinstance(self, (IPv4, Network))
+        if isinstance(self, (IPv4, Network)):
+            return True
+        # For base Address type, check actual address value
+        addr_str = self.get_address()
+        if addr_str:
+            try:
+                return isinstance(ipaddress.ip_address(addr_str), ipaddress.IPv4Address)
+            except ValueError:
+                pass
+        return False
 
     def is_v6(self) -> bool:
         """True if this address is an IPv6-family address."""
-        return isinstance(self, (IPv6, NetworkIPv6))
+        if isinstance(self, (IPv6, NetworkIPv6)):
+            return True
+        # For base Address type, check actual address value
+        addr_str = self.get_address()
+        if addr_str:
+            try:
+                return isinstance(ipaddress.ip_address(addr_str), ipaddress.IPv6Address)
+            except ValueError:
+                pass
+        return False
 
     def is_any(self) -> bool:
         """True if this represents the 'any' address (0.0.0.0/0 or ::/0)."""

@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import io
 import ipaddress
+import socket
+import uuid
 from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._base import BaseCompiler, CompilerStatus
@@ -27,12 +29,14 @@ from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
 from firewallfabrik.core.objects import (
     Address,
+    DNSName,
     Firewall,
     Group,
     Host,
     Interface,
     IPv4,
     IPv6,
+    MultiAddress,
     Network,
     NetworkIPv6,
     RuleSet,
@@ -175,6 +179,10 @@ class Compiler(BaseCompiler):
         """Expand all groups in a rule element slot, replacing group objects
         with their leaf members.
 
+        MultiAddress objects (DNSName, AddressTable) are handled specially:
+        compile-time objects are resolved and expanded to Address objects;
+        runtime objects are kept as-is for later swap to MultiAddressRunTime.
+
         After expansion, elements are sorted by name to match C++
         Compiler::expandGroupsInRuleElement() which uses
         FWObjectNameCmpPredicate.
@@ -182,13 +190,77 @@ class Compiler(BaseCompiler):
         elements = getattr(comp_rule, slot)
         new_elements = []
         for obj in elements:
-            if isinstance(obj, Group):
+            if isinstance(obj, MultiAddress):
+                is_runtime = (obj.data or {}).get('run_time', 'False').lower() == 'true'
+                if is_runtime:
+                    # Runtime: keep as-is (swapped to MultiAddressRunTime later)
+                    new_elements.append(obj)
+                else:
+                    # Compile-time: resolve and expand to child addresses
+                    new_elements.extend(self._resolve_multi_address(obj))
+            elif isinstance(obj, Group):
                 members = expand_group(self.session, obj)
                 new_elements.extend(members)
             else:
                 new_elements.append(obj)
         new_elements.sort(key=lambda obj: getattr(obj, 'name', ''))
         setattr(comp_rule, slot, new_elements)
+
+    def _resolve_multi_address(self, obj: MultiAddress) -> list:
+        """Resolve a compile-time MultiAddress to Address objects.
+
+        For DNSName: resolves hostname via DNS.
+        For AddressTable: loads addresses from the referenced file.
+        Falls back to obj.addresses if already populated.
+
+        Matches C++ Preprocessor::convertObject() + DNSName::loadFromSource().
+        """
+        # If the object already has child addresses (e.g. previously resolved),
+        # return them directly.
+        if obj.addresses:
+            return list(obj.addresses)
+
+        if isinstance(obj, DNSName):
+            return self._resolve_dns_name(obj)
+
+        return []
+
+    def _resolve_dns_name(self, obj: DNSName) -> list:
+        """Resolve a compile-time DNSName via DNS lookup."""
+        dnsrec = (obj.data or {}).get('dnsrec', obj.name)
+        if not dnsrec:
+            return []
+
+        af = socket.AF_INET6 if self.ipv6_policy else socket.AF_INET
+        try:
+            infos = socket.getaddrinfo(dnsrec, None, af, socket.SOCK_STREAM)
+        except socket.gaierror:
+            self.warning(
+                f'DNSName "{obj.name}" cannot resolve "{dnsrec}": DNS lookup failed'
+            )
+            return []
+
+        seen: set[str] = set()
+        results: list[Address] = []
+        addr_type = IPv6 if self.ipv6_policy else IPv4
+        netmask = (
+            'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'
+            if self.ipv6_policy
+            else '255.255.255.255'
+        )
+        for info in infos:
+            ip_str = info[4][0]
+            if ip_str in seen:
+                continue
+            seen.add(ip_str)
+            addr = addr_type(
+                id=uuid.uuid4(),
+                type=addr_type.__mapper_args__['polymorphic_identity'],
+                name='address',
+                inet_addr_mask={'address': ip_str, 'netmask': netmask},
+            )
+            results.append(addr)
+        return results
 
     def expand_addr(self, comp_rule: CompRule, slot: str) -> None:
         """Expand hosts/firewalls in an element slot into their interface addresses.
@@ -216,10 +288,8 @@ class Compiler(BaseCompiler):
                     if iface.is_loopback() and not on_loopback:
                         continue
                     for addr in iface.addresses:
-                        if (
-                            self.ipv6_policy and isinstance(addr, (IPv6, NetworkIPv6))
-                        ) or (
-                            not self.ipv6_policy and isinstance(addr, (IPv4, Network))
+                        if (self.ipv6_policy and addr.is_v6()) or (
+                            not self.ipv6_policy and addr.is_v4()
                         ):
                             new_elements.append(addr)
             else:
