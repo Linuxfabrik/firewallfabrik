@@ -1,6 +1,8 @@
-# If fwf is not on your PATH (e.g. installed in a virtual environment),
-# replace "fwf" with the absolute path, for example:
+# If fwf is not on your PATH (e.g. installed in a virtual environment, or in Git repo),
+# replace "fwf" with the absolute path.
+# Examples:
 # Exec=/home/user/venvs/firewallfabrik/bin/fwf %F
+# Exec=bash -c 'cd /home/user/git/firewallfabrik && PYTHONPATH=src python -m firewallfabrik.gui.app %F'
 [Desktop Entry]
 Name=FirewallFabrik
 Comment=Qt-based GUI tool for managing firewall configurations
