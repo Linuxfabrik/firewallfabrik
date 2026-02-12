@@ -50,7 +50,7 @@ For example:
 python3.14 -m venv $HOME/venvs/firewallfabrik
 source $HOME/venvs/firewallfabrik/bin/activate
 pip install --upgrade pip
-pip install --editable .
+pip install --editable '.[gui]' # add `--group dev` for development dependencies
 
 # run
 fwf
@@ -130,6 +130,10 @@ Removal of the "Deleted Objects" Feature from Firewall Builder
 
 * In Firewall Builder, the "Deleted Objects" feature provides only very limited value. When an object is deleted, all references to it are immediately removed. As a result, restoring an object from "Deleted Objects" does not restore its original relationships, significantly reducing the usefulness of the feature.
 * For this reason, we decided not to implement "Deleted Objects" in FirewallFabrik. Instead, we recommend using Git as a version control system. With the switch from an XML-based backend (Firewall Builder) to YAML (FirewallFabrik), Git makes it easy to restore deleted objects - including all their references - by reverting or inspecting previous revisions of the data files.
+
+Changed the host settings default for "IPv4 Packet forwarding" from "On" to "No change"
+
+* This option is only needed for firewalls that actually forward traffic, so it shouldn't be set by default.
 
 
 ## License
