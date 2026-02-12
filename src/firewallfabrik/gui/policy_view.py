@@ -105,6 +105,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
 
     _BORDER_COLOR = QColor('lightgray')
     _H_PAD = 2
+    _HIGHLIGHT_COLOR = QColor(255, 255, 150, 100)
     _ICON_TEXT_GAP = 2
     _V_PAD = 2
 
@@ -142,6 +143,18 @@ class _CellBorderDelegate(QStyledItemDelegate):
                 option.rect,
                 option.palette.color(QPalette.ColorRole.Highlight),
             )
+
+        # Highlight matched cell (Find / Where Used navigation).
+        view = self.parent()
+        if (
+            isinstance(view, PolicyView)
+            and view._highlight_rule_id is not None
+            and view._highlight_col is not None
+            and index.column() == view._highlight_col
+        ):
+            rd = index.model().get_row_data(index)
+            if rd is not None and rd.rule_id == view._highlight_rule_id:
+                painter.fillRect(option.rect, self._HIGHLIGHT_COLOR)
 
         elements = index.data(ELEMENTS_ROLE)
         if elements:
@@ -258,6 +271,8 @@ class PolicyView(QTreeView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._highlight_rule_id = None
+        self._highlight_col = None
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setRootIsDecorated(True)
@@ -285,6 +300,23 @@ class PolicyView(QTreeView):
         self._selected_element = None  # (rule_id, slot, target_id) or None
         self._selected_index = QModelIndex()  # cell containing selected element
         self._drag_start_pos = None  # QPoint for drag threshold
+
+    def set_highlight(self, rule_id, col):
+        """Mark a single cell for visual emphasis."""
+        self._highlight_rule_id = rule_id
+        self._highlight_col = col
+        self.viewport().update()
+
+    def clear_highlight(self):
+        """Remove cell highlight."""
+        if self._highlight_rule_id is not None:
+            self._highlight_rule_id = None
+            self._highlight_col = None
+            self.viewport().update()
+
+    def mousePressEvent(self, event):
+        self.clear_highlight()
+        super().mousePressEvent(event)
 
     # ------------------------------------------------------------------
     # Model setup

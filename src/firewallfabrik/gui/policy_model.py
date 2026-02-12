@@ -78,6 +78,8 @@ _COL_TO_SLOT = {
     _COL_TIME: 'when',
 }
 
+_SLOT_TO_COL = {v: k for k, v in _COL_TO_SLOT.items()}
+
 _ELEMENT_COLS = frozenset(_COL_TO_SLOT.keys())
 
 _DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})

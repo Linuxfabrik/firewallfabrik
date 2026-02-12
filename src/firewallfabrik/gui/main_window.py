@@ -60,7 +60,7 @@ from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
 from firewallfabrik.gui.object_tree import ObjectTree
-from firewallfabrik.gui.policy_model import PolicyTreeModel
+from firewallfabrik.gui.policy_model import _SLOT_TO_COL, PolicyTreeModel
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -918,12 +918,15 @@ class FWWindow(QMainWindow):
     @staticmethod
     def _scroll_to_rule(view, model, rule_id, slot):
         """Scroll *view* to the rule node matching *rule_id*."""
+        col = _SLOT_TO_COL.get(slot, 0) if slot else 0
 
         def _walk(parent_index, row_count):
             for row in range(row_count):
-                idx = model.index(row, 0, parent_index)
+                idx = model.index(row, col, parent_index)
                 rd = model.get_row_data(idx)
                 if rd is not None and rd.rule_id == rule_id:
+                    if col:
+                        view.set_highlight(rule_id, col)
                     view.setCurrentIndex(idx)
                     view.scrollTo(idx)
                     return True
