@@ -210,6 +210,7 @@ class FWWindow(QMainWindow):
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
         self._object_tree.rule_set_activated.connect(self._open_rule_set)
         self._object_tree.object_activated.connect(self._open_object_editor)
+        self._object_tree.tree_changed.connect(self._on_tree_changed)
         self._object_tree.set_db_manager(self._db_manager)
 
         self._editor_map = {
@@ -807,6 +808,14 @@ class FWWindow(QMainWindow):
         # Keep the tree in sync with the editor.
         if obj is not None:
             self._object_tree.update_item(obj)
+
+    def _on_tree_changed(self):
+        """Refresh the tree after a CRUD operation (e.g. duplicate)."""
+        file_key = (
+            str(self._display_file) if getattr(self, '_display_file', None) else ''
+        )
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session, file_key=file_key)
 
     @Slot()
     def toggleViewObjectTree(self):

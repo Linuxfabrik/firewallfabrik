@@ -12,7 +12,9 @@
 
 """Object tree panel for the main window."""
 
+import copy
 import json
+import uuid
 from datetime import UTC, datetime
 
 import sqlalchemy
@@ -31,10 +33,16 @@ from PySide6.QtWidgets import (
 )
 
 from firewallfabrik.core.objects import (
+    Address,
     Group,
     Host,
+    Interface,
+    Interval,
     Library,
+    RuleSet,
+    Service,
     group_membership,
+    rule_elements,
 )
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 
@@ -436,6 +444,53 @@ _NON_DRAGGABLE_TYPES = frozenset(
 )
 
 
+# Map type discriminator strings to their SQLAlchemy base model class.
+_MODEL_MAP = {
+    'AddressRange': Address,
+    'AddressTable': Group,
+    'AttachedNetworks': Group,
+    'Cluster': Host,
+    'CustomService': Service,
+    'DNSName': Group,
+    'Firewall': Host,
+    'Host': Host,
+    'ICMP6Service': Service,
+    'ICMPService': Service,
+    'IPService': Service,
+    'IPv4': Address,
+    'IPv6': Address,
+    'Interface': Interface,
+    'Interval': Interval,
+    'IntervalGroup': Group,
+    'Library': Library,
+    'NAT': RuleSet,
+    'Network': Address,
+    'NetworkIPv6': Address,
+    'ObjectGroup': Group,
+    'PhysAddress': Address,
+    'Policy': RuleSet,
+    'Routing': RuleSet,
+    'ServiceGroup': Group,
+    'TCPService': Service,
+    'TagService': Service,
+    'UDPService': Service,
+    'UserService': Service,
+}
+
+# Types for which "Duplicate ..." is not offered (structural / internal).
+_NO_DUPLICATE_TYPES = frozenset(
+    {
+        'AttachedNetworks',
+        'Interface',
+        'Library',
+        'NAT',
+        'PhysAddress',
+        'Policy',
+        'Routing',
+    }
+)
+
+
 class _DraggableTree(QTreeWidget):
     """QTreeWidget subclass that provides drag MIME data for object items."""
 
@@ -488,6 +543,9 @@ class ObjectTree(QWidget):
 
     object_activated = Signal(str, str)
     """Emitted when a non-rule-set object is double-clicked: (obj_id, obj_type)."""
+
+    tree_changed = Signal()
+    """Emitted after a CRUD operation (e.g. duplicate) to trigger a tree refresh."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1077,6 +1135,25 @@ class ObjectTree(QWidget):
         edit_action = menu.addAction(label)
         edit_action.triggered.connect(lambda: self._ctx_edit(item))
 
+        # Duplicate ...
+        if obj_type not in _NO_DUPLICATE_TYPES:
+            menu.addSeparator()
+            libraries = self._get_writable_libraries()
+            if len(libraries) == 1:
+                dup_action = menu.addAction('Duplicate ...')
+                lib_id = libraries[0][0]
+                dup_action.triggered.connect(lambda: self._ctx_duplicate(item, lib_id))
+            elif libraries:
+                dup_menu = menu.addMenu('Duplicate ...')
+                for lib_id, lib_name in libraries:
+                    act = dup_menu.addAction(f'place in library {lib_name}')
+                    act.triggered.connect(
+                        lambda checked=False, lid=lib_id: self._ctx_duplicate(item, lid)
+                    )
+            else:
+                dup_action = menu.addAction('Duplicate ...')
+                dup_action.setEnabled(False)
+
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
     def _ctx_edit(self, item):
@@ -1089,3 +1166,190 @@ class ObjectTree(QWidget):
             self.rule_set_activated.emit(obj_id, fw_name, item.text(0))
         else:
             self.object_activated.emit(obj_id, obj_type)
+
+    # ------------------------------------------------------------------
+    # Duplicate
+    # ------------------------------------------------------------------
+
+    def _get_writable_libraries(self):
+        """Return [(lib_id, lib_name), ...] for non-read-only libraries."""
+        if self._db_manager is None:
+            return []
+        result = []
+        with self._db_manager.session() as session:
+            for lib in session.scalars(sqlalchemy.select(Library)).all():
+                if not lib.ro:
+                    result.append((lib.id, lib.name))
+        result.sort(key=lambda t: t[1].lower())
+        return result
+
+    def _ctx_duplicate(self, item, target_lib_id):
+        """Duplicate the object referenced by *item* into *target_lib_id*."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not obj_id or not obj_type:
+            return
+        model_cls = _MODEL_MAP.get(obj_type)
+        if model_cls is None:
+            return
+        new_id = self._duplicate_object(uuid.UUID(obj_id), model_cls, target_lib_id)
+        if new_id is not None:
+            self.tree_changed.emit()
+            # Select the newly created object.
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+            self.object_activated.emit(str(new_id), obj_type)
+
+    def _duplicate_object(self, source_id, model_cls, target_lib_id):
+        """Deep-copy *source_id* into *target_lib_id*. Returns new UUID or None."""
+        if self._db_manager is None:
+            return None
+
+        session = self._db_manager.create_session()
+        try:
+            source = session.get(model_cls, source_id)
+            if source is None:
+                session.close()
+                return None
+
+            id_map = {}
+            new_obj = self._clone_object(source, id_map)
+
+            # Place in target library.
+            if hasattr(new_obj, 'library_id'):
+                new_obj.library_id = target_lib_id
+            # If duplicating into a different library, clear group ownership
+            # so the object lands at the library root.
+            source_lib_id = getattr(source, 'library_id', None)
+            if source_lib_id != target_lib_id:
+                if hasattr(new_obj, 'group_id'):
+                    new_obj.group_id = None
+                if hasattr(new_obj, 'parent_group_id'):
+                    new_obj.parent_group_id = None
+
+            # Make name unique within the target scope.
+            new_obj.name = self._make_name_unique(session, new_obj)
+
+            session.add(new_obj)
+
+            # Deep-copy children for devices (interfaces, rule sets, rules, rule elements).
+            if isinstance(source, Host):
+                self._duplicate_device_children(session, source, new_obj, id_map)
+
+            # Copy group_membership entries for groups.
+            if isinstance(source, Group):
+                self._duplicate_group_members(session, source, new_obj)
+
+            session.commit()
+            self._db_manager.save_state(f'Duplicate {source.type} {source.name}')
+            new_id = new_obj.id
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return new_id
+
+    @staticmethod
+    def _clone_object(source, id_map):
+        """Create a detached copy of *source* with a new UUID.
+
+        All scalar/JSON column attributes are deep-copied.
+        *id_map* is updated with ``{old_id: new_id}``.
+        """
+        mapper = sqlalchemy.inspect(type(source))
+        new_id = uuid.uuid4()
+        id_map[source.id] = new_id
+        kwargs = {}
+        for attr in mapper.column_attrs:
+            key = attr.key
+            if key == 'id':
+                continue
+            val = getattr(source, key)
+            if isinstance(val, (dict, list, set)):
+                val = copy.deepcopy(val)
+            kwargs[key] = val
+        return type(source)(id=new_id, **kwargs)
+
+    def _duplicate_device_children(self, session, source_device, new_device, id_map):
+        """Recursively duplicate interfaces, addresses, rule sets, rules, and rule elements."""
+        # Interfaces + their child addresses.
+        for iface in source_device.interfaces:
+            new_iface = self._clone_object(iface, id_map)
+            new_iface.device_id = new_device.id
+            new_iface.library_id = new_device.library_id
+            session.add(new_iface)
+            for addr in iface.addresses:
+                new_addr = self._clone_object(addr, id_map)
+                new_addr.interface_id = new_iface.id
+                new_addr.library_id = None
+                new_addr.group_id = None
+                session.add(new_addr)
+
+        # Rule sets + their rules + rule_elements.
+        for rs in source_device.rule_sets:
+            new_rs = self._clone_object(rs, id_map)
+            new_rs.device_id = new_device.id
+            session.add(new_rs)
+            for rule in rs.rules:
+                new_rule = self._clone_object(rule, id_map)
+                new_rule.rule_set_id = new_rs.id
+                session.add(new_rule)
+                # Copy rule_elements, remapping target_id for internal refs.
+                rows = session.execute(
+                    sqlalchemy.select(rule_elements).where(
+                        rule_elements.c.rule_id == rule.id
+                    )
+                ).all()
+                for row in rows:
+                    target_id = id_map.get(row.target_id, row.target_id)
+                    session.execute(
+                        rule_elements.insert().values(
+                            rule_id=new_rule.id,
+                            slot=row.slot,
+                            target_id=target_id,
+                            position=row.position,
+                        )
+                    )
+
+    @staticmethod
+    def _duplicate_group_members(session, source_group, new_group):
+        """Copy group_membership entries from *source_group* to *new_group*."""
+        rows = session.execute(
+            sqlalchemy.select(group_membership).where(
+                group_membership.c.group_id == source_group.id
+            )
+        ).all()
+        for row in rows:
+            session.execute(
+                group_membership.insert().values(
+                    group_id=new_group.id,
+                    member_id=row.member_id,
+                    position=row.position,
+                )
+            )
+
+    @staticmethod
+    def _make_name_unique(session, obj):
+        """Return a unique name like 'name-1', 'name-2', etc.
+
+        Queries the appropriate table for existing names to find the
+        next available suffix.
+        """
+        base_name = obj.name
+        model_cls = type(obj)
+
+        # Collect existing names in the same scope.
+        stmt = sqlalchemy.select(model_cls.name).where(
+            model_cls.name.like(f'{base_name}%')
+        )
+        if hasattr(obj, 'library_id') and obj.library_id is not None:
+            stmt = stmt.where(model_cls.library_id == obj.library_id)
+        existing = set(session.scalars(stmt).all())
+
+        suffix = 1
+        while True:
+            candidate = f'{base_name}-{suffix}'
+            if candidate not in existing:
+                return candidate
+            suffix += 1
