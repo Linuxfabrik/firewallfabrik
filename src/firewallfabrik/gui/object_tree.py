@@ -1164,7 +1164,6 @@ class ObjectTree(QWidget):
 
         # Duplicate ...
         if obj_type not in _NO_DUPLICATE_TYPES:
-            menu.addSeparator()
             libraries = self._get_writable_libraries()
             if len(libraries) == 1:
                 dup_action = menu.addAction('Duplicate ...')
