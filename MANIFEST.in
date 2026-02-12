@@ -1,0 +1,2 @@
+recursive-include src/firewallfabrik/gui/ui *.png *.qrc *.rcc *.svg *.ui
+recursive-include src/firewallfabrik/resources *

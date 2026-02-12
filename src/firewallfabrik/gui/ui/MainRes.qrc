@@ -172,6 +172,6 @@
     <file alias="Icons/UserService/icon-big">Icons/user_64.png</file>
 
     <!-- Window icon (multiple sizes for taskbar / window manager) -->
-    <file alias="Icons/FirewallFabrik">../../../../data/ch.linuxfabrik.firewallfabrik.svg</file>
+    <file alias="Icons/FirewallFabrik/scalable">Icons/firewallfabrik.svg</file>
   </qresource>
 </RCC>

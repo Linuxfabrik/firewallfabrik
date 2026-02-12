@@ -62,9 +62,9 @@ fwf
 To integrate FirewallFabrik with your desktop environment (application icon in dock, app switcher, etc.), install the `.desktop` file and icon:
 
 ```bash
-cp data/ch.linuxfabrik.firewallfabrik.desktop $HOME/.local/share/applications/
+cp assets/ch.linuxfabrik.firewallfabrik.desktop $HOME/.local/share/applications/
 mkdir -p $HOME/.local/share/icons/hicolor/scalable/apps/
-cp data/ch.linuxfabrik.firewallfabrik.svg $HOME/.local/share/icons/hicolor/scalable/apps/
+cp src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg $HOME/.local/share/icons/hicolor/scalable/apps/
 update-desktop-database $HOME/.local/share/applications/ 2>/dev/null
 gtk-update-icon-cache $HOME/.local/share/icons/hicolor/ 2>/dev/null
 ```

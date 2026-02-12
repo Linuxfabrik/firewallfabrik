@@ -45,6 +45,9 @@ Homepage = "https://github.com/linuxfabrik/firewallfabrik/"
 Source = "https://github.com/linuxfabrik/firewallfabrik/"
 Tracker = "https://github.com/linuxfabrik/firewallfabrik/issues/"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.dynamic]
 version = { attr = "firewallfabrik.__version__" }
 
