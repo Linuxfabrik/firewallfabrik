@@ -169,7 +169,10 @@
     <file alias="Icons/UDPService/icon-big">Icons/service-udp_64.png</file>
     <file alias="Icons/UserService/icon-big">Icons/user_64.png</file>
 
-    <!-- Window icon -->
+    <!-- Window icon (multiple sizes for taskbar / window manager) -->
     <file>Images/fwbuilder3.png</file>
+    <file>Images/fwbuilder3-72x72.png</file>
+    <file>Images/fwbuilder3-128x128.png</file>
+    <file>Images/fwbuilder3-256x256.png</file>
   </qresource>
 </RCC>
