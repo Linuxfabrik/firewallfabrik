@@ -59,12 +59,20 @@ def parse_args(argv=None):
         help='output directory for generated scripts. Default: %(default)s',
     )
 
-    parser.add_argument(
+    fw_lookup = parser.add_mutually_exclusive_group()
+    fw_lookup.add_argument(
         '-i',
         '--id',
         action='store_true',
         dest='FW_BY_ID',
         help='look up firewall by object ID instead of name',
+    )
+    fw_lookup.add_argument(
+        '-p',
+        '--path',
+        action='store_true',
+        dest='FW_BY_PATH',
+        help='look up firewall by tree-path identifier instead of name',
     )
 
     parser.add_argument(
@@ -184,7 +192,16 @@ def main(argv=None):
 
     # Verify firewall exists
     with db.session() as session:
-        if args.FW_BY_ID:
+        if args.FW_BY_PATH:
+            fw_uuid = db.ref_index.get(args.firewall_name)
+            if fw_uuid is None:
+                print(
+                    f"Error: tree-path '{args.firewall_name}' not found in {args.FILE}",
+                    file=sys.stderr,
+                )
+                return 1
+            firewall = session.get(firewallfabrik.core.objects.Firewall, fw_uuid)
+        elif args.FW_BY_ID:
             firewall = session.execute(
                 sqlalchemy.select(firewallfabrik.core.objects.Firewall).where(
                     firewallfabrik.core.objects.Firewall.id == args.firewall_name
@@ -198,7 +215,12 @@ def main(argv=None):
             ).scalar_one_or_none()
 
         if firewall is None:
-            label = 'id' if args.FW_BY_ID else 'name'
+            if args.FW_BY_PATH:
+                label = 'tree-path'
+            elif args.FW_BY_ID:
+                label = 'id'
+            else:
+                label = 'name'
             print(
                 f"Error: firewall with {label} '{args.firewall_name}' not found in {args.FILE}",
                 file=sys.stderr,
