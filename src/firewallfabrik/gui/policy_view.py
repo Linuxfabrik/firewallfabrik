@@ -469,7 +469,6 @@ class PolicyView(QTreeView):
             'Insert Rule Above', lambda: model.insert_rule(index, before=True)
         )
         menu.addAction('Insert Rule Below', lambda: model.insert_rule(index))
-        menu.addSeparator()
         menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
         up = menu.addAction(
