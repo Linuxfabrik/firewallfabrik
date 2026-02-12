@@ -38,6 +38,7 @@ from firewallfabrik.compiler.processors._generic import (
     EliminateDuplicatesInSRV,
     EmptyGroupsInRE,
     ExpandGroups,
+    ResolveMultiAddress,
     SimplePrintProgress,
 )
 from firewallfabrik.core.objects import (
@@ -193,6 +194,8 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(
             SplitIfIfaceAndDirectionBoth('split interface rule with direction both')
         )
+
+        self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
         self.add(EmptyGroupsInRE('check for empty groups in SRC', 'src'))
         self.add(EmptyGroupsInRE('check for empty groups in DST', 'dst'))

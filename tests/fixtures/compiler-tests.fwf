@@ -1,4 +1,4 @@
-last_modified: 1770916435.0
+last_modified: 1770924711.0
 data:
   version: '24'
 libraries:
@@ -3043,11 +3043,150 @@ libraries:
         name: 'Firewalls'
         children:
           - type: 'Firewall'
+            name: 'fw-dns-names'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770924730'
+              lastInstalled: '0'
+              lastModified: '1770924724'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: '1'
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-dns-names:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-dns-names:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-dns-names:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:DNS Names/DNSName:compile-time'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: 'False'
+                      group: ''
+                      log: 'False'
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:DNS Names/DNSName:run-time'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
             name: 'fw-empty-groups'
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770916520'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770916395'
               platform: 'iptables'
@@ -3407,7 +3546,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770914366'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770914360'
               platform: 'iptables'
@@ -3528,7 +3667,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770882452'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770825381'
               platform: 'iptables'
@@ -3743,7 +3882,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770916520'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770916040'
               platform: 'iptables'
@@ -4114,7 +4253,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770882452'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770825667'
               platform: 'iptables'
@@ -4342,7 +4481,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770913900'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770913727'
               platform: 'iptables'
@@ -4672,7 +4811,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770913900'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770913669'
               platform: 'iptables'
@@ -4871,7 +5010,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770882452'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770825591'
               platform: 'iptables'
@@ -5054,7 +5193,7 @@ libraries:
             data:
               host_OS: 'linux24'
               inactive: false
-              lastCompiled: '1770916520'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770915904'
               platform: 'iptables'
@@ -5211,7 +5350,7 @@ libraries:
             name: 'fw-services'
             data:
               host_OS: 'linux24'
-              lastCompiled: '1770882452'
+              lastCompiled: '1770922821'
               lastInstalled: '0'
               lastModified: '1770825218'
               platform: 'iptables'
@@ -5660,6 +5799,19 @@ libraries:
             name: 'Addresses'
           - type: 'ObjectGroup'
             name: 'DNS Names'
+            children:
+              - type: 'DNSName'
+                name: 'compile-time'
+                data:
+                  dnsrec: 'linuxfabrik.ch'
+                  dnsrectype: 'A'
+                  run_time: false
+              - type: 'DNSName'
+                name: 'run-time'
+                data:
+                  dnsrec: 'linuxfabrik.ch'
+                  dnsrectype: 'A'
+                  run_time: true
           - type: 'ObjectGroup'
             name: 'Groups'
             children:

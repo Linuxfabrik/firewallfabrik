@@ -27,6 +27,7 @@ from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    DNSName,
     Host,
     ICMP6Service,
     ICMPService,
@@ -191,6 +192,10 @@ class NATPrintRule_nft(NATRuleProcessor):
                         return addr_str
             self.compiler.error(rule, f'Host "{obj.name}" has no addresses')
             return ''
+
+        if isinstance(obj, DNSName):
+            # Runtime DNSName — use the DNS record directly as address
+            return (obj.data or {}).get('dnsrec', obj.name)
 
         if not isinstance(obj, Address):
             self.compiler.error(

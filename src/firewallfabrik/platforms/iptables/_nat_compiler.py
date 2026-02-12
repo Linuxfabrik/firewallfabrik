@@ -31,6 +31,7 @@ from firewallfabrik.compiler.processors._generic import (
     DropIPv6Rules,
     EmptyGroupsInRE,
     ExpandGroups,
+    ResolveMultiAddress,
     SimplePrintProgress,
 )
 from firewallfabrik.core.objects import (
@@ -184,6 +185,8 @@ class NATCompiler_ipt(NATCompiler):
                 'process single object negation in outbound Itf'
             )
         )
+
+        self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
         self.add(EmptyGroupsInRE('check for empty groups in OSRC', 'osrc'))
         self.add(EmptyGroupsInRE('check for empty groups in ODST', 'odst'))

@@ -192,9 +192,9 @@ class Compiler(BaseCompiler):
         """Expand all groups in a rule element slot, replacing group objects
         with their leaf members.
 
-        MultiAddress objects (DNSName, AddressTable) are handled specially:
-        compile-time objects are resolved and expanded to Address objects;
-        runtime objects are kept as-is for later swap to MultiAddressRunTime.
+        Compile-time MultiAddress objects (DNSName, AddressTable) have
+        already been resolved by the ``ResolveMultiAddress`` processor.
+        Runtime MultiAddress objects are kept as-is.
 
         After expansion, elements are sorted by name to match C++
         Compiler::expandGroupsInRuleElement() which uses
@@ -204,13 +204,8 @@ class Compiler(BaseCompiler):
         new_elements = []
         for obj in elements:
             if isinstance(obj, MultiAddress):
-                is_runtime = bool((obj.data or {}).get('run_time', False))
-                if is_runtime:
-                    # Runtime: keep as-is (swapped to MultiAddressRunTime later)
-                    new_elements.append(obj)
-                else:
-                    # Compile-time: resolve and expand to child addresses
-                    new_elements.extend(self._resolve_multi_address(obj))
+                # Runtime MultiAddress — keep as-is
+                new_elements.append(obj)
             elif isinstance(obj, Group):
                 members = expand_group(self.session, obj)
                 new_elements.extend(members)

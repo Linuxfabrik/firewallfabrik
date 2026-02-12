@@ -31,6 +31,7 @@ from firewallfabrik.core.objects import (
     ICMP6Service,
     ICMPService,
     IPService,
+    MultiAddress,
     Network,
     NetworkIPv6,
     PolicyAction,
@@ -38,6 +39,11 @@ from firewallfabrik.core.objects import (
     TCPService,
     TCPUDPService,
 )
+
+
+def _is_runtime(obj: MultiAddress) -> bool:
+    """Return True if the MultiAddress is marked for run-time resolution."""
+    return bool((obj.data or {}).get('run_time', False))
 
 
 class Begin(BasicRuleProcessor):
@@ -121,17 +127,62 @@ class SkipDisabledRules(BasicRuleProcessor):
         return True
 
 
+class ResolveMultiAddress(BasicRuleProcessor):
+    """Resolve compile-time MultiAddress objects in all rule element slots.
+
+    Corresponds to C++ ``Preprocessor::convertObject()`` which calls
+    ``MultiAddress::loadFromSource()`` before compilation.  In C++ this
+    runs as a separate ``Preprocessor`` pass over the entire object tree;
+    here we do it per-rule in the processor pipeline, but *before*
+    ``EmptyGroupsInRE`` so that the empty-group check can see whether
+    resolution produced any addresses.
+
+    - **Compile-time** MultiAddress (DNSName, AddressTable): resolved
+      and replaced with the resulting Address objects in the slot.
+    - **Runtime** MultiAddress: kept as-is.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        for slot in SLOT_VALUES:
+            elements = getattr(rule, slot)
+            if not elements:
+                continue
+            new_elements = []
+            changed = False
+            for obj in elements:
+                if isinstance(obj, MultiAddress) and not _is_runtime(obj):
+                    new_elements.extend(
+                        self.compiler._resolve_multi_address(obj),
+                    )
+                    changed = True
+                else:
+                    new_elements.append(obj)
+            if changed:
+                setattr(rule, slot, new_elements)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
 class EmptyGroupsInRE(BasicRuleProcessor):
     """Check for empty groups in a specific rule element slot.
 
-    Corresponds to C++ ``Compiler::emptyGroupsInRE``.  Runs **before**
-    ``ExpandGroups``.  For each Group in the slot that has zero effective
-    members (recursively counting through nested groups):
+    Corresponds to C++ ``Compiler::emptyGroupsInRE``.  Runs **after**
+    ``ResolveMultiAddress`` and **before** ``ExpandGroups``.  For each
+    Group in the slot that has zero effective members (recursively
+    counting through nested groups):
 
     - If ``ignore_empty_groups`` is **true**: remove the empty group from
       the element and warn.  If the element becomes "any" (empty) after
       all removals, drop the rule.
     - If ``ignore_empty_groups`` is **false** (default): abort compilation.
+
+    Runtime MultiAddress objects are skipped (their content is unknown at
+    compile time).
 
     Each platform compiler adds one instance per slot it cares about
     (C++: src, dst, srv, itf for policy; osrc, odst, osrv, tsrc, tdst,
@@ -144,8 +195,15 @@ class EmptyGroupsInRE(BasicRuleProcessor):
 
     @staticmethod
     def _count_children(session, obj) -> int:
-        """Count effective leaf members of a group recursively."""
+        """Count effective leaf members of a group recursively.
+
+        Matches C++ ``Compiler::emptyGroupsInRE::countChildren``.
+        Runtime MultiAddress objects count as 1 (their content is
+        unknown at compile time).
+        """
         if not isinstance(obj, Group):
+            return 1
+        if isinstance(obj, MultiAddress) and _is_runtime(obj):
             return 1
         members = expand_group(session, obj)
         return len(members)
@@ -161,9 +219,13 @@ class EmptyGroupsInRE(BasicRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # Find empty groups in this slot
+        # Find empty groups in this slot.  Skip runtime MultiAddress
+        # objects — their content is unknown at compile time.  Matches
+        # C++ Compiler::emptyGroupsInRE::processNext().
         empty_groups: list = []
         for obj in elements:
+            if isinstance(obj, MultiAddress) and _is_runtime(obj):
+                continue
             if (
                 isinstance(obj, Group)
                 and self._count_children(self.compiler.session, obj) == 0

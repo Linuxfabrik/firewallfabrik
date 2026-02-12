@@ -31,6 +31,7 @@ from firewallfabrik.core.objects import (
     Address,
     AddressRange,
     Direction,
+    DNSName,
     Host,
     ICMP6Service,
     ICMPService,
@@ -298,6 +299,10 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_addr_basic(self, obj, rule: CompRule) -> str:
         """Print basic address in CIDR notation."""
+        if isinstance(obj, DNSName):
+            # Runtime DNSName — use the DNS record directly as address
+            return (obj.data or {}).get('dnsrec', obj.name)
+
         if not isinstance(obj, Address):
             self.compiler.error(
                 rule,
