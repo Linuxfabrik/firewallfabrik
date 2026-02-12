@@ -202,7 +202,7 @@ This processor appears multiple times in the pipeline — after each stage that
 can remove objects from rule elements (group expansion, address family
 filtering, address expansion, etc.).
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:DropRuleWithEmptyRE` — only checks Src/Dst/Srv (PolicyRule). Missing NATRule checks (OSrc/ODst/OSrv/TSrc/TDst/TSrv) and RoutingRule checks (RDst/RGtw/RItf). Fine for policy compilation only.
+> **Python**: ✅ `_generic.py:DropRuleWithEmptyRE` — checks `has_empty_re` flag set by upstream processors that remove objects from elements. Used in both policy and NAT pipelines.
 
 #### `checkForObjectsWithErrors` (line 594 / 1411) — Validation
 
@@ -324,7 +324,7 @@ option:
   warning (a match-nothing element is meaningless).
 - **If false**: aborts compilation with an error listing the empty groups.
 
-> **Python**: ❌ Not implemented
+> **Python**: ✅ `_generic.py:EmptyGroupsInRE` — parameterized by slot name. Recursively counts group children via `expand_group()`. Respects `ignore_empty_groups` option: removes empty groups with warning (or aborts). Drops rule if element becomes "any" after removal. Wired into both iptables and nftables policy pipelines (SRC, DST, SRV, ITF) and iptables NAT pipeline (OSRC, ODST, OSRV, TSRC, TDST, TSRV).
 
 #### `swapMultiAddressObjectsInRE` (line 486 / 1340) — Transform
 
@@ -499,7 +499,7 @@ and hidden rules):
 Also has a variant `DetectShadowingForNonTerminatingRules` that detects
 when a non-terminating rule (Continue) shadows a terminating rule above it.
 
-> **Python**: ⚠️ `compiler.py:DetectShadowing` — stub only; calls `slurp()` and passes rules through. No `find_more_general_rule()`, no comparison against `rules_seen_so_far`, no abort on shadow. Completely non-functional. (not wired into pipeline)
+> **Python**: ✅ `_generic.py:DetectShadowing` — fully implemented. Processes rules one at a time (no slurp), accumulates in `_rules_seen`. Skips rules with negation, Branch/Continue/Return/Accounting actions, fallback, or hidden flags. Checks interface, direction, chain, and all three elements (src, dst, srv) for containment. Address containment via `_addr_contains()` supports Network, AddressRange, and single Address. Service containment via `_srv_contains()` supports TCP/UDP port range, ICMP type, IPService flags/proto, and cross-type IPService(proto=0) shadowing. Wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Missing: `DetectShadowingForNonTerminatingRules` variant, separate shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing`.
 
 ### Generic service processors (`Compiler.h` / `Compiler.cpp`)
 
@@ -573,10 +573,10 @@ rule elements. These are defined in the Compiler and PolicyCompiler headers:
 | `recursiveGroupsInSrc` | `recursiveGroupsInRE` | Src | ❌ |
 | `recursiveGroupsInDst` | `recursiveGroupsInRE` | Dst | ❌ |
 | `recursiveGroupsInSrv` | `recursiveGroupsInRE` | Srv | ❌ |
-| `emptyGroupsInSrc` | `emptyGroupsInRE` | Src | ❌ |
-| `emptyGroupsInDst` | `emptyGroupsInRE` | Dst | ❌ |
-| `emptyGroupsInSrv` | `emptyGroupsInRE` | Srv | ❌ |
-| `emptyGroupsInItf` | `emptyGroupsInRE` | Itf | ❌ |
+| `emptyGroupsInSrc` | `emptyGroupsInRE` | Src | ✅ `_generic.py:EmptyGroupsInRE('...', 'src')` |
+| `emptyGroupsInDst` | `emptyGroupsInRE` | Dst | ✅ `_generic.py:EmptyGroupsInRE('...', 'dst')` |
+| `emptyGroupsInSrv` | `emptyGroupsInRE` | Srv | ✅ `_generic.py:EmptyGroupsInRE('...', 'srv')` |
+| `emptyGroupsInItf` | `emptyGroupsInRE` | Itf | ✅ `_generic.py:EmptyGroupsInRE('...', 'itf')` |
 | `swapMultiAddressObjectsInSrc` | `swapMultiAddressObjectsInRE` | Src | ❌ |
 | `swapMultiAddressObjectsInDst` | `swapMultiAddressObjectsInRE` | Dst | ❌ |
 | `ExpandMultipleAddressesInSrc` | `expandMultipleAddressesInRE` | Src | ❌ (single `ExpandMultipleAddresses` does both) |
@@ -926,7 +926,7 @@ Skips if: `firewall_is_part_of_any_and_networks` is false, `has_output_chain`
 flag is already set, chain is already assigned, or bridging firewall with
 bridge port interfaces (can't use `--physdev-out` in OUTPUT chain).
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfSrcAny` — creates OUTPUT copy correctly. Missing: (1) no POSTROUTING copy for mangle+classification, (2) no bridging firewall check, (3) doesn't reset dst/srv/interval in the OUTPUT copy (C++ does to avoid redundant matching), (4) doesn't check `has_output_chain` flag.
+> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfSrcAny` — creates OUTPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Missing: (1) no POSTROUTING copy for mangle+classification, (2) no bridging firewall check, (3) doesn't reset dst/srv/interval in the OUTPUT copy (C++ does to avoid redundant matching), (4) doesn't check `has_output_chain` flag.
 
 #### `splitIfDstAny` (h:490 / cpp:2255) — Split
 
@@ -936,7 +936,7 @@ Mirror of `splitIfSrcAny` for Dst:
 2. For mangle with classification: additional `PREROUTING` copy.
 3. Original remains for FORWARD.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfDstAny` — creates INPUT copy correctly. Same missing items as `SplitIfSrcAny` (PREROUTING copy, bridging check, element reset).
+> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfDstAny` — creates INPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Same remaining gaps as `SplitIfSrcAny` (PREROUTING copy, bridging check, element reset).
 
 #### `splitIfSrcAnyForShadowing` / `splitIfDstAnyForShadowing` (h:544-550) — Split
 
@@ -1518,6 +1518,48 @@ Replaces Firewall objects in ODst with the firewall's non-loopback Interface obj
 > **C++**: `NATCompiler_ipt::ReplaceFirewallObjectsODst`
 > **Python**: ✅ `_nat_compiler.py:ReplaceFirewallObjectsODst` — matches C++
 
+#### `ReplaceFirewallObjectsTSrc` — Transform
+
+Replaces Firewall objects in TSrc with the interface facing ODst. For SNAT rules where TSrc is the firewall itself, finds the interface whose network contains the ODst address and uses that interface's address for the SNAT source. Falls back to all eligible (non-loopback, non-unnumbered, non-bridge-port) interfaces when ODst is "any" or no matching interface is found. When `odst_single_object_negation` is set, skips the direct match and uses the fallback (excluding the ODst-facing interface). Also excludes the OSrc-facing interface from the fallback set.
+
+> **C++**: `NATCompiler_ipt::ReplaceFirewallObjectsTSrc`
+> **Python**: ✅ `_nat_compiler.py:ReplaceFirewallObjectsTSrc` — matches C++. Uses `_find_interface_for()` to locate the interface on the same network as the target address.
+
+#### `SingleObjectNegationOSrc` — Transform
+
+Handles single-object negation for OSrc in NAT rules. If OSrc has negation and contains exactly one address object that doesn't `complexMatch()` the firewall, converts to inline `!` negation by setting `osrc_single_object_negation = True` and clearing the negation flag.
+
+> **C++**: `NATCompiler::singleObjectNegationOSrc`
+> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationOSrc` — matches C++
+
+#### `SingleObjectNegationODst` — Transform
+
+Mirror of `SingleObjectNegationOSrc` for ODst. Sets `odst_single_object_negation = True` when the element has negation and exactly one address object that doesn't `complexMatch()` the firewall.
+
+> **C++**: `NATCompiler::singleObjectNegationODst`
+> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationODst` — matches C++
+
+#### `SplitIfOSrcAny` — Split
+
+For DNAT rules where OSrc is "any" (or has `single_object_negation`) and the inbound interface is "any", creates a copy with OSrc set to the firewall object. This is part of the `local_nat` support — when `local_nat` and `firewall_is_part_of_any_and_networks` are both enabled, it ensures locally-originated DNAT traffic gets its own rule. Skips rules added for negation handling.
+
+> **C++**: `NATCompiler_ipt::splitIfOSrcAny`
+> **Python**: ✅ `_nat_compiler.py:SplitIfOSrcAny` — matches C++. Only added when `local_nat` and `firewall_is_part_of_any_and_networks` options are both set.
+
+#### `SplitIfOSrcMatchesFw` — Split
+
+Splits rules where OSrc contains the firewall among other objects. Extracts firewall-matching objects into separate rules via `complexMatch()`. The original rule keeps the non-firewall objects.
+
+> **C++**: `NATCompiler_ipt::splitIfOSrcMatchesFw`
+> **Python**: ✅ `_nat_compiler.py:SplitIfOSrcMatchesFw` — matches C++. Only added when `local_nat` option is set.
+
+#### `LocalNATRule` — Transform
+
+For DNAT/DNetnat/Redirect rules where OSrc matches the firewall, sets the chain to OUTPUT. If OSrc is the firewall object itself, clears OSrc to "any" (the OUTPUT chain already implies the firewall is the source).
+
+> **C++**: `NATCompiler_ipt::localNATRule`
+> **Python**: ✅ `_nat_compiler.py:LocalNATRule` — matches C++
+
 #### `ExpandMultipleAddresses` (NAT) — Transform
 
 Expands Host/Firewall/Interface objects in NAT element lists (OSrc, ODst, TSrc, TDst) to their Address objects. Expansion scope depends on rule type: NONAT/Return expand OSrc+ODst; SNAT/SDNAT/DNAT expand all four; Redirect expands OSrc+ODst+TSrc. Sorts results by address for deterministic output. Skips loopback interfaces when expanding from Host/Firewall.
@@ -1678,16 +1720,21 @@ ConvertToAtomicForAddresses → countChainUsage → PrintRule → simplePrintPro
 
 ### iptables NAT pipeline order
 
-The NAT compilation pipeline (`NATCompiler_ipt::compile()`) processes NAT rules through ~24 processors:
+The NAT compilation pipeline (`NATCompiler_ipt::compile()`) processes NAT rules through ~30 processors:
 
 ```
 Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
+EmptyGroupsInRE(osrc) → EmptyGroupsInRE(odst) → EmptyGroupsInRE(osrv) →
+EmptyGroupsInRE(tsrc) → EmptyGroupsInRE(tdst) → EmptyGroupsInRE(tsrv) →
 ExpandGroups → DropRuleWithEmptyRE → [DropIPv4Rules OR DropIPv6Rules] →
 EliminateDuplicatesInOSRC → EliminateDuplicatesInODST → EliminateDuplicatesInOSRV →
 ClassifyNATRule → VerifyRules →
+SingleObjectNegationOSrc → SingleObjectNegationODst →
 PortTranslationRules → SpecialCaseWithRedirect →
-SplitNONATRule → DecideOnChain → DecideOnTarget →
-ReplaceFirewallObjectsODst → ExpandMultipleAddresses → DropRuleWithEmptyRE →
+[SplitIfOSrcAny → SplitIfOSrcMatchesFw (if local_nat)] →
+SplitNONATRule → LocalNATRule → DecideOnChain → DecideOnTarget →
+ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc →
+ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
 GroupServicesByProtocol → PrepareForMultiport → ConvertToAtomicForAddresses →
 AssignInterface → CountChainUsage →
@@ -1704,9 +1751,9 @@ Status of the firewallfabrik Python rewrite (`src/firewallfabrik/`) relative to 
 
 | Status | Count | Meaning |
 |--------|-------|---------|
-| ✅ Implemented | ~42 | Python equivalent exists and matches C++ behavior |
-| ⚠️ Partial | ~14 | Python equivalent exists but has missing features or behavioral differences |
-| ❌ Missing | ~42 | No Python equivalent |
+| ✅ Implemented | ~52 | Python equivalent exists and matches C++ behavior |
+| ⚠️ Partial | ~12 | Python equivalent exists but has missing features or behavioral differences |
+| ❌ Missing | ~34 | No Python equivalent |
 
 ### Processors that exist but are NOT wired into `compile()`
 
@@ -1715,7 +1762,6 @@ These classes exist in the Python codebase but are not added to the active compi
 - `PrintTotalNumberOfRules` — slurps but doesn't print
 - `SingleRuleFilter` — exists, matches C++
 - `ConvertToAtomic` — only needed by shadowing pass
-- `DetectShadowing` — stub only
 - `InterfacePolicyRules` — ipt uses `ConvertToAtomicForInterfaces` instead
 - `ExpandGroupsInItf` — correct implementation
 - `MACFiltering` — correct implementation
@@ -1736,7 +1782,7 @@ These processors exist only in the Python rewrite:
 
 ### Pipeline comparison
 
-The Python policy `compile()` pipeline uses **~43 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~24 processors**. The implemented processors are in the correct relative order. The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) but omits many validation, edge-case, and mangle-table processors.
+The Python policy `compile()` pipeline uses **~48 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~30 processors**. The implemented processors are in the correct relative order. The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) plus empty group validation, shadowing detection, `firewall_is_part_of_any_and_networks` support, and `local_nat` NAT support, but omits many validation, edge-case, and mangle-table processors.
 
 ### Implementation priority
 
@@ -1751,7 +1797,7 @@ Already wired in but produce subtly wrong output. Fixing them improves correctne
 | 1 | `StoreAction` | ~3 lines | Add the 3 missing flags (`originated_from_a_rule_with_tagging/classification/routing`). Trivial change, but blocks all of Tier 5. |
 | 2 | `InterfaceAndDirection` | ~5 lines | Add wildcard `"*"` for any+directional. Without it, any+Inbound/Outbound rules silently lose their `-i +`/`-o +` match. |
 | 3 | `DecideOnTarget` | ~30 lines | Add Tag→MARK/CONNMARK, Classify→CLASSIFY, Route→ROUTE, Branch→chain name. Without this, mangle rules and branching produce wrong targets. |
-| 4 | `SplitIfSrcAny` / `SplitIfDstAny` | ~15 lines each | Add element reset in OUTPUT/INPUT copies + `has_output_chain` guard. Currently duplicates match conditions unnecessarily and can produce redundant rules. |
+| 4 | `SplitIfSrcAny` / `SplitIfDstAny` | ~15 lines each | Now checks `firewall_is_part_of_any_and_networks` option and has improved negation logic. Still missing: element reset in OUTPUT/INPUT copies + `has_output_chain` guard + POSTROUTING/PREROUTING copies for mangle+classification + bridging check. |
 | 5 | `ConvertToAtomicForInterfaces` | ~40 lines | Add the chain optimization from C++ `InterfacePolicyRulesWithOptimization`. Without it, multi-interface rules duplicate the entire rule body N times instead of using a shared chain. Directly inflates output size. |
 
 #### Tier 2 — Wire existing unwired processors (medium impact, low effort)
@@ -1771,11 +1817,11 @@ Missing these means bad configs compile without errors. Low effort, high safety 
 | # | Processor | Effort | Why |
 |---|-----------|--------|-----|
 | 9 | `recursiveGroupsInRE` (×3) | ~20 lines | Prevent infinite loops from circular group references. Without it, compilation hangs or crashes. |
-| 10 | `emptyGroupsInRE` (×4) | ~30 lines | Catch empty groups. Without it, rules with empty groups silently expand to "any" — matching all traffic instead of none. **Dangerous.** |
+| ~~10~~ | ~~`emptyGroupsInRE` (×4)~~ | ✅ Done | Implemented as `EmptyGroupsInRE` in `_generic.py` with slot parameterization. Wired into iptables policy (SRC, DST, SRV, ITF), iptables NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV), and nftables policy (SRC, DST, SRV, ITF). Not yet in nftables NAT. |
 | 11 | `checkForUnnumbered` | ~15 lines | Catch unnumbered interfaces used as addresses. Without it, rules silently compile with missing addresses. |
 | 12 | `checkForZeroAddr` | ~25 lines | Catch 0.0.0.0 addresses and /0 typos. Without it, overly broad rules compile silently. |
 | 13 | `CheckForTCPEstablished` | ~10 lines | Abort if the unsupported "established" flag is used. Without it, the flag is silently ignored. |
-| 14 | Shadowing detection pass (~5 processors) | ~100 lines | `DetectShadowing` + `convertAnyToNotFWForShadowing` + `splitIf*AnyForShadowing` + `splitIf*NegAndFw`. One of fwbuilder's key safety features — prevents rules from being silently masked by broader rules above them. A missed shadow means a rule that looks like it works but doesn't, which is worse than a compilation error. C++ runs this pass *before* the main compilation. |
+| ~~14~~ | ~~Shadowing detection pass~~ | ✅ Partially done | `DetectShadowing` is fully implemented with address/service containment checks and wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Remaining: the separate C++ shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing` + `splitIf*AnyForShadowing` is not implemented (current approach runs inline in the main pass without full atomization). |
 
 #### Tier 4 — Missing processors for common rule patterns
 
@@ -1836,11 +1882,11 @@ Lowest priority — either affect rare configurations or are pure improvements.
 
 #### Recommended first sprint
 
-For maximum correctness improvement per effort, do **Tiers 1+2** first (items 1–8). Tier 2 items 7–8 (negation) are now complete. Remaining work is roughly **~70 lines of changes**:
+For maximum correctness improvement per effort, do **Tiers 1+2** first (items 1–8). Tier 2 items 7–8 (negation) are complete. Tier 3 items 10 (empty groups) and 14 (shadowing) are now done. Remaining work is roughly **~70 lines of changes**:
 - Partial processors in the active pipeline (items 1–5)
 - Global logging override (item 6)
 
-After that, **Tier 3** (items 9–14, ~200 lines) closes the safety gap — validation processors that prevent bad configs, plus shadowing detection which is one of fwbuilder's key safety features. Together, Tiers 1–3 cover the most impactful ~350 lines of work.
+After that, **Tier 3** remaining items (9, 11–13, ~70 lines) closes the safety gap — validation processors that prevent bad configs. Together, Tiers 1–3 cover the most impactful ~210 lines of work.
 
 ---
 
@@ -1918,7 +1964,7 @@ Converts element negation flags to `single_object_negation` flags for nftables' 
 
 #### `SplitIfSrcAny` / `SplitIfDstAny` — Split
 
-If Src/Dst is "any" (or has `single_object_negation`), creates an additional rule for the OUTPUT/INPUT chain. The original remains for FORWARD.
+If Src/Dst is "any" (or has `single_object_negation` with a non-firewall object), creates an additional rule for the OUTPUT/INPUT chain. The original remains for FORWARD. First checks the `firewall_is_part_of_any_and_networks` option (per-rule then global) — if not set, passes the rule through unchanged.
 
 #### `SplitIfSrcMatchesFw` / `SplitIfDstMatchesFw` — Split
 
@@ -2085,7 +2131,7 @@ NAT action output:
 
 ### Compiler driver (`_compiler_driver.py`)
 
-`CompilerDriver_nft` orchestrates the full compilation:
+`CompilerDriver_nft` orchestrates the full compilation. Both iptables and nftables drivers call `_warn_unsupported_options()` (defined in the base `CompilerDriver`) to emit warnings for recognised but unimplemented firewall options (ULOG/NFLOG, TCP/IP log options, numeric log levels, log_all, kernel timezone, bridge interfaces).
 
 1. Look up firewall object (error if empty `fw_id` or not found)
 2. Create OS configurator
@@ -2119,6 +2165,7 @@ table ip nat {
 
 ```
 Begin → StoreAction → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth →
+EmptyGroupsInRE(src) → EmptyGroupsInRE(dst) → EmptyGroupsInRE(srv) → EmptyGroupsInRE(itf) →
 ExpandGroups → DropRuleWithEmptyRE →
 EliminateDuplicatesInSRC → EliminateDuplicatesInDST → EliminateDuplicatesInSRV →
 FillActionOnReject → Logging_nft →
@@ -2131,19 +2178,27 @@ FinalizeChain → DecideOnTarget →
 RemoveFW → ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
 ConvertToAtomicForInterfaces → GroupServicesByProtocol →
-Optimize3 → PrintRule_nft → SimplePrintProgress
+Optimize3 → [DetectShadowing (if check_shading)] →
+PrintRule_nft → SimplePrintProgress
 ```
 
-~30 processors vs. ~80 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`) but omits all mangle-table, temp-chain, and multiport processors. Negation is handled natively via `!=` (3 processors: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`).
+~35 processors vs. ~80 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits all mangle-table, temp-chain, and multiport processors. Negation is handled natively via `!=` (3 processors: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`). `SplitIfSrcAny`/`SplitIfDstAny` now check `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
 
 ### NAT pipeline order
 
 ```
 Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
+EmptyGroupsInRE(osrc) → EmptyGroupsInRE(odst) → EmptyGroupsInRE(osrv) →
+EmptyGroupsInRE(tsrc) → EmptyGroupsInRE(tdst) → EmptyGroupsInRE(tsrv) →
 ExpandGroups → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] →
 EliminateDuplicatesInOSRC → EliminateDuplicatesInODST → EliminateDuplicatesInOSRV →
-ClassifyNATRule → VerifyRules → DecideOnChain →
+ClassifyNATRule → VerifyRules →
+SingleObjectNegationOSrc → SingleObjectNegationODst →
+[SplitIfOSrcAny (if local_nat+fw_part_of_any)] →
+[SplitIfOSrcMatchesFw (if local_nat)] →
+LocalNATRule → DecideOnChain →
+ReplaceFirewallObjectsTSrc →
 ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
 GroupServicesByProtocol → ConvertToAtomicForAddresses →
@@ -2165,6 +2220,11 @@ AssignInterface → NATPrintRule_nft → SimplePrintProgress
 | Branch (sub-policy) | Yes (`jump`/`goto`) | Error emitted |
 | SDNAT (simultaneous SNAT+DNAT) | Yes (two rules) | Error emitted |
 | Pipe/QUEUE (`queue num`) | Yes | Error emitted |
-| Shadowing detection | N/A (platform-independent) | Not implemented for any nftables pipeline |
+| Shadowing detection | ✅ Done | `DetectShadowing` wired into policy pipeline (conditional on `check_shading` option) |
+| Empty group validation | ✅ Done | `EmptyGroupsInRE` wired into both policy (SRC, DST, SRV, ITF) and NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV) pipelines |
+| `firewall_is_part_of_any_and_networks` | ✅ Done | `SplitIfSrcAny`/`SplitIfDstAny` check this option |
 | Negation expansion (policy) | ✅ Done | `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
 | NAT interface negation | ✅ Done | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `_print_interface()` `!=` output |
+| NAT OSrc/ODst negation | ✅ Done | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` set inline `!` flags |
+| NAT local_nat | ✅ Done | `SplitIfOSrcAny` + `SplitIfOSrcMatchesFw` + `LocalNATRule` with nftables output chain |
+| NAT ReplaceFirewallObjectsTSrc | ✅ Done | Replaces firewall in TSrc with interface facing ODst |

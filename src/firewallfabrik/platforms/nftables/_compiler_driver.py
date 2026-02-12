@@ -169,6 +169,7 @@ class CompilerDriver_nft(CompilerDriver):
                 nat_chains: dict[str, list[str]] = {
                     'prerouting': [],
                     'postrouting': [],
+                    'output': [],
                 }
 
                 for policy_af in ipv4_6_runs:
@@ -521,7 +522,12 @@ class CompilerDriver_nft(CompilerDriver):
         # --- NAT table ---
         prerouting_rules = ''.join(nat_chains.get('prerouting', []))
         postrouting_rules = ''.join(nat_chains.get('postrouting', []))
-        have_nat = bool(prerouting_rules.strip() or postrouting_rules.strip())
+        output_nat_rules = ''.join(nat_chains.get('output', []))
+        have_nat = bool(
+            prerouting_rules.strip()
+            or postrouting_rules.strip()
+            or output_nat_rules.strip()
+        )
 
         if have_nat:
             # NAT uses ip family (not inet) for broader compatibility
@@ -534,6 +540,15 @@ class CompilerDriver_nft(CompilerDriver):
             if prerouting_rules.strip():
                 out.write(prerouting_rules)
             out.write('    }\n')
+
+            # Output chain (local NAT — DNAT for locally-originated traffic)
+            if output_nat_rules.strip():
+                out.write('\n')
+                out.write('    chain output {\n')
+                out.write('        type nat hook output priority dstnat;\n')
+                out.write(output_nat_rules)
+                out.write('    }\n')
+
             out.write('\n')
 
             # Postrouting chain (SNAT/masquerade)
