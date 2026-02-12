@@ -37,6 +37,7 @@
     <file alias="Icons/Library/icon-tree">Icons/library_16.png</file>
     <file alias="Icons/Log/icon-tree">Icons/log_16.png</file>
     <file alias="Icons/lock">Icons/lock_16.png</file>
+    <file alias="Icons/Neg/icon-tree">Icons/neg_16.png</file>
     <file alias="Icons/NAT/icon-tree">Icons/nat_16.png</file>
     <file alias="Icons/Network/icon-tree">Icons/network_16.png</file>
     <file alias="Icons/NetworkIPv6/icon-tree">Icons/network6_16.png</file>
@@ -102,6 +103,7 @@
     <file alias="Icons/Interval/icon">Icons/clock_25.png</file>
     <file alias="Icons/IntervalGroup/icon">Icons/clock-group_25.png</file>
     <file alias="Icons/Log/icon">Icons/log_25.png</file>
+    <file alias="Icons/Neg/icon">Icons/neg_25.png</file>
     <file alias="Icons/Network/icon">Icons/network_25.png</file>
     <file alias="Icons/NetworkIPv6/icon">Icons/network6_25.png</file>
     <file alias="Icons/ObjectGroup/icon">Icons/object-group_25.png</file>

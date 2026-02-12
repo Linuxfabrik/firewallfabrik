@@ -361,6 +361,7 @@ class PolicyView(QTreeView):
             self._add_new_group_action(menu, model, index)
             self._add_to_adjacent_group_actions(menu, model, index)
 
+        self._add_disable_action(menu, model, index)
         self._add_color_submenu(menu, model, index)
         menu.addSeparator()
 
@@ -559,6 +560,41 @@ class PolicyView(QTreeView):
                 f'Remove {name}',
                 lambda tid=target_id: model.remove_element(index, slot, tid),
             )
+
+    def _add_disable_action(self, menu, model, index):
+        """Add 'Disable Rule' or 'Enable Rule' action to the menu."""
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+        multi = len(selected) > 1
+        rule_label = 'Rules' if multi else 'Rule'
+        any_enabled = any(
+            not (rd := model.get_row_data(idx)) or not rd.disabled for idx in selected
+        )
+        any_disabled = any(
+            (rd := model.get_row_data(idx)) is not None and rd.disabled
+            for idx in selected
+        )
+        if any_disabled:
+            menu.addAction(
+                f'Enable {rule_label}',
+                lambda sel=selected: self._set_disabled_on_selection(
+                    model, sel, disabled=False
+                ),
+            )
+        if any_enabled:
+            menu.addAction(
+                f'Disable {rule_label}',
+                lambda sel=selected: self._set_disabled_on_selection(
+                    model, sel, disabled=True
+                ),
+            )
+
+    @staticmethod
+    def _set_disabled_on_selection(model, indices, *, disabled):
+        """Set the disabled state for all rules in *indices*."""
+        for idx in indices:
+            model.set_disabled(idx, disabled)
 
     def _add_color_submenu(self, menu, model, index):
         """Add a 'Color' submenu with 7 label entries + 'No Color'."""

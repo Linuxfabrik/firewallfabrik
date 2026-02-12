@@ -104,6 +104,7 @@ class _RowData:
     comment: str
     direction: str
     direction_int: int
+    disabled: bool
     dst: list  # list[tuple[uuid.UUID, str, str]]  (id, name, type)
     group: str
     itf: list
@@ -217,6 +218,7 @@ class PolicyTreeModel(QAbstractItemModel):
                     comment=rule.comment or '',
                     direction=dir_name,
                     direction_int=direction.value,
+                    disabled=_opt_bool(opts, 'disabled'),
                     dst=slots.get('dst', []),
                     group=group_name,
                     itf=slots.get('itf', []),
@@ -484,6 +486,8 @@ class PolicyTreeModel(QAbstractItemModel):
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         if role == Qt.ItemDataRole.DecorationRole:
             suffix = _icon_suffix()
+            if col == _COL_POSITION and row_data.disabled:
+                return QIcon(f':/Icons/Neg/{suffix}')
             if col == _COL_ACTION and row_data.action:
                 icon = QIcon(f':/Icons/{row_data.action}/{suffix}')
                 if not icon.isNull():
@@ -910,6 +914,27 @@ class PolicyTreeModel(QAbstractItemModel):
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
                 rule.policy_action = action.value
+        self.reload()
+
+    def set_disabled(self, index, disabled):
+        """Enable or disable the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        desc = (
+            f'Disable rule {row_data.position}'
+            if disabled
+            else f'Enable rule {row_data.position}'
+        )
+        with self._db_manager.session(self._desc(desc)) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                opts = dict(rule.options or {})
+                if disabled:
+                    opts['disabled'] = True
+                else:
+                    opts.pop('disabled', None)
+                rule.options = opts
         self.reload()
 
     def set_direction(self, index, direction):
