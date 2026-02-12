@@ -119,6 +119,8 @@ class CompRule:
     src_single_object_negation: bool = False
     dst_single_object_negation: bool = False
     itf_single_object_negation: bool = False
+    itf_inb_single_object_negation: bool = False
+    itf_outb_single_object_negation: bool = False
     osrc_single_object_negation: bool = False
     odst_single_object_negation: bool = False
     srv_single_object_negation: bool = False
