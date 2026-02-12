@@ -76,6 +76,10 @@ class Group(Base):
         sqlalchemy.JSON,
         default=dict,
     )
+    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.JSON,
+        default=dict,
+    )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
         'Library',

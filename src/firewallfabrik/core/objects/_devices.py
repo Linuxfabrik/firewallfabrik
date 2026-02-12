@@ -229,6 +229,15 @@ class Interface(Base):
         default=0,
     )
 
+    parent_interface_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.Uuid,
+            sqlalchemy.ForeignKey('interfaces.id'),
+            nullable=True,
+            default=None,
+        )
+    )
+
     device: sqlalchemy.orm.Mapped[Host | None] = sqlalchemy.orm.relationship(
         'Host',
         back_populates='interfaces',
@@ -237,6 +246,19 @@ class Interface(Base):
         'Library',
         back_populates='interfaces',
     )
+    parent_interface: sqlalchemy.orm.Mapped[Interface | None] = (
+        sqlalchemy.orm.relationship(
+            'Interface',
+            remote_side='Interface.id',
+            back_populates='sub_interfaces',
+        )
+    )
+    sub_interfaces: sqlalchemy.orm.Mapped[list[Interface]] = (
+        sqlalchemy.orm.relationship(
+            'Interface',
+            back_populates='parent_interface',
+        )
+    )
     addresses: sqlalchemy.orm.Mapped[list[Address]] = sqlalchemy.orm.relationship(
         'Address',
         back_populates='interface',
@@ -244,7 +266,20 @@ class Interface(Base):
     )
 
     __table_args__ = (
-        sqlalchemy.UniqueConstraint('device_id', 'name', name='uq_interfaces_device'),
+        # Sub-interfaces: unique name within the same parent interface.
+        # SQLite treats NULL parent_interface_id as distinct, so this only
+        # constrains actual sub-interfaces.
+        sqlalchemy.UniqueConstraint(
+            'parent_interface_id', 'name', name='uq_interfaces_parent'
+        ),
+        # Top-level interfaces: unique (device_id, name) where no parent.
+        sqlalchemy.Index(
+            'uq_interfaces_device',
+            'device_id',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('parent_interface_id IS NULL'),
+        ),
         sqlalchemy.Index(
             'uq_interfaces_standalone_lib',
             'library_id',

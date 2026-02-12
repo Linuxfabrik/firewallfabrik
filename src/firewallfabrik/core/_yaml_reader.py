@@ -318,6 +318,7 @@ class YamlReader:
         grp.ro = data.get('ro', False)
         grp.keywords = set(data.get('keywords', []))
         grp.data = data.get('data', {})
+        grp.options = _coerce_bools(data.get('options', {}))
         grp.library = library
 
         if parent_group is not None:
@@ -366,7 +367,9 @@ class YamlReader:
 
         return dev
 
-    def _parse_interface(self, data, library, device, parent_path):
+    def _parse_interface(
+        self, data, library, device, parent_path, parent_interface=None
+    ):
         iface = objects.Interface()
         iface.id = uuid.uuid4()
         iface.name = data.get('name', '')
@@ -380,12 +383,21 @@ class YamlReader:
         iface.library = library
         iface.device = device
 
+        if parent_interface is not None:
+            iface.parent_interface = parent_interface
+
         iface_path = f'{parent_path}/Interface:{escape_obj_name(iface.name)}'
         self._register_ref(iface_path, iface.id)
 
         # Interface addresses
         for addr_data in data.get('addresses', []):
             self._parse_address(addr_data, iface_path, interface=iface)
+
+        # Sub-interfaces
+        for sub_data in data.get('interfaces', []):
+            self._parse_interface(
+                sub_data, library, device, iface_path, parent_interface=iface
+            )
 
         return iface
 

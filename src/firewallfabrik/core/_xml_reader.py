@@ -43,6 +43,7 @@ _ADDRESS_TAGS = {
     **ADDRESS_CLASSES,
     'AnyNetwork': objects.Network,
     'DummyNetwork': objects.Network,
+    'physAddress': objects.PhysAddress,
 }
 
 _SERVICE_TAGS = {
@@ -440,9 +441,13 @@ class XmlReader:
             group.parent_group = parent_group
 
         for child in elem:
-            self._dispatch_child(
-                child, library, parent_group=group, context_name=group.name
-            )
+            tag = _tag(child)
+            if tag in _OPTIONS_TAGS:
+                group.options = _parse_options_children(child)
+            else:
+                self._dispatch_child(
+                    child, library, parent_group=group, context_name=group.name
+                )
         return group
 
     def _parse_device(self, elem, cls, library, parent_group=None):
@@ -459,8 +464,8 @@ class XmlReader:
 
         for child in elem:
             tag = _tag(child)
-            if tag == 'Interface':
-                self._parse_interface(child, None, device)
+            if tag in ('Interface', 'DummyInterface'):
+                self._parse_interface(child, library, device)
             elif tag in _RULESET_TAGS:
                 self._parse_ruleset(child, _RULESET_TAGS[tag], device)
             elif tag == 'Management':
@@ -474,7 +479,7 @@ class XmlReader:
                 logger.warning('Unhandled device child: %s (in %s)', tag, device.name)
         return device
 
-    def _parse_interface(self, elem, library, device):
+    def _parse_interface(self, elem, library, device, parent_interface=None):
         iface = objects.Interface()
         iface.id = self._register(elem.get('id', ''))
         iface.name = elem.get('name', '')
@@ -483,12 +488,19 @@ class XmlReader:
         iface.library = library
         iface.device = device
 
+        if parent_interface is not None:
+            iface.parent_interface = parent_interface
+
         for child in elem:
             tag = _tag(child)
             if tag in _ADDRESS_TAGS:
                 self._parse_address(child, interface=iface)
             elif tag in _OPTIONS_TAGS:
                 iface.options = _parse_options_children(child)
+            elif tag in ('Interface', 'DummyInterface'):
+                self._parse_interface(child, library, device, parent_interface=iface)
+            elif tag in _GROUP_TAGS:
+                self._parse_group(child, _GROUP_TAGS[tag], library, None)
             else:
                 logger.warning('Unhandled interface child: %s (in %s)', tag, iface.name)
         return iface
@@ -591,6 +603,11 @@ class XmlReader:
             rule.nat_action = _enum_value(
                 objects.NATAction,
                 elem.get('action', ''),
+            )
+        elif cls is objects.RoutingRule:
+            rule.routing_rule_type = _enum_value(
+                objects.RoutingRuleType,
+                elem.get('rule_type', ''),
             )
 
         for rule_id, slot, ref_id in _parse_rule_children(rule, elem):

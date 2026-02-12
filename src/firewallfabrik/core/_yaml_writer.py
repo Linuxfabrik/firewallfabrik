@@ -59,6 +59,7 @@ _SKIP_ALWAYS = frozenset(
         'device_id',
         'rule_set_id',
         'parent_group_id',
+        'parent_interface_id',
         'database_id',
     }
 )
@@ -220,14 +221,7 @@ class YamlWriter:
                     objects.Interface.device_id.is_(None),
                 ),
             ).all():
-                iface_path = f'{lib_path}/Interface:{escape_obj_name(iface.name)}'
-                self._register_ref(seen_paths, iface_path, iface.id)
-                for addr in sorted(iface.addresses, key=lambda a: a.name):
-                    self._register_ref(
-                        seen_paths,
-                        f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}',
-                        addr.id,
-                    )
+                self._walk_interface(seen_paths, iface, lib_path)
 
     def _walk_group(self, session, seen_paths, grp, parent_path):
         """Walk a group and its children, registering ref-paths."""
@@ -291,15 +285,22 @@ class YamlWriter:
         dev_path = f'{parent_path}/{dev.type}:{escape_obj_name(dev.name)}'
         self._register_ref(seen_paths, dev_path, dev.id)
 
-        for iface in sorted(dev.interfaces, key=lambda i: i.name):
-            iface_path = f'{dev_path}/Interface:{escape_obj_name(iface.name)}'
-            self._register_ref(seen_paths, iface_path, iface.id)
-            for addr in sorted(iface.addresses, key=lambda a: a.name):
-                self._register_ref(
-                    seen_paths,
-                    f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}',
-                    addr.id,
-                )
+        top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
+        for iface in sorted(top_ifaces, key=lambda i: i.name):
+            self._walk_interface(seen_paths, iface, dev_path)
+
+    def _walk_interface(self, seen_paths, iface, parent_path):
+        """Walk an interface and its sub-interfaces, registering ref-paths."""
+        iface_path = f'{parent_path}/Interface:{escape_obj_name(iface.name)}'
+        self._register_ref(seen_paths, iface_path, iface.id)
+        for addr in sorted(iface.addresses, key=lambda a: a.name):
+            self._register_ref(
+                seen_paths,
+                f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}',
+                addr.id,
+            )
+        for sub in sorted(iface.sub_interfaces, key=lambda i: i.name):
+            self._walk_interface(seen_paths, sub, iface_path)
 
     def _register_ref(self, seen_paths, path, obj_id):
         """Register a full tree-path -> UUID mapping, with #N fallback for collisions."""
@@ -491,11 +492,12 @@ class YamlWriter:
         if dev.id_mapping_for_duplicate:
             d['id_mapping_for_duplicate'] = dev.id_mapping_for_duplicate
 
-        # Interfaces
-        if dev.interfaces:
+        # Interfaces (top-level only; sub-interfaces are nested within)
+        top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
+        if top_ifaces:
             d['interfaces'] = [
                 self._serialize_interface(iface)
-                for iface in sorted(dev.interfaces, key=lambda i: i.name)
+                for iface in sorted(top_ifaces, key=lambda i: i.name)
             ]
 
         # Rule sets
@@ -515,6 +517,13 @@ class YamlWriter:
             d['addresses'] = [
                 self._serialize_address(a)
                 for a in sorted(iface.addresses, key=lambda a: a.name)
+            ]
+
+        # Sub-interfaces
+        if iface.sub_interfaces:
+            d['interfaces'] = [
+                self._serialize_interface(sub)
+                for sub in sorted(iface.sub_interfaces, key=lambda i: i.name)
             ]
 
         return d
