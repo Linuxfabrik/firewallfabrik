@@ -57,6 +57,7 @@ from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.find_panel import FindPanel
+from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
 from firewallfabrik.gui.object_tree import ObjectTree
 from firewallfabrik.gui.policy_model import PolicyTreeModel
 from firewallfabrik.gui.policy_view import PolicyView
@@ -209,6 +210,14 @@ class FWWindow(QMainWindow):
         self._find_panel.object_found.connect(self._open_object_editor)
         self._find_panel.navigate_to_rule.connect(self._navigate_to_rule_match)
         self.findAction.triggered.connect(self._show_find_panel)
+
+        # Where Used panel — embedded in the "Where Used" tab.
+        self._where_used_panel = FindWhereUsedPanel()
+        self._where_used_panel.set_tree(self._object_tree._tree)
+        self._where_used_panel.set_db_manager(self._db_manager)
+        self.where_used_panel.layout().addWidget(self._where_used_panel)
+        self._where_used_panel.object_found.connect(self._open_object_editor)
+        self._where_used_panel.navigate_to_rule.connect(self._navigate_to_rule_match)
 
         # Undo / redo actions in the Edit menu.
         self._undo_action = QAction('&Undo', self)
@@ -552,6 +561,11 @@ class FWWindow(QMainWindow):
         self._find_panel.set_reload_callback(self._reload_rule_set_views)
         self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
         self._find_panel.reset()
+
+        self._where_used_panel.set_tree(self._object_tree._tree)
+        self._where_used_panel.set_db_manager(self._db_manager)
+        self._where_used_panel.reset()
+
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):
@@ -742,6 +756,18 @@ class FWWindow(QMainWindow):
         self.editorPanelTabWidget.setCurrentIndex(1)
         self._find_panel.focus_input()
 
+    def _show_where_used_panel(self):
+        """Show the editor dock and switch to the Where Used tab."""
+        if not self.editorDockWidget.isVisible():
+            self.editorDockWidget.setVisible(True)
+            self.actionEditor_panel.setChecked(True)
+        self.editorPanelTabWidget.setCurrentIndex(2)
+
+    def show_where_used(self, obj_id, name, obj_type):
+        """Show where-used results for the given object."""
+        self._show_where_used_panel()
+        self._where_used_panel.find_object(obj_id, name, obj_type)
+
     def _active_policy_view(self):
         """Return the active :class:`PolicyView`, or *None*."""
         sub = self.m_space.activeSubWindow()
@@ -921,6 +947,7 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
         self._find_panel.reset()
+        self._where_used_panel.reset()
         if obj_id is not None:
             self._open_object_editor(obj_id, obj_type)
 
