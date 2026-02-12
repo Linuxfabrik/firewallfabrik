@@ -222,6 +222,7 @@ class NATCompiler_ipt(NATCompiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         self.add(GroupServicesByProtocol('group services by protocol'))
+        self.add(SeparatePortRanges('separate port ranges'))
         self.add(PrepareForMultiport('prepare for multiport'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AssignInterface('assign rules to interfaces'))
@@ -830,6 +831,63 @@ class GroupServicesByProtocol(NATRuleProcessor):
             r = rule.clone()
             r.osrv = srv_list
             self.tmp_queue.append(r)
+
+        return True
+
+
+class SeparatePortRanges(NATRuleProcessor):
+    """Separate TCP/UDP services with port ranges into individual rules.
+
+    Services where src or dst port range start != end (i.e. actual port
+    ranges like 749:750) or "any TCP/UDP" services (all ports zero) get
+    pulled out into their own rules because they can't be combined with
+    single-port services in a ``-m multiport`` match.
+
+    Uses the same condition logic as the policy compiler variant.
+    """
+
+    @staticmethod
+    def _is_port_range(srv) -> bool:
+        if not isinstance(srv, TCPService | UDPService):
+            return False
+
+        srs = srv.src_range_start or 0
+        sre = srv.src_range_end or 0
+        drs = srv.dst_range_start or 0
+        dre = srv.dst_range_end or 0
+
+        if srs != 0 and sre == 0:
+            sre = srs
+        if drs != 0 and dre == 0:
+            dre = drs
+
+        if srs == 0 and sre == 0 and drs == 0 and dre == 0:
+            sre = 65535
+            dre = 65535
+
+        return srs != sre or drs != dre
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.osrv) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        separated = []
+        for srv in rule.osrv:
+            if self._is_port_range(srv):
+                r = rule.clone()
+                r.osrv = [srv]
+                self.tmp_queue.append(r)
+                separated.append(srv)
+
+        remaining = [s for s in rule.osrv if s not in separated]
+        if remaining:
+            rule.osrv = remaining
+            self.tmp_queue.append(rule)
 
         return True
 
