@@ -225,6 +225,11 @@ class FWWindow(QMainWindow):
         self.editMenu.insertAction(first_action, self._undo_action)
         self.editMenu.insertAction(first_action, self._redo_action)
 
+        # Clipboard actions — forward to the active PolicyView.
+        self.editCopyAction.triggered.connect(self._on_edit_copy)
+        self.editCutAction.triggered.connect(self._on_edit_cut)
+        self.editPasteAction.triggered.connect(self._on_edit_paste)
+
         # History list and callback.
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
         self._db_manager.on_history_changed = self._on_history_changed
@@ -736,6 +741,33 @@ class FWWindow(QMainWindow):
             self.actionEditor_panel.setChecked(True)
         self.editorPanelTabWidget.setCurrentIndex(1)
         self._find_panel.focus_input()
+
+    def _active_policy_view(self):
+        """Return the active :class:`PolicyView`, or *None*."""
+        sub = self.m_space.activeSubWindow()
+        if sub is not None:
+            widget = sub.widget()
+            if isinstance(widget, PolicyView):
+                return widget
+        return None
+
+    @Slot()
+    def _on_edit_copy(self):
+        view = self._active_policy_view()
+        if view is not None:
+            view.copy_selection()
+
+    @Slot()
+    def _on_edit_cut(self):
+        view = self._active_policy_view()
+        if view is not None:
+            view.cut_selection()
+
+    @Slot()
+    def _on_edit_paste(self):
+        view = self._active_policy_view()
+        if view is not None:
+            view.paste_below()
 
     def _reload_rule_set_views(self):
         """Reload all open PolicyTreeModel views (after replace)."""

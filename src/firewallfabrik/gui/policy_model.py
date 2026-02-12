@@ -12,9 +12,12 @@
 
 """Database-backed tree model for policy rules with group support."""
 
+from __future__ import annotations
+
 import dataclasses
 import enum
 import uuid
+from typing import ClassVar
 
 import sqlalchemy
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt
@@ -135,6 +138,8 @@ class _TreeNode:
 
 class PolicyTreeModel(QAbstractItemModel):
     """Database-backed tree model for policy rules with group support."""
+
+    _clipboard: ClassVar[list[uuid.UUID]] = []
 
     def __init__(self, db_manager, rule_set_id, *, object_name='', parent=None):
         super().__init__(parent)
@@ -662,6 +667,121 @@ class PolicyTreeModel(QAbstractItemModel):
                 rule.position = i
 
         self.reload()
+
+    def copy_rules(self, indices):
+        """Copy rule IDs from selected *indices* to the clipboard."""
+        rule_ids = []
+        for idx in indices:
+            node = self._node_from_index(idx)
+            if node.node_type == _NodeType.Rule:
+                rule_ids.append(node.row_data.rule_id)
+            elif node.node_type == _NodeType.Group:
+                for child in node.children:
+                    rule_ids.append(child.row_data.rule_id)
+        PolicyTreeModel._clipboard = rule_ids
+
+    def cut_rules(self, indices):
+        """Copy rule IDs to clipboard, then delete the rules."""
+        self.copy_rules(indices)
+        self.delete_rules(indices)
+
+    def paste_rules(self, index, *, before=False):
+        """Paste rules from clipboard at *index*.
+
+        When *before* is True, pasted rules are inserted above the target;
+        otherwise they are inserted below.  Returns a list of new rule IDs.
+
+        Uses :meth:`DatabaseManager.create_session` with an explicit
+        :meth:`~DatabaseManager.save_state` call because the internal
+        ``session.flush()`` (needed for FK constraints on rule_elements)
+        clears ``session.new``, which would prevent the automatic dirty
+        detection in the ``session()`` context manager.
+        """
+        if not PolicyTreeModel._clipboard:
+            return []
+
+        node = self._node_from_index(index)
+        if node.node_type == _NodeType.Group:
+            position = node.children[-1].row_data.position + 1 if node.children else 0
+            group_name = node.name
+        elif node.node_type == _NodeType.Rule:
+            position = node.row_data.position if before else node.row_data.position + 1
+            group_name = node.row_data.group
+        else:
+            position = self.flat_rule_count()
+            group_name = ''
+
+        new_ids = []
+        session = self._db_manager.create_session()
+        try:
+            for i, src_id in enumerate(PolicyTreeModel._clipboard):
+                src_rule = session.get(PolicyRule, src_id)
+                if src_rule is None:
+                    continue
+
+                # Shift existing rules to make room.
+                session.execute(
+                    sqlalchemy.update(PolicyRule)
+                    .where(
+                        PolicyRule.rule_set_id == self._rule_set_id,
+                        PolicyRule.position >= position + i,
+                    )
+                    .values(position=PolicyRule.position + 1),
+                )
+
+                new_id = uuid.uuid4()
+                opts = dict(src_rule.options or {})
+                if group_name:
+                    opts['group'] = group_name
+                else:
+                    opts.pop('group', None)
+
+                new_rule = PolicyRule(
+                    id=new_id,
+                    rule_set_id=self._rule_set_id,
+                    position=position + i,
+                    comment=src_rule.comment or '',
+                    label=src_rule.label or '',
+                    negations=dict(src_rule.negations or {}),
+                    options=opts,
+                    policy_action=src_rule.policy_action,
+                    policy_direction=src_rule.policy_direction,
+                )
+                session.add(new_rule)
+                session.flush()
+
+                # Copy rule_elements.
+                src_elements = session.execute(
+                    sqlalchemy.select(
+                        rule_elements.c.slot,
+                        rule_elements.c.target_id,
+                        rule_elements.c.position,
+                    ).where(rule_elements.c.rule_id == src_id),
+                ).all()
+                for slot, target_id, elem_pos in src_elements:
+                    session.execute(
+                        rule_elements.insert().values(
+                            rule_id=new_id,
+                            slot=slot,
+                            target_id=target_id,
+                            position=elem_pos,
+                        ),
+                    )
+
+                new_ids.append(new_id)
+
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        if new_ids:
+            self._db_manager.save_state(self._desc(f'Paste rule at {position}'))
+
+        self.reload()
+        return new_ids
 
     def move_rule_up(self, index):
         """Move the rule at *index* up one position.

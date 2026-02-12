@@ -41,6 +41,7 @@ from firewallfabrik.gui.policy_model import (
     ELEMENTS_ROLE,
     FWF_MIME_TYPE,
     NEGATED_ROLE,
+    PolicyTreeModel,
 )
 
 _VALID_TYPES_BY_SLOT = {
@@ -467,6 +468,12 @@ class PolicyView(QTreeView):
 
     def _build_row_menu(self, menu, model, index):
         """Build standard row-level context menu (# and Comment columns)."""
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+        multi = len(selected) > 1
+        rule_label = 'Rules' if multi else 'Rule'
+
         menu.addAction(
             'Insert Rule Above',
             lambda: self._insert_and_scroll(model, index=index, before=True),
@@ -487,6 +494,30 @@ class PolicyView(QTreeView):
             lambda: self._move_and_select(model.move_rule_down(index)),
         )
         down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
+        menu.addSeparator()
+        copy_act = menu.addAction(
+            f'Copy {rule_label}',
+            lambda sel=selected: model.copy_rules(sel),
+        )
+        copy_act.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_C))
+        cut_act = menu.addAction(
+            f'Cut {rule_label}',
+            lambda sel=selected: model.cut_rules(sel),
+        )
+        cut_act.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_X))
+        clipboard_count = len(PolicyTreeModel._clipboard)
+        paste_label = 'Rules' if clipboard_count > 1 else 'Rule'
+        paste_above = menu.addAction(
+            f'Paste {paste_label} Above',
+            lambda: self._paste_and_scroll(model, index, before=True),
+        )
+        paste_above.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_V))
+        paste_below = menu.addAction(
+            f'Paste {paste_label} Below',
+            lambda: self._paste_and_scroll(model, index),
+        )
+        paste_above.setEnabled(clipboard_count > 0)
+        paste_below.setEnabled(clipboard_count > 0)
 
     def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu."""
@@ -557,6 +588,37 @@ class PolicyView(QTreeView):
             model.set_label(idx, label_key)
 
     # ------------------------------------------------------------------
+    # Public clipboard actions (called from main window edit menu)
+    # ------------------------------------------------------------------
+
+    def copy_selection(self):
+        """Copy selected rules to the clipboard."""
+        model = self.model()
+        if model is None:
+            return
+        indices = self._selected_rule_indices()
+        if indices:
+            model.copy_rules(indices)
+
+    def cut_selection(self):
+        """Cut selected rules to the clipboard."""
+        model = self.model()
+        if model is None:
+            return
+        indices = self._selected_rule_indices()
+        if indices:
+            model.cut_rules(indices)
+
+    def paste_below(self):
+        """Paste rules from clipboard below the current rule."""
+        model = self.model()
+        if model is None:
+            return
+        idx = self.currentIndex()
+        if idx.isValid() and not model.is_group(idx):
+            self._paste_and_scroll(model, idx)
+
+    # ------------------------------------------------------------------
     # Selection helpers
     # ------------------------------------------------------------------
 
@@ -585,6 +647,15 @@ class PolicyView(QTreeView):
                 self.scrollTo(new_idx)
                 self.setCurrentIndex(new_idx)
 
+    def _paste_and_scroll(self, model, index, *, before=False):
+        """Paste rules from clipboard and scroll to the first pasted rule."""
+        new_ids = model.paste_rules(index, before=before)
+        if new_ids:
+            first_idx = model.index_for_rule(new_ids[0])
+            if first_idx.isValid():
+                self.scrollTo(first_idx)
+                self.setCurrentIndex(first_idx)
+
     def _move_and_select(self, rule_id):
         """Re-select the moved rule after a move operation."""
         if rule_id is None:
@@ -610,6 +681,15 @@ class PolicyView(QTreeView):
         modifiers = event.modifiers()
 
         if modifiers == Qt.KeyboardModifier.ControlModifier:
+            if key == Qt.Key.Key_C:
+                self.copy_selection()
+                return
+            if key == Qt.Key.Key_V:
+                self.paste_below()
+                return
+            if key == Qt.Key.Key_X:
+                self.cut_selection()
+                return
             if key == Qt.Key.Key_PageUp:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
