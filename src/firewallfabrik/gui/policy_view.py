@@ -308,10 +308,12 @@ class PolicyView(QTreeView):
         if not index.isValid():
             # Clicked on empty area.
             menu.addAction(
-                'Insert New Rule on Top', lambda: model.insert_rule(at_top=True)
+                'Insert New Rule on Top',
+                lambda: self._insert_and_scroll(model, at_top=True),
             )
             menu.addAction(
-                'Insert New Rule at Bottom', lambda: model.insert_rule(at_bottom=True)
+                'Insert New Rule at Bottom',
+                lambda: self._insert_and_scroll(model, at_bottom=True),
             )
             menu.exec(global_pos)
             return
@@ -466,9 +468,13 @@ class PolicyView(QTreeView):
     def _build_row_menu(self, menu, model, index):
         """Build standard row-level context menu (# and Comment columns)."""
         menu.addAction(
-            'Insert Rule Above', lambda: model.insert_rule(index, before=True)
+            'Insert Rule Above',
+            lambda: self._insert_and_scroll(model, index=index, before=True),
         )
-        menu.addAction('Insert Rule Below', lambda: model.insert_rule(index))
+        menu.addAction(
+            'Insert Rule Below',
+            lambda: self._insert_and_scroll(model, index=index),
+        )
         menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
         up = menu.addAction(
@@ -570,6 +576,15 @@ class PolicyView(QTreeView):
                 result.append(idx0)
         return result
 
+    def _insert_and_scroll(self, model, index=None, **kwargs):
+        """Insert a rule and scroll to it."""
+        rule_id = model.insert_rule(index, **kwargs)
+        if rule_id is not None:
+            new_idx = model.index_for_rule(rule_id)
+            if new_idx.isValid():
+                self.scrollTo(new_idx)
+                self.setCurrentIndex(new_idx)
+
     def _move_and_select(self, rule_id):
         """Re-select the moved rule after a move operation."""
         if rule_id is None:
@@ -615,9 +630,9 @@ class PolicyView(QTreeView):
             if key == Qt.Key.Key_Insert:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
-                    model.insert_rule(idx)
+                    self._insert_and_scroll(model, index=idx)
                 else:
-                    model.insert_rule(at_bottom=True)
+                    self._insert_and_scroll(model, at_bottom=True)
                 return
 
         super().keyPressEvent(event)

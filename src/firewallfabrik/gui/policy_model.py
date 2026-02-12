@@ -613,8 +613,9 @@ class PolicyTreeModel(QAbstractItemModel):
                 .values(position=PolicyRule.position + 1),
             )
             opts = {'group': group_name} if group_name else None
+            new_id = uuid.uuid4()
             new_rule = PolicyRule(
-                id=uuid.uuid4(),
+                id=new_id,
                 rule_set_id=self._rule_set_id,
                 position=position,
                 policy_action=PolicyAction.Deny.value,
@@ -624,6 +625,7 @@ class PolicyTreeModel(QAbstractItemModel):
             session.add(new_rule)
 
         self.reload()
+        return new_id
 
     def delete_rules(self, indices):
         """Delete rules at the given QModelIndex list."""
