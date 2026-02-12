@@ -30,7 +30,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="MainRes.qrc">
-    <normaloff>:/Images/fwbuilder3.png</normaloff>:/Images/fwbuilder3.png</iconset>
+    <normaloff>:/Icons/FirewallFabrik/scalable</normaloff>:/Icons/FirewallFabrik/scalable</iconset>
   </property>
   <widget class="QWidget" name="widget">
    <layout class="QGridLayout" name="gridLayout_4">
@@ -144,7 +144,7 @@
               <string/>
              </property>
              <property name="pixmap">
-              <pixmap>:/Icons/Cluster/icon</pixmap>
+              <pixmap resource="MainRes.qrc">:/Icons/Cluster/icon</pixmap>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -809,7 +809,6 @@
     </property>
     <addaction name="compileAction"/>
     <addaction name="installAction"/>
-    <addaction name="inspectAction"/>
    </widget>
    <widget class="QMenu" name="fileMenu">
     <property name="title">
@@ -827,7 +826,6 @@
     <addaction name="fileSaveAction"/>
     <addaction name="fileSaveAsAction"/>
     <addaction name="fileCloseAction"/>
-    <addaction name="filePropAction"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="policyImportAction"/>
@@ -941,12 +939,15 @@
   </action>
   <action name="filePrintAction">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>&amp;Print...</string>
    </property>
    <property name="iconText">
+    <string>Print</string>
+   </property>
+   <property name="toolTip">
     <string>Print</string>
    </property>
    <property name="shortcut">
@@ -1213,19 +1214,31 @@
    </property>
   </action>
   <action name="libExportAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Export Library</string>
    </property>
    <property name="iconText">
     <string>Export Library To a File</string>
    </property>
+   <property name="toolTip">
+    <string>Export Library</string>
+   </property>
   </action>
   <action name="libImportAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Import &amp;Library</string>
    </property>
    <property name="iconText">
     <string>Import Library From a File</string>
+   </property>
+   <property name="toolTip">
+    <string>Import Library</string>
    </property>
   </action>
   <action name="debugAction">
@@ -1251,6 +1264,9 @@
    </property>
   </action>
   <action name="ObjectLockAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Lock</string>
    </property>
@@ -1259,6 +1275,9 @@
    </property>
   </action>
   <action name="ObjectUnlockAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Unlock</string>
    </property>
@@ -1283,19 +1302,31 @@
    </property>
   </action>
   <action name="fileCompareAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Find Conflicting Objects in Two Files</string>
    </property>
    <property name="iconText">
     <string>Find Conflicting Objects in Two Files</string>
    </property>
+   <property name="toolTip">
+    <string>Find Conflicting Objects in Two Files</string>
+   </property>
   </action>
   <action name="policyImportAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Import &amp;Firewall</string>
    </property>
    <property name="iconText">
     <string>Import Policy</string>
+   </property>
+   <property name="toolTip">
+    <string>Import Firewall</string>
    </property>
   </action>
   <action name="helpAction">
@@ -1367,12 +1398,24 @@
    </property>
   </action>
   <action name="ImportAddressesFromFileAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
+    <string>Import Addresses From File</string>
+   </property>
+   <property name="toolTip">
     <string>Import Addresses From File</string>
    </property>
   </action>
   <action name="SNMPDiscoveryAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
+    <string>Discover networks and hosts using SNMP</string>
+   </property>
+   <property name="toolTip">
     <string>Discover networks and hosts using SNMP</string>
    </property>
   </action>
@@ -1831,22 +1874,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>filePropAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileProp()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>fileSaveAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2194,22 +2221,6 @@
     </hint>
     <hint type="destinationlabel">
      <x>554</x>
-     <y>422</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>inspectAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>inspect()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>571</x>
      <y>422</y>
     </hint>
    </hints>
