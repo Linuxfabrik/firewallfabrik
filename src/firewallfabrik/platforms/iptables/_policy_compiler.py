@@ -1739,10 +1739,65 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         return True
 
 
-class SeparatePortRanges(_Passthrough):
-    """Separate services with port ranges."""
+class SeparatePortRanges(PolicyRuleProcessor):
+    """Separate TCP/UDP services with port ranges into individual rules.
 
-    pass
+    Services where src or dst port range start != end (i.e. actual port
+    ranges like 749:750) or "any TCP/UDP" services (all ports zero) get
+    pulled out into their own rules because they can't be combined with
+    single-port services in a ``-m multiport`` match.
+    """
+
+    @staticmethod
+    def _is_port_range(srv) -> bool:
+        from firewallfabrik.core.objects import TCPService, UDPService
+
+        if not isinstance(srv, (TCPService, UDPService)):
+            return False
+
+        srs = srv.src_range_start or 0
+        sre = srv.src_range_end or 0
+        drs = srv.dst_range_start or 0
+        dre = srv.dst_range_end or 0
+
+        # Normalize: single port has end==0 or end==start
+        if srs != 0 and sre == 0:
+            sre = srs
+        if drs != 0 and dre == 0:
+            dre = drs
+
+        # "Any TCP/UDP" (all zeros) — treat as full range
+        if srs == 0 and sre == 0 and drs == 0 and dre == 0:
+            sre = 65535
+            dre = 65535
+
+        return srs != sre or drs != dre
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.srv) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Pull out services matching the condition into individual rules
+        separated = []
+        for srv in rule.srv:
+            if self._is_port_range(srv):
+                r = rule.clone()
+                r.srv = [srv]
+                self.tmp_queue.append(r)
+                separated.append(srv)
+
+        # Remove separated services from the original rule
+        remaining = [s for s in rule.srv if s not in separated]
+        if remaining:
+            rule.srv = remaining
+            self.tmp_queue.append(rule)
+
+        return True
 
 
 class CheckForStatefulICMP6Rules(_Passthrough):
