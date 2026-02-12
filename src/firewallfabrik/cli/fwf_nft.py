@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 import sqlalchemy
+import sqlalchemy.exc
 
 import firewallfabrik
 import firewallfabrik.core
@@ -150,6 +151,25 @@ def main(argv=None):
     try:
         db = firewallfabrik.core.DatabaseManager()
         db.load(args.FILE)
+    except sqlalchemy.exc.IntegrityError as e:
+        msg = f'Error: failed to load database from {args.FILE}: '
+        if 'UNIQUE constraint failed' in str(e):
+            if args.FILE.endswith('.fwb'):
+                msg += (
+                    'Duplicate names are not allowed. Open the database in '
+                    'Firewall Builder, rename the affected objects and retry '
+                    'the import.'
+                )
+            else:
+                msg += (
+                    'Duplicate names are not allowed. This should not happen '
+                    'during normal operations. If you edited the YAML '
+                    'manually, double-check your changes.'
+                )
+        else:
+            msg += str(e)
+        print(msg, file=sys.stderr)
+        return 1
     except Exception as e:
         print(f'Error: failed to load database from {args.FILE}: {e}', file=sys.stderr)
         return 1

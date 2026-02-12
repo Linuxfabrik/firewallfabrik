@@ -89,19 +89,16 @@ class YamlReader:
     """Parses a single YAML file into a ParseResult compatible with DatabaseManager.load()."""
 
     def __init__(self):
-        self._ref_index = {}  # ref-path -> UUID
-        self._lib_name_by_id = {}
+        self._ref_index = {}  # full tree-path -> UUID
         self._memberships = []
         self._rule_element_rows = []
         self._deferred_memberships = []
         self._deferred_rule_elements = []
-        self._current_lib_name = ''
 
     def parse(self, input_path):
         input_path = pathlib.Path(input_path)
 
         self._ref_index.clear()
-        self._lib_name_by_id.clear()
         self._memberships.clear()
         self._rule_element_rows.clear()
         self._deferred_memberships.clear()
@@ -133,40 +130,23 @@ class YamlReader:
             rule_element_rows=self._rule_element_rows[:],
         )
 
-    def _register_ref(self, type_name, obj_name, obj_id):
-        """Register a ref-path -> UUID mapping."""
-        obj_name_escaped = escape_obj_name(obj_name)
-        # Try plain ref first, use #N for duplicates
-        ref = f'{type_name}/{obj_name_escaped}'
-        if ref not in self._ref_index:
-            self._ref_index[ref] = obj_id
-        else:
-            # Find next available suffix
-            n = 2
-            while f'{ref}#{n}' in self._ref_index:
-                n += 1
-            # If this is the second one, also add #1 alias for the first
-            if n == 2:
-                self._ref_index[f'{ref}#1'] = self._ref_index[ref]
-            self._ref_index[f'{ref}#{n}'] = obj_id
-
-        # Also register with library prefix for cross-library resolution
-        full_ref = f'{self._current_lib_name}/{ref}'
-        self._ref_index[full_ref] = obj_id
+    def _register_ref(self, path, obj_id):
+        """Register a full tree-path -> UUID mapping."""
+        if path not in self._ref_index:
+            self._ref_index[path] = obj_id
+            return path
+        # #N fallback for same-path collisions
+        n = 2
+        while f'{path}#{n}' in self._ref_index:
+            n += 1
+        if n == 2:
+            self._ref_index[f'{path}#1'] = self._ref_index[path]
+        self._ref_index[f'{path}#{n}'] = obj_id
+        return f'{path}#{n}'
 
     def _resolve_ref_path(self, ref_path):
-        """Resolve a ref-path to UUID, trying direct and library-prefixed lookups."""
-        uid = self._ref_index.get(ref_path)
-        if uid is not None:
-            return uid
-
-        # Try with each library prefix (for same-library refs that collide)
-        for lib_name in self._lib_name_by_id.values():
-            uid = self._ref_index.get(f'{lib_name}/{ref_path}')
-            if uid is not None:
-                return uid
-
-        return None
+        """Resolve a full tree-path to UUID via direct lookup."""
+        return self._ref_index.get(ref_path)
 
     def _resolve_deferred(self):
         for group_id, ref_path in self._deferred_memberships:
@@ -194,29 +174,29 @@ class YamlReader:
                 }
             )
 
-    def _dispatch_child(self, data, library, parent_group=None):
+    def _dispatch_child(self, data, library, parent_path, parent_group=None):
         """Route a child dict by its ``type`` to the correct parse method."""
         type_name = data.get('type', '')
         if type_name in _GROUP_CLASSES:
-            self._parse_group(data, library, parent_group=parent_group)
+            self._parse_group(data, library, parent_path, parent_group=parent_group)
         elif type_name in _ADDRESS_CLASSES:
-            addr = self._parse_address(data, library=library)
+            addr = self._parse_address(data, parent_path, library=library)
             if parent_group is not None:
                 addr.group = parent_group
         elif type_name in _SERVICE_CLASSES:
-            svc = self._parse_service(data, library)
+            svc = self._parse_service(data, library, parent_path)
             if parent_group is not None:
                 svc.group = parent_group
         elif type_name == 'Interval':
-            itv = self._parse_interval(data, library)
+            itv = self._parse_interval(data, library, parent_path)
             if parent_group is not None:
                 itv.group = parent_group
         elif type_name in _DEVICE_CLASSES:
-            dev = self._parse_device(data, library)
+            dev = self._parse_device(data, library, parent_path)
             if parent_group is not None:
                 dev.group = parent_group
         elif type_name == 'Interface':
-            self._parse_interface(data, library, None)
+            self._parse_interface(data, library, None, parent_path)
         else:
             logger.warning('Unknown child type: %s', type_name)
 
@@ -229,15 +209,14 @@ class YamlReader:
         lib.data = lib_data.get('data', {})
         lib.database = db
 
-        self._current_lib_name = lib.name
-        self._lib_name_by_id[lib.id] = lib.name
+        lib_path = f'Library:{escape_obj_name(lib.name)}'
 
         for child_data in lib_data.get('children', []):
-            self._dispatch_child(child_data, lib)
+            self._dispatch_child(child_data, lib, lib_path)
 
         return lib
 
-    def _parse_address(self, data, library=None, interface=None):
+    def _parse_address(self, data, parent_path, library=None, interface=None):
         type_name = data.get('type', 'Address')
         cls = _ADDRESS_CLASSES.get(type_name, objects.Address)
         addr = cls()
@@ -266,10 +245,13 @@ class YamlReader:
         elif library is not None:
             addr.library = library
 
-        self._register_ref(type_name, addr.name, addr.id)
+        self._register_ref(
+            f'{parent_path}/{type_name}:{escape_obj_name(addr.name)}',
+            addr.id,
+        )
         return addr
 
-    def _parse_service(self, data, library):
+    def _parse_service(self, data, library, parent_path):
         type_name = data.get('type', 'Service')
         cls = _SERVICE_CLASSES.get(type_name, objects.Service)
         svc = cls()
@@ -305,10 +287,13 @@ class YamlReader:
         if 'userid' in data:
             svc.userid = data['userid']
 
-        self._register_ref(type_name, svc.name, svc.id)
+        self._register_ref(
+            f'{parent_path}/{type_name}:{escape_obj_name(svc.name)}',
+            svc.id,
+        )
         return svc
 
-    def _parse_interval(self, data, library):
+    def _parse_interval(self, data, library, parent_path):
         itv = objects.Interval()
         itv.id = uuid.uuid4()
         itv.name = data.get('name', '')
@@ -317,10 +302,13 @@ class YamlReader:
         itv.data = data.get('data', {})
         itv.library = library
 
-        self._register_ref('Interval', itv.name, itv.id)
+        self._register_ref(
+            f'{parent_path}/Interval:{escape_obj_name(itv.name)}',
+            itv.id,
+        )
         return itv
 
-    def _parse_group(self, data, library, parent_group):
+    def _parse_group(self, data, library, parent_path, parent_group=None):
         type_name = data.get('type', 'ObjectGroup')
         cls = _GROUP_CLASSES.get(type_name, objects.ObjectGroup)
         grp = cls()
@@ -335,11 +323,12 @@ class YamlReader:
         if parent_group is not None:
             grp.parent_group = parent_group
 
-        self._register_ref(type_name, grp.name, grp.id)
+        grp_path = f'{parent_path}/{type_name}:{escape_obj_name(grp.name)}'
+        self._register_ref(grp_path, grp.id)
 
         # Children (mixed types: objects + subgroups)
         for child_data in data.get('children', []):
-            self._dispatch_child(child_data, library, parent_group=grp)
+            self._dispatch_child(child_data, library, grp_path, parent_group=grp)
 
         # Deferred member references (cross-references only)
         for ref_path in data.get('members', []):
@@ -347,7 +336,7 @@ class YamlReader:
 
         return grp
 
-    def _parse_device(self, data, library):
+    def _parse_device(self, data, library, parent_path):
         type_name = data.get('type', 'Host')
         cls = _DEVICE_CLASSES.get(type_name, objects.Host)
         dev = cls()
@@ -364,11 +353,12 @@ class YamlReader:
         if 'id_mapping_for_duplicate' in data:
             dev.id_mapping_for_duplicate = data['id_mapping_for_duplicate']
 
-        self._register_ref(type_name, dev.name, dev.id)
+        dev_path = f'{parent_path}/{type_name}:{escape_obj_name(dev.name)}'
+        self._register_ref(dev_path, dev.id)
 
         # Interfaces
         for iface_data in data.get('interfaces', []):
-            self._parse_interface(iface_data, None, dev)
+            self._parse_interface(iface_data, None, dev, dev_path)
 
         # Rule sets
         for rs_data in data.get('rule_sets', []):
@@ -376,7 +366,7 @@ class YamlReader:
 
         return dev
 
-    def _parse_interface(self, data, library, device):
+    def _parse_interface(self, data, library, device, parent_path):
         iface = objects.Interface()
         iface.id = uuid.uuid4()
         iface.name = data.get('name', '')
@@ -390,11 +380,12 @@ class YamlReader:
         iface.library = library
         iface.device = device
 
-        self._register_ref('Interface', iface.name, iface.id)
+        iface_path = f'{parent_path}/Interface:{escape_obj_name(iface.name)}'
+        self._register_ref(iface_path, iface.id)
 
         # Interface addresses
         for addr_data in data.get('addresses', []):
-            self._parse_address(addr_data, interface=iface)
+            self._parse_address(addr_data, iface_path, interface=iface)
 
         return iface
 

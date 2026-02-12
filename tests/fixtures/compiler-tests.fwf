@@ -187,15 +187,18 @@ libraries:
 
                   '
                 members:
-                  - 'NetworkIPv6/documentation net'
-                  - 'NetworkIPv6/experimental ipv6'
-                  - 'NetworkIPv6/link-local ipv6'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/NetworkIPv6:documentation
+                    net'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/NetworkIPv6:experimental
+                    ipv6'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/NetworkIPv6:link-local
+                    ipv6'
               - type: 'ObjectGroup'
                 name: 'rfc1918-nets'
                 members:
-                  - 'Network/net-10.0.0.0'
-                  - 'Network/net-172.16.0.0'
-                  - 'Network/net-192.168.0.0'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/Network:net-10.0.0.0'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/Network:net-172.16.0.0'
+                  - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/Network:net-192.168.0.0'
           - type: 'ObjectGroup'
             name: 'Hosts'
             children:
@@ -680,95 +683,106 @@ libraries:
               - type: 'ServiceGroup'
                 name: 'DHCP'
                 members:
-                  - 'UDPService/bootpc'
-                  - 'UDPService/bootps'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:bootpc'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:bootps'
               - type: 'ServiceGroup'
                 name: 'DNS'
                 members:
-                  - 'TCPService/domain'
-                  - 'UDPService/domain'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:domain'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
               - type: 'ServiceGroup'
                 name: 'IPSEC'
                 members:
-                  - 'IPService/AH'
-                  - 'IPService/ESP'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:AH'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:ESP'
               - type: 'ServiceGroup'
                 name: 'Ipv6 unreachable messages'
                 members:
-                  - 'ICMP6Service/ipv6 all dest unreachable'
-                  - 'ICMP6Service/ipv6 packet too big'
-                  - 'ICMP6Service/ipv6 parameter problem'
-                  - 'ICMP6Service/ipv6 time exceeded'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMP6Service:ipv6
+                    all dest unreachable'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMP6Service:ipv6
+                    packet too big'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMP6Service:ipv6
+                    parameter problem'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMP6Service:ipv6
+                    time exceeded'
               - type: 'ServiceGroup'
                 name: 'NETBIOS'
                 members:
-                  - 'TCPService/netbios-ssn'
-                  - 'UDPService/netbios-dgm'
-                  - 'UDPService/netbios-ns'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:netbios-ssn'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:netbios-dgm'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:netbios-ns'
               - type: 'ServiceGroup'
                 name: 'PCAnywhere'
                 members:
-                  - 'TCPService/PCAnywhere-data'
-                  - 'UDPService/PCAnywhere-status'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:PCAnywhere-data'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:PCAnywhere-status'
               - type: 'ServiceGroup'
                 name: 'Real Player'
                 members:
-                  - 'TCPService/Real-Audio'
-                  - 'TCPService/rtsp'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Real-Audio'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:rtsp'
               - type: 'ServiceGroup'
                 name: 'UPnP'
                 members:
-                  - 'TCPService/icslap'
-                  - 'TCPService/upnp'
-                  - 'TCPService/upnp-5431'
-                  - 'UDPService/SSDP'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:icslap'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:upnp'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:upnp-5431'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:SSDP'
               - type: 'ServiceGroup'
                 name: 'Useful_ICMP'
                 members:
-                  - 'ICMPService/all ICMP unreachables'
-                  - 'ICMPService/ping reply'
-                  - 'ICMPService/time exceeded'
-                  - 'ICMPService/time exceeded in transit'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:all
+                    ICMP unreachables'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:ping
+                    reply'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time
+                    exceeded'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time
+                    exceeded in transit'
               - type: 'ServiceGroup'
                 name: 'Win2000'
                 members:
-                  - 'ServiceGroup/WinNT'
-                  - 'TCPService/LDAP GC'
-                  - 'TCPService/LDAP GC SSL'
-                  - 'TCPService/SMB'
-                  - 'TCPService/domain'
-                  - 'TCPService/kerberos'
-                  - 'TCPService/ldap'
-                  - 'TCPService/ldaps'
-                  - 'UDPService/domain'
-                  - 'UDPService/kerberos'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:Groups/ServiceGroup:WinNT'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP
+                    GC'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP
+                    GC SSL'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:SMB'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:domain'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:kerberos'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ldap'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ldaps'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:kerberos'
               - type: 'ServiceGroup'
                 name: 'WinNT'
                 members:
-                  - 'ServiceGroup/NETBIOS'
-                  - 'TCPService/WINS replication'
-                  - 'TCPService/microsoft-rpc'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:Groups/ServiceGroup:NETBIOS'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:WINS
+                    replication'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:microsoft-rpc'
               - type: 'ServiceGroup'
                 name: 'kerberos'
                 members:
-                  - 'TCPService/eklogin'
-                  - 'TCPService/kerberos'
-                  - 'TCPService/klogin'
-                  - 'TCPService/ksh'
-                  - 'UDPService/kerberos'
-                  - 'UDPService/kerberos-adm'
-                  - 'UDPService/kpasswd'
-                  - 'UDPService/krb524'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:eklogin'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:kerberos'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:klogin'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ksh'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:kerberos'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:kerberos-adm'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:kpasswd'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:krb524'
               - type: 'ServiceGroup'
                 name: 'nfs'
                 members:
-                  - 'TCPService/nfs'
-                  - 'UDPService/nfs'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:nfs'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:nfs'
               - type: 'ServiceGroup'
                 name: 'quake'
                 members:
-                  - 'TCPService/quake'
-                  - 'UDPService/quake'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:quake'
+                  - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:quake'
           - type: 'ServiceGroup'
             name: 'ICMP'
             children:
@@ -3136,15 +3150,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-interfaces'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-interfaces'
                     itf:
-                      - 'Interface/eth1#3'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth1'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/TCPService/ssh'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
                     options:
@@ -3155,15 +3169,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Interface/eth0#6'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-negation/Interface:eth0'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
                     options:
@@ -3174,15 +3188,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Firewall/fw-interfaces'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-interfaces'
                     srv:
-                      - 'Standard/UDPService/domain'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
                     options:
@@ -3193,15 +3207,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
-                      - 'Host/external-host'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:external-host'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Firewall/fw-interfaces'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-interfaces'
                     srv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 4
                     options:
@@ -3212,15 +3226,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-interfaces'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-interfaces'
                     itf:
-                      - 'Interface/eth0#6'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-negation/Interface:eth0'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
                     options:
@@ -3231,15 +3245,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Both'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
@@ -3386,15 +3400,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-logging'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-logging'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Host/external-host'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:external-host'
                     srv:
-                      - 'Standard/TCPService/ssh'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
                     options:
@@ -3440,15 +3454,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-logging'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-logging'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
                     options:
@@ -3459,15 +3473,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Both'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
@@ -3590,21 +3604,21 @@ libraries:
                       group: ''
                     action: 'Translate'
                     itf_inb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf_outb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     odst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     osrc:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     osrv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     tdst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrc:
-                      - 'Interface/eth0#5'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
                     tsrv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 1
                     options:
@@ -3612,21 +3626,21 @@ libraries:
                       group: ''
                     action: 'Translate'
                     itf_inb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf_outb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     odst:
-                      - 'Interface/eth0#5'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
                     osrc:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     osrv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     tdst:
-                      - 'Host/web-server'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
                     tsrc:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 2
                     options:
@@ -3634,21 +3648,21 @@ libraries:
                       group: ''
                     action: 'Translate'
                     itf_inb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf_outb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     odst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     osrc:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     osrv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     tdst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrc:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 3
                     options:
@@ -3656,21 +3670,22 @@ libraries:
                       group: ''
                     action: 'Translate'
                     itf_inb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf_outb:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     odst:
-                      - 'Firewall/fw-nat'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat'
                     osrc:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     osrv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     tdst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrc:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     tsrv:
-                      - 'TCPService/http 8080'
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http
+                        8080'
               - type: 'Policy'
                 name: 'Policy'
                 top: true
@@ -3684,15 +3699,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
                     options:
@@ -3703,15 +3718,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Host/web-server'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/TCPService/http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
                     options:
@@ -3722,15 +3737,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Both'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
@@ -3844,15 +3859,15 @@ libraries:
                     negations:
                       src: true
                     dst:
-                      - 'Firewall/fw-negation'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-negation'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/TCPService/ssh'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
                     options:
@@ -3865,15 +3880,15 @@ libraries:
                     negations:
                       dst: true
                     dst:
-                      - 'Firewall/fw-negation'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-negation'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
                     options:
@@ -3886,15 +3901,15 @@ libraries:
                     negations:
                       srv: true
                     dst:
-                      - 'Firewall/fw-negation'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-negation'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/TCPService/ssh'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
                     options:
@@ -3905,15 +3920,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Both'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
@@ -4023,15 +4038,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/TCPService/ssh'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
                     options:
@@ -4042,16 +4057,16 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'Standard/TCPService/http'
-                      - 'Standard/TCPService/https'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:https'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
                     options:
@@ -4062,15 +4077,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'TCPService/high-ports'
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:high-ports'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
                     options:
@@ -4081,15 +4096,15 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Network/internal-net'
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
                     srv:
-                      - 'UDPService/custom-udp'
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:UDP/UDPService:custom-udp'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 4
                     options:
@@ -4100,15 +4115,16 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/ICMPService/ping request'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:ping
+                        request'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
                     options:
@@ -4119,15 +4135,16 @@ libraries:
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     srv:
-                      - 'Standard/ICMPService/ping reply'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:ping
+                        reply'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 6
                     options:
@@ -4138,15 +4155,16 @@ libraries:
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
-                      - 'Firewall/fw-services'
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/ICMPService/time exceeded'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:time
+                        exceeded'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 7
                     options:
@@ -4157,15 +4175,15 @@ libraries:
                     action: 'Deny'
                     direction: 'Both'
                     dst:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     itf:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     src:
-                      - 'Standard/Network/Any'
+                      - 'Library:Standard/Network:Any'
                     srv:
-                      - 'Standard/IPService/Any'
+                      - 'Library:Standard/IPService:Any'
                     when:
-                      - 'Standard/Interval/Any'
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
@@ -4193,8 +4211,8 @@ libraries:
               - type: 'ObjectGroup'
                 name: 'host-group-1'
                 members:
-                  - 'Host/external-host'
-                  - 'Host/web-server'
+                  - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:external-host'
+                  - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
           - type: 'ObjectGroup'
             name: 'Hosts'
             children:

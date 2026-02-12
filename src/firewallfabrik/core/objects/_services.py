@@ -122,6 +122,17 @@ class Service(Base):
         sqlalchemy.Index('ix_services_library_id', 'library_id'),
         sqlalchemy.Index('ix_services_group_id', 'group_id'),
         sqlalchemy.Index('ix_services_name', 'name'),
+        sqlalchemy.UniqueConstraint(
+            'group_id', 'type', 'name', name='uq_services_group'
+        ),
+        sqlalchemy.Index(
+            'uq_services_orphan_lib',
+            'library_id',
+            'type',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('group_id IS NULL'),
+        ),
     )
 
     # -- Compiler helper methods --
@@ -272,4 +283,12 @@ class Interval(Base):
         sqlalchemy.Index('ix_intervals_library_id', 'library_id'),
         sqlalchemy.Index('ix_intervals_group_id', 'group_id'),
         sqlalchemy.Index('ix_intervals_name', 'name'),
+        sqlalchemy.UniqueConstraint('group_id', 'name', name='uq_intervals_group'),
+        sqlalchemy.Index(
+            'uq_intervals_orphan_lib',
+            'library_id',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('group_id IS NULL'),
+        ),
     )

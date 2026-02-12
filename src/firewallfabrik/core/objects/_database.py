@@ -102,6 +102,12 @@ class Library(Base):
         default=dict,
     )
 
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            'database_id', 'name', name='uq_libraries_database'
+        ),
+    )
+
     database: sqlalchemy.orm.Mapped[FWObjectDatabase] = sqlalchemy.orm.relationship(
         'FWObjectDatabase',
         back_populates='libraries',

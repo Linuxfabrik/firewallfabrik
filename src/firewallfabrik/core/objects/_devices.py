@@ -114,6 +114,17 @@ class Host(Base):
         sqlalchemy.Index('ix_devices_library_id', 'library_id'),
         sqlalchemy.Index('ix_devices_group_id', 'group_id'),
         sqlalchemy.Index('ix_devices_name', 'name'),
+        sqlalchemy.UniqueConstraint(
+            'group_id', 'type', 'name', name='uq_devices_group'
+        ),
+        sqlalchemy.Index(
+            'uq_devices_orphan_lib',
+            'library_id',
+            'type',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('group_id IS NULL'),
+        ),
     )
 
     # -- Compiler helper methods --
@@ -230,6 +241,17 @@ class Interface(Base):
         'Address',
         back_populates='interface',
         primaryjoin='Interface.id == foreign(Address.interface_id)',
+    )
+
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint('device_id', 'name', name='uq_interfaces_device'),
+        sqlalchemy.Index(
+            'uq_interfaces_standalone_lib',
+            'library_id',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('device_id IS NULL'),
+        ),
     )
 
     # -- Compiler helper methods --

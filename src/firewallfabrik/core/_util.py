@@ -119,4 +119,10 @@ def escape_obj_name(obj_name):
     # '\' = escape character
     # '/' = reference path separator
     # '#' = reference number for multiple objects with the same name
-    return obj_name.replace('\\', '\\\\').replace('/', '\\/').replace('#', '\\#')
+    # ':' = type/name separator within a path segment
+    return (
+        obj_name.replace('\\', '\\\\')
+        .replace('/', '\\/')
+        .replace('#', '\\#')
+        .replace(':', '\\:')
+    )

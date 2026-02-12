@@ -16,6 +16,7 @@ import uuid
 from pathlib import Path
 
 import sqlalchemy
+import sqlalchemy.exc
 from PySide6.QtCore import (
     QByteArray,
     QModelIndex,
@@ -588,6 +589,24 @@ class FWWindow(QMainWindow):
             self._db_manager = DatabaseManager()
             self._db_manager.on_history_changed = self._on_history_changed
             file_path = self._db_manager.load(file_path)
+        except sqlalchemy.exc.IntegrityError as e:
+            logger.exception('Failed to load %s', file_path)
+            msg = self.tr(f"Failed to load '{file_path}'.")
+            if 'UNIQUE constraint failed' in str(e):
+                if original_path.suffix == '.fwb':
+                    msg += self.tr(
+                        '\n\nDuplicate names are not allowed. Open the '
+                        'database in Firewall Builder, rename the affected '
+                        'objects and retry the import.'
+                    )
+                else:
+                    msg += self.tr(
+                        '\n\nDuplicate names are not allowed. This should '
+                        'not happen during normal operations. If you edited '
+                        'the YAML manually, double-check your changes.'
+                    )
+            QMessageBox.critical(self, 'FirewallFabrik', msg)
+            return
         except Exception:
             logger.exception('Failed to load %s', file_path)
             QMessageBox.critical(
@@ -754,7 +773,19 @@ class FWWindow(QMainWindow):
         if editor is None or session is None:
             return
         editor.apply_all()
-        session.commit()
+        try:
+            session.commit()
+        except sqlalchemy.exc.IntegrityError as e:
+            session.rollback()
+            if 'UNIQUE constraint failed' in str(e):
+                QMessageBox.critical(
+                    self,
+                    'FirewallFabrik',
+                    self.tr('Duplicate names are not allowed.'),
+                )
+            else:
+                logger.exception('Commit failed')
+            return
 
         # Build a human-readable undo description.
         obj = getattr(editor, '_obj', None)

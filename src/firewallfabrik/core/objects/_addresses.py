@@ -123,6 +123,20 @@ class Address(Base):
         sqlalchemy.Index('ix_addresses_interface_id', 'interface_id'),
         sqlalchemy.Index('ix_addresses_group_id', 'group_id'),
         sqlalchemy.Index('ix_addresses_name', 'name'),
+        sqlalchemy.UniqueConstraint(
+            'group_id', 'type', 'name', name='uq_addresses_group'
+        ),
+        sqlalchemy.UniqueConstraint(
+            'interface_id', 'type', 'name', name='uq_addresses_interface'
+        ),
+        sqlalchemy.Index(
+            'uq_addresses_orphan_lib',
+            'library_id',
+            'type',
+            'name',
+            unique=True,
+            sqlite_where=sqlalchemy.text('group_id IS NULL AND interface_id IS NULL'),
+        ),
     )
 
     # -- Compiler helper methods --

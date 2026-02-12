@@ -60,21 +60,21 @@ libraries:
                 action: 'Accept'
                 direction: 'Inbound'
                 dst:
-                  - 'IPv4/eth0-addr'
-                  - 'IPv4/eth1-addr'
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth0/IPv4:eth0-addr'
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth1/IPv4:eth1-addr'
                 src:
-                  - 'Network/internal-net'
+                  - 'Library:Test Objects/Network:internal-net'
                 srv:
-                  - 'TCPService/ssh'
+                  - 'Library:Test Objects/TCPService:ssh'
               - type: 'PolicyRule'
                 position: 1
                 action: 'Accept'
                 direction: 'Inbound'
                 dst:
-                  - 'IPv4/eth0-addr'
-                  - 'IPv4/eth1-addr'
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth0/IPv4:eth0-addr'
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth1/IPv4:eth1-addr'
                 srv:
-                  - 'ICMPService/echo request'
+                  - 'Library:Test Objects/ICMPService:echo request'
               - type: 'PolicyRule'
                 position: 2
                 action: 'Deny'
@@ -84,9 +84,9 @@ libraries:
                 action: 'Accept'
                 direction: 'Both'
                 dst:
-                  - 'IPv4/external-host'
+                  - 'Library:Test Objects/IPv4:external-host'
                 src:
-                  - 'Network/internal-net'
+                  - 'Library:Test Objects/Network:internal-net'
       - type: 'Network'
         name: 'internal-net'
         inet_addr_mask:

@@ -121,6 +121,15 @@ class Group(Base):
         sqlalchemy.Index('ix_groups_library_id', 'library_id'),
         sqlalchemy.Index('ix_groups_parent_group_id', 'parent_group_id'),
         sqlalchemy.Index('ix_groups_name', 'name'),
+        sqlalchemy.UniqueConstraint(
+            'parent_group_id', 'type', 'name', name='uq_groups_parent'
+        ),
+        # No root-level partial unique index here: Group has no device_id FK,
+        # so cluster-internal groups (e.g. StateSyncClusterGroup "State Sync
+        # Group") end up at the library root — one per cluster — with
+        # identical (library_id, type, name) tuples.  A partial unique index
+        # on (library_id, type, name) WHERE parent_group_id IS NULL would
+        # reject this legitimate data.
     )
 
 

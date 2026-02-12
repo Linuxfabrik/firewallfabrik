@@ -122,7 +122,6 @@ class YamlWriter:
 
     def __init__(self):
         self._ref_index = {}
-        self._lib_name_by_id = {}
 
     def write(self, session, database_id, output_path):
         output_path = pathlib.Path(output_path)
@@ -138,10 +137,7 @@ class YamlWriter:
             ),
         ).all()
 
-        # Build lib name lookup
-        self._lib_name_by_id = {lib.id: lib.name for lib in libraries}
-
-        # Build the global ref-path index
+        # Build the global ref-path index via tree walk
         self._build_ref_index(session, libraries)
 
         # Build a single combined document
@@ -153,140 +149,180 @@ class YamlWriter:
         self._write_yaml(output_path, doc)
 
     def _build_ref_index(self, session, libraries):
-        """Build UUID -> ref-path mapping for all objects."""
+        """Build UUID -> full tree-path mapping for all objects."""
         self._ref_index = {}
-        self._uuid_to_lib = {}
-
-        # Track (library_id, type, name) to detect duplicates
-        seen = {}
+        seen_paths = {}
 
         for lib in libraries:
-            lib_id = lib.id
-            lib_name = lib.name
+            lib_path = f'Library:{escape_obj_name(lib.name)}'
 
-            # Addresses (library-level)
+            # Orphan addresses (group_id IS NULL)
             for addr in session.scalars(
                 sqlalchemy.select(objects.Address).where(
-                    objects.Address.library_id == lib_id
+                    objects.Address.library_id == lib.id,
+                    objects.Address.group_id.is_(None),
                 ),
             ).all():
                 self._register_ref(
-                    seen, lib_id, lib_name, addr.type, addr.name, addr.id
+                    seen_paths,
+                    f'{lib_path}/{addr.type}:{escape_obj_name(addr.name)}',
+                    addr.id,
                 )
-                self._uuid_to_lib[addr.id] = lib_id
 
-            # Interface addresses
-            for iface in session.scalars(
-                sqlalchemy.select(objects.Interface)
-                .join(objects.Host)
-                .where(objects.Host.library_id == lib_id),
-            ).all():
-                for addr in iface.addresses:
-                    self._register_ref(
-                        seen, lib_id, lib_name, addr.type, addr.name, addr.id
-                    )
-                    self._uuid_to_lib[addr.id] = lib_id
-
-            # Services
+            # Orphan services
             for svc in session.scalars(
                 sqlalchemy.select(objects.Service).where(
-                    objects.Service.library_id == lib_id
+                    objects.Service.library_id == lib.id,
+                    objects.Service.group_id.is_(None),
                 ),
-            ).all():
-                self._register_ref(seen, lib_id, lib_name, svc.type, svc.name, svc.id)
-                self._uuid_to_lib[svc.id] = lib_id
-
-            # Intervals
-            for itv in session.scalars(
-                sqlalchemy.select(objects.Interval).where(
-                    objects.Interval.library_id == lib_id
-                ),
-            ).all():
-                self._register_ref(seen, lib_id, lib_name, 'Interval', itv.name, itv.id)
-                self._uuid_to_lib[itv.id] = lib_id
-
-            # Groups (all, including nested)
-            for grp in session.scalars(
-                sqlalchemy.select(objects.Group).where(
-                    objects.Group.library_id == lib_id
-                ),
-            ).all():
-                self._register_ref(seen, lib_id, lib_name, grp.type, grp.name, grp.id)
-                self._uuid_to_lib[grp.id] = lib_id
-
-            # Devices
-            for dev in session.scalars(
-                sqlalchemy.select(objects.Host).where(
-                    objects.Host.library_id == lib_id
-                ),
-            ).all():
-                self._register_ref(seen, lib_id, lib_name, dev.type, dev.name, dev.id)
-                self._uuid_to_lib[dev.id] = lib_id
-
-            # Interfaces (device-owned)
-            for iface in session.scalars(
-                sqlalchemy.select(objects.Interface)
-                .join(objects.Host)
-                .where(objects.Host.library_id == lib_id),
             ).all():
                 self._register_ref(
-                    seen,
-                    lib_id,
-                    lib_name,
-                    'Interface',
-                    iface.name,
-                    iface.id,
+                    seen_paths,
+                    f'{lib_path}/{svc.type}:{escape_obj_name(svc.name)}',
+                    svc.id,
                 )
-                self._uuid_to_lib[iface.id] = lib_id
+
+            # Orphan intervals
+            for itv in session.scalars(
+                sqlalchemy.select(objects.Interval).where(
+                    objects.Interval.library_id == lib.id,
+                    objects.Interval.group_id.is_(None),
+                ),
+            ).all():
+                self._register_ref(
+                    seen_paths,
+                    f'{lib_path}/Interval:{escape_obj_name(itv.name)}',
+                    itv.id,
+                )
+
+            # Root groups
+            for grp in session.scalars(
+                sqlalchemy.select(objects.Group).where(
+                    objects.Group.library_id == lib.id,
+                    objects.Group.parent_group_id.is_(None),
+                ),
+            ).all():
+                self._walk_group(session, seen_paths, grp, lib_path)
+
+            # Orphan devices
+            for dev in session.scalars(
+                sqlalchemy.select(objects.Host).where(
+                    objects.Host.library_id == lib.id,
+                    objects.Host.group_id.is_(None),
+                ),
+            ).all():
+                self._walk_device(session, seen_paths, dev, lib_path)
 
             # Standalone interfaces (no device)
             for iface in session.scalars(
                 sqlalchemy.select(objects.Interface).where(
-                    objects.Interface.library_id == lib_id,
+                    objects.Interface.library_id == lib.id,
                     objects.Interface.device_id.is_(None),
                 ),
             ).all():
+                iface_path = f'{lib_path}/Interface:{escape_obj_name(iface.name)}'
+                self._register_ref(seen_paths, iface_path, iface.id)
+                for addr in sorted(iface.addresses, key=lambda a: a.name):
+                    self._register_ref(
+                        seen_paths,
+                        f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}',
+                        addr.id,
+                    )
+
+    def _walk_group(self, session, seen_paths, grp, parent_path):
+        """Walk a group and its children, registering ref-paths."""
+        grp_path = f'{parent_path}/{grp.type}:{escape_obj_name(grp.name)}'
+        self._register_ref(seen_paths, grp_path, grp.id)
+
+        # Child addresses
+        for addr in session.scalars(
+            sqlalchemy.select(objects.Address).where(
+                objects.Address.group_id == grp.id,
+            ),
+        ).all():
+            self._register_ref(
+                seen_paths,
+                f'{grp_path}/{addr.type}:{escape_obj_name(addr.name)}',
+                addr.id,
+            )
+
+        # Child services
+        for svc in session.scalars(
+            sqlalchemy.select(objects.Service).where(
+                objects.Service.group_id == grp.id,
+            ),
+        ).all():
+            self._register_ref(
+                seen_paths,
+                f'{grp_path}/{svc.type}:{escape_obj_name(svc.name)}',
+                svc.id,
+            )
+
+        # Child intervals
+        for itv in session.scalars(
+            sqlalchemy.select(objects.Interval).where(
+                objects.Interval.group_id == grp.id,
+            ),
+        ).all():
+            self._register_ref(
+                seen_paths,
+                f'{grp_path}/Interval:{escape_obj_name(itv.name)}',
+                itv.id,
+            )
+
+        # Child devices
+        for dev in session.scalars(
+            sqlalchemy.select(objects.Host).where(
+                objects.Host.group_id == grp.id,
+            ),
+        ).all():
+            self._walk_device(session, seen_paths, dev, grp_path)
+
+        # Child groups
+        for child in session.scalars(
+            sqlalchemy.select(objects.Group).where(
+                objects.Group.parent_group_id == grp.id,
+            ),
+        ).all():
+            self._walk_group(session, seen_paths, child, grp_path)
+
+    def _walk_device(self, session, seen_paths, dev, parent_path):
+        """Walk a device and its interfaces, registering ref-paths."""
+        dev_path = f'{parent_path}/{dev.type}:{escape_obj_name(dev.name)}'
+        self._register_ref(seen_paths, dev_path, dev.id)
+
+        for iface in sorted(dev.interfaces, key=lambda i: i.name):
+            iface_path = f'{dev_path}/Interface:{escape_obj_name(iface.name)}'
+            self._register_ref(seen_paths, iface_path, iface.id)
+            for addr in sorted(iface.addresses, key=lambda a: a.name):
                 self._register_ref(
-                    seen,
-                    lib_id,
-                    lib_name,
-                    'Interface',
-                    iface.name,
-                    iface.id,
+                    seen_paths,
+                    f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}',
+                    addr.id,
                 )
-                self._uuid_to_lib[iface.id] = lib_id
 
-    def _register_ref(self, seen, lib_id, lib_name, type_name, obj_name, obj_id):
-        """Register a ref-path for an object, handling duplicates with #N."""
-        obj_name_escaped = escape_obj_name(obj_name)
-        key = (lib_id, type_name, obj_name_escaped)
-        count = seen.get(key, 0)
-        seen[key] = count + 1
-
-        if count == 0:
-            ref = f'{type_name}/{obj_name_escaped}'
+    def _register_ref(self, seen_paths, path, obj_id):
+        """Register a full tree-path -> UUID mapping, with #N fallback for collisions."""
+        if path not in seen_paths:
+            seen_paths[path] = obj_id
+            self._ref_index[obj_id] = path
         else:
-            ref = f'{type_name}/{obj_name_escaped}#{count + 1}'
-            # Rename the first entry when the second occurrence appears
-            if count == 1:
-                for uid, existing_ref in self._ref_index.items():
-                    if existing_ref == f'{type_name}/{obj_name_escaped}':
-                        self._ref_index[uid] = f'{type_name}/{obj_name_escaped}#1'
-                        break
+            n = 2
+            while f'{path}#{n}' in seen_paths:
+                n += 1
+            if n == 2:
+                first_id = seen_paths[path]
+                self._ref_index[first_id] = f'{path}#1'
+                seen_paths[f'{path}#1'] = first_id
+            seen_paths[f'{path}#{n}'] = obj_id
+            self._ref_index[obj_id] = f'{path}#{n}'
 
-        self._ref_index[obj_id] = ref
-
-    def _ref_path(self, target_id, context_lib_id):
-        """Resolve a UUID to a ref-path string, with a cross-library prefix if needed."""
+    def _ref_path(self, target_id):
+        """Resolve a UUID to a full tree-path ref string."""
         ref = self._ref_index.get(target_id)
         if ref is None:
             logger.warning('No ref-path for UUID %s', target_id)
             return str(target_id)
-
-        target_lib = self._uuid_to_lib.get(target_id)
-        if target_lib is not None and target_lib != context_lib_id:
-            lib_name = self._lib_name_by_id.get(target_lib, '?')
-            return f'{lib_name}/{ref}'
         return ref
 
     def _serialize_database(self, db):
@@ -352,7 +388,7 @@ class YamlWriter:
                 objects.Group.parent_group_id.is_(None),
             ),
         ).all():
-            children.append(self._serialize_group(session, g, lib.id))
+            children.append(self._serialize_group(session, g))
 
         # Orphan devices
         for dev in session.scalars(
@@ -361,7 +397,7 @@ class YamlWriter:
                 objects.Host.group_id.is_(None),
             ),
         ).all():
-            children.append(self._serialize_device(session, dev, lib.id))
+            children.append(self._serialize_device(session, dev))
 
         # Standalone interfaces (no device)
         for iface in session.scalars(
@@ -370,7 +406,7 @@ class YamlWriter:
                 objects.Interface.device_id.is_(None),
             ),
         ).all():
-            d_iface = self._serialize_interface(session, iface, lib.id)
+            d_iface = self._serialize_interface(iface)
             d_iface.setdefault('type', 'Interface')
             children.append(d_iface)
 
@@ -382,7 +418,7 @@ class YamlWriter:
     def _serialize_address(self, addr):
         return _serialize_obj(addr)
 
-    def _serialize_group(self, session, grp, lib_id):
+    def _serialize_group(self, session, grp):
         d = _serialize_obj(grp, extra_skip=frozenset({'ro'}))
         if grp.ro:
             d['ro'] = True
@@ -421,7 +457,7 @@ class YamlWriter:
                 objects.Host.group_id == grp.id,
             ),
         ).all():
-            children.append(self._serialize_device(session, dev, lib_id))
+            children.append(self._serialize_device(session, dev))
 
         # Child groups
         for child in session.scalars(
@@ -429,7 +465,7 @@ class YamlWriter:
                 objects.Group.parent_group_id == grp.id,
             ),
         ).all():
-            children.append(self._serialize_group(session, child, lib_id))
+            children.append(self._serialize_group(session, child))
 
         if children:
             d['children'] = sorted(children, key=lambda c: c.get('name', ''))
@@ -441,11 +477,11 @@ class YamlWriter:
             ),
         ).fetchall()
         if rows:
-            d['members'] = sorted(self._ref_path(row[0], lib_id) for row in rows)
+            d['members'] = sorted(self._ref_path(row[0]) for row in rows)
 
         return d
 
-    def _serialize_device(self, session, dev, lib_id):
+    def _serialize_device(self, session, dev):
         d = _serialize_obj(
             dev,
             extra_skip=frozenset({'id_mapping_for_duplicate'}),
@@ -458,20 +494,20 @@ class YamlWriter:
         # Interfaces
         if dev.interfaces:
             d['interfaces'] = [
-                self._serialize_interface(session, iface, lib_id)
+                self._serialize_interface(iface)
                 for iface in sorted(dev.interfaces, key=lambda i: i.name)
             ]
 
         # Rule sets
         if dev.rule_sets:
             d['rule_sets'] = [
-                self._serialize_ruleset(session, rs, lib_id)
+                self._serialize_ruleset(session, rs)
                 for rs in sorted(dev.rule_sets, key=lambda rs: rs.name)
             ]
 
         return d
 
-    def _serialize_interface(self, session, iface, lib_id):
+    def _serialize_interface(self, iface):
         d = _serialize_obj(iface)
 
         # Interface addresses
@@ -483,7 +519,7 @@ class YamlWriter:
 
         return d
 
-    def _serialize_ruleset(self, session, rs, lib_id):
+    def _serialize_ruleset(self, session, rs):
         d = _serialize_obj(rs)
 
         # Rules (ordered by position)
@@ -495,11 +531,11 @@ class YamlWriter:
             .order_by(objects.Rule.position),
         ).all()
         if rules:
-            d['rules'] = [self._serialize_rule(session, rule, lib_id) for rule in rules]
+            d['rules'] = [self._serialize_rule(session, rule) for rule in rules]
 
         return d
 
-    def _serialize_rule(self, session, rule, lib_id):
+    def _serialize_rule(self, session, rule):
         d = _serialize_obj(rule, extra_skip=frozenset({'sorted_dst_ids', 'negations'}))
 
         # Negations — only include slots that are True
@@ -521,7 +557,7 @@ class YamlWriter:
         if rows:
             slots = {}
             for slot, target_id in rows:
-                ref = self._ref_path(target_id, lib_id)
+                ref = self._ref_path(target_id)
                 slots.setdefault(slot, []).append(ref)
             for slot in slots:
                 slots[slot].sort()

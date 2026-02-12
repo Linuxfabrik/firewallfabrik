@@ -84,6 +84,12 @@ class RuleSet(Base):
         'polymorphic_identity': 'RuleSet',
     }
 
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            'device_id', 'type', 'name', name='uq_rule_sets_device'
+        ),
+    )
+
     # -- Compiler helper methods --
 
     def matching_address_family(self, af: int) -> bool:
