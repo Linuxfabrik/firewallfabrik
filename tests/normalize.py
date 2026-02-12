@@ -24,20 +24,20 @@ def normalize_ipt(text: str) -> str:
     """Normalize iptables compiler output for expected output comparison."""
     # Normalize header comment (C++: "automatically generated", Python: "managed by")
     text = re.sub(
-        r'^#  This is automatically generated file\. DO NOT MODIFY !$',
+        r'^# +This is automatically generated file\. DO NOT MODIFY !$',
         '#  MANAGED_HEADER',
         text,
         flags=re.MULTILINE,
     )
     text = re.sub(
-        r'^#  This file is managed by FirewallFabrik - do not edit$',
+        r'^# +This file is managed by FirewallFabrik - do not edit$',
         '#  MANAGED_HEADER',
         text,
         flags=re.MULTILINE,
     )
     # Replace generated timestamp line
     text = re.sub(
-        r'^(#  Generated ).*$',
+        r'^(# +Generated ).*$',
         r'\1TIMESTAMP',
         text,
         flags=re.MULTILINE,
@@ -45,7 +45,7 @@ def normalize_ipt(text: str) -> str:
     # Replace version header (C++: "Firewall Builder  fwb_ipt v5.3.7",
     # Python: "FirewallFabrik fwf-ipt v0.1.0")
     text = re.sub(
-        r'^#  (?:Firewall Builder  fwb_ipt|FirewallFabrik fwf-ipt) v.*$',
+        r'^# +(?:Firewall Builder +fwb_ipt|FirewallFabrik fwf-ipt) (?:v\S+|VERSION)$',
         '#  TOOL VERSION',
         text,
         flags=re.MULTILINE,
@@ -83,14 +83,14 @@ def normalize_nft(text: str) -> str:
     """Normalize nftables compiler output for expected output comparison."""
     # Replace generated timestamp line
     text = re.sub(
-        r'^(#  Generated ).*$',
+        r'^(# +Generated ).*$',
         r'\1TIMESTAMP',
         text,
         flags=re.MULTILINE,
     )
     # Replace version header
     text = re.sub(
-        r'^(#  Firewall Builder  fwf )v.*$',
+        r'^(# +Firewall Builder +fwf )v.*$',
         r'\1VERSION',
         text,
         flags=re.MULTILINE,
