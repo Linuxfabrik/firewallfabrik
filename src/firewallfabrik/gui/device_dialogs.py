@@ -12,6 +12,8 @@
 
 """Editor panel dialogs for device objects (Host, Firewall, Interface)."""
 
+from datetime import UTC, datetime
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
@@ -42,6 +44,18 @@ class FirewallDialog(BaseObjectDialog):
         self._set_combo_text(self.version, data.get('version', ''))
         self._set_combo_text(self.hostOS, data.get('host_OS', ''))
         self.inactive.setChecked(data.get('inactive') == 'True')
+        for attr, key in (
+            ('last_modified', 'lastModified'),
+            ('last_compiled', 'lastCompiled'),
+            ('last_installed', 'lastInstalled'),
+        ):
+            ts = int(data.get(key, 0) or 0)
+            text = (
+                datetime.fromtimestamp(ts, tz=UTC).strftime('%Y-%m-%d %H:%M:%S')
+                if ts
+                else '-'
+            )
+            getattr(self, attr).setText(text)
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
