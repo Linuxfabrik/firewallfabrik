@@ -10,10 +10,10 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Output normalization for golden file comparison.
+"""Output normalization for expected output comparison.
 
 Strips timestamps, usernames, and other non-deterministic parts of
-compiler output so that golden files remain stable across machines
+compiler output so that expected output files remain stable across machines
 and runs.
 """
 
@@ -21,7 +21,20 @@ import re
 
 
 def normalize_ipt(text: str) -> str:
-    """Normalize iptables compiler output for golden file comparison."""
+    """Normalize iptables compiler output for expected output comparison."""
+    # Normalize header comment (C++: "automatically generated", Python: "managed by")
+    text = re.sub(
+        r'^#  This is automatically generated file\. DO NOT MODIFY !$',
+        '#  MANAGED_HEADER',
+        text,
+        flags=re.MULTILINE,
+    )
+    text = re.sub(
+        r'^#  This file is managed by FirewallFabrik - do not edit$',
+        '#  MANAGED_HEADER',
+        text,
+        flags=re.MULTILINE,
+    )
     # Replace generated timestamp line
     text = re.sub(
         r'^(#  Generated ).*$',
@@ -29,10 +42,11 @@ def normalize_ipt(text: str) -> str:
         text,
         flags=re.MULTILINE,
     )
-    # Replace version header (Python: fwb_ipt v0.1.0, C++: fwb_ipt v-5.3.7.7846)
+    # Replace version header (C++: "Firewall Builder  fwb_ipt v5.3.7",
+    # Python: "FirewallFabrik fwf-ipt v0.1.0")
     text = re.sub(
-        r'^(#  Firewall Builder  fwb_ipt )v.*$',
-        r'\1VERSION',
+        r'^#  (?:Firewall Builder  fwb_ipt|FirewallFabrik fwf-ipt) v.*$',
+        '#  TOOL VERSION',
         text,
         flags=re.MULTILINE,
     )
@@ -66,7 +80,7 @@ def normalize_ipt(text: str) -> str:
 
 
 def normalize_nft(text: str) -> str:
-    """Normalize nftables compiler output for golden file comparison."""
+    """Normalize nftables compiler output for expected output comparison."""
     # Replace generated timestamp line
     text = re.sub(
         r'^(#  Generated ).*$',

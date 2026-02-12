@@ -159,3 +159,7 @@ cython_debug/
 *.rcc
 
 CLAUDE.md
+
+# Private test fixtures and expected output files (not checked in)
+tests/fixtures-private/
+tests/expected-output-private/

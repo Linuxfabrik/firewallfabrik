@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Shared pytest fixtures for compiler golden file tests."""
+"""Shared pytest fixtures for compiler expected output tests."""
 
 from pathlib import Path
 
@@ -21,16 +21,21 @@ import firewallfabrik.core
 from firewallfabrik.core.objects import Firewall
 
 FIXTURES_DIR = Path(__file__).parent / 'fixtures'
-GOLDEN_DIR = Path(__file__).parent / 'golden'
+EXPECTED_OUTPUT_DIR = Path(__file__).parent / 'expected-output'
+FIXTURES_PRIVATE_DIR = Path(__file__).parent / 'fixtures-private'
+EXPECTED_OUTPUT_PRIVATE_DIR = Path(__file__).parent / 'expected-output-private'
 
 
 FIXTURE_EXTENSIONS = ('.fwf', '.fwb')
 
 
-def _find_fixture(fixture_name: str) -> Path | None:
+def _find_fixture(
+    fixture_name: str,
+    fixtures_dir: Path = FIXTURES_DIR,
+) -> Path | None:
     """Find a fixture file by name, trying .fwf then .fwb extensions."""
     for ext in FIXTURE_EXTENSIONS:
-        path = FIXTURES_DIR / f'{fixture_name}{ext}'
+        path = fixtures_dir / f'{fixture_name}{ext}'
         if path.exists():
             return path
     return None
@@ -121,22 +126,39 @@ def compile_nft():
 
 
 def discover_test_cases(platform: str) -> list[tuple[str, str]]:
-    """Discover (fixture_name, fw_name) pairs from golden directory.
+    """Discover (fixture_name, fw_name) pairs from expected output directory.
 
     Returns a list of tuples suitable for pytest parametrize.
     """
-    golden_platform_dir = GOLDEN_DIR / platform
-    if not golden_platform_dir.exists():
+    platform_dir = EXPECTED_OUTPUT_DIR / platform
+    if not platform_dir.exists():
         return []
 
     cases = []
-    for fixture_dir in sorted(golden_platform_dir.iterdir()):
+    for fixture_dir in sorted(platform_dir.iterdir()):
         if not fixture_dir.is_dir():
             continue
         fixture_name = fixture_dir.name
         if _find_fixture(fixture_name) is None:
             continue
-        for golden_file in sorted(fixture_dir.glob('*.fw')):
-            fw_name = golden_file.stem
+        for expected_file in sorted(fixture_dir.glob('*.fw')):
+            fw_name = expected_file.stem
             cases.append((fixture_name, fw_name))
+    return cases
+
+
+def discover_private_test_cases() -> list[tuple[str, str]]:
+    """Discover (fixture_name, fw_name) pairs from private fixtures.
+
+    Loads each .fwf/.fwb in tests/fixtures-private/ and enumerates
+    all Firewall objects.  Returns [] if the directory doesn't exist.
+    """
+    if not FIXTURES_PRIVATE_DIR.exists():
+        return []
+    cases = []
+    for path in sorted(FIXTURES_PRIVATE_DIR.iterdir()):
+        if path.suffix not in FIXTURE_EXTENSIONS:
+            continue
+        for fw_name in _find_firewalls(path):
+            cases.append((path.stem, fw_name))
     return cases

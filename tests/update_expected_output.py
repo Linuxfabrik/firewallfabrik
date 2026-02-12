@@ -11,14 +11,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Recompile fixtures and update golden files with normalized output.
+"""Recompile fixtures and update expected output files with normalized output.
 
 Usage:
-    python tests/update_golden.py                              # recompile all
-    python tests/update_golden.py --fixture basic_accept_deny  # recompile one fixture
-    python tests/update_golden.py --platform nft               # recompile only nftables
-    python tests/update_golden.py --normalize-only             # normalize existing golden files in-place
-    python tests/update_golden.py --normalize-only --platform ipt  # normalize only iptables golden files
+    python tests/update_expected_output.py                              # recompile all
+    python tests/update_expected_output.py --fixture basic_accept_deny  # recompile one fixture
+    python tests/update_expected_output.py --platform nft               # recompile only nftables
+    python tests/update_expected_output.py --normalize-only             # normalize existing expected output files in-place
+    python tests/update_expected_output.py --normalize-only --platform ipt  # normalize only iptables expected output files
 """
 
 import argparse
@@ -37,7 +37,9 @@ from firewallfabrik.core.objects import Firewall
 
 TESTS_DIR = Path(__file__).resolve().parent
 FIXTURES_DIR = TESTS_DIR / 'fixtures'
-GOLDEN_DIR = TESTS_DIR / 'golden'
+EXPECTED_OUTPUT_DIR = TESTS_DIR / 'expected-output'
+FIXTURES_PRIVATE_DIR = TESTS_DIR / 'fixtures-private'
+EXPECTED_OUTPUT_PRIVATE_DIR = TESTS_DIR / 'expected-output-private'
 
 PLATFORMS = {
     'ipt': {
@@ -53,44 +55,52 @@ PLATFORMS = {
 }
 
 
-def normalize_existing(platform: str, fixture: str | None = None) -> list[str]:
-    """Normalize existing golden files in-place.
+def normalize_existing(
+    platform: str,
+    fixture: str | None = None,
+    expected_output_dir: Path = EXPECTED_OUTPUT_DIR,
+) -> list[str]:
+    """Normalize existing expected output files in-place.
 
-    Reads each .fw file under tests/golden/<platform>/, applies the
+    Reads each .fw file under expected_output_dir/<platform>/, applies the
     platform normalizer, and writes the result back.
 
     Returns a list of normalized file paths (relative to repo root).
     """
     normalize = PLATFORMS[platform]['normalize']
-    golden_platform_dir = GOLDEN_DIR / platform
+    platform_dir = expected_output_dir / platform
 
-    if not golden_platform_dir.exists():
-        print(f'  No golden directory: {golden_platform_dir}', file=sys.stderr)
+    if not platform_dir.exists():
+        print(f'  No expected output directory: {platform_dir}', file=sys.stderr)
         return []
 
     if fixture:
-        dirs = [golden_platform_dir / fixture]
+        dirs = [platform_dir / fixture]
         if not dirs[0].exists():
-            print(f'  No golden directory: {dirs[0]}', file=sys.stderr)
+            print(f'  No expected output directory: {dirs[0]}', file=sys.stderr)
             return []
     else:
-        dirs = sorted(d for d in golden_platform_dir.iterdir() if d.is_dir())
+        dirs = sorted(d for d in platform_dir.iterdir() if d.is_dir())
 
     updated = []
     for fixture_dir in dirs:
-        for golden_path in sorted(fixture_dir.glob('*.fw')):
-            raw = golden_path.read_text()
+        for expected_path in sorted(fixture_dir.glob('*.fw')):
+            raw = expected_path.read_text()
             normalized = normalize(raw)
             if raw != normalized:
-                golden_path.write_text(normalized)
-                rel = golden_path.relative_to(TESTS_DIR.parent)
+                expected_path.write_text(normalized)
+                rel = expected_path.relative_to(TESTS_DIR.parent)
                 updated.append(str(rel))
                 print(f'  Normalized: {rel}')
     return updated
 
 
-def compile_and_update(fwf_path: Path, platform: str) -> list[str]:
-    """Compile all firewalls in a fixture and update golden files.
+def compile_and_update(
+    fwf_path: Path,
+    platform: str,
+    expected_output_dir: Path = EXPECTED_OUTPUT_DIR,
+) -> list[str]:
+    """Compile all firewalls in a fixture and update expected output files.
 
     Returns a list of updated file paths (relative to repo root).
     """
@@ -102,8 +112,8 @@ def compile_and_update(fwf_path: Path, platform: str) -> list[str]:
     normalize = cfg['normalize']
 
     fixture_name = fwf_path.stem
-    golden_dir = GOLDEN_DIR / platform / fixture_name
-    golden_dir.mkdir(parents=True, exist_ok=True)
+    expected_fixture_dir = expected_output_dir / platform / fixture_name
+    expected_fixture_dir.mkdir(parents=True, exist_ok=True)
 
     db = firewallfabrik.core.DatabaseManager()
     db.load(str(fwf_path))
@@ -142,17 +152,17 @@ def compile_and_update(fwf_path: Path, platform: str) -> list[str]:
                 raw_output = output_path.read_text()
 
             normalized = normalize(raw_output)
-            golden_path = golden_dir / f'{fw_name}.fw'
-            golden_path.write_text(normalized)
-            updated.append(str(golden_path.relative_to(TESTS_DIR.parent)))
-            print(f'  Updated: {golden_path.relative_to(TESTS_DIR.parent)}')
+            expected_path = expected_fixture_dir / f'{fw_name}.fw'
+            expected_path.write_text(normalized)
+            updated.append(str(expected_path.relative_to(TESTS_DIR.parent)))
+            print(f'  Updated: {expected_path.relative_to(TESTS_DIR.parent)}')
 
     return updated
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Update golden files for compiler regression tests.',
+        description='Update expected output files for compiler regression tests.',
     )
     parser.add_argument(
         '--fixture',
@@ -169,29 +179,45 @@ def main():
         '--normalize-only',
         action='store_true',
         default=False,
-        help='Normalize existing golden files in-place instead of recompiling.',
+        help='Normalize existing expected output files in-place instead of recompiling.',
+    )
+    parser.add_argument(
+        '--private',
+        action='store_true',
+        default=False,
+        help='Operate on private fixtures (tests/fixtures-private/ and tests/expected-output-private/).',
     )
     args = parser.parse_args()
 
     platforms = [args.platform] if args.platform else list(PLATFORMS.keys())
 
+    fixtures_dir = FIXTURES_PRIVATE_DIR if args.private else FIXTURES_DIR
+    expected_output_dir = (
+        EXPECTED_OUTPUT_PRIVATE_DIR if args.private else EXPECTED_OUTPUT_DIR
+    )
+    label = 'private ' if args.private else ''
+
     if args.normalize_only:
         total_updated = 0
         for platform in platforms:
-            print(f'Normalizing golden files ({platform}):')
-            updated = normalize_existing(platform, fixture=args.fixture)
+            print(f'Normalizing {label}expected output files ({platform}):')
+            updated = normalize_existing(
+                platform,
+                fixture=args.fixture,
+                expected_output_dir=expected_output_dir,
+            )
             total_updated += len(updated)
         if total_updated == 0:
-            print('\nAll golden files are already normalized.')
+            print(f'\nAll {label}expected output files are already normalized.')
         else:
-            print(f'\n{total_updated} golden file(s) normalized.')
+            print(f'\n{total_updated} {label}expected output file(s) normalized.')
         return 0
 
     if args.fixture:
         # Try .fwf first, then .fwb
         fixture = None
         for ext in ('.fwf', '.fwb'):
-            candidate = FIXTURES_DIR / f'{args.fixture}{ext}'
+            candidate = fixtures_dir / f'{args.fixture}{ext}'
             if candidate.exists():
                 fixture = candidate
                 break
@@ -201,21 +227,26 @@ def main():
         fixtures = [fixture]
     else:
         fixtures = sorted(
-            [*FIXTURES_DIR.glob('*.fwf'), *FIXTURES_DIR.glob('*.fwb')],
+            [*fixtures_dir.glob('*.fwf'), *fixtures_dir.glob('*.fwb')],
             key=lambda p: p.stem,
         )
         if not fixtures:
-            print('No fixtures found in tests/fixtures/', file=sys.stderr)
+            print(
+                f'No {label}fixtures found in {fixtures_dir.relative_to(TESTS_DIR.parent)}/',
+                file=sys.stderr,
+            )
             return 1
 
     total_updated = 0
     for fwf_path in fixtures:
         for platform in platforms:
             print(f'{fwf_path.stem} ({platform}):')
-            updated = compile_and_update(fwf_path, platform)
+            updated = compile_and_update(
+                fwf_path, platform, expected_output_dir=expected_output_dir
+            )
             total_updated += len(updated)
 
-    print(f'\n{total_updated} golden file(s) updated.')
+    print(f'\n{total_updated} expected output file(s) updated.')
     return 0
 
 
