@@ -127,6 +127,7 @@ class _RowData:
     itf: list
     label: str
     negations: dict  # slot → bool, e.g. {'src': True, 'dst': False}
+    options: dict  # raw rule options dict for tooltip generation
     options_display: list  # list[tuple[str, str, str]]  (sentinel_id, label, icon-type)
     position: int
     rule_id: uuid.UUID
@@ -241,6 +242,7 @@ class PolicyTreeModel(QAbstractItemModel):
                     itf=slots.get('itf', []),
                     label=rule.label or '',
                     negations=rule.negations or {},
+                    options=opts,
                     options_display=_build_options_display(opts),
                     position=rule.position,
                     rule_id=rule.id,
@@ -484,9 +486,11 @@ class PolicyTreeModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.DisplayRole:
             return self._display_value(row_data, col)
         if role == Qt.ItemDataRole.ToolTipRole:
-            if QSettings().value('UI/ObjTooltips', True, type=bool):
-                return self._display_value(row_data, col)
-            return None
+            if not QSettings().value('UI/ObjTooltips', True, type=bool):
+                return None
+            if col == _COL_OPTIONS:
+                return _options_tooltip(row_data)
+            return self._display_value(row_data, col)
         if role == Qt.ItemDataRole.BackgroundRole:
             if row_data.color_hex:
                 return QColor(row_data.color_hex)
@@ -648,7 +652,10 @@ class PolicyTreeModel(QAbstractItemModel):
                 )
                 .values(position=PolicyRule.position + 1),
             )
-            opts = {'group': group_name} if group_name else None
+            # Deny defaults to stateless (matching fwbuilder).
+            opts = {'stateless': True}
+            if group_name:
+                opts['group'] = group_name
             new_id = uuid.uuid4()
             new_rule = PolicyRule(
                 id=new_id,
@@ -931,7 +938,12 @@ class PolicyTreeModel(QAbstractItemModel):
         return rule_id
 
     def set_action(self, index, action):
-        """Set the policy action for the rule at *index*."""
+        """Set the policy action for the rule at *index*.
+
+        Also updates the ``stateless`` flag: Accept defaults to stateful,
+        all other actions default to stateless (matching fwbuilder's
+        ``getStatelessFlagForAction``).
+        """
         row_data = self.get_row_data(index)
         if row_data is None:
             return
@@ -941,6 +953,12 @@ class PolicyTreeModel(QAbstractItemModel):
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
                 rule.policy_action = action.value
+                opts = dict(rule.options or {})
+                if action == PolicyAction.Accept:
+                    opts.pop('stateless', None)
+                else:
+                    opts['stateless'] = True
+                rule.options = opts
         self.reload()
 
     def set_comment(self, index, comment):
@@ -1408,6 +1426,91 @@ def _opt_int(opts, key):
         return 0
 
 
+def _options_tooltip(row_data):
+    """Build an HTML tooltip for the Options column.
+
+    Mirrors fwbuilder's ``FWObjectPropertiesFactory::getPolicyRuleOptions()``.
+    The stateful/stateless default depends on the action: Accept defaults to
+    stateful, all other actions default to stateless.
+    """
+    opts = row_data.options or {}
+    rows = []
+
+    # Stateful / Stateless.
+    if _opt_bool(opts, 'stateless'):
+        rows.append(('Stateless', ''))
+    else:
+        rows.append(('Stateful', ''))
+
+    # iptables-specific options (the only platform we support).
+    if _opt_bool(opts, 'tagging'):
+        tag_id = _opt_str(opts, 'tagobject_id')
+        rows.append(('Tag:', tag_id or 'yes'))
+
+    classify = _opt_str(opts, 'classify_str')
+    if classify:
+        rows.append(('Class:', classify))
+
+    log_prefix = _opt_str(opts, 'log_prefix')
+    if log_prefix:
+        rows.append(('Log prefix:', log_prefix))
+
+    log_level = _opt_str(opts, 'log_level')
+    if log_level:
+        rows.append(('Log level:', log_level))
+
+    nlgroup = _opt_int(opts, 'ulog_nlgroup')
+    if nlgroup > 1:
+        rows.append(('Netlink group:', str(nlgroup)))
+
+    limit_val = _opt_int(opts, 'limit_value')
+    if limit_val > 0:
+        arg = '! ' if _opt_bool(opts, 'limit_value_not') else ''
+        arg += str(limit_val)
+        suffix = _opt_str(opts, 'limit_suffix')
+        if suffix:
+            arg += suffix
+        rows.append(('Limit value:', arg))
+
+    limit_burst = _opt_int(opts, 'limit_burst')
+    if limit_burst > 0:
+        rows.append(('Limit burst:', str(limit_burst)))
+
+    connlimit = _opt_int(opts, 'connlimit_value')
+    if connlimit > 0:
+        arg = '! ' if _opt_bool(opts, 'connlimit_above_not') else ''
+        arg += str(connlimit)
+        rows.append(('Connlimit value:', arg))
+
+    hashlimit_val = _opt_int(opts, 'hashlimit_value')
+    if hashlimit_val > 0:
+        hl_name = _opt_str(opts, 'hashlimit_name')
+        if hl_name:
+            rows.append(('Hashlimit name:', hl_name))
+        arg = str(hashlimit_val)
+        hl_suffix = _opt_str(opts, 'hashlimit_suffix')
+        if hl_suffix:
+            arg += hl_suffix
+        rows.append(('Hashlimit value:', arg))
+        hl_burst = _opt_int(opts, 'hashlimit_burst')
+        if hl_burst > 0:
+            rows.append(('Hashlimit burst:', str(hl_burst)))
+
+    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
+        rows.append(('Part of Any', ''))
+
+    # Logging (always shown, last row).
+    logging_on = _opt_bool(opts, 'log')
+    rows.append(('Logging:', 'on' if logging_on else 'off'))
+
+    # Format as HTML table.
+    html = '<table>'
+    for label, value in rows:
+        html += f"<tr><th align='left'>{label}</th><td>{value}</td></tr>"
+    html += '</table>'
+    return html
+
+
 def _has_nondefault_options(opts):
     """Check whether any non-default iptables rule options are set.
 
@@ -1446,8 +1549,6 @@ def _has_nondefault_options(opts):
     if _opt_str(opts, 'log_level'):
         return True
     if _opt_str(opts, 'log_prefix'):
-        return True
-    if _opt_bool(opts, 'stateless'):
         return True
     return _opt_int(opts, 'ulog_nlgroup') > 1
 
