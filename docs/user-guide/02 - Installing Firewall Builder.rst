@@ -1,147 +1,166 @@
-Installing Firewall Builder
-============================
+Installing FirewallFabrik
+=========================
 
 .. sectnum::
-   :start: 1
+   :start: 2
 
 .. contents::
    :local:
    :depth: 2
 
 
-RPM-Based Distributions (Red Hat, Fedora, OpenSUSE, and Others)
-----------------------------------------------------------------
+Requirements
+------------
 
-Using pre-built binary RPM
-
-You need to download and install the Firewall Builder RPM:
-
-* Example: ``fwbuilder-4.2.2.3541-1.el5.i386.rpm``
-
-To satisfy dependencies, you need the following packages installed on your system:
-
-* libxml2 v2.4.10 or newer
-* libxslt v1.0.7 o newer
-* ucd-snmp or net-snmp
-* QT 4.3.x, 4.4.x, 4.5.x, 4.6.x. Firewall Builder uses features available in QT 4.3 and later; the system does not support version 4.2 and earlier.
-
-Pre-built binary RPMs for RedHat Enterprise Linux 5 (RHEL 5) and CentOS 5.x
-
-These distributions do not come with QT4, and third-party binary RPMs of QT v4.3.x and 4.4.x can be difficult to obtain. For these distributions, we distribute binary RPMs of Firewall Builder 4.0 statically linked with QT 4.4.1. These RPMs are posted in the Downloads area of the SourceForge project site. These RPMs have the same standard names ``fwbuilder-4.2.2.3541-1.el5.i386.rpm``, but they have no dependency on QT RPMs.
-
-If a Firewall Builder V3.0 distribution statically linked with QT crashes on start on your CentOS system, please upgrade to the latest version of Firewall Builder. If you need to run Firewall Builder V3.0 please make sure you have the following font packages installed: ``bitmap-fonts`` or ``bitstream-vera-fonts``. Either one resolves the issue and will enable Firewall Builder to work.
-
-To install Firewall Builder, navigate to your download directory and execute the following command (replacing the filename with the name of the files you actually downloaded):
-
-.. code-block:: bash
-
-   rpm -i fwbuilder-4.0.0-1.i386.rpm
+FirewallFabrik requires **Python 3.14** or later. The GUI additionally requires **PySide6** (Qt6 for Python).
 
 
-Ubuntu Installation
---------------------
-
-Using pre-built binary packages
-
-You need to download and install the Firewall Builder package:
-
-* Example: ``fwbuilder_4.2.2.3541-ubuntu-karmic-1_i386.deb``
-
-To satisfy dependencies, you need the following packages installed on your system:
-
-* QT 4.3.x, 4.4.x, 4.5.x, 4.6.x. Firewall Builder uses features available in QT 4.3 and later; the system does not support version 4.2 and earlier.
-
-You can obtain QT using your favorite package manager.
-
-To install Firewall Builder, go to your download directory and execute the following command (replacing the filenames with the names of the files you actually downloaded):
-
-.. code-block:: bash
-
-   dpkg -i fwbuilder_4.2.2.3541-ubuntu-karmic-1_i386.deb
-
-
-Installing FreeBSD and OpenBSD Ports
--------------------------------------
-
-Firewall Builder consists of two ports: ``/usr/ports/security/libfwbuilder`` and ``/usr/ports/security/fwbuilder``. Once both ports are updated (which typically takes two to three weeks after the package is released), simply install the port as usual using ``portinstall`` or issuing the ``make install`` command in ``/usr/ports/security/fwbuilder``.
-
-
-Windows Installation
+Installing from PyPI
 ---------------------
 
-To install onto a Windows system, double-click the package file, then follow the step-by-step instructions in the Installation wizard.
+The recommended way to install FirewallFabrik is from PyPI. Make sure to include the ``[gui]`` extra to pull in PySide6 for the graphical interface.
 
+Using uv (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Mac OS X Installation
-----------------------
-
-The Mac OS X package is distributed in the form of a disk image (that is, a ``.dmg`` file). Double-click the image to mount it, then drag the Firewall Builder application to your ``Applications`` folder (or any other location).
-
-
-Compiling from Source
-----------------------
-
-Firewall Builder can be compiled and works on the following OS and distributions: Debian Linux (including Ubuntu), Mandrake Linux, RedHat Linux, SuSE Linux, Gentoo Linux, FreeBSD, OpenBSD, Mac OS X, and Solaris.
-
-To compile from source, first download the dependencies for your platform:
-
-For RedHat-based systems:
-
-* ``automake``
-* ``autoconf``
-* ``libtool``
-* ``libxml2-devel``
-* ``libxslt-devel``
-* ``net-snmp-devel``
-* ``qt``
-* ``qt-devel``
-* ``qt-x11``
-
-You may need to install the packages ``elfutils-libelf`` and ``elfutils-libelf-devel`` (``libelf`` on SuSE), otherwise ``libfwbuilder`` does not pick up the ``net-snmp`` library even if it is installed.
-
-For Debian-based systems:
-
-* ``automake``
-* ``autoconf``
-* ``libtool``
-* ``libxml2-dev``
-* ``libxslt-dev``
-* ``libsnmp-dev``
-* ``libqt4-core``
-* ``libqt4-dev``
-* ``libqt4-gui``
-* ``qt4-dev-tools``
-
-Next, download the source archives from SourceForge, for example ``fwbuilder-4.2.2.3541.tar.gz``, and unpack them to a location. Then build as follows:
+You can run FirewallFabrik without a permanent install:
 
 .. code-block:: bash
 
-   cd /fwbuilder-<version_number>
-   ./autogen.sh
-   make
-   make install
+   uvx --from 'firewallfabrik[gui]' fwf
 
-
-Compilation may require other packages for RedHat and SuSE
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you observe errors that refer to missing ``autoconf`` macros while running ``autogen.sh`` for ``fwbuilder``, check to ensure your system includes RPM ``gettext-devel``. You may need to add other "development" RPMs besides these, but these two are often forgotten.
-
-The configure scripts for ``fwbuilder`` tries to find your QT4 installation in several standard places. However, if you installed QT in a directory where the script is unable to find it, you can provide the path to it using the ``--with-qtdir`` option to script ``autogen.sh``, as in the following example:
+Or install it as a tool:
 
 .. code-block:: bash
 
-   cd /fwbuilder-<version_number>
-   ./autogen.sh --with-qtdir=/opt/qt4
-   make
-   make install
+   uv tool install 'firewallfabrik[gui]'
 
-By default, script configure assumes ``prefix="/usr/local"`` and installs libraries in ``/usr/local/lib`` and binaries in ``/usr/local/bin``. Make sure ``/usr/local/lib`` is added to your ``LD_LIBRARY_PATH`` environment variable or to the ``/etc/ld.so.conf`` configuration file; otherwise the program will be unable to find dynamic libraries there. Likewise, ``/usr/local/bin`` must be included in your PATH.
-
-You can install libraries and binaries in a different place by specifying a new prefix, as follows:
+Using pipx
+~~~~~~~~~~
 
 .. code-block:: bash
 
-   ./autogen.sh --prefix="/opt"
+   pipx install 'firewallfabrik[gui]'
 
-This command installs libraries in ``/opt/lib`` and the program in ``/opt/bin``.
+Using pip
+~~~~~~~~~
+
+.. code-block:: bash
+
+   pip install --user 'firewallfabrik[gui]'
+
+On certain Linux distributions that protect the system Python environment, you may need to add the ``--break-system-packages`` flag.
+
+
+CLI-Only Installation (No GUI)
+-------------------------------
+
+If you only need the command-line compilers (``fwf-ipt``, ``fwf-nft``) and do not need the graphical interface, you can install without the ``[gui]`` extra. This avoids pulling in PySide6:
+
+.. code-block:: bash
+
+   pip install firewallfabrik
+
+
+Installing from Git
+--------------------
+
+For development or to run the latest code from the repository:
+
+.. code-block:: bash
+
+   python3.14 -m venv $HOME/venvs/firewallfabrik
+   source $HOME/venvs/firewallfabrik/bin/activate
+   pip install --upgrade pip
+   pip install --editable '.[gui]'
+   fwf
+
+To also install development dependencies (e.g. pytest), add ``--group dev``:
+
+.. code-block:: bash
+
+   pip install --editable '.[gui]' --group dev
+
+
+Using Native PySide6 on Linux
+-------------------------------
+
+Some Linux distributions ship a native PySide6 package that integrates better with the desktop theme (e.g. ``python3-pyside6`` on Fedora). To use it instead of the PyPI version:
+
+1. Install the distribution's PySide6 package, for example:
+
+   .. code-block:: bash
+
+      dnf install python3-pyside6
+
+2. Install FirewallFabrik **without** the ``[gui]`` extra so it does not pull in a separate PySide6 from PyPI:
+
+   .. code-block:: bash
+
+      pip install firewallfabrik
+
+3. If you are using ``pipx``, ``uv tool``, or a virtual environment, initialize it with ``--system-site-packages`` so the native PySide6 is inherited.
+
+
+Linux Desktop Integration
+--------------------------
+
+To add FirewallFabrik to your application menu and associate its icon:
+
+.. code-block:: bash
+
+   cp assets/ch.linuxfabrik.firewallfabrik.desktop $HOME/.local/share/applications/
+   mkdir -p $HOME/.local/share/icons/hicolor/scalable/apps/
+   cp src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg \
+       $HOME/.local/share/icons/hicolor/scalable/apps/ch.linuxfabrik.firewallfabrik.svg
+   update-desktop-database $HOME/.local/share/applications/ 2>/dev/null
+   gtk-update-icon-cache $HOME/.local/share/icons/hicolor/ 2>/dev/null
+
+If ``fwf`` is installed inside a virtual environment and is not on your system ``PATH``, update the desktop file to use the full path:
+
+.. code-block:: bash
+
+   sed -i "s|Exec=fwf|Exec=$VIRTUAL_ENV/bin/fwf|" \
+       $HOME/.local/share/applications/ch.linuxfabrik.firewallfabrik.desktop
+
+
+Running FirewallFabrik
+-----------------------
+
+After installation, launch the GUI with:
+
+.. code-block:: bash
+
+   fwf
+
+To open a specific database file on startup:
+
+.. code-block:: bash
+
+   fwf myconfig.fwf
+   fwf -f myconfig.fwf
+
+FirewallFabrik can also open Firewall Builder XML files (``.fwb``) directly.
+
+To check the installed version:
+
+.. code-block:: bash
+
+   fwf --version
+
+Both X11 and Wayland display servers are supported.
+
+
+Available Commands
+-------------------
+
+FirewallFabrik provides the following commands:
+
+``fwf``
+   The graphical interface (requires the ``[gui]`` extra).
+
+``fwf-ipt``
+   Command-line compiler for iptables configurations.
+
+``fwf-nft``
+   Command-line compiler for nftables configurations.
