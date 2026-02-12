@@ -1,0 +1,13 @@
+#!/usr/sbin/nft -f
+#
+#  This is automatically generated file. DO NOT MODIFY !
+#
+#  Firewall Builder  fwf VERSION
+#
+#  Generated TIMESTAMP
+#
+#  fw is part of any is OFF
+#  ip forwarding is OFF
+#
+
+flush ruleset
