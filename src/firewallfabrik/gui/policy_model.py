@@ -39,6 +39,7 @@ from firewallfabrik.gui.label_settings import (
 )
 
 ELEMENTS_ROLE = Qt.ItemDataRole.UserRole + 1
+NEGATED_ROLE = Qt.ItemDataRole.UserRole + 2
 FWF_MIME_TYPE = 'application/x-fwf-object'
 _INVALID_INDEX = QModelIndex()
 
@@ -104,6 +105,7 @@ class _RowData:
     group: str
     itf: list
     label: str
+    negations: dict  # slot → bool, e.g. {'src': True, 'dst': False}
     options_display: list  # list[tuple[None, str, str]]  (None, label, icon-type)
     position: int
     rule_id: uuid.UUID
@@ -214,6 +216,7 @@ class PolicyTreeModel(QAbstractItemModel):
                     group=group_name,
                     itf=slots.get('itf', []),
                     label=rule.label or '',
+                    negations=rule.negations or {},
                     options_display=_build_options_display(opts),
                     position=rule.position,
                     rule_id=rule.id,
@@ -450,6 +453,11 @@ class PolicyTreeModel(QAbstractItemModel):
                 return getattr(row_data, slot)
             if col == _COL_OPTIONS:
                 return row_data.options_display or None
+        if role == NEGATED_ROLE:
+            if col in _ELEMENT_COLS:
+                slot = _COL_TO_SLOT[col]
+                return bool(row_data.negations.get(slot))
+            return False
         return None
 
     @staticmethod

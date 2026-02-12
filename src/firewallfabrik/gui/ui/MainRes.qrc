@@ -55,6 +55,30 @@
     <file alias="Icons/UDPService/icon-tree">Icons/service-udp_16.png</file>
     <file alias="Icons/UserService/icon-tree">Icons/user_16.png</file>
 
+    <!-- Negated object-tree icons 16x16 (:/Icons/Type/icon-neg-tree) -->
+    <file alias="Icons/AddressRange/icon-neg-tree">Icons/rangeaddress-neg_16.png</file>
+    <file alias="Icons/Cluster/icon-neg-tree">Icons/cluster-neg_16.png</file>
+    <file alias="Icons/CustomService/icon-neg-tree">Icons/service-custom-neg_16.png</file>
+    <file alias="Icons/Firewall/icon-neg-tree">Icons/firewall-neg_16.png</file>
+    <file alias="Icons/Host/icon-neg-tree">Icons/host-neg_16.png</file>
+    <file alias="Icons/ICMP6Service/icon-neg-tree">Icons/service-icmp6-neg_16.png</file>
+    <file alias="Icons/ICMPService/icon-neg-tree">Icons/service-icmp-neg_16.png</file>
+    <file alias="Icons/IPService/icon-neg-tree">Icons/service-ip-neg_16.png</file>
+    <file alias="Icons/IPv4/icon-neg-tree">Icons/address-neg_16.png</file>
+    <file alias="Icons/IPv6/icon-neg-tree">Icons/address6-neg_16.png</file>
+    <file alias="Icons/Interface/icon-neg-tree">Icons/interface-neg_16.png</file>
+    <file alias="Icons/Interval/icon-neg-tree">Icons/clock-neg_16.png</file>
+    <file alias="Icons/IntervalGroup/icon-neg-tree">Icons/clock-group-neg_16.png</file>
+    <file alias="Icons/Network/icon-neg-tree">Icons/network-neg_16.png</file>
+    <file alias="Icons/NetworkIPv6/icon-neg-tree">Icons/network6-neg_16.png</file>
+    <file alias="Icons/ObjectGroup/icon-neg-tree">Icons/object-group-neg_16.png</file>
+    <file alias="Icons/PhysAddress/icon-neg-tree">Icons/physaddress-neg_16.png</file>
+    <file alias="Icons/ServiceGroup/icon-neg-tree">Icons/service-group-neg_16.png</file>
+    <file alias="Icons/TCPService/icon-neg-tree">Icons/service-tcp-neg_16.png</file>
+    <file alias="Icons/TagService/icon-neg-tree">Icons/service-tag-neg_16.png</file>
+    <file alias="Icons/UDPService/icon-neg-tree">Icons/service-udp-neg_16.png</file>
+    <file alias="Icons/UserService/icon-neg-tree">Icons/user-neg_16.png</file>
+
     <!-- Rule-set icons 25x25 (:/Icons/Type/icon) -->
     <file alias="Icons/Accept/icon">Icons/accept_25.png</file>
     <file alias="Icons/Accounting/icon">Icons/accounting_25.png</file>
@@ -93,6 +117,30 @@
     <file alias="Icons/TagService/icon">Icons/service-tag_25.png</file>
     <file alias="Icons/UDPService/icon">Icons/service-udp_25.png</file>
     <file alias="Icons/UserService/icon">Icons/user_25.png</file>
+
+    <!-- Negated rule-set icons 25x25 (:/Icons/Type/icon-neg) -->
+    <file alias="Icons/AddressRange/icon-neg">Icons/rangeaddress-neg_25.png</file>
+    <file alias="Icons/Cluster/icon-neg">Icons/cluster-neg_25.png</file>
+    <file alias="Icons/CustomService/icon-neg">Icons/service-custom-neg_25.png</file>
+    <file alias="Icons/Firewall/icon-neg">Icons/firewall-neg_25.png</file>
+    <file alias="Icons/Host/icon-neg">Icons/host-neg_25.png</file>
+    <file alias="Icons/ICMP6Service/icon-neg">Icons/service-icmp6-neg_25.png</file>
+    <file alias="Icons/ICMPService/icon-neg">Icons/service-icmp-neg_25.png</file>
+    <file alias="Icons/IPService/icon-neg">Icons/service-ip-neg_25.png</file>
+    <file alias="Icons/IPv4/icon-neg">Icons/address-neg_25.png</file>
+    <file alias="Icons/IPv6/icon-neg">Icons/address6-neg_25.png</file>
+    <file alias="Icons/Interface/icon-neg">Icons/interface-neg_25.png</file>
+    <file alias="Icons/Interval/icon-neg">Icons/clock-neg_25.png</file>
+    <file alias="Icons/IntervalGroup/icon-neg">Icons/clock-group-neg_25.png</file>
+    <file alias="Icons/Network/icon-neg">Icons/network-neg_25.png</file>
+    <file alias="Icons/NetworkIPv6/icon-neg">Icons/network6-neg_25.png</file>
+    <file alias="Icons/ObjectGroup/icon-neg">Icons/object-group-neg_25.png</file>
+    <file alias="Icons/PhysAddress/icon-neg">Icons/physaddress-neg_25.png</file>
+    <file alias="Icons/ServiceGroup/icon-neg">Icons/service-group-neg_25.png</file>
+    <file alias="Icons/TCPService/icon-neg">Icons/service-tcp-neg_25.png</file>
+    <file alias="Icons/TagService/icon-neg">Icons/service-tag-neg_25.png</file>
+    <file alias="Icons/UDPService/icon-neg">Icons/service-udp-neg_25.png</file>
+    <file alias="Icons/UserService/icon-neg">Icons/user-neg_25.png</file>
 
     <!-- Editor/dialog big icons (:/Icons/Type/icon-big) -->
     <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>

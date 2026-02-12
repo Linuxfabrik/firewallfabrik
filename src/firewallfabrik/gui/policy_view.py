@@ -16,7 +16,7 @@ import json
 import uuid
 
 from PySide6.QtCore import QModelIndex, QRect, QSettings, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
@@ -40,6 +40,7 @@ from firewallfabrik.gui.policy_model import (
     _ELEMENT_COLS,
     ELEMENTS_ROLE,
     FWF_MIME_TYPE,
+    NEGATED_ROLE,
 )
 
 _VALID_TYPES_BY_SLOT = {
@@ -100,6 +101,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
 
     _BORDER_COLOR = QColor('lightgray')
     _H_PAD = 2
+    _HIGHLIGHT_BG = QColor(0xE8, 0xE8, 0xE8)  # discrete light gray, like fwbuilder
     _ICON_TEXT_GAP = 2
     _V_PAD = 2
 
@@ -113,9 +115,11 @@ class _CellBorderDelegate(QStyledItemDelegate):
         """Return the configured icon size (16 or 25)."""
         return QSettings().value('UI/IconSizeInRules', 25, type=int)
 
-    def _icon_suffix(self):
+    def _icon_suffix(self, negated=False):
         """Return the QRC alias suffix for the configured size."""
-        return 'icon-tree' if self._icon_size() == 16 else 'icon'
+        if self._icon_size() == 16:
+            return 'icon-neg-tree' if negated else 'icon-tree'
+        return 'icon-neg' if negated else 'icon'
 
     def sizeHint(self, option, index):
         icon_sz = self._icon_size()
@@ -135,6 +139,12 @@ class _CellBorderDelegate(QStyledItemDelegate):
         self.initStyleOption(option, index)
         option.text = ''
         option.icon = QIcon()
+        # Use a discrete light gray for selection instead of the system blue.
+        option.palette.setColor(QPalette.ColorRole.Highlight, self._HIGHLIGHT_BG)
+        option.palette.setColor(
+            QPalette.ColorRole.HighlightedText,
+            option.palette.color(QPalette.ColorRole.Text),
+        )
         style = option.widget.style() if option.widget else None
         if style:
             style.drawControl(
@@ -190,7 +200,8 @@ class _CellBorderDelegate(QStyledItemDelegate):
     def _paint_elements(self, painter, option, index, elements):
         """Paint a list of (id, name, type) elements with icons."""
         icon_sz = self._icon_size()
-        icon_suffix = self._icon_suffix()
+        negated = index.data(NEGATED_ROLE)
+        icon_suffix = self._icon_suffix(negated=negated)
         rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
         line_h = max(icon_sz, painter.fontMetrics().height())
         fg = index.data(Qt.ItemDataRole.ForegroundRole)
