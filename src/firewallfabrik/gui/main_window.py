@@ -681,7 +681,7 @@ class FWWindow(QMainWindow):
         # The dialog widget sits inside a page's layout, not as a direct
         # page of the stacked widget — switch to its parent page instead.
         self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
-        self.editorPanelTabWidget.setCurrentIndex(2)
+        self._show_editor_panel()
 
         path = _build_editor_path(obj)
         if self._current_file:
@@ -748,6 +748,14 @@ class FWWindow(QMainWindow):
         QSettings().setValue('View/UndoStack', visible)
 
     @Slot()
+    def _show_editor_panel(self):
+        """Show the editor dock and switch to the Editor tab."""
+        if not self.editorDockWidget.isVisible():
+            self.editorDockWidget.setVisible(True)
+            self.actionEditor_panel.setChecked(True)
+        self.editorPanelTabWidget.setCurrentIndex(0)
+
+    @Slot()
     def _show_find_panel(self):
         """Show the editor dock and switch to the Find tab."""
         if not self.editorDockWidget.isVisible():
@@ -762,6 +770,13 @@ class FWWindow(QMainWindow):
             self.editorDockWidget.setVisible(True)
             self.actionEditor_panel.setChecked(True)
         self.editorPanelTabWidget.setCurrentIndex(2)
+
+    def _show_output_panel(self):
+        """Show the editor dock and switch to the Output tab."""
+        if not self.editorDockWidget.isVisible():
+            self.editorDockWidget.setVisible(True)
+            self.actionEditor_panel.setChecked(True)
+        self.editorPanelTabWidget.setCurrentIndex(3)
 
     def show_where_used(self, obj_id, name, obj_type):
         """Show where-used results for the given object."""
