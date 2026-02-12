@@ -1,71 +1,81 @@
 # Rule Processor Developer Documentation
 
-This document describes the rule processor pipeline architecture used by fwbuilder's compilers, with focus on the base (platform-independent) processors and the iptables-specific processors.
+This document describes the rule processor pipeline architecture used by the firewallfabrik compilers, covering the base (platform-independent) processors and the iptables- and nftables-specific processors. The Python implementation follows the same architecture as the original C++ code.
 
 ---
 
 ## Architecture Overview
 
-The compilation pipeline is a chain of `BasicRuleProcessor` objects. Each processor pulls rules from its predecessor via `getNextRule()`, transforms them, and pushes results into its own `tmp_queue`. Execution is **pull-based**: `runRuleProcessors()` calls `processNext()` on the last processor, which recursively pulls from all predecessors.
+The compilation pipeline is a chain of `BasicRuleProcessor` objects. Each processor pulls rules from its predecessor via `get_next_rule()`, transforms them, and pushes results into its own `tmp_queue`. Execution is **pull-based**: `run_rule_processors()` calls `process_next()` on the last processor, which recursively pulls from all predecessors.
 
-Key source files:
-- `src/libfwbuilder/src/fwcompiler/RuleProcessor.h` — `BasicRuleProcessor` base class (line 53)
-- `src/libfwbuilder/src/fwcompiler/Compiler.cpp` — `add()` (line 691), `runRuleProcessors()` (line 698)
+### Key source files (Python)
+
+- `src/firewallfabrik/compiler/_rule_processor.py` — `BasicRuleProcessor` base class
+- `src/firewallfabrik/compiler/_compiler.py` — `Compiler.add()`, `run_rule_processors()`
+- `src/firewallfabrik/compiler/processors/_generic.py` — generic/shared processors (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `DetectShadowing`, etc.)
+- `src/firewallfabrik/compiler/processors/_policy.py` — policy-specific base processors (`InterfacePolicyRules`, `ExpandMultipleAddresses`, `MACFiltering`, etc.)
+- `src/firewallfabrik/platforms/iptables/_policy_compiler.py` — iptables policy processors
+- `src/firewallfabrik/platforms/iptables/_nat_compiler.py` — iptables NAT processors
+- `src/firewallfabrik/platforms/iptables/_print_rule.py` — iptables output generation
+- `src/firewallfabrik/platforms/nftables/_policy_compiler.py` — nftables policy processors
+- `src/firewallfabrik/platforms/nftables/_nat_compiler.py` — nftables NAT processors
+- `src/firewallfabrik/platforms/nftables/_print_rule.py` — nftables output generation
+
+> *Legacy C++ source: `src/libfwbuilder/src/fwcompiler/` (upstream reference)*
 
 ### Class hierarchy
 
+Python uses the same class hierarchy as the C++ original:
+
 ```
-BasicRuleProcessor          (abstract base — RuleProcessor.h:53)
-├── PolicyRuleProcessor     (getNext() returns PolicyRule*)
-├── NATRuleProcessor        (getNext() returns NATRule*)
-└── RoutingRuleProcessor    (getNext() returns RoutingRule*)
+BasicRuleProcessor          (_rule_processor.py)
+├── PolicyRuleProcessor     (get_next() returns PolicyRule)
+├── NATRuleProcessor        (get_next() returns NATRule)
+└── RoutingRuleProcessor    (get_next() returns RoutingRule)
 ```
 
-All concrete processors inherit from one of the typed subclasses and are declared
-with a macro such as `DECLARE_POLICY_RULE_PROCESSOR`, which expands to:
+All concrete processors inherit from one of the typed subclasses and override `process_next()`.
 
-```cpp
-#define DECLARE_POLICY_RULE_PROCESSOR(_Name) \
-    friend class _Name; \
-    class _Name : public PolicyRuleProcessor { \
-        public: \
-        _Name(const std::string &n) : PolicyRuleProcessor(n) {}; \
-        virtual ~_Name() {}; \
-        virtual bool processNext(); \
-    };
-```
+> *C++ historical context: C++ used `DECLARE_POLICY_RULE_PROCESSOR` macros to declare processors. In Python, processors are plain subclasses:*
+>
+> ```python
+> class MyProcessor(PolicyRuleProcessor):
+>     def process_next(self) -> bool:
+>         rule = self.prev_processor.get_next_rule()
+>         ...
+> ```
 
 ### Core data structures
 
-| Member | Type | Purpose |
-|--------|------|---------|
-| `tmp_queue` | `std::deque<Rule*>` | Output buffer. Processors push transformed rules here. |
-| `prev_processor` | `BasicRuleProcessor*` | Upstream processor (data source). |
-| `compiler` | `Compiler*` | Context pointer — gives access to `fw`, `dbcopy`, options, etc. |
+| Member | Python | Purpose |
+|--------|--------|---------|
+| `tmp_queue` | `collections.deque` | Output buffer. Processors push transformed rules here. |
+| `prev_processor` | `BasicRuleProcessor` | Upstream processor (data source). |
+| `compiler` | `Compiler` | Context pointer — gives access to `fw`, `dbcopy`, options, etc. |
 | `do_once` | `bool` | Guard for `slurp()` — ensures it only pulls once. |
 
 ### Pull-based execution model
 
-The pipeline runs by repeatedly calling `processNext()` on the **last** processor
-in the chain. Each processor calls `prev_processor->getNextRule()` to pull one
+The pipeline runs by repeatedly calling `process_next()` on the **last** processor
+in the chain. Each processor calls `prev_processor.get_next_rule()` to pull one
 rule from upstream:
 
 ```
-runRuleProcessors():
+run_rule_processors():
     link each processor to its predecessor
-    while (last_processor->processNext()) ;
+    while (last_processor.process_next()) ;
 
-getNextRule():
-    while (tmp_queue is empty AND processNext() returns true) ;
-    if tmp_queue is empty: return nullptr
+get_next_rule():
+    while (tmp_queue is empty AND process_next() returns true) ;
+    if tmp_queue is empty: return None
     else: pop front of tmp_queue and return it
 
-processNext():                    // each processor implements this
-    rule = prev_processor->getNextRule()   // pull one rule
-    if rule is nullptr: return false
+process_next():                    # each processor implements this
+    rule = prev_processor.get_next_rule()   # pull one rule
+    if rule is None: return False
     ... transform rule ...
-    tmp_queue.push_back(rule)              // push result(s)
-    return true
+    tmp_queue.append(rule)                  # push result(s)
+    return True
 ```
 
 This means a rule only flows through the chain when the final processor
@@ -75,23 +85,20 @@ and splitting processors push multiple rules for one input.
 #### The `slurp()` method
 
 Some processors need the entire rule set at once (e.g. `DetectShadowing`,
-`printTotalNumberOfRules`). They call `slurp()` instead of `getNext()`:
+`PrintTotalNumberOfRules`). They call `slurp()` instead of `get_next_rule()`:
 
-```cpp
-bool slurp() {
-    if (!do_once) {
-        Rule *rule;
-        while ((rule = prev_processor->getNextRule()) != nullptr)
-            tmp_queue.push_back(rule);
-        do_once = true;
-        return (tmp_queue.size() != 0);
-    }
-    return false;     // subsequent calls return false immediately
-}
+```python
+def slurp(self) -> bool:
+    if not self.do_once:
+        while (rule := self.prev_processor.get_next_rule()) is not None:
+            self.tmp_queue.append(rule)
+        self.do_once = True
+        return len(self.tmp_queue) != 0
+    return False  # subsequent calls return False immediately
 ```
 
 After slurping, the processor can iterate `tmp_queue` freely. On the next
-call from `getNextRule()`, the buffered rules drain out one at a time.
+call from `get_next_rule()`, the buffered rules drain out one at a time.
 
 ### Processor categories
 
@@ -123,9 +130,11 @@ Processors communicate through string properties stored on the Rule object:
 
 ## Base Processors (platform-independent)
 
-These live in `src/libfwbuilder/src/fwcompiler/` and are reusable by all compiler backends.
+These live in `src/firewallfabrik/compiler/processors/` and are reusable by all compiler backends.
 
-### Compiler utilities (`Compiler.h` / `Compiler.cpp`)
+> *C++ reference: `src/libfwbuilder/src/fwcompiler/`*
+
+### Compiler utilities
 
 #### `Begin` (line 310 / 733) — Source
 
@@ -140,7 +149,7 @@ the source ruleset and for each rule:
 On subsequent calls returns `false` immediately. All downstream processors
 work with these copies, not the originals.
 
-> **Python**: ✅ `compiler.py:Begin` — matches C++
+> **Python**: ✅ `compiler/processors/_generic.py:Begin` — matches C++
 
 #### `printTotalNumberOfRules` (line 323 / 764) — Pass-through
 
@@ -148,7 +157,7 @@ Calls `slurp()` to buffer all upstream rules. If verbose mode is on, prints
 " processing N rules". Returns `true` once (rules then drain from buffer),
 `false` if no rules.
 
-> **Python**: ⚠️ `compiler.py:PrintTotalNumberOfRules` — slurps correctly but never prints the "processing N rules" message, no verbose check (not wired into pipeline)
+> **Python**: ⚠️ `compiler/processors/_generic.py:PrintTotalNumberOfRules` — slurps correctly but never prints the "processing N rules" message, no verbose check (not wired into pipeline)
 
 #### `createNewCompilerPass` (line 337 / 780) — Pass-through
 
@@ -163,7 +172,7 @@ phases — all rules are buffered and then re-released.
 Pulls one rule at a time. If the rule's label differs from the previous one,
 prints " rule LABEL" (when verbose). Pushes the rule unchanged.
 
-> **Python**: ⚠️ `compiler.py:SimplePrintProgress` — just passes rules through; no `current_rule_label` tracking, no " rule LABEL" output
+> **Python**: ⚠️ `compiler/processors/_generic.py:SimplePrintProgress` — just passes rules through; no `current_rule_label` tracking, no " rule LABEL" output
 
 #### `singleRuleFilter` (line 631 / 818) — Filter
 
@@ -175,7 +184,7 @@ Used in single-rule compilation mode (`-xp`). Pulls each rule and checks:
 
 Always returns `true` (even when dropping) to keep pulling upstream.
 
-> **Python**: ✅ `compiler.py:SingleRuleFilter` — matches C++ (not wired into pipeline)
+> **Python**: ✅ `compiler/processors/_generic.py:SingleRuleFilter` — matches C++ (not wired into pipeline)
 
 #### `Debug` (line 621 / 791) — Pass-through
 
@@ -185,7 +194,7 @@ rule matching `debug_rule`, calls `debugPrintRule()`. Automatically inserted
 after every processor by `Compiler::add()` when `-xp` is active (except after
 `simplePrintProgress`).
 
-> **Python**: ✅ `_rule_processor.py:Debug` — matches C++. Uses `slurp()`, prints separator with previous processor name, calls `compiler.debug_print_rule()` for matching rules. Automatically inserted by `Compiler.add()` when `rule_debug_on` is True (except after `SimplePrintProgress`). `PolicyCompiler_ipt` overrides `debug_print_rule()` with rich columnar output matching C++. Activated via CLI `--xp N`/`--xn N`/`--xr N`.
+> **Python**: ✅ `compiler/_rule_processor.py:Debug` — matches C++. Uses `slurp()`, prints separator with previous processor name, calls `compiler.debug_print_rule()` for matching rules. Automatically inserted by `Compiler.add()` when `rule_debug_on` is True (except after `SimplePrintProgress`). `PolicyCompiler_ipt` overrides `debug_print_rule()` with rich columnar output matching C++. Activated via CLI `--xp N`/`--xn N`/`--xr N`.
 
 #### `dropRuleWithEmptyRE` (line 562 / 1564) — Filter
 
@@ -202,7 +211,7 @@ This processor appears multiple times in the pipeline — after each stage that
 can remove objects from rule elements (group expansion, address family
 filtering, address expansion, etc.).
 
-> **Python**: ✅ `_generic.py:DropRuleWithEmptyRE` — checks `has_empty_re` flag set by upstream processors that remove objects from elements. Used in both policy and NAT pipelines.
+> **Python**: ✅ `compiler/processors/_generic.py:DropRuleWithEmptyRE` — checks `has_empty_re` flag set by upstream processors that remove objects from elements. Used in both policy and NAT pipelines.
 
 #### `checkForObjectsWithErrors` (line 594 / 1411) — Validation
 
@@ -211,7 +220,7 @@ Pulls one rule and iterates all rule elements. For each object that has a
 object's `.error_msg`. This propagates errors from MultiAddress objects that
 failed DNS resolution or other preprocessor steps.
 
-> **Python**: ✅ `policy_compiler_ipt.py:CheckForObjectsWithErrors` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:CheckForObjectsWithErrors` — matches C++
 
 #### `DropIPv4Rules` / `DropIPv6Rules` (line 534 / 545) — Filter
 
@@ -227,14 +236,13 @@ element:
 `DropIPv4Rules` removes IPv4 (for IPv6-only compilation);
 `DropIPv6Rules` removes IPv6 (for IPv4-only compilation).
 
-> **Python**: ✅ `compiler.py:DropIPv4Rules` / `DropIPv6Rules` — matches C++
+> **Python**: ✅ `compiler/processors/_generic.py:DropIPv4Rules` / `DropIPv6Rules` — matches C++
 
-### Generic rule element processors (`Compiler.h` / `Compiler.cpp`)
+### Generic rule element processors
 
-These are **parameterized** — they take a `re_type` string (e.g.
-`RuleElementSrc::TYPENAME`) and operate on that specific rule element.
-Named convenience subclasses instantiate them for specific elements
-(see [Convenience subclasses](#compiler-level-convenience-subclasses)).
+These are **parameterized** — they take a slot name (e.g. `'src'`) and operate on that specific rule element. Named convenience subclasses instantiate them for specific elements (see [Convenience subclasses](#compiler-level-convenience-subclasses)).
+
+> *C++ reference: `Compiler.h` / `Compiler.cpp`*
 
 #### `splitIfRuleElementMatchesFW` (line 363 / 861) — Split
 
@@ -250,7 +258,7 @@ element and pushes the original too. This ensures the firewall gets its own
 rule for proper chain assignment (OUTPUT for firewall-sourced, INPUT for
 firewall-destined, FORWARD for others).
 
-> **Python**: ✅ `policy_compiler_ipt.py:_SplitIfRuleElementMatchesFW` — matches C++ (via `SplitIfSrcMatchesFw` / `SplitIfDstMatchesFw`)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:_SplitIfRuleElementMatchesFW` — matches C++ (via `SplitIfSrcMatchesFw` / `SplitIfDstMatchesFw`)
 
 #### `singleObjectNegation` (line 376 / 985) — Transform
 
@@ -265,7 +273,7 @@ For address elements: only applies when the single address has exactly one
 inet address AND doesn't `complexMatch()` the firewall (which would need
 splitting first).
 
-> **Python**: ✅ `policy_compiler_ipt.py:SingleSrcNegation` / `SingleDstNegation` — marks `single_object_negation` if neg+size==1, with `isinstance(Address)` type check and `complexMatch(fw)` guard. Wired into pipeline. Missing: no `countInetAddresses` check (relies on `isinstance(Address)` which excludes Host/Firewall/Interface), no AddressTable/ipset handling, no TagService/UserService special case
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SingleSrcNegation` / `SingleDstNegation` — marks `single_object_negation` if neg+size==1, with `isinstance(Address)` type check and `complexMatch(fw)` guard. Wired into pipeline. Missing: no `countInetAddresses` check (relies on `isinstance(Address)` which excludes Host/Firewall/Interface), no AddressTable/ipset handling, no TagService/UserService special case
 
 #### `fullInterfaceNegationInRE` (line 389 / 1036) — Transform
 
@@ -281,7 +289,7 @@ interfaces. Given "not eth0, eth1":
 
 Result: `!{eth0, eth1}` becomes `{eth2, eth3}`.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:ItfNegation` + `policy_compiler.py:ItfNegation` — two implementations. ipt version: single-object case correctly marks `single_object_negation`; multi-object case replaces with all other interfaces but only excludes loopback — missing C++ filters for unprotected, bridge port, and cluster interfaces (not wired into pipeline)
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:ItfNegation` + `compiler/processors/_policy.py:ItfNegation` — two implementations. ipt version: single-object case correctly marks `single_object_negation`; multi-object case replaces with all other interfaces but only excludes loopback — missing C++ filters for unprotected, bridge port, and cluster interfaces (not wired into pipeline)
 
 #### `replaceClusterInterfaceInItfRE` (line 402 / 1102) — Transform
 
@@ -303,7 +311,7 @@ element, keeping only the first occurrence of each object (compared by ID
 via the `equalObj` functor, or a custom comparator). If duplicates were
 removed, clears and rebuilds the element with unique objects only.
 
-> **Python**: ✅ `compiler.py:_eliminate_duplicates_in_re` method — used by `EliminateDuplicatesInSRC`/`DST`/`SRV` wrapper processors
+> **Python**: ✅ `compiler/processors/_generic.py:EliminateDuplicatesInSRC`/`DST`/`SRV` — deduplication by object identity
 
 #### `recursiveGroupsInRE` (line 450 / 1204) — Validation
 
@@ -324,7 +332,7 @@ option:
   warning (a match-nothing element is meaningless).
 - **If false**: aborts compilation with an error listing the empty groups.
 
-> **Python**: ✅ `_generic.py:EmptyGroupsInRE` — parameterized by slot name. Recursively counts group children via `expand_group()`. Respects `ignore_empty_groups` option: removes empty groups with warning (or aborts). Drops rule if element becomes "any" after removal. Wired into both iptables and nftables policy pipelines (SRC, DST, SRV, ITF) and iptables NAT pipeline (OSRC, ODST, OSRV, TSRC, TDST, TSRV).
+> **Python**: ✅ `compiler/processors/_generic.py:EmptyGroupsInRE` — parameterized by slot name. Recursively counts group children via `expand_group()`. Respects `ignore_empty_groups` option: removes empty groups with warning (or aborts). Drops rule if element becomes "any" after removal. Wired into both iptables and nftables policy pipelines (SRC, DST, SRV, ITF) and iptables NAT pipeline (OSRC, ODST, OSRV, TSRC, TDST, TSRV).
 
 #### `swapMultiAddressObjectsInRE` (line 486 / 1340) — Transform
 
@@ -348,7 +356,7 @@ interface addresses. Calls `compiler->_expand_addr()` which:
 5. Filters by current address family (IPv4 vs. IPv6).
 6. Sorts results by address value for deterministic output.
 
-> **Python**: ✅ `compiler.py:_expand_addr` method — used by `ExpandMultipleAddresses`
+> **Python**: ✅ `compiler/_compiler.py:Compiler.expand_addr` method — used by `ExpandMultipleAddresses`
 
 #### `ReplaceFirewallObjectWithSelfInRE` (line 858 / 915) — Transform
 
@@ -370,7 +378,9 @@ and gets the corresponding member interface via
 
 > **Python**: ❌ Not implemented
 
-### PolicyCompiler processors (`PolicyCompiler.h` / `PolicyCompiler.cpp`)
+### PolicyCompiler processors
+
+> *C++ reference: `PolicyCompiler.h` / `PolicyCompiler.cpp`*
 
 #### `InterfacePolicyRules` (line 152 / 358) — Split
 
@@ -384,7 +394,7 @@ rule unchanged. Otherwise, for each object in Itf:
 
 Each output rule has exactly one interface in its Itf element.
 
-> **Python**: ✅ `policy_compiler.py:InterfacePolicyRules` — matches C++ (not wired into pipeline; ipt uses `ConvertToAtomicForInterfaces` instead)
+> **Python**: ✅ `compiler/processors/_policy.py:InterfacePolicyRules` — matches C++ (not wired into pipeline; ipt uses `ConvertToAtomicForInterfaces` instead)
 
 #### `ExpandGroups` (line 160 / 414) — Transform
 
@@ -397,7 +407,7 @@ Recursively expands all group objects in **Src, Dst, and Srv**. Calls
 4. Sorts results alphabetically by name.
 5. Validates each expanded object is appropriate for the element type.
 
-> **Python**: ✅ `compiler.py:ExpandGroups` — matches C++
+> **Python**: ✅ `compiler/processors/_generic.py:ExpandGroups` — matches C++
 
 #### `expandGroupsInSrv` (line 165 / 431) — Transform
 
@@ -409,14 +419,14 @@ Same as `ExpandGroups` but only for the **Srv** element.
 
 Same as `ExpandGroups` but only for the **Itf** element.
 
-> **Python**: ✅ `policy_compiler_ipt.py:ExpandGroupsInItf` — correct, calls `expand_groups_in_rule_element()` on Itf only (not wired into pipeline)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:ExpandGroupsInItf` — correct, calls `expand_groups_in_rule_element()` on Itf only (not wired into pipeline)
 
 #### `ExpandMultipleAddresses` (line 277) — Transform
 
 Expands Host and Firewall objects in both **Src and Dst** to their
 individual interface addresses. Calls `compiler->_expand_addr()` on each.
 
-> **Python**: ✅ `policy_compiler.py` + `policy_compiler_ipt.py:ExpandMultipleAddresses` — matches C++
+> **Python**: ✅ `compiler/processors/_policy.py` + `platforms/iptables/_policy_compiler.py:ExpandMultipleAddresses` — matches C++
 
 #### `addressRanges` (line 283 / 472) — Split
 
@@ -459,7 +469,7 @@ Creates the **cartesian product** of Src × Dst. For each (src_obj, dst_obj)
 pair, creates a new rule with exactly one object in Src and one in Dst.
 Srv is left unchanged (may still have multiple objects).
 
-> **Python**: ✅ `policy_compiler_ipt.py:ConvertToAtomicForAddresses` — matches C++ (Src × Dst cartesian product)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:ConvertToAtomicForAddresses` — matches C++ (Src × Dst cartesian product)
 
 #### `ConvertToAtomicForIntervals` (line 316 / 762) — Split
 
@@ -475,7 +485,7 @@ Full atomic conversion: creates the **cartesian product** of Src × Dst × Srv.
 Each output rule has exactly one object in each element. Used in the
 shadowing detection pass where exact comparison is needed.
 
-> **Python**: ✅ `compiler.py:ConvertToAtomic` — matches C++ (not wired into pipeline; only used by shadowing pass)
+> **Python**: ✅ `compiler/processors/_generic.py:ConvertToAtomic` — matches C++ (not wired into pipeline; only used by shadowing pass)
 
 #### `MACFiltering` (line 509 / 980) — Transform
 
@@ -483,7 +493,7 @@ Removes `physAddress` objects from Src and Dst (MAC filtering is unsupported
 on most platforms). Issues a warning if any were removed. Aborts if a rule
 element becomes empty after removal (means the rule only matched on MAC).
 
-> **Python**: ✅ `policy_compiler.py:MACFiltering` — matches C++ (not wired into pipeline)
+> **Python**: ✅ `compiler/processors/_policy.py:MACFiltering` — matches C++ (not wired into pipeline)
 
 #### `DetectShadowing` (line 449 / 891) — Validation
 
@@ -499,11 +509,13 @@ and hidden rules):
 Also has a variant `DetectShadowingForNonTerminatingRules` that detects
 when a non-terminating rule (Continue) shadows a terminating rule above it.
 
-> **Python**: ✅ `_generic.py:DetectShadowing` — fully implemented. Processes rules one at a time (no slurp), accumulates in `_rules_seen`. Skips rules with negation, Branch/Continue/Return/Accounting actions, fallback, or hidden flags. Checks interface, direction, chain, and all three elements (src, dst, srv) for containment. Address containment via `_addr_contains()` supports Network, AddressRange, and single Address. Service containment via `_srv_contains()` supports TCP/UDP port range, ICMP type, IPService flags/proto, and cross-type IPService(proto=0) shadowing. Wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Missing: `DetectShadowingForNonTerminatingRules` variant, separate shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing`.
+> **Python**: ✅ `compiler/processors/_generic.py:DetectShadowing` — fully implemented. Processes rules one at a time (no slurp), accumulates in `_rules_seen`. Skips rules with negation, Branch/Continue/Return/Accounting actions, fallback, or hidden flags. Checks interface, direction, chain, and all three elements (src, dst, srv) for containment. Address containment via `_addr_contains()` supports Network, AddressRange, and single Address. Service containment via `_srv_contains()` supports TCP/UDP port range, ICMP type, IPService flags/proto, and cross-type IPService(proto=0) shadowing. Wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Missing: `DetectShadowingForNonTerminatingRules` variant, separate shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing`.
 
-### Generic service processors (`Compiler.h` / `Compiler.cpp`)
+### Generic service processors
 
 These processors operate on the Srv (or OSrv for NAT) rule element.
+
+> *C++ reference: `Compiler.h` / `Compiler.cpp`*
 
 #### `groupServicesByProtocol` (line 655) — Split
 
@@ -514,7 +526,7 @@ has services of the same protocol.
 
 If the rule has only one service, it passes through unchanged.
 
-> **Python**: ✅ `policy_compiler_ipt.py:GroupServicesByProtocol` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:GroupServicesByProtocol` — matches C++
 
 #### `separateTCPWithFlags` — Split
 
@@ -528,7 +540,7 @@ flags set into individual rules. Condition: `TCPService::isA(srv) && has flags`.
 Separates TCP/UDP services where source and destination port ranges are
 mismatched (can't be combined in a single `-m multiport` match).
 
-> **Python**: ✅ `policy_compiler_ipt.py:SeparatePortRanges` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SeparatePortRanges` — matches C++
 
 #### `separateSrcPort` — Split
 
@@ -567,24 +579,24 @@ rule elements. These are defined in the Compiler and PolicyCompiler headers:
 
 | Subclass | Base processor | Rule element | Python |
 |----------|---------------|--------------|--------|
-| `eliminateDuplicatesInSRC` | `eliminateDuplicatesInRE` | Src | ✅ `policy_compiler_ipt.py` |
-| `eliminateDuplicatesInDST` | `eliminateDuplicatesInRE` | Dst | ✅ `policy_compiler_ipt.py` |
-| `eliminateDuplicatesInSRV` | `eliminateDuplicatesInRE` | Srv | ✅ `policy_compiler_ipt.py` |
+| `eliminateDuplicatesInSRC` | `eliminateDuplicatesInRE` | Src | ✅ `compiler/processors/_generic.py` |
+| `eliminateDuplicatesInDST` | `eliminateDuplicatesInRE` | Dst | ✅ `compiler/processors/_generic.py` |
+| `eliminateDuplicatesInSRV` | `eliminateDuplicatesInRE` | Srv | ✅ `compiler/processors/_generic.py` |
 | `recursiveGroupsInSrc` | `recursiveGroupsInRE` | Src | ❌ |
 | `recursiveGroupsInDst` | `recursiveGroupsInRE` | Dst | ❌ |
 | `recursiveGroupsInSrv` | `recursiveGroupsInRE` | Srv | ❌ |
-| `emptyGroupsInSrc` | `emptyGroupsInRE` | Src | ✅ `_generic.py:EmptyGroupsInRE('...', 'src')` |
-| `emptyGroupsInDst` | `emptyGroupsInRE` | Dst | ✅ `_generic.py:EmptyGroupsInRE('...', 'dst')` |
-| `emptyGroupsInSrv` | `emptyGroupsInRE` | Srv | ✅ `_generic.py:EmptyGroupsInRE('...', 'srv')` |
-| `emptyGroupsInItf` | `emptyGroupsInRE` | Itf | ✅ `_generic.py:EmptyGroupsInRE('...', 'itf')` |
+| `emptyGroupsInSrc` | `emptyGroupsInRE` | Src | ✅ `compiler/processors/_generic.py:EmptyGroupsInRE('...', 'src')` |
+| `emptyGroupsInDst` | `emptyGroupsInRE` | Dst | ✅ `compiler/processors/_generic.py:EmptyGroupsInRE('...', 'dst')` |
+| `emptyGroupsInSrv` | `emptyGroupsInRE` | Srv | ✅ `compiler/processors/_generic.py:EmptyGroupsInRE('...', 'srv')` |
+| `emptyGroupsInItf` | `emptyGroupsInRE` | Itf | ✅ `compiler/processors/_generic.py:EmptyGroupsInRE('...', 'itf')` |
 | `swapMultiAddressObjectsInSrc` | `swapMultiAddressObjectsInRE` | Src | ❌ |
 | `swapMultiAddressObjectsInDst` | `swapMultiAddressObjectsInRE` | Dst | ❌ |
 | `ExpandMultipleAddressesInSrc` | `expandMultipleAddressesInRE` | Src | ❌ (single `ExpandMultipleAddresses` does both) |
 | `ExpandMultipleAddressesInDst` | `expandMultipleAddressesInRE` | Dst | ❌ (single `ExpandMultipleAddresses` does both) |
-| `splitIfSrcMatchesFw` | `splitIfRuleElementMatchesFW` | Src | ✅ `policy_compiler_ipt.py` |
-| `splitIfDstMatchesFw` | `splitIfRuleElementMatchesFW` | Dst | ✅ `policy_compiler_ipt.py` |
+| `splitIfSrcMatchesFw` | `splitIfRuleElementMatchesFW` | Src | ✅ `platforms/iptables/_policy_compiler.py` |
+| `splitIfDstMatchesFw` | `splitIfRuleElementMatchesFW` | Dst | ✅ `platforms/iptables/_policy_compiler.py` |
 | `singleObjectNegationItf` | `singleObjectNegation` | Itf | ❌ (`ItfNegation` handles single-object inline) |
-| `ItfNegation` | `fullInterfaceNegationInRE` | Itf | ⚠️ `policy_compiler_ipt.py` (see above) |
+| `ItfNegation` | `fullInterfaceNegationInRE` | Itf | ⚠️ `platforms/iptables/_policy_compiler.py` (see above) |
 | `replaceClusterInterfaceInItf` | `replaceClusterInterfaceInItfRE` | Itf | ❌ |
 
 ### Common implementation patterns
@@ -593,48 +605,41 @@ These patterns recur throughout the processor implementations:
 
 #### Pattern 1: Safe iteration with deferred modification
 
-```cpp
-// Collect objects to remove first, then modify (avoids iterator invalidation)
-list<FWObject*> to_remove;
-for (auto i = re->begin(); i != re->end(); i++) {
-    FWObject *o = FWReference::getObject(*i);
-    if (condition(o)) to_remove.push_back(o);
-}
-for (auto o : to_remove) re->removeRef(o);
+```python
+# Collect objects to remove first, then modify (avoids mutation during iteration)
+to_remove = [obj for obj in rule.src if condition(obj)]
+for obj in to_remove:
+    rule.src.remove(obj)
 ```
 
 #### Pattern 2: Creating duplicate rules (splitting)
 
-```cpp
-Rule *r = Rule::cast(compiler->dbcopy->create(rule->getTypeName()));
-compiler->temp_ruleset->add(r);
-r->duplicate(rule);                          // copy all attributes
-RuleElement *re = RuleElement::cast(r->getFirstByType(re_type));
-re->clearChildren();
-re->addRef(object);                          // set single object
-tmp_queue.push_back(r);
+```python
+new_rule = rule.duplicate()
+new_rule.src = [object]         # set single object
+self.tmp_queue.append(new_rule)
 ```
 
 #### Pattern 3: Accessing typed objects in rule elements
 
-```cpp
-RuleElement *re = RuleElement::cast(rule->getFirstByType(RuleElementSrc::TYPENAME));
-for (auto i = re->begin(); i != re->end(); i++) {
-    FWObject *o = FWReference::getObject(*i);
-    Address *addr = Address::cast(o);        // returns nullptr if not an Address
-    if (addr) { /* process */ }
-}
+```python
+for obj in rule.src:
+    if isinstance(obj, Address):
+        # process address
+        ...
 ```
+
+> *C++ reference: The C++ equivalents use `FWReference::getObject()`, `RuleElement::cast()`, and `Rule::duplicate()` with explicit memory management.*
 
 ---
 
 ## iptables Processors
 
-These live in `src/iptlib/` and are specific to the iptables/ip6tables backend.
+These live in `src/firewallfabrik/platforms/iptables/` and are specific to the iptables/ip6tables backend.
 
-All are declared with `DECLARE_POLICY_RULE_PROCESSOR` in `PolicyCompiler_ipt.h`
-unless noted as inline classes. The compiler object is `PolicyCompiler_ipt`
-which provides:
+> *C++ reference: `src/iptlib/`*
+
+The compiler object is `PolicyCompiler_ipt` which provides:
 - `ipv6` flag — whether compiling for ip6tables
 - `my_table` — current table (`filter` or `mangle`)
 - `minus_n_commands` — tracks created chains (for deduplication)
@@ -650,7 +655,7 @@ classification with action Continue). When compiling for **mangle** table,
 drops rules that don't need mangle. Also drops Branch rules whose target
 ruleset only needs the other table.
 
-> **Python**: ✅ `policy_compiler_ipt.py:DropMangleTableRules` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:DropMangleTableRules` — matches C++
 
 #### `checkActionInMangleTable` (h:164 / cpp:817) — Validation
 
@@ -683,7 +688,7 @@ Preserves original rule metadata before later processors modify it. Stores:
 
 These are read later by chain selection and printing processors.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:StoreAction` — stores `stored_action` only. Missing: `originated_from_a_rule_with_tagging`, `originated_from_a_rule_with_classification`, `originated_from_a_rule_with_routing` flags. These flags are read by `splitIfSrcAny`, chain processors, and `PrintRule`.
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:StoreAction` — stores `stored_action` only. Missing: `originated_from_a_rule_with_tagging`, `originated_from_a_rule_with_classification`, `originated_from_a_rule_with_routing` flags. These flags are read by `splitIfSrcAny`, chain processors, and `PrintRule`.
 
 #### `deprecateOptionRoute` (h:187 / cpp:862) — Validation
 
@@ -699,7 +704,7 @@ major Linux distributions and is no longer supported.
 If the global firewall option `log_all` is true, sets `rule->setLogging(true)`
 on every rule. Simple global override.
 
-> **Python**: ✅ `policy_compiler_ipt.py:Logging1` — correct, checks `compiler_log_all` option and sets logging on every rule (not wired into pipeline)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:Logging1` — correct, checks `compiler_log_all` option and sets logging on every rule (not wired into pipeline)
 
 #### `Logging2` (h:241 / cpp:911) — Split
 
@@ -720,7 +725,7 @@ intermediate user-defined chain:
    original action and target. Srv is preserved for `--reject-with tcp-reset`
    which needs the protocol.
 
-> **Python**: ✅ `policy_compiler_ipt.py:Logging2` — matches C++, creates jump/LOG/action chain correctly
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:Logging2` — matches C++, creates jump/LOG/action chain correctly
 
 #### `clearLogInMangle` (h:257 / cpp:570) — Transform
 
@@ -742,7 +747,7 @@ Guarantees every rule has valid interface and direction values:
 - If interface is "any" and direction is `Inbound` or `Outbound`, adds a
   wildcard interface `"*"` (becomes `-i +` or `-o +` in output).
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:InterfaceAndDirection` — correctly sets undefined→Both, any+Both→`".iface"="nil"`, and resolves named interfaces. Missing: when iface=any AND direction is Inbound or Outbound, C++ adds wildcard `"*"` (becomes `-i +` / `-o +` in output). Python doesn't add the wildcard.
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:InterfaceAndDirection` — correctly sets undefined→Both, any+Both→`".iface"="nil"`, and resolves named interfaces. Missing: when iface=any AND direction is Inbound or Outbound, C++ adds wildcard `"*"` (becomes `-i +` / `-o +` in output). Python doesn't add the wildcard.
 
 #### `splitIfIfaceAndDirectionBoth` (h:422 / cpp:1855) — Split
 
@@ -753,7 +758,7 @@ it into two rules:
 
 Rules with direction already set to Inbound or Outbound pass through.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfIfaceAndDirectionBoth` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfIfaceAndDirectionBoth` — matches C++
 
 #### `checkInterfaceAgainstAddressFamily` (h:967 / cpp:4198) — Filter
 
@@ -767,7 +772,7 @@ Exceptions (always passed through):
 - Bridge port interfaces.
 - Failover interfaces — checks the corresponding member interface instead.
 
-> **Python**: ✅ `policy_compiler_ipt.py:CheckInterfaceAgainstAddressFamily` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:CheckInterfaceAgainstAddressFamily` — matches C++
 
 ### Tag, Classify, Route (mangle table)
 
@@ -784,7 +789,7 @@ the Src/Dst/Srv/Itf are not all "any", creates an intermediate chain:
 This is necessary because each option maps to a different iptables target
 (MARK, CLASSIFY, ROUTE), and only one target can be used per rule.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfTagClassifyOrRoute` — exists (~99 lines), logic roughly correct but over-aggressive: resets Src/Dst/Srv/Itf in all cases, while C++ only resets when `number_of_options > 1` AND at least one element is non-any (not wired into pipeline)
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:SplitIfTagClassifyOrRoute` — exists (~99 lines), logic roughly correct but over-aggressive: resets Src/Dst/Srv/Itf in all cases, while C++ only resets when `number_of_options > 1` AND at least one element is non-any (not wired into pipeline)
 
 #### `clearTagClassifyInFilter` (h:251 / cpp:534) — Transform
 
@@ -863,7 +868,7 @@ Additional checks:
   address and doesn't `complexMatch()` the firewall.
 - For `TagService` / `UserService`: always applies.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SingleSrcNegation` / `SingleDstNegation` / `SingleSrvNegation` — wired into pipeline. Src/Dst check `isinstance(Address)` and `complexMatch(fw)` guard. `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled). Missing: `countInetAddresses` check, AddressTable/ipset handling
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SingleSrcNegation` / `SingleDstNegation` / `SingleSrvNegation` — wired into pipeline. Src/Dst check `isinstance(Address)` and `complexMatch(fw)` guard. `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled). Missing: `countInetAddresses` check, AddressTable/ipset handling
 
 #### `SrcNegation` (h:345 / cpp:1155) — Split
 
@@ -884,25 +889,25 @@ Creates 3 rules:
 In `shadowing_mode`, Dst/Srv/Interval are preserved in the jump rule
 instead of being reset (needed for accurate shadowing comparison).
 
-> **Python**: ✅ `policy_compiler_ipt.py:SrcNegation` — wired into pipeline. Creates correct 3-rule temp-chain pattern (jump, RETURN, action) with proper option resets (classification, routing, tagging, limits). Missing: `shadowing_mode` parameter, TCP RST special case (preserving "any TCP" service on action rule when action_on_reject is tcp-reset)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SrcNegation` — wired into pipeline. Creates correct 3-rule temp-chain pattern (jump, RETURN, action) with proper option resets (classification, routing, tagging, limits). Missing: `shadowing_mode` parameter, TCP RST special case (preserving "any TCP" service on action rule when action_on_reject is tcp-reset)
 
 #### `DstNegation` (h:362 / cpp:1285) — Split
 
 Mirror of `SrcNegation` but for the Dst element.
 
-> **Python**: ✅ `policy_compiler_ipt.py:DstNegation` — wired into pipeline. Mirror of SrcNegation. Same missing items: `shadowing_mode`, TCP RST special case
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:DstNegation` — wired into pipeline. Mirror of SrcNegation. Same missing items: `shadowing_mode`, TCP RST special case
 
 #### `SrvNegation` (h:379 / cpp:1421) — Split
 
 Same pattern for the Srv element.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SrvNegation` — wired into pipeline. Creates temp-chain pattern correctly with proper option resets. Missing: `shadowing_mode`
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SrvNegation` — wired into pipeline. Creates temp-chain pattern correctly with proper option resets. Missing: `shadowing_mode`
 
 #### `TimeNegation` (h:396 / cpp:1537) — Split
 
 Same pattern for the time Interval element.
 
-> **Python**: ⚠️ `policy_compiler.py:TimeNegation` — validation only, aborts if negation not allowed by platform. Missing: actual temp-chain expansion (the 3-rule pattern) for when negation IS allowed. No iptables-specific override exists. (not wired into pipeline)
+> **Python**: ⚠️ `compiler/processors/_policy.py:TimeNegation` — validation only, aborts if negation not allowed by platform. Missing: actual temp-chain expansion (the 3-rule pattern) for when negation IS allowed. No iptables-specific override exists. (not wired into pipeline)
 
 ### Splitting on Src/Dst = any
 
@@ -926,7 +931,7 @@ Skips if: `firewall_is_part_of_any_and_networks` is false, `has_output_chain`
 flag is already set, chain is already assigned, or bridging firewall with
 bridge port interfaces (can't use `--physdev-out` in OUTPUT chain).
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfSrcAny` — creates OUTPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Missing: (1) no POSTROUTING copy for mangle+classification, (2) no bridging firewall check, (3) doesn't reset dst/srv/interval in the OUTPUT copy (C++ does to avoid redundant matching), (4) doesn't check `has_output_chain` flag.
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:SplitIfSrcAny` — creates OUTPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Missing: (1) no POSTROUTING copy for mangle+classification, (2) no bridging firewall check, (3) doesn't reset dst/srv/interval in the OUTPUT copy (C++ does to avoid redundant matching), (4) doesn't check `has_output_chain` flag.
 
 #### `splitIfDstAny` (h:490 / cpp:2255) — Split
 
@@ -936,7 +941,7 @@ Mirror of `splitIfSrcAny` for Dst:
 2. For mangle with classification: additional `PREROUTING` copy.
 3. Original remains for FORWARD.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:SplitIfDstAny` — creates INPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Same remaining gaps as `SplitIfSrcAny` (PREROUTING copy, bridging check, element reset).
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:SplitIfDstAny` — creates INPUT copy correctly. Now checks `firewall_is_part_of_any_and_networks` option (per-rule then global) and has improved `single_object_negation` logic (only splits if the negated object doesn't `complexMatch(fw)`). Same remaining gaps as `SplitIfSrcAny` (PREROUTING copy, bridging check, element reset).
 
 #### `splitIfSrcAnyForShadowing` / `splitIfDstAnyForShadowing` (h:544-550) — Split
 
@@ -954,7 +959,7 @@ Inherited from base `splitIfRuleElementMatchesFW`. Splits rules where the
 firewall object appears among other objects in Src or Dst. Each occurrence
 of the firewall gets its own rule for proper chain assignment.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfSrcMatchesFw` / `SplitIfDstMatchesFw` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfSrcMatchesFw` / `SplitIfDstMatchesFw` — matches C++
 
 #### `splitIfSrcFWNetwork` (h:569 / cpp:2528) — Split
 
@@ -964,13 +969,13 @@ forwarded. Creates:
 - A FORWARD rule (network without the firewall).
 - An INPUT rule (firewall only).
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfSrcFWNetwork` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfSrcFWNetwork` — matches C++
 
 #### `splitIfDstFWNetwork` (h:575 / cpp:2601) — Split
 
 Mirror for Dst. Creates FORWARD + OUTPUT rules.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfDstFWNetwork` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfDstFWNetwork` — matches C++
 
 #### `splitIfSrcNegAndFw` (h:588 / cpp:2011) — Split
 
@@ -981,13 +986,13 @@ negation expansion:
 1. Creates an OUTPUT rule with only the firewall objects in Src.
 2. Original rule keeps the non-firewall objects with negation flag preserved.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfSrcNegAndFw` — wired into pipeline. Checks direction != Inbound, splits fw-matching objects into OUTPUT rule, sets `no_output_chain` on remainder. Re-enables negation only if non-fw objects remain.
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfSrcNegAndFw` — wired into pipeline. Checks direction != Inbound, splits fw-matching objects into OUTPUT rule, sets `no_output_chain` on remainder. Re-enables negation only if non-fw objects remain.
 
 #### `splitIfDstNegAndFw` (h:593 / cpp:2089) — Split
 
 Mirror for Dst with direction not Outbound.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SplitIfDstNegAndFw` — wired into pipeline. Mirror of SplitIfSrcNegAndFw with direction != Outbound, INPUT chain, `no_input_chain`.
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SplitIfDstNegAndFw` — wired into pipeline. Mirror of SplitIfSrcNegAndFw with direction != Outbound, INPUT chain, `no_input_chain`.
 
 #### `splitIfSrcMatchingAddressRange` / `splitIfDstMatchingAddressRange` (h:496-502) — Split
 
@@ -1022,7 +1027,7 @@ If Src matches the firewall (not an AddressRange):
 For bridging firewalls: splits rules where the firewall is on a bridge port
 interface, putting the split copy in FORWARD.
 
-> **Python**: ✅ `policy_compiler_ipt.py:DecideOnChainIfSrcFW` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:DecideOnChainIfSrcFW` — matches C++
 
 #### `decideOnChainIfDstFW` (h:740 / cpp:3182) — Transform
 
@@ -1030,7 +1035,7 @@ If Dst matches the firewall or a cluster member:
 - Direction `Inbound` → chain = `INPUT`.
 - Direction `Both` → chain = `INPUT`, direction changed to `Inbound`.
 
-> **Python**: ✅ `policy_compiler_ipt.py:DecideOnChainIfDstFW` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:DecideOnChainIfDstFW` — matches C++
 
 #### `decideOnChainIfLoopback` (h:764 / cpp:3307) — Transform
 
@@ -1038,7 +1043,7 @@ For loopback interface with Src = "any" and Dst = "any" and no chain set:
 - Direction `Inbound` → chain = `INPUT`.
 - Direction `Outbound` → chain = `OUTPUT`.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:DecideOnChainIfLoopback` — enhanced: for direction Both, splits into two rules (INPUT + OUTPUT). C++ only sets INPUT or OUTPUT based on direction, doesn't split Both. This is arguably an improvement.
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:DecideOnChainIfLoopback` — enhanced: for direction Both, splits into two rules (INPUT + OUTPUT). C++ only sets INPUT or OUTPUT based on direction, doesn't split Both. This is arguably an improvement.
 
 #### `decideOnChainForClassify` (h:769 / cpp:3351) — Transform
 
@@ -1061,7 +1066,7 @@ The **last-resort** chain assignment. If no chain has been set:
 4. Drops FORWARD rules if `ip_forward` is disabled on the firewall (warns
    the user).
 
-> **Python**: ✅ `policy_compiler_ipt.py:FinalizeChain` — matches C++, includes mangle handling
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:FinalizeChain` — matches C++, includes mangle handling
 
 ### Target selection
 
@@ -1083,7 +1088,7 @@ Maps the rule's action to an iptables target:
 For tagging rules: target is set to `MARK`, `CONNMARK`, or `CLASSIFY`
 depending on the specific options. For routing: `ROUTE`.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:DecideOnTarget` — maps basic actions correctly (Accept→ACCEPT, Deny→DROP, Reject→REJECT, Return→RETURN, Pipe→QUEUE, Continue→.CONTINUE, Custom→.CUSTOM). Missing: tagging→MARK/CONNMARK, classification→CLASSIFY, routing→ROUTE, Branch→chain name. Critical for mangle table support.
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:DecideOnTarget` — maps basic actions correctly (Accept→ACCEPT, Deny→DROP, Reject→REJECT, Return→RETURN, Pipe→QUEUE, Continue→.CONTINUE, Custom→.CUSTOM). Missing: tagging→MARK/CONNMARK, classification→CLASSIFY, routing→ROUTE, Branch→chain name. Critical for mangle table support.
 
 ### Firewall object handling
 
@@ -1098,7 +1103,7 @@ Strips redundant firewall object references after chain assignment:
 Skips if the rule has virtual NAT addresses or upstream negation
 (`upstream_rule_neg` flag).
 
-> **Python**: ✅ `policy_compiler_ipt.py:RemoveFW` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:RemoveFW` — matches C++
 
 #### `specialCaseWithFW1` (h:636 / cpp:2720) — Split
 
@@ -1114,7 +1119,7 @@ After `specialCaseWithFW1`, expands Src and Dst to interface addresses
 **including loopback**. The standard `_expand_addr` skips loopback, but
 firewall-to-firewall traffic (e.g. a service listening on localhost) needs it.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SpecialCaseWithFW2` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SpecialCaseWithFW2` — matches C++
 
 #### `specialCaseWithFWInDstAndOutbound` (h:645 / cpp:2761) — Split
 
@@ -1163,7 +1168,7 @@ Handles unnumbered interfaces (interfaces with no IP address):
 These interfaces can't be matched by address, so address-based rule elements
 referencing them are meaningless.
 
-> **Python**: ✅ `policy_compiler_ipt.py:SpecialCaseWithUnnumberedInterface` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SpecialCaseWithUnnumberedInterface` — matches C++
 
 #### `checkForDynamicInterfacesOfOtherObjects` (h:681 / cpp:2998) — Validation
 
@@ -1181,7 +1186,7 @@ multiple interfaces, creates a user-defined chain for the common rule body
 and jumps to it from each interface-specific rule. Reduces rule duplication
 in the output.
 
-> **Python**: ⚠️ `policy_compiler_ipt.py:ConvertToAtomicForInterfaces` — renamed from `InterfacePolicyRulesWithOptimization`. Simply splits one rule per interface. Missing: C++ optimization that creates a user-defined chain for the common rule body and jumps to it from each interface-specific rule (avoids duplicating the match conditions).
+> **Python**: ⚠️ `platforms/iptables/_policy_compiler.py:ConvertToAtomicForInterfaces` — renamed from `InterfacePolicyRulesWithOptimization`. Simply splits one rule per interface. Missing: C++ optimization that creates a user-defined chain for the common rule body and jumps to it from each interface-specific rule (avoids duplicating the match conditions).
 
 ### Reject handling
 
@@ -1191,7 +1196,7 @@ If the rule option `action_on_reject` is empty, copies the default from the
 global firewall option. This ensures every Reject rule has an explicit
 reject type (e.g. `icmp-port-unreachable`, `tcp-reset`).
 
-> **Python**: ✅ `policy_compiler_ipt.py:FillActionOnReject` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:FillActionOnReject` — matches C++
 
 #### `splitRuleIfSrvAnyActionReject` (h:824 / cpp:3683) — Split
 
@@ -1222,7 +1227,7 @@ with the appropriate reject method.
 output rule has one protocol. This is required because iptables `-p` only
 accepts one protocol.
 
-> **Python**: ✅ `policy_compiler_ipt.py:GroupServicesByProtocol` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:GroupServicesByProtocol` — matches C++
 
 #### `separateTCPWithFlags` — Split
 
@@ -1250,7 +1255,7 @@ that set specific match modules or protocols).
 Separates TCP/UDP services with port ranges that can't be combined in
 multiport (e.g. overlapping source/destination ranges).
 
-> **Python**: ✅ `policy_compiler_ipt.py:SeparatePortRanges` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:SeparatePortRanges` — matches C++
 
 #### `separateUserServices` — Split
 
@@ -1275,7 +1280,7 @@ Prepares services for the `-m multiport` module:
 - **≤15 TCP/UDP services**: sets the `ipt_multiport` flag for `PrintRule`.
 - **>15 TCP/UDP services**: splits into groups of 15 (multiport limit).
 
-> **Python**: ✅ `policy_compiler_ipt.py:PrepareForMultiport` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:PrepareForMultiport` — matches C++
 
 #### `checkForStatefulICMP6Rules` (h:855 / cpp:3717) — Validation
 
@@ -1283,7 +1288,7 @@ If a service is ICMPv6 and the rule is stateful (`stateless == false`),
 forces `stateless = true` and issues a warning. ICMPv6 should not be
 statefully tracked (it can break IPv6 neighbor discovery).
 
-> **Python**: ✅ `policy_compiler_ipt.py:CheckForStatefulICMP6Rules` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:CheckForStatefulICMP6Rules` — matches C++
 
 #### `CheckForTCPEstablished` — Validation
 
@@ -1356,7 +1361,7 @@ pass can split on a different element.
 Skips if: any element has ≤1 objects, or 3+ elements are "any" (not enough
 to optimize).
 
-> **Python**: ✅ `policy_compiler_ipt.py:Optimize1` — matches C++ (run 3×)
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:Optimize1` — matches C++ (run 3×)
 
 #### `optimize2` (h:892 / optimizer:259) — Transform
 
@@ -1365,7 +1370,7 @@ a jump rule) and the action doesn't need protocol specificity (not Reject
 with TCP RST), sets Srv to "any". The protocol was already matched by
 the jump rule, so re-checking it is redundant.
 
-> **Python**: ✅ `policy_compiler_ipt.py:Optimize2` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:Optimize2` — matches C++
 
 #### `optimize3` (h:898 / optimizer:290) — Filter
 
@@ -1373,7 +1378,7 @@ Removes duplicate rules. Converts each rule to its string representation
 via `PrintRule`, and drops rules that produce identical output. Uses a
 `set<string>` to track seen rules.
 
-> **Python**: ✅ `policy_compiler_ipt.py:Optimize3` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:Optimize3` — matches C++
 
 #### `optimizeForMinusIOPlus` (h:916 / optimizer:317) — Transform
 
@@ -1405,7 +1410,7 @@ Counts how many rules reference each user-defined chain (via their
 later skips creation of chains with zero usage (dead chains from
 optimization or filtering).
 
-> **Python**: ✅ `policy_compiler_ipt.py:CountChainUsage` — matches C++
+> **Python**: ✅ `platforms/iptables/_policy_compiler.py:CountChainUsage` — matches C++
 
 ### Output generation
 
@@ -1419,7 +1424,7 @@ The final processor. Generates iptables shell commands. For each rule:
 4. Delegates to `OSConfigurator` for runtime wrappers (dynamic interfaces).
 5. Calls `PolicyRuleToString()` to assemble the actual command.
 
-> **Python**: ✅ `print_rule.py:PrintRule` — full implementation
+> **Python**: ✅ `platforms/iptables/_print_rule.py:PrintRule` — full implementation
 
 **`PolicyRuleToString()`** assembles the command in this order:
 
@@ -1462,7 +1467,7 @@ Variant that generates `iptables-restore` format instead of shell commands.
 Outputs rules as raw table entries (e.g. `-A INPUT -s 10.0.0.0/8 -j ACCEPT`)
 grouped by table, with `*filter` / `COMMIT` markers.
 
-> **Python**: ✅ `print_rule.py:PrintRuleIptRst` — matches C++
+> **Python**: ✅ `platforms/iptables/_print_rule.py:PrintRuleIptRst` — matches C++
 
 #### `PrintRuleIptRstEcho` (h:1178 / PrintRuleIptRstEcho.cpp:79) — Output
 
@@ -1470,7 +1475,7 @@ Variant for `iptables-restore` with echo wrappers. Used for dynamic
 interfaces — wraps rules in shell `echo` commands so they can be piped
 to `iptables-restore` at runtime after variable substitution.
 
-> **Python**: ✅ `print_rule.py:PrintRuleIptRstEcho` — matches C++
+> **Python**: ✅ `platforms/iptables/_print_rule.py:PrintRuleIptRstEcho` — matches C++
 
 ### iptables NAT Processors
 
@@ -1481,106 +1486,108 @@ These processors are specific to the iptables NAT compilation pipeline (`NATComp
 Handles single-object negation for the inbound interface (`ItfInb`) element in NAT rules. If the element has negation and contains exactly one object, converts to inline `!` negation by setting `itf_inb_single_object_negation = True` and clearing the negation flag.
 
 > **C++**: `NATCompiler::singleObjectNegationItfInb`
-> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationItfInb` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SingleObjectNegationItfInb` — matches C++
 
 #### `SingleObjectNegationItfOutb` — Transform
 
 Mirror of `SingleObjectNegationItfInb` for the outbound interface (`ItfOutb`). Sets `itf_outb_single_object_negation = True` when the element has negation and exactly one object.
 
 > **C++**: `NATCompiler::singleObjectNegationItfOutb`
-> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationItfOutb` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SingleObjectNegationItfOutb` — matches C++
 
 #### `PortTranslationRules` — Transform
 
 Copies ODst into TDst for port-only DNAT rules targeting the firewall. Triggers when `nat_rule_type == DNAT`, TSrc and TDst are both empty, TSrv is set, and ODst is the firewall. This allows `SpecialCaseWithRedirect` to detect and convert it to a Redirect rule downstream.
 
 > **C++**: `NATCompiler_ipt::portTranslationRules`
-> **Python**: ✅ `_nat_compiler.py:PortTranslationRules` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:PortTranslationRules` — matches C++
 
 #### `SpecialCaseWithRedirect` — Transform
 
 Converts DNAT rules to Redirect when TDst matches the firewall. After `PortTranslationRules` fills in TDst for port-only translations, this processor reclassifies the rule type to `NATRuleType.Redirect`, which changes the iptables target from `DNAT --to-destination` to `REDIRECT --to-ports`.
 
 > **C++**: `NATCompiler_ipt::specialCaseWithRedirect`
-> **Python**: ✅ `_nat_compiler.py:SpecialCaseWithRedirect` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SpecialCaseWithRedirect` — matches C++
 
 #### `SplitNONATRule` — Split
 
 Splits NONAT rules into two: one for `POSTROUTING` and one for `PREROUTING` (or `OUTPUT` if OSrc is the firewall). NONAT rules need ACCEPT in both chains to prevent accidental translation by other rules. When OSrc is the firewall, the second copy goes to OUTPUT with OSrc cleared.
 
 > **C++**: `NATCompiler_ipt::splitNONATRule`
-> **Python**: ✅ `_nat_compiler.py:SplitNONATRule` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SplitNONATRule` — matches C++
 
 #### `ReplaceFirewallObjectsODst` — Transform
 
 Replaces Firewall objects in ODst with the firewall's non-loopback Interface objects. Skips Masq and Redirect rule types. This prepares the rule for `ExpandMultipleAddresses` which expands interfaces to their addresses.
 
 > **C++**: `NATCompiler_ipt::ReplaceFirewallObjectsODst`
-> **Python**: ✅ `_nat_compiler.py:ReplaceFirewallObjectsODst` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:ReplaceFirewallObjectsODst` — matches C++
 
 #### `ReplaceFirewallObjectsTSrc` — Transform
 
 Replaces Firewall objects in TSrc with the interface facing ODst. For SNAT rules where TSrc is the firewall itself, finds the interface whose network contains the ODst address and uses that interface's address for the SNAT source. Falls back to all eligible (non-loopback, non-unnumbered, non-bridge-port) interfaces when ODst is "any" or no matching interface is found. When `odst_single_object_negation` is set, skips the direct match and uses the fallback (excluding the ODst-facing interface). Also excludes the OSrc-facing interface from the fallback set.
 
 > **C++**: `NATCompiler_ipt::ReplaceFirewallObjectsTSrc`
-> **Python**: ✅ `_nat_compiler.py:ReplaceFirewallObjectsTSrc` — matches C++. Uses `_find_interface_for()` to locate the interface on the same network as the target address.
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:ReplaceFirewallObjectsTSrc` — matches C++. Uses `_find_interface_for()` to locate the interface on the same network as the target address.
 
 #### `SingleObjectNegationOSrc` — Transform
 
 Handles single-object negation for OSrc in NAT rules. If OSrc has negation and contains exactly one address object that doesn't `complexMatch()` the firewall, converts to inline `!` negation by setting `osrc_single_object_negation = True` and clearing the negation flag.
 
 > **C++**: `NATCompiler::singleObjectNegationOSrc`
-> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationOSrc` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SingleObjectNegationOSrc` — matches C++
 
 #### `SingleObjectNegationODst` — Transform
 
 Mirror of `SingleObjectNegationOSrc` for ODst. Sets `odst_single_object_negation = True` when the element has negation and exactly one address object that doesn't `complexMatch()` the firewall.
 
 > **C++**: `NATCompiler::singleObjectNegationODst`
-> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationODst` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SingleObjectNegationODst` — matches C++
 
 #### `SplitIfOSrcAny` — Split
 
 For DNAT rules where OSrc is "any" (or has `single_object_negation`) and the inbound interface is "any", creates a copy with OSrc set to the firewall object. This is part of the `local_nat` support — when `local_nat` and `firewall_is_part_of_any_and_networks` are both enabled, it ensures locally-originated DNAT traffic gets its own rule. Skips rules added for negation handling.
 
 > **C++**: `NATCompiler_ipt::splitIfOSrcAny`
-> **Python**: ✅ `_nat_compiler.py:SplitIfOSrcAny` — matches C++. Only added when `local_nat` and `firewall_is_part_of_any_and_networks` options are both set.
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SplitIfOSrcAny` — matches C++. Only added when `local_nat` and `firewall_is_part_of_any_and_networks` options are both set.
 
 #### `SplitIfOSrcMatchesFw` — Split
 
 Splits rules where OSrc contains the firewall among other objects. Extracts firewall-matching objects into separate rules via `complexMatch()`. The original rule keeps the non-firewall objects.
 
 > **C++**: `NATCompiler_ipt::splitIfOSrcMatchesFw`
-> **Python**: ✅ `_nat_compiler.py:SplitIfOSrcMatchesFw` — matches C++. Only added when `local_nat` option is set.
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:SplitIfOSrcMatchesFw` — matches C++. Only added when `local_nat` option is set.
 
 #### `LocalNATRule` — Transform
 
 For DNAT/DNetnat/Redirect rules where OSrc matches the firewall, sets the chain to OUTPUT. If OSrc is the firewall object itself, clears OSrc to "any" (the OUTPUT chain already implies the firewall is the source).
 
 > **C++**: `NATCompiler_ipt::localNATRule`
-> **Python**: ✅ `_nat_compiler.py:LocalNATRule` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:LocalNATRule` — matches C++
 
 #### `ExpandMultipleAddresses` (NAT) — Transform
 
 Expands Host/Firewall/Interface objects in NAT element lists (OSrc, ODst, TSrc, TDst) to their Address objects. Expansion scope depends on rule type: NONAT/Return expand OSrc+ODst; SNAT/SDNAT/DNAT expand all four; Redirect expands OSrc+ODst+TSrc. Sorts results by address for deterministic output. Skips loopback interfaces when expanding from Host/Firewall.
 
 > **C++**: `NATCompiler::ExpandMultipleAddresses`
-> **Python**: ✅ `_nat_compiler.py:ExpandMultipleAddresses` — matches C++
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:ExpandMultipleAddresses` — matches C++
 
 #### `ClassifyNATRule` (enhanced) — Transform
 
 Enhanced version of the base `ClassifyNATRule` that handles TSrv port translation logic. In addition to classifying by TSrc/TDst presence, it checks whether TSrv translates source ports only, destination ports only, or both (comparing against OSrv to detect no-op translations where ports match). This affects SDNAT detection: `TSrc + dst port translation` or `TDst + src port translation` both classify as SDNAT.
 
 > **C++**: `NATCompiler::classifyNATRule`
-> **Python**: ✅ `_nat_compiler.py:ClassifyNATRule` — matches C++ including TSrv port logic
+> **Python**: ✅ `platforms/iptables/_nat_compiler.py:ClassifyNATRule` — matches C++ including TSrv port logic
 
 ---
 
-## Full pipeline order (unmodified `compile()`)
+## Full pipeline order
 
-For reference, this is the order of processors in the full `PolicyCompiler_ipt::compile()` method (`PolicyCompiler_ipt.cpp:4291`). The shadowing detection pass runs first (if enabled), then the main compilation pass.
+### C++ reference pipeline (`PolicyCompiler_ipt::compile()`)
 
-### Shadowing detection pass (optional)
+> *This is the full C++ pipeline order from `PolicyCompiler_ipt.cpp:4291`. The Python pipeline implements a subset of these processors — see [Pipeline comparison](#pipeline-comparison) for the current status.*
+
+#### Shadowing detection pass (optional)
 
 ```
 Begin → addRuleFilter → printTotalNumberOfRules → ItfNegation →
@@ -1599,7 +1606,7 @@ so that `DetectShadowing` can do exact superset comparisons. It uses
 `ConvertToAtomic` (the full cartesian product) and `convertAnyToNotFWForShadowing`
 to handle the "any includes firewall" case.
 
-### Main compilation pass
+#### Main compilation pass
 
 ```
 Begin → addPredefinedRules → addRuleFilter → printTotalNumberOfRules →
@@ -1652,7 +1659,7 @@ checkForObjectsWithErrors → countChainUsage →
 PrintRule → simplePrintProgress
 ```
 
-### Pipeline phases (logical grouping)
+#### Pipeline phases (logical grouping)
 
 The main compilation pass can be understood as these logical phases:
 
@@ -1707,7 +1714,7 @@ The main compilation pass can be understood as these logical phases:
 15. **Output** — `countChainUsage` through `simplePrintProgress`. Count
     chain usage, generate iptables commands, print progress.
 
-### Minimal pipeline (for tracing/development)
+#### Minimal pipeline (for tracing/development)
 
 This reduced set of 15 processors produces correct output for simple rules:
 
@@ -1720,7 +1727,7 @@ ConvertToAtomicForAddresses → countChainUsage → PrintRule → simplePrintPro
 
 ### iptables NAT pipeline order
 
-The NAT compilation pipeline (`NATCompiler_ipt::compile()`) processes NAT rules through ~30 processors:
+The NAT compilation pipeline (`NATCompiler_ipt.compile()`) processes NAT rules through ~30 processors:
 
 ```
 Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
@@ -1743,9 +1750,9 @@ NATPrintRule → SimplePrintProgress
 
 ---
 
-## Python Implementation Summary
+## Implementation Summary
 
-Status of the firewallfabrik Python rewrite (`src/firewallfabrik/`) relative to the C++ rule processors documented above.
+Status of the Python implementation (`src/firewallfabrik/`) relative to the C++ rule processors documented above.
 
 ### Aggregate counts
 
@@ -1774,11 +1781,11 @@ These classes exist in the Python codebase but are not added to the active compi
 
 ### Python-only processors (not in C++)
 
-These processors exist only in the Python rewrite:
+These processors exist only in the Python implementation:
 
-- `SkipDisabledRules` (`compiler.py`) — filters out disabled rules at pipeline level (C++ handles this inside `Begin`)
-- `AssignUniqueRuleId` (`policy_compiler.py`) — assigns unique IDs to rules
-- `AddPredefinedRules` (`policy_compiler_ipt.py`) — adds default/predefined rules (C++ does this via a method call, not a processor)
+- `SkipDisabledRules` (`compiler/processors/_generic.py`) — filters out disabled rules at pipeline level (C++ handles this inside `Begin`)
+- `AssignUniqueRuleId` (`compiler/processors/_generic.py`) — assigns unique IDs to rules
+- `AddPredefinedRules` (`platforms/iptables/_policy_compiler.py`) — adds default/predefined rules (C++ does this via a method call, not a processor)
 
 ### Pipeline comparison
 
@@ -1817,7 +1824,7 @@ Missing these means bad configs compile without errors. Low effort, high safety 
 | # | Processor | Effort | Why |
 |---|-----------|--------|-----|
 | 9 | `recursiveGroupsInRE` (×3) | ~20 lines | Prevent infinite loops from circular group references. Without it, compilation hangs or crashes. |
-| ~~10~~ | ~~`emptyGroupsInRE` (×4)~~ | ✅ Done | Implemented as `EmptyGroupsInRE` in `_generic.py` with slot parameterization. Wired into iptables policy (SRC, DST, SRV, ITF), iptables NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV), and nftables policy (SRC, DST, SRV, ITF). Not yet in nftables NAT. |
+| ~~10~~ | ~~`emptyGroupsInRE` (×4)~~ | ✅ Done | Implemented as `EmptyGroupsInRE` in `compiler/processors/_generic.py` with slot parameterization. Wired into iptables policy (SRC, DST, SRV, ITF), iptables NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV), and nftables policy (SRC, DST, SRV, ITF). Not yet in nftables NAT. |
 | 11 | `checkForUnnumbered` | ~15 lines | Catch unnumbered interfaces used as addresses. Without it, rules silently compile with missing addresses. |
 | 12 | `checkForZeroAddr` | ~25 lines | Catch 0.0.0.0 addresses and /0 typos. Without it, overly broad rules compile silently. |
 | 13 | `CheckForTCPEstablished` | ~10 lines | Abort if the unsupported "established" flag is used. Without it, the flag is silently ignored. |
@@ -1895,11 +1902,11 @@ After that, **Tier 3** remaining items (9, 11–13, ~70 lines) closes the safety
 These live in `src/firewallfabrik/platforms/nftables/` and are specific to the nftables backend. The nftables compiler is significantly simpler than iptables because nftables has native support for sets (no multiport hack), negation (no temp chains), inline logging (no LOG chain splitting), and user-defined tables/chains.
 
 Key source files:
-- `_policy_compiler.py` — `PolicyCompiler_nft` and all policy rule processors
-- `_nat_compiler.py` — `NATCompiler_nft` and all NAT rule processors
-- `_print_rule.py` — `PrintRule_nft` final output generation (filter rules)
-- `_nat_print_rule.py` — `NATPrintRule_nft` final output generation (NAT rules)
-- `_compiler_driver.py` — `CompilerDriver_nft` orchestrator
+- `platforms/nftables/_policy_compiler.py` — `PolicyCompiler_nft` and all policy rule processors
+- `platforms/nftables/_nat_compiler.py` — `NATCompiler_nft` and all NAT rule processors
+- `platforms/nftables/_print_rule.py` — `PrintRule_nft` final output generation (filter rules)
+- `platforms/nftables/_nat_print_rule.py` — `NATPrintRule_nft` final output generation (NAT rules)
+- `platforms/nftables/_compiler_driver.py` — `CompilerDriver_nft` orchestrator
 
 ### Architecture differences from iptables
 
@@ -1919,7 +1926,7 @@ All processors have access to `self.compiler.error(rule, msg)` and `self.compile
 
 **Convention**: Messages say "not supported in nftables" when the feature genuinely doesn't exist in nftables (e.g. Scrub, Skip actions), and "not yet supported by nftables compiler" when nftables could do it but our compiler doesn't implement it yet (e.g. dynamic interfaces, SDNAT, Branch, Pipe).
 
-### Policy processors (`_policy_compiler.py`)
+### Policy processors (`platforms/nftables/_policy_compiler.py`)
 
 #### `StoreAction` — Transform
 
@@ -2025,7 +2032,7 @@ Splits rules with services of different protocols. Special case: if only TCP+UDP
 
 Removes duplicate rules that produce identical nftables commands. Includes the chain name in the dedup key (unlike iptables where the chain is part of the command string).
 
-### NAT processors (`_nat_compiler.py`)
+### NAT processors (`platforms/nftables/_nat_compiler.py`)
 
 #### `DropRuleWithEmptyRE` — Filter
 
@@ -2079,7 +2086,7 @@ Assigns outbound interface for SNAT/Masquerade rules. If TSrc is an interface on
 
 ### Print rule processors
 
-#### `PrintRule_nft` (`_print_rule.py`) — Output
+#### `PrintRule_nft` (`platforms/nftables/_print_rule.py`) — Output
 
 Final processor for policy rules. Generates nft rule statements and writes them to the per-chain `compiler.chain_rules` dict.
 
@@ -2105,7 +2112,7 @@ Supports:
 - Inline logging: `log prefix "..." level ...` combined with verdict
 - Log prefix macros: `%N` (position), `%A` (action), `%I` (interface), `%C` (chain), `%R` (ruleset)
 
-#### `NATPrintRule_nft` (`_nat_print_rule.py`) — Output
+#### `NATPrintRule_nft` (`platforms/nftables/_nat_print_rule.py`) — Output
 
 Final processor for NAT rules. Generates nft NAT rule statements.
 
@@ -2129,7 +2136,7 @@ NAT action output:
 | Return | `return` |
 | SDNAT | error — not yet supported |
 
-### Compiler driver (`_compiler_driver.py`)
+### Compiler driver (`platforms/nftables/_compiler_driver.py`)
 
 `CompilerDriver_nft` orchestrates the full compilation. Both iptables and nftables drivers call `_warn_unsupported_options()` (defined in the base `CompilerDriver`) to emit warnings for recognised but unimplemented firewall options (ULOG/NFLOG, TCP/IP log options, numeric log levels, log_all, kernel timezone, bridge interfaces).
 
