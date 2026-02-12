@@ -883,14 +883,17 @@ class PolicyTreeModel(QAbstractItemModel):
         if not group_name or not indices:
             return
         rule_ids = []
+        positions = []
         for idx in indices:
             rd = self.get_row_data(idx)
             if rd is not None and not rd.group:
                 rule_ids.append(rd.rule_id)
+                positions.append(str(rd.position))
         if not rule_ids:
             return
+        pos_str = ', '.join(positions)
         with self._db_manager.session(
-            self._desc(f'Add to group {group_name}'),
+            self._desc(f'Add rule {pos_str} to group {group_name}'),
         ) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, group_name)
@@ -902,15 +905,17 @@ class PolicyTreeModel(QAbstractItemModel):
             return
         unique_name = self._find_unique_group_name(name)
         rule_ids = []
+        positions = []
         for idx in indices:
             rd = self.get_row_data(idx)
             if rd is not None:
                 rule_ids.append(rd.rule_id)
+                positions.append(str(rd.position))
         if not rule_ids:
             return
-
+        pos_str = ', '.join(positions)
         with self._db_manager.session(
-            self._desc(f'New group {unique_name}')
+            self._desc(f'New group {unique_name} with rule {pos_str}'),
         ) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, unique_name)
@@ -947,7 +952,16 @@ class PolicyTreeModel(QAbstractItemModel):
         """Remove the rules identified by *rule_ids* from their groups."""
         if not rule_ids:
             return
-        with self._db_manager.session(self._desc('Remove from group')) as session:
+        positions = []
+        for rid in rule_ids:
+            idx = self.index_for_rule(rid)
+            rd = self.get_row_data(idx)
+            if rd is not None:
+                positions.append(str(rd.position))
+        pos_str = ', '.join(positions) if positions else '?'
+        with self._db_manager.session(
+            self._desc(f'Remove rule {pos_str} from group'),
+        ) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, '')
         self.reload()
