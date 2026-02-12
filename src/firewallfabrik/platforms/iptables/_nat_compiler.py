@@ -199,6 +199,9 @@ class NATCompiler_ipt(NATCompiler):
         self.add(ClassifyNATRule('classify NAT rule'))
         self.add(VerifyRules('verify rules'))
 
+        self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
+        self.add(SingleObjectNegationODst('negation in ODst if it holds single object'))
+
         self.add(PortTranslationRules('port translation rules'))
         self.add(
             SpecialCaseWithRedirect(
@@ -211,6 +214,7 @@ class NATCompiler_ipt(NATCompiler):
         self.add(DecideOnTarget('decide on target'))
 
         self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
+        self.add(ReplaceFirewallObjectsTSrc('replace firewall in TSrc'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
@@ -331,6 +335,56 @@ class SingleObjectNegationItfOutb(NATRuleProcessor):
         if rule.get_neg('itf_outb') and len(rule.itf_outb) == 1:
             rule.set_neg('itf_outb', False)
             rule.itf_outb_single_object_negation = True
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleObjectNegationOSrc(NATRuleProcessor):
+    """Handle single-object negation for OSrc in NAT rules.
+
+    If OSrc has negation and contains exactly one address object with
+    a single IP that doesn't match the firewall, convert to inline
+    '!' negation.
+
+    Corresponds to C++ NATCompiler::singleObjectNegationOSrc.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('osrc') and len(rule.osrc) == 1:
+            obj = rule.osrc[0]
+            if isinstance(obj, Address) and not self.compiler.complex_match(
+                obj, self.compiler.fw
+            ):
+                rule.osrc_single_object_negation = True
+                rule.set_neg('osrc', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleObjectNegationODst(NATRuleProcessor):
+    """Handle single-object negation for ODst in NAT rules.
+
+    If ODst has negation and contains exactly one address object with
+    a single IP that doesn't match the firewall, convert to inline
+    '!' negation.
+
+    Corresponds to C++ NATCompiler::singleObjectNegationODst.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('odst') and len(rule.odst) == 1:
+            obj = rule.odst[0]
+            if isinstance(obj, Address) and not self.compiler.complex_match(
+                obj, self.compiler.fw
+            ):
+                rule.odst_single_object_negation = True
+                rule.set_neg('odst', False)
         self.tmp_queue.append(rule)
         return True
 
@@ -650,6 +704,112 @@ class ReplaceFirewallObjectsODst(NATRuleProcessor):
             ]
             if interfaces:
                 rule.odst = interfaces
+
+        return True
+
+
+class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
+    """Replace Firewall object in TSrc with the interface facing ODst.
+
+    Corresponds to C++ NATCompiler_ipt::ReplaceFirewallObjectsTSrc.
+    For SNAT rules where TSrc is the firewall itself, finds the
+    interface whose network contains the ODst address and uses that
+    interface.  Falls back to all eligible interfaces when ODst is
+    "any" or no matching interface is found.
+    """
+
+    @staticmethod
+    def _find_interface_for(addr_obj, fw) -> Interface | None:
+        """Find the firewall interface on the same network as *addr_obj*."""
+        import ipaddress
+
+        target_addr_str = None
+        if isinstance(addr_obj, Address):
+            target_addr_str = addr_obj.get_address()
+        elif isinstance(addr_obj, Interface) and addr_obj.addresses:
+            target_addr_str = addr_obj.addresses[0].get_address()
+
+        if not target_addr_str:
+            return None
+
+        try:
+            target_ip = ipaddress.ip_address(target_addr_str)
+        except (ValueError, TypeError):
+            return None
+
+        for iface in fw.interfaces:
+            if not iface.is_regular():
+                continue
+            for addr in iface.addresses:
+                addr_str = addr.get_address()
+                mask_str = addr.get_netmask()
+                if not addr_str or not mask_str:
+                    continue
+                try:
+                    network = ipaddress.ip_network(
+                        f'{addr_str}/{mask_str}', strict=False
+                    )
+                    if target_ip in network:
+                        return iface
+                except (ValueError, TypeError):
+                    continue
+
+        return None
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type in (NATRuleType.Masq, NATRuleType.Redirect):
+            return True
+
+        if not rule.tsrc:
+            return True
+
+        tsrc = rule.tsrc[0]
+        if not (isinstance(tsrc, Firewall) and tsrc.id == self.compiler.fw.id):
+            return True
+
+        # TSrc is the firewall — replace with the interface facing ODst
+        odst = rule.odst[0] if rule.odst else None
+        osrc = rule.osrc[0] if rule.osrc else None
+
+        odst_iface = self._find_interface_for(odst, self.compiler.fw) if odst else None
+        osrc_iface = self._find_interface_for(osrc, self.compiler.fw) if osrc else None
+
+        # When ODst has single_object_negation, skip the direct match
+        # and fall through to the fallback (excluding odst_iface).
+        if odst_iface is not None and not rule.odst_single_object_negation:
+            rule.tsrc = [odst_iface]
+            return True
+
+        # Fallback: use all non-loopback, non-unnumbered, non-bridge interfaces,
+        # excluding the interface facing OSrc (per C++ logic).
+        # Also exclude odst_iface when single_object_negation is set.
+        interfaces = [
+            iface
+            for iface in self.compiler.fw.interfaces
+            if not iface.is_loopback()
+            and not iface.is_unnumbered()
+            and not iface.is_bridge_port()
+            and not (osrc_iface and iface.id == osrc_iface.id)
+            and not (
+                rule.odst_single_object_negation
+                and odst_iface
+                and iface.id == odst_iface.id
+            )
+        ]
+        if interfaces:
+            rule.tsrc = interfaces
+        else:
+            self.compiler.abort(
+                rule,
+                'Could not find suitable interface for the NAT rule. '
+                'Perhaps all interfaces are unnumbered?',
+            )
 
         return True
 

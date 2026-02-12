@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-nat.fw /etc/fw/fw-nat.fw
+# files: * fw-nat-negation.fw /etc/fw/fw-nat-negation.fw
 #
 # Compiled for iptables (any version)
 #
@@ -327,49 +327,7 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 198.51.100.1
- #
- # Rule 1 (NAT)
- #
- echo "Rule 1 (NAT)"
- #
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 198.51.100.1 --dport 80 -j DNAT --to-destination 10.0.0.53
- #
- # Rule 2 (NAT)
- #
- echo "Rule 2 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -s 192.168.1.0/24 -j ACCEPT
- $IPTABLES -t nat -A PREROUTING -s 192.168.1.0/24 -j ACCEPT
- #
- # Rule 3 (NAT)
- #
- echo "Rule 3 (NAT)"
- #
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 10.0.0.1 --dport 80 -j REDIRECT --to-ports 8080
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.1 --dport 80 -j REDIRECT --to-ports 8080
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 198.51.100.1 --dport 80 -j REDIRECT --to-ports 8080
- #
- # Rule 4 (NAT)
- #
- echo "Rule 4 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 10.0.0.1
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 198.51.100.1
- #
- # Rule 5 (NAT)
- #
- echo "Rule 5 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -j SNAT --to-source 10.0.0.1
- $IPTABLES -t nat -A POSTROUTING -o eth1 -j SNAT --to-source 192.168.1.1
- $IPTABLES -t nat -A POSTROUTING -o eth0 -j SNAT --to-source 198.51.100.1
- #
- # Rule 6 (NAT)
- #
- echo "Rule 6 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -d 10.0.0.1 -j SNAT --to-source 10.0.0.1
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -d ! 198.51.100.0/24 -j SNAT --to-source 10.0.0.1
 
  # ================ Table 'filter', rule set Policy
  #
