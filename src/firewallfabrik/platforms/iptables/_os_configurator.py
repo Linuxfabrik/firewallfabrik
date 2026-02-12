@@ -212,6 +212,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
         shell_functions = Configlet('linux24', 'shell_functions')
         parts.append(shell_functions.expand())
+        parts.append('')
 
         check_utils = Configlet('linux24', 'check_utilities')
         check_utils.remove_comments()

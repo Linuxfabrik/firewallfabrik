@@ -104,6 +104,7 @@ diff_intf() {
  }
  done
 }
+
 find_program() {
  PGM=$1
  which $PGM >/dev/null 2>&1 || {
