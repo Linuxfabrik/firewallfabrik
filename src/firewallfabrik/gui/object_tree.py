@@ -1434,6 +1434,13 @@ class ObjectTree(QWidget):
                 )
             menu.addSeparator()
 
+        # Edit (rename folder)
+        edit_action = menu.addAction('Edit')
+        edit_action.setEnabled(not effective_ro)
+        edit_action.triggered.connect(lambda: self._ctx_rename_folder(item))
+
+        menu.addSeparator()
+
         for type_name, display_name in new_types:
             icon_path = ICON_MAP.get(type_name, '')
             act = menu.addAction(QIcon(icon_path), f'New {display_name}')
@@ -2274,6 +2281,76 @@ class ObjectTree(QWidget):
             lib.data = data
             session.commit()
             self._db_manager.save_state(f'New subfolder "{name}"')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        self.tree_changed.emit()
+
+    def _ctx_rename_folder(self, item):
+        """Rename a category folder.
+
+        Updates ``data.folder`` on every child object and the
+        ``Library.data['subfolders']`` list when applicable.
+        """
+        if self._db_manager is None:
+            return
+
+        old_name = item.text(0)
+        new_name, ok = QInputDialog.getText(
+            self._tree,
+            'Rename Folder',
+            'Enter new folder name:',
+            QLineEdit.EchoMode.Normal,
+            old_name,
+        )
+        new_name = new_name.strip() if ok else ''
+        if not new_name or new_name == old_name:
+            return
+        if ',' in new_name:
+            QMessageBox.warning(
+                self._tree,
+                'Rename Folder',
+                'Folder name cannot contain a comma.',
+            )
+            return
+
+        lib_id = self._get_item_library_id(item)
+        if lib_id is None:
+            return
+
+        session = self._db_manager.create_session()
+        try:
+            # Rename data.folder on all objects that belong to this folder.
+            for cls in (Address, Group, Host, Interface, Interval, Service):
+                if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
+                    continue
+                for obj in (
+                    session.scalars(
+                        sqlalchemy.select(cls).where(cls.library_id == lib_id)
+                    )
+                    .unique()
+                    .all()
+                ):
+                    obj_data = obj.data or {}
+                    if obj_data.get('folder') == old_name:
+                        obj.data = {**obj_data, 'folder': new_name}
+
+            # Update Library.data['subfolders'] list.
+            lib = session.get(Library, lib_id)
+            if lib is not None:
+                lib_data = dict(lib.data or {})
+                subfolders = list(lib_data.get('subfolders', []))
+                if old_name in subfolders:
+                    subfolders[subfolders.index(old_name)] = new_name
+                    subfolders.sort(key=str.casefold)
+                    lib_data['subfolders'] = subfolders
+                    lib.data = lib_data
+
+            session.commit()
+            self._db_manager.save_state(f'Rename folder "{old_name}" → "{new_name}"')
         except Exception:
             session.rollback()
             raise

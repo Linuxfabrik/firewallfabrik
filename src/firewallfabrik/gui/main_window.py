@@ -828,12 +828,20 @@ class FWWindow(QMainWindow):
             self._object_tree.update_item(obj)
 
     def _on_tree_changed(self):
-        """Refresh the tree after a CRUD operation (e.g. duplicate)."""
+        """Refresh the tree and editor after a CRUD operation (e.g. duplicate, delete)."""
+        obj_id = getattr(self, '_editor_obj_id', None)
+        obj_type = getattr(self, '_editor_obj_type', None)
+        self._close_editor()
+
         file_key = (
             str(self._display_file) if getattr(self, '_display_file', None) else ''
         )
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
+
+        # Re-open the editor for the same object (refreshes all fields).
+        if obj_id is not None:
+            self._open_object_editor(obj_id, obj_type)
 
     @Slot()
     def toggleViewObjectTree(self):
