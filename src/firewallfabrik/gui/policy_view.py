@@ -233,9 +233,7 @@ class PolicyView(QTreeView):
             self.resizeColumnToContents,
         )
 
-        # Context menu.
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_context_menu)
+        # Context menu (handled via contextMenuEvent override).
 
         # Double-click on group header → rename.
         self.doubleClicked.connect(self._on_double_clicked)
@@ -296,8 +294,11 @@ class PolicyView(QTreeView):
     # Context menu
     # ------------------------------------------------------------------
 
-    def _show_context_menu(self, pos):
-        index = self.indexAt(pos)
+    def contextMenuEvent(self, event):
+        """Show context menu, using viewport coordinates for correct hit-testing."""
+        vp_pos = self.viewport().mapFromGlobal(event.globalPos())
+        index = self.indexAt(vp_pos)
+        global_pos = event.globalPos()
         model = self.model()
         if model is None:
             return
@@ -312,13 +313,20 @@ class PolicyView(QTreeView):
             menu.addAction(
                 'Insert New Rule at Bottom', lambda: model.insert_rule(at_bottom=True)
             )
-            menu.exec(self.viewport().mapToGlobal(pos))
+            menu.exec(global_pos)
             return
 
+        # setFirstColumnSpanned on group headers can cause indexAt() to
+        # return the group index even for clicks on child rule rows.
+        # Detect this and resolve to the correct child index.
         if model.is_group(index):
-            self._build_group_header_menu(menu, model, index)
-            menu.exec(self.viewport().mapToGlobal(pos))
-            return
+            child_index = self._child_index_at(model, index, vp_pos)
+            if child_index is not None:
+                index = child_index
+            else:
+                self._build_group_header_menu(menu, model, index)
+                menu.exec(global_pos)
+                return
 
         col = index.column()
 
@@ -327,13 +335,16 @@ class PolicyView(QTreeView):
         in_group = row_data is not None and row_data.group
 
         if in_group:
-            menu.addAction(
-                'Remove From Group',
-                lambda: model.remove_from_group([index]),
-            )
-            menu.addSeparator()
-        elif not in_group:
+            if model.is_outermost(index):
+                rid = row_data.rule_id
+                menu.addAction(
+                    'Remove From Group',
+                    lambda r=rid: model.remove_from_group_by_ids([r]),
+                )
+                menu.addSeparator()
+        else:
             self._add_new_group_action(menu, model, index)
+            self._add_to_adjacent_group_actions(menu, model, index)
 
         self._add_color_submenu(menu, model, index)
         menu.addSeparator()
@@ -347,7 +358,7 @@ class PolicyView(QTreeView):
         else:
             self._build_row_menu(menu, model, index)
 
-        menu.exec(self.viewport().mapToGlobal(pos))
+        menu.exec(global_pos)
 
     def _add_new_group_action(self, menu, model, index):
         """Add 'New Group' action + separator for top-level rules."""
@@ -366,6 +377,61 @@ class PolicyView(QTreeView):
 
         menu.addAction('New Group', _do_create)
         menu.addSeparator()
+
+    def _add_to_adjacent_group_actions(self, menu, model, index):
+        """Add 'Add to the Group <name>' actions for adjacent groups."""
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+        above, below = model.adjacent_group_names(
+            selected[0] if len(selected) == 1 else index,
+        )
+        if above:
+            menu.addAction(
+                f'Add to the Group {above}',
+                lambda g=above: model.add_to_group(selected, g),
+            )
+        if below:
+            menu.addAction(
+                f'Add to the Group {below}',
+                lambda g=below: model.add_to_group(selected, g),
+            )
+        if above or below:
+            menu.addSeparator()
+
+    def _child_index_at(self, model, group_index, vp_pos):
+        """Resolve a click below a group header to the correct child index.
+
+        When ``setFirstColumnSpanned`` is active, ``indexAt()`` may return
+        the group index for clicks on child rows.  This method checks the
+        visual rects to find the actual child.
+
+        Returns a child :class:`QModelIndex`, or *None* if the click is on
+        the group header itself.
+        """
+        group_rect = self.visualRect(group_index)
+        if group_rect.isValid() and group_rect.contains(vp_pos):
+            return None  # Click is genuinely on the group header.
+
+        child_count = model.rowCount(group_index)
+        for row in range(child_count):
+            child_idx = model.index(row, 0, group_index)
+            child_rect = self.visualRect(child_idx)
+            if (
+                child_rect.isValid()
+                and child_rect.top() <= vp_pos.y() <= child_rect.bottom()
+            ):
+                # Determine the correct column from the x coordinate.
+                for col in range(model.columnCount()):
+                    col_idx = model.index(row, col, group_index)
+                    col_rect = self.visualRect(col_idx)
+                    if (
+                        col_rect.isValid()
+                        and col_rect.left() <= vp_pos.x() <= col_rect.right()
+                    ):
+                        return col_idx
+                return child_idx  # Fallback: column-0 child.
+        return None
 
     def _build_group_header_menu(self, menu, model, group_index):
         """Build context menu for a group header row."""

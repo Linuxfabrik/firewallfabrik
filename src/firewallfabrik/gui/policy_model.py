@@ -401,6 +401,44 @@ class PolicyTreeModel(QAbstractItemModel):
             return node.name
         return ''
 
+    def is_outermost(self, index):
+        """Return True if *index* is the first or last rule in its group.
+
+        Matches fwbuilder's ``RuleNode::isOutermost()`` — only outermost
+        rules can be removed from a group.
+        """
+        if not index.isValid():
+            return False
+        node = index.internalPointer()
+        if node.node_type != _NodeType.Rule:
+            return False
+        parent = node.parent
+        if parent is None or parent is self._root:
+            return False  # Not in a group.
+        return node is parent.children[0] or node is parent.children[-1]
+
+    def adjacent_group_names(self, index):
+        """Return ``(above, below)`` group names adjacent to a top-level rule.
+
+        Each value is the group name or ``''`` if no group is adjacent
+        in that direction.  Returns ``('', '')`` for grouped rules or
+        non-rule indices.
+        """
+        if not index.isValid():
+            return ('', '')
+        node = index.internalPointer()
+        if node.node_type != _NodeType.Rule or node.parent is not self._root:
+            return ('', '')
+        children = self._root.children
+        idx = children.index(node)
+        above = ''
+        if idx > 0 and children[idx - 1].node_type == _NodeType.Group:
+            above = children[idx - 1].name
+        below = ''
+        if idx < len(children) - 1 and children[idx + 1].node_type == _NodeType.Group:
+            below = children[idx + 1].name
+        return (above, below)
+
     # ------------------------------------------------------------------
     # Display helpers
     # ------------------------------------------------------------------
@@ -840,6 +878,24 @@ class PolicyTreeModel(QAbstractItemModel):
     # Group management methods
     # ------------------------------------------------------------------
 
+    def add_to_group(self, indices, group_name):
+        """Move the top-level rules at *indices* into the existing *group_name*."""
+        if not group_name or not indices:
+            return
+        rule_ids = []
+        for idx in indices:
+            rd = self.get_row_data(idx)
+            if rd is not None and not rd.group:
+                rule_ids.append(rd.rule_id)
+        if not rule_ids:
+            return
+        with self._db_manager.session(
+            self._desc(f'Add to group {group_name}'),
+        ) as session:
+            for rid in rule_ids:
+                self._set_rule_group(session, rid, group_name)
+        self.reload()
+
     def create_group(self, name, indices):
         """Group the rules at *indices* under a new group named *name*."""
         if not name or not indices:
@@ -885,9 +941,12 @@ class PolicyTreeModel(QAbstractItemModel):
             rd = self.get_row_data(idx)
             if rd is not None and rd.group:
                 rule_ids.append(rd.rule_id)
+        self.remove_from_group_by_ids(rule_ids)
+
+    def remove_from_group_by_ids(self, rule_ids):
+        """Remove the rules identified by *rule_ids* from their groups."""
         if not rule_ids:
             return
-
         with self._db_manager.session(self._desc('Remove from group')) as session:
             for rid in rule_ids:
                 self._set_rule_group(session, rid, '')
