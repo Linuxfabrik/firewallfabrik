@@ -15,22 +15,22 @@ Using [uv](https://docs.astral.sh/uv/):
 
 ```shell
 # Run FirewallFabrik without installing
-uvx firewallfabrik[gui]
+uvx --from 'firewallfabrik[gui]' fwf
 
 # Install FirewallFabrik
-uv tool install firewallfabrik[gui]
+uv tool install 'firewallfabrik[gui]'
 ```
 
 Using [pipx](https://pipx.pypa.io):
 
 ```shell
-pipx install firewallfabrik[gui]
+pipx install 'firewallfabrik[gui]'
 ```
 
 Using standard pip (user install):
 
 ```shell
-pip install --user firewallfabrik[gui]
+pip install --user 'firewallfabrik[gui]'
 ```
 
 Please note that on certain Linux systems `--break-system-packages`
