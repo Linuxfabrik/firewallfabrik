@@ -478,12 +478,12 @@ class PolicyView(QTreeView):
         menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
         up = menu.addAction(
-            'Move Up',
+            'Move Rule Up',
             lambda: self._move_and_select(model.move_rule_up(index)),
         )
         up.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp))
         down = menu.addAction(
-            'Move Down',
+            'Move Rule Down',
             lambda: self._move_and_select(model.move_rule_down(index)),
         )
         down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
