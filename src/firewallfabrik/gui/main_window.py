@@ -152,13 +152,10 @@ class FWWindow(QMainWindow):
         self._db_manager = DatabaseManager()
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
-        icons_path = Path(__file__).resolve().parent / 'ui' / 'Images'
-        app_icon = QIcon()
-        app_icon.addFile(str(icons_path / 'fwbuilder3.png'))
-        app_icon.addFile(str(icons_path / 'fwbuilder3-72x72.png'))
-        app_icon.addFile(str(icons_path / 'fwbuilder3-128x128.png'))
-        app_icon.addFile(str(icons_path / 'fwbuilder3-256x256.png'))
-        QGuiApplication.setWindowIcon(app_icon)
+        icon_path = (
+            Path(__file__).resolve().parent / 'ui' / 'Images' / 'fwbuilder3-128x128.png'
+        )
+        self.setWindowIcon(QIcon(str(icon_path)))
         self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
         # Object tree + splitter layout
