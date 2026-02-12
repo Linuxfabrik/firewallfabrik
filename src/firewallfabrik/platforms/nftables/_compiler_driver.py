@@ -25,6 +25,7 @@ from __future__ import annotations
 import io
 import os
 import socket
+import textwrap
 import time
 import uuid
 from pathlib import Path
@@ -314,6 +315,7 @@ class CompilerDriver_nft(CompilerDriver):
                     fw,
                     nft_rules_body,
                     routing_output,
+                    oscnf,
                 )
 
                 # --- Write output file ---
@@ -562,6 +564,7 @@ class CompilerDriver_nft(CompilerDriver):
         fw: Firewall,
         nft_rules_body: str,
         routing_output: str,
+        oscnf=None,
     ) -> str:
         """Assemble the complete shell script using the Jinja2 template."""
         options = fw.options or {}
@@ -595,6 +598,37 @@ class CompilerDriver_nft(CompilerDriver):
         # IP forwarding commands
         ip_forward_commands = self._get_ip_forward_commands(fw)
 
+        # Interface configuration
+        configure_interfaces = options.get('configure_interfaces', False)
+        verify_interfaces_opt = options.get('verify_interfaces', False)
+        ip_path = options.get('ip_path', '') or 'ip'
+
+        shell_functions = ''
+        configure_interfaces_code = ''
+        verify_interfaces_code = ''
+
+        if oscnf is not None:
+            # Include shell functions when any interface feature is enabled
+            need_shell_functions = (
+                configure_interfaces
+                or verify_interfaces_opt
+                or any(iface.is_dynamic() for iface in fw.interfaces)
+            )
+            if need_shell_functions:
+                shell_functions = oscnf.print_shell_functions()
+
+            if configure_interfaces:
+                buf = io.StringIO()
+                buf.write(oscnf.print_interface_configuration_commands())
+                buf.write(oscnf.print_commands_to_clear_known_interfaces())
+                buf.write(oscnf.print_dynamic_addresses_configuration_commands())
+                raw = textwrap.dedent(buf.getvalue()).strip()
+                configure_interfaces_code = textwrap.indent(raw, '    ')
+
+            if verify_interfaces_opt:
+                raw = textwrap.dedent(oscnf.print_verify_interfaces_commands()).strip()
+                verify_interfaces_code = textwrap.indent(raw, '    ')
+
         context = {
             'version': firewallfabrik.__version__,
             'timestamp': timestr,
@@ -612,6 +646,10 @@ class CompilerDriver_nft(CompilerDriver):
             'ip_forward_commands': ip_forward_commands,
             'mgmt_access': mgmt_access,
             'ssh_management_address': ssh_management_address,
+            'shell_functions': shell_functions,
+            'configure_interfaces_code': configure_interfaces_code,
+            'verify_interfaces_code': verify_interfaces_code,
+            'ip_path': ip_path,
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')

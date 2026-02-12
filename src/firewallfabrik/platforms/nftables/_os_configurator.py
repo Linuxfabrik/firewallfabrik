@@ -22,7 +22,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._os_configurator import OSConfigurator
-from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.objects import Firewall, Interface
+from firewallfabrik.driver._configlet import Configlet
+from firewallfabrik.driver._interface_properties import (
+    LinuxInterfaceProperties,
+    get_interface_var_name,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -38,6 +43,7 @@ class OSConfigurator_nft(OSConfigurator):
         ipv6: bool = False,
     ) -> None:
         super().__init__(session, fw, ipv6)
+        self.known_interfaces: list[str] = []
 
     def my_platform_name(self) -> str:
         return 'nftables'
@@ -135,3 +141,113 @@ class OSConfigurator_nft(OSConfigurator):
             rules.append('        tcp flags != syn ct state new drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
+
+    # -- Shell functions (reuses linux24 configlets) --
+
+    def print_shell_functions(self) -> str:
+        """Generate shell utility functions for interface management.
+
+        Expands the linux24 ``shell_functions`` and ``update_addresses``
+        configlets which provide ``getaddr()``, ``getnet()``,
+        ``diff_intf()``, ``update_addresses_of_interface()``,
+        ``missing_address()``, etc.
+        """
+        parts = []
+
+        shell_functions = Configlet('linux24', 'shell_functions')
+        parts.append(shell_functions.expand())
+
+        update_addr = Configlet('linux24', 'update_addresses')
+        parts.append(update_addr.expand())
+
+        return '\n'.join(parts)
+
+    # -- Interface configuration --
+
+    def print_verify_interfaces_commands(self) -> str:
+        """Generate interface verification commands."""
+        interfaces = []
+        for iface in self.fw.interfaces:
+            name = iface.name
+            if name and '*' not in name and name not in interfaces:
+                interfaces.append(name)
+
+        verify = Configlet('linux24', 'verify_interfaces')
+        verify.set_variable('have_interfaces', len(interfaces))
+        verify.set_variable('interfaces', ' '.join(interfaces))
+        return verify.expand()
+
+    def print_interface_configuration_commands(self) -> str:
+        """Generate interface address configuration commands."""
+        int_prop = LinuxInterfaceProperties()
+
+        script = Configlet('linux24', 'configure_interfaces')
+        script.remove_comments()
+        script.collapse_empty_strings(True)
+
+        need_promote_command = False
+        gencmd: list[str] = []
+
+        for iface in self.fw.interfaces:
+            should_manage, update_addresses, ignore_addresses = (
+                int_prop.manage_ip_addresses(iface)
+            )
+
+            if should_manage:
+                gencmd.append(
+                    self._print_update_address_command(
+                        iface, update_addresses, ignore_addresses
+                    )
+                )
+                need_promote_command = need_promote_command or len(update_addresses) > 2
+
+            self.known_interfaces.append(iface.name)
+
+        script.set_variable('have_interfaces', len(self.fw.interfaces) > 0)
+        script.set_variable('need_promote_command', need_promote_command)
+        script.set_variable('configure_interfaces_script', '\n'.join(gencmd))
+        return script.expand() + '\n'
+
+    @staticmethod
+    def _print_update_address_command(
+        iface: Interface,
+        update_addresses: list[str],
+        ignore_addresses: list[str],
+    ) -> str:
+        """Format an update_addresses_of_interface shell command."""
+        update_addresses.insert(0, iface.name)
+        return (
+            f'update_addresses_of_interface '
+            f'"{" ".join(update_addresses)}" '
+            f'"{" ".join(ignore_addresses)}"'
+        )
+
+    def print_dynamic_addresses_configuration_commands(self) -> str:
+        """Generate commands to get dynamic interface addresses."""
+        result = ''
+        for iface in self.fw.interfaces:
+            if not iface.is_dynamic():
+                continue
+            name = iface.name
+            if '*' in name:
+                continue
+
+            var_name = get_interface_var_name(iface)
+            var_name_v6 = get_interface_var_name(iface, suffix='v6')
+            result += f'getaddr {name}  {var_name}\n'
+            result += f'getaddr6 {name}  {var_name_v6}\n'
+            result += f'getnet {name}  {var_name}_network\n'
+            result += f'getnet6 {name}  {var_name_v6}_network\n'
+
+        return result
+
+    def print_commands_to_clear_known_interfaces(self) -> str:
+        """Generate commands to clear addresses on unknown interfaces."""
+        if not self.fw.get_option('clear_unknown_interfaces', False):
+            return ''
+        if not self.known_interfaces:
+            return ''
+        return (
+            f'clear_addresses_except_known_interfaces '
+            f'"{" ".join(self.known_interfaces)}"\n'
+        )

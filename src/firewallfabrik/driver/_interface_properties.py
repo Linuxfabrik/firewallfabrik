@@ -21,6 +21,20 @@ from firewallfabrik.core.objects import (
 )
 
 
+def get_interface_var_name(iface: Interface, suffix: str = '') -> str:
+    """Generate a shell variable name for an interface.
+
+    Replaces characters not valid in shell variable names with underscores.
+    E.g., "eth0.100" -> "i_eth0_100"
+    """
+    name = iface.name
+    # Replace non-alphanumeric characters with underscore
+    var_name = re.sub(r'[^a-zA-Z0-9]', '_', name)
+    if suffix:
+        return f'i_{var_name}_{suffix}'
+    return f'i_{var_name}'
+
+
 class InterfaceProperties:
     """Platform-agnostic interface validation and name checking."""
 
