@@ -1,26 +1,26 @@
-Firewall Builder GUI
+FirewallFabrik GUI
 ====================
 
 .. sectnum::
-   :start: 1
+   :start: 4
 
 .. contents::
    :local:
    :depth: 2
 
-The Firewall Builder GUI is your workspace for creating and compiling a firewall policy. In the workspace, you create *objects*, which are logical representations of your servers, network services, subnetworks, and other aspects of your network. You then use these objects in your policy.
+The FirewallFabrik GUI is your workspace for creating and compiling a firewall policy. In the workspace, you create *objects*, which are logical representations of your servers, network services, subnetworks, and other aspects of your network. You then use these objects in your policy.
 
-You use Firewall Builder to compile your policy for your target firewall platform, and, if you like, to deploy the policy to the actual firewall.
+You use FirewallFabrik to compile your policy for your target firewall platform, and, if you like, to deploy the policy to the actual firewall.
 
-This chapter provides a high-level overview of the Firewall Builder GUI and how it works. Later chapters describe using the GUI to accomplish specific tasks.
+This chapter provides a high-level overview of the FirewallFabrik GUI and how it works. Later chapters describe using the GUI to accomplish specific tasks.
 
-The Firewall Builder GUI consists of a main window and some dialog boxes. In the next section, we describe the main window.
+The FirewallFabrik GUI consists of a main window and some dialog boxes. In the next section, we describe the main window.
 
 
 The Main Window
 ---------------
 
-This figure shows the Firewall Builder GUI with a single object file open.
+This figure shows the FirewallFabrik GUI with an object file open.
 
 .. figure:: img/gui-main-window.png
    :alt: The Main Window
@@ -31,7 +31,7 @@ The sections of the main window are as follows:
 
 **Menus and Tool Bar**
 
-Firewall Builder comes with menus and a tool bar at the top of the window.
+FirewallFabrik comes with menus and a tool bar at the top of the window.
 
 .. figure:: img/gui-menu-and-tool-bars.png
    :alt: Menu and Tool Bars
@@ -49,38 +49,46 @@ Displayed on the left side of the window, the object tree displays firewalls, ho
 
 **The Policy Rule Set Workspace**
 
-Displayed to the right of the object tree, this area holds the rule set you are currently working on. This space is blank when you first load an object file. It only appears when you double-click a policy, NAT, or routing rule set link in a firewall object. (This means that you have to create a firewall object before you can work on a policy.)
+Displayed to the right of the object tree, this area holds the rule sets you are currently working on. This space is blank when you first load an object file. It only appears when you double-click a policy, NAT, or routing rule set link in a firewall object. (This means that you have to create a firewall object before you can work on a policy.)
+
+Each rule set opens in its own sub-window within a Multiple Document Interface (MDI) area. Multiple rule sets can be open simultaneously and arranged side by side.
 
 See :doc:`05 - Working with Objects` for instructions on creating a firewall object. See :doc:`07 - Firewall Policies` for instructions on working with policies.
-
-The + button on the left inserts a new rule in the open policy above the currently selected rule. The buttons on the top right of the policy window are shortcuts to compile, compile-and-install and inspect generated files.
 
 .. figure:: img/gui-policy-area.png
    :alt: The Policy Area
 
    The Policy Area
 
-**The Object Editor Dialog**
+**The Object Editor Panel**
 
-The dialog area, across the bottom of the main window, is where you make changes to object parameters, perform find and replace operations, and view the output from single-rule compiles. The dialog area is not visible until you double-click an object.
+The editor panel, across the bottom of the main window, is where you make changes to object parameters, perform find and replace operations, view where objects are used, and view the output from single-rule compiles. The editor panel is not visible until you double-click an object.
 
-The dialog has three tabs and three uses: editing an object's parameters, doing a find or find-and-replace on an object, and displaying the output of a single-rule compile run. Close the dialog by clicking the X.
+The panel has four tabs:
 
-In the object editor dialog, you can make changes to an object's parameters. Changes made to a field in the dialog are saved whenever you click out of the field, or when you press the Tab or Enter key. (Note that this does not change the data in the .fwb file until you save the file itself.) If you wish to cancel a change, select Edit > Undo. For more information on objects and their parameters, see :doc:`05 - Working with Objects`.
+Editor
+   Edit an object's parameters, including its comment and tags. Changes made to a field are saved whenever you click out of the field, or when you press the Tab or Enter key. (Note that this does not change the data in the file until you save the file itself.) If you wish to cancel a change, select Edit > Undo. For more information on objects and their parameters, see :doc:`05 - Working with Objects`.
+
+Find
+   Search for objects and rule sets across your object file, plus do replacements of objects. You can search by name, address, port range, protocol, or ICMP type. You can also search by dragging an object into the search area. See :doc:`05 - Working with Objects` for details.
+
+Where Used
+   Find all places where a specific object is referenced -- in groups, rule sets, and as child objects. Results are clickable and navigate directly to the usage location.
+
+Output
+   Displays the compiler output for single-rule compiles.
+
+Close the editor panel by clicking the X or by unchecking View > Editor Panel.
 
 .. figure:: img/gui-object-editor.png
    :alt: Object Editor, Partial View
 
    Object Editor, Partial View
 
-You can search for objects and rule sets across your object files, plus do replacements of objects. See :doc:`05 - Working with Objects` for an explanation of the Find-and-Replace tab.
-
 .. figure:: img/gui-find-and-replace.png
-   :alt: Find-and-Replace Object dialog, Partial View
+   :alt: Find-and-Replace Object Panel, Partial View
 
-   Find-and-Replace Object dialog, Partial View
-
-You can compile individual rules and see how the rule gets converted into firewall instructions.
+   Find-and-Replace Object Panel, Partial View
 
 .. figure:: img/gui-output-view.png
    :alt: Output View, Partial View
@@ -91,18 +99,16 @@ You can compile individual rules and see how the rule gets converted into firewa
 
 Displayed on the right side of the window, the Undo Stack is not displayed by default. To activate it, select View > Undo Stack.
 
-As you make changes to your object file, those changes show up in the Undo Stack window. You can "undo" an action by clicking the action above it (in other words, prior to it) in the window. Clicking any action in the window rolls back all changes after that action. However, the "future" changes stay in the Undo Stack until you make another edit. At that point, all changes after the current point in the stack are removed.
+As you make changes to your object file, those changes show up in the Undo Stack panel. You can "undo" an action by clicking the action above it (in other words, prior to it) in the panel. Clicking any action rolls back all changes after that action. However, the "future" changes stay in the Undo Stack until you make another edit. At that point, all changes after the current point in the stack are removed.
 
 The Undo Stack can "float" as its own window by clicking the button at the top of the panel next to the close button.
 
-See the `Undo Stack`_ section for a more detailed explanation of the Undo Stack window.
+See the `Undo Stack`_ section for a more detailed explanation of the Undo Stack.
 
 .. figure:: img/gui-undo-stack-panel.png
    :alt: Undo Stack
 
    Undo Stack
-
-You can open more than one object file window at a time, and you can copy objects between them. See `Working with Multiple Data Files`_ for an example.
 
 
 GUI Menu and Tool Bars
@@ -114,7 +120,7 @@ This section describes the commands available in the GUI menus and tool bar.
 File Menu
 ~~~~~~~~~
 
-The File menu provides standard file management options, and in addition allows you to import and export libraries and manage your object files with the revision control system.
+The File menu provides standard file management options.
 
 .. list-table:: File Menu
    :header-rows: 1
@@ -123,41 +129,50 @@ The File menu provides standard file management options, and in addition allows 
    * - File Menu Entry
      - Explanation
    * - New Object File
-     - Opens a "file" dialog that lets you name your new object file. Object file names end with ".fwb". In general, you should create a new directory for your object files.
+     - Opens a "file" dialog that lets you name your new object file. Object file names end with ".fwf".
    * - Open...
-     - Opens a standard "file" dialog that lets you select an existing file. The file dialog, by default, only looks for files that end in ".fwb".
+     - Opens a standard "file" dialog that lets you select an existing file. The file dialog shows FirewallFabrik files (.fwf), Firewall Builder files (.fwb), or all files.
    * - Open Recent
-     - Contains a submenu listing recently opened object files.
+     - Contains a submenu listing up to 20 recently opened object files. The most recent nine files can be opened with Ctrl+1 through Ctrl+9. Use "Clear Menu" at the bottom to clear the list.
    * - Save
-     - Saves the current file.
+     - Saves the current file. Files are always saved in the FirewallFabrik YAML format (.fwf), even if the original file was a Firewall Builder XML file (.fwb).
    * - Save As...
      - Opens a "file" dialog that lets you save the object file under a new name.
-   * - Close
-     - Closes the current object file, but does not exit the program.
-   * - Properties
-     - Opens a dialog indicating properties of the current file, including revision control information (if applicable.) (Program preferences are in the Edit menu.)
-   * - Import Firewall
-     - Allows you to import an existing firewall policy into Firewall Builder. See :doc:`06 - Network Discovery` for a detailed explanation.
-   * - Import Library
-     - Lets you import an Object Library. (See Export Library.)
-   * - Export Library
-     - Brings up a dialog that lets you select which Object Library you wish to export to a ".fwl" file. Once a library is exported, you can import it into another instantiation of Firewall Builder. This is particularly useful in Enterprise settings that have multiple Firewall Builder workstations and administrators.
-   * - Print
-     - Lets you print your policy.
    * - Exit
-     - Closes Firewall Builder.
+     - Closes FirewallFabrik.
 
 
 Edit Menu
 ~~~~~~~~~
 
-The Edit options are standard for GUI-based tools. Preferences for Firewall Builder are described in the `Preferences Dialog`_ section.
+The Edit menu provides standard editing operations. The clipboard operations (Cut, Copy, Paste, Delete) are context-sensitive -- they dispatch to either the object tree or the active policy view, depending on which area has focus.
+
+.. list-table:: Edit Menu
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Edit Menu Entry
+     - Explanation
+   * - Undo
+     - Undoes the last change.
+   * - Redo
+     - Redoes the last undone change.
+   * - Cut
+     - Copies the selected item to the clipboard and removes it.
+   * - Copy
+     - Copies the selected item to the clipboard.
+   * - Paste
+     - Pastes the item from the clipboard.
+   * - Delete
+     - Deletes the selected item.
+   * - Preferences...
+     - Opens the Preferences dialog. See the `Preferences Dialog`_ section.
 
 
 View Menu
 ~~~~~~~~~
 
-The View menu lets you turn on or off various display panes.
+The View menu lets you turn on or off various display panels.
 
 .. list-table:: View Menu
    :header-rows: 1
@@ -166,17 +181,17 @@ The View menu lets you turn on or off various display panes.
    * - View Menu Entry
      - Explanation
    * - Object Tree
-     - If checked, the object tree is displayed.
+     - If checked, the object tree is displayed on the left side of the window.
    * - Editor Panel
-     - Displays the object editor. You can also display this panel by double-clicking an object.
+     - If checked, the editor panel is displayed at the bottom of the window. You can also display this panel by double-clicking an object.
    * - Undo Stack
-     - Displays the undo history. You can undo several changes by clicking on the last change you want to keep. With the next change, all changes after the current one are removed from the undo history.
+     - If checked, the undo history is displayed on the right side of the window. You can undo several changes by clicking on the last change you want to keep. With the next change, all changes after the current one are removed from the undo history.
 
 
 Object Menu
 ~~~~~~~~~~~
 
-The Object menu lets you create a new object, find occurrences of an object (including doing replaces), lock an object to prevent accidental changes, and unlock an object when you need to edit it.
+The Object menu lets you create new objects and search for them.
 
 .. list-table:: Object Menu
    :header-rows: 1
@@ -187,65 +202,49 @@ The Object menu lets you create a new object, find occurrences of an object (inc
    * - New Object
      - Opens a menu of all possible object types. Select one to create a new object of that type. The `Creating Objects`_ section describes how to create objects.
    * - Find Object
-     - Opens the Find object dialog, which also provides search and replace functions. See :doc:`05 - Working with Objects` for details on how to use this dialog.
-   * - Lock
-     - Makes the selected object read-only, which prevents accidental modification. An object that is locked has a little padlock for its icon. In this example, the eth0 interface of test server is locked. Locking the eth0 interface object also renders read-only the address objects associated with the interface. (Note that the test server object, located "above" eth0 in the hierarchy, is still editable.)
-
-       .. figure:: img/gui-locked-object.png
-          :alt: Locked Object
-
-          Locked Object
-
-   * - Unlock
-     - Unlocks the selected object. The object becomes editable, and the objects associated with it become editable as well, unless they have their own locks.
-
-       .. figure:: img/gui-unlocked-object.png
-          :alt: Unlocked Object
-
-          Unlocked Object
+     - Opens the Find panel, which also provides search and replace functions. See :doc:`05 - Working with Objects` for details on how to use this panel.
 
 
 Rules Menu
 ~~~~~~~~~~
 
-The Rules menu lets you add, delete, and rearrange rules and rule groups in a policy. In addition, the Rules menu lets you compile an individual rule or an entire policy or install an entire policy. The menu is context-sensitive, so not all options are visible at all times. See :doc:`07 - Firewall Policies` for details.
+The Rules menu lets you compile the firewall policy.
 
-
-Tools Menu
-~~~~~~~~~~
-
-The Tools menu provides access to useful tools.
-
-.. list-table:: Tools Menu
+.. list-table:: Rules Menu
    :header-rows: 1
    :widths: 30 70
 
-   * - Tools Menu Entry
+   * - Rules Menu Entry
      - Explanation
-   * - Find Conflicting Objects in Two Files
-     - Launches a tool that lets you specify two object files (.fwb) or two library files (.fwl). The tool then looks for objects that have the same ID, but different characteristics. This kind of conflict would cause a problem if you wanted to merge the files.
-   * - Import Addresses From File
-     - Launches a wizard that lets you import objects from a file in ``/etc/hosts`` format.
-   * - Discovery Networks and Hosts via SNMP
-     - Launches a wizard that lets you populate many objects automatically using an SNMP crawl of your network. See :doc:`06 - Network Discovery` for details on the tool.
-
-
-Window Menu
-~~~~~~~~~~~
-
-The Window menu provides controls for selecting and rearranging object file windows. This feature works similarly to Window menus in most GUIs.
+   * - Compile
+     - Opens the compile dialog for all firewalls in the current object file. See :doc:`10 - Compiling and Installing a Policy` for more detail.
 
 
 Help Menu
 ~~~~~~~~~
 
-The Help menu provides access to help resources, information about the current version of Firewall Builder, and a dialog with debugging information.
+The Help menu provides access to help resources and information about the program.
+
+.. list-table:: Help Menu
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Help Menu Entry
+     - Explanation
+   * - User Guide
+     - Opens the user guide documentation.
+   * - Changelog
+     - Displays the project changelog.
+   * - About
+     - Shows version information about FirewallFabrik.
+   * - Debugging Info
+     - Shows technical information including the executable path, resource paths, locale, and version numbers for FirewallFabrik, Python, PySide6, and Qt.
 
 
 Object Context Menu
 ~~~~~~~~~~~~~~~~~~~
 
-The Context Menu for a particular object provides a short-cut to menu commands for that object. Right-click an object's label to bring up a menu of the following functions:
+The context menu for a particular object provides a shortcut to commands for that object. Right-click an object's label to bring up a menu with the following functions:
 
 .. list-table:: Object Right-Click Menu
    :header-rows: 1
@@ -253,12 +252,16 @@ The Context Menu for a particular object provides a short-cut to menu commands f
 
    * - Right-Click Menu Entry
      - Explanation
+   * - Expand / Collapse
+     - Expands or collapses the selected item's children (only visible for items that have children).
    * - Edit
-     - Opens the Editor dialog for that object. (You can achieve the same result by double-clicking the object.)
+     - Opens the Editor panel for that object. (You can achieve the same result by double-clicking the object.)
+   * - Inspect
+     - Inspects the object.
    * - Duplicate
-     - Places a copy of the object into the specified library. (If no user-created libraries exist, then Firewall Builder puts the object in the User tree by default.) The new object has the same name as the original object, unless that object name is already in use in that tree. If so, a "-1" is appended to the object name.
+     - Creates a copy of the object. The new object has the same name as the original object, unless that name is already in use, in which case a numeric suffix is appended.
    * - Move
-     - Deletes the object from the current library and places it in the selected new library.
+     - Moves the object to a different location in the tree.
    * - Copy
      - Copies an object onto the clipboard.
    * - Cut
@@ -266,21 +269,19 @@ The Context Menu for a particular object provides a short-cut to menu commands f
    * - Paste
      - Puts a copy of the object on the clipboard into a tree or into the policy, depending on where the mouse is when you click.
    * - Delete
-     - Deletes an object without making a copy on the clipboard. If the Deleted Objects tree has been enabled, the object shows up there.
-   * - Find
-     - Brings up a Find/Find-and-Replace panel, which is another tab in the object dialog. Click Next in the panel to see all instances of the object boxed in red. To do a Search and Replace, drag another object into the Replace object box, specify a scope for the replacement using the pull-down menu, and then use the Replace All, Replace, Replace & Find, and Next buttons. See :doc:`05 - Working with Objects` for details on this dialog.
+     - Deletes an object.
+   * - New [Type]
+     - Context-sensitive option to create a new child object. For example, right-clicking a firewall shows options for Interface, Policy, and NAT. Right-clicking a folder shows options appropriate to that folder type.
+   * - New Subfolder
+     - Creates a new subfolder within a folder to help organize objects (only available on folders).
    * - Where Used
-     - Scans the whole tree, including all groups and policies of all firewalls, looking for references to the object. When finished, the program shows a pop-up dialog with icons corresponding to groups and firewalls using the object. Double-clicking an icon opens the corresponding object in the main window.
-   * - Group
-     - Only active if multiple objects are selected. This operation will open a dialog for you to enter a group name and select the Library the group should be created in.
-   * - Keywords
-     - Add or remove a tag from the selected object(s). To apply a tag that doesn't exist yet select Add -> New Keyword.
-   * - Lock and Unlock
-     - Lock makes an object read-only, which prevents accidental modification. Unlock places the object back into read/write mode.
+     - Scans the whole tree, including all groups and policies of all firewalls, looking for references to the object.
+   * - Tags
+     - Add or remove tags from the selected object(s). To add a tag that doesn't exist yet, create a new one in the Tags dialog.
 
-The pop-up menu can also have items to add interface and address objects, depending on the type of object that was clicked.
+The context menu is context-sensitive: certain operations are not available for certain object types. For example, you cannot duplicate or delete a Library.
 
-In addition, the right-click context menu on policy rules has a selection for Compile Rule. Selecting this option compiles the rule and displays the output in the Output tab of the Editor dialog.
+In addition, the right-click context menu on policy rules has a selection for Compile Rule. Selecting this option compiles the rule and displays the output in the Output tab of the Editor panel.
 
 
 Tool Bar
@@ -300,21 +301,15 @@ The Tool Bar has buttons for commonly used functions:
    * - Button
      - Explanation
    * - Open
-     - Opens a standard "file" dialog that lets you select an existing file. The file dialog, by default, only looks for files that end in ".fwb".
+     - Opens a standard "file" dialog that lets you select an existing file.
    * - Save
      - Saves the current file.
-   * - Back
-     - Navigation tool that changes the active selection to an earlier selection in the selection history.
-   * - Forward
-     - Navigation tool that changes the active selection to the next selection if you have used the Back button to navigate the selection history.
    * - New Object
      - Activates dropdown menu that allows you to create a new object of any object type, including creating a new Library object.
    * - Find Object
-     - Opens the Find object dialog, which also provides search-and-replace functions. See :doc:`05 - Working with Objects` for details on how to use this dialog.
+     - Opens the Find panel, which also provides search-and-replace functions. See :doc:`05 - Working with Objects` for details on how to use this panel.
    * - Compile
-     - Opens the compile wizard for all firewalls in the current object file. The compile button on an individual file opens the compile dialog for just the selected firewall. See :doc:`10 - Compiling and Installing a Policy` for more detail.
-   * - Install
-     - Opens the compile/install wizard for all firewalls in the current object file. The compile/install button on an individual file opens the compile/install dialog for just the selected firewall. See :doc:`10 - Compiling and Installing a Policy` for more detail.
+     - Opens the compile dialog for all firewalls in the current object file. See :doc:`10 - Compiling and Installing a Policy` for more detail.
 
 
 Object Tree
@@ -334,24 +329,25 @@ The object tree stores all objects in a predefined hierarchy:
 
 Newly created objects are automatically placed in the appropriate position in the tree. Each branch of the tree is automatically sorted by the object name.
 
-The program has three default libraries: User, Standard, and Deleted Objects.
+The program has two default libraries: User and Standard.
 
 * The User library holds objects that you define, including objects for your firewall, hosts, and networks.
-* The Standard library holds a collection of predefined standard objects that come with Firewall Builder. Note that you need not (and cannot) insert objects into the Standard tree.
-* The Deleted Objects library acts like a trash can or recycle bin for user objects you delete. Note that the Deleted Objects library must be enabled using the File > Preferences > Objects > Show deleted objects menu option.
+* The Standard library holds a collection of predefined standard objects that come with FirewallFabrik. Note that you need not (and cannot) insert objects into the Standard library.
+
+Optionally, a Deleted Objects library can be enabled using Edit > Preferences > Objects > "Show deleted objects". When enabled, it acts like a trash can for user objects you delete.
 
 .. figure:: img/gui-standard-objects.png
    :alt: Standard Objects
 
    Standard Objects
 
-In addition, you can create custom libraries by selecting New Library from the New Object menu. You can populate the new library by copying and pasting objects other views or by creating them from scratch within the new library. See :doc:`05 - Working with Objects` for instructions on creating and distributing user-defined libraries.
+In addition, you can create custom libraries by selecting New Library from the New Object menu. You can populate the new library by copying and pasting objects from other libraries or by creating them from scratch within the new library. See :doc:`05 - Working with Objects` for instructions on creating user-defined libraries.
 
-Functionally, there is no difference between having an object in the Standard tree, the User tree, or a user-defined tree; it is just a convenient way to sort objects in the tree. You can think of each as a kind of "view". The choice of tree affect only the display of the data in the GUI; objects are all equal in all other senses and you can use an object from any library in your policy.
+Functionally, there is no difference between having an object in the Standard library, the User library, or a user-defined library; it is just a convenient way to organize objects. You can think of each as a kind of "view". The choice of library affects only the display of the data in the GUI; objects are all equal in all other senses and you can use an object from any library in your policy.
 
-The object that is currently selected in the tree is highlighted in color and is shown in the dialog area on the right.
+The object that is currently selected in the tree is highlighted in color and is shown in the editor panel at the bottom.
 
-Firewall Builder understands and uses the object and service types described in the table below. See :doc:`05 - Working with Objects` for more detailed information.
+FirewallFabrik understands and uses the object and service types described in the table below. See :doc:`05 - Working with Objects` for more detailed information.
 
 .. list-table:: Object Types
    :header-rows: 1
@@ -359,62 +355,58 @@ Firewall Builder understands and uses the object and service types described in 
 
    * - Object Type
      - Explanation
-   * - Library
-     - A library of objects. Firewall Builder comes with the User, Standard, and Deleted Objects libraries. In addition, you can create your own.
-   * - Cluster
-     - A high-availability pair of firewall devices. The firewall objects themselves must be created as firewall objects, then added to the cluster. The cluster's platform and OS settings must match those of the component firewalls.
-   * - Firewall
-     - A physical firewall device, its interfaces and addresses, and the policy rule sets associated with the device. Use Firewall Builder to model your actual device's firewall software, OS, interfaces and addresses. Then, use Firewall Builder to construct the policy rule sets to assign to the device.
-   * - Host
-     - A computer on your network. Hosts can have interfaces associated with them.
-   * - Interface
-     - A physical interface on a firewall or host. Interfaces can have IP and physical (MAC) addresses associated with them. An IP address can be created from the New Object for the selected interface, but physical addresses can only be created by right-clicking on an interface object.
-   * - Network
-     - An IPv4 subnet.
-   * - Network IPv6
-     - An IPv6 subnet.
    * - Address
      - An IPv4 address.
    * - Address IPv6
      - An IPv6 address.
-   * - DNS Name
-     - A DNS "A" or "AAAA" record. This name is resolved into an IP address at compile or run time.
-   * - Address Table
-     - An IP address. Objects of this type can be configured with the name of an external file that is expected to contain a list of IP addresses. Mixing IPv4 and IPv6 addresses is supported. Addresses can be loaded during policy compile or during the execution of a generated firewall script.
    * - Address Range
-     - A range of IPv4 or IPv6 IP addresses. This range does not have to be a specific subnet, but address must be contiguous.
-   * - Object Group
-     - A collection of addressable objects (objects that have or contain IP addresses) such as network, interface, and hosts objects. A group is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule.
-   * - Dynamic Group
-     - Dynamic Groups include filters based on the object type and tags in order to build a dynamic list of objects that will be included in the group. Dynamic Groups are used in rules in the same way that standard Object Groups are. When a firewall is compiled the Dynamic Group is expanded to include all the object matching the filter rules when the compile is run.
+     - A range of IPv4 or IPv6 IP addresses. This range does not have to be a specific subnet, but addresses must be contiguous.
+   * - Address Table
+     - An object configured with the name of an external file containing a list of IP addresses. Mixing IPv4 and IPv6 addresses is supported. Addresses can be loaded during policy compile or during the execution of a generated firewall script.
+   * - Cluster
+     - A high-availability group of firewall devices. The firewall objects themselves must be created as firewall objects, then added to the cluster. The cluster's platform and OS settings must match those of the component firewalls.
    * - Custom Service
      - An object that can be used to inject arbitrary code into the generated firewall script.
-   * - ESTABLISHED and ESTABLISHED IPv6 Services
-     - An object matching all packets that are part of network connections established through the firewall, or connections 'related' to those established through the firewall. (The term "established" here refers to the state tracking mechanism used by iptables and other stateful firewalls; it does not imply any particular combination of packet header options.)
-   * - IP Service
-     - An IP service such as GRE, ESP, or VRRP. This category is meant to include IP services that do not fall into ICMP, ICMP6, TCP, or UDP service categories.
+   * - DNS Name
+     - A DNS "A" or "AAAA" record. This name is resolved into an IP address at compile or run time.
+   * - Dynamic Group
+     - A group whose membership is determined dynamically based on filters using object type and tags. When a firewall is compiled, the Dynamic Group is expanded to include all objects matching the filter rules.
+   * - Firewall
+     - A physical firewall device, its interfaces and addresses, and the policy rule sets associated with the device. Use FirewallFabrik to model your actual device's firewall software, OS, interfaces and addresses. Then, use FirewallFabrik to construct the policy rule sets to assign to the device.
+   * - Host
+     - A computer on your network. Hosts can have interfaces associated with them.
    * - ICMP Service
      - An ICMP service such as a ping request or reply.
-   * - ICMP6 Service
-     - An ICMP6 service such as "ipv6 packet too big", "ipv6 ping request", or "ipv6 ping reply".
+   * - ICMPv6 Service
+     - An ICMPv6 service such as "IPv6 packet too big", "IPv6 ping request", or "IPv6 ping reply".
+   * - Interface
+     - A physical interface on a firewall or host. Interfaces can have IP and physical (MAC) addresses associated with them. Interfaces support sub-interfaces for VLANs, bonding slaves, and bridge ports.
+   * - IP Service
+     - An IP service such as GRE, ESP, or VRRP. This category includes IP services that do not fall into ICMP, ICMPv6, TCP, or UDP service categories.
+   * - Library
+     - A library of objects. FirewallFabrik comes with the User and Standard libraries. In addition, you can create your own and optionally enable the Deleted Objects library.
+   * - Network
+     - An IPv4 subnet.
+   * - Network IPv6
+     - An IPv6 subnet.
+   * - Object Group
+     - A collection of addressable objects (objects that have or contain IP addresses) such as network, interface, and host objects. A group is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule.
+   * - Service Group
+     - A collection of services. Grouping services is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule.
+   * - Tag Service
+     - A service object that lets you examine the tag in an IP header. You can then construct your rule to take appropriate action on a match.
    * - TCP Service
      - A TCP service such as HTTP, SMTP, or FTP.
+   * - Time Interval
+     - A time period such as "weekends" or a range of dates, or a range of times on certain days of the week. Can be used as part of rule matching in Policy rule sets to provide or deny access based on time. Note that these time intervals are relative to the time on the firewall device itself.
    * - UDP Service
      - A UDP service such as DNS or NTP.
-   * - TagService
-     - A service object that lets you examine the tag in an IP header. You can then construct your rule to take appropriate action on a match.
-   * - User Service
-     - A service object that matches the owner of the process on the firewall that sends the packet. This object correlates to the "owner" match in iptables and the "user" parameter for PF.
-   * - Service Group
-     - A collection of services. For example, Firewall Builder comes with the Useful_ICMP service group containing the "time exceeded", "time exceeded in transit", "ping reply", and "all ICMP unreachable" ICMP services. It also comes with a "DNS" service group containing both the UDP and TCP version of DNS. Grouping services is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule.
-   * - Time Interval
-     - A time period such as "weekends" or a range of dates, or a range of times on certain days of the week. Can be used as part of rule matching in Access Policy rule sets to provide or deny access to something based on time. Note that these time intervals are relative to the time on the firewall device itself.
 
 
-Using Subfolders to Organize Object Tree
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using Subfolders to Organize the Object Tree
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Firewall Builder comes with a set of predefined system folders. You can also create your own subfolders in the Object Tree to help organize your objects.
+FirewallFabrik comes with a set of predefined system folders. You can also create your own subfolders in the Object Tree to help organize your objects.
 
 The following figure shows the object tree of a retailer with multiple stores in several cities. As you can see the objects are not grouped together which can make it hard to quickly find the object you are looking for. Subfolders provide an easy way to organize your objects.
 
@@ -430,7 +422,7 @@ To add a subfolder right-click on one of the system folders, in this case we are
 
    Add Firewalls Subfolder
 
-A dialog window will appear. Enter the name of your subfolder an click OK. In this case we will create a new subfolder called "Berlin" to hold all the Firewall objects located in Berlin.
+A dialog window will appear. Enter the name of your subfolder and click OK. In this case we will create a new subfolder called "Berlin" to hold all the Firewall objects located in Berlin.
 
 To add the firewalls to the Berlin subfolder, select the firewall objects in the tree, and drag-and-drop the firewalls onto the Berlin subfolder.
 
@@ -450,15 +442,17 @@ While this example showed using subfolders in the Firewalls system folder, you c
 
 .. note::
 
-   To *delete* a subfolder simply right-click on the subfolder and select Delete. If there are objects in the subfolder Firewall Builder will pop-up a warning showing the locations where the objects that are going to be deleted are used.
+   To *delete* a subfolder simply right-click on the subfolder and select Delete. If there are objects in the subfolder FirewallFabrik will show a warning about the locations where the objects that are going to be deleted are used.
 
    If you don't want to delete the objects in the subfolder then you first need to move them to the system folder by selecting all the objects in the subfolder and dragging-and-dropping them onto the system folder that is the parent of the subfolder you want to delete.
 
 
 Filtering the Object Tree
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The object tree can hold a great many objects, nested in their respective categories. You can filter the tree to show only certain objects and categories appear based on a string. For example, typing "eth" in the Filter field causes all the objects with "eth" in the object name to appear.
+The object tree can hold a great many objects, nested in their respective categories. You can filter the tree to show only certain objects based on a string. For example, typing "eth" in the Filter field causes all the objects with "eth" in the object name to appear. The filter also searches object tags and attributes. Filters are not case sensitive.
+
+Use Ctrl+F to focus the filter field. Click the X in the filter box to clear the active filter.
 
 As your configuration grows you will find that it becomes harder to quickly find the objects you are looking for. This example shows how filtering helps.
 
@@ -467,20 +461,18 @@ As your configuration grows you will find that it becomes harder to quickly find
 
    Empty Filter Field
 
-In the example, the word "new york" is typed into Filter field, with the goal of retrieving all address-related objects. As the screen shot below shows, filtering takes effect immediately. In the example, only "new" has been typed but the tree is already filtered by those characters, showing the Address Range, Addresses, Groups, and Networks objects that include "new" in their name. Filters are not case sensitive.
+In the example, the word "new york" is typed into Filter field, with the goal of retrieving all address-related objects. As the screen shot below shows, filtering takes effect immediately. In the example, only "new" has been typed but the tree is already filtered by those characters, showing the Address Range, Addresses, Groups, and Networks objects that include "new" in their name.
 
 .. figure:: img/gui-populated-filter-field.png
    :alt: Populated Filter Field
 
    Populated Filter Field
 
-Click the X in the filter box to clear the active filter.
-
 
 Object Attributes in the Tree
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you check the Show object attributes in the tree checkbox in the Preferences > Object tab, the object tree displays a second column of information, as shown below.
+If you check the "Show attributes in tree" checkbox in the Preferences > Objects tab, the object tree displays a second column of information, as shown below.
 
 .. figure:: img/gui-object-attributes-column.png
    :alt: Object Attributes Column
@@ -489,7 +481,7 @@ If you check the Show object attributes in the tree checkbox in the Preferences 
 
 The information shown depends on the type of object.
 
-If you check the checkbox but don't see the second column, make the panel wider until you see the column separator, then drag the column separator until the columns are in the correct position. Column sizing is saved with the object file, so the next time you open the object, the column display preservers your changes.
+If you check the checkbox but don't see the second column, make the panel wider until you see the column separator, then drag the column separator until the columns are in the correct position.
 
 
 Creating Objects
@@ -507,20 +499,20 @@ New objects can be created using the New Object menu, accessed by clicking this 
 
    Creating Objects Using The Object Menu
 
-You can create all objects except physical address objects through the New Object menu. (Physical address objects can only be created by right-clicking an existing interface object.) You can also create objects by right-clicking a folder in a tree (though not in the read-only Standard tree). If you right-click a folder, you can only create objects appropriate to that folder. For example, an interface object can only be placed under a host or firewall object, so the Add Interface option is available only if you right-click a host or firewall.
+You can also create objects by right-clicking a folder in a library (though not in the read-only Standard library). If you right-click a folder, you can only create objects appropriate to that folder. For example, an interface object can only be placed under a host or firewall object, so the Add Interface option is available only if you right-click a host or firewall.
 
 .. figure:: img/gui-creating-objects-by-right-clicking.png
    :alt: Creating Objects by Right-Clicking
 
    Creating Objects by Right-Clicking
 
-Another way to create objects is to use the Duplicate option when you right-click an object. This allows you to create a copy of the object. For example, you may want to create a firewall policy for one platform, duplicate it, then just change the target platform on the copy. Note that copies are not linked in any way. A change to the original has no affect on the copy, and vice versa.
+Another way to create objects is to use the Duplicate option when you right-click an object. This allows you to create a copy of the object. For example, you may want to create a firewall policy for one platform, duplicate it, then just change the target platform on the copy. Note that copies are not linked in any way. A change to the original has no effect on the copy, and vice versa.
 
 
 Undo and Redo
 -------------
 
-Firewall Builder supports undo and redo functions from the GUI and from the keyboard. In the GUI, both functions are located in the Edit menu. The keyboard commands are Ctrl-Z for Undo, and Ctrl-Y for Redo.
+FirewallFabrik supports undo and redo functions from the GUI and from the keyboard. In the GUI, both functions are located in the Edit menu. The keyboard commands are Ctrl+Z for Undo, and Ctrl+Y for Redo.
 
 
 Undo Stack
@@ -528,13 +520,15 @@ Undo Stack
 
 The undo stack shows you a list of your changes, and lets you roll back changes you don't want. You can roll back just one change, all changes after a certain point, or all changes.
 
-Press Ctrl-Z to undo an action. The undo stack is essentially unlimited, so you can press Ctrl-Z repeatedly to roll back a series of changes. You can also you can view the Undo stack directly by selecting Edit > Undo Stack. From that view, you can roll back several changes with a single mouse click.
+Press Ctrl+Z to undo an action. The undo stack is essentially unlimited, so you can press Ctrl+Z repeatedly to roll back a series of changes. You can also view the Undo Stack directly by selecting View > Undo Stack. From that view, you can roll back several changes with a single mouse click.
 
 Note that a change enters the undo stack as soon as you "commit" the change. For dragging and dropping, a change is committed as soon as you drag an object into a new position, at which time that change appears in the undo stack. For field edits, the change appears as soon as you move the GUI focus out of a field by pressing Enter or Tab, or by clicking outside the field.
 
 Rolling back a change does not immediately remove that change from the stack. You can "redo" a change by clicking it. Changes after the current change stay in the stack until you perform a new edit. At that point, the new change appears as current, and all the undone changes after that point are removed from the stack.
 
-The following figure shows a portion of an object tree, an access policy, and the undo stack. The stack has been "floated," so it can be moved as its own window. (To make an object float, click the button next to the close button.)
+Each undo entry includes a description of the change and the name of the firewall it belongs to, making it easy to identify changes in multi-firewall configurations.
+
+The following figure shows a portion of an object tree, an access policy, and the undo stack. The stack has been "floated," so it can be moved as its own window. (To make a panel float, click the button next to the close button.)
 
 In the example stack, a new, blank rule has just been added to the policy.
 
@@ -570,34 +564,12 @@ Next, we drag "outside range 2" into the Destination field. You can see that the
 Preferences Dialog
 ------------------
 
-To open the Preferences dialog, select Edit/Preferences.... The dialog has several tabs, described here.
+To open the Preferences dialog, select Edit > Preferences (Ctrl+,). The dialog has several tabs, described here.
 
 .. figure:: img/gui-preferences-dialog.png
    :alt: The GUI Preferences Dialog
 
    The GUI Preferences Dialog
-
-.. list-table:: Preferences > General Tab
-   :header-rows: 1
-   :widths: 30 70
-
-   * - General Preferences
-     - Explanation
-   * - Working Directory
-     - This option tells the program where it should store the data file. Policy compilers also store firewall configuration files and scripts they produce in this directory. If this parameter is left blank, the policy compiler stores the firewall configurations it generates in the same directory as the original data file.
-   * - Do not show tips on startup
-     - If checked, the program does not show tips on start up.
-   * - Check for updates automatically
-     - If checked, the program checks for program updates every time it starts. If unchecked, the program will not check for updates unless specifically enabled by clicking the Check Now button.
-   * - Check Now
-     - Click if you want the program to check for updates at that moment.
-   * - Use http proxy while checking for updates (host:port)
-     - Whether you use the automatic or manual method to check for updates, if you are behind a proxy, enter the host IP and port of the proxy in this field. Separate the host IP and port number with a colon (:).
-
-.. figure:: img/gui-preferences-objects-tab.png
-   :alt: GUI Preferences Objects Tab
-
-   GUI Preferences Objects Tab
 
 .. list-table:: Preferences > Objects Tab
    :header-rows: 1
@@ -606,24 +578,19 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
    * - Objects Preferences
      - Explanation
    * - Enable object tooltips
-     - Firewall Builder can show a summary of an object's properties in a quick pop-up window (a "tooltip") when you hover the mouse cursor over an object icon. If this feature is not enabled, then you must click on an object to get the same information. The Tooltip delay control sets the delay, in seconds, between the time you hover the cursor and the time the tooltip appears.
+     - FirewallFabrik can show a summary of an object's properties in a quick pop-up window (a "tooltip") when you hover the mouse cursor over an object icon. If this feature is not enabled, then you must click on an object to get the same information.
+   * - Advanced User Mode
+     - When enabled, tooltips are shown in a shorter, more compact format intended for experienced users.
    * - Show deleted objects
-     - Selecting this checkbox turns on a third object tree: Deleted Objects. Once enabled, the Deleted Objects tree acts like trash can (or recycle bin) for deleted objects. If you delete something by mistake, you can retrieve it.
-   * - Show object attributes in the tree
+     - Selecting this checkbox enables the Deleted Objects library. Once enabled, the Deleted Objects library acts like trash can (or recycle bin) for deleted objects. If you delete something by mistake, you can retrieve it.
+   * - Show attributes in tree
      - Creates a second column in the object tree. The second column contains information about the object, such as how many objects a folder contains, whether a rule set is the top rule set, IP addresses, and so on. See the `Object Attributes in the Tree`_ section for a description.
-   * - Clip comments in rules
-     - Comments in a rule can sometimes make the rule line taller, reducing the number of rules visible on a screen. Select this if you want comments to be truncated in the view if they take up more than one line.
-   * - DNS Name - Create new objects in "Compile Time" or "Run Time" mode by default
-     - These radio buttons set the default behavior for reading DNS Name object addresses from a file: when the firewall script is generated by Firewall Builder or when the firewall runs the script. Note that the default value set here can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information on DNS Name object creation.
-   * - DNS Name - Use object name for the DNS record in all objects of this type
-     - If checked, Firewall Builder uses the DNS Name object's name for DNS lookups. If not checked, Firewall Builder uses the DNS Record field in the object for lookups. (If this checkbox is checked, the DNS Record field will be grayed out in all DNS Name objects.)
-   * - Address Table - Create new objects in "Compile Time" mode or "Run Time" mode by default
-     - These radio buttons set the default behavior for reading Address Table object addresses are read from a file: when the firewall script is generated by Firewall Builder or when the firewall runs the script. Note that the default value set here can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information on Address Table object creation.
-
-.. figure:: img/gui-preferences-data-file-tab.png
-   :alt: GUI Preferences Data File tab
-
-   GUI Preferences Data File tab
+   * - Enable custom templates
+     - When enabled, allows the use of custom template firewall objects when creating new firewalls.
+   * - DNS Name settings
+     - Set the default behavior for new DNS Name objects: whether they resolve at compile time or at run time. You can also choose whether to use the object name for the DNS record by default. These defaults can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information.
+   * - Address Table settings
+     - Set the default behavior for new Address Table objects: whether addresses are loaded from the file at compile time or at run time. This default can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information.
 
 .. list-table:: Preferences > Data File Tab
    :header-rows: 1
@@ -633,15 +600,8 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
      - Explanation
    * - Periodically save data to file every ... minute
      - If checked, data is automatically saved at the specified interval.
-   * - Do not ask for the log record when checking in the new file version
-     - Affects only RCS. If selected, the system does not prompt you for a "comment" when you check your file back into RCS. See :doc:`07 - Firewall Policies` for a detailed explanation on using revision control with Firewall Builder.
    * - Enable compression of the data file
      - If selected, the data file is compressed to save disk space.
-
-.. figure:: img/gui-preferences-installer-tab.png
-   :alt: GUI Preferences Installer Tab
-
-   GUI Preferences Installer Tab
 
 .. list-table:: Preferences > Installer Tab
    :header-rows: 1
@@ -650,14 +610,11 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
    * - Installer Preferences
      - Explanation
    * - SSH and SCP paths
-     - These fields specify the paths to your SSH and SCP programs, or their equivalents. If these paths are already recorded in your PATH system variable, you need not specify paths here. On Windows, however, you must install putty. See :doc:`10 - Compiling and Installing a Policy` for instructions.
+     - These fields specify the paths to your SSH and SCP programs, or their equivalents. If these paths are already recorded in your PATH system variable, you need not specify paths here.
+   * - SSH timeout
+     - The maximum time (in seconds) to wait for an SSH connection before timing out.
    * - Enable password caching
-     - If checked, the program can remember firewall passwords for the duration of the Firewall Builder GUI session. Passwords are never stored permanently in any form; they are only kept in memory for the working Firewall Builder GUI instance. You need to enter each password once when you activate a generated policy. If you keep the program open and need to modify and activate policy again, the password fields in the installer dialog can be filled automatically. Cached passwords are associated with the firewall object and account name used to activate the policy. To use this feature, you must also configure a user name in the Installer tab in the Firewall Settings dialog of the firewall object. Caution: using this feature creates a risk if a working Firewall Builder GUI is left unattended on an unlocked workstation.
-
-.. figure:: img/gui-preferences-labels-tab.png
-   :alt: GUI Preferences Labels Tab
-
-   GUI Preferences Labels Tab
+     - If checked, the program can remember firewall passwords for the duration of the FirewallFabrik GUI session. Passwords are never stored permanently in any form; they are only kept in memory. You need to enter each password once when you activate a generated policy. If you keep the program open and need to modify and activate policy again, the password fields in the installer dialog can be filled automatically. To use this feature, you must also configure a user name in the Installer tab in the Firewall Settings dialog of the firewall object. Caution: using this feature creates a risk if a working FirewallFabrik GUI is left unattended on an unlocked workstation.
 
 .. list-table:: Preferences > Labels Tab
    :header-rows: 1
@@ -666,12 +623,7 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
    * - Labels Preferences
      - Explanation
    * - Labels
-     - You can assign colors to particular rows in your policies to make them stand out visually. You can also change the text label associated with each color using this tab. While the color shows up in the rule set, the text label only appears in the label list.
-
-.. figure:: img/gui-preferences-appearance-tab.png
-   :alt: GUI Preferences Appearance Tab
-
-   GUI Preferences Appearance Tab
+     - You can assign colors to particular rows in your policies to make them stand out visually. You can also change the text label associated with each color using this tab. FirewallFabrik provides seven label slots with default labels such as "Outbound", "Inbound", "Block", "DNAT/Forward", "SNAT/Forward", and others. While the color shows up in the rule set, the text label only appears in the label list.
 
 .. list-table:: Preferences > Appearance Tab
    :header-rows: 1
@@ -679,19 +631,33 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
 
    * - Appearance Preferences
      - Explanation
-   * - Rules, Tree, and Compiler Output Panel Fonts
+   * - Rules, Tree, and Compiler Output Fonts
      - Use these controls to set the font used for rules, the object tree, and the compiler output panel.
    * - Show icons in rules
-     - If deselected, suppresses icon display for an object, showing only text. By default, objects such as interfaces, hosts, and networks are displayed as both an icon and text.
+     - If deselected, suppresses icon display for objects in rules, showing only text. By default, objects such as interfaces, hosts, and networks are displayed as both an icon and text.
    * - Show text descriptions in columns "Direction", "Action"
      - If selected, displays text descriptions in addition to icons in the Direction and Action columns. By default, only icons are shown.
+   * - Show toolbar text
+     - If selected, displays text labels below toolbar buttons.
+   * - Clip comments in rules
+     - Comments in a rule can sometimes make the rule line taller, reducing the number of rules visible on a screen. Select this if you want comments to be truncated in the view if they take up more than one line.
    * - Icon size
-     - By default, icons are 25x25 pixels. Select 16x16 to make them somewhat smaller. (The larger icons are easier to see, but the smaller ones are useful for smaller displays, such as laptop screens.)
+     - By default, icons are 25x25 pixels. Select 16x16 to make them smaller. (The larger icons are easier to see, but the smaller ones are useful for smaller displays, such as laptop screens.)
 
-.. figure:: img/gui-preferences-platforms-and-os-tab.png
-   :alt: GUI Preferences Platforms and OS Tab
+.. list-table:: Preferences > Diff Tab
+   :header-rows: 1
+   :widths: 30 70
 
-   GUI Preferences Platforms and OS Tab
+   * - Diff Preferences
+     - Explanation
+   * - Rule Set Diff Viewer colors
+     - Configure the colors used to highlight added, edited, moved, and removed rules in the diff viewer.
+   * - Display unmodified rules
+     - If checked, shows unmodified rules alongside changed rules for context.
+   * - Generated Output Diff Viewer
+     - Settings for the generated output diff viewer, including an option to auto-compile when viewing diffs.
+   * - Diff utility path
+     - Path to an external diff utility to use for comparisons.
 
 .. list-table:: Preferences > Platforms and OS Tab
    :header-rows: 1
@@ -700,73 +666,18 @@ To open the Preferences dialog, select Edit/Preferences.... The dialog has sever
    * - Platforms and OS Preferences
      - Explanation
    * - Lists of Platforms and OSs
-     - Checked platforms and OSs appear in drop-down menus of platforms and OSs in the program. You can uncheck unneeded platforms and OSs to reduce clutter in GUI menus. Remember to recheck entries when you want them to reappear in the GUI, such as when you acquire a new type of firewall. Also, not all platforms and OSs supported by Firewall Builder are checked by default. If the firewall you have doesn't appear in your drop-down menus, make sure it is checked in this tab.
-
-
-Working with Multiple Data Files
----------------------------------
-
-This section presents an example of how to work with two data files at the same time.
-
-The example begins with one data file. The file name, "policy_rules.fwb", displays in the main window title bar.
-
-.. figure:: img/gui-data-file.png
-   :alt: Data File
-
-   Data File
-
-Use File > Open to open the second data file.
-
-.. figure:: img/gui-data-file-menu.png
-   :alt: Data File
-
-   Data File
-
-The file "clusters.fwb" is now open in the GUI; its name displays in the title bar of the window.
-
-.. figure:: img/gui-clusters-fwb.png
-   :alt: clusters.fwb
-
-   clusters.fwb
-
-The Window menu supports standard window operations: you can maximize and minimize windows, as well as cascade or tile them and switch from one to another.
-
-.. figure:: img/gui-window-menu.png
-   :alt: Window Menu
-
-   Window Menu
-
-Now both windows show. The size of the main windows is small to reduce the size of the screen shots; as a result the two windows do not fit well. Even so, objects can be easily moved between windows using copy and paste operations. In this example the firewall object "fw" will be copied from the top window and pasted into "Firewalls" in the tree of the bottom window.
-
-.. figure:: img/gui-copy-and-pasting-between-windows.png
-   :alt: Copy and Pasting between Windows
-
-   Copy and Pasting between Windows
-
-The following figure shows the window with the "clusters.fwb" data file maximized; note that firewall object "fw" is part of the tree.
-
-.. figure:: img/gui-object-in-top-window.png
-   :alt: Object in Top Window
-
-   Object in Top Window
-
-The firewall in the example, "fw", used a host object called "dmz-server" in the data file "policy_rules.fwb". The system automatically copies "dmz-server" along with the "fw" object, as well as any other object the "fw" object depends on. The following figure shows that host "dmz-server" is now part of the "clusters.fwb" data file.
-
-.. figure:: img/gui-dmz-server.png
-   :alt: dmz-server
-
-   dmz-server
+     - Checked platforms and operating systems appear in drop-down menus when configuring firewall objects. You can uncheck unneeded platforms and OSs to reduce clutter in GUI menus.
 
 
 Keyboard Shortcuts
 ------------------
 
-.. list-table::                                                               
-    :header-rows: 1                                                            
+.. list-table::
+    :header-rows: 1
     :widths: 20 20 60
 
     * - Shortcut
-      - 
+      -
       - Action
     * - ``Ctrl+1`` .. ``Ctrl+9``
       - Menu "File"
@@ -777,12 +688,15 @@ Keyboard Shortcuts
     * - ``Ctrl+S``
       - Menu "File"
       - Save file
-    * - ``Ctrl+P``
-      - Menu "File"
-      - Print
     * - ``Ctrl+,``
       - Menu "Edit"
       - Preferences
+    * - ``Ctrl+Z``
+      - Menu "Edit"
+      - Undo
+    * - ``Ctrl+Y``
+      - Menu "Edit"
+      - Redo
     * - ``Ctrl+X``
       - Menu "Edit"
       - Cut
@@ -792,30 +706,27 @@ Keyboard Shortcuts
     * - ``Ctrl+V``
       - Menu "Edit"
       - Paste
-    * - ``Ctrl+Z``
+    * - ``Delete``
       - Menu "Edit"
-      - Undo
-    * - ``Ctrl+Y``
-      - Menu "Edit"
-      - Redo
-    * - ``Shift+Ctrl+Z``
-      - Menu "Edit"
-      - Redo (alternate)
-    * - ``Ctrl+F``
-      - Object tree view
-      - Filter object
-    * - ``Shift+Ctrl+F``
-      - Menu "Edit"
-      - Find object
+      - Delete
     * - ``Ctrl+N``
       - Menu "Object"
       - New object
-    * - ``Ctrl+I``
-      - Menu "View"
-      - File properties
+    * - ``Ctrl+Shift+F``
+      - Menu "Object"
+      - Find object
     * - ``Ctrl+T``
       - Menu "View"
-      - Toggle object tree view
+      - Toggle object tree
+    * - ``F1``
+      - Menu "Help"
+      - User Guide
+    * - ``Ctrl+F``
+      - Object tree
+      - Focus the filter field
+    * - ``Insert``
+      - Policy Editor
+      - Insert new rule
     * - ``X``
       - Policy Editor
       - Compile rule
