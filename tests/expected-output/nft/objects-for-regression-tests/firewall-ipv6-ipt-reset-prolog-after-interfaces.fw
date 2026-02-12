@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  Policy is configured as dual address family. Usigng iptables-restore. Prolog is after configuration of interfaces
+#
 
 FWBDEBUG=""
 
@@ -194,8 +196,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
+    echo "Verifying interfaces: eth0 eth1"
+    for i in eth0 eth1 ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -205,6 +207,7 @@ verify_interfaces() {
 
 prolog_commands() {
     echo "Running prolog script"
+    echo "This is prolog"
 
 }
 
@@ -220,45 +223,72 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
+    update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
+    update_addresses_of_interface "eth1 22.22.22.22/24" ""
 }
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
+table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 0 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth1" ip saddr 1.1.1.0/24 snat to 22.22.22.22
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth1" ip6 saddr fe80::/64 snat to 22.22.22.22
     }
 }
 
@@ -268,6 +298,7 @@ NFT_RULES
 ip_forward() {
     :
     echo 1 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 block_action() {
@@ -313,9 +344,9 @@ case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
         check_nft
-        prolog_commands
         configure_interfaces
         verify_interfaces
+        prolog_commands
         stop_action
         script_body
         ip_forward

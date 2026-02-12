@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  various tests for the "-o itf" clause in SNAT rules
+#
 
 FWBDEBUG=""
 
@@ -192,17 +194,6 @@ check_nft() {
     fi
 }
 
-verify_interfaces() {
-    :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
-        $IP link show "$i" > /dev/null 2>&1 || {
-            log "Interface $i does not exist"
-            exit 1
-        }
-    done
-}
-
 prolog_commands() {
     echo "Running prolog script"
 
@@ -220,8 +211,17 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 222.222.222.222/24" ""
+    update_addresses_of_interface "eth3 33.33.33.25/29" ""
+    update_addresses_of_interface "eth2 33.33.33.3/29 33.33.33.4/29" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -233,32 +233,108 @@ table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        #
+        # Rule 0 (global)
+        #
+        # 'catch all' rule
+        log prefix "RULE 0 - DENY **" level debug drop
+    }
+}
+
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # NETMAP and no -o itf
+        ip saddr 192.168.1.0/24 snat to 22.22.22.0/24
+        #
+        # Rule 1 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        #
+        # Rule 2 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        #
+        # Rule 3 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        #
+        # Rule 4 (NAT)
+        #
+        # should be -o eth1
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
+        #
+        # Rule 5 (NAT)
+        #
+        # should be -o eth2
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
+        #
+        # Rule 6 (NAT)
+        #
+        ip saddr 192.168.1.0/24 snat to 33.33.33.24/29
+        #
+        # Rule 7 (NAT)
+        #
+        # partially matches eth3
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
+        #
+        # Rule 8 (NAT)
+        #
+        # should be two rules: -o eth2 and -o eth3
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
+        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
+        #
+        # Rule 9 (NAT)
+        #
+        # should be -o eth2
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.3
     }
 }
 
@@ -313,10 +389,9 @@ case "$cmd" in
     start)
         log "Activating firewall script generated TIMESTAMP"
         check_nft
-        prolog_commands
         configure_interfaces
-        verify_interfaces
         stop_action
+        prolog_commands
         script_body
         ip_forward
         epilog_commands

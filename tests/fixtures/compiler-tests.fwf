@@ -3143,9 +3143,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
@@ -3162,9 +3162,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: false
                     action: 'Accept'
                     direction: 'Inbound'

@@ -194,8 +194,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
+    echo "Verifying interfaces: bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5"
+    for i in bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5 ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -220,49 +220,32 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
+    update_addresses_of_interface "eth3 192.0.2.11/24" ""
+    update_addresses_of_interface "bond1 192.168.11.11/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "eth6 192.168.6.11/24" ""
+    update_addresses_of_interface "bond0.2 192.168.2.11/24" ""
+    update_addresses_of_interface "bond0.1 192.168.1.11/24" ""
+    update_addresses_of_interface "eth2.201 192.168.201.11/24" ""
+    update_addresses_of_interface "eth2.202 192.168.202.11/24" ""
+    clear_addresses_except_known_interfaces "bond0 eth2 eth3 bond1 lo eth6 eth0 eth1 bond0.2 bond0.1 eth2.201 eth2.202 eth4 eth5"
 }
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
-    }
-
-    chain forward {
-        type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related accept
-    }
+NFT_RULES
 }
 
-NFT_RULES
+routing_script() {
+    ip route add default via 200.200.200.200 dev eth3
+ip route add 192.168.101.0/24 via 192.168.1.200 dev bond0.1
+ip route add 192.168.102.0/24 via 192.168.2.200 dev bond0.2
+ip route add 192.168.111.0/24 via 192.168.11.200 dev bond1
+ip route add 192.168.211.0/24 via 192.168.201.200 dev eth2.201
+ip route add 192.168.212.0/24 via 192.168.202.200 dev eth2.202
+
 }
 
 ip_forward() {
@@ -318,6 +301,7 @@ case "$cmd" in
         verify_interfaces
         stop_action
         script_body
+        routing_script
         ip_forward
         epilog_commands
         RETVAL=$?

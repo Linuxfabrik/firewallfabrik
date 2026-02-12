@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing rules that use address ranges that include or not include fw
+#
 
 FWBDEBUG=""
 
@@ -194,8 +196,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
+    echo "Verifying interfaces: eth0"
+    for i in eth0 ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -220,27 +222,66 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
+    update_addresses_of_interface "eth0 192.168.1.2/24 fe80::20c:29ff:fe28:c078/64" ""
 }
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
 
-table ip filter {
+table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        # address range in src includes firewall
+        ip saddr 192.168.1.1-192.168.1.3 ct state new accept
         #
         # Rule 1 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        ip saddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip saddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        ip saddr 255.255.255.255-255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip saddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 13 (global)
+        #
+        ip saddr 0.0.0.0-0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        # address range in src includes firewall
+        ip6 saddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        ip6 saddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip6 saddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip6 saddr 0.0.0.0-0.0.0.0 ct state new accept
     }
 
     chain forward {
@@ -249,16 +290,134 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        # address range in src includes firewall
+        ip saddr 192.168.1.1-192.168.1.3 ct state new accept
         #
         # Rule 1 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        ip saddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        ip daddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip saddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        ip saddr 255.255.255.255-255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip saddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 13 (global)
+        #
+        ip saddr 0.0.0.0-0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        #
+        # Rule 19 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        # address range in src includes firewall
+        ip6 saddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        ip6 saddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip6 daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        ip6 daddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip6 saddr 255.255.255.255-255.255.255.255 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip6 saddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip6 daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        ip6 daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        ip daddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        #
+        # Rule 19 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip6 daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        ip6 daddr 192.168.1.3-192.168.1.5 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip6 daddr 0.0.0.0-0.0.0.0 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        ip6 daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
     }
 }
 

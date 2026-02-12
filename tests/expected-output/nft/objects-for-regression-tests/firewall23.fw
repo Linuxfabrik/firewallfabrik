@@ -7,6 +7,9 @@
 #  Generated TIMESTAMP
 #
 
+#  This is BRIDGING FIREWALL
+#
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -192,17 +195,6 @@ check_nft() {
     fi
 }
 
-verify_interfaces() {
-    :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
-        $IP link show "$i" > /dev/null 2>&1 || {
-            log "Interface $i does not exist"
-            exit 1
-        }
-    done
-}
-
 prolog_commands() {
     echo "Running prolog script"
 
@@ -220,9 +212,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "br0 192.168.1.1/24" ""
 }
 
 script_body() {
@@ -234,31 +225,129 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth*)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        iifname "eth*" ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 5 (eth*)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        iifname "eth*" ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 6 (eth*)
+        #
+        iifname "eth*" ip daddr != 192.168.1.0/24 ct state new accept
+        #
+        # Rule 13 (global)
+        #
+        # this rule should generate commands
+        # in both INPUT and FORWARD chains
+        # because this is a bridging firewall
+        # see bug #811860
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 14 (global)
+        #
+        ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 1 (eth*)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        iifname "eth*" ct state new accept
         #
-        # Rule 1 (global)
+        # Rule 2 (eth*)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        iifname "eth*" ip daddr 192.168.1.255 ct state new accept
+        #
+        # Rule 3 (eth*)
+        #
+        iifname "eth*" ip daddr 255.255.255.255 ct state new accept
+        #
+        # Rule 4 (eth*)
+        #
+        iifname "eth*" ip daddr 224.0.1.141 ct state new accept
+        #
+        # Rule 5 (eth*)
+        #
+        iifname "eth*" ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 6 (eth*)
+        #
+        iifname "eth*" ip daddr != 192.168.1.0/24 ct state new accept
+        #
+        # Rule 7 (global)
+        #
+        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr 224.0.0.5 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip daddr 192.168.1.10 log level debug drop
+        #
+        # Rule 15 (global)
+        #
+        # interface of another firewall
+        # (firewall11)
+        # Why do we need to test for this?
+        ip daddr 10.1.1.1 ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule 7 (global)
+        #
+        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr 224.0.0.5 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip daddr 192.168.1.10 log level debug drop
+        #
+        # Rule 14 (global)
+        #
+        ip daddr 192.168.1.1 ct state new accept
+        #
+        # Rule 15 (global)
+        #
+        # interface of another firewall
+        # (firewall11)
+        # Why do we need to test for this?
+        ip daddr 10.1.1.1 ct state new accept
     }
 }
 
@@ -267,7 +356,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 block_action() {
@@ -315,7 +404,6 @@ case "$cmd" in
         check_nft
         prolog_commands
         configure_interfaces
-        verify_interfaces
         stop_action
         script_body
         ip_forward

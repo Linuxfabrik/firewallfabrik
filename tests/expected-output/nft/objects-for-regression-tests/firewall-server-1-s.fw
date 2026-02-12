@@ -6,6 +6,9 @@
 #
 #  Generated TIMESTAMP
 #
+#  fw is part of any is OFF
+#  ip forwarding is OFF
+#
 
 FWBDEBUG=""
 
@@ -194,8 +197,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
+    echo "Verifying interfaces: lo eth0"
+    for i in lo eth0 ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -220,9 +223,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
 }
 
 script_body() {
@@ -234,26 +236,32 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 1 (eth0)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        # ticket #1338: local override of "Assume fw is part of any"
+        # only INPUT chain because ip forwarding is off
+        iifname "eth0" ip saddr 192.168.1.1 drop
         #
-        # Rule 1 (global)
+        # Rule 2 (eth0)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        iifname "eth0" ip saddr { 127.0.0.1, 192.168.1.1 } ip daddr { 127.0.0.1, 192.168.1.1 } drop
+        #
+        # Rule 3 (eth0)
+        #
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        iifname "eth0" ip saddr 192.168.1.1 ip daddr 192.168.1.1 drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
+        # this rule generates no iptables commands
+        iifname "eth0" ip saddr 192.168.1.1 drop
     }
 
     chain output {
@@ -267,7 +275,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 block_action() {

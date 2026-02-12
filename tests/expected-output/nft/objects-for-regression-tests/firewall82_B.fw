@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+#  this object is used to hold branch rulesets for firewall82 and firewall82_A
+#
 
 FWBDEBUG=""
 
@@ -192,17 +194,6 @@ check_nft() {
     fi
 }
 
-verify_interfaces() {
-    :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
-        $IP link show "$i" > /dev/null 2>&1 || {
-            log "Interface $i does not exist"
-            exit 1
-        }
-    done
-}
-
 prolog_commands() {
     echo "Running prolog script"
 
@@ -218,13 +209,6 @@ run_epilog_and_exit() {
     exit "$1"
 }
 
-configure_interfaces() {
-    :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
-}
-
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
@@ -233,32 +217,24 @@ table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 0 (global)
-        #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule Policy_B 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
-        #
-        # Rule 1 (global)
-        #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        ip daddr 192.0.2.100 ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule Policy_B 0 (global)
+        #
+        ip daddr 192.0.2.100 ct state new accept
     }
 }
 
@@ -314,8 +290,6 @@ case "$cmd" in
         log "Activating firewall script generated TIMESTAMP"
         check_nft
         prolog_commands
-        configure_interfaces
-        verify_interfaces
         stop_action
         script_body
         ip_forward
@@ -344,19 +318,8 @@ case "$cmd" in
         RETVAL=$?
         ;;
 
-    interfaces)
-        configure_interfaces
-        RETVAL=$?
-        ;;
-
-    test_interfaces)
-        FWBDEBUG="echo"
-        configure_interfaces
-        RETVAL=$?
-        ;;
-
     *)
-        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        echo "Usage $0 [start|stop|status|block|reload]"
         ;;
 
 esac

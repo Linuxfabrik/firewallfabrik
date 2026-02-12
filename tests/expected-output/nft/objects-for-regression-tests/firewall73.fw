@@ -6,6 +6,12 @@
 #
 #  Generated TIMESTAMP
 #
+#  testing for "-i +" that is generated
+#  when interface rule element is "any"
+#  but direction is inbound. Trying different
+#  combinations. Bug 2822098
+#  "Firewall is part of any" is on
+#
 
 FWBDEBUG=""
 
@@ -192,17 +198,6 @@ check_nft() {
     fi
 }
 
-verify_interfaces() {
-    :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
-        $IP link show "$i" > /dev/null 2>&1 || {
-            log "Interface $i does not exist"
-            exit 1
-        }
-    done
-}
-
 prolog_commands() {
     echo "Running prolog script"
 
@@ -220,8 +215,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
+    update_addresses_of_interface "eth0 33.33.33.33/24" ""
+    update_addresses_of_interface "eth1 172.16.1.1/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -234,31 +229,80 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        iifname "eth0" drop
         #
-        # Rule 1 (global)
+        # Rule 3 (lo)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        iif "lo" drop
+        #
+        # Rule 6 (global)
+        #
+        drop
+        #
+        # Rule 15 (eth0)
+        #
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        #
+        # Rule 18 (global)
+        #
+        ip saddr { 33.33.33.33, 172.16.1.1 } drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (eth0)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        iifname "eth0" drop
+        oifname "eth0" drop
         #
-        # Rule 1 (global)
+        # Rule 6 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        drop
+        #
+        # Rule 9 (eth0)
+        #
+        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        #
+        # Rule 14 (global)
+        #
+        ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        #
+        # Rule 15 (eth0)
+        #
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        #
+        # Rule 19 (global)
+        #
+        ip saddr { 33.33.33.33, 172.16.1.1 } drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        oifname "eth0" drop
+        #
+        # Rule 3 (lo)
+        #
+        oif "lo" drop
+        #
+        # Rule 6 (global)
+        #
+        drop
+        #
+        # Rule 9 (eth0)
+        #
+        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        #
+        # Rule 12 (global)
+        #
+        ip daddr { 33.33.33.33, 172.16.1.1 } drop
     }
 }
 
@@ -267,7 +311,7 @@ NFT_RULES
 
 ip_forward() {
     :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 block_action() {
@@ -315,7 +359,6 @@ case "$cmd" in
         check_nft
         prolog_commands
         configure_interfaces
-        verify_interfaces
         stop_action
         script_body
         ip_forward

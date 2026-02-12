@@ -6,6 +6,10 @@
 #
 #  Generated TIMESTAMP
 #
+#  this firewall translates outgoing connections using address of the particular interface (not external one). Also testing different cmbinations of objects in the policy rules on loopback interface. Finally, testing for a situation when dynamic interface "shades" a rule with old broadcast
+
+#  Also the name of the script on the firewall is different
+#
 
 FWBDEBUG=""
 
@@ -220,8 +224,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.1/24" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 66.66.66.130/25" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -234,31 +238,35 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule not_quite_long_ruleset_name 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } ip daddr != { 66.66.66.130, 192.168.1.1 } log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 1 (global)
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule not_quite_long_ruleset_name 0 (global)
         #
-        ip saddr 195.15.242.254 tcp dport 22 ct state new accept
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } log prefix "RULE 0 -- DENY " level info drop
         #
-        # Rule 1 (global)
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        ip saddr linuxfabrik.ch tcp dport 22 ct state new accept
+        log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        #
+        # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
+        #
+        log prefix "RULE 0 -- DENY " level info drop
     }
 }
 
