@@ -151,7 +151,8 @@ class NATPrintRule_nft(NATRuleProcessor):
             if isinstance(obj, Interface):
                 name = obj.name
                 if name:
-                    parts.append(f'oifname "{name}"')
+                    neg = '!= ' if rule.itf_outb_single_object_negation else ''
+                    parts.append(f'oifname {neg}"{name}"')
 
         # Inbound interface (for DNAT)
         if rule.itf_inb:
@@ -159,7 +160,8 @@ class NATPrintRule_nft(NATRuleProcessor):
             if isinstance(obj, Interface):
                 name = obj.name
                 if name:
-                    parts.append(f'iifname "{name}"')
+                    neg = '!= ' if rule.itf_inb_single_object_negation else ''
+                    parts.append(f'iifname {neg}"{name}"')
 
         return ' '.join(parts)
 

@@ -1472,6 +1472,66 @@ to `iptables-restore` at runtime after variable substitution.
 
 > **Python**: ✅ `print_rule.py:PrintRuleIptRstEcho` — matches C++
 
+### iptables NAT Processors
+
+These processors are specific to the iptables NAT compilation pipeline (`NATCompiler_ipt`). They handle interface negation, port translation, NONAT splitting, and address expansion for NAT rules.
+
+#### `SingleObjectNegationItfInb` — Transform
+
+Handles single-object negation for the inbound interface (`ItfInb`) element in NAT rules. If the element has negation and contains exactly one object, converts to inline `!` negation by setting `itf_inb_single_object_negation = True` and clearing the negation flag.
+
+> **C++**: `NATCompiler::singleObjectNegationItfInb`
+> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationItfInb` — matches C++
+
+#### `SingleObjectNegationItfOutb` — Transform
+
+Mirror of `SingleObjectNegationItfInb` for the outbound interface (`ItfOutb`). Sets `itf_outb_single_object_negation = True` when the element has negation and exactly one object.
+
+> **C++**: `NATCompiler::singleObjectNegationItfOutb`
+> **Python**: ✅ `_nat_compiler.py:SingleObjectNegationItfOutb` — matches C++
+
+#### `PortTranslationRules` — Transform
+
+Copies ODst into TDst for port-only DNAT rules targeting the firewall. Triggers when `nat_rule_type == DNAT`, TSrc and TDst are both empty, TSrv is set, and ODst is the firewall. This allows `SpecialCaseWithRedirect` to detect and convert it to a Redirect rule downstream.
+
+> **C++**: `NATCompiler_ipt::portTranslationRules`
+> **Python**: ✅ `_nat_compiler.py:PortTranslationRules` — matches C++
+
+#### `SpecialCaseWithRedirect` — Transform
+
+Converts DNAT rules to Redirect when TDst matches the firewall. After `PortTranslationRules` fills in TDst for port-only translations, this processor reclassifies the rule type to `NATRuleType.Redirect`, which changes the iptables target from `DNAT --to-destination` to `REDIRECT --to-ports`.
+
+> **C++**: `NATCompiler_ipt::specialCaseWithRedirect`
+> **Python**: ✅ `_nat_compiler.py:SpecialCaseWithRedirect` — matches C++
+
+#### `SplitNONATRule` — Split
+
+Splits NONAT rules into two: one for `POSTROUTING` and one for `PREROUTING` (or `OUTPUT` if OSrc is the firewall). NONAT rules need ACCEPT in both chains to prevent accidental translation by other rules. When OSrc is the firewall, the second copy goes to OUTPUT with OSrc cleared.
+
+> **C++**: `NATCompiler_ipt::splitNONATRule`
+> **Python**: ✅ `_nat_compiler.py:SplitNONATRule` — matches C++
+
+#### `ReplaceFirewallObjectsODst` — Transform
+
+Replaces Firewall objects in ODst with the firewall's non-loopback Interface objects. Skips Masq and Redirect rule types. This prepares the rule for `ExpandMultipleAddresses` which expands interfaces to their addresses.
+
+> **C++**: `NATCompiler_ipt::ReplaceFirewallObjectsODst`
+> **Python**: ✅ `_nat_compiler.py:ReplaceFirewallObjectsODst` — matches C++
+
+#### `ExpandMultipleAddresses` (NAT) — Transform
+
+Expands Host/Firewall/Interface objects in NAT element lists (OSrc, ODst, TSrc, TDst) to their Address objects. Expansion scope depends on rule type: NONAT/Return expand OSrc+ODst; SNAT/SDNAT/DNAT expand all four; Redirect expands OSrc+ODst+TSrc. Sorts results by address for deterministic output. Skips loopback interfaces when expanding from Host/Firewall.
+
+> **C++**: `NATCompiler::ExpandMultipleAddresses`
+> **Python**: ✅ `_nat_compiler.py:ExpandMultipleAddresses` — matches C++
+
+#### `ClassifyNATRule` (enhanced) — Transform
+
+Enhanced version of the base `ClassifyNATRule` that handles TSrv port translation logic. In addition to classifying by TSrc/TDst presence, it checks whether TSrv translates source ports only, destination ports only, or both (comparing against OSrv to detect no-op translations where ports match). This affects SDNAT detection: `TSrc + dst port translation` or `TDst + src port translation` both classify as SDNAT.
+
+> **C++**: `NATCompiler::classifyNATRule`
+> **Python**: ✅ `_nat_compiler.py:ClassifyNATRule` — matches C++ including TSrv port logic
+
 ---
 
 ## Full pipeline order (unmodified `compile()`)
@@ -1616,6 +1676,24 @@ ExpandMultipleAddresses → groupServicesByProtocol → prepareForMultiport →
 ConvertToAtomicForAddresses → countChainUsage → PrintRule → simplePrintProgress
 ```
 
+### iptables NAT pipeline order
+
+The NAT compilation pipeline (`NATCompiler_ipt::compile()`) processes NAT rules through ~24 processors:
+
+```
+Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
+ExpandGroups → DropRuleWithEmptyRE → [DropIPv4Rules OR DropIPv6Rules] →
+EliminateDuplicatesInOSRC → EliminateDuplicatesInODST → EliminateDuplicatesInOSRV →
+ClassifyNATRule → VerifyRules →
+PortTranslationRules → SpecialCaseWithRedirect →
+SplitNONATRule → DecideOnChain → DecideOnTarget →
+ReplaceFirewallObjectsODst → ExpandMultipleAddresses → DropRuleWithEmptyRE →
+[DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
+GroupServicesByProtocol → PrepareForMultiport → ConvertToAtomicForAddresses →
+AssignInterface → CountChainUsage →
+NATPrintRule → SimplePrintProgress
+```
+
 ---
 
 ## Python Implementation Summary
@@ -1626,7 +1704,7 @@ Status of the firewallfabrik Python rewrite (`src/firewallfabrik/`) relative to 
 
 | Status | Count | Meaning |
 |--------|-------|---------|
-| ✅ Implemented | ~31 | Python equivalent exists and matches C++ behavior |
+| ✅ Implemented | ~42 | Python equivalent exists and matches C++ behavior |
 | ⚠️ Partial | ~14 | Python equivalent exists but has missing features or behavioral differences |
 | ❌ Missing | ~42 | No Python equivalent |
 
@@ -1658,7 +1736,7 @@ These processors exist only in the Python rewrite:
 
 ### Pipeline comparison
 
-The Python `compile()` pipeline uses **~43 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The implemented processors are in the correct relative order. The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) but omits many validation, edge-case, and mangle-table processors.
+The Python policy `compile()` pipeline uses **~43 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~24 processors**. The implemented processors are in the correct relative order. The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) but omits many validation, edge-case, and mangle-table processors.
 
 ### Implementation priority
 
@@ -1825,6 +1903,18 @@ Errors reported:
 - `Tagging not yet supported by nftables compiler` — nftables has `meta mark set`, but not implemented.
 - `Classification not yet supported by nftables compiler` — nftables has `meta priority set`, but not implemented.
 - `Policy routing not yet supported by nftables compiler` — nftables has `fib`+marks, but not implemented.
+
+#### `SplitIfSrcNegAndFw` — Split
+
+Splits rules where Src is negated and contains firewall-like objects. Creates an OUTPUT chain rule for the FW objects (keeping negation) and passes through non-FW objects with a `no_output_chain` option. Skips rules that already have a chain assigned or have `Inbound` direction.
+
+#### `SplitIfDstNegAndFw` — Split
+
+Mirror of `SplitIfSrcNegAndFw` for Dst. Creates an INPUT chain rule for FW objects (keeping negation) and passes through non-FW objects with a `no_input_chain` option. Skips rules that already have a chain assigned or have `Outbound` direction.
+
+#### `NftNegation` — Transform
+
+Converts element negation flags to `single_object_negation` flags for nftables' native `!=` operator. Unlike iptables (which needs temp chains for multi-object negation), nftables supports `!=` for both single and multi-object sets, so this processor simply converts all `src`/`dst`/`srv` negation flags directly — no chain splitting needed.
 
 #### `SplitIfSrcAny` / `SplitIfDstAny` — Split
 
@@ -2032,6 +2122,7 @@ Begin → StoreAction → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth
 ExpandGroups → DropRuleWithEmptyRE →
 EliminateDuplicatesInSRC → EliminateDuplicatesInDST → EliminateDuplicatesInSRV →
 FillActionOnReject → Logging_nft →
+SplitIfSrcNegAndFw → SplitIfDstNegAndFw → NftNegation →
 SplitIfSrcAny → SplitIfDstAny →
 SplitIfSrcMatchesFw → SplitIfDstMatchesFw →
 DecideOnChainIfDstFW → SplitIfSrcFWNetwork → DecideOnChainIfSrcFW →
@@ -2043,12 +2134,13 @@ ConvertToAtomicForInterfaces → GroupServicesByProtocol →
 Optimize3 → PrintRule_nft → SimplePrintProgress
 ```
 
-~27 processors vs. ~80 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`) but omits all mangle-table, negation expansion, temp-chain, and multiport processors.
+~30 processors vs. ~80 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`) but omits all mangle-table, temp-chain, and multiport processors. Negation is handled natively via `!=` (3 processors: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`).
 
 ### NAT pipeline order
 
 ```
-Begin → ExpandGroups → DropRuleWithEmptyRE →
+Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
+ExpandGroups → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] →
 EliminateDuplicatesInOSRC → EliminateDuplicatesInODST → EliminateDuplicatesInOSRV →
 ClassifyNATRule → VerifyRules → DecideOnChain →
@@ -2074,4 +2166,5 @@ AssignInterface → NATPrintRule_nft → SimplePrintProgress
 | SDNAT (simultaneous SNAT+DNAT) | Yes (two rules) | Error emitted |
 | Pipe/QUEUE (`queue num`) | Yes | Error emitted |
 | Shadowing detection | N/A (platform-independent) | Not implemented for any nftables pipeline |
-| Negation expansion | Not needed | nftables has native `!=` |
+| Negation expansion (policy) | ✅ Done | `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
+| NAT interface negation | ✅ Done | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `_print_interface()` `!=` output |

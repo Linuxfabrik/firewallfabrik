@@ -96,6 +96,15 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(Begin())
 
+        self.add(
+            SingleObjectNegationItfInb('process single object negation in inbound Itf')
+        )
+        self.add(
+            SingleObjectNegationItfOutb(
+                'process single object negation in outbound Itf'
+            )
+        )
+
         self.add(ExpandGroups('Expand groups'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
@@ -144,6 +153,42 @@ class NATCompiler_nft(NATCompiler):
 
 
 # -- Rule Processors --
+
+
+class SingleObjectNegationItfInb(NATRuleProcessor):
+    """Handle single-object negation for inbound interface in NAT rules.
+
+    If the inbound interface element has negation and contains exactly
+    one object, convert to inline '!=' negation.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('itf_inb') and len(rule.itf_inb) == 1:
+            rule.set_neg('itf_inb', False)
+            rule.itf_inb_single_object_negation = True
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleObjectNegationItfOutb(NATRuleProcessor):
+    """Handle single-object negation for outbound interface in NAT rules.
+
+    If the outbound interface element has negation and contains exactly
+    one object, convert to inline '!=' negation.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('itf_outb') and len(rule.itf_outb) == 1:
+            rule.set_neg('itf_outb', False)
+            rule.itf_outb_single_object_negation = True
+        self.tmp_queue.append(rule)
+        return True
 
 
 class _PassthroughNAT(NATRuleProcessor):
