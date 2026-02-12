@@ -1497,13 +1497,13 @@ class PolicyView(QTreeView):
 
         if modifiers == Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_C:
-                self.copy_selection()
+                self.copy_object()
                 return
             if key == Qt.Key.Key_V:
-                self.paste_below()
+                self.paste_object()
                 return
             if key == Qt.Key.Key_X:
-                self.cut_selection()
+                self.cut_object()
                 return
             if key == Qt.Key.Key_PageUp:
                 idx = self.currentIndex()
@@ -1518,9 +1518,7 @@ class PolicyView(QTreeView):
 
         if modifiers == Qt.KeyboardModifier.NoModifier:
             if key == Qt.Key.Key_Delete:
-                indices = self._selected_rule_indices()
-                if indices:
-                    model.delete_rules(indices)
+                self.delete_selection()
                 return
             if key == Qt.Key.Key_Insert:
                 idx = self.currentIndex()

@@ -1836,12 +1836,11 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _ctx_delete(self, item):
-        """Delete the object referenced by *item* after confirmation.
+        """Delete the object referenced by *item*.
 
         Mimics fwbuilder's ``ObjectManipulator::delObj()``:
-        shows a confirmation dialog listing all groups and rules that
-        reference the object, then removes those references and deletes
-        the object itself.
+        removes all group and rule references, then deletes the object.
+        No confirmation dialog — changes are undoable via Ctrl+Z.
         """
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -1852,79 +1851,8 @@ class ObjectTree(QWidget):
             return
         obj_name = item.text(0)
 
-        # Collect references for the confirmation dialog.
-        ref_lines = self._find_references(uuid.UUID(obj_id))
-
-        # Build confirmation message.
-        msg = f"Delete '{obj_name}'?"
-        if ref_lines:
-            msg += (
-                '\n\nThis object is referenced in the following places. '
-                'All references will be removed:\n\n' + '\n'.join(ref_lines)
-            )
-
-        result = QMessageBox.question(
-            self,
-            'Delete',
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
-        if result != QMessageBox.StandardButton.Yes:
-            return
-
         if self._delete_object(uuid.UUID(obj_id), model_cls, obj_name, obj_type):
             self.tree_changed.emit()
-
-    def _find_references(self, obj_id):
-        """Return a list of human-readable strings describing references to *obj_id*.
-
-        Searches group_membership and rule_elements tables.
-        Also recursively checks children (interfaces, addresses) of
-        devices so that references to children are reported.
-        """
-        if self._db_manager is None:
-            return []
-
-        lines = []
-        with self._db_manager.session() as session:
-            ids_to_check = self._collect_child_ids(session, obj_id)
-            ids_to_check.add(obj_id)
-
-            for check_id in ids_to_check:
-                # Groups containing this object.
-                grp_rows = session.execute(
-                    sqlalchemy.select(group_membership.c.group_id).where(
-                        group_membership.c.member_id == check_id
-                    )
-                ).all()
-                for (grp_id,) in grp_rows:
-                    grp = session.get(Group, grp_id)
-                    if grp is not None:
-                        lines.append(f'  Group: {grp.name}')
-
-                # Rules referencing this object.
-                from firewallfabrik.core.objects import Rule, RuleSet
-
-                rule_rows = session.execute(
-                    sqlalchemy.select(
-                        rule_elements.c.slot,
-                        Rule.position,
-                        Rule.rule_set_id,
-                    )
-                    .join(Rule, Rule.id == rule_elements.c.rule_id)
-                    .where(rule_elements.c.target_id == check_id)
-                ).all()
-                for slot, position, rule_set_id in rule_rows:
-                    rs = session.get(RuleSet, rule_set_id)
-                    if rs is not None:
-                        fw_name = rs.device.name if rs.device else '?'
-                        lines.append(
-                            f'  {fw_name} / {rs.type} / Rule #{position} / {slot}'
-                        )
-
-        # Deduplicate and sort for readability.
-        return sorted(set(lines))
 
     @staticmethod
     def _collect_child_ids(session, obj_id):

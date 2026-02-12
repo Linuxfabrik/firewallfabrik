@@ -274,23 +274,25 @@ class FWWindow(QMainWindow):
 
         # Undo / redo actions in the Edit menu.
         self._undo_action = QAction('&Undo', self)
-        self._undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        self._undo_action.setShortcut(QKeySequence('Ctrl+Z'))
         self._undo_action.setEnabled(False)
         self._undo_action.triggered.connect(self._do_undo)
         self._redo_action = QAction('&Redo', self)
-        self._redo_action.setShortcuts(
-            [QKeySequence.StandardKey.Redo, QKeySequence('Ctrl+Y')]
-        )
+        self._redo_action.setShortcut(QKeySequence('Ctrl+Y'))
         self._redo_action.setEnabled(False)
         self._redo_action.triggered.connect(self._do_redo)
         first_action = self.editMenu.actions()[0] if self.editMenu.actions() else None
         self.editMenu.insertAction(first_action, self._undo_action)
         self.editMenu.insertAction(first_action, self._redo_action)
+        # Register on the main window so shortcuts work regardless of focus.
+        self.addAction(self._undo_action)
+        self.addAction(self._redo_action)
 
         # Clipboard and delete actions — route based on focus.
         self.editCopyAction.triggered.connect(self.editCopy)
         self.editCutAction.triggered.connect(self.editCut)
         self.editPasteAction.triggered.connect(self.editPaste)
+        self.editDeleteAction.setShortcut(QKeySequence.StandardKey.Delete)
         self.editDeleteAction.triggered.connect(self.editDelete)
 
         # History list and callback.
