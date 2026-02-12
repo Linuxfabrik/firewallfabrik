@@ -41,37 +41,6 @@ run_epilog_and_exit() {
     exit "$1"
 }
 
-stop_action() {
-    $NFT flush ruleset
-}
-
-block_action() {
-    $NFT flush ruleset
-    # block all traffic by default
-    $NFT add table inet block
-    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
-    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
-    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
-}
-
-check_nft_status() {
-    tables=$($NFT list tables 2>/dev/null)
-    if [ -n "$tables" ]; then
-        return 0
-    fi
-    return 3
-}
-
-status_action() {
-    check_nft_status
-    ret=$?
-    if [ $ret -eq 0 ]; then
-        return 0
-    fi
-    echo "Firewall is not configured"
-    exit 3
-}
-
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 flush ruleset
@@ -147,6 +116,37 @@ NFT_RULES
 ip_forward() {
     :
     echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+block_action() {
+    $NFT flush ruleset
+    # block all traffic by default
+    $NFT add table inet block
+    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    $NFT flush ruleset
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if [ -n "$tables" ]; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
 }
 
 # See how we were called.

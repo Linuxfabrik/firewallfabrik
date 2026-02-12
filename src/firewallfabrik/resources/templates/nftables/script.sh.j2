@@ -21,11 +21,19 @@ PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
 NFT="{{ nft_path }}"
+{% if shell_functions %}
+IP="{{ ip_path }}"
+LOGGER="logger"
+{% endif %}
 
+{% if shell_functions %}
+{{ shell_functions }}
+{% else %}
 log() {
     echo "$1"
     which logger > /dev/null 2>&1 && logger -p info "$1"
 }
+{% endif %}
 
 check_nft() {
     if [ ! -x "$NFT" ]; then
@@ -33,6 +41,13 @@ check_nft() {
         exit 1
     fi
 }
+{% if verify_interfaces_code %}
+
+verify_interfaces() {
+    :
+{{ verify_interfaces_code }}
+}
+{% endif %}
 
 prolog_commands() {
     echo "Running prolog script"
@@ -48,9 +63,29 @@ run_epilog_and_exit() {
     epilog_commands
     exit "$1"
 }
+{% if configure_interfaces_code %}
 
-stop_action() {
-    $NFT flush ruleset
+configure_interfaces() {
+    :
+{{ configure_interfaces_code }}
+}
+{% endif %}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+{{ nft_rules_body }}
+NFT_RULES
+}
+
+{% if routing_output %}
+routing_script() {
+    {{ routing_output }}
+}
+
+{% endif %}
+ip_forward() {
+    :
+    {{ ip_forward_commands }}
 }
 
 block_action() {
@@ -65,6 +100,10 @@ block_action() {
     $NFT add rule inet block input tcp dport 22 ip saddr {{ ssh_management_address }} ct state new,established accept
     $NFT add rule inet block output tcp sport 22 ip daddr {{ ssh_management_address }} ct state established accept
 {% endif %}
+}
+
+stop_action() {
+    $NFT flush ruleset
 }
 
 check_nft_status() {
@@ -85,23 +124,6 @@ status_action() {
     exit 3
 }
 
-script_body() {
-    $NFT -f /dev/stdin <<'NFT_RULES'
-{{ nft_rules_body }}
-NFT_RULES
-}
-
-{% if routing_output %}
-routing_script() {
-    {{ routing_output }}
-}
-
-{% endif %}
-ip_forward() {
-    :
-    {{ ip_forward_commands }}
-}
-
 # See how we were called.
 # For backwards compatibility missing argument is equivalent to 'start'
 
@@ -116,6 +138,12 @@ case "$cmd" in
         check_nft
 {% if prolog_place == 'top' %}
         prolog_commands
+{% endif %}
+{% if configure_interfaces_code %}
+        configure_interfaces
+{% endif %}
+{% if verify_interfaces_code %}
+        verify_interfaces
 {% endif %}
 {% if prolog_place == 'after_interfaces' %}
         prolog_commands
@@ -153,9 +181,26 @@ case "$cmd" in
         $0 start
         RETVAL=$?
         ;;
+{% if configure_interfaces_code %}
+
+    interfaces)
+        configure_interfaces
+        RETVAL=$?
+        ;;
+
+    test_interfaces)
+        FWBDEBUG="echo"
+        configure_interfaces
+        RETVAL=$?
+        ;;
+{% endif %}
 
     *)
+{% if configure_interfaces_code %}
+        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+{% else %}
         echo "Usage $0 [start|stop|status|block|reload]"
+{% endif %}
         ;;
 
 esac
