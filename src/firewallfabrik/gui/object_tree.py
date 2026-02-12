@@ -490,6 +490,19 @@ _NO_DUPLICATE_TYPES = frozenset(
     }
 )
 
+# Types for which "Move" is not offered.
+_NO_MOVE_TYPES = frozenset(
+    {
+        'AttachedNetworks',
+        'Interface',
+        'Library',
+        'NAT',
+        'PhysAddress',
+        'Policy',
+        'Routing',
+    }
+)
+
 
 class _DraggableTree(QTreeWidget):
     """QTreeWidget subclass that provides drag MIME data for object items."""
@@ -1154,6 +1167,29 @@ class ObjectTree(QWidget):
                 dup_action = menu.addAction('Duplicate ...')
                 dup_action.setEnabled(False)
 
+        # Move ...
+        if obj_type not in _NO_MOVE_TYPES and not effective_ro:
+            current_lib_id = self._get_item_library_id(item)
+            libraries = [
+                (lid, lname)
+                for lid, lname in self._get_writable_libraries()
+                if lid != current_lib_id
+            ]
+            if len(libraries) == 1:
+                move_action = menu.addAction('Move ...')
+                lib_id = libraries[0][0]
+                move_action.triggered.connect(lambda: self._ctx_move(item, lib_id))
+            elif libraries:
+                move_menu = menu.addMenu('Move ...')
+                for lib_id, lib_name in libraries:
+                    act = move_menu.addAction(f'to library {lib_name}')
+                    act.triggered.connect(
+                        lambda checked=False, lid=lib_id: self._ctx_move(item, lid)
+                    )
+            else:
+                move_action = menu.addAction('Move ...')
+                move_action.setEnabled(False)
+
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
     def _ctx_edit(self, item):
@@ -1328,6 +1364,77 @@ class ObjectTree(QWidget):
                     position=row.position,
                 )
             )
+
+    # ------------------------------------------------------------------
+    # Move
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _get_item_library_id(item):
+        """Walk up the tree to find the Library ancestor and return its UUID."""
+        current = item
+        while current is not None:
+            if current.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
+                obj_id = current.data(0, Qt.ItemDataRole.UserRole)
+                if obj_id:
+                    return uuid.UUID(obj_id)
+                return None
+            current = current.parent()
+        return None
+
+    def _ctx_move(self, item, target_lib_id):
+        """Move the object referenced by *item* to *target_lib_id*."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not obj_id or not obj_type:
+            return
+        model_cls = _MODEL_MAP.get(obj_type)
+        if model_cls is None:
+            return
+        if self._move_object(uuid.UUID(obj_id), model_cls, target_lib_id):
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda: self.select_object(uuid.UUID(obj_id)))
+
+    def _move_object(self, obj_id, model_cls, target_lib_id):
+        """Move *obj_id* to *target_lib_id*. Returns True on success."""
+        if self._db_manager is None:
+            return False
+
+        session = self._db_manager.create_session()
+        try:
+            obj = session.get(model_cls, obj_id)
+            if obj is None:
+                session.close()
+                return False
+
+            obj_name = obj.name
+            obj_type = getattr(obj, 'type', type(obj).__name__)
+            obj.library_id = target_lib_id
+
+            # Clear group/parent ownership — object lands at the library root.
+            if hasattr(obj, 'group_id'):
+                obj.group_id = None
+            if hasattr(obj, 'parent_group_id'):
+                obj.parent_group_id = None
+
+            # For devices, also move child interfaces.
+            if isinstance(obj, Host):
+                for iface in obj.interfaces:
+                    iface.library_id = target_lib_id
+
+            session.commit()
+            self._db_manager.save_state(f'Move {obj_type} {obj_name}')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return True
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _make_name_unique(session, obj):
