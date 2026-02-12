@@ -379,6 +379,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                     if single_rule_id:
                         routing_compiler.single_rule_compile_mode = True
+                        routing_compiler.single_rule_id = single_rule_id
                     routing_compiler.verbose = self.verbose > 0
                     routing_compiler.source_dir = self.source_dir
 
@@ -636,6 +637,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
         if single_rule_id:
             nat_compiler.single_rule_compile_mode = True
+            nat_compiler.single_rule_id = single_rule_id
         nat_compiler.verbose = self.verbose > 0
         nat_compiler.source_dir = self.source_dir
         nat_compiler.debug_rule = self.debug_rule_nat
@@ -720,6 +722,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
         if single_rule_id:
             mangle_compiler.single_rule_compile_mode = True
+            mangle_compiler.single_rule_id = single_rule_id
         mangle_compiler.verbose = self.verbose > 0
         mangle_compiler.source_dir = self.source_dir
         mangle_compiler.have_dynamic_interfaces = self.have_dynamic_interfaces
@@ -754,6 +757,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True
+            policy_compiler.single_rule_id = single_rule_id
         policy_compiler.verbose = self.verbose > 0
         policy_compiler.source_dir = self.source_dir
         policy_compiler.have_dynamic_interfaces = self.have_dynamic_interfaces

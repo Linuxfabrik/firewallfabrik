@@ -86,12 +86,22 @@ class Compiler(BaseCompiler):
     def add(self, rp: BasicRuleProcessor) -> None:
         """Add a processor to the chain.
 
+        When single-rule compile mode is active, a
+        :class:`SingleRuleFilter` is injected automatically after the
+        :class:`Begin` processor so that only the target rule is compiled.
+
         If debugging is ON (rule_debug_on), also adds a Debug processor
         after it — except after SimplePrintProgress.
         """
-        from firewallfabrik.compiler.processors._generic import SimplePrintProgress
+        from firewallfabrik.compiler.processors._generic import (
+            Begin,
+            SimplePrintProgress,
+            SingleRuleFilter,
+        )
 
         self.rule_processors.append(rp)
+        if isinstance(rp, Begin) and self.single_rule_compile_mode:
+            self.rule_processors.append(SingleRuleFilter())
         if self.rule_debug_on and not isinstance(rp, SimplePrintProgress):
             self.rule_processors.append(Debug())
 

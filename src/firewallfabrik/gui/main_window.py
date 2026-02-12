@@ -50,6 +50,7 @@ from firewallfabrik.core.objects import (
     Interface,
     Interval,
     Library,
+    Rule,
     RuleSet,
     Service,
 )
@@ -774,6 +775,54 @@ class FWWindow(QMainWindow):
             self.editorDockWidget.setVisible(True)
             self.actionEditor_panel.setChecked(True)
         self.editorPanelTabWidget.setCurrentIndex(3)
+
+    def compile_single_rule(self, rule_id, rule_set_id):
+        """Compile a single rule and display the output in the Output panel."""
+        from html import escape
+
+        from firewallfabrik.platforms.iptables._compiler_driver import (
+            CompilerDriver_ipt,
+        )
+
+        with self._db_manager.session() as session:
+            rs = session.get(RuleSet, rule_set_id)
+            if rs is None:
+                return
+            device = rs.device
+            if device is None:
+                return
+            device_id = device.id
+            fw_name = device.name
+            rs_name = rs.name
+            rule = session.get(Rule, rule_id)
+            rule_position = rule.position if rule is not None else '?'
+
+        driver = CompilerDriver_ipt(self._db_manager)
+        driver.single_rule_compile_on = True
+        driver.single_rule_id = str(rule_id)
+
+        result = driver.run(
+            cluster_id='',
+            fw_id=str(device_id),
+            single_rule_id=str(rule_id),
+        )
+
+        # Build HTML output.
+        header = (
+            f'Compiling {escape(fw_name)} / {escape(rs_name)} / Rule {rule_position}'
+        )
+        parts = [f'<p><b>{header}</b></p>']
+        if driver.all_errors:
+            parts.append('<pre style="color: red;">')
+            parts.append(escape('\n'.join(driver.all_errors)))
+            parts.append('</pre>')
+        if result:
+            parts.append(f'<pre>{escape(result)}</pre>')
+        elif not driver.all_errors:
+            parts.append('<p><i>No output generated.</i></p>')
+
+        self.output_box.setHtml('\n'.join(parts))
+        self._show_output_panel()
 
     def show_where_used(self, obj_id, name, obj_type):
         """Show where-used results for the given object."""

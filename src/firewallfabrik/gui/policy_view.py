@@ -520,6 +520,31 @@ class PolicyView(QTreeView):
         paste_below.setEnabled(clipboard_count > 0)
         menu.addSeparator()
         self._add_disable_action(menu, model, index)
+        menu.addSeparator()
+        self._add_compile_action(menu, model, index)
+
+    def _add_compile_action(self, menu, model, index):
+        """Add 'Compile Rule' action, disabled for multi-select or disabled rules."""
+        selected = self._selected_rule_indices()
+        if not selected:
+            selected = [index]
+        row_data = model.get_row_data(index)
+        enabled = len(selected) == 1 and row_data is not None and not row_data.disabled
+        action = menu.addAction(
+            'Compile Rule',
+            lambda: self._do_compile_rule(model, index),
+        )
+        action.setShortcut(QKeySequence('X'))
+        action.setEnabled(enabled)
+
+    def _do_compile_rule(self, model, index):
+        """Trigger single-rule compilation via the main window."""
+        row_data = model.get_row_data(index)
+        if row_data is None:
+            return
+        main_win = self.window()
+        if hasattr(main_win, 'compile_single_rule'):
+            main_win.compile_single_rule(row_data.rule_id, model.rule_set_id)
 
     def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu."""
@@ -750,6 +775,11 @@ class PolicyView(QTreeView):
                     self._insert_and_scroll(model, index=idx)
                 else:
                     self._insert_and_scroll(model, at_bottom=True)
+                return
+            if key == Qt.Key.Key_X:
+                idx = self.currentIndex()
+                if idx.isValid() and not model.is_group(idx):
+                    self._do_compile_rule(model, idx)
                 return
 
         super().keyPressEvent(event)

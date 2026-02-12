@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QDockWidget, QWidget
+from PySide6.QtWidgets import QDockWidget, QTextBrowser, QWidget
 
 # Maps custom widget class names from the .ui file to their Qt base classes.
 # As Python implementations are created, replace QWidget with the real class.
@@ -25,7 +25,7 @@ CUSTOM_WIDGET_MAP = {
     'ClusterGroupDialog': QWidget,
     'CommentEditorPanel': QWidget,
     'CommentKeywords': QWidget,  # replaced by CommentTags at module bottom
-    'CompilerOutputPanel': QWidget,
+    'CompilerOutputPanel': QTextBrowser,
     'CustomServiceDialog': QWidget,
     'DNSNameDialog': QWidget,
     'DynamicGroupDialog': QWidget,
