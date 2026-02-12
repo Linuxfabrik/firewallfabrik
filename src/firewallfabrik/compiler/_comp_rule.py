@@ -108,6 +108,9 @@ class CompRule:
 
     # Action/logging metadata
     stored_action: str = ''
+    originated_from_a_rule_with_tagging: bool = False
+    originated_from_a_rule_with_classification: bool = False
+    originated_from_a_rule_with_routing: bool = False
     nft_log: bool = False  # nftables inline log + verdict
     force_state_check: bool = False
     upstream_rule_chain: str = ''  # iptables logging chain tracking

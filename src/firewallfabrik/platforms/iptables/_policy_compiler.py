@@ -651,6 +651,15 @@ class StoreAction(PolicyRuleProcessor):
             return False
         action_str = rule.action.name if rule.action else ''
         rule.stored_action = action_str
+        rule.originated_from_a_rule_with_tagging = bool(
+            rule.get_option('tagging', False)
+        )
+        rule.originated_from_a_rule_with_classification = bool(
+            rule.get_option('classification', False)
+        )
+        rule.originated_from_a_rule_with_routing = bool(
+            rule.get_option('routing', False)
+        )
         self.tmp_queue.append(rule)
         return True
 
