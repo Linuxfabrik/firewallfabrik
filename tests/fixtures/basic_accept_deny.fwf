@@ -2,32 +2,16 @@ name: 'Test: basic accept/deny'
 libraries:
   - name: 'Test Objects'
     children:
-      # --- Address objects ---
-      - type: 'Network'
-        name: 'internal-net'
-        inet_addr_mask:
-          address: '192.168.1.0'
-          netmask: '255.255.255.0'
-
-      - type: 'IPv4'
-        name: 'external-host'
-        inet_addr_mask:
-          address: '203.0.113.42'
-          netmask: '255.255.255.255'
-
-      # --- Service objects ---
-      - type: 'TCPService'
-        name: 'ssh'
-        dst_range_start: 22
-        dst_range_end: 22
-
       - type: 'ICMPService'
         name: 'echo request'
         data:
           type: '8'
           code: '0'
-
-      # --- Firewall ---
+      - type: 'IPv4'
+        name: 'external-host'
+        inet_addr_mask:
+          address: '203.0.113.42'
+          netmask: '255.255.255.255'
       - type: 'Firewall'
         name: 'fw-test'
         data:
@@ -35,19 +19,12 @@ libraries:
           host_OS: 'linux24'
           version: ''
         options:
-          accept_established: 'True'
-          configure_interfaces: 'False'
-          verify_interfaces: 'False'
-          load_modules: 'False'
-          manage_virtual_addr: 'False'
+          accept_established: true
+          configure_interfaces: false
+          verify_interfaces: false
+          load_modules: false
+          manage_virtual_addr: false
         interfaces:
-          - name: 'lo'
-            addresses:
-              - type: 'IPv4'
-                name: 'lo-addr'
-                inet_addr_mask:
-                  address: '127.0.0.1'
-                  netmask: '255.0.0.0'
           - name: 'eth0'
             data:
               label: 'outside'
@@ -66,26 +43,29 @@ libraries:
                 inet_addr_mask:
                   address: '192.168.1.1'
                   netmask: '255.255.255.0'
+          - name: 'lo'
+            addresses:
+              - type: 'IPv4'
+                name: 'lo-addr'
+                inet_addr_mask:
+                  address: '127.0.0.1'
+                  netmask: '255.0.0.0'
         rule_sets:
           - type: 'Policy'
             name: 'Policy'
             ipv4: true
             top: true
             rules:
-              # Rule 0: Accept SSH from internal network to firewall
               - type: 'PolicyRule'
-                position: 0
                 action: 'Accept'
                 direction: 'Inbound'
-                src:
-                  - 'Network/internal-net'
                 dst:
                   - 'IPv4/eth0-addr'
                   - 'IPv4/eth1-addr'
+                src:
+                  - 'Network/internal-net'
                 srv:
                   - 'TCPService/ssh'
-
-              # Rule 1: Accept ICMP echo request to firewall
               - type: 'PolicyRule'
                 position: 1
                 action: 'Accept'
@@ -95,19 +75,24 @@ libraries:
                   - 'IPv4/eth1-addr'
                 srv:
                   - 'ICMPService/echo request'
-
-              # Rule 2: Deny all to firewall
               - type: 'PolicyRule'
                 position: 2
                 action: 'Deny'
                 direction: 'Inbound'
-
-              # Rule 3: Accept forwarding from internal to external host
               - type: 'PolicyRule'
                 position: 3
                 action: 'Accept'
                 direction: 'Both'
-                src:
-                  - 'Network/internal-net'
                 dst:
                   - 'IPv4/external-host'
+                src:
+                  - 'Network/internal-net'
+      - type: 'Network'
+        name: 'internal-net'
+        inet_addr_mask:
+          address: '192.168.1.0'
+          netmask: '255.255.255.0'
+      - type: 'TCPService'
+        name: 'ssh'
+        dst_range_start: 22
+        dst_range_end: 22

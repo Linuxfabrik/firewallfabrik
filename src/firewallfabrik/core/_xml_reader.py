@@ -102,8 +102,8 @@ def _int(value, default=0):
 
 
 def _extra_attrs(elem, known):
-    """Return a dict of XML attributes not in *known*."""
-    return {k: v for k, v in elem.attrib.items() if k not in known}
+    """Return a dict of XML attributes not in *known*, with bool coercion."""
+    return {k: _coerce_bool(v) for k, v in elem.attrib.items() if k not in known}
 
 
 def _coerce_bool(value):

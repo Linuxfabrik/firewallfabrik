@@ -204,7 +204,7 @@ class Compiler(BaseCompiler):
         new_elements = []
         for obj in elements:
             if isinstance(obj, MultiAddress):
-                is_runtime = (obj.data or {}).get('run_time', 'False').lower() == 'true'
+                is_runtime = bool((obj.data or {}).get('run_time', False))
                 if is_runtime:
                     # Runtime: keep as-is (swapped to MultiAddressRunTime later)
                     new_elements.append(obj)

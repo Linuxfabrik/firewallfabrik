@@ -71,13 +71,12 @@ class InterfaceDialog(BaseObjectDialog):
         data = self._obj.data or {}
         self.label.setText(data.get('label', ''))
         self.seclevel.setValue(int(data.get('security_level', 0)))
-        self.management.setChecked(data.get('management') == 'True')
-        self.unprotected.setChecked(data.get('unprotected') == 'True')
-        self.dedicated_failover.setChecked(data.get('dedicated_failover') == 'True')
-        iface_type = data.get('type', 'regular')
-        if iface_type == 'dynamic':
+        self.management.setChecked(bool(data.get('management', False)))
+        self.unprotected.setChecked(bool(data.get('unprotected', False)))
+        self.dedicated_failover.setChecked(bool(data.get('dedicated_failover', False)))
+        if data.get('dyn', False):
             self.dynamic.setChecked(True)
-        elif iface_type == 'unnumbered':
+        elif data.get('unnum', False):
             self.unnumbered.setChecked(True)
         else:
             self.regular.setChecked(True)
@@ -87,13 +86,9 @@ class InterfaceDialog(BaseObjectDialog):
         data = self._obj.data or {}
         data['label'] = self.label.text()
         data['security_level'] = str(self.seclevel.value())
-        data['management'] = str(self.management.isChecked())
-        data['unprotected'] = str(self.unprotected.isChecked())
-        data['dedicated_failover'] = str(self.dedicated_failover.isChecked())
-        if self.dynamic.isChecked():
-            data['type'] = 'dynamic'
-        elif self.unnumbered.isChecked():
-            data['type'] = 'unnumbered'
-        else:
-            data['type'] = 'regular'
+        data['management'] = self.management.isChecked()
+        data['unprotected'] = self.unprotected.isChecked()
+        data['dedicated_failover'] = self.dedicated_failover.isChecked()
+        data['dyn'] = self.dynamic.isChecked()
+        data['unnum'] = self.unnumbered.isChecked()
         self._obj.data = data

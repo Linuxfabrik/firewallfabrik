@@ -63,16 +63,16 @@ _RULESET_CLASSES = {**RULESET_CLASSES, 'RuleSet': objects.RuleSet}
 _RULE_CLASSES = {**RULE_CLASSES, 'Rule': objects.Rule}
 
 
-def _coerce_options(opts):
-    """Coerce string booleans in an options dict to Python bools.
+def _coerce_bools(d):
+    """Coerce string booleans in a dict to Python bools.
 
     YAML normally handles this, but quoted values like ``"true"`` remain
     strings. This keeps behaviour consistent with the XML reader.
     """
-    if not isinstance(opts, dict):
-        return opts
+    if not isinstance(d, dict):
+        return d
     coerced = {}
-    for k, v in opts.items():
+    for k, v in d.items():
         if isinstance(v, str):
             low = v.lower()
             if low == 'true':
@@ -357,7 +357,7 @@ class YamlReader:
         dev.ro = data.get('ro', False)
         dev.keywords = set(data.get('keywords', []))
         dev.data = data.get('data', {})
-        dev.options = _coerce_options(data.get('options', {}))
+        dev.options = _coerce_bools(data.get('options', {}))
         dev.management = data.get('management', {})
         dev.library = library
 
@@ -383,7 +383,7 @@ class YamlReader:
         iface.comment = data.get('comment', '')
         iface.keywords = set(data.get('keywords', []))
         iface.data = data.get('data', {})
-        iface.options = _coerce_options(data.get('options', {}))
+        iface.options = _coerce_bools(data.get('options', {}))
         iface.bcast_bits = data.get('bcast_bits', 0)
         iface.ostatus = data.get('ostatus', False)
         iface.snmp_type = data.get('snmp_type', 0)
@@ -405,7 +405,7 @@ class YamlReader:
         rs.id = uuid.uuid4()
         rs.name = data.get('name', '')
         rs.comment = data.get('comment', '')
-        rs.options = _coerce_options(data.get('options', {}))
+        rs.options = _coerce_bools(data.get('options', {}))
         rs.ipv4 = data.get('ipv4', False)
         rs.ipv6 = data.get('ipv6', False)
         rs.top = data.get('top', False)
@@ -430,7 +430,7 @@ class YamlReader:
         rule.position = data.get('position', 0)
         rule.fallback = data.get('fallback', False)
         rule.hidden = data.get('hidden', False)
-        rule.options = _coerce_options(data.get('options', {}))
+        rule.options = _coerce_bools(data.get('options', {}))
         rule.negations = data.get('negations', {})
         rule.rule_set = rule_set
 

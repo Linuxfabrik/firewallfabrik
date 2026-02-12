@@ -250,10 +250,10 @@ class Interface(Base):
         return self.name == 'lo'
 
     def is_dynamic(self) -> bool:
-        return bool(self.get_option('type', '') == 'dynamic')
+        return bool((self.data or {}).get('dyn', False))
 
     def is_unnumbered(self) -> bool:
-        return bool(self.get_option('type', '') == 'unnumbered')
+        return bool((self.data or {}).get('unnum', False))
 
     def is_regular(self) -> bool:
         return (

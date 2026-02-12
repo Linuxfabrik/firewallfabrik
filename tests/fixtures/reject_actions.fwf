@@ -52,11 +52,11 @@ libraries:
       - name: 'Dummy'
         comment: 'Dummy Interface'
         data:
-          dedicated_failover: 'False'
-          dyn: 'False'
+          dedicated_failover: false
+          dyn: false
           security_level: '0'
-          unnum: 'True'
-          unprotected: 'False'
+          unnum: true
+          unprotected: false
         type: 'Interface'
       - type: 'ObjectGroup'
         name: 'Firewalls'
@@ -225,11 +225,11 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: 'False'
-                      dyn: 'False'
+                      dedicated_failover: false
+                      dyn: false
                       security_level: '0'
-                      unnum: 'False'
-                      unprotected: 'False'
+                      unnum: false
+                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -262,11 +262,11 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: 'False'
-                      dyn: 'False'
+                      dedicated_failover: false
+                      dyn: false
                       security_level: '0'
-                      unnum: 'False'
-                      unprotected: 'False'
+                      unnum: false
+                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -900,24 +900,24 @@ libraries:
                 name: 'AH'
                 comment: 'IPSEC Authentication Header Protocol'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '51'
               - type: 'IPService'
                 name: 'ESP'
                 comment: 'IPSEC Encapsulating Security Payload Protocol'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '50'
               - type: 'IPService'
@@ -926,26 +926,26 @@ libraries:
 
                   '
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '47'
               - type: 'IPService'
                 name: 'IGMP'
                 comment: 'Internet Group Management Protocol, Version 3, RFC 3376'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  rtralt: 'True'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  rtralt: true
                   rtralt_value: '0'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '2'
               - type: 'IPService'
@@ -954,74 +954,74 @@ libraries:
                   3973, or Protocol Independent Multicast-Sparse Mode (PIM-SM) RFC
                   2362'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  rtralt: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  rtralt: false
                   rtralt_value: '0'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '103'
               - type: 'IPService'
                 name: 'RR'
                 comment: 'Route recording packets'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'True'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: true
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '0'
               - type: 'IPService'
                 name: 'SKIP'
                 comment: 'IPSEC Simple Key Management for Internet Protocols'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '57'
               - type: 'IPService'
                 name: 'SRR'
                 comment: 'All sorts of Source Routing Packets'
                 data:
-                  fragm: 'False'
-                  lsrr: 'True'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'True'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: true
+                  rr: false
+                  short_fragm: false
+                  ssrr: true
+                  ts: false
                 named_protocols:
                   protocol_num: '0'
               - type: 'IPService'
                 name: 'ip_fragments'
                 comment: '''Short'' fragments'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'True'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: true
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '0'
               - type: 'IPService'
                 name: 'vrrp'
                 comment: 'Virtual Router Redundancy Protocol'
                 data:
-                  fragm: 'False'
-                  lsrr: 'False'
-                  rr: 'False'
-                  short_fragm: 'False'
-                  ssrr: 'False'
-                  ts: 'False'
+                  fragm: false
+                  lsrr: false
+                  rr: false
+                  short_fragm: false
+                  ssrr: false
+                  ts: false
                 named_protocols:
                   protocol_num: '112'
           - type: 'ServiceGroup'
@@ -1096,7 +1096,7 @@ libraries:
 
                   '
                 data:
-                  established: 'True'
+                  established: true
                 tcp_flags:
                   urg: false
                   ack: false
@@ -2009,7 +2009,7 @@ libraries:
 
                   '
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 5666
                 dst_range_end: 5666
                 tcp_flags:
@@ -2231,7 +2231,7 @@ libraries:
                 name: 'rtmp'
                 comment: 'Real Time Messaging Protocol'
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 1935
                 dst_range_end: 1935
                 tcp_flags:
@@ -2693,7 +2693,7 @@ libraries:
 
                   '
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 5222
                 dst_range_end: 5222
                 tcp_flags:
@@ -2716,7 +2716,7 @@ libraries:
 
                   '
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 5223
                 dst_range_end: 5223
                 tcp_flags:
@@ -2739,7 +2739,7 @@ libraries:
 
                   '
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 5269
                 dst_range_end: 5269
                 tcp_flags:
@@ -2762,7 +2762,7 @@ libraries:
 
                   '
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 5270
                 dst_range_end: 5270
                 tcp_flags:
@@ -3112,12 +3112,12 @@ libraries:
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: 'False'
-                  dyn: 'False'
+                  dedicated_failover: false
+                  dyn: false
                   label: 'outside'
                   security_level: '0'
-                  unnum: 'False'
-                  unprotected: 'False'
+                  unnum: false
+                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:eth0:ip'
@@ -3126,12 +3126,12 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: 'False'
-                  dyn: 'False'
+                  dedicated_failover: false
+                  dyn: false
                   label: 'inside'
                   security_level: '100'
-                  unnum: 'False'
-                  unprotected: 'False'
+                  unnum: false
+                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:eth1:ip'
@@ -3140,12 +3140,12 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: 'False'
-                  dyn: 'False'
+                  dedicated_failover: false
+                  dyn: false
                   label: ''
                   security_level: '0'
-                  unnum: 'False'
-                  unprotected: 'False'
+                  unnum: false
+                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:lo:ip'
@@ -3162,9 +3162,9 @@ libraries:
                 rules:
                   - type: 'PolicyRule'
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
@@ -3181,9 +3181,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 1
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       action_on_reject: 'ICMP host unreachable'
                       custom_str: ''
                       ipfw_pipe_port_num: '0'
@@ -3204,9 +3204,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 2
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       action_on_reject: 'ICMP net unreachable'
                       custom_str: ''
                       ipfw_pipe_port_num: '0'
@@ -3227,9 +3227,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 3
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       action_on_reject: 'ICMP admin prohibited'
                       custom_str: ''
                       ipfw_pipe_port_num: '0'
@@ -3250,9 +3250,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 4
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       action_on_reject: 'TCP RST'
                       custom_str: ''
                       ipfw_pipe_port_num: '0'
@@ -3273,9 +3273,9 @@ libraries:
                   - type: 'PolicyRule'
                     position: 5
                     options:
-                      disabled: 'False'
+                      disabled: false
                       group: ''
-                      log: 'False'
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
