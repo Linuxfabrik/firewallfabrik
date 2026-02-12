@@ -35,10 +35,12 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QFileDialog,
+    QLabel,
     QMainWindow,
     QMdiSubWindow,
     QMessageBox,
     QSplitter,
+    QVBoxLayout,
 )
 
 from firewallfabrik import __version__
@@ -60,7 +62,15 @@ from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
 from firewallfabrik.gui.object_tree import ObjectTree
-from firewallfabrik.gui.policy_model import _SLOT_TO_COL, PolicyTreeModel
+from firewallfabrik.gui.policy_model import (
+    _COL_DST,
+    _COL_SRC,
+    _COL_SRV,
+    _COL_TIME,
+    _SLOT_TO_COL,
+    PolicyTreeModel,
+    _action_label,
+)
 from firewallfabrik.gui.policy_view import PolicyView
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -69,6 +79,38 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_WIDTH = 1024
 _DEFAULT_HEIGHT = 768
+
+# Messages shown when double-clicking an "Any" element in a policy rule.
+_ANY_MESSAGES = {
+    _COL_DST: (
+        'When used in the Source or Destination field of a rule, '
+        'the Any object will match all IP addresses. '
+        'To update your rule to match only specific IP addresses, '
+        'drag-and-drop an object from the Object tree into the field '
+        'in the rule.'
+    ),
+    _COL_SRC: (
+        'When used in the Source or Destination field of a rule, '
+        'the Any object will match all IP addresses. '
+        'To update your rule to match only specific IP addresses, '
+        'drag-and-drop an object from the Object tree into the field '
+        'in the rule.'
+    ),
+    _COL_SRV: (
+        'When used in the Service field of a rule, '
+        'the Any object will match all IP, ICMP, TCP or UDP services. '
+        'To update your rule to match only specific service, '
+        'drag-and-drop an object from the Object tree into the field '
+        'in the rule.'
+    ),
+    _COL_TIME: (
+        'When used in the Time Interval field of a rule, '
+        'the Any object will match any time of the day or day '
+        'of the week. To update your rule to match only specific '
+        'service, drag-and-drop an object from the Object tree into '
+        'the field in the rule.'
+    ),
+}
 
 
 def _undo_desc(action, obj_type, name, old_name=None):
@@ -197,6 +239,15 @@ class FWWindow(QMainWindow):
 
         self._current_editor = None
         self._editor_session = None
+
+        # Blank-dialog label for "Any" object messages.
+        self._blank_label = QLabel(self.w_BlankDialog)
+        self._blank_label.setWordWrap(True)
+        self._blank_label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft,
+        )
+        self._blank_label.setContentsMargins(10, 10, 10, 10)
+        QVBoxLayout(self.w_BlankDialog).addWidget(self._blank_label)
 
         # Find panel — embedded in the "Find" tab of the editor dock.
         self._find_panel = FindPanel()
@@ -778,6 +829,7 @@ class FWWindow(QMainWindow):
 
     def compile_single_rule(self, rule_id, rule_set_id):
         """Compile a single rule and display the output in the Output panel."""
+        import re
         from html import escape
 
         from firewallfabrik.platforms.iptables._compiler_driver import (
@@ -807,6 +859,10 @@ class FWWindow(QMainWindow):
             single_rule_id=str(rule_id),
         )
 
+        # Collapse runs of whitespace (except newlines) in the output.
+        if result:
+            result = re.sub(r'[^\S\n]+', ' ', result)
+
         # Build HTML output.
         header = (
             f'Compiling {escape(fw_name)} / {escape(rs_name)} / Rule {rule_position}'
@@ -823,6 +879,110 @@ class FWWindow(QMainWindow):
 
         self.output_box.setHtml('\n'.join(parts))
         self._show_output_panel()
+
+    def open_comment_editor(self, model, index):
+        """Open the comment editor panel in the editor pane."""
+        self._close_editor()
+
+        self.w_CommentEditorPanel.load_rule(model, index)
+        self.objectEditorStack.setCurrentWidget(
+            self.w_CommentEditorPanel.parentWidget(),
+        )
+        self._show_editor_panel()
+        self.editorDockWidget.setWindowTitle('Comment')
+
+        pixmap = QIcon(':/Icons/Comment/icon-big').pixmap(64, 64)
+        if pixmap.isNull():
+            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
+
+    def open_rule_options(self, model, index):
+        """Open the rule options panel in the editor pane."""
+        # Close any current object editor session.
+        self._close_editor()
+
+        self.w_RuleOptionsDialog.load_rule(model, index)
+        self.objectEditorStack.setCurrentWidget(
+            self.w_RuleOptionsDialog.parentWidget(),
+        )
+        self._show_editor_panel()
+        self.editorDockWidget.setWindowTitle('Rule Options')
+
+        pixmap = QIcon(':/Icons/Options/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
+
+    def open_action_editor(self, model, index):
+        """Open the action parameters panel in the editor pane."""
+        self._close_editor()
+
+        self.w_ActionsDialog.load_rule(model, index)
+        self.objectEditorStack.setCurrentWidget(
+            self.w_ActionsDialog.parentWidget(),
+        )
+        self._show_editor_panel()
+
+        # Determine the action name for title and icon.
+        row_data = model.get_row_data(index)
+        action_enum = 'Policy'
+        if row_data is not None:
+            action_enum = row_data.action or 'Policy'
+        self.editorDockWidget.setWindowTitle(
+            f'Action: {_action_label(action_enum)}',
+        )
+
+        icon_path = f':/Icons/{action_enum}/icon-big'
+        pixmap = QIcon(icon_path).pixmap(64, 64)
+        if pixmap.isNull():
+            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
+
+    def open_direction_editor(self, model, index):
+        """Open the (blank) direction pane in the editor pane."""
+        self._close_editor()
+
+        self._blank_label.clear()
+        self.objectEditorStack.setCurrentWidget(
+            self.w_BlankDialog.parentWidget(),
+        )
+        self._show_editor_panel()
+
+        row_data = model.get_row_data(index)
+        direction_name = 'Both'
+        if row_data is not None:
+            direction_name = row_data.direction or 'Both'
+        self.editorDockWidget.setWindowTitle(f'Direction: {direction_name}')
+
+        icon_path = f':/Icons/{direction_name}/icon-big'
+        pixmap = QIcon(icon_path).pixmap(64, 64)
+        if pixmap.isNull():
+            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
+
+    def show_any_editor(self, col):
+        """Show the 'Any' object description in the editor pane."""
+        self._close_editor()
+
+        msg = _ANY_MESSAGES.get(col, '')
+        self._blank_label.setText(msg)
+        self.objectEditorStack.setCurrentWidget(
+            self.w_BlankDialog.parentWidget(),
+        )
+        self._show_editor_panel()
+        self.editorDockWidget.setWindowTitle('Any')
+
+        icon_type = {
+            _COL_SRC: 'Network',
+            _COL_DST: 'Network',
+            _COL_SRV: 'IPService',
+            _COL_TIME: 'Interval',
+        }.get(col, 'Policy')
+        pixmap = QIcon(f':/Icons/{icon_type}/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self.objectTypeIcon.setPixmap(pixmap)
 
     def show_where_used(self, obj_id, name, obj_type):
         """Show where-used results for the given object."""

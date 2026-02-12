@@ -16,6 +16,9 @@
     <file alias="Icons/Accept/icon-tree">Icons/accept_16.png</file>
     <file alias="Icons/Accounting/icon-tree">Icons/accounting_16.png</file>
     <file alias="Icons/AddressRange/icon-tree">Icons/rangeaddress_16.png</file>
+    <file alias="Icons/Branch/icon-tree">Icons/branch_16.png</file>
+    <file alias="Icons/Continue/icon-tree">Icons/continue_16.png</file>
+    <file alias="Icons/Custom/icon-tree">Icons/custom_16.png</file>
     <file alias="Icons/AddressTable/icon-tree">Icons/addresstable_16.png</file>
     <file alias="Icons/Both/icon-tree">Icons/both_16.png</file>
     <file alias="Icons/Classify/icon-tree">Icons/classify_16.png</file>
@@ -23,6 +26,7 @@
     <file alias="Icons/CustomService/icon-tree">Icons/service-custom_16.png</file>
     <file alias="Icons/DNSName/icon-tree">Icons/domainname_16.png</file>
     <file alias="Icons/Deny/icon-tree">Icons/deny_16.png</file>
+    <file alias="Icons/Pipe/icon-tree">Icons/pipe_16.png</file>
     <file alias="Icons/Firewall/icon-tree">Icons/firewall_16.png</file>
     <file alias="Icons/Host/icon-tree">Icons/host_16.png</file>
     <file alias="Icons/ICMP6Service/icon-tree">Icons/service-icmp6_16.png</file>
@@ -84,6 +88,9 @@
     <file alias="Icons/Accept/icon">Icons/accept_25.png</file>
     <file alias="Icons/Accounting/icon">Icons/accounting_25.png</file>
     <file alias="Icons/AddressRange/icon">Icons/rangeaddress_25.png</file>
+    <file alias="Icons/Branch/icon">Icons/branch_25.png</file>
+    <file alias="Icons/Continue/icon">Icons/continue_25.png</file>
+    <file alias="Icons/Custom/icon">Icons/custom_25.png</file>
     <file alias="Icons/AddressTable/icon">Icons/addresstable_25.png</file>
     <file alias="Icons/Both/icon">Icons/both_25.png</file>
     <file alias="Icons/Classify/icon">Icons/classify_25.png</file>
@@ -91,6 +98,7 @@
     <file alias="Icons/CustomService/icon">Icons/service-custom_25.png</file>
     <file alias="Icons/DNSName/icon">Icons/domainname_25.png</file>
     <file alias="Icons/Deny/icon">Icons/deny_25.png</file>
+    <file alias="Icons/Pipe/icon">Icons/pipe_25.png</file>
     <file alias="Icons/Firewall/icon">Icons/firewall_25.png</file>
     <file alias="Icons/Host/icon">Icons/host_25.png</file>
     <file alias="Icons/ICMP6Service/icon">Icons/service-icmp6_25.png</file>
@@ -145,14 +153,22 @@
     <file alias="Icons/UserService/icon-neg">Icons/user-neg_25.png</file>
 
     <!-- Editor/dialog big icons (:/Icons/Type/icon-big) -->
+    <file alias="Icons/Accept/icon-big">Icons/accept_64.png</file>
+    <file alias="Icons/Accounting/icon-big">Icons/accounting_64.png</file>
     <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>
     <file alias="Icons/AddressTable/icon-big">Icons/addresstable_64.png</file>
+    <file alias="Icons/Both/icon-big">Icons/both_64.png</file>
+    <file alias="Icons/Branch/icon-big">Icons/branch_64.png</file>
     <file alias="Icons/Cluster/icon-big">Icons/cluster_64.png</file>
+    <file alias="Icons/Continue/icon-big">Icons/continue_64.png</file>
+    <file alias="Icons/Custom/icon-big">Icons/custom_64.png</file>
     <file alias="Icons/CustomService/icon-big">Icons/service-custom_64.png</file>
+    <file alias="Icons/Deny/icon-big">Icons/deny_64.png</file>
     <file alias="Icons/DNSName/icon-big">Icons/domainname_64.png</file>
     <file alias="Icons/Firewall/icon-big">Icons/firewall_64.png</file>
     <file alias="Icons/Host/icon-big">Icons/host_64.png</file>
     <file alias="Icons/ICMP6Service/icon-big">Icons/service-icmp6_64.png</file>
+    <file alias="Icons/Inbound/icon-big">Icons/inbound_64.png</file>
     <file alias="Icons/ICMPService/icon-big">Icons/service-icmp_64.png</file>
     <file alias="Icons/IPService/icon-big">Icons/service-ip_64.png</file>
     <file alias="Icons/IPv4/icon-big">Icons/address_64.png</file>
@@ -163,8 +179,12 @@
     <file alias="Icons/Network/icon-big">Icons/network_64.png</file>
     <file alias="Icons/NetworkIPv6/icon-big">Icons/network6_64.png</file>
     <file alias="Icons/ObjectGroup/icon-big">Icons/object-group_64.png</file>
+    <file alias="Icons/Options/icon-big">Icons/options_64.png</file>
+    <file alias="Icons/Outbound/icon-big">Icons/outbound_64.png</file>
     <file alias="Icons/PhysAddress/icon-big">Icons/physaddress_64.png</file>
+    <file alias="Icons/Pipe/icon-big">Icons/pipe_64.png</file>
     <file alias="Icons/Policy/icon-big">Icons/ruleset_64.png</file>
+    <file alias="Icons/Reject/icon-big">Icons/reject_64.png</file>
     <file alias="Icons/ServiceGroup/icon-big">Icons/service-group_64.png</file>
     <file alias="Icons/TCPService/icon-big">Icons/service-tcp_64.png</file>
     <file alias="Icons/TagService/icon-big">Icons/service-tag_64.png</file>

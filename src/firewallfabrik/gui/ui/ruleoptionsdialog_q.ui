@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>RuleOptionsDialog_q</class>
- <widget class="QDialog" name="RuleOptionsDialog_q">
+ <widget class="QWidget" name="RuleOptionsDialog_q">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -9,9 +9,6 @@
     <width>640</width>
     <height>380</height>
    </rect>
-  </property>
-  <property name="windowTitle">
-   <string>Rule Options</string>
   </property>
   <layout class="QVBoxLayout" name="mainLayout">
    <item>
@@ -800,49 +797,309 @@
        </item>
       </layout>
      </widget>
-    </widget>
-   </item>
-   <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="standardButtons">
-      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
-     </property>
+     <widget class="QWidget" name="tabClassify">
+      <attribute name="title">
+       <string>Classify</string>
+      </attribute>
+      <layout class="QGridLayout" name="classifyLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="classifyLabel">
+         <property name="text">
+          <string>Classify string:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLineEdit" name="classify_str">
+         <property name="toolTip">
+          <string>Classification string (e.g. "1:10") for tc queuing disciplines. Maps to the iptables CLASSIFY target. The value is passed as --set-class argument.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <spacer name="classifyHSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="2" column="0">
+        <spacer name="classifyVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabRoute">
+      <attribute name="title">
+       <string>Route</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="routeLayout">
+       <item>
+        <widget class="QFrame" name="routeDeprecationFrame">
+         <property name="frameShape">
+          <enum>QFrame::Shape::StyledPanel</enum>
+         </property>
+         <layout class="QVBoxLayout" name="routeDeprecationLayout">
+          <item>
+           <widget class="QLabel" name="routeDeprecationTitle">
+            <property name="text">
+             <string>Option Route has been deprecated.</string>
+            </property>
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="routeDeprecationDetail">
+            <property name="text">
+             <string>Use Custom Action in combination with branching rule to create iptables command with '-j ROUTE' target. This works only if the OS running on your firewall supports this iptables target.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <layout class="QGridLayout" name="routeFieldsLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="routeIifLabel">
+           <property name="text">
+            <string>Change inbound interface to</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QComboBox" name="ipt_iif">
+           <property name="toolTip">
+            <string>Override the inbound interface for routed packets. The selected interface name is passed to the ROUTE target's --iif option.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <spacer name="routeRow0Spacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="routeOifLabel">
+           <property name="text">
+            <string>Change outbound interface to</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="ipt_oif">
+           <property name="toolTip">
+            <string>Override the outbound interface for routed packets. The selected interface name is passed to the ROUTE target's --oif option.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="routeGwLabel">
+           <property name="text">
+            <string>Route through gateway</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="ipt_gw">
+           <property name="minimumSize">
+            <size>
+             <width>250</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>IP address of the gateway to route packets through. Passed to the ROUTE target's --gw option.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="routeCheckboxLayout">
+         <item>
+          <widget class="QCheckBox" name="ipt_continue">
+           <property name="text">
+            <string>Continue packet inspection</string>
+           </property>
+           <property name="toolTip">
+            <string>When checked, the packet continues traversing the iptables rules after routing. Disables the inbound interface selector and "Make a copy" option. Maps to ROUTE target's --continue flag.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="ipt_tee">
+           <property name="text">
+            <string>Make a copy</string>
+           </property>
+           <property name="toolTip">
+            <string>Send a copy of the packet to the route target while letting the original continue normally. Maps to ROUTE target's --tee flag.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="routeCheckboxSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="routeVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabTag">
+      <attribute name="title">
+       <string>Tag</string>
+      </attribute>
+      <layout class="QGridLayout" name="tagLayout">
+       <property name="leftMargin">
+        <number>12</number>
+       </property>
+       <property name="topMargin">
+        <number>12</number>
+       </property>
+       <property name="rightMargin">
+        <number>12</number>
+       </property>
+       <property name="bottomMargin">
+        <number>12</number>
+       </property>
+       <property name="spacing">
+        <number>12</number>
+       </property>
+       <item row="0" column="0" colspan="2">
+        <widget class="QLabel" name="tagLabel">
+         <property name="text">
+          <string>Tag service object:</string>
+         </property>
+         <property name="wordWrap">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2" rowspan="3">
+        <spacer name="tagHSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Policy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>615</width>
+           <height>81</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" rowspan="2">
+        <widget class="FWObjectDropArea" name="iptTagDropArea" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>100</width>
+           <height>80</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Drag-and-drop a TagService object from the object tree to tag packets matching this rule.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="ipt_mark_connections">
+         <property name="text">
+          <string>Tag connections created by packets that match this rule (adds a rule with CONNMARK target)</string>
+         </property>
+         <property name="toolTip">
+          <string>When enabled, the compiler generates an additional rule using the CONNMARK target to mark all connections created by packets matching this rule. This allows subsequent rules to match the entire connection via connmark.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="3">
+        <spacer name="tagVSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Policy::MinimumExpanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
  </widget>
- <connections>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
-   <receiver>RuleOptionsDialog_q</receiver>
-   <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>320</x>
-     <y>360</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>320</x>
-     <y>190</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>RuleOptionsDialog_q</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>320</x>
-     <y>360</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>320</x>
-     <y>190</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <customwidgets>
+  <customwidget>
+   <class>FWObjectDropArea</class>
+   <extends>QWidget</extends>
+   <header>drop_area</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
 </ui>

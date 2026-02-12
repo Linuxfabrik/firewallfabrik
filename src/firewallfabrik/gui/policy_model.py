@@ -71,8 +71,11 @@ _COL_SRV = 3
 _COL_TIME = 7
 
 _COL_TO_SLOT = {
+    _COL_ACTION: 'action',
+    _COL_DIRECTION: 'direction',
     _COL_DST: 'dst',
     _COL_ITF: 'itf',
+    _COL_OPTIONS: 'options',
     _COL_SRC: 'src',
     _COL_SRV: 'srv',
     _COL_TIME: 'when',
@@ -80,11 +83,23 @@ _COL_TO_SLOT = {
 
 _SLOT_TO_COL = {v: k for k, v in _COL_TO_SLOT.items()}
 
-_ELEMENT_COLS = frozenset(_COL_TO_SLOT.keys())
+_ELEMENT_COLS = frozenset({_COL_DST, _COL_ITF, _COL_SRC, _COL_SRV, _COL_TIME})
+
+# All columns that support single-click element selection / highlighting.
+_SELECTABLE_COLS = _ELEMENT_COLS | {_COL_ACTION, _COL_DIRECTION, _COL_OPTIONS}
 
 _DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})
 
 _GROUP_BG = QColor('lightgray')
+
+# Enum names that differ from the display label shown in the UI.
+_ACTION_DISPLAY = {'Pipe': 'Queue'}
+
+
+def _action_label(enum_name):
+    """Return the user-visible label for an action enum name."""
+    return _ACTION_DISPLAY.get(enum_name, enum_name)
+
 
 # Classes used to resolve target names from the database.
 _NAME_CLASSES = (Address, Group, Host, Interface, Interval, Service)
@@ -112,7 +127,7 @@ class _RowData:
     itf: list
     label: str
     negations: dict  # slot → bool, e.g. {'src': True, 'dst': False}
-    options_display: list  # list[tuple[None, str, str]]  (None, label, icon-type)
+    options_display: list  # list[tuple[str, str, str]]  (sentinel_id, label, icon-type)
     position: int
     rule_id: uuid.UUID
     src: list
@@ -323,8 +338,6 @@ class PolicyTreeModel(QAbstractItemModel):
         if node.node_type == _NodeType.Group:
             return base
         col = index.column()
-        if col == _COL_COMMENT:
-            return base | Qt.ItemFlag.ItemIsEditable
         if col in _ELEMENT_COLS:
             return base | Qt.ItemFlag.ItemIsDropEnabled
         return base
@@ -500,6 +513,18 @@ class PolicyTreeModel(QAbstractItemModel):
             if col in _ELEMENT_COLS:
                 slot = _COL_TO_SLOT[col]
                 return getattr(row_data, slot)
+            if col == _COL_ACTION and row_data.action:
+                return [
+                    (
+                        '__action__',
+                        _action_label(row_data.action),
+                        row_data.action,
+                    ),
+                ]
+            if col == _COL_DIRECTION and row_data.direction:
+                return [
+                    ('__direction__', row_data.direction, row_data.direction),
+                ]
             if col == _COL_OPTIONS:
                 return row_data.options_display or None
         if role == NEGATED_ROLE:
@@ -524,7 +549,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if col == _COL_DIRECTION:
             return row_data.direction
         if col == _COL_ACTION:
-            return row_data.action
+            return _action_label(row_data.action)
         if col == _COL_TIME:
             return _format_elements(row_data.when)
         if col == _COL_OPTIONS:
@@ -916,6 +941,22 @@ class PolicyTreeModel(QAbstractItemModel):
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
                 rule.policy_action = action.value
+        self.reload()
+
+    def set_comment(self, index, comment):
+        """Set the comment for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        new_comment = str(comment).strip()
+        if new_comment == (row_data.comment or ''):
+            return
+        with self._db_manager.session(
+            self._desc(f'Edit rule {row_data.position} comment'),
+        ) as session:
+            rule = session.get(PolicyRule, row_data.rule_id)
+            if rule is not None:
+                rule.comment = new_comment
         self.reload()
 
     def set_disabled(self, index, disabled):
@@ -1320,26 +1361,27 @@ _WHITE = QColor('white')
 
 
 def _build_options_display(opts):
-    """Build a list of (None, label, icon_type) triples from rule options.
+    """Build a list of (id, label, icon_type) triples from rule options.
 
     Matches fwbuilder's ``PolicyModel::getRuleOptions()`` display logic.
+    The *id* is a unique string sentinel used for per-element selection.
     """
     if not opts:
         return []
     result = []
     if _opt_str(opts, 'counter_name') or _opt_str(opts, 'rule_name_accounting'):
-        result.append((None, 'accounting', 'Accounting'))
+        result.append(('__opt_accounting__', 'accounting', 'Accounting'))
     if _opt_bool(opts, 'classification'):
         label = _opt_str(opts, 'classify_str') or 'classify'
-        result.append((None, label, 'Classify'))
+        result.append(('__opt_classify__', label, 'Classify'))
     if _opt_bool(opts, 'log'):
-        result.append((None, 'log', 'Log'))
+        result.append(('__opt_log__', 'log', 'Log'))
     if _has_nondefault_options(opts):
-        result.append((None, 'options', 'Options'))
+        result.append(('__opt_options__', 'options', 'Options'))
     if _opt_bool(opts, 'routing'):
-        result.append((None, 'route', 'Route'))
+        result.append(('__opt_route__', 'route', 'Route'))
     if _opt_bool(opts, 'tagging'):
-        result.append((None, 'tag', 'TagService'))
+        result.append(('__opt_tag__', 'tag', 'TagService'))
     return result
 
 
@@ -1371,15 +1413,43 @@ def _has_nondefault_options(opts):
 
     Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
     """
-    if _opt_str(opts, 'log_prefix'):
+    if _opt_int(opts, 'connlimit_value') > 0:
         return True
-    if _opt_str(opts, 'log_level'):
+    if _opt_bool(opts, 'connlimit_above_not'):
+        return True
+    if _opt_int(opts, 'connlimit_masklen') > 0:
+        return True
+    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
+        return True
+    if _opt_int(opts, 'hashlimit_burst') > 0:
+        return True
+    if _opt_int(opts, 'hashlimit_expire') > 0:
+        return True
+    if _opt_int(opts, 'hashlimit_gcinterval') > 0:
+        return True
+    if _opt_int(opts, 'hashlimit_max') > 0:
+        return True
+    if _opt_str(opts, 'hashlimit_name'):
+        return True
+    if _opt_int(opts, 'hashlimit_size') > 0:
+        return True
+    if _opt_int(opts, 'hashlimit_value') > 0:
+        return True
+    if _opt_int(opts, 'limit_burst') > 0:
+        return True
+    if _opt_str(opts, 'limit_suffix'):
         return True
     if _opt_int(opts, 'limit_value') > 0:
         return True
-    if _opt_int(opts, 'connlimit_value') > 0:
+    if _opt_bool(opts, 'limit_value_not'):
         return True
-    return _opt_int(opts, 'hashlimit_value') > 0
+    if _opt_str(opts, 'log_level'):
+        return True
+    if _opt_str(opts, 'log_prefix'):
+        return True
+    if _opt_bool(opts, 'stateless'):
+        return True
+    return _opt_int(opts, 'ulog_nlgroup') > 1
 
 
 def _icon_suffix():

@@ -12,10 +12,19 @@
 
 """QTreeView wrapper for policy rule display with group and editing support."""
 
+import contextlib
 import json
 import uuid
 
-from PySide6.QtCore import QMimeData, QModelIndex, QRect, QSettings, QSize, Qt
+from PySide6.QtCore import (
+    QItemSelectionModel,
+    QMimeData,
+    QModelIndex,
+    QRect,
+    QSettings,
+    QSize,
+    Qt,
+)
 from PySide6.QtGui import QColor, QDrag, QIcon, QKeySequence, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -41,6 +50,8 @@ from firewallfabrik.gui.policy_model import (
     _COL_OPTIONS,
     _COL_TO_SLOT,
     _ELEMENT_COLS,
+    _SELECTABLE_COLS,
+    _SLOT_TO_COL,
     ELEMENTS_ROLE,
     FWF_MIME_TYPE,
     NEGATED_ROLE,
@@ -170,6 +181,28 @@ class _CellBorderDelegate(QStyledItemDelegate):
 
     def _paint_cell(self, painter, option, index):
         """Paint a single-value cell (icon + text) top-aligned."""
+        # Per-element highlight for non-element columns (Action, Direction, Options).
+        cell_highlighted = False
+        view = self.parent()
+        if hasattr(view, '_selected_element') and view._selected_element is not None:
+            sel_index = view._selected_index
+            if (
+                index.row() == sel_index.row()
+                and index.column() == sel_index.column()
+                and index.parent() == sel_index.parent()
+            ):
+                if view.hasFocus():
+                    painter.fillRect(
+                        option.rect,
+                        option.palette.color(QPalette.ColorRole.Highlight),
+                    )
+                    cell_highlighted = True
+                else:
+                    painter.save()
+                    painter.setPen(QColor('red'))
+                    painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+                    painter.restore()
+
         icon_sz = self._icon_size()
         rect = option.rect.adjusted(self._H_PAD, self._V_PAD, -self._H_PAD, 0)
         line_h = max(icon_sz, painter.fontMetrics().height())
@@ -180,7 +213,11 @@ class _CellBorderDelegate(QStyledItemDelegate):
             h_align = Qt.AlignmentFlag.AlignRight
 
         painter.save()
-        if fg:
+        if cell_highlighted:
+            painter.setPen(
+                option.palette.color(QPalette.ColorRole.HighlightedText),
+            )
+        elif fg:
             painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
 
         x = rect.left()
@@ -269,6 +306,8 @@ class _CellBorderDelegate(QStyledItemDelegate):
 class PolicyView(QTreeView):
     """Tree view with context menus, keyboard shortcuts, and drop support."""
 
+    _object_clipboard = None  # {'id': str, 'name': str, 'type': str} or None
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._highlight_rule_id = None
@@ -314,10 +353,6 @@ class PolicyView(QTreeView):
             self._highlight_col = None
             self.viewport().update()
 
-    def mousePressEvent(self, event):
-        self.clear_highlight()
-        super().mousePressEvent(event)
-
     # ------------------------------------------------------------------
     # Model setup
     # ------------------------------------------------------------------
@@ -325,7 +360,7 @@ class PolicyView(QTreeView):
     def setModel(self, model):
         super().setModel(model)
         if model is not None:
-            model.modelReset.connect(self._clear_element_selection)
+            model.modelAboutToBeReset.connect(self._save_selection)
             model.modelReset.connect(self._configure_groups)
             self._configure_groups()
 
@@ -335,7 +370,7 @@ class PolicyView(QTreeView):
         self.setIconSize(QSize(sz, sz))
 
     def _configure_groups(self):
-        """Mark group rows as first-column-spanned, expand, and fit columns."""
+        """Mark group rows as first-column-spanned, expand, fit columns, and restore selection."""
         model = self.model()
         if model is None:
             return
@@ -347,6 +382,77 @@ class PolicyView(QTreeView):
         self.expandAll()
         for col in range(model.columnCount()):
             self.resizeColumnToContents(col)
+        self._restore_selection()
+
+    # ------------------------------------------------------------------
+    # Selection save / restore across model resets
+    # ------------------------------------------------------------------
+
+    def _save_selection(self):
+        """Snapshot row and element selections before a model reset."""
+        model = self.model()
+        self._saved_row_rule_ids = []
+        self._saved_current_rule_id = None
+        if model is not None:
+            for idx in self.selectionModel().selectedRows():
+                rd = model.get_row_data(idx)
+                if rd is not None:
+                    self._saved_row_rule_ids.append(rd.rule_id)
+            cur = self.currentIndex()
+            if cur.isValid():
+                rd = model.get_row_data(cur)
+                if rd is not None:
+                    self._saved_current_rule_id = rd.rule_id
+        self._saved_element = self._selected_element  # (rule_id, slot, target_id)
+        # Clear stale index references (they become invalid after reset).
+        self._selected_element = None
+        self._selected_index = QModelIndex()
+        self._drag_start_pos = None
+
+    def _restore_selection(self):
+        """Re-select rows and the per-element highlight after a model reset."""
+        model = self.model()
+        if model is None:
+            return
+
+        sel_model = self.selectionModel()
+
+        # Restore current index (needed for keyboard shortcuts like X to compile).
+        saved_current = getattr(self, '_saved_current_rule_id', None)
+        if saved_current is not None:
+            idx = model.index_for_rule(saved_current)
+            if idx.isValid():
+                sel_model.setCurrentIndex(
+                    idx,
+                    QItemSelectionModel.SelectionFlag.NoUpdate,
+                )
+            self._saved_current_rule_id = None
+
+        # Restore row selection.
+        saved_ids = getattr(self, '_saved_row_rule_ids', [])
+        if saved_ids:
+            for rule_id in saved_ids:
+                idx = model.index_for_rule(rule_id)
+                if idx.isValid():
+                    sel_model.select(
+                        idx,
+                        QItemSelectionModel.SelectionFlag.Select
+                        | QItemSelectionModel.SelectionFlag.Rows,
+                    )
+            self._saved_row_rule_ids = []
+
+        # Restore per-element selection.
+        saved_elem = getattr(self, '_saved_element', None)
+        if saved_elem is not None:
+            rule_id, slot, _target_id = saved_elem
+            idx = model.index_for_rule(rule_id)
+            if idx.isValid():
+                col = _SLOT_TO_COL.get(slot)
+                if col is not None:
+                    cell_idx = model.index(idx.row(), col, idx.parent())
+                    self._selected_element = saved_elem
+                    self._selected_index = cell_idx
+            self._saved_element = None
 
     # ------------------------------------------------------------------
     # Per-element selection
@@ -370,6 +476,30 @@ class PolicyView(QTreeView):
         if old_index.isValid() and old_index != index:
             self.update(old_index)
         self.update(index)
+
+    def _select_element_at(self, index, vp_pos, model):
+        """Select the element at *vp_pos* for any selectable column."""
+        col = index.column()
+        elem = self._element_at_pos(index, vp_pos)
+        if elem is not None:
+            tid, _n, _t = elem
+            rd = model.get_row_data(index)
+            if rd is not None:
+                self._select_element(
+                    index,
+                    tid,
+                    _COL_TO_SLOT[col],
+                    rd.rule_id,
+                )
+        elif col not in _ELEMENT_COLS:
+            rd = model.get_row_data(index)
+            if rd is not None:
+                self._select_element(
+                    index,
+                    f'__{_COL_TO_SLOT[col]}__',
+                    _COL_TO_SLOT[col],
+                    rd.rule_id,
+                )
 
     def _element_at_pos(self, index, viewport_pos):
         """Return the ``(target_id, name, type)`` element at *viewport_pos*, or ``None``."""
@@ -396,6 +526,7 @@ class PolicyView(QTreeView):
     # ------------------------------------------------------------------
 
     def mousePressEvent(self, event):
+        self.clear_highlight()
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position().toPoint()
             index = self.indexAt(pos)
@@ -404,12 +535,13 @@ class PolicyView(QTreeView):
                 index.isValid()
                 and model is not None
                 and not model.is_group(index)
-                and index.column() in _ELEMENT_COLS
+                and index.column() in _SELECTABLE_COLS
             ):
+                col = index.column()
                 elem = self._element_at_pos(index, pos)
                 if elem is not None:
                     target_id, _name, _obj_type = elem
-                    slot = _COL_TO_SLOT[index.column()]
+                    slot = _COL_TO_SLOT[col]
                     row_data = model.get_row_data(index)
                     if row_data is not None:
                         self._select_element(
@@ -418,7 +550,22 @@ class PolicyView(QTreeView):
                             slot,
                             row_data.rule_id,
                         )
-                        self._drag_start_pos = pos
+                        # Only start drag for true element columns.
+                        if col in _ELEMENT_COLS:
+                            self._drag_start_pos = pos
+                    else:
+                        self._clear_element_selection()
+                elif col not in _ELEMENT_COLS:
+                    # Non-element columns (Action, Direction, Options)
+                    # are always selectable even when the cell is empty.
+                    row_data = model.get_row_data(index)
+                    if row_data is not None:
+                        self._select_element(
+                            index,
+                            f'__{_COL_TO_SLOT[col]}__',
+                            _COL_TO_SLOT[col],
+                            row_data.rule_id,
+                        )
                     else:
                         self._clear_element_selection()
                 else:
@@ -522,8 +669,17 @@ class PolicyView(QTreeView):
                                 break
                 if target is None:
                     target = elements[0]
-                self._open_element_editor(str(target[0]), target[2])
-                self._reveal_in_tree(str(target[0]))
+                if target[1] == 'Any':
+                    self._show_any_message(col)
+                else:
+                    self._open_element_editor(str(target[0]), target[2])
+                    self._reveal_in_tree(str(target[0]))
+        elif col == _COL_ACTION:
+            self._open_action_editor(model, index)
+        elif col == _COL_COMMENT:
+            self._open_comment_editor(model, index)
+        elif col == _COL_DIRECTION:
+            self._open_direction_editor(model, index)
         elif col == _COL_OPTIONS:
             self._open_rule_options_dialog(model, index)
 
@@ -569,7 +725,51 @@ class PolicyView(QTreeView):
 
         col = index.column()
 
-        # Check if this rule is inside a group or at top level.
+        # Element and comment columns get their own self-contained menus
+        # without group/color actions.
+        if col in _ELEMENT_COLS:
+            # Hit-test for per-element selection on right-click.
+            elem = self._element_at_pos(index, vp_pos)
+            if elem is not None:
+                tid, _n, _t = elem
+                rd = model.get_row_data(index)
+                if rd is not None:
+                    self._select_element(
+                        index,
+                        tid,
+                        _COL_TO_SLOT[col],
+                        rd.rule_id,
+                    )
+            self._build_element_menu(menu, model, index, col)
+            menu.exec(global_pos)
+            return
+
+        if col == _COL_COMMENT:
+            self._build_comment_menu(menu, model, index)
+            menu.exec(global_pos)
+            return
+
+        # Columns with self-contained menus (no group/color).
+        # Select the element on right-click for visual feedback.
+        if col in _SELECTABLE_COLS and col not in _ELEMENT_COLS:
+            self._select_element_at(index, vp_pos, model)
+
+        if col == _COL_ACTION:
+            self._build_action_menu(menu, model, index)
+            menu.exec(global_pos)
+            return
+
+        if col == _COL_DIRECTION:
+            self._build_direction_menu(menu, model, index)
+            menu.exec(global_pos)
+            return
+
+        if col == _COL_OPTIONS:
+            self._build_options_menu(menu, model, index)
+            menu.exec(global_pos)
+            return
+
+        # Remaining columns get group/color actions.
         row_data = model.get_row_data(index)
         in_group = row_data is not None and row_data.group
 
@@ -600,30 +800,7 @@ class PolicyView(QTreeView):
         self._add_color_submenu(menu, model, index)
         menu.addSeparator()
 
-        if col == _COL_ACTION:
-            self._build_action_menu(menu, model, index)
-        elif col == _COL_COMMENT:
-            self._build_comment_menu(menu, model, index)
-        elif col == _COL_DIRECTION:
-            self._build_direction_menu(menu, model, index)
-        elif col == _COL_OPTIONS:
-            self._build_options_menu(menu, model, index)
-        elif col in _ELEMENT_COLS:
-            # Hit-test for per-element selection on right-click.
-            elem = self._element_at_pos(index, vp_pos)
-            if elem is not None:
-                tid, _n, _t = elem
-                rd = model.get_row_data(index)
-                if rd is not None:
-                    self._select_element(
-                        index,
-                        tid,
-                        _COL_TO_SLOT[col],
-                        rd.rule_id,
-                    )
-            self._build_element_menu(menu, model, index, col)
-        else:
-            self._build_row_menu(menu, model, index)
+        self._build_row_menu(menu, model, index)
 
         menu.exec(global_pos)
 
@@ -798,15 +975,52 @@ class PolicyView(QTreeView):
         if hasattr(main_win, 'compile_single_rule'):
             main_win.compile_single_rule(row_data.rule_id, model.rule_set_id)
 
+    # Actions whose Parameters entry should be enabled (have a dialog in fwbuilder).
+    _ACTIONS_WITH_PARAMS = frozenset(
+        {
+            PolicyAction.Accounting,
+            PolicyAction.Branch,
+            PolicyAction.Custom,
+            PolicyAction.Reject,
+        }
+    )
+
+    # Action entries shown in the menu: (enum, display_label, icon_name).
+    _ACTION_MENU_ENTRIES = (
+        (PolicyAction.Accept, 'Accept', 'Accept'),
+        (PolicyAction.Deny, 'Deny', 'Deny'),
+        (PolicyAction.Reject, 'Reject', 'Reject'),
+        (PolicyAction.Accounting, 'Accounting', 'Accounting'),
+        (PolicyAction.Pipe, 'Queue', 'Pipe'),
+        (PolicyAction.Custom, 'Custom', 'Custom'),
+        (PolicyAction.Branch, 'Branch', 'Branch'),
+        (PolicyAction.Continue, 'Continue', 'Continue'),
+    )
+
     def _build_action_menu(self, menu, model, index):
-        """Build action-selection context menu."""
-        for action in (PolicyAction.Accept, PolicyAction.Deny, PolicyAction.Reject):
-            icon = QIcon(f':/Icons/{action.name}/icon-tree')
+        """Build action-selection context menu matching fwbuilder."""
+        for action, label, icon_name in self._ACTION_MENU_ENTRIES:
+            icon = QIcon(f':/Icons/{icon_name}/icon-tree')
             menu.addAction(
                 icon,
-                action.name,
-                lambda a=action: model.set_action(index, a),
+                label,
+                lambda a=action: self._change_action_and_edit(model, index, a),
             )
+        menu.addSeparator()
+
+        row_data = model.get_row_data(index)
+        current_action = None
+        if row_data is not None:
+            with contextlib.suppress(TypeError, ValueError):
+                current_action = PolicyAction(row_data.action_int)
+        params_act = menu.addAction(
+            'Parameters',
+            lambda: self._open_action_editor(model, index),
+        )
+        params_act.setEnabled(current_action in self._ACTIONS_WITH_PARAMS)
+        menu.addSeparator()
+
+        self._add_compile_action(menu, model, index)
 
     def _build_direction_menu(self, menu, model, index):
         """Build direction-selection context menu."""
@@ -824,41 +1038,90 @@ class PolicyView(QTreeView):
             )
 
     def _build_element_menu(self, menu, model, index, col):
-        """Build element column context menu with edit, remove, negate, and navigation."""
+        """Build element column context menu matching fwbuilder's layout."""
         slot = _COL_TO_SLOT[col]
         row_data = model.get_row_data(index)
         if row_data is None:
             return
         elements = getattr(row_data, slot, [])
-        if not elements:
-            menu.addAction('(empty)').setEnabled(False)
-            return
 
         # Determine the target element (clicked or first).
-        target_id, target_name, target_type = elements[0]
-        if self._selected_element is not None:
-            sel_rid, sel_slot, sel_tid = self._selected_element
-            if sel_rid == row_data.rule_id and sel_slot == slot:
-                for eid, ename, etype in elements:
-                    if eid == sel_tid:
-                        target_id, target_name, target_type = eid, ename, etype
-                        break
+        target_id = target_name = target_type = None
+        if elements:
+            target_id, target_name, target_type = elements[0]
+            if self._selected_element is not None:
+                sel_rid, sel_slot, sel_tid = self._selected_element
+                if sel_rid == row_data.rule_id and sel_slot == slot:
+                    for eid, ename, etype in elements:
+                        if eid == sel_tid:
+                            target_id, target_name, target_type = eid, ename, etype
+                            break
 
-        # Edit: open the targeted element in the editor panel.
-        menu.addAction(
-            f'Edit {target_name}',
+        has_element = target_id is not None
+
+        # Edit.
+        edit_act = menu.addAction(
+            'Edit',
             lambda oid=target_id, otype=target_type: self._open_element_editor(
                 str(oid), otype
             ),
         )
+        edit_act.setEnabled(has_element)
         menu.addSeparator()
 
-        # Remove actions (one per element).
-        for elem_id, name, _type in elements:
-            menu.addAction(
-                f'Remove {name}',
-                lambda tid=elem_id: model.remove_element(index, slot, tid),
-            )
+        # Copy.
+        copy_act = menu.addAction(
+            'Copy',
+            lambda tid=target_id, n=target_name, t=target_type: self._copy_element(
+                tid, n, t
+            ),
+        )
+        copy_act.setEnabled(has_element)
+
+        # Cut.
+        cut_act = menu.addAction(
+            'Cut',
+            lambda tid=target_id, n=target_name, t=target_type: self._cut_element(
+                model, index, slot, tid, n, t
+            ),
+        )
+        cut_act.setEnabled(has_element)
+
+        # Paste.
+        paste_act = menu.addAction(
+            'Paste',
+            lambda: self._paste_element(model, index, slot),
+        )
+        valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
+        can_paste = (
+            PolicyView._object_clipboard is not None
+            and PolicyView._object_clipboard.get('type', '') in valid_types
+        )
+        paste_act.setEnabled(can_paste)
+
+        # Delete.
+        delete_act = menu.addAction(
+            'Delete',
+            lambda tid=target_id: model.remove_element(index, slot, tid),
+        )
+        delete_act.setEnabled(has_element)
+        menu.addSeparator()
+
+        # Where Used.
+        where_act = menu.addAction(
+            'Where Used',
+            lambda oid=target_id, n=target_name, ot=target_type: self._show_where_used(
+                str(oid), n, ot
+            ),
+        )
+        where_act.setEnabled(has_element)
+
+        # Reveal in Tree.
+        reveal_act = menu.addAction(
+            'Reveal in Tree',
+            lambda oid=target_id: self._reveal_in_tree(str(oid)),
+        )
+        reveal_act.setEnabled(has_element)
         menu.addSeparator()
 
         # Negate toggle.
@@ -869,27 +1132,23 @@ class PolicyView(QTreeView):
         )
         negate_action.setCheckable(True)
         negate_action.setChecked(negated)
+        negate_action.setEnabled(has_element)
         menu.addSeparator()
 
-        # Where Used.
-        menu.addAction(
-            'Where Used',
-            lambda oid=target_id, n=target_name, ot=target_type: self._show_where_used(
-                str(oid), n, ot
-            ),
-        )
-
-        # Reveal in Tree.
-        menu.addAction(
-            'Reveal in Tree',
-            lambda oid=target_id: self._reveal_in_tree(str(oid)),
-        )
+        # Compile Rule.
+        self._add_compile_action(menu, model, index)
 
     def _open_element_editor(self, obj_id, obj_type):
         """Open the object editor for the given element."""
         main_win = self.window()
         if hasattr(main_win, '_open_object_editor'):
             main_win._open_object_editor(obj_id, obj_type)
+
+    def _show_any_message(self, col):
+        """Show the 'Any' object description in the editor pane."""
+        main_win = self.window()
+        if hasattr(main_win, 'show_any_editor'):
+            main_win.show_any_editor(col)
 
     def _reveal_in_tree(self, obj_id):
         """Select and reveal the object in the object tree."""
@@ -903,25 +1162,46 @@ class PolicyView(QTreeView):
         if hasattr(main_win, 'show_where_used'):
             main_win.show_where_used(obj_id, name, obj_type)
 
+    def _copy_element(self, target_id, name, obj_type):
+        """Copy the element to the object clipboard."""
+        PolicyView._object_clipboard = {
+            'id': str(target_id),
+            'name': name,
+            'type': obj_type,
+        }
+
+    def _cut_element(self, model, index, slot, target_id, name, obj_type):
+        """Copy the element to clipboard and remove it from the cell."""
+        self._copy_element(target_id, name, obj_type)
+        model.remove_element(index, slot, target_id)
+
+    def _paste_element(self, model, index, slot):
+        """Paste the object clipboard into the cell."""
+        if PolicyView._object_clipboard is None:
+            return
+        obj_id = PolicyView._object_clipboard['id']
+        model.add_element(index, slot, uuid.UUID(obj_id))
+
     def _build_comment_menu(self, menu, model, index):
-        """Build Comment column context menu with inline edit trigger."""
-        menu.addAction('Edit', lambda: self.edit(index))
+        """Build Comment column context menu."""
+        menu.addAction('Edit', lambda: self._open_comment_editor(model, index))
         menu.addSeparator()
-        self._build_row_menu(menu, model, index)
+        self._add_compile_action(menu, model, index)
 
     def _build_options_menu(self, menu, model, index):
         """Build Options column context menu."""
         menu.addAction(
+            QIcon(':/Icons/Options/icon-tree'),
             'Rule Options',
             lambda: self._open_rule_options_dialog(model, index),
         )
-        menu.addSeparator()
         row_data = model.get_row_data(index)
         log_on = row_data is not None and bool(
             (row_data.options_display or [])
             and any(label == 'log' for _, label, _ in row_data.options_display)
         )
         on_action = menu.addAction(
+            QIcon(':/Icons/Log/icon-tree'),
             'Logging On',
             lambda: model.set_logging(index, True),
         )
@@ -931,16 +1211,47 @@ class PolicyView(QTreeView):
         )
         on_action.setEnabled(not log_on)
         off_action.setEnabled(log_on)
+        menu.addSeparator()
+        self._add_compile_action(menu, model, index)
 
-    def _open_rule_options_dialog(self, model, index):
-        """Open the Rule Options dialog for the rule at *index*."""
-        from firewallfabrik.gui.rule_options_dialog import RuleOptionsDialog
-
+    def _change_action_and_edit(self, model, index, action):
+        """Change the rule action and open the action editor with a fresh index."""
         row_data = model.get_row_data(index)
         if row_data is None:
             return
-        dialog = RuleOptionsDialog(self, model, index)
-        dialog.exec()
+        rule_id = row_data.rule_id
+        model.set_action(index, action)
+        # set_action() triggers reload(), invalidating the old index.
+        new_index = model.index_for_rule(rule_id)
+        if new_index.isValid():
+            self._open_action_editor(model, new_index)
+
+    def _open_action_editor(self, model, index):
+        """Open the Action parameters panel in the editor pane."""
+        main_win = self.window()
+        if hasattr(main_win, 'open_action_editor'):
+            main_win.open_action_editor(model, index)
+
+    def _open_comment_editor(self, model, index):
+        """Open the Comment editor panel in the editor pane."""
+        main_win = self.window()
+        if hasattr(main_win, 'open_comment_editor'):
+            main_win.open_comment_editor(model, index)
+
+    def _open_direction_editor(self, model, index):
+        """Open the (blank) Direction pane in the editor pane."""
+        main_win = self.window()
+        if hasattr(main_win, 'open_direction_editor'):
+            main_win.open_direction_editor(model, index)
+
+    def _open_rule_options_dialog(self, model, index):
+        """Open the Rule Options panel in the editor pane."""
+        row_data = model.get_row_data(index)
+        if row_data is None:
+            return
+        main_win = self.window()
+        if hasattr(main_win, 'open_rule_options'):
+            main_win.open_rule_options(model, index)
 
     def _add_disable_action(self, menu, model, index):
         """Add 'Disable Rule' or 'Enable Rule' action to the menu."""

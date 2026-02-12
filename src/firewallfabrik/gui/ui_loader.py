@@ -84,6 +84,12 @@ class FWFUiLoader(QUiLoader):
 
 # Late imports: dialog modules import FWFUiLoader from this module,
 # so we update the map after both modules are fully defined.
+def _register_actions_dialog():
+    from firewallfabrik.gui.actions_dialog import ActionsPanel
+
+    CUSTOM_WIDGET_MAP['ActionsDialog'] = ActionsPanel
+
+
 def _register_address_dialogs():
     from firewallfabrik.gui.address_dialogs import (
         AddressRangeDialog,
@@ -146,16 +152,31 @@ def _register_comment_tags():
     CUSTOM_WIDGET_MAP['CommentKeywords'] = CommentTags
 
 
+def _register_comment_editor_panel():
+    from firewallfabrik.gui.comment_editor_panel import CommentEditorPanel
+
+    CUSTOM_WIDGET_MAP['CommentEditorPanel'] = CommentEditorPanel
+
+
 def _register_drop_area():
     from firewallfabrik.gui.drop_area import FWObjectDropArea
 
     CUSTOM_WIDGET_MAP['FWObjectDropArea'] = FWObjectDropArea
 
 
+def _register_rule_options_panel():
+    from firewallfabrik.gui.rule_options_dialog import RuleOptionsPanel
+
+    CUSTOM_WIDGET_MAP['RuleOptionsDialog'] = RuleOptionsPanel
+
+
+_register_actions_dialog()
 _register_address_dialogs()
+_register_comment_editor_panel()
 _register_comment_tags()
 _register_device_dialogs()
 _register_drop_area()
 _register_group_dialog()
+_register_rule_options_panel()
 _register_service_dialogs()
 _register_time_dialog()
