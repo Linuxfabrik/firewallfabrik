@@ -62,7 +62,7 @@ class TimeDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
 
         if self.useStartDate.isChecked():
             data['from_date'] = self.startDate.date().toString('yyyy-MM-dd')

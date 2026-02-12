@@ -26,7 +26,7 @@ class _BaseAddressDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        inet = self._obj.inet_addr_mask or {}
+        inet = dict(self._obj.inet_addr_mask or {})
         inet['address'] = self.address.text()
         inet['netmask'] = self.netmask.text()
         self._obj.inet_addr_mask = inet
@@ -65,10 +65,10 @@ class AddressRangeDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        start = self._obj.start_address or {}
+        start = dict(self._obj.start_address or {})
         start['address'] = self.rangeStart.text()
         self._obj.start_address = start
-        end = self._obj.end_address or {}
+        end = dict(self._obj.end_address or {})
         end['address'] = self.rangeEnd.text()
         self._obj.end_address = end
 
@@ -84,6 +84,6 @@ class PhysAddressDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        inet = self._obj.inet_addr_mask or {}
+        inet = dict(self._obj.inet_addr_mask or {})
         inet['address'] = self.pAddress.text()
         self._obj.inet_addr_mask = inet

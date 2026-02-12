@@ -1494,7 +1494,30 @@ class ObjectTree(QWidget):
         model_cls = _MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
-        new_id = self._duplicate_object(uuid.UUID(obj_id), model_cls, target_lib_id)
+
+        # When duplicating within the same library, preserve the parent
+        # context so the clone appears at the same hierarchy level.
+        kwargs = {}
+        source_lib_id = self._get_item_library_id(item)
+        if source_lib_id is not None and source_lib_id == target_lib_id:
+            with self._db_manager.session() as session:
+                source = session.get(model_cls, uuid.UUID(obj_id))
+                if source is not None:
+                    if hasattr(source, 'interface_id') and source.interface_id:
+                        kwargs['target_interface_id'] = source.interface_id
+                    elif hasattr(source, 'group_id') and source.group_id:
+                        kwargs['target_group_id'] = source.group_id
+                    elif hasattr(source, 'parent_group_id') and source.parent_group_id:
+                        kwargs['target_group_id'] = source.parent_group_id
+
+        prefix = self._get_device_prefix(item)
+        new_id = self._duplicate_object(
+            uuid.UUID(obj_id),
+            model_cls,
+            target_lib_id,
+            prefix=prefix,
+            **kwargs,
+        )
         if new_id is not None:
             self.tree_changed.emit()
             # Select the newly created object.
@@ -1507,6 +1530,7 @@ class ObjectTree(QWidget):
         model_cls,
         target_lib_id,
         *,
+        prefix='',
         target_interface_id=None,
         target_group_id=None,
     ):
@@ -1566,7 +1590,9 @@ class ObjectTree(QWidget):
                 self._duplicate_group_members(session, source, new_obj)
 
             session.commit()
-            self._db_manager.save_state(f'Duplicate {source.type} {source.name}')
+            self._db_manager.save_state(
+                f'{prefix}Duplicate {source.type} {source.name}',
+            )
             new_id = new_obj.id
         except Exception:
             session.rollback()
@@ -1671,6 +1697,20 @@ class ObjectTree(QWidget):
                 return None
             current = current.parent()
         return None
+
+    @staticmethod
+    def _get_device_prefix(item):
+        """Walk up the tree and return ``'device_name: '`` if under a device."""
+        _DEVICE_TYPES = frozenset({'Cluster', 'Firewall', 'Host'})
+        current = item.parent() if item else None
+        while current is not None:
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type in _DEVICE_TYPES:
+                return f'{current.text(0)}: '
+            if obj_type == 'Library':
+                return ''
+            current = current.parent()
+        return ''
 
     @staticmethod
     def _get_paste_context(item):
@@ -1821,6 +1861,8 @@ class ObjectTree(QWidget):
 
         target_iface_id, target_group_id = self._get_paste_context(item)
 
+        prefix = self._get_device_prefix(item)
+
         if cb['cut']:
             # Cut-paste = move to target library.
             if self._move_object(cb_id, model_cls, target_lib_id):
@@ -1833,6 +1875,7 @@ class ObjectTree(QWidget):
                 cb_id,
                 model_cls,
                 target_lib_id,
+                prefix=prefix,
                 target_interface_id=target_iface_id,
                 target_group_id=target_group_id,
             )
@@ -1888,8 +1931,15 @@ class ObjectTree(QWidget):
         if model_cls is None:
             return
         obj_name = item.text(0)
+        prefix = self._get_device_prefix(item)
 
-        if self._delete_object(uuid.UUID(obj_id), model_cls, obj_name, obj_type):
+        if self._delete_object(
+            uuid.UUID(obj_id),
+            model_cls,
+            obj_name,
+            obj_type,
+            prefix=prefix,
+        ):
             self.tree_changed.emit()
 
     @staticmethod
@@ -1910,7 +1960,7 @@ class ObjectTree(QWidget):
                 child_ids.add(addr.id)
         return child_ids
 
-    def _delete_object(self, obj_id, model_cls, obj_name, obj_type):
+    def _delete_object(self, obj_id, model_cls, obj_name, obj_type, *, prefix=''):
         """Delete *obj_id* and clean up all references.  Returns True on success."""
         if self._db_manager is None:
             return False
@@ -1968,7 +2018,9 @@ class ObjectTree(QWidget):
 
             session.delete(obj)
             session.commit()
-            self._db_manager.save_state(f'Delete {obj_type} {obj_name}')
+            self._db_manager.save_state(
+                f'{prefix}Delete {obj_type} {obj_name}',
+            )
         except Exception:
             session.rollback()
             raise
@@ -2163,6 +2215,7 @@ class ObjectTree(QWidget):
                     folder = f
                     break
 
+        prefix = self._get_device_prefix(item)
         new_id = self._create_new_object(
             model_cls,
             type_name,
@@ -2171,6 +2224,7 @@ class ObjectTree(QWidget):
             folder=folder,
             interface_id=interface_id,
             parent_interface_id=parent_interface_id,
+            prefix=prefix,
         )
         if new_id is not None:
             self.tree_changed.emit()
@@ -2187,6 +2241,7 @@ class ObjectTree(QWidget):
         folder=None,
         interface_id=None,
         parent_interface_id=None,
+        prefix='',
     ):
         """Create a new object and return its UUID, or None on failure."""
         if self._db_manager is None:
@@ -2226,7 +2281,7 @@ class ObjectTree(QWidget):
 
             session.add(new_obj)
             session.commit()
-            self._db_manager.save_state(f'New {type_name}')
+            self._db_manager.save_state(f'{prefix}New {type_name}')
         except Exception:
             session.rollback()
             raise

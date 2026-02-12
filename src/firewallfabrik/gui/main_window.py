@@ -115,15 +115,40 @@ _ANY_MESSAGES = {
 }
 
 
-def _undo_desc(action, obj_type, name, old_name=None):
+def _device_prefix(obj):
+    """Return ``'device_name: '`` if *obj* is a child of a device, else ``''``.
+
+    Walks up the ORM parent chain looking for a :class:`Host` (the base
+    class for Firewall / Cluster / Host).
+    """
+    current = obj
+    while current is not None:
+        if isinstance(current, Host):
+            return f'{current.name}: '
+        if isinstance(current, Address):
+            current = current.interface or current.group or current.library
+        elif isinstance(current, Interface):
+            current = current.device or current.library
+        elif isinstance(current, RuleSet):
+            current = current.device
+        elif isinstance(current, Rule):
+            rs = current.rule_set
+            current = rs.device if rs else None
+        else:
+            break
+    return ''
+
+
+def _undo_desc(action, obj_type, name, old_name=None, prefix=''):
     """Build a short undo description.
 
     Supported *action* values: ``Delete``, ``Edit``, ``New``, ``Rename``.
     For ``Rename``, *old_name* must be provided.
+    *prefix* is prepended as-is (e.g. ``"fw-test: "``).
     """
     if action == 'Rename':
-        return f'Rename {obj_type} {old_name} > {name}'
-    return f'{action} {obj_type} {name}'
+        return f'{prefix}Rename {obj_type} {old_name} > {name}'
+    return f'{prefix}{action} {obj_type} {name}'
 
 
 def _build_editor_path(obj):
@@ -827,6 +852,12 @@ class FWWindow(QMainWindow):
         # potential rollback which would expire all ORM state).
         obj = getattr(editor, '_obj', None)
         obj_path = _build_editor_path(obj) if obj else None
+
+        # Nothing to persist (e.g. checkbox toggled back to the same
+        # value) — skip the commit and undo-stack entry entirely.
+        if not (session.new or session.dirty or session.deleted):
+            return
+
         try:
             session.commit()
         except sqlalchemy.exc.IntegrityError as e:
@@ -845,13 +876,20 @@ class FWWindow(QMainWindow):
         # Build a human-readable undo description.
         obj = getattr(editor, '_obj', None)
         if obj is not None:
+            prefix = _device_prefix(obj)
             obj_type = getattr(obj, 'type', type(obj).__name__)
             old_name = getattr(self, '_editor_obj_name', '')
             new_name = obj.name
             if old_name and new_name != old_name:
-                desc = _undo_desc('Rename', obj_type, new_name, old_name=old_name)
+                desc = _undo_desc(
+                    'Rename',
+                    obj_type,
+                    new_name,
+                    old_name=old_name,
+                    prefix=prefix,
+                )
             else:
-                desc = _undo_desc('Edit', obj_type, new_name)
+                desc = _undo_desc('Edit', obj_type, new_name, prefix=prefix)
             self._editor_obj_name = new_name
         else:
             desc = 'Editor change'
@@ -1274,11 +1312,17 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def _do_undo(self):
+        # Close the editor session *before* the restore so that no stale
+        # ORM connection interferes with ``_restore_db`` (which drops and
+        # recreates all tables via raw SQL on the shared StaticPool
+        # connection).
+        self._close_editor()
         if self._db_manager.undo():
             self._refresh_after_history_change()
 
     @Slot()
     def _do_redo(self):
+        self._close_editor()
         if self._db_manager.redo():
             self._refresh_after_history_change()
 
@@ -1286,6 +1330,7 @@ class FWWindow(QMainWindow):
     def _on_undo_list_clicked(self, row):
         if row < 0:
             return
+        self._close_editor()
         if self._db_manager.jump_to(row):
             self._refresh_after_history_change()
 

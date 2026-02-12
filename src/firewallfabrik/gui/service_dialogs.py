@@ -45,7 +45,7 @@ class TCPServiceDialog(BaseObjectDialog):
         self._obj.src_range_end = self.se.value()
         self._obj.dst_range_start = self.ds.value()
         self._obj.dst_range_end = self.de.value()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['established'] = str(self.established.isChecked())
         self._obj.data = data
         flags = {}
@@ -92,7 +92,7 @@ class ICMPServiceDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['type'] = str(self.icmpType.value())
         data['code'] = str(self.icmpCode.value())
         self._obj.data = data
@@ -126,7 +126,7 @@ class IPServiceDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['protocol_num'] = str(self.protocolNum.value())
         if self.use_dscp.isChecked():
             data['dscp'] = self.code.text()

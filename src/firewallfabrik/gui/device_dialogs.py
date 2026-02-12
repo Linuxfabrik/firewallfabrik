@@ -41,7 +41,7 @@ class HostDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['mac_filter_enabled'] = str(self.MACmatching.isChecked())
         self._obj.data = data
 
@@ -82,7 +82,7 @@ class FirewallDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['platform'] = self.platform.currentText()
         data['version'] = self.version.currentText()
         host_os_text = self.hostOS.currentText()
@@ -133,7 +133,7 @@ class InterfaceDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = self._obj.data or {}
+        data = dict(self._obj.data or {})
         data['label'] = self.label.text()
         data['security_level'] = str(self.seclevel.value())
         data['management'] = self.management.isChecked()
