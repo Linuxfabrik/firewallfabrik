@@ -1376,7 +1376,11 @@ class PolicyView(QTreeView):
         """Delete element or rules — context-aware like fwbuilder.
 
         If a single element is selected in an element column, remove
-        that element from the cell.  Otherwise delete whole rules.
+        that element from the cell.  If the current cell is in an
+        element column but no element is individually selected, do
+        nothing (don't accidentally delete the whole rule).  Only
+        delete whole rules when the current cell is outside element
+        columns (e.g. Position or Comment).
         """
         if self._selected_element is not None:
             _rule_id, slot, target_id = self._selected_element
@@ -1386,6 +1390,12 @@ class PolicyView(QTreeView):
                 model.remove_element(idx, slot, target_id)
                 self._clear_element_selection()
                 return
+        # Guard: if the current cell is in an element column, don't
+        # fall through to deleting the whole rule — the user intended
+        # to remove an element, not the row.
+        cur = self.currentIndex()
+        if cur.isValid() and cur.column() in _ELEMENT_COLS:
+            return
         model = self.model()
         if model is None:
             return
