@@ -380,7 +380,7 @@ class PolicyTreeModel(QAbstractItemModel):
         return False
 
     def supportedDropActions(self):
-        return Qt.DropAction.CopyAction
+        return Qt.DropAction.CopyAction | Qt.DropAction.MoveAction
 
     # ------------------------------------------------------------------
     # Node helpers
@@ -1010,6 +1010,57 @@ class PolicyTreeModel(QAbstractItemModel):
                 rule_elements.insert().values(
                     rule_id=row_data.rule_id,
                     slot=slot,
+                    target_id=target_id,
+                    position=(max_pos or 0) + 1,
+                ),
+            )
+        self.reload()
+
+    def move_element(
+        self, source_rule_id, source_slot, target_index, target_slot, target_id
+    ):
+        """Move *target_id* from *source_rule_id*/*source_slot* to the rule at *target_index*."""
+        target_row_data = self.get_row_data(target_index)
+        if target_row_data is None:
+            return
+        with self._db_manager.session(
+            self._desc(
+                f'Move element to rule {target_row_data.position} {target_slot}'
+            ),
+        ) as session:
+            # Check for duplicate in target.
+            existing = session.execute(
+                sqlalchemy.select(rule_elements.c.target_id).where(
+                    rule_elements.c.rule_id == target_row_data.rule_id,
+                    rule_elements.c.slot == target_slot,
+                    rule_elements.c.target_id == target_id,
+                ),
+            ).first()
+            if existing is not None:
+                return
+            # Delete from source.
+            session.execute(
+                sqlalchemy.delete(rule_elements).where(
+                    rule_elements.c.rule_id == source_rule_id,
+                    rule_elements.c.slot == source_slot,
+                    rule_elements.c.target_id == target_id,
+                ),
+            )
+            # Insert into target.
+            max_pos = session.scalar(
+                sqlalchemy.select(
+                    sqlalchemy.func.coalesce(
+                        sqlalchemy.func.max(rule_elements.c.position), -1
+                    ),
+                ).where(
+                    rule_elements.c.rule_id == target_row_data.rule_id,
+                    rule_elements.c.slot == target_slot,
+                ),
+            )
+            session.execute(
+                rule_elements.insert().values(
+                    rule_id=target_row_data.rule_id,
+                    slot=target_slot,
                     target_id=target_id,
                     position=(max_pos or 0) + 1,
                 ),

@@ -15,10 +15,11 @@
 import json
 import uuid
 
-from PySide6.QtCore import QModelIndex, QRect, QSettings, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QPalette, QPixmap
+from PySide6.QtCore import QMimeData, QModelIndex, QRect, QSettings, QSize, Qt
+from PySide6.QtGui import QColor, QDrag, QIcon, QKeySequence, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QHeaderView,
     QInputDialog,
     QMenu,
@@ -194,10 +195,41 @@ class _CellBorderDelegate(QStyledItemDelegate):
         line_h = max(icon_sz, painter.fontMetrics().height())
         fg = index.data(Qt.ItemDataRole.ForegroundRole)
 
+        # Per-element highlight from the view's selection.
+        view = self.parent()
+        sel_target_id = None
+        if hasattr(view, '_selected_element') and view._selected_element is not None:
+            sel_index = view._selected_index
+            if (
+                index.row() == sel_index.row()
+                and index.column() == sel_index.column()
+                and index.parent() == sel_index.parent()
+            ):
+                sel_target_id = view._selected_element[2]
+        has_focus = view.hasFocus() if sel_target_id is not None else False
+
         painter.save()
         if fg:
             painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
-        for _target_id, name, obj_type in elements:
+        default_pen = painter.pen()
+        for target_id, name, obj_type in elements:
+            # Draw per-element selection highlight.
+            if sel_target_id is not None and target_id == sel_target_id:
+                elem_rect = QRect(rect.left(), rect.top(), rect.width(), line_h)
+                if has_focus:
+                    painter.fillRect(
+                        elem_rect,
+                        option.palette.color(QPalette.ColorRole.Highlight),
+                    )
+                    painter.setPen(
+                        option.palette.color(QPalette.ColorRole.HighlightedText),
+                    )
+                else:
+                    painter.save()
+                    painter.setPen(QColor('red'))
+                    painter.drawRect(elem_rect.adjusted(0, 0, -1, -1))
+                    painter.restore()
+
             icon_path = f':/Icons/{obj_type}/{icon_suffix}' if obj_type else ''
             x = rect.left()
             if icon_path:
@@ -214,6 +246,9 @@ class _CellBorderDelegate(QStyledItemDelegate):
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 name,
             )
+            # Restore default pen after highlighted element.
+            if sel_target_id is not None and target_id == sel_target_id and has_focus:
+                painter.setPen(default_pen)
             rect.setTop(rect.top() + line_h)
         painter.restore()
 
@@ -246,6 +281,11 @@ class PolicyView(QTreeView):
         self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
         self.setDropIndicatorShown(True)
 
+        # Per-element selection state.
+        self._selected_element = None  # (rule_id, slot, target_id) or None
+        self._selected_index = QModelIndex()  # cell containing selected element
+        self._drag_start_pos = None  # QPoint for drag threshold
+
     # ------------------------------------------------------------------
     # Model setup
     # ------------------------------------------------------------------
@@ -253,6 +293,7 @@ class PolicyView(QTreeView):
     def setModel(self, model):
         super().setModel(model)
         if model is not None:
+            model.modelReset.connect(self._clear_element_selection)
             model.modelReset.connect(self._configure_groups)
             self._configure_groups()
 
@@ -274,6 +315,141 @@ class PolicyView(QTreeView):
         self.expandAll()
         for col in range(model.columnCount()):
             self.resizeColumnToContents(col)
+
+    # ------------------------------------------------------------------
+    # Per-element selection
+    # ------------------------------------------------------------------
+
+    def _clear_element_selection(self):
+        """Clear the per-element selection and repaint the old cell."""
+        if self._selected_element is not None:
+            old_index = self._selected_index
+            self._selected_element = None
+            self._selected_index = QModelIndex()
+            self._drag_start_pos = None
+            if old_index.isValid():
+                self.update(old_index)
+
+    def _select_element(self, index, target_id, slot, rule_id):
+        """Set the per-element selection and repaint affected cells."""
+        old_index = self._selected_index
+        self._selected_element = (rule_id, slot, target_id)
+        self._selected_index = index
+        if old_index.isValid() and old_index != index:
+            self.update(old_index)
+        self.update(index)
+
+    def _element_at_pos(self, index, viewport_pos):
+        """Return the ``(target_id, name, type)`` element at *viewport_pos*, or ``None``."""
+        elements = index.data(ELEMENTS_ROLE)
+        if not elements:
+            return None
+        vrect = self.visualRect(index)
+        if not vrect.isValid():
+            return None
+        delegate = self.itemDelegate()
+        icon_sz = delegate._icon_size()
+        fm = self.fontMetrics()
+        line_h = max(icon_sz, fm.height())
+        relative_y = viewport_pos.y() - vrect.top() - delegate._V_PAD
+        if relative_y < 0:
+            return None
+        elem_index = int(relative_y // line_h)
+        if 0 <= elem_index < len(elements):
+            return elements[elem_index]
+        return None
+
+    # ------------------------------------------------------------------
+    # Mouse events for per-element selection and drag
+    # ------------------------------------------------------------------
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            index = self.indexAt(pos)
+            model = self.model()
+            if (
+                index.isValid()
+                and model is not None
+                and not model.is_group(index)
+                and index.column() in _ELEMENT_COLS
+            ):
+                elem = self._element_at_pos(index, pos)
+                if elem is not None:
+                    target_id, _name, _obj_type = elem
+                    slot = _COL_TO_SLOT[index.column()]
+                    row_data = model.get_row_data(index)
+                    if row_data is not None:
+                        self._select_element(
+                            index,
+                            target_id,
+                            slot,
+                            row_data.rule_id,
+                        )
+                        self._drag_start_pos = pos
+                    else:
+                        self._clear_element_selection()
+                else:
+                    self._clear_element_selection()
+            else:
+                self._clear_element_selection()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._drag_start_pos is not None
+            and self._selected_element is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+        ):
+            dist = (event.position().toPoint() - self._drag_start_pos).manhattanLength()
+            if dist >= QApplication.startDragDistance():
+                self._start_element_drag()
+                return
+        super().mouseMoveEvent(event)
+
+    def _start_element_drag(self):
+        """Initiate a drag operation for the selected element."""
+        rule_id, slot, target_id = self._selected_element
+        model = self.model()
+        if model is None:
+            return
+        row_data = model.get_row_data(self._selected_index)
+        if row_data is None:
+            return
+        elements = getattr(row_data, slot, [])
+        name = ''
+        obj_type = ''
+        for eid, ename, etype in elements:
+            if eid == target_id:
+                name = ename
+                obj_type = etype
+                break
+        if not obj_type:
+            return
+
+        payload = json.dumps(
+            {
+                'id': str(target_id),
+                'name': name,
+                'source_rule_id': str(rule_id),
+                'source_slot': slot,
+                'type': obj_type,
+            }
+        ).encode()
+
+        mime_data = QMimeData()
+        mime_data.setData(FWF_MIME_TYPE, payload)
+
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+
+        icon_sz = QSettings().value('UI/IconSizeInRules', 25, type=int)
+        icon = QIcon(f':/Icons/{obj_type}/icon')
+        if not icon.isNull():
+            drag.setPixmap(icon.pixmap(icon_sz, icon_sz))
+
+        self._drag_start_pos = None
+        drag.exec(Qt.DropAction.CopyAction | Qt.DropAction.MoveAction)
 
     # ------------------------------------------------------------------
     # Double-click to rename group
@@ -304,9 +480,18 @@ class PolicyView(QTreeView):
             slot = _COL_TO_SLOT[col]
             elements = getattr(row_data, slot, [])
             if elements:
-                first_id, _name, first_type = elements[0]
-                self._open_element_editor(str(first_id), first_type)
-                self._reveal_in_tree(str(first_id))
+                target = None
+                if self._selected_element is not None:
+                    sel_rid, sel_slot, sel_tid = self._selected_element
+                    if sel_rid == row_data.rule_id and sel_slot == slot:
+                        for eid, ename, etype in elements:
+                            if eid == sel_tid:
+                                target = (eid, ename, etype)
+                                break
+                if target is None:
+                    target = elements[0]
+                self._open_element_editor(str(target[0]), target[2])
+                self._reveal_in_tree(str(target[0]))
         elif col == _COL_OPTIONS:
             self._open_rule_options_dialog(model, index)
 
@@ -392,6 +577,18 @@ class PolicyView(QTreeView):
         elif col == _COL_OPTIONS:
             self._build_options_menu(menu, model, index)
         elif col in _ELEMENT_COLS:
+            # Hit-test for per-element selection on right-click.
+            elem = self._element_at_pos(index, vp_pos)
+            if elem is not None:
+                tid, _n, _t = elem
+                rd = model.get_row_data(index)
+                if rd is not None:
+                    self._select_element(
+                        index,
+                        tid,
+                        _COL_TO_SLOT[col],
+                        rd.rule_id,
+                    )
             self._build_element_menu(menu, model, index, col)
         else:
             self._build_row_menu(menu, model, index)
@@ -605,21 +802,30 @@ class PolicyView(QTreeView):
             menu.addAction('(empty)').setEnabled(False)
             return
 
-        # Edit: open first element in the editor panel.
-        first_id, first_name, first_type = elements[0]
+        # Determine the target element (clicked or first).
+        target_id, target_name, target_type = elements[0]
+        if self._selected_element is not None:
+            sel_rid, sel_slot, sel_tid = self._selected_element
+            if sel_rid == row_data.rule_id and sel_slot == slot:
+                for eid, ename, etype in elements:
+                    if eid == sel_tid:
+                        target_id, target_name, target_type = eid, ename, etype
+                        break
+
+        # Edit: open the targeted element in the editor panel.
         menu.addAction(
-            'Edit',
-            lambda oid=first_id, otype=first_type: self._open_element_editor(
+            f'Edit {target_name}',
+            lambda oid=target_id, otype=target_type: self._open_element_editor(
                 str(oid), otype
             ),
         )
         menu.addSeparator()
 
         # Remove actions (one per element).
-        for target_id, name, _type in elements:
+        for elem_id, name, _type in elements:
             menu.addAction(
                 f'Remove {name}',
-                lambda tid=target_id: model.remove_element(index, slot, tid),
+                lambda tid=elem_id: model.remove_element(index, slot, tid),
             )
         menu.addSeparator()
 
@@ -636,7 +842,7 @@ class PolicyView(QTreeView):
         # Where Used.
         menu.addAction(
             'Where Used',
-            lambda oid=first_id, n=first_name, ot=first_type: self._show_where_used(
+            lambda oid=target_id, n=target_name, ot=target_type: self._show_where_used(
                 str(oid), n, ot
             ),
         )
@@ -644,7 +850,7 @@ class PolicyView(QTreeView):
         # Reveal in Tree.
         menu.addAction(
             'Reveal in Tree',
-            lambda oid=first_id: self._reveal_in_tree(str(oid)),
+            lambda oid=target_id: self._reveal_in_tree(str(oid)),
         )
 
     def _open_element_editor(self, obj_id, obj_type):
@@ -923,7 +1129,11 @@ class PolicyView(QTreeView):
             and model is not None
             and not model.is_group(index)
         ):
-            event.acceptProposedAction()
+            if event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
+                event.setDropAction(Qt.DropAction.CopyAction)
+            else:
+                event.setDropAction(Qt.DropAction.MoveAction)
+            event.accept()
         else:
             event.ignore()
 
@@ -962,5 +1172,33 @@ class PolicyView(QTreeView):
             event.ignore()
             return
 
-        model.add_element(index, slot, uuid.UUID(obj_id))
+        source_rule_id = payload.get('source_rule_id')
+        source_slot = payload.get('source_slot')
+
+        if source_rule_id and source_slot:
+            # Drag from another cell (or same cell).
+            row_data = model.get_row_data(index)
+            if row_data is None:
+                event.ignore()
+                return
+            # Same cell → no-op.
+            if str(row_data.rule_id) == source_rule_id and source_slot == slot:
+                event.ignore()
+                return
+            if event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
+                # Copy (Ctrl+drag).
+                model.add_element(index, slot, uuid.UUID(obj_id))
+            else:
+                # Move.
+                model.move_element(
+                    uuid.UUID(source_rule_id),
+                    source_slot,
+                    index,
+                    slot,
+                    uuid.UUID(obj_id),
+                )
+        else:
+            # Tree drop (existing behavior).
+            model.add_element(index, slot, uuid.UUID(obj_id))
+
         event.acceptProposedAction()
