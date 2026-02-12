@@ -101,15 +101,8 @@ class _CellBorderDelegate(QStyledItemDelegate):
 
     _BORDER_COLOR = QColor('lightgray')
     _H_PAD = 2
-    _HIGHLIGHT_BG = QColor(0xE8, 0xE8, 0xE8)  # discrete light gray, like fwbuilder
     _ICON_TEXT_GAP = 2
     _V_PAD = 2
-
-    def initStyleOption(self, option, index):
-        super().initStyleOption(option, index)
-        option.decorationAlignment = (
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
 
     def _icon_size(self):
         """Return the configured icon size (16 or 25)."""
@@ -134,24 +127,16 @@ class _CellBorderDelegate(QStyledItemDelegate):
         return QSize(super().sizeHint(option, index).width(), line_h + 2 * self._V_PAD)
 
     def paint(self, painter, option, index):
-        # Draw selection/background only — suppress text and icon so we
-        # can render everything ourselves with consistent top-alignment.
-        self.initStyleOption(option, index)
-        option.text = ''
-        option.icon = QIcon()
-        # Use a discrete light gray for selection instead of the system blue.
-        option.palette.setColor(QPalette.ColorRole.Highlight, self._HIGHLIGHT_BG)
-        option.palette.setColor(
-            QPalette.ColorRole.HighlightedText,
-            option.palette.color(QPalette.ColorRole.Text),
-        )
-        style = option.widget.style() if option.widget else None
-        if style:
-            style.drawControl(
-                QStyle.ControlElement.CE_ItemViewItem,
-                option,
-                painter,
-                option.widget,
+        # Manual background painting matching fwbuilder's RuleSetViewDelegate:
+        # flat fillRect instead of styled CE_ItemViewItem to avoid platform
+        # selection effects (gradients, rounded corners, etc.).
+        bg = index.data(Qt.ItemDataRole.BackgroundRole)
+        if bg:
+            painter.fillRect(option.rect, bg)
+        elif option.state & QStyle.StateFlag.State_Selected:
+            painter.fillRect(
+                option.rect,
+                option.palette.color(QPalette.ColorRole.Highlight),
             )
 
         elements = index.data(ELEMENTS_ROLE)
@@ -235,7 +220,6 @@ class PolicyView(QTreeView):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAlternatingRowColors(True)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setRootIsDecorated(True)
