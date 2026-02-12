@@ -20,12 +20,15 @@
     <file alias="Icons/Continue/icon-tree">Icons/continue_16.png</file>
     <file alias="Icons/Custom/icon-tree">Icons/custom_16.png</file>
     <file alias="Icons/AddressTable/icon-tree">Icons/addresstable_16.png</file>
+    <file alias="Icons/AttachedNetworks/icon-tree">Icons/network_16.png</file>
     <file alias="Icons/Both/icon-tree">Icons/both_16.png</file>
     <file alias="Icons/Classify/icon-tree">Icons/classify_16.png</file>
     <file alias="Icons/Cluster/icon-tree">Icons/cluster_16.png</file>
     <file alias="Icons/CustomService/icon-tree">Icons/service-custom_16.png</file>
     <file alias="Icons/DNSName/icon-tree">Icons/domainname_16.png</file>
     <file alias="Icons/Deny/icon-tree">Icons/deny_16.png</file>
+    <file alias="Icons/DynamicGroup/icon-tree">Icons/dynamic-group_16.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon-tree">Icons/failover-cluster-group_16.png</file>
     <file alias="Icons/Pipe/icon-tree">Icons/pipe_16.png</file>
     <file alias="Icons/Firewall/icon-tree">Icons/firewall_16.png</file>
     <file alias="Icons/Host/icon-tree">Icons/host_16.png</file>
@@ -54,6 +57,7 @@
     <file alias="Icons/Route/icon-tree">Icons/route_16.png</file>
     <file alias="Icons/Routing/icon-tree">Icons/routing_16.png</file>
     <file alias="Icons/ServiceGroup/icon-tree">Icons/service-group_16.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon-tree">Icons/state-sync-cluster-group_16.png</file>
     <file alias="Icons/SystemGroup/icon-tree">Icons/folder_16.png</file>
     <file alias="Icons/TCPService/icon-tree">Icons/service-tcp_16.png</file>
     <file alias="Icons/TagService/icon-tree">Icons/service-tag_16.png</file>
@@ -62,8 +66,11 @@
 
     <!-- Negated object-tree icons 16x16 (:/Icons/Type/icon-neg-tree) -->
     <file alias="Icons/AddressRange/icon-neg-tree">Icons/rangeaddress-neg_16.png</file>
+    <file alias="Icons/AttachedNetworks/icon-neg-tree">Icons/network-neg_16.png</file>
     <file alias="Icons/Cluster/icon-neg-tree">Icons/cluster-neg_16.png</file>
     <file alias="Icons/CustomService/icon-neg-tree">Icons/service-custom-neg_16.png</file>
+    <file alias="Icons/DynamicGroup/icon-neg-tree">Icons/dynamic-group-neg_16.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon-neg-tree">Icons/failover-cluster-group-neg_16.png</file>
     <file alias="Icons/Firewall/icon-neg-tree">Icons/firewall-neg_16.png</file>
     <file alias="Icons/Host/icon-neg-tree">Icons/host-neg_16.png</file>
     <file alias="Icons/ICMP6Service/icon-neg-tree">Icons/service-icmp6-neg_16.png</file>
@@ -79,6 +86,7 @@
     <file alias="Icons/ObjectGroup/icon-neg-tree">Icons/object-group-neg_16.png</file>
     <file alias="Icons/PhysAddress/icon-neg-tree">Icons/physaddress-neg_16.png</file>
     <file alias="Icons/ServiceGroup/icon-neg-tree">Icons/service-group-neg_16.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon-neg-tree">Icons/state-sync-cluster-group-neg_16.png</file>
     <file alias="Icons/TCPService/icon-neg-tree">Icons/service-tcp-neg_16.png</file>
     <file alias="Icons/TagService/icon-neg-tree">Icons/service-tag-neg_16.png</file>
     <file alias="Icons/UDPService/icon-neg-tree">Icons/service-udp-neg_16.png</file>
@@ -92,12 +100,15 @@
     <file alias="Icons/Continue/icon">Icons/continue_25.png</file>
     <file alias="Icons/Custom/icon">Icons/custom_25.png</file>
     <file alias="Icons/AddressTable/icon">Icons/addresstable_25.png</file>
+    <file alias="Icons/AttachedNetworks/icon">Icons/network_25.png</file>
     <file alias="Icons/Both/icon">Icons/both_25.png</file>
     <file alias="Icons/Classify/icon">Icons/classify_25.png</file>
     <file alias="Icons/Cluster/icon">Icons/cluster_25.png</file>
     <file alias="Icons/CustomService/icon">Icons/service-custom_25.png</file>
     <file alias="Icons/DNSName/icon">Icons/domainname_25.png</file>
     <file alias="Icons/Deny/icon">Icons/deny_25.png</file>
+    <file alias="Icons/DynamicGroup/icon">Icons/dynamic-group_25.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon">Icons/failover-cluster-group_25.png</file>
     <file alias="Icons/Pipe/icon">Icons/pipe_25.png</file>
     <file alias="Icons/Firewall/icon">Icons/firewall_25.png</file>
     <file alias="Icons/Host/icon">Icons/host_25.png</file>
@@ -123,6 +134,7 @@
     <file alias="Icons/Route/icon">Icons/route_25.png</file>
     <file alias="Icons/Routing/icon">Icons/routing_25.png</file>
     <file alias="Icons/ServiceGroup/icon">Icons/service-group_25.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon">Icons/state-sync-cluster-group_25.png</file>
     <file alias="Icons/TCPService/icon">Icons/service-tcp_25.png</file>
     <file alias="Icons/TagService/icon">Icons/service-tag_25.png</file>
     <file alias="Icons/UDPService/icon">Icons/service-udp_25.png</file>
@@ -130,8 +142,11 @@
 
     <!-- Negated rule-set icons 25x25 (:/Icons/Type/icon-neg) -->
     <file alias="Icons/AddressRange/icon-neg">Icons/rangeaddress-neg_25.png</file>
+    <file alias="Icons/AttachedNetworks/icon-neg">Icons/network-neg_25.png</file>
     <file alias="Icons/Cluster/icon-neg">Icons/cluster-neg_25.png</file>
     <file alias="Icons/CustomService/icon-neg">Icons/service-custom-neg_25.png</file>
+    <file alias="Icons/DynamicGroup/icon-neg">Icons/dynamic-group-neg_25.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon-neg">Icons/failover-cluster-group-neg_25.png</file>
     <file alias="Icons/Firewall/icon-neg">Icons/firewall-neg_25.png</file>
     <file alias="Icons/Host/icon-neg">Icons/host-neg_25.png</file>
     <file alias="Icons/ICMP6Service/icon-neg">Icons/service-icmp6-neg_25.png</file>
@@ -147,6 +162,7 @@
     <file alias="Icons/ObjectGroup/icon-neg">Icons/object-group-neg_25.png</file>
     <file alias="Icons/PhysAddress/icon-neg">Icons/physaddress-neg_25.png</file>
     <file alias="Icons/ServiceGroup/icon-neg">Icons/service-group-neg_25.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon-neg">Icons/state-sync-cluster-group-neg_25.png</file>
     <file alias="Icons/TCPService/icon-neg">Icons/service-tcp-neg_25.png</file>
     <file alias="Icons/TagService/icon-neg">Icons/service-tag-neg_25.png</file>
     <file alias="Icons/UDPService/icon-neg">Icons/service-udp-neg_25.png</file>
@@ -157,6 +173,7 @@
     <file alias="Icons/Accounting/icon-big">Icons/accounting_64.png</file>
     <file alias="Icons/AddressRange/icon-big">Icons/rangeaddress_64.png</file>
     <file alias="Icons/AddressTable/icon-big">Icons/addresstable_64.png</file>
+    <file alias="Icons/AttachedNetworks/icon-big">Icons/network_64.png</file>
     <file alias="Icons/Both/icon-big">Icons/both_64.png</file>
     <file alias="Icons/Branch/icon-big">Icons/branch_64.png</file>
     <file alias="Icons/Cluster/icon-big">Icons/cluster_64.png</file>
@@ -165,6 +182,8 @@
     <file alias="Icons/CustomService/icon-big">Icons/service-custom_64.png</file>
     <file alias="Icons/Deny/icon-big">Icons/deny_64.png</file>
     <file alias="Icons/DNSName/icon-big">Icons/domainname_64.png</file>
+    <file alias="Icons/DynamicGroup/icon-big">Icons/dynamic-group_64.png</file>
+    <file alias="Icons/FailoverClusterGroup/icon-big">Icons/failover-cluster-group_64.png</file>
     <file alias="Icons/Firewall/icon-big">Icons/firewall_64.png</file>
     <file alias="Icons/Host/icon-big">Icons/host_64.png</file>
     <file alias="Icons/ICMP6Service/icon-big">Icons/service-icmp6_64.png</file>
@@ -186,6 +205,7 @@
     <file alias="Icons/Policy/icon-big">Icons/ruleset_64.png</file>
     <file alias="Icons/Reject/icon-big">Icons/reject_64.png</file>
     <file alias="Icons/ServiceGroup/icon-big">Icons/service-group_64.png</file>
+    <file alias="Icons/StateSyncClusterGroup/icon-big">Icons/state-sync-cluster-group_64.png</file>
     <file alias="Icons/TCPService/icon-big">Icons/service-tcp_64.png</file>
     <file alias="Icons/TagService/icon-big">Icons/service-tag_64.png</file>
     <file alias="Icons/UDPService/icon-big">Icons/service-udp_64.png</file>

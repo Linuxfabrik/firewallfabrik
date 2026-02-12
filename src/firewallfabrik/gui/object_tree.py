@@ -23,6 +23,7 @@ from PySide6.QtGui import QDrag, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHeaderView,
+    QInputDialog,
     QLineEdit,
     QMenu,
     QMessageBox,
@@ -51,9 +52,12 @@ from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 ICON_MAP = {
     'AddressRange': ':/Icons/AddressRange/icon-tree',
     'AddressTable': ':/Icons/AddressTable/icon-tree',
+    'AttachedNetworks': ':/Icons/AttachedNetworks/icon-tree',
     'Cluster': ':/Icons/Cluster/icon-tree',
     'CustomService': ':/Icons/CustomService/icon-tree',
     'DNSName': ':/Icons/DNSName/icon-tree',
+    'DynamicGroup': ':/Icons/DynamicGroup/icon-tree',
+    'FailoverClusterGroup': ':/Icons/FailoverClusterGroup/icon-tree',
     'Firewall': ':/Icons/Firewall/icon-tree',
     'Host': ':/Icons/Host/icon-tree',
     'ICMP6Service': ':/Icons/ICMP6Service/icon-tree',
@@ -73,6 +77,7 @@ ICON_MAP = {
     'Policy': ':/Icons/Policy/icon-tree',
     'Routing': ':/Icons/Routing/icon-tree',
     'ServiceGroup': ':/Icons/ServiceGroup/icon-tree',
+    'StateSyncClusterGroup': ':/Icons/StateSyncClusterGroup/icon-tree',
     'TCPService': ':/Icons/TCPService/icon-tree',
     'TagService': ':/Icons/TagService/icon-tree',
     'UDPService': ':/Icons/UDPService/icon-tree',
@@ -453,6 +458,8 @@ _MODEL_MAP = {
     'Cluster': Host,
     'CustomService': Service,
     'DNSName': Group,
+    'DynamicGroup': Group,
+    'FailoverClusterGroup': Group,
     'Firewall': Host,
     'Host': Host,
     'ICMP6Service': Service,
@@ -472,6 +479,7 @@ _MODEL_MAP = {
     'Policy': RuleSet,
     'Routing': RuleSet,
     'ServiceGroup': Group,
+    'StateSyncClusterGroup': Group,
     'TCPService': Service,
     'TagService': Service,
     'UDPService': Service,
@@ -520,6 +528,116 @@ _NO_DELETE_TYPES = frozenset(
     {
         'AttachedNetworks',
         'Library',
+    }
+)
+
+# New object types offered for device context (fwbuilder order).
+_NEW_TYPES_FOR_PARENT = {
+    'Cluster': [
+        ('Interface', 'Interface'),
+        ('Policy', 'Policy Rule Set'),
+        ('NAT', 'NAT Rule Set'),
+        ('StateSyncClusterGroup', 'State Sync Group'),
+    ],
+    'Firewall': [
+        ('Interface', 'Interface'),
+        ('Policy', 'Policy Rule Set'),
+        ('NAT', 'NAT Rule Set'),
+    ],
+    'Host': [
+        ('Interface', 'Interface'),
+    ],
+}
+
+# New object types offered based on the data.folder of the clicked item
+# (or its siblings).  Matches fwbuilder's addSubfolderActions() order.
+_NEW_TYPES_FOR_FOLDER = {
+    'Address Ranges': [
+        ('AddressRange', 'Address Range'),
+    ],
+    'Address Tables': [
+        ('AddressTable', 'Address Table'),
+    ],
+    'Addresses': [
+        ('IPv4', 'Address'),
+        ('IPv6', 'Address IPv6'),
+    ],
+    'Clusters': [
+        ('Cluster', 'Cluster'),
+    ],
+    'Custom': [
+        ('CustomService', 'Custom Service'),
+    ],
+    'DNS Names': [
+        ('DNSName', 'DNS Name'),
+    ],
+    'Firewalls': [
+        ('Firewall', 'Firewall'),
+    ],
+    'Groups': [
+        ('ObjectGroup', 'Object Group'),
+        ('DynamicGroup', 'Dynamic Group'),
+    ],
+    'Hosts': [
+        ('Host', 'Host'),
+    ],
+    'ICMP': [
+        ('ICMPService', 'ICMP Service'),
+        ('ICMP6Service', 'ICMP6 Service'),
+    ],
+    'IP': [
+        ('IPService', 'IP Service'),
+    ],
+    'Networks': [
+        ('Network', 'Network'),
+        ('NetworkIPv6', 'Network IPv6'),
+    ],
+    'Service Groups': [
+        ('ServiceGroup', 'Service Group'),
+    ],
+    'TCP': [
+        ('TCPService', 'TCP Service'),
+    ],
+    'TagServices': [
+        ('TagService', 'Tag Service'),
+    ],
+    'Time': [
+        ('Interval', 'Time Interval'),
+    ],
+    'UDP': [
+        ('UDPService', 'UDP Service'),
+    ],
+    'Users': [
+        ('UserService', 'User Service'),
+    ],
+}
+
+# Types that do NOT get "New Subfolder" in their context menu.
+# Matches fwbuilder's exclusion list in addSubfolderActions().
+_NO_SUBFOLDER_TYPES = frozenset(
+    {
+        'AddressRange',
+        'AddressTable',
+        'AttachedNetworks',
+        'Cluster',
+        'CustomService',
+        'DNSName',
+        'DynamicGroup',
+        'Firewall',
+        'Host',
+        'ICMP6Service',
+        'ICMPService',
+        'IPService',
+        'IPv4',
+        'IPv6',
+        'Interval',
+        'Network',
+        'NetworkIPv6',
+        'ServiceGroup',
+        'TCPService',
+        'TagService',
+        'UDPService',
+        'UserService',
     }
 )
 
@@ -848,7 +966,13 @@ class ObjectTree(QWidget):
         ]
         children += [g for g in lib.groups if g.parent_group_id is None]
         children += [i for i in lib.interfaces if i.device_id is None]
-        self._add_objects_with_folders(children, parent_item)
+        # Include user-created subfolders stored in lib.data.
+        user_subfolders = (getattr(lib, 'data', None) or {}).get('subfolders', [])
+        self._add_objects_with_folders(
+            children,
+            parent_item,
+            extra_folders=user_subfolders,
+        )
 
     def _add_object(self, obj, parent_item):
         """Create a tree item for *obj* and recurse into groups / devices."""
@@ -887,14 +1011,14 @@ class ObjectTree(QWidget):
         )
         self._add_objects_with_folders(children, parent_item)
 
-    def _add_objects_with_folders(self, objects, parent_item):
+    def _add_objects_with_folders(self, objects, parent_item, *, extra_folders=None):
         """Add *objects* under *parent_item*, grouping by ``data.folder``."""
         sorted_objects = sorted(objects, key=_obj_sort_key)
         # Pre-create folder items (sorted) so they appear above ungrouped objects.
-        folder_names = sorted(
-            {self._get_folder_name(obj) for obj in sorted_objects} - {''},
-            key=str.casefold,
-        )
+        folder_names = {self._get_folder_name(obj) for obj in sorted_objects} - {''}
+        if extra_folders:
+            folder_names |= set(extra_folders)
+        folder_names = sorted(folder_names, key=str.casefold)
         folder_items = {
             name: self._make_category(name, parent_item) for name in folder_names
         }
@@ -1159,7 +1283,10 @@ class ObjectTree(QWidget):
             return
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+
+        # Category folder (no obj_id/obj_type): show only New items.
         if not obj_id or not obj_type:
+            self._on_category_context_menu(item, pos)
             return
 
         effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
@@ -1240,6 +1367,56 @@ class ObjectTree(QWidget):
         delete_action.setShortcut(QKeySequence.StandardKey.Delete)
         delete_action.setEnabled(can_delete)
         delete_action.triggered.connect(lambda: self._ctx_delete(item))
+
+        # New [Type] + New Subfolder (grouped in one section)
+        new_types = self._get_new_object_types(item, obj_type)
+        show_subfolder = obj_type == 'Library' or obj_type not in _NO_SUBFOLDER_TYPES
+        if new_types or show_subfolder:
+            menu.addSeparator()
+        for type_name, display_name in new_types:
+            icon_path = ICON_MAP.get(type_name, '')
+            act = menu.addAction(QIcon(icon_path), f'New {display_name}')
+            act.setEnabled(not effective_ro)
+            act.triggered.connect(
+                lambda checked=False, t=type_name: self._ctx_new_object(item, t)
+            )
+        if show_subfolder:
+            sf_action = menu.addAction(
+                QIcon(_CATEGORY_ICON),
+                'New Subfolder',
+            )
+            sf_action.setEnabled(not effective_ro)
+            sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
+
+        menu.exec(self._tree.viewport().mapToGlobal(pos))
+
+    def _on_category_context_menu(self, item, pos):
+        """Show a context menu for category folder items (New + Subfolder)."""
+        folder_name = item.text(0)
+        new_types = _NEW_TYPES_FOR_FOLDER.get(folder_name, [])
+
+        # Determine read-only state from parent library.
+        effective_ro = False
+        parent = item.parent()
+        while parent is not None:
+            if parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
+                effective_ro = parent.data(0, Qt.ItemDataRole.UserRole + 5) or False
+                break
+            parent = parent.parent()
+
+        menu = QMenu(self)
+
+        for type_name, display_name in new_types:
+            icon_path = ICON_MAP.get(type_name, '')
+            act = menu.addAction(QIcon(icon_path), f'New {display_name}')
+            act.setEnabled(not effective_ro)
+            act.triggered.connect(
+                lambda checked=False, t=type_name: self._ctx_new_object(item, t)
+            )
+
+        sf_action = menu.addAction(QIcon(_CATEGORY_ICON), 'New Subfolder')
+        sf_action.setEnabled(not effective_ro)
+        sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
 
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
@@ -1843,6 +2020,311 @@ class ObjectTree(QWidget):
         effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
         if obj_type and obj_type not in _NO_DELETE_TYPES and not effective_ro:
             self._ctx_delete(item)
+
+    # ------------------------------------------------------------------
+    # New [Type]
+    # ------------------------------------------------------------------
+
+    def _get_new_object_types(self, item, obj_type):
+        """Return a list of ``(type_name, display_name)`` for the New menu.
+
+        Matches fwbuilder's context menu logic strictly:
+
+        - Devices (Cluster/Firewall/Host) → fixed child types only.
+        - Interface → dynamic list (addresses, subinterface, etc.).
+        - Rule sets (Policy/NAT/Routing) → no "New" items.
+        - Library → no "New" items (only subfolder, handled elsewhere).
+        - Objects in category folders → folder-based items.
+        - Objects under devices/interfaces → no "New" items.
+        """
+        # Devices: fixed child types only.
+        if obj_type in ('Cluster', 'Firewall', 'Host'):
+            return list(_NEW_TYPES_FOR_PARENT.get(obj_type, []))
+
+        # Interface: dynamic list based on parent and existing children.
+        if obj_type == 'Interface':
+            return self._get_interface_new_types(item)
+
+        # Rule sets and Library: no "New" items.
+        if obj_type in ('Library', *_RULE_SET_TYPES):
+            return []
+
+        # All other objects: only get folder-based items if they live
+        # directly under a category folder.  Objects under devices or
+        # interfaces get nothing (matches fwbuilder's strict path check).
+        folder = self._find_folder_context(item)
+        if folder is not None:
+            return list(_NEW_TYPES_FOR_FOLDER.get(folder, []))
+
+        return []
+
+    @staticmethod
+    def _find_folder_context(item):
+        """Walk up the tree to find the enclosing category folder.
+
+        Returns the folder name string, or ``None`` if the item lives
+        under a device or interface (where no folder-based "New" items
+        are offered).
+        """
+        current = item.parent()
+        while current is not None:
+            current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if current_type is None:
+                # Category folder (no obj_id/obj_type) — this is what we want.
+                return current.text(0)
+            if current_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
+                # Under a device or interface — no folder-based items.
+                return None
+            if current_type == 'Library':
+                # Directly under library without a category folder.
+                return None
+            current = current.parent()
+
+        return None
+
+    @staticmethod
+    def _get_interface_new_types(item):
+        """Build the dynamic "New" list for an Interface item.
+
+        Matches fwbuilder's logic:
+        - New Interface (subinterface): only for Firewall interfaces
+        - New Address (IPv4), New Address IPv6 (IPv6): always
+        - New MAC Address (PhysAddress): always
+        - New Attached Networks: only if not already present
+        - New Failover Group: only for Cluster interfaces, if not
+          already present
+        """
+        result = []
+
+        # Determine parent device type.
+        parent = item.parent()
+        parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) if parent else None
+
+        # Subinterface: only for Firewall interfaces.
+        if parent_type == 'Firewall':
+            result.append(('Interface', 'Interface'))
+
+        # Standard address types — always offered.
+        result.append(('IPv4', 'Address'))
+        result.append(('IPv6', 'Address IPv6'))
+        result.append(('PhysAddress', 'MAC Address'))
+
+        # Check existing children in the tree to suppress singleton items.
+        has_attached = False
+        has_failover = False
+        for i in range(item.childCount()):
+            child_type = item.child(i).data(0, Qt.ItemDataRole.UserRole + 1)
+            if child_type == 'AttachedNetworks':
+                has_attached = True
+            elif child_type == 'FailoverClusterGroup':
+                has_failover = True
+
+        if not has_attached:
+            result.append(('AttachedNetworks', 'Attached Networks'))
+
+        if parent_type == 'Cluster' and not has_failover:
+            result.append(('FailoverClusterGroup', 'Failover Group'))
+
+        return result
+
+    def _ctx_new_object(self, item, type_name):
+        """Create a new object of *type_name* in the context of *item*."""
+        if self._db_manager is None:
+            return
+        model_cls = _MODEL_MAP.get(type_name)
+        if model_cls is None:
+            return
+
+        # Determine where to place the new object.
+        lib_id = self._get_item_library_id(item)
+        if lib_id is None:
+            return
+
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+
+        # Figure out the parent context.
+        interface_id = None
+        parent_interface_id = None
+        device_id = None
+        folder = None
+
+        if obj_type == 'Interface' and obj_id:
+            if issubclass(model_cls, Address):
+                interface_id = uuid.UUID(obj_id)
+            elif issubclass(model_cls, Interface):
+                # Sub-interface: set parent_interface_id and find device.
+                parent_interface_id = uuid.UUID(obj_id)
+                parent = item.parent()
+                if parent:
+                    pid = parent.data(0, Qt.ItemDataRole.UserRole)
+                    if pid:
+                        device_id = uuid.UUID(pid)
+            # Groups (AttachedNetworks, FailoverClusterGroup) created
+            # at library level — no special parent ref needed.
+        elif obj_type in ('Cluster', 'Firewall', 'Host') and obj_id:
+            if issubclass(model_cls, Interface) or issubclass(model_cls, RuleSet):
+                device_id = uuid.UUID(obj_id)
+        elif obj_type == 'Library':
+            pass  # Library root — folder will be set from type.
+        elif obj_type is None:
+            # Category folder — the item text IS the folder name.
+            folder = item.text(0)
+        else:
+            # Walk up to find device or interface context.
+            parent = item.parent()
+            while parent is not None:
+                pt = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+                pid = parent.data(0, Qt.ItemDataRole.UserRole)
+                if pt == 'Interface' and pid and issubclass(model_cls, Address):
+                    interface_id = uuid.UUID(pid)
+                    break
+                if pt in ('Cluster', 'Firewall', 'Host') and pid:
+                    if issubclass(model_cls, Interface):
+                        device_id = uuid.UUID(pid)
+                    break
+                if pt == 'Library':
+                    break
+                # Category folder — remember its name for data.folder.
+                if pt is None:
+                    folder = parent.text(0)
+                parent = parent.parent()
+
+        # If no explicit folder, derive from type.
+        if folder is None and interface_id is None and device_id is None:
+            for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
+                if any(tn == type_name for tn, _dn in type_list):
+                    folder = f
+                    break
+
+        new_id = self._create_new_object(
+            model_cls,
+            type_name,
+            lib_id,
+            device_id=device_id,
+            folder=folder,
+            interface_id=interface_id,
+            parent_interface_id=parent_interface_id,
+        )
+        if new_id is not None:
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+            self.object_activated.emit(str(new_id), type_name)
+
+    def _create_new_object(
+        self,
+        model_cls,
+        type_name,
+        lib_id,
+        *,
+        device_id=None,
+        folder=None,
+        interface_id=None,
+        parent_interface_id=None,
+    ):
+        """Create a new object and return its UUID, or None on failure."""
+        if self._db_manager is None:
+            return None
+
+        session = self._db_manager.create_session()
+        try:
+            new_id = uuid.uuid4()
+            kwargs = {'id': new_id, 'type': type_name}
+
+            # Set parent references based on context.
+            if interface_id is not None and hasattr(model_cls, 'interface_id'):
+                kwargs['interface_id'] = interface_id
+            elif parent_interface_id is not None and hasattr(
+                model_cls, 'parent_interface_id'
+            ):
+                kwargs['parent_interface_id'] = parent_interface_id
+                if device_id is not None and hasattr(model_cls, 'device_id'):
+                    kwargs['device_id'] = device_id
+                kwargs['library_id'] = lib_id
+            elif device_id is not None and hasattr(model_cls, 'device_id'):
+                kwargs['device_id'] = device_id
+                kwargs['library_id'] = lib_id
+            else:
+                if hasattr(model_cls, 'library_id'):
+                    kwargs['library_id'] = lib_id
+
+            # Set data.folder for proper tree placement.
+            if folder and hasattr(model_cls, 'data'):
+                kwargs['data'] = {'folder': folder}
+
+            new_obj = model_cls(**kwargs)
+            new_obj.name = f'New {type_name}'
+
+            # Make name unique.
+            new_obj.name = self._make_name_unique(session, new_obj)
+
+            session.add(new_obj)
+            session.commit()
+            self._db_manager.save_state(f'New {type_name}')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return new_id
+
+    # ------------------------------------------------------------------
+    # New Subfolder
+    # ------------------------------------------------------------------
+
+    def _ctx_new_subfolder(self, item):
+        """Prompt for a subfolder name and create it under *item*.
+
+        User subfolders are stored in the Library's ``data.subfolders``
+        list, matching fwbuilder's ``addSubfolderSlot()`` approach.
+        """
+        if self._db_manager is None:
+            return
+
+        name, ok = QInputDialog.getText(
+            self._tree,
+            'New Subfolder',
+            'Enter subfolder name:',
+        )
+        name = name.strip() if ok else ''
+        if not name:
+            return
+        if ',' in name:
+            QMessageBox.warning(
+                self._tree,
+                'New Subfolder',
+                'Subfolder name cannot contain a comma.',
+            )
+            return
+
+        # Find the library for this item.
+        lib_id = self._get_item_library_id(item)
+        if lib_id is None:
+            return
+
+        session = self._db_manager.create_session()
+        try:
+            lib = session.get(Library, lib_id)
+            if lib is None:
+                return
+            data = dict(lib.data or {})
+            subfolders = list(data.get('subfolders', []))
+            if name in subfolders:
+                return  # Already exists.
+            subfolders.append(name)
+            subfolders.sort(key=str.casefold)
+            data['subfolders'] = subfolders
+            lib.data = data
+            session.commit()
+            self._db_manager.save_state(f'New subfolder "{name}"')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        self.tree_changed.emit()
 
     # ------------------------------------------------------------------
     # Shared helpers
