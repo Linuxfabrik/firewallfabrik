@@ -335,11 +335,23 @@ class PolicyView(QTreeView):
         in_group = row_data is not None and row_data.group
 
         if in_group:
-            if model.is_outermost(index):
-                rid = row_data.rule_id
+            selected = self._selected_rule_indices()
+            if not selected:
+                selected = [index]
+            # Collect all selected in-group rule IDs; show action if any
+            # selected rule is outermost (matches fwbuilder behavior).
+            group_rids = []
+            any_outermost = False
+            for sel in selected:
+                rd = model.get_row_data(sel)
+                if rd is not None and rd.group:
+                    group_rids.append(rd.rule_id)
+                    if model.is_outermost(sel):
+                        any_outermost = True
+            if any_outermost and group_rids:
                 menu.addAction(
                     'Remove From Group',
-                    lambda r=rid: model.remove_from_group_by_ids([r]),
+                    lambda rids=group_rids: model.remove_from_group_by_ids(rids),
                 )
                 menu.addSeparator()
         else:
