@@ -262,7 +262,7 @@ class FWWindow(QMainWindow):
         }
 
         # Connect changed signal on all editor dialogs for auto-save.
-        for widget in self._editor_map.values():
+        for widget in set(self._editor_map.values()):
             if isinstance(widget, BaseObjectDialog):
                 widget.changed.connect(self._on_editor_changed)
 
