@@ -154,17 +154,25 @@ def main(argv=None):
     except sqlalchemy.exc.IntegrityError as e:
         msg = f'Error: failed to load database from {args.FILE}: '
         if 'UNIQUE constraint failed' in str(e):
+            lib_names = getattr(db, '_library_names', None)
+            parent_names = getattr(db, '_parent_names', None)
+            dup = firewallfabrik.core.duplicate_object_name(
+                e,
+                library_names=lib_names,
+                parent_names=parent_names,
+            )
+            detail = f': {dup}' if dup else ''
             if args.FILE.endswith('.fwb'):
                 msg += (
-                    'Duplicate names are not allowed. Open the database in '
-                    'Firewall Builder, rename the affected objects and retry '
-                    'the import.'
+                    f'Duplicate names are not allowed{detail}. Open the '
+                    'database in Firewall Builder, rename the affected '
+                    'objects and retry the import.'
                 )
             else:
                 msg += (
-                    'Duplicate names are not allowed. This should not happen '
-                    'during normal operations. If you edited the YAML '
-                    'manually, double-check your changes.'
+                    f'Duplicate names are not allowed{detail}. This should '
+                    'not happen during normal operations. If you edited the '
+                    'YAML manually, double-check your changes.'
                 )
         else:
             msg += str(e)

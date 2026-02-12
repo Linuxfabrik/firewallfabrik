@@ -473,7 +473,6 @@
       <ServiceGroup id="stdid19" name="TagServices" comment="" ro="False"/>
       <ServiceGroup id="stdid20" name="UserServices" comment="" ro="False"/>
       <ServiceGroup id="stdid05_userservices" name="Users" comment="" ro="False"/>
-      <ServiceGroup id="stdid05_og_tag_1" name="TagServices" comment="" ro="False"/>
     </ServiceGroup>
     <ObjectGroup id="stdid12" name="Firewalls" comment="" ro="False"/>
     <ObjectGroup id="stdid21" name="Clusters" comment="" ro="False"/>

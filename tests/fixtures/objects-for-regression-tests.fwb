@@ -5428,7 +5428,7 @@
             <IPv4 id="id3DECF624" name="address" comment="" ro="False" address="222.222.222.40" netmask="255.255.255.0"/>
             <InterfaceOptions/>
           </Interface>
-          <Interface id="id3DECF62A" dedicated_failover="False" dyn="False" security_level="0" unnum="False" unprotected="False" name="unknown" comment="" ro="False">
+          <Interface id="id3DECF62A" dedicated_failover="False" dyn="False" label="" security_level="0" unnum="False" unprotected="False" name="unknown1" comment="" ro="False">
             <IPv4 id="id3DECF62B" name="hostM-outside" comment="" ro="False" address="222.222.222.41" netmask="255.255.255.0"/>
             <InterfaceOptions/>
           </Interface>

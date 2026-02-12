@@ -45,7 +45,7 @@ from PySide6.QtWidgets import (
 )
 
 from firewallfabrik import __version__
-from firewallfabrik.core import DatabaseManager
+from firewallfabrik.core import DatabaseManager, duplicate_object_name
 from firewallfabrik.core.objects import (
     Address,
     Group,
@@ -595,17 +595,26 @@ class FWWindow(QMainWindow):
             logger.exception('Failed to load %s', file_path)
             msg = self.tr(f"Failed to load '{file_path}'.")
             if 'UNIQUE constraint failed' in str(e):
+                lib_names = getattr(self._db_manager, '_library_names', None)
+                parent_names = getattr(self._db_manager, '_parent_names', None)
+                dup = duplicate_object_name(
+                    e,
+                    library_names=lib_names,
+                    parent_names=parent_names,
+                )
+                detail = f': {dup}' if dup else ''
                 if original_path.suffix == '.fwb':
                     msg += self.tr(
-                        '\n\nDuplicate names are not allowed. Open the '
-                        'database in Firewall Builder, rename the affected '
-                        'objects and retry the import.'
+                        f'\n\nDuplicate names are not allowed{detail}. '
+                        'Open the database in Firewall Builder, rename the '
+                        'affected objects and retry the import.'
                     )
                 else:
                     msg += self.tr(
-                        '\n\nDuplicate names are not allowed. This should '
-                        'not happen during normal operations. If you edited '
-                        'the YAML manually, double-check your changes.'
+                        f'\n\nDuplicate names are not allowed{detail}. '
+                        'This should not happen during normal operations. '
+                        'If you edited the YAML manually, double-check '
+                        'your changes.'
                     )
             QMessageBox.critical(self, 'FirewallFabrik', msg)
             return
@@ -776,16 +785,21 @@ class FWWindow(QMainWindow):
         if editor is None or session is None:
             return
         editor.apply_all()
+        # Capture path while the session is still usable (before a
+        # potential rollback which would expire all ORM state).
+        obj = getattr(editor, '_obj', None)
+        obj_path = _build_editor_path(obj) if obj else None
         try:
             session.commit()
         except sqlalchemy.exc.IntegrityError as e:
             session.rollback()
             if 'UNIQUE constraint failed' in str(e):
-                QMessageBox.critical(
-                    self,
-                    'FirewallFabrik',
-                    self.tr('Duplicate names are not allowed.'),
-                )
+                if obj_path:
+                    detail = obj_path.replace(' / ', ' > ')
+                    msg = self.tr(f'Duplicate names are not allowed: {detail}')
+                else:
+                    msg = self.tr('Duplicate names are not allowed.')
+                QMessageBox.critical(self, 'FirewallFabrik', msg)
             else:
                 logger.exception('Commit failed')
             return

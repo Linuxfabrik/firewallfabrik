@@ -15,6 +15,7 @@ import dataclasses
 import io
 import logging
 import pathlib
+import re
 import time
 
 import sqlalchemy
@@ -45,6 +46,95 @@ class HistorySnapshot:
     timestamp: float
     description: str
     is_current: bool
+
+
+def duplicate_object_name(exc, library_names=None, parent_names=None):
+    """Extract the duplicate object name from a UNIQUE-constraint IntegrityError.
+
+    *library_names* is an optional ``{uuid_hex: name}`` mapping used to
+    resolve a ``library_id`` column to a human-readable library name.
+
+    *parent_names* is an optional ``{uuid_hex: context_str}`` mapping used to
+    resolve any parent FK column (e.g. ``device_id``) to a human-readable
+    context string when ``library_id`` is not available.
+
+    Returns a string like ``"User > TCPService 'ssh'"`` (with library) or
+    ``"TCPService 'ssh'"`` (without), or *None* when the name cannot be
+    determined.
+    """
+    stmt = getattr(exc, 'statement', None) or ''
+    params = getattr(exc, 'params', None)
+    if not stmt or not params:
+        return None
+    m = re.search(r'\(([^)]+)\)\s*VALUES', stmt)
+    if not m:
+        return None
+    cols = [c.strip() for c in m.group(1).split(',')]
+
+    # Parse the constraint columns and table name from the error message
+    # (e.g. "UNIQUE constraint failed: services.library_id, services.type, services.name")
+    constraint_cols = set()
+    constraint_table = ''
+    orig_msg = str(getattr(exc, 'orig', ''))
+    cm = re.search(r'UNIQUE constraint failed:\s*(.+)', orig_msg)
+    if cm:
+        parts = [c.strip().split('.') for c in cm.group(1).split(',')]
+        constraint_cols = {p[-1] for p in parts}
+        constraint_table = parts[0][0] if parts and len(parts[0]) > 1 else ''
+
+    rows = params if isinstance(params, list) else [params]
+
+    # Find the actual conflicting row by looking for a duplicate on the
+    # constraint columns.  Fall back to the first row if we cannot tell.
+    row = rows[0] if rows else None
+    if constraint_cols and len(rows) > 1:
+        key_idxs = [cols.index(c) for c in constraint_cols if c in cols]
+        if key_idxs:
+            seen = {}
+            for r in rows:
+                key = tuple(r[i] for i in key_idxs)
+                if key in seen:
+                    row = r
+                    break
+                seen[key] = r
+
+    if not isinstance(row, (tuple, list)):
+        return None
+    name_idx = cols.index('name') if 'name' in cols else -1
+    if name_idx < 0 or name_idx >= len(row):
+        return None
+    name = row[name_idx]
+    type_idx = cols.index('type') if 'type' in cols else -1
+    if 0 <= type_idx < len(row):
+        obj_part = f"{row[type_idx]} '{name}'"
+    elif constraint_table:
+        # No STI type column — derive a label from the table name in the
+        # constraint error (e.g. "interfaces.device_id" → "Interface").
+        _table_labels = {
+            'interfaces': 'Interface',
+            'intervals': 'Interval',
+            'libraries': 'Library',
+        }
+        label = _table_labels.get(constraint_table, constraint_table.title())
+        obj_part = f"{label} '{name}'"
+    else:
+        obj_part = f"'{name}'"
+    context = None
+    if library_names:
+        lib_idx = cols.index('library_id') if 'library_id' in cols else -1
+        if 0 <= lib_idx < len(row):
+            context = library_names.get(row[lib_idx])
+    if not context and parent_names:
+        # Try any FK column present in the constraint (e.g. device_id)
+        for fk_col in constraint_cols - {'type', 'name'}:
+            fk_idx = cols.index(fk_col) if fk_col in cols else -1
+            if 0 <= fk_idx < len(row):
+                context = parent_names.get(row[fk_idx])
+                if context:
+                    break
+    if context:
+        return f'{context} > {obj_part}'
+    return obj_part
 
 
 class DatabaseManager:
@@ -200,6 +290,30 @@ class DatabaseManager:
         self._saved_index = self._current_index
 
     def _import(self, data):
+        # Build UUID-hex-to-name maps so that IntegrityError messages can
+        # include context (the transaction is rolled back before callers see
+        # the exception, so a DB lookup is not possible).
+        self._library_names = {
+            str(lib.id).replace('-', ''): lib.name for lib in data.database.libraries
+        }
+        # Map device UUIDs to their full tree path so that child objects
+        # (e.g. interfaces) without their own library_id can still be
+        # located in the tree.
+        group_index = {}
+        for lib in data.database.libraries:
+            for grp in lib.groups:
+                group_index[grp.id] = grp
+        self._parent_names = {}
+        for lib in data.database.libraries:
+            for dev in lib.devices:
+                parts = [dev.name]
+                grp = group_index.get(dev.group_id)
+                while grp is not None:
+                    parts.append(grp.name)
+                    grp = group_index.get(grp.parent_group_id)
+                parts.append(lib.name)
+                parts.reverse()
+                self._parent_names[str(dev.id).replace('-', '')] = ' > '.join(parts)
         with self.session() as session:
             session.add(data.database)
             session.flush()

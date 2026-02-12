@@ -129,7 +129,8 @@ class Group(Base):
         # Group") end up at the library root — one per cluster — with
         # identical (library_id, type, name) tuples.  A partial unique index
         # on (library_id, type, name) WHERE parent_group_id IS NULL would
-        # reject this legitimate data.
+        # reject this legitimate data.  The UniqueConstraint above is safe
+        # because SQLite treats NULL parent_group_id values as distinct.
     )
 
 
