@@ -303,7 +303,11 @@ def main(argv=None):
     elapsed = time.monotonic() - t_start
     hours, remainder = divmod(int(elapsed), 3600)
     minutes, seconds = divmod(remainder, 60)
-    print(f'Compile time: {hours:02d}:{minutes:02d}:{seconds:02d}', file=sys.stderr)
+    frac = elapsed - int(elapsed)
+    print(
+        f'Compile time: {hours:02d}:{minutes:02d}:{seconds:02d}.{int(frac * 1000):03d}',
+        file=sys.stderr,
+    )
 
     if driver.all_errors:
         return 1
