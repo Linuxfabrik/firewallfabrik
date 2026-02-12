@@ -276,7 +276,7 @@ def _parse_rule_children(rule, elem):
     and *negations* maps slot names to their negation flag.
     """
     known = {'id', 'name', 'comment', 'position', 'action', 'direction'}
-    options = {k: v for k, v in elem.attrib.items() if k not in known}
+    options = {k: _coerce_bool(v) for k, v in elem.attrib.items() if k not in known}
     negations = {}
 
     for child in elem:
