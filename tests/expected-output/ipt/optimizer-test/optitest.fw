@@ -1,25 +1,20 @@
 #!/bin/sh
 #
-#  This is automatically generated file. DO NOT MODIFY !
+# MANAGED_HEADER
 #
-#  Firewall Builder  fwb_ipt v5.3.7
+# TOOL VERSION
 #
-#  Generated Thu Feb 12 08:49:43 2026 CET by navid.sassan
+# Generated TIMESTAMP
 #
 # files: * optitest.fw /etc/optitest.fw
 #
 # Compiled for iptables 1.2.9
 #
 
-
-
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
-
-
 
 LSMOD="lsmod"
 MODPROBE="modprobe"
@@ -36,858 +31,847 @@ IPSET="ipset"
 LOGGER="logger"
 
 log() {
-    echo "$1"
-    which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ echo "$1"
+ which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
-    echo $1 | sed 's/\./_/'
+ echo $1 | sed 's/\./_/'
 }
 
 getaddr_internal() {
-    dev=$1
-    name=$2
-    af=$3
-    L=$($IP $af addr show dev $dev |  sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
-    test -z "$L" && {
-        eval "$name=''"
-        return
-    }
-    eval "${name}_list=\"$L\""
+ dev=$1
+ name=$2
+ af=$3
+ L=$($IP $af addr show dev $dev | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
 }
 
 getnet_internal() {
-    dev=$1
-    name=$2
-    af=$3
-    L=$($IP route list proto kernel | grep $dev | grep -v default |  sed 's! .*$!!')
-    test -z "$L" && {
-        eval "$name=''"
-        return
-    }
-    eval "${name}_list=\"$L\""
+ dev=$1
+ name=$2
+ af=$3
+ L=$($IP route list proto kernel | grep $dev | grep -v default | sed 's! .*$!!')
+ test -z "$L" && {
+ eval "$name=''"
+ return
+ }
+ eval "${name}_list=\"$L\""
 }
 
-
 getaddr() {
-    getaddr_internal $1 $2 "-4"
+ getaddr_internal $1 $2 "-4"
 }
 
 getaddr6() {
-    getaddr_internal $1 $2 "-6"
+ getaddr_internal $1 $2 "-6"
 }
 
 getnet() {
-    getnet_internal $1 $2 "-4"
+ getnet_internal $1 $2 "-4"
 }
 
 getnet6() {
-    getnet_internal $1 $2 "-6"
+ getnet_internal $1 $2 "-6"
 }
 
 # function getinterfaces is used to process wildcard interfaces
 getinterfaces() {
-    NAME=$1
-    $IP link show | grep ": $NAME" | while read L; do
-        OIFS=$IFS
-        IFS=" :"
-        set $L
-        IFS=$OIFS
-        echo $2
-    done
+ NAME=$1
+ $IP link show | grep ": $NAME" | while read L; do
+ OIFS=$IFS
+ IFS=" :"
+ set $L
+ IFS=$OIFS
+ echo $2
+ done
 }
 
 diff_intf() {
-    func=$1
-    list1=$2
-    list2=$3
-    cmd=$4
-    for intf in $list1
-    do
-        echo $list2 | grep -q $intf || {
-        # $vlan is absent in list 2
-            $func $intf $cmd
-        }
-    done
+ func=$1
+ list1=$2
+ list2=$3
+ cmd=$4
+ for intf in $list1
+ do
+ echo $list2 | grep -q $intf || {
+ # $vlan is absent in list 2
+ $func $intf $cmd
+ }
+ done
 }
 
 find_program() {
-  PGM=$1
-  which $PGM >/dev/null 2>&1 || {
-    echo "\"$PGM\" not found"
-    exit 1
-  }
+ PGM=$1
+ which $PGM >/dev/null 2>&1 || {
+ echo "\"$PGM\" not found"
+ exit 1
+ }
 }
 check_tools() {
-  find_program which
-  find_program $IPTABLES
-  find_program $IP
+ find_program which
+ find_program $IPTABLES
+ find_program $IP
 }
 reset_iptables_v4() {
-  local list
+ local list
 
-  $IPTABLES  -P OUTPUT  DROP
-  $IPTABLES  -P INPUT   DROP
-  $IPTABLES  -P FORWARD DROP
+ $IPTABLES -P OUTPUT DROP
+ $IPTABLES -P INPUT DROP
+ $IPTABLES -P FORWARD DROP
 
-  while read table; do
-      list=$($IPTABLES  -t $table -L -n)
-      printf "%s" "$list" | while read c chain rest; do
-      if test "X$c" = "XChain" ; then
-        $IPTABLES  -t $table -F $chain
-      fi
-      done
-      $IPTABLES  -t $table -X
-  done < /proc/net/ip_tables_names
+ while read table; do
+ list=$($IPTABLES -t $table -L -n)
+ printf "%s" "$list" | while read c chain rest; do
+ if test "X$c" = "XChain" ; then
+ $IPTABLES -t $table -F $chain
+ fi
+ done
+ $IPTABLES -t $table -X
+ done < /proc/net/ip_tables_names
 }
 
 reset_iptables_v6() {
-  local list
+ local list
 
-  $IP6TABLES  -P OUTPUT  DROP
-  $IP6TABLES  -P INPUT   DROP
-  $IP6TABLES  -P FORWARD DROP
+ $IP6TABLES -P OUTPUT DROP
+ $IP6TABLES -P INPUT DROP
+ $IP6TABLES -P FORWARD DROP
 
-  while read table; do
-      list=$($IP6TABLES  -t $table -L -n)
-      printf "%s" "$list" | while read c chain rest; do
-      if test "X$c" = "XChain" ; then
-        $IP6TABLES  -t $table -F $chain
-      fi
-      done
-      $IP6TABLES  -t $table -X
-  done < /proc/net/ip6_tables_names
+ while read table; do
+ list=$($IP6TABLES -t $table -L -n)
+ printf "%s" "$list" | while read c chain rest; do
+ if test "X$c" = "XChain" ; then
+ $IP6TABLES -t $table -F $chain
+ fi
+ done
+ $IP6TABLES -t $table -X
+ done < /proc/net/ip6_tables_names
 }
-
 
 P2P_INTERFACE_WARNING=""
 
 missing_address() {
-    address=$1
-    cmd=$2
+ address=$1
+ cmd=$2
 
-    oldIFS=$IFS
-    IFS="@"
-    set $address
-    addr=$1
-    interface=$2
-    IFS=$oldIFS
+ oldIFS=$IFS
+ IFS="@"
+ set $address
+ addr=$1
+ interface=$2
+ IFS=$oldIFS
 
+ $IP addr show dev $interface | grep -q POINTOPOINT && {
+ test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+ P2P_INTERFACE_WARNING="yes"
+ return
+ }
 
+ test "$cmd" = "add" && {
+ echo "# Adding ip address: $interface $addr"
+ echo $addr | grep -q ':' && {
+ $FWBDEBUG $IP addr $cmd $addr dev $interface
+ } || {
+ $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
+ }
+ }
 
-    $IP addr show dev $interface | grep -q POINTOPOINT && {
-        test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
-        P2P_INTERFACE_WARNING="yes"
-        return
-    }
+ test "$cmd" = "del" && {
+ echo "# Removing ip address: $interface $addr"
+ $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
+ }
 
-    test "$cmd" = "add" && {
-      echo "# Adding ip address: $interface $addr"
-      echo $addr | grep -q ':' && {
-          $FWBDEBUG $IP addr $cmd $addr dev $interface
-      } || {
-          $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
-      }
-    }
-
-    test "$cmd" = "del" && {
-      echo "# Removing ip address: $interface $addr"
-      $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
-    }
-
-    $FWBDEBUG $IP link set $interface up
+ $FWBDEBUG $IP link set $interface up
 }
 
 list_addresses_by_scope() {
-    interface=$1
-    scope=$2
-    ignore_list=$3
-    $IP addr ls dev $interface | \
-      awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
-        'BEGIN {
-           split(IGNORED,ignored_arr);
-           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
-         }
-         (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
-        while read addr; do
-          echo "${addr}@$interface"
+ interface=$1
+ scope=$2
+ ignore_list=$3
+ $IP addr ls dev $interface | \
+ awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+ while read addr; do
+ echo "${addr}@$interface"
 	done | sort
 }
 
-
 update_addresses_of_interface() {
-    ignore_list=$2
-    set $1
-    interface=$1
-    shift
+ ignore_list=$2
+ set $1
+ interface=$1
+ shift
 
-    FWB_ADDRS=$(
-      for addr in $*; do
-        echo "${addr}@$interface"
-      done | sort
-    )
+ FWB_ADDRS=$(
+ for addr in $*; do
+ echo "${addr}@$interface"
+ done | sort
+ )
 
-    CURRENT_ADDRS_ALL_SCOPES=""
-    CURRENT_ADDRS_GLOBAL_SCOPE=""
+ CURRENT_ADDRS_ALL_SCOPES=""
+ CURRENT_ADDRS_GLOBAL_SCOPE=""
 
-    $IP link show dev $interface >/dev/null 2>&1 && {
-      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
-      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
-    } || {
-      echo "# Interface $interface does not exist"
-      # Stop the script if we are not in test mode
-      test -z "$FWBDEBUG" && exit 1
-    }
+ $IP link show dev $interface >/dev/null 2>&1 && {
+ CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
+ CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
+ } || {
+ echo "# Interface $interface does not exist"
+ # Stop the script if we are not in test mode
+ test -z "$FWBDEBUG" && exit 1
+ }
 
-    diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
-    diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+ diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+ diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
 }
 
 clear_addresses_except_known_interfaces() {
-    $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
-        'BEGIN {
-           split(IGNORED,ignored_arr);
-           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
-         }
-         (/state/ && !($2 in ignored_dict)) {print $2;}' | \
-         while read intf; do
-            echo "# Removing addresses not configured in fwbuilder from interface $intf"
-            $FWBDEBUG $IP addr flush dev $intf scope global
-            $FWBDEBUG $IP link set $intf down
-         done
+ $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ (/state/ && !($2 in ignored_dict)) {print $2;}' | \
+ while read intf; do
+ echo "# Removing addresses not configured in fwbuilder from interface $intf"
+ $FWBDEBUG $IP addr flush dev $intf scope global
+ $FWBDEBUG $IP link set $intf down
+ done
 }
 
 check_file() {
-    test -r "$2" || {
-        echo "Can not find file $2 referenced by address table object $1"
-        exit 1
-    }
+ test -r "$2" || {
+ echo "Can not find file $2 referenced by address table object $1"
+ exit 1
+ }
 }
 
 check_run_time_address_table_files() {
-    :
+ :
 
 }
 
 load_modules() {
-    :
+ :
 
 }
 
 verify_interfaces() {
-    :
+ :
 
 }
 
 prolog_commands() {
-    echo "Running prolog script"
+ echo "Running prolog script"
 
 }
 
 epilog_commands() {
-    echo "Running epilog script"
+ echo "Running epilog script"
 
 }
 
 run_epilog_and_exit() {
-    epilog_commands
-    exit $1
+ epilog_commands
+ exit $1
 }
 
 configure_interfaces() {
-    :
-    # Configure interfaces
+ :
+ # Configure interfaces
 }
 
 script_body() {
-    # ================ IPv4
+ # ================ IPv4
 
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-    # ================ Table 'filter', automatic rules
-    # accept established sessions
-    $IPTABLES -A INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
-    $IPTABLES -A OUTPUT  -m state --state ESTABLISHED,RELATED -j ACCEPT
-    $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-
-
-
-
-
-    # ================ Table 'filter', rule set Policy
-    #
-    # Rule 0 (eth0)
-    #
-    echo "Rule 0 (eth0)"
-    #
-    # Test 1 : Don't Optimize 1 dst
-    $IPTABLES -A FORWARD -i eth0   -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0   -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 1 (eth0)
-    #
-    echo "Rule 1 (eth0)"
-    #
-    # Test 2 : Don't Optimize 1 service
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 2 (eth0)
-    #
-    echo "Rule 2 (eth0)"
-    #
-    # Test 3 : Don't Optimize 1 src & 1 dst
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 3 (eth0)
-    #
-    echo "Rule 3 (eth0)"
-    #
-    # Test 4 : Don't Optimize 1 src & 1 service
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -s 10.0.1.1   --dport 80  -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -s 10.0.1.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 4 (eth0)
-    #
-    echo "Rule 4 (eth0)"
-    #
-    # Test 5 : Don't Optimize 1 dst & 1 service
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 5 (eth0)
-    #
-    echo "Rule 5 (eth0)"
-    #
-    # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 6 (eth0)
-    #
-    echo "Rule 6 (eth0)"
-    #
-    # Test 7 : Optimize : src, dst, svc
-    # Time should appear on the src rules in the FORWARD table
-    # +Logging
-    $IPTABLES -N Cid4145348F.0
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  --dport 21  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid4145348F.0
-    $IPTABLES -A FORWARD -i eth0  -p udp -m udp  --dport 873  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid4145348F.0
-    $IPTABLES -N Cid4145348F.1
-    $IPTABLES -A Cid4145348F.0  -s 10.0.1.1   -j Cid4145348F.1
-    $IPTABLES -A Cid4145348F.0  -s 10.0.1.2   -j Cid4145348F.1
-    $IPTABLES -N In_RULE_6
-    $IPTABLES -A Cid4145348F.1  -d 10.0.0.1   -j In_RULE_6
-    $IPTABLES -A Cid4145348F.1  -d 10.0.0.2   -j In_RULE_6
-    $IPTABLES -A In_RULE_6  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 6 -- ACCEPT "
-    $IPTABLES -A In_RULE_6  -j ACCEPT
-    $IPTABLES -N Cid4145348F.2
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  --dport 21  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid4145348F.2
-    $IPTABLES -A FORWARD -o eth0  -p udp -m udp  --dport 873  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid4145348F.2
-    $IPTABLES -N Cid4145348F.3
-    $IPTABLES -A Cid4145348F.2  -s 10.0.1.1   -j Cid4145348F.3
-    $IPTABLES -A Cid4145348F.2  -s 10.0.1.2   -j Cid4145348F.3
-    $IPTABLES -N Out_RULE_6
-    $IPTABLES -A Cid4145348F.3  -d 10.0.0.1   -j Out_RULE_6
-    $IPTABLES -A Cid4145348F.3  -d 10.0.0.2   -j Out_RULE_6
-    $IPTABLES -A Out_RULE_6  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 6 -- ACCEPT "
-    $IPTABLES -A Out_RULE_6  -j ACCEPT
-    #
-    # Rule 7 (eth0)
-    #
-    echo "Rule 7 (eth0)"
-    #
-    # Test 7 : Optimize on service - dsts -> user chain
-    $IPTABLES -N Cid414534A0.0
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid414534A0.0
-    $IPTABLES -A Cid414534A0.0  -d 10.0.0.1   -j ACCEPT
-    $IPTABLES -A Cid414534A0.0  -d 10.0.0.2   -j ACCEPT
-    $IPTABLES -A Cid414534A0.0  -d 10.0.0.3   -j ACCEPT
-    $IPTABLES -N Cid414534A0.1
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid414534A0.1
-    $IPTABLES -A Cid414534A0.1  -d 10.0.0.1   -j ACCEPT
-    $IPTABLES -A Cid414534A0.1  -d 10.0.0.2   -j ACCEPT
-    $IPTABLES -A Cid414534A0.1  -d 10.0.0.3   -j ACCEPT
-    #
-    # Rule 8 (eth0)
-    #
-    echo "Rule 8 (eth0)"
-    #
-    # Test 8 : Optimize on service - srcs -> user chain
-    $IPTABLES -N Cid414534B0.0
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid414534B0.0
-    $IPTABLES -A Cid414534B0.0  -s 10.0.1.1   -j ACCEPT
-    $IPTABLES -A Cid414534B0.0  -s 10.0.1.2   -j ACCEPT
-    $IPTABLES -A Cid414534B0.0  -s 10.0.1.3   -j ACCEPT
-    $IPTABLES -N Cid414534B0.1
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid414534B0.1
-    $IPTABLES -A Cid414534B0.1  -s 10.0.1.1   -j ACCEPT
-    $IPTABLES -A Cid414534B0.1  -s 10.0.1.2   -j ACCEPT
-    $IPTABLES -A Cid414534B0.1  -s 10.0.1.3   -j ACCEPT
-    #
-    # Rule 9 (eth0)
-    #
-    echo "Rule 9 (eth0)"
-    #
-    # Test 9 : Optimize on service - srcs -> user chain
-    #             Dst to stay on rule in FORWARD table
-    # + options TCP RST Reject Test
-    $IPTABLES -N Cid414534C0.0
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 80  -j Cid414534C0.0
-    $IPTABLES -A Cid414534C0.0 -p tcp -m tcp  -s 10.0.1.1   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid414534C0.0 -p tcp -m tcp  -s 10.0.1.2   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid414534C0.0 -p tcp -m tcp  -s 10.0.1.3   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -N Cid414534C0.1
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 80  -j Cid414534C0.1
-    $IPTABLES -A Cid414534C0.1 -p tcp -m tcp  -s 10.0.1.1   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid414534C0.1 -p tcp -m tcp  -s 10.0.1.2   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid414534C0.1 -p tcp -m tcp  -s 10.0.1.3   -j REJECT  --reject-with tcp-reset
-    #
-    # Rule 10 (eth0)
-    #
-    echo "Rule 10 (eth0)"
-    #
-    # Test 10 : Optimize on src & dst, services -> user chain
-    # + Logging
-    $IPTABLES -N Cid414534D0.0
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j Cid414534D0.0
-    $IPTABLES -N In_RULE_10
-    $IPTABLES -A Cid414534D0.0 -p icmp  -m icmp  --icmp-type any  -j In_RULE_10
-    $IPTABLES -A Cid414534D0.0 -p tcp -m tcp  --dport 80  -j In_RULE_10
-    $IPTABLES -A Cid414534D0.0 -p udp -m udp  --dport 873  -j In_RULE_10
-    $IPTABLES -A In_RULE_10  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 10 -- ACCEPT "
-    $IPTABLES -A In_RULE_10  -j ACCEPT
-    $IPTABLES -N Cid414534D0.1
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j Cid414534D0.1
-    $IPTABLES -N Out_RULE_10
-    $IPTABLES -A Cid414534D0.1 -p icmp  -m icmp  --icmp-type any  -j Out_RULE_10
-    $IPTABLES -A Cid414534D0.1 -p tcp -m tcp  --dport 80  -j Out_RULE_10
-    $IPTABLES -A Cid414534D0.1 -p udp -m udp  --dport 873  -j Out_RULE_10
-    $IPTABLES -A Out_RULE_10  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 10 -- ACCEPT "
-    $IPTABLES -A Out_RULE_10  -j ACCEPT
-    #
-    # Rule 11 (eth0)
-    #
-    echo "Rule 11 (eth0)"
-    #
-    # Test 11 : Special case - with multiport we shouldn't
-    # optimize here as all services are TCP and we have <15
-    # of them
-    # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
-    # SOLUTION ?
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -m multiport  -s 10.0.1.1   -d 10.0.0.1   --dports 21,80  -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -m multiport  -s 10.0.1.1   -d 10.0.0.1   --dports 21,80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 12 (eth0)
-    #
-    echo "Rule 12 (eth0)"
-    #
-    # Test 12 : Optimize : src, dst, svc
-    # + options limit test
-    # + logging
-    $IPTABLES -N Cid414534EF.0
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.2   -m state --state NEW  -m limit --limit 8 --limit-burst 4 -j Cid414534EF.0
-    $IPTABLES -N Cid414534EF.1
-    $IPTABLES -A Cid414534EF.0  -d 10.0.0.1   -j Cid414534EF.1
-    $IPTABLES -A Cid414534EF.0  -d 10.0.0.2   -j Cid414534EF.1
-    $IPTABLES -A Cid414534EF.0  -d 10.0.0.3   -j Cid414534EF.1
-    $IPTABLES -N In_RULE_12
-    $IPTABLES -A Cid414534EF.1 -p icmp  -m icmp  --icmp-type any  -j In_RULE_12
-    $IPTABLES -A Cid414534EF.1 -p tcp -m tcp  --dport 21  -j In_RULE_12
-    $IPTABLES -A Cid414534EF.1 -p udp -m udp  --dport 873  -j In_RULE_12
-    $IPTABLES -A Cid414534EF.1 -p ah  -j In_RULE_12
-    $IPTABLES -A In_RULE_12  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 12 -- ACCEPT "
-    $IPTABLES -A In_RULE_12  -j ACCEPT
-    $IPTABLES -N Cid414534EF.2
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.2   -m state --state NEW  -m limit --limit 8 --limit-burst 4 -j Cid414534EF.2
-    $IPTABLES -N Cid414534EF.3
-    $IPTABLES -A Cid414534EF.2  -d 10.0.0.1   -j Cid414534EF.3
-    $IPTABLES -A Cid414534EF.2  -d 10.0.0.2   -j Cid414534EF.3
-    $IPTABLES -A Cid414534EF.2  -d 10.0.0.3   -j Cid414534EF.3
-    $IPTABLES -N Out_RULE_12
-    $IPTABLES -A Cid414534EF.3 -p icmp  -m icmp  --icmp-type any  -j Out_RULE_12
-    $IPTABLES -A Cid414534EF.3 -p tcp -m tcp  --dport 21  -j Out_RULE_12
-    $IPTABLES -A Cid414534EF.3 -p udp -m udp  --dport 873  -j Out_RULE_12
-    $IPTABLES -A Cid414534EF.3 -p ah  -j Out_RULE_12
-    $IPTABLES -A Out_RULE_12  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 12 -- ACCEPT "
-    $IPTABLES -A Out_RULE_12  -j ACCEPT
-    #
-    # Rule 13 (eth0)
-    #
-    echo "Rule 13 (eth0)"
-    #
-    # Test 13 : Optimize : src, dst, svc
-    # Time should appear on the src rules in the FORWARD table
-    # +Logging
-    # NOT OPTIMUM : Time appears in Logging
-    # SOLUTION : Patch logging not to include time?
-    $IPTABLES -N Cid41453502.0
-    $IPTABLES -A FORWARD -i eth0   -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid41453502.0
-    $IPTABLES -N Cid41453502.1
-    $IPTABLES -A Cid41453502.0  -s 10.0.1.1   -j Cid41453502.1
-    $IPTABLES -A Cid41453502.0  -s 10.0.1.2   -j Cid41453502.1
-    $IPTABLES -N Cid41453502.2
-    $IPTABLES -A Cid41453502.1  -d 10.0.0.1   -j Cid41453502.2
-    $IPTABLES -A Cid41453502.1  -d 10.0.0.2   -j Cid41453502.2
-    $IPTABLES -A Cid41453502.1  -d 10.0.0.3   -j Cid41453502.2
-    $IPTABLES -N In_RULE_13
-    $IPTABLES -A Cid41453502.2 -p icmp  -m icmp  --icmp-type any  -j In_RULE_13
-    $IPTABLES -A Cid41453502.2 -p tcp -m tcp  --dport 21  -j In_RULE_13
-    $IPTABLES -A Cid41453502.2 -p udp -m udp  --dport 873  -j In_RULE_13
-    $IPTABLES -A Cid41453502.2 -p ah  -j In_RULE_13
-    $IPTABLES -A In_RULE_13  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 13 -- ACCEPT "
-    $IPTABLES -A In_RULE_13  -j ACCEPT
-    $IPTABLES -N Cid41453502.3
-    $IPTABLES -A FORWARD -o eth0   -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid41453502.3
-    $IPTABLES -N Cid41453502.4
-    $IPTABLES -A Cid41453502.3  -s 10.0.1.1   -j Cid41453502.4
-    $IPTABLES -A Cid41453502.3  -s 10.0.1.2   -j Cid41453502.4
-    $IPTABLES -N Cid41453502.5
-    $IPTABLES -A Cid41453502.4  -d 10.0.0.1   -j Cid41453502.5
-    $IPTABLES -A Cid41453502.4  -d 10.0.0.2   -j Cid41453502.5
-    $IPTABLES -A Cid41453502.4  -d 10.0.0.3   -j Cid41453502.5
-    $IPTABLES -N Out_RULE_13
-    $IPTABLES -A Cid41453502.5 -p icmp  -m icmp  --icmp-type any  -j Out_RULE_13
-    $IPTABLES -A Cid41453502.5 -p tcp -m tcp  --dport 21  -j Out_RULE_13
-    $IPTABLES -A Cid41453502.5 -p udp -m udp  --dport 873  -j Out_RULE_13
-    $IPTABLES -A Cid41453502.5 -p ah  -j Out_RULE_13
-    $IPTABLES -A Out_RULE_13  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 13 -- ACCEPT "
-    $IPTABLES -A Out_RULE_13  -j ACCEPT
-    #
-    # Rule 14 (eth0)
-    #
-    echo "Rule 14 (eth0)"
-    #
-    # Test 14 : Optimize : src, dst, svc
-    # Time should appear on the service rules
-    # since we there are two of them and we don't optimize
-    # for time (yet!)
-    # + Logging
-    # NOT OPTIMUM : Time appears in Logging
-    # SOLUTION : Patch logging not to include time?
-    $IPTABLES -N Cid41453516.0
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.1   -m state --state NEW  -j Cid41453516.0
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.2   -m state --state NEW  -j Cid41453516.0
-    $IPTABLES -N Cid41453516.1
-    $IPTABLES -A Cid41453516.0 -m time  --timestart 00:00  --timestop 11:59  -j Cid41453516.1
-    $IPTABLES -A Cid41453516.0 -m time  --timestart 12:00  --timestop 23:59  -j Cid41453516.1
-    $IPTABLES -N Cid41453516.2
-    $IPTABLES -A Cid41453516.1  -d 10.0.0.1   -j Cid41453516.2
-    $IPTABLES -A Cid41453516.1  -d 10.0.0.2   -j Cid41453516.2
-    $IPTABLES -A Cid41453516.1  -d 10.0.0.3   -j Cid41453516.2
-    $IPTABLES -A Cid41453516.2 -p icmp  -m icmp  --icmp-type any  -j ACCEPT
-    $IPTABLES -A Cid41453516.2 -p tcp -m tcp  --dport 21  -j ACCEPT
-    $IPTABLES -A Cid41453516.2 -p udp -m udp  --dport 873  -j ACCEPT
-    $IPTABLES -A Cid41453516.2 -p ah  -j ACCEPT
-    $IPTABLES -N Cid41453516.3
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.1   -m state --state NEW  -j Cid41453516.3
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.2   -m state --state NEW  -j Cid41453516.3
-    $IPTABLES -N Cid41453516.4
-    $IPTABLES -A Cid41453516.3 -m time  --timestart 00:00  --timestop 11:59  -j Cid41453516.4
-    $IPTABLES -A Cid41453516.3 -m time  --timestart 12:00  --timestop 23:59  -j Cid41453516.4
-    $IPTABLES -N Cid41453516.5
-    $IPTABLES -A Cid41453516.4  -d 10.0.0.1   -j Cid41453516.5
-    $IPTABLES -A Cid41453516.4  -d 10.0.0.2   -j Cid41453516.5
-    $IPTABLES -A Cid41453516.4  -d 10.0.0.3   -j Cid41453516.5
-    $IPTABLES -A Cid41453516.5 -p icmp  -m icmp  --icmp-type any  -j ACCEPT
-    $IPTABLES -A Cid41453516.5 -p tcp -m tcp  --dport 21  -j ACCEPT
-    $IPTABLES -A Cid41453516.5 -p udp -m udp  --dport 873  -j ACCEPT
-    $IPTABLES -A Cid41453516.5 -p ah  -j ACCEPT
-    #
-    # Rule 15 (eth0)
-    #
-    echo "Rule 15 (eth0)"
-    #
-    # Test 15 : Don't optimize if we have limit options
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.2   --dport 80  -m limit --limit 8 --limit-burst 4 -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.2   --dport 80  -m limit --limit 8 --limit-burst 4 -j REJECT  --reject-with tcp-reset
-    #
-    # Rule 16 (eth0)
-    #
-    echo "Rule 16 (eth0)"
-    #
-    # Test 16 : Check INPUT/OUPUT with FW part of rule
-    $IPTABLES -N In_RULE_16
-    $IPTABLES -A INPUT -i eth0  -p tcp -m tcp  --dport 21  -j In_RULE_16
-    $IPTABLES -A FORWARD -i eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 21  -j In_RULE_16
-    $IPTABLES -A In_RULE_16  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 16 -- DENY "
-    $IPTABLES -A In_RULE_16  -j DROP
-    $IPTABLES -N Out_RULE_16
-    $IPTABLES -A FORWARD -o eth0  -p tcp -m tcp  -d 10.0.0.1   --dport 21  -j Out_RULE_16
-    $IPTABLES -A Out_RULE_16  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 16 -- DENY "
-    $IPTABLES -A Out_RULE_16  -j DROP
-    #
-    # Rule 17 (eth0)
-    #
-    echo "Rule 17 (eth0)"
-    #
-    # Test 0 : Don't Optimize 1 src
-    $IPTABLES -A FORWARD -i eth0   -s 10.0.1.1   -m state --state NEW  -j ACCEPT
-    $IPTABLES -A FORWARD -o eth0   -s 10.0.1.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 18 (global)
-    #
-    echo "Rule 18 (global)"
-    #
-    # Test 0 : Don't Optimize 1 src
-    $IPTABLES -A FORWARD  -s 10.0.1.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 19 (global)
-    #
-    echo "Rule 19 (global)"
-    #
-    # Test 1 : Don't Optimize 1 dst
-    $IPTABLES -A FORWARD  -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 20 (global)
-    #
-    echo "Rule 20 (global)"
-    #
-    # Test 2 : Don't Optimize 1 service
-    $IPTABLES -A FORWARD -p tcp -m tcp  --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 21 (global)
-    #
-    echo "Rule 21 (global)"
-    #
-    # Test 3 : Don't Optimize 1 src & 1 dst
-    $IPTABLES -A FORWARD  -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j ACCEPT
-    #
-    # Rule 22 (global)
-    #
-    echo "Rule 22 (global)"
-    #
-    # Test 4 : Don't Optimize 1 src & 1 service
-    $IPTABLES -A FORWARD -p tcp -m tcp  -s 10.0.1.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 23 (global)
-    #
-    echo "Rule 23 (global)"
-    #
-    # Test 5 : Don't Optimize 1 dst & 1 service
-    $IPTABLES -A FORWARD -p tcp -m tcp  -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 24 (global)
-    #
-    echo "Rule 24 (global)"
-    #
-    # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
-    $IPTABLES -A FORWARD -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.1   --dport 80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 25 (global)
-    #
-    echo "Rule 25 (global)"
-    #
-    # Test 7 : Optimize : src, dst, svc
-    # Time should appear on the src rules in the FORWARD table
-    # +Logging
-    $IPTABLES -N Cid413FD6F5.0
-    $IPTABLES -A FORWARD -p tcp -m tcp  --dport 21  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid413FD6F5.0
-    $IPTABLES -A FORWARD -p udp -m udp  --dport 873  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid413FD6F5.0
-    $IPTABLES -N Cid413FD6F5.1
-    $IPTABLES -A Cid413FD6F5.0  -s 10.0.1.1   -j Cid413FD6F5.1
-    $IPTABLES -A Cid413FD6F5.0  -s 10.0.1.2   -j Cid413FD6F5.1
-    $IPTABLES -N RULE_25
-    $IPTABLES -A Cid413FD6F5.1  -d 10.0.0.1   -j RULE_25
-    $IPTABLES -A Cid413FD6F5.1  -d 10.0.0.2   -j RULE_25
-    $IPTABLES -A RULE_25  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 25 -- ACCEPT "
-    $IPTABLES -A RULE_25  -j ACCEPT
-    #
-    # Rule 26 (global)
-    #
-    echo "Rule 26 (global)"
-    #
-    # Test 7 : Optimize on service - dsts -> user chain
-    $IPTABLES -N Cid413EF03D.0
-    $IPTABLES -A FORWARD -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid413EF03D.0
-    $IPTABLES -A Cid413EF03D.0  -d 10.0.0.1   -j ACCEPT
-    $IPTABLES -A Cid413EF03D.0  -d 10.0.0.2   -j ACCEPT
-    $IPTABLES -A Cid413EF03D.0  -d 10.0.0.3   -j ACCEPT
-    #
-    # Rule 27 (global)
-    #
-    echo "Rule 27 (global)"
-    #
-    # Test 8 : Optimize on service - srcs -> user chain
-    $IPTABLES -N Cid413EF062.0
-    $IPTABLES -A FORWARD -p tcp -m tcp  --dport 80  -m state --state NEW  -j Cid413EF062.0
-    $IPTABLES -A Cid413EF062.0  -s 10.0.1.1   -j ACCEPT
-    $IPTABLES -A Cid413EF062.0  -s 10.0.1.2   -j ACCEPT
-    $IPTABLES -A Cid413EF062.0  -s 10.0.1.3   -j ACCEPT
-    #
-    # Rule 28 (global)
-    #
-    echo "Rule 28 (global)"
-    #
-    # Test 9 : Optimize on service - srcs -> user chain
-    #             Dst to stay on rule in FORWARD table
-    # + options TCP RST Reject Test
-    $IPTABLES -N Cid413EF08B.0
-    $IPTABLES -A FORWARD -p tcp -m tcp  -d 10.0.0.1   --dport 80  -j Cid413EF08B.0
-    $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp  -s 10.0.1.1   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp  -s 10.0.1.2   -j REJECT  --reject-with tcp-reset
-    $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp  -s 10.0.1.3   -j REJECT  --reject-with tcp-reset
-    #
-    # Rule 29 (global)
-    #
-    echo "Rule 29 (global)"
-    #
-    # Test 10 : Optimize on src & dst, services -> user chain
-    # + Logging
-    $IPTABLES -N Cid413F033B.0
-    $IPTABLES -A FORWARD  -s 10.0.1.1   -d 10.0.0.1   -m state --state NEW  -j Cid413F033B.0
-    $IPTABLES -N RULE_29
-    $IPTABLES -A Cid413F033B.0 -p icmp  -m icmp  --icmp-type any  -j RULE_29
-    $IPTABLES -A Cid413F033B.0 -p tcp -m tcp  --dport 80  -j RULE_29
-    $IPTABLES -A Cid413F033B.0 -p udp -m udp  --dport 873  -j RULE_29
-    $IPTABLES -A RULE_29  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 29 -- ACCEPT "
-    $IPTABLES -A RULE_29  -j ACCEPT
-    #
-    # Rule 30 (global)
-    #
-    echo "Rule 30 (global)"
-    #
-    # Test 11 : Special case - with multiport we shouldn't
-    # optimize here as all services are TCP and we have <15
-    # of them
-    # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
-    # SOLUTION ?
-    $IPTABLES -A FORWARD -p tcp -m tcp  -m multiport  -s 10.0.1.1   -d 10.0.0.1   --dports 21,80  -m state --state NEW  -j ACCEPT
-    #
-    # Rule 31 (global)
-    #
-    echo "Rule 31 (global)"
-    #
-    # Test 12 : Optimize : src, dst, svc
-    # + options limit test
-    # + logging
-    $IPTABLES -N Cid413EEACF.0
-    $IPTABLES -A FORWARD  -s 10.0.1.2   -m state --state NEW  -m limit --limit 8 --limit-burst 4 -j Cid413EEACF.0
-    $IPTABLES -N Cid413EEACF.1
-    $IPTABLES -A Cid413EEACF.0  -d 10.0.0.1   -j Cid413EEACF.1
-    $IPTABLES -A Cid413EEACF.0  -d 10.0.0.2   -j Cid413EEACF.1
-    $IPTABLES -A Cid413EEACF.0  -d 10.0.0.3   -j Cid413EEACF.1
-    $IPTABLES -N RULE_31
-    $IPTABLES -A Cid413EEACF.1 -p icmp  -m icmp  --icmp-type any  -j RULE_31
-    $IPTABLES -A Cid413EEACF.1 -p tcp -m tcp  --dport 21  -j RULE_31
-    $IPTABLES -A Cid413EEACF.1 -p udp -m udp  --dport 873  -j RULE_31
-    $IPTABLES -A Cid413EEACF.1 -p ah  -j RULE_31
-    $IPTABLES -A RULE_31  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 31 -- ACCEPT "
-    $IPTABLES -A RULE_31  -j ACCEPT
-    #
-    # Rule 32 (global)
-    #
-    echo "Rule 32 (global)"
-    #
-    # Test 13 : Optimize : src, dst, svc
-    # Time should appear on the src rules in the FORWARD table
-    # +Logging
-    # NOT OPTIMUM : Time appears in Logging
-    # SOLUTION : Patch logging not to include time?
-    $IPTABLES -N Cid413EEDC5.0
-    $IPTABLES -A FORWARD  -m state --state NEW -m time  --timestart 00:00  --timestop 11:59  -j Cid413EEDC5.0
-    $IPTABLES -N Cid413EEDC5.1
-    $IPTABLES -A Cid413EEDC5.0  -s 10.0.1.1   -j Cid413EEDC5.1
-    $IPTABLES -A Cid413EEDC5.0  -s 10.0.1.2   -j Cid413EEDC5.1
-    $IPTABLES -N Cid413EEDC5.2
-    $IPTABLES -A Cid413EEDC5.1  -d 10.0.0.1   -j Cid413EEDC5.2
-    $IPTABLES -A Cid413EEDC5.1  -d 10.0.0.2   -j Cid413EEDC5.2
-    $IPTABLES -A Cid413EEDC5.1  -d 10.0.0.3   -j Cid413EEDC5.2
-    $IPTABLES -N RULE_32
-    $IPTABLES -A Cid413EEDC5.2 -p icmp  -m icmp  --icmp-type any  -j RULE_32
-    $IPTABLES -A Cid413EEDC5.2 -p tcp -m tcp  --dport 21  -j RULE_32
-    $IPTABLES -A Cid413EEDC5.2 -p udp -m udp  --dport 873  -j RULE_32
-    $IPTABLES -A Cid413EEDC5.2 -p ah  -j RULE_32
-    $IPTABLES -A RULE_32  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 32 -- ACCEPT "
-    $IPTABLES -A RULE_32  -j ACCEPT
-    #
-    # Rule 33 (global)
-    #
-    echo "Rule 33 (global)"
-    #
-    # Test 14 : Optimize : src, dst, svc
-    # Time should appear on the service rules
-    # since we there are two of them and we don't optimize
-    # for time (yet!)
-    # + Logging
-    # NOT OPTIMUM : Time appears in Logging
-    # SOLUTION : Patch logging not to include time?
-    $IPTABLES -N Cid413EEE2D.0
-    $IPTABLES -A FORWARD  -s 10.0.1.1   -m state --state NEW  -j Cid413EEE2D.0
-    $IPTABLES -A FORWARD  -s 10.0.1.2   -m state --state NEW  -j Cid413EEE2D.0
-    $IPTABLES -N Cid413EEE2D.1
-    $IPTABLES -A Cid413EEE2D.0 -m time  --timestart 00:00  --timestop 11:59  -j Cid413EEE2D.1
-    $IPTABLES -A Cid413EEE2D.0 -m time  --timestart 12:00  --timestop 23:59  -j Cid413EEE2D.1
-    $IPTABLES -N Cid413EEE2D.2
-    $IPTABLES -A Cid413EEE2D.1  -d 10.0.0.1   -j Cid413EEE2D.2
-    $IPTABLES -A Cid413EEE2D.1  -d 10.0.0.2   -j Cid413EEE2D.2
-    $IPTABLES -A Cid413EEE2D.1  -d 10.0.0.3   -j Cid413EEE2D.2
-    $IPTABLES -A Cid413EEE2D.2 -p icmp  -m icmp  --icmp-type any  -j ACCEPT
-    $IPTABLES -A Cid413EEE2D.2 -p tcp -m tcp  --dport 21  -j ACCEPT
-    $IPTABLES -A Cid413EEE2D.2 -p udp -m udp  --dport 873  -j ACCEPT
-    $IPTABLES -A Cid413EEE2D.2 -p ah  -j ACCEPT
-    #
-    # Rule 34 (global)
-    #
-    echo "Rule 34 (global)"
-    #
-    # Test 15 : Don't optimize if we have limit options
-    $IPTABLES -A FORWARD -p tcp -m tcp  -s 10.0.1.1   -d 10.0.0.2   --dport 80  -m limit --limit 8 --limit-burst 4 -j REJECT  --reject-with tcp-reset
-    #
-    # Rule 35 (global)
-    #
-    echo "Rule 35 (global)"
-    #
-    # Test 16 : Check INPUT/OUPUT with FW part of rule
-    $IPTABLES -N RULE_35
-    $IPTABLES -A INPUT -p tcp -m tcp  --dport 21  -j RULE_35
-    $IPTABLES -A FORWARD -p tcp -m tcp  -d 10.0.0.1   --dport 21  -j RULE_35
-    $IPTABLES -A RULE_35  -m limit --limit 5/second -j LOG  --log-level info --log-prefix "RULE 35 -- DENY "
-    $IPTABLES -A RULE_35  -j DROP
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (eth0)
+ #
+ echo "Rule 0 (eth0)"
+ #
+ # Test 1 : Don't Optimize 1 dst
+ $IPTABLES -A FORWARD -i eth0 -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (eth0)
+ #
+ echo "Rule 1 (eth0)"
+ #
+ # Test 2 : Don't Optimize 1 service
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 2 (eth0)
+ #
+ echo "Rule 2 (eth0)"
+ #
+ # Test 3 : Don't Optimize 1 src & 1 dst
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 3 (eth0)
+ #
+ echo "Rule 3 (eth0)"
+ #
+ # Test 4 : Don't Optimize 1 src & 1 service
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -s 10.0.1.1 --dport 80 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -s 10.0.1.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 4 (eth0)
+ #
+ echo "Rule 4 (eth0)"
+ #
+ # Test 5 : Don't Optimize 1 dst & 1 service
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 5 (eth0)
+ #
+ echo "Rule 5 (eth0)"
+ #
+ # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 6 (eth0)
+ #
+ echo "Rule 6 (eth0)"
+ #
+ # Test 7 : Optimize : src, dst, svc
+ # Time should appear on the src rules in the FORWARD table
+ # +Logging
+ $IPTABLES -N Cid4145348F.0
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid4145348F.0
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid4145348F.0
+ $IPTABLES -N Cid4145348F.1
+ $IPTABLES -A Cid4145348F.0 -s 10.0.1.1 -j Cid4145348F.1
+ $IPTABLES -A Cid4145348F.0 -s 10.0.1.2 -j Cid4145348F.1
+ $IPTABLES -N In_RULE_6
+ $IPTABLES -A Cid4145348F.1 -d 10.0.0.1 -j In_RULE_6
+ $IPTABLES -A Cid4145348F.1 -d 10.0.0.2 -j In_RULE_6
+ $IPTABLES -A In_RULE_6 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 6 -- ACCEPT "
+ $IPTABLES -A In_RULE_6 -j ACCEPT
+ $IPTABLES -N Cid4145348F.2
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid4145348F.2
+ $IPTABLES -A FORWARD -o eth0 -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid4145348F.2
+ $IPTABLES -N Cid4145348F.3
+ $IPTABLES -A Cid4145348F.2 -s 10.0.1.1 -j Cid4145348F.3
+ $IPTABLES -A Cid4145348F.2 -s 10.0.1.2 -j Cid4145348F.3
+ $IPTABLES -N Out_RULE_6
+ $IPTABLES -A Cid4145348F.3 -d 10.0.0.1 -j Out_RULE_6
+ $IPTABLES -A Cid4145348F.3 -d 10.0.0.2 -j Out_RULE_6
+ $IPTABLES -A Out_RULE_6 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 6 -- ACCEPT "
+ $IPTABLES -A Out_RULE_6 -j ACCEPT
+ #
+ # Rule 7 (eth0)
+ #
+ echo "Rule 7 (eth0)"
+ #
+ # Test 7 : Optimize on service - dsts -> user chain
+ $IPTABLES -N Cid414534A0.0
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j Cid414534A0.0
+ $IPTABLES -A Cid414534A0.0 -d 10.0.0.1 -j ACCEPT
+ $IPTABLES -A Cid414534A0.0 -d 10.0.0.2 -j ACCEPT
+ $IPTABLES -A Cid414534A0.0 -d 10.0.0.3 -j ACCEPT
+ $IPTABLES -N Cid414534A0.1
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j Cid414534A0.1
+ $IPTABLES -A Cid414534A0.1 -d 10.0.0.1 -j ACCEPT
+ $IPTABLES -A Cid414534A0.1 -d 10.0.0.2 -j ACCEPT
+ $IPTABLES -A Cid414534A0.1 -d 10.0.0.3 -j ACCEPT
+ #
+ # Rule 8 (eth0)
+ #
+ echo "Rule 8 (eth0)"
+ #
+ # Test 8 : Optimize on service - srcs -> user chain
+ $IPTABLES -N Cid414534B0.0
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j Cid414534B0.0
+ $IPTABLES -A Cid414534B0.0 -s 10.0.1.1 -j ACCEPT
+ $IPTABLES -A Cid414534B0.0 -s 10.0.1.2 -j ACCEPT
+ $IPTABLES -A Cid414534B0.0 -s 10.0.1.3 -j ACCEPT
+ $IPTABLES -N Cid414534B0.1
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j Cid414534B0.1
+ $IPTABLES -A Cid414534B0.1 -s 10.0.1.1 -j ACCEPT
+ $IPTABLES -A Cid414534B0.1 -s 10.0.1.2 -j ACCEPT
+ $IPTABLES -A Cid414534B0.1 -s 10.0.1.3 -j ACCEPT
+ #
+ # Rule 9 (eth0)
+ #
+ echo "Rule 9 (eth0)"
+ #
+ # Test 9 : Optimize on service - srcs -> user chain
+ # Dst to stay on rule in FORWARD table
+ # + options TCP RST Reject Test
+ $IPTABLES -N Cid414534C0.0
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -j Cid414534C0.0
+ $IPTABLES -A Cid414534C0.0 -p tcp -m tcp -s 10.0.1.1 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid414534C0.0 -p tcp -m tcp -s 10.0.1.2 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid414534C0.0 -p tcp -m tcp -s 10.0.1.3 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid414534C0.1
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -j Cid414534C0.1
+ $IPTABLES -A Cid414534C0.1 -p tcp -m tcp -s 10.0.1.1 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid414534C0.1 -p tcp -m tcp -s 10.0.1.2 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid414534C0.1 -p tcp -m tcp -s 10.0.1.3 -j REJECT --reject-with tcp-reset
+ #
+ # Rule 10 (eth0)
+ #
+ echo "Rule 10 (eth0)"
+ #
+ # Test 10 : Optimize on src & dst, services -> user chain
+ # + Logging
+ $IPTABLES -N Cid414534D0.0
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j Cid414534D0.0
+ $IPTABLES -N In_RULE_10
+ $IPTABLES -A Cid414534D0.0 -p icmp -m icmp --icmp-type any -j In_RULE_10
+ $IPTABLES -A Cid414534D0.0 -p tcp -m tcp --dport 80 -j In_RULE_10
+ $IPTABLES -A Cid414534D0.0 -p udp -m udp --dport 873 -j In_RULE_10
+ $IPTABLES -A In_RULE_10 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 10 -- ACCEPT "
+ $IPTABLES -A In_RULE_10 -j ACCEPT
+ $IPTABLES -N Cid414534D0.1
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j Cid414534D0.1
+ $IPTABLES -N Out_RULE_10
+ $IPTABLES -A Cid414534D0.1 -p icmp -m icmp --icmp-type any -j Out_RULE_10
+ $IPTABLES -A Cid414534D0.1 -p tcp -m tcp --dport 80 -j Out_RULE_10
+ $IPTABLES -A Cid414534D0.1 -p udp -m udp --dport 873 -j Out_RULE_10
+ $IPTABLES -A Out_RULE_10 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 10 -- ACCEPT "
+ $IPTABLES -A Out_RULE_10 -j ACCEPT
+ #
+ # Rule 11 (eth0)
+ #
+ echo "Rule 11 (eth0)"
+ #
+ # Test 11 : Special case - with multiport we shouldn't
+ # optimize here as all services are TCP and we have <15
+ # of them
+ # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
+ # SOLUTION ?
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -m multiport -s 10.0.1.1 -d 10.0.0.1 --dports 21,80 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -m multiport -s 10.0.1.1 -d 10.0.0.1 --dports 21,80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 12 (eth0)
+ #
+ echo "Rule 12 (eth0)"
+ #
+ # Test 12 : Optimize : src, dst, svc
+ # + options limit test
+ # + logging
+ $IPTABLES -N Cid414534EF.0
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -m limit --limit 8 --limit-burst 4 -j Cid414534EF.0
+ $IPTABLES -N Cid414534EF.1
+ $IPTABLES -A Cid414534EF.0 -d 10.0.0.1 -j Cid414534EF.1
+ $IPTABLES -A Cid414534EF.0 -d 10.0.0.2 -j Cid414534EF.1
+ $IPTABLES -A Cid414534EF.0 -d 10.0.0.3 -j Cid414534EF.1
+ $IPTABLES -N In_RULE_12
+ $IPTABLES -A Cid414534EF.1 -p icmp -m icmp --icmp-type any -j In_RULE_12
+ $IPTABLES -A Cid414534EF.1 -p tcp -m tcp --dport 21 -j In_RULE_12
+ $IPTABLES -A Cid414534EF.1 -p udp -m udp --dport 873 -j In_RULE_12
+ $IPTABLES -A Cid414534EF.1 -p ah -j In_RULE_12
+ $IPTABLES -A In_RULE_12 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 12 -- ACCEPT "
+ $IPTABLES -A In_RULE_12 -j ACCEPT
+ $IPTABLES -N Cid414534EF.2
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -m limit --limit 8 --limit-burst 4 -j Cid414534EF.2
+ $IPTABLES -N Cid414534EF.3
+ $IPTABLES -A Cid414534EF.2 -d 10.0.0.1 -j Cid414534EF.3
+ $IPTABLES -A Cid414534EF.2 -d 10.0.0.2 -j Cid414534EF.3
+ $IPTABLES -A Cid414534EF.2 -d 10.0.0.3 -j Cid414534EF.3
+ $IPTABLES -N Out_RULE_12
+ $IPTABLES -A Cid414534EF.3 -p icmp -m icmp --icmp-type any -j Out_RULE_12
+ $IPTABLES -A Cid414534EF.3 -p tcp -m tcp --dport 21 -j Out_RULE_12
+ $IPTABLES -A Cid414534EF.3 -p udp -m udp --dport 873 -j Out_RULE_12
+ $IPTABLES -A Cid414534EF.3 -p ah -j Out_RULE_12
+ $IPTABLES -A Out_RULE_12 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 12 -- ACCEPT "
+ $IPTABLES -A Out_RULE_12 -j ACCEPT
+ #
+ # Rule 13 (eth0)
+ #
+ echo "Rule 13 (eth0)"
+ #
+ # Test 13 : Optimize : src, dst, svc
+ # Time should appear on the src rules in the FORWARD table
+ # +Logging
+ # NOT OPTIMUM : Time appears in Logging
+ # SOLUTION : Patch logging not to include time?
+ $IPTABLES -N Cid41453502.0
+ $IPTABLES -A FORWARD -i eth0 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid41453502.0
+ $IPTABLES -N Cid41453502.1
+ $IPTABLES -A Cid41453502.0 -s 10.0.1.1 -j Cid41453502.1
+ $IPTABLES -A Cid41453502.0 -s 10.0.1.2 -j Cid41453502.1
+ $IPTABLES -N Cid41453502.2
+ $IPTABLES -A Cid41453502.1 -d 10.0.0.1 -j Cid41453502.2
+ $IPTABLES -A Cid41453502.1 -d 10.0.0.2 -j Cid41453502.2
+ $IPTABLES -A Cid41453502.1 -d 10.0.0.3 -j Cid41453502.2
+ $IPTABLES -N In_RULE_13
+ $IPTABLES -A Cid41453502.2 -p icmp -m icmp --icmp-type any -j In_RULE_13
+ $IPTABLES -A Cid41453502.2 -p tcp -m tcp --dport 21 -j In_RULE_13
+ $IPTABLES -A Cid41453502.2 -p udp -m udp --dport 873 -j In_RULE_13
+ $IPTABLES -A Cid41453502.2 -p ah -j In_RULE_13
+ $IPTABLES -A In_RULE_13 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 13 -- ACCEPT "
+ $IPTABLES -A In_RULE_13 -j ACCEPT
+ $IPTABLES -N Cid41453502.3
+ $IPTABLES -A FORWARD -o eth0 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid41453502.3
+ $IPTABLES -N Cid41453502.4
+ $IPTABLES -A Cid41453502.3 -s 10.0.1.1 -j Cid41453502.4
+ $IPTABLES -A Cid41453502.3 -s 10.0.1.2 -j Cid41453502.4
+ $IPTABLES -N Cid41453502.5
+ $IPTABLES -A Cid41453502.4 -d 10.0.0.1 -j Cid41453502.5
+ $IPTABLES -A Cid41453502.4 -d 10.0.0.2 -j Cid41453502.5
+ $IPTABLES -A Cid41453502.4 -d 10.0.0.3 -j Cid41453502.5
+ $IPTABLES -N Out_RULE_13
+ $IPTABLES -A Cid41453502.5 -p icmp -m icmp --icmp-type any -j Out_RULE_13
+ $IPTABLES -A Cid41453502.5 -p tcp -m tcp --dport 21 -j Out_RULE_13
+ $IPTABLES -A Cid41453502.5 -p udp -m udp --dport 873 -j Out_RULE_13
+ $IPTABLES -A Cid41453502.5 -p ah -j Out_RULE_13
+ $IPTABLES -A Out_RULE_13 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 13 -- ACCEPT "
+ $IPTABLES -A Out_RULE_13 -j ACCEPT
+ #
+ # Rule 14 (eth0)
+ #
+ echo "Rule 14 (eth0)"
+ #
+ # Test 14 : Optimize : src, dst, svc
+ # Time should appear on the service rules
+ # since we there are two of them and we don't optimize
+ # for time (yet!)
+ # + Logging
+ # NOT OPTIMUM : Time appears in Logging
+ # SOLUTION : Patch logging not to include time?
+ $IPTABLES -N Cid41453516.0
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -m state --state NEW -j Cid41453516.0
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -j Cid41453516.0
+ $IPTABLES -N Cid41453516.1
+ $IPTABLES -A Cid41453516.0 -m time --timestart 00:00 --timestop 11:59 -j Cid41453516.1
+ $IPTABLES -A Cid41453516.0 -m time --timestart 12:00 --timestop 23:59 -j Cid41453516.1
+ $IPTABLES -N Cid41453516.2
+ $IPTABLES -A Cid41453516.1 -d 10.0.0.1 -j Cid41453516.2
+ $IPTABLES -A Cid41453516.1 -d 10.0.0.2 -j Cid41453516.2
+ $IPTABLES -A Cid41453516.1 -d 10.0.0.3 -j Cid41453516.2
+ $IPTABLES -A Cid41453516.2 -p icmp -m icmp --icmp-type any -j ACCEPT
+ $IPTABLES -A Cid41453516.2 -p tcp -m tcp --dport 21 -j ACCEPT
+ $IPTABLES -A Cid41453516.2 -p udp -m udp --dport 873 -j ACCEPT
+ $IPTABLES -A Cid41453516.2 -p ah -j ACCEPT
+ $IPTABLES -N Cid41453516.3
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -m state --state NEW -j Cid41453516.3
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -j Cid41453516.3
+ $IPTABLES -N Cid41453516.4
+ $IPTABLES -A Cid41453516.3 -m time --timestart 00:00 --timestop 11:59 -j Cid41453516.4
+ $IPTABLES -A Cid41453516.3 -m time --timestart 12:00 --timestop 23:59 -j Cid41453516.4
+ $IPTABLES -N Cid41453516.5
+ $IPTABLES -A Cid41453516.4 -d 10.0.0.1 -j Cid41453516.5
+ $IPTABLES -A Cid41453516.4 -d 10.0.0.2 -j Cid41453516.5
+ $IPTABLES -A Cid41453516.4 -d 10.0.0.3 -j Cid41453516.5
+ $IPTABLES -A Cid41453516.5 -p icmp -m icmp --icmp-type any -j ACCEPT
+ $IPTABLES -A Cid41453516.5 -p tcp -m tcp --dport 21 -j ACCEPT
+ $IPTABLES -A Cid41453516.5 -p udp -m udp --dport 873 -j ACCEPT
+ $IPTABLES -A Cid41453516.5 -p ah -j ACCEPT
+ #
+ # Rule 15 (eth0)
+ #
+ echo "Rule 15 (eth0)"
+ #
+ # Test 15 : Don't optimize if we have limit options
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.2 --dport 80 -m limit --limit 8 --limit-burst 4 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.2 --dport 80 -m limit --limit 8 --limit-burst 4 -j REJECT --reject-with tcp-reset
+ #
+ # Rule 16 (eth0)
+ #
+ echo "Rule 16 (eth0)"
+ #
+ # Test 16 : Check INPUT/OUPUT with FW part of rule
+ $IPTABLES -N In_RULE_16
+ $IPTABLES -A INPUT -i eth0 -p tcp -m tcp --dport 21 -j In_RULE_16
+ $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -d 10.0.0.1 --dport 21 -j In_RULE_16
+ $IPTABLES -A In_RULE_16 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 16 -- DENY "
+ $IPTABLES -A In_RULE_16 -j DROP
+ $IPTABLES -N Out_RULE_16
+ $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -d 10.0.0.1 --dport 21 -j Out_RULE_16
+ $IPTABLES -A Out_RULE_16 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 16 -- DENY "
+ $IPTABLES -A Out_RULE_16 -j DROP
+ #
+ # Rule 17 (eth0)
+ #
+ echo "Rule 17 (eth0)"
+ #
+ # Test 0 : Don't Optimize 1 src
+ $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 18 (global)
+ #
+ echo "Rule 18 (global)"
+ #
+ # Test 0 : Don't Optimize 1 src
+ $IPTABLES -A FORWARD -s 10.0.1.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 19 (global)
+ #
+ echo "Rule 19 (global)"
+ #
+ # Test 1 : Don't Optimize 1 dst
+ $IPTABLES -A FORWARD -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 20 (global)
+ #
+ echo "Rule 20 (global)"
+ #
+ # Test 2 : Don't Optimize 1 service
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 21 (global)
+ #
+ echo "Rule 21 (global)"
+ #
+ # Test 3 : Don't Optimize 1 src & 1 dst
+ $IPTABLES -A FORWARD -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 22 (global)
+ #
+ echo "Rule 22 (global)"
+ #
+ # Test 4 : Don't Optimize 1 src & 1 service
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 10.0.1.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 23 (global)
+ #
+ echo "Rule 23 (global)"
+ #
+ # Test 5 : Don't Optimize 1 dst & 1 service
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 24 (global)
+ #
+ echo "Rule 24 (global)"
+ #
+ # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.1 --dport 80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 25 (global)
+ #
+ echo "Rule 25 (global)"
+ #
+ # Test 7 : Optimize : src, dst, svc
+ # Time should appear on the src rules in the FORWARD table
+ # +Logging
+ $IPTABLES -N Cid413FD6F5.0
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid413FD6F5.0
+ $IPTABLES -A FORWARD -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid413FD6F5.0
+ $IPTABLES -N Cid413FD6F5.1
+ $IPTABLES -A Cid413FD6F5.0 -s 10.0.1.1 -j Cid413FD6F5.1
+ $IPTABLES -A Cid413FD6F5.0 -s 10.0.1.2 -j Cid413FD6F5.1
+ $IPTABLES -N RULE_25
+ $IPTABLES -A Cid413FD6F5.1 -d 10.0.0.1 -j RULE_25
+ $IPTABLES -A Cid413FD6F5.1 -d 10.0.0.2 -j RULE_25
+ $IPTABLES -A RULE_25 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 25 -- ACCEPT "
+ $IPTABLES -A RULE_25 -j ACCEPT
+ #
+ # Rule 26 (global)
+ #
+ echo "Rule 26 (global)"
+ #
+ # Test 7 : Optimize on service - dsts -> user chain
+ $IPTABLES -N Cid413EF03D.0
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j Cid413EF03D.0
+ $IPTABLES -A Cid413EF03D.0 -d 10.0.0.1 -j ACCEPT
+ $IPTABLES -A Cid413EF03D.0 -d 10.0.0.2 -j ACCEPT
+ $IPTABLES -A Cid413EF03D.0 -d 10.0.0.3 -j ACCEPT
+ #
+ # Rule 27 (global)
+ #
+ echo "Rule 27 (global)"
+ #
+ # Test 8 : Optimize on service - srcs -> user chain
+ $IPTABLES -N Cid413EF062.0
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j Cid413EF062.0
+ $IPTABLES -A Cid413EF062.0 -s 10.0.1.1 -j ACCEPT
+ $IPTABLES -A Cid413EF062.0 -s 10.0.1.2 -j ACCEPT
+ $IPTABLES -A Cid413EF062.0 -s 10.0.1.3 -j ACCEPT
+ #
+ # Rule 28 (global)
+ #
+ echo "Rule 28 (global)"
+ #
+ # Test 9 : Optimize on service - srcs -> user chain
+ # Dst to stay on rule in FORWARD table
+ # + options TCP RST Reject Test
+ $IPTABLES -N Cid413EF08B.0
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 10.0.0.1 --dport 80 -j Cid413EF08B.0
+ $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp -s 10.0.1.1 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp -s 10.0.1.2 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid413EF08B.0 -p tcp -m tcp -s 10.0.1.3 -j REJECT --reject-with tcp-reset
+ #
+ # Rule 29 (global)
+ #
+ echo "Rule 29 (global)"
+ #
+ # Test 10 : Optimize on src & dst, services -> user chain
+ # + Logging
+ $IPTABLES -N Cid413F033B.0
+ $IPTABLES -A FORWARD -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j Cid413F033B.0
+ $IPTABLES -N RULE_29
+ $IPTABLES -A Cid413F033B.0 -p icmp -m icmp --icmp-type any -j RULE_29
+ $IPTABLES -A Cid413F033B.0 -p tcp -m tcp --dport 80 -j RULE_29
+ $IPTABLES -A Cid413F033B.0 -p udp -m udp --dport 873 -j RULE_29
+ $IPTABLES -A RULE_29 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 29 -- ACCEPT "
+ $IPTABLES -A RULE_29 -j ACCEPT
+ #
+ # Rule 30 (global)
+ #
+ echo "Rule 30 (global)"
+ #
+ # Test 11 : Special case - with multiport we shouldn't
+ # optimize here as all services are TCP and we have <15
+ # of them
+ # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
+ # SOLUTION ?
+ $IPTABLES -A FORWARD -p tcp -m tcp -m multiport -s 10.0.1.1 -d 10.0.0.1 --dports 21,80 -m state --state NEW -j ACCEPT
+ #
+ # Rule 31 (global)
+ #
+ echo "Rule 31 (global)"
+ #
+ # Test 12 : Optimize : src, dst, svc
+ # + options limit test
+ # + logging
+ $IPTABLES -N Cid413EEACF.0
+ $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -m limit --limit 8 --limit-burst 4 -j Cid413EEACF.0
+ $IPTABLES -N Cid413EEACF.1
+ $IPTABLES -A Cid413EEACF.0 -d 10.0.0.1 -j Cid413EEACF.1
+ $IPTABLES -A Cid413EEACF.0 -d 10.0.0.2 -j Cid413EEACF.1
+ $IPTABLES -A Cid413EEACF.0 -d 10.0.0.3 -j Cid413EEACF.1
+ $IPTABLES -N RULE_31
+ $IPTABLES -A Cid413EEACF.1 -p icmp -m icmp --icmp-type any -j RULE_31
+ $IPTABLES -A Cid413EEACF.1 -p tcp -m tcp --dport 21 -j RULE_31
+ $IPTABLES -A Cid413EEACF.1 -p udp -m udp --dport 873 -j RULE_31
+ $IPTABLES -A Cid413EEACF.1 -p ah -j RULE_31
+ $IPTABLES -A RULE_31 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 31 -- ACCEPT "
+ $IPTABLES -A RULE_31 -j ACCEPT
+ #
+ # Rule 32 (global)
+ #
+ echo "Rule 32 (global)"
+ #
+ # Test 13 : Optimize : src, dst, svc
+ # Time should appear on the src rules in the FORWARD table
+ # +Logging
+ # NOT OPTIMUM : Time appears in Logging
+ # SOLUTION : Patch logging not to include time?
+ $IPTABLES -N Cid413EEDC5.0
+ $IPTABLES -A FORWARD -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j Cid413EEDC5.0
+ $IPTABLES -N Cid413EEDC5.1
+ $IPTABLES -A Cid413EEDC5.0 -s 10.0.1.1 -j Cid413EEDC5.1
+ $IPTABLES -A Cid413EEDC5.0 -s 10.0.1.2 -j Cid413EEDC5.1
+ $IPTABLES -N Cid413EEDC5.2
+ $IPTABLES -A Cid413EEDC5.1 -d 10.0.0.1 -j Cid413EEDC5.2
+ $IPTABLES -A Cid413EEDC5.1 -d 10.0.0.2 -j Cid413EEDC5.2
+ $IPTABLES -A Cid413EEDC5.1 -d 10.0.0.3 -j Cid413EEDC5.2
+ $IPTABLES -N RULE_32
+ $IPTABLES -A Cid413EEDC5.2 -p icmp -m icmp --icmp-type any -j RULE_32
+ $IPTABLES -A Cid413EEDC5.2 -p tcp -m tcp --dport 21 -j RULE_32
+ $IPTABLES -A Cid413EEDC5.2 -p udp -m udp --dport 873 -j RULE_32
+ $IPTABLES -A Cid413EEDC5.2 -p ah -j RULE_32
+ $IPTABLES -A RULE_32 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 32 -- ACCEPT "
+ $IPTABLES -A RULE_32 -j ACCEPT
+ #
+ # Rule 33 (global)
+ #
+ echo "Rule 33 (global)"
+ #
+ # Test 14 : Optimize : src, dst, svc
+ # Time should appear on the service rules
+ # since we there are two of them and we don't optimize
+ # for time (yet!)
+ # + Logging
+ # NOT OPTIMUM : Time appears in Logging
+ # SOLUTION : Patch logging not to include time?
+ $IPTABLES -N Cid413EEE2D.0
+ $IPTABLES -A FORWARD -s 10.0.1.1 -m state --state NEW -j Cid413EEE2D.0
+ $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -j Cid413EEE2D.0
+ $IPTABLES -N Cid413EEE2D.1
+ $IPTABLES -A Cid413EEE2D.0 -m time --timestart 00:00 --timestop 11:59 -j Cid413EEE2D.1
+ $IPTABLES -A Cid413EEE2D.0 -m time --timestart 12:00 --timestop 23:59 -j Cid413EEE2D.1
+ $IPTABLES -N Cid413EEE2D.2
+ $IPTABLES -A Cid413EEE2D.1 -d 10.0.0.1 -j Cid413EEE2D.2
+ $IPTABLES -A Cid413EEE2D.1 -d 10.0.0.2 -j Cid413EEE2D.2
+ $IPTABLES -A Cid413EEE2D.1 -d 10.0.0.3 -j Cid413EEE2D.2
+ $IPTABLES -A Cid413EEE2D.2 -p icmp -m icmp --icmp-type any -j ACCEPT
+ $IPTABLES -A Cid413EEE2D.2 -p tcp -m tcp --dport 21 -j ACCEPT
+ $IPTABLES -A Cid413EEE2D.2 -p udp -m udp --dport 873 -j ACCEPT
+ $IPTABLES -A Cid413EEE2D.2 -p ah -j ACCEPT
+ #
+ # Rule 34 (global)
+ #
+ echo "Rule 34 (global)"
+ #
+ # Test 15 : Don't optimize if we have limit options
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 10.0.1.1 -d 10.0.0.2 --dport 80 -m limit --limit 8 --limit-burst 4 -j REJECT --reject-with tcp-reset
+ #
+ # Rule 35 (global)
+ #
+ echo "Rule 35 (global)"
+ #
+ # Test 16 : Check INPUT/OUPUT with FW part of rule
+ $IPTABLES -N RULE_35
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 21 -j RULE_35
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 10.0.0.1 --dport 21 -j RULE_35
+ $IPTABLES -A RULE_35 -m limit --limit 5/second -j LOG --log-level info --log-prefix "RULE 35 -- DENY "
+ $IPTABLES -A RULE_35 -j DROP
 }
 
 ip_forward() {
-    :
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+ :
+ echo 1 > /proc/sys/net/ipv4/ip_forward
 }
 
 reset_all() {
-    :
-    reset_iptables_v4
+ :
+ reset_iptables_v4
 }
 
 block_action() {
-    reset_all
+ reset_all
 }
 
 stop_action() {
-    reset_all
-    $IPTABLES  -P OUTPUT  ACCEPT
-    $IPTABLES  -P INPUT   ACCEPT
-    $IPTABLES  -P FORWARD ACCEPT
+ reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
 }
 
 check_iptables() {
-    IP_TABLES="$1"
-    [ ! -e $IP_TABLES ] && return 151
-    NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
-    [ -z "$NF_TABLES" ] && return 152
-    return 0
+ IP_TABLES="$1"
+ [ ! -e $IP_TABLES ] && return 151
+ NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
+ [ -z "$NF_TABLES" ] && return 152
+ return 0
 }
 status_action() {
-    check_iptables "/proc/net/ip_tables_names"
-    ret_ipv4=$?
-    check_iptables "/proc/net/ip6_tables_names"
-    ret_ipv6=$?
-    [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
-    [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
-        echo "iptables modules are not loaded"
-    }
-    [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
-        echo "Firewall is not configured"
-    }
-    exit 3
+ check_iptables "/proc/net/ip_tables_names"
+ ret_ipv4=$?
+ check_iptables "/proc/net/ip6_tables_names"
+ ret_ipv6=$?
+ [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
+ [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
+ echo "iptables modules are not loaded"
+ }
+ [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
+ echo "Firewall is not configured"
+ }
+ exit 3
 }
 
 # See how we were called.
@@ -895,66 +879,64 @@ status_action() {
 
 cmd=$1
 test -z "$cmd" && {
-    cmd="start"
+ cmd="start"
 }
 
 case "$cmd" in
-    start)
-        log "Activating firewall script generated Thu Feb 12 08:49:43 2026 by navid.sassan"
-        check_tools
-         prolog_commands
-        check_run_time_address_table_files
+ start)
+ log "Activating firewall script generated TIMESTAMP"
+ check_tools
+ prolog_commands
+ check_run_time_address_table_files
 
-        load_modules " "
-        configure_interfaces
-        verify_interfaces
+ load_modules " "
+ configure_interfaces
+ verify_interfaces
 
-         reset_all
+ reset_all
 
-        script_body
-        ip_forward
+ script_body
+ ip_forward
 
-        epilog_commands
-        RETVAL=$?
-        ;;
+ epilog_commands
+ RETVAL=$?
+ ;;
 
-    stop)
-        stop_action
-        RETVAL=$?
-        ;;
+ stop)
+ stop_action
+ RETVAL=$?
+ ;;
 
-    status)
-        status_action
-        RETVAL=$?
-        ;;
+ status)
+ status_action
+ RETVAL=$?
+ ;;
 
-    block)
-        block_action
-        RETVAL=$?
-        ;;
+ block)
+ block_action
+ RETVAL=$?
+ ;;
 
-    reload)
-        $0 stop
-        $0 start
-        RETVAL=$?
-        ;;
+ reload)
+ $0 stop
+ $0 start
+ RETVAL=$?
+ ;;
 
-    interfaces)
-        configure_interfaces
-        RETVAL=$?
-        ;;
+ interfaces)
+ configure_interfaces
+ RETVAL=$?
+ ;;
 
-    test_interfaces)
-        FWBDEBUG="echo"
-        configure_interfaces
-        RETVAL=$?
-        ;;
+ test_interfaces)
+ FWBDEBUG="echo"
+ configure_interfaces
+ RETVAL=$?
+ ;;
 
-
-
-    *)
-        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
-        ;;
+ *)
+ echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+ ;;
 
 esac
 
