@@ -135,6 +135,7 @@ Changed the host settings default for "IPv4 Packet forwarding" from "On" to "No 
 
 * This option is only needed for firewalls that actually forward traffic, so it shouldn't be set by default.
 
+The names and identifiers "linux24", "Linux2.4/2.6", "Linux" all refer to the same host OS and do not correspond to a specific Linux version. These names are kept for backward compatibility.
 
 ## License
 

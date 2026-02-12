@@ -12,9 +12,9 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Slot
+from PySide6.QtCore import QSettings, Qt, Slot
 from PySide6.QtGui import QColor, QIcon, QPixmap
-from PySide6.QtWidgets import QColorDialog, QDialog
+from PySide6.QtWidgets import QColorDialog, QDialog, QTableWidgetItem
 
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
@@ -22,6 +22,14 @@ from firewallfabrik.gui.label_settings import (
     get_label_text,
     set_label_color,
     set_label_text,
+)
+from firewallfabrik.gui.platform_settings import (
+    HOST_OS,
+    PLATFORMS,
+    is_os_enabled,
+    is_platform_enabled,
+    set_os_enabled,
+    set_platform_enabled,
 )
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
@@ -71,7 +79,38 @@ class PreferencesDialog(QDialog):
             text_field = getattr(self, f'{key}Text')
             text_field.setText(get_label_text(key))
 
+        self._populate_platform_table()
+        self._populate_os_table()
+
         self.accepted.connect(self._save_settings)
+
+    def _populate_platform_table(self):
+        table = self.enabled_platforms
+        table.setRowCount(len(PLATFORMS))
+        for row, (key, display) in enumerate(PLATFORMS.items()):
+            item = QTableWidgetItem(display)
+            item.setData(Qt.ItemDataRole.UserRole, key)
+            item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if is_platform_enabled(key)
+                else Qt.CheckState.Unchecked
+            )
+            table.setItem(row, 0, item)
+        table.horizontalHeader().setStretchLastSection(True)
+
+    def _populate_os_table(self):
+        table = self.enabled_os
+        table.setRowCount(len(HOST_OS))
+        for row, (key, display) in enumerate(HOST_OS.items()):
+            item = QTableWidgetItem(display)
+            item.setData(Qt.ItemDataRole.UserRole, key)
+            item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            item.setCheckState(
+                Qt.CheckState.Checked if is_os_enabled(key) else Qt.CheckState.Unchecked
+            )
+            table.setItem(row, 0, item)
+        table.horizontalHeader().setStretchLastSection(True)
 
     # ------------------------------------------------------------------
     # Icon size slots (connected via .ui signal/slot)
@@ -151,3 +190,17 @@ class PreferencesDialog(QDialog):
         for key in LABEL_KEYS:
             set_label_color(key, self._label_colors[key])
             set_label_text(key, getattr(self, f'{key}Text').text())
+
+        # Persist platform / OS enabled states.
+        for row in range(self.enabled_platforms.rowCount()):
+            item = self.enabled_platforms.item(row, 0)
+            set_platform_enabled(
+                item.data(Qt.ItemDataRole.UserRole),
+                item.checkState() == Qt.CheckState.Checked,
+            )
+        for row in range(self.enabled_os.rowCount()):
+            item = self.enabled_os.item(row, 0)
+            set_os_enabled(
+                item.data(Qt.ItemDataRole.UserRole),
+                item.checkState() == Qt.CheckState.Checked,
+            )

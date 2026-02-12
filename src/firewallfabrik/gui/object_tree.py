@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     group_membership,
     rule_elements,
 )
+from firewallfabrik.gui.platform_settings import HOST_OS
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 
 # Map ORM type discriminator strings to QRC icon aliases.
@@ -162,6 +163,7 @@ def _obj_brief_attrs(obj, under_interface=False):
         platform = data.get('platform', '')
         version = data.get('version', '')
         host_os = data.get('host_OS', '')
+        host_os = HOST_OS.get(host_os, host_os)
         if platform:
             return f'{platform}({version or "- any -"}) / {host_os}'
         return ''
@@ -295,6 +297,7 @@ def _obj_tooltip(obj):
         platform = data.get('platform', '')
         version = data.get('version', '') or '- any -'
         host_os = data.get('host_OS', '')
+        host_os = HOST_OS.get(host_os, host_os)
         ts_modified = int(data.get('lastModified', 0) or 0)
         ts_compiled = int(data.get('lastCompiled', 0) or 0)
         ts_installed = int(data.get('lastInstalled', 0) or 0)

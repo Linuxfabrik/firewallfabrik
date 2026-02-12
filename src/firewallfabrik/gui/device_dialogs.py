@@ -14,7 +14,20 @@
 
 from datetime import UTC, datetime
 
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QDialog
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+from firewallfabrik.gui.iptables_settings_dialog import IptablesSettingsDialog
+from firewallfabrik.gui.linux_settings_dialog import LinuxSettingsDialog
+from firewallfabrik.gui.platform_settings import (
+    HOST_OS,
+    get_enabled_os,
+    get_enabled_platforms,
+)
+
+# Reverse mapping: display name → internal key for host OS.
+_HOST_OS_INTERNAL = {v: k for k, v in HOST_OS.items()}
 
 
 class HostDialog(BaseObjectDialog):
@@ -40,9 +53,19 @@ class FirewallDialog(BaseObjectDialog):
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
+
+        # Populate combos with enabled entries before setting the current value.
+        self.platform.clear()
+        for display in get_enabled_platforms().values():
+            self.platform.addItem(display)
+        self.hostOS.clear()
+        for display in get_enabled_os().values():
+            self.hostOS.addItem(display)
+
         self._set_combo_text(self.platform, data.get('platform', ''))
         self._set_combo_text(self.version, data.get('version', ''))
-        self._set_combo_text(self.hostOS, data.get('host_OS', ''))
+        host_os = data.get('host_OS', '')
+        self._set_combo_text(self.hostOS, HOST_OS.get(host_os, host_os))
         self.inactive.setChecked(data.get('inactive') == 'True')
         for attr, key in (
             ('last_modified', 'lastModified'),
@@ -62,9 +85,22 @@ class FirewallDialog(BaseObjectDialog):
         data = self._obj.data or {}
         data['platform'] = self.platform.currentText()
         data['version'] = self.version.currentText()
-        data['host_OS'] = self.hostOS.currentText()
+        host_os_text = self.hostOS.currentText()
+        data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
         data['inactive'] = str(self.inactive.isChecked())
         self._obj.data = data
+
+    @Slot()
+    def openFWDialog(self):
+        dlg = IptablesSettingsDialog(self._obj, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.changed.emit()
+
+    @Slot()
+    def openOSDialog(self):
+        dlg = LinuxSettingsDialog(self._obj, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.changed.emit()
 
     @staticmethod
     def _set_combo_text(combo, text):
