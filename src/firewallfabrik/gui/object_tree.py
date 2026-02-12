@@ -1293,6 +1293,16 @@ class ObjectTree(QWidget):
 
         menu = QMenu(self)
 
+        # Expand / Collapse (only for items with children)
+        if item.childCount() > 0:
+            if self._tree.isItemExpanded(item):
+                collapse_action = menu.addAction('Collapse')
+                collapse_action.triggered.connect(lambda: self._tree.collapseItem(item))
+            else:
+                expand_action = menu.addAction('Expand')
+                expand_action.triggered.connect(lambda: self._tree.expandItem(item))
+            menu.addSeparator()
+
         # Edit / Inspect
         label = 'Inspect' if effective_ro else 'Edit'
         edit_action = menu.addAction(label)
@@ -1405,6 +1415,16 @@ class ObjectTree(QWidget):
             parent = parent.parent()
 
         menu = QMenu(self)
+
+        # Expand / Collapse
+        if item.childCount() > 0:
+            if self._tree.isItemExpanded(item):
+                collapse_action = menu.addAction('Collapse')
+                collapse_action.triggered.connect(lambda: self._tree.collapseItem(item))
+            else:
+                expand_action = menu.addAction('Expand')
+                expand_action.triggered.connect(lambda: self._tree.expandItem(item))
+            menu.addSeparator()
 
         for type_name, display_name in new_types:
             icon_path = ICON_MAP.get(type_name, '')

@@ -1517,9 +1517,6 @@ class PolicyView(QTreeView):
                 return
 
         if modifiers == Qt.KeyboardModifier.NoModifier:
-            if key == Qt.Key.Key_Delete:
-                self.delete_selection()
-                return
             if key == Qt.Key.Key_Insert:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
