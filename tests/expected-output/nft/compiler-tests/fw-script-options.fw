@@ -1,0 +1,167 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    which logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+flush ruleset
+
+table ip filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (global)
+        #
+        tcp dport 22 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 1 (global)
+        #
+        log prefix "RULE 1 -- DENY " level info drop
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+block_action() {
+    $NFT flush ruleset
+    # block all traffic by default
+    $NFT add table inet block
+    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    $NFT flush ruleset
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if [ -n "$tables" ]; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body
+        ip_forward
+        epilog_commands
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"

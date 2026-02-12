@@ -1,4 +1,4 @@
-last_modified: 1770924711.0
+last_modified: 1770934906.0
 data:
   version: '24'
 libraries:
@@ -5326,6 +5326,726 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
+                    options:
+                      disabled: false
+                      group: ''
+                      log: true
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-prolog-epilog1'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770934959'
+              lastInstalled: '0'
+              lastModified: '1770934851'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: '# epilog'
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: '# prolog on top of the script'
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog1:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog1:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog1:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-prolog-epilog1'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: false
+                      group: ''
+                      log: true
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-prolog-epilog2'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770934959'
+              lastInstalled: '0'
+              lastModified: '1770934848'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: '# epilog'
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'after_interfaces'
+              prolog_script: '# prolog after interface configuration'
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog2:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog2:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog2:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-prolog-epilog2'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: false
+                      group: ''
+                      log: true
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-prolog-epilog3'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770934959'
+              lastInstalled: '0'
+              lastModified: '1770934865'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: true
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: '# epilog'
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'after_flush'
+              prolog_script: '# prolog after policy reset'
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog3:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog3:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-prolog-epilog3:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-prolog-epilog3'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
+                    options:
+                      disabled: false
+                      group: ''
+                      log: true
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Both'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
+            name: 'fw-script-options'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770934960'
+              lastInstalled: '0'
+              lastModified: '1770934947'
+              platform: 'iptables'
+              version: ''
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              action_on_reject: ''
+              activationCmd: ''
+              add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
+              admUser: ''
+              altAddress: ''
+              bridging_fw: false
+              check_shading: true
+              clamp_mss_to_mtu: false
+              clear_unknown_interfaces: false
+              cmdline: ''
+              compiler: ''
+              configure_bonding_interfaces: false
+              configure_bridge_interfaces: false
+              configure_interfaces: false
+              configure_vlan_interfaces: false
+              debug: false
+              drop_invalid: false
+              epilog_script: ''
+              firewall_dir: ''
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              ignore_empty_groups: false
+              ipv4_6_order: 'ipv4_first'
+              limit_suffix: ''
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: false
+              local_nat: false
+              log_all: false
+              log_invalid: false
+              log_ip_opt: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              log_tcp_opt: false
+              log_tcp_seq: false
+              loopback_interface: 'lo'
+              manage_virtual_addr: false
+              mgmt_addr: ''
+              mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              output_file: ''
+              prolog_place: 'top'
+              prolog_script: ''
+              scpArgs: ''
+              script_name_on_firewall: ''
+              sshArgs: ''
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
+              use_ULOG: false
+              use_iptables_restore: false
+              use_kerneltz: false
+              use_m_set: false
+              use_numeric_log_levels: false
+              verify_interfaces: false
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-script-options:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.1'
+                      netmask: '255.255.255.0'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-script-options:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.1.1'
+                      netmask: '255.255.255.0'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-script-options:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                top: true
+              - type: 'Policy'
+                name: 'Policy'
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-script-options'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 1
                     options:
                       disabled: false
                       group: ''
