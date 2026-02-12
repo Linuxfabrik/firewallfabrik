@@ -465,11 +465,10 @@ class PolicyView(QTreeView):
 
     def _build_row_menu(self, menu, model, index):
         """Build standard row-level context menu (# and Comment columns)."""
-        menu.addAction('Insert Rule Above', lambda: model.insert_rule(index))
         menu.addAction(
-            'Insert Rule Below',
-            lambda: self._insert_below(model, index),
+            'Insert Rule Above', lambda: model.insert_rule(index, before=True)
         )
+        menu.addAction('Insert Rule Below', lambda: model.insert_rule(index))
         menu.addSeparator()
         menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
         menu.addSeparator()
@@ -483,24 +482,6 @@ class PolicyView(QTreeView):
             lambda: self._move_and_select(model.move_rule_down(index)),
         )
         down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
-
-    @staticmethod
-    def _insert_below(model, index):
-        """Insert a rule below *index* by creating a sibling index at row+1."""
-        parent = index.parent()
-        next_row = index.row() + 1
-        # Create an index at the next row if it exists, otherwise pass None.
-        if next_row < model.rowCount(parent):
-            next_idx = model.index(next_row, 0, parent)
-        else:
-            next_idx = index
-        # Use a position-based insert: the new rule goes at position + 1.
-        rd = model.get_row_data(index)
-        if rd is not None:
-            # Directly insert at the rule's position + 1 via a temporary index.
-            model.insert_rule(next_idx)
-        else:
-            model.insert_rule(at_bottom=True)
 
     def _build_action_menu(self, menu, model, index):
         """Build action-selection context menu."""

@@ -569,8 +569,12 @@ class PolicyTreeModel(QAbstractItemModel):
     # Mutation methods
     # ------------------------------------------------------------------
 
-    def insert_rule(self, index=None, *, at_top=False, at_bottom=False):
+    def insert_rule(self, index=None, *, at_top=False, at_bottom=False, before=False):
         """Insert a new rule.
+
+        When *before* is True the new rule is placed **at** the position
+        of the rule pointed to by *index* (pushing it down).  When False
+        (the default) the new rule is placed **after** *index*.
 
         If *index* points inside a group, the new rule inherits that group.
         """
@@ -590,7 +594,10 @@ class PolicyTreeModel(QAbstractItemModel):
                     position = 0
                 group_name = node.name
             elif node.node_type == _NodeType.Rule:
-                position = node.row_data.position + 1
+                if before:
+                    position = node.row_data.position
+                else:
+                    position = node.row_data.position + 1
                 group_name = node.row_data.group
             else:
                 position = self.flat_rule_count()
