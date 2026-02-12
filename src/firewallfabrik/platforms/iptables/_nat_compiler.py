@@ -35,12 +35,14 @@ from firewallfabrik.compiler.processors._generic import (
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
+    Host,
     Interface,
     NATAction,
     NATRuleType,
     Network,
     NetworkIPv6,
     TCPService,
+    TCPUDPService,
     UDPService,
 )
 
@@ -197,9 +199,18 @@ class NATCompiler_ipt(NATCompiler):
         self.add(ClassifyNATRule('classify NAT rule'))
         self.add(VerifyRules('verify rules'))
 
+        self.add(PortTranslationRules('port translation rules'))
+        self.add(
+            SpecialCaseWithRedirect(
+                'special case with redirecting port translation rules'
+            )
+        )
+
+        self.add(SplitNONATRule('NAT rules that request no translation'))
         self.add(DecideOnChain('decide on chain'))
         self.add(DecideOnTarget('decide on target'))
 
+        self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
@@ -399,7 +410,11 @@ class EliminateDuplicatesInOSRV(NATRuleProcessor):
 
 
 class ClassifyNATRule(NATRuleProcessor):
-    """Classify NAT rule type based on TSrc/TDst/TSrv contents."""
+    """Classify NAT rule type based on TSrc/TDst/TSrv contents.
+
+    Corresponds to C++ NATCompiler::classifyNATRule.  Considers service
+    port translation (TSrv) in addition to address translation (TSrc/TDst).
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -414,6 +429,7 @@ class ClassifyNATRule(NATRuleProcessor):
         tsrc = rule.tsrc[0] if rule.tsrc else None
         tdst = rule.tdst[0] if rule.tdst else None
         tsrv = rule.tsrv[0] if rule.tsrv else None
+        osrv = rule.osrv[0] if rule.osrv else None
 
         tsrc_any = tsrc is None
         tdst_any = tdst is None
@@ -429,27 +445,64 @@ class ClassifyNATRule(NATRuleProcessor):
             rule.nat_rule_type = NATRuleType.NONAT
             return True
 
-        # SNAT / SNetnat
-        if not tsrc_any and tdst_any:
-            if isinstance(tsrc, Network | NetworkIPv6):
+        # Determine if TSrv translates src or dst ports
+        tsrv_translates_src_port = False
+        tsrv_translates_dst_port = False
+
+        if isinstance(osrv, TCPUDPService) and isinstance(tsrv, TCPUDPService):
+            tsrv_translates_src_port = (tsrv.src_range_start or 0) != 0 and (
+                tsrv.dst_range_start or 0
+            ) == 0
+            tsrv_translates_dst_port = (tsrv.src_range_start or 0) == 0 and (
+                tsrv.dst_range_start or 0
+            ) != 0
+
+            # If tsrv defines the same ports as osrv, it's not a translation
+            if tsrv_translates_dst_port and (
+                (osrv.dst_range_start or 0) == (tsrv.dst_range_start or 0)
+                and (osrv.dst_range_end or 0) == (tsrv.dst_range_end or 0)
+            ):
+                tsrv_translates_dst_port = False
+
+            if tsrv_translates_src_port and (
+                (osrv.src_range_start or 0) == (tsrv.src_range_start or 0)
+                and (osrv.src_range_end or 0) == (tsrv.src_range_end or 0)
+            ):
+                tsrv_translates_src_port = False
+
+        # SDNAT: both src and dst translation
+        if (
+            (not tsrc_any and not tdst_any)
+            or (not tsrc_any and tsrv_translates_dst_port)
+            or (not tdst_any and tsrv_translates_src_port)
+        ):
+            rule.nat_rule_type = NATRuleType.SDNAT
+            return True
+
+        # SNAT / SNetnat (including src port translation only)
+        if (not tsrc_any and tdst_any) or (
+            tsrc_any and tdst_any and tsrv_translates_src_port
+        ):
+            if not tsrc_any and isinstance(tsrc, Network | NetworkIPv6):
                 rule.nat_rule_type = NATRuleType.SNetnat
             else:
                 rule.nat_rule_type = NATRuleType.SNAT
             return True
 
-        # DNAT / DNetnat / Redirect
-        if tsrc_any and not tdst_any:
-            if isinstance(tdst, Network | NetworkIPv6):
+        # DNAT / DNetnat / Redirect / LB (including dst port translation only)
+        if (tsrc_any and not tdst_any) or (
+            tsrc_any and tdst_any and tsrv_translates_dst_port
+        ):
+            if not tdst_any and isinstance(tdst, Network | NetworkIPv6):
                 rule.nat_rule_type = NATRuleType.DNetnat
-            elif isinstance(tdst, Firewall) and tdst.id == self.compiler.fw.id:
+            elif (
+                not tdst_any
+                and isinstance(tdst, Firewall)
+                and tdst.id == self.compiler.fw.id
+            ):
                 rule.nat_rule_type = NATRuleType.Redirect
             else:
                 rule.nat_rule_type = NATRuleType.DNAT
-            return True
-
-        # SDNAT: both src and dst translation
-        if not tsrc_any and not tdst_any:
-            rule.nat_rule_type = NATRuleType.SDNAT
             return True
 
         self.compiler.abort('Unsupported NAT rule')
@@ -477,6 +530,126 @@ class VerifyRules(NATRuleProcessor):
             return True
 
         self.tmp_queue.append(rule)
+        return True
+
+
+class PortTranslationRules(NATRuleProcessor):
+    """Copy ODst into TDst for port-only translation targeting the firewall.
+
+    Corresponds to C++ NATCompiler_ipt::portTranslationRules.
+    When a DNAT rule has TSrc=Any, TDst=Any, TSrv!=Any, and ODst is
+    the firewall, copy ODst into TDst so downstream processors can
+    recognize it as a redirect.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            rule.nat_rule_type == NATRuleType.DNAT
+            and not rule.tsrc
+            and not rule.tdst
+            and rule.tsrv
+            and rule.odst
+        ):
+            odst = rule.odst[0]
+            if isinstance(odst, Firewall) and odst.id == self.compiler.fw.id:
+                rule.tdst = [odst]
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseWithRedirect(NATRuleProcessor):
+    """Convert DNAT to Redirect when TDst is the firewall.
+
+    Corresponds to C++ NATCompiler_ipt::specialCaseWithRedirect.
+    If a DNAT rule has TDst matching the firewall, it is a redirect
+    (traffic to the firewall itself with port translation).
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type == NATRuleType.DNAT and rule.tdst:
+            tdst = rule.tdst[0]
+            if isinstance(tdst, Firewall) and tdst.id == self.compiler.fw.id:
+                rule.nat_rule_type = NATRuleType.Redirect
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitNONATRule(NATRuleProcessor):
+    """Split NONAT rules into POSTROUTING + PREROUTING/OUTPUT.
+
+    Corresponds to C++ NATCompiler_ipt::splitNONATRule.
+    NONAT rules need ACCEPT in both chains to prevent accidental
+    translation by other rules.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.ipt_chain and rule.nat_rule_type == NATRuleType.NONAT:
+            osrc = rule.osrc[0] if rule.osrc else None
+            osrc_is_fw = isinstance(osrc, Firewall) and osrc.id == self.compiler.fw.id
+
+            # First copy: POSTROUTING
+            r = rule.clone()
+            r.ipt_chain = 'POSTROUTING'
+            self.tmp_queue.append(r)
+
+            # Second copy: OUTPUT (if OSrc is fw) or PREROUTING
+            if osrc_is_fw:
+                rule.ipt_chain = 'OUTPUT'
+                rule.osrc = []
+            else:
+                rule.ipt_chain = 'PREROUTING'
+            self.tmp_queue.append(rule)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class ReplaceFirewallObjectsODst(NATRuleProcessor):
+    """Replace Firewall object in ODst with its non-loopback interfaces.
+
+    Corresponds to C++ NATCompiler_ipt::ReplaceFirewallObjectsODst.
+    Skips Masq and Redirect rule types. For other types, replaces the
+    firewall object with Interface objects for address expansion.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type == NATRuleType.Masq:
+            return True
+
+        if not rule.odst:
+            return True
+
+        odst = rule.odst[0]
+        if isinstance(odst, Firewall) and odst.id == self.compiler.fw.id:
+            interfaces = [
+                iface
+                for iface in self.compiler.fw.interfaces
+                if not iface.is_loopback()
+            ]
+            if interfaces:
+                rule.odst = interfaces
+
         return True
 
 
@@ -545,13 +718,83 @@ class DecideOnTarget(NATRuleProcessor):
 
 
 class ExpandMultipleAddresses(NATRuleProcessor):
-    """Expand hosts/firewalls with multiple addresses."""
+    """Expand hosts/firewalls/interfaces into their addresses.
+
+    Corresponds to C++ NATCompiler::ExpandMultipleAddresses.
+    Replaces Host/Firewall/Interface objects in element lists with
+    their Address objects, then sorts by address.  The expansion
+    varies by rule type: 'expand_fully' means Host/Firewall expand
+    through interfaces to addresses; otherwise the element is kept
+    as-is.
+    """
+
+    @staticmethod
+    def _expand_slot(objects: list) -> list:
+        """Expand a single element list, replacing composite objects.
+
+        Host/Firewall objects are expanded through their interfaces to
+        addresses.  Interface objects are expanded to their addresses
+        (unless dynamic).  Loopback interfaces are skipped when
+        expanding from a parent Host/Firewall.
+        """
+        result = []
+        for obj in objects:
+            if isinstance(obj, Interface):
+                if obj.is_dynamic():
+                    result.append(obj)
+                elif obj.is_loopback():
+                    continue
+                else:
+                    for addr in obj.addresses:
+                        result.append(addr)
+            elif isinstance(obj, Host):
+                for iface in getattr(obj, 'interfaces', []):
+                    if iface.is_loopback():
+                        continue
+                    if iface.is_dynamic():
+                        result.append(iface)
+                    else:
+                        for addr in iface.addresses:
+                            result.append(addr)
+            else:
+                result.append(obj)
+
+        # Sort by address for deterministic output
+        def _sort_key(o):
+            addr = getattr(o, 'get_address', lambda: None)()
+            if addr is not None:
+                import ipaddress as _ipa
+
+                try:
+                    return _ipa.ip_address(addr).packed
+                except (ValueError, TypeError):
+                    pass
+            return b'\xff' * 16
+
+        result.sort(key=_sort_key)
+        return result
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
+
         self.tmp_queue.append(rule)
+
+        rt = rule.nat_rule_type
+        if rt in (NATRuleType.NONAT, NATRuleType.Return):
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+        elif rt in (NATRuleType.SNAT, NATRuleType.SDNAT) or rt == NATRuleType.DNAT:
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+            rule.tsrc = self._expand_slot(rule.tsrc)
+            rule.tdst = self._expand_slot(rule.tdst)
+        elif rt == NATRuleType.Redirect:
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+            rule.tsrc = self._expand_slot(rule.tsrc)
+
         return True
 
 
