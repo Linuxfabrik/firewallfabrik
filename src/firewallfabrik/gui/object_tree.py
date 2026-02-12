@@ -503,6 +503,20 @@ _NO_MOVE_TYPES = frozenset(
     }
 )
 
+# Types that cannot be copied / cut.
+_NO_COPY_TYPES = frozenset(
+    {
+        'AttachedNetworks',
+        'Library',
+        'NAT',
+        'Policy',
+        'Routing',
+    }
+)
+
+# Module-level clipboard shared across all ObjectTree instances.
+_tree_clipboard: dict | None = None  # {'id': str, 'type': str, 'cut': bool}
+
 
 class _DraggableTree(QTreeWidget):
     """QTreeWidget subclass that provides drag MIME data for object items."""
@@ -1190,6 +1204,27 @@ class ObjectTree(QWidget):
                 move_action = menu.addAction('Move ...')
                 move_action.setEnabled(False)
 
+        # Copy / Cut / Paste
+        menu.addSeparator()
+
+        can_copy = obj_type not in _NO_COPY_TYPES
+        copy_action = menu.addAction('Copy')
+        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        copy_action.setEnabled(can_copy)
+        copy_action.triggered.connect(lambda: self._ctx_copy(item))
+
+        can_cut = can_copy and not effective_ro
+        cut_action = menu.addAction('Cut')
+        cut_action.setShortcut(QKeySequence.StandardKey.Cut)
+        cut_action.setEnabled(can_cut)
+        cut_action.triggered.connect(lambda: self._ctx_cut(item))
+
+        can_paste = _tree_clipboard is not None and not effective_ro
+        paste_action = menu.addAction('Paste')
+        paste_action.setShortcut(QKeySequence.StandardKey.Paste)
+        paste_action.setEnabled(can_paste)
+        paste_action.triggered.connect(lambda: self._ctx_paste(item))
+
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
     def _ctx_edit(self, item):
@@ -1235,8 +1270,20 @@ class ObjectTree(QWidget):
             QTimer.singleShot(0, lambda: self.select_object(new_id))
             self.object_activated.emit(str(new_id), obj_type)
 
-    def _duplicate_object(self, source_id, model_cls, target_lib_id):
-        """Deep-copy *source_id* into *target_lib_id*. Returns new UUID or None."""
+    def _duplicate_object(
+        self,
+        source_id,
+        model_cls,
+        target_lib_id,
+        *,
+        target_interface_id=None,
+        target_group_id=None,
+    ):
+        """Deep-copy *source_id* into *target_lib_id*. Returns new UUID or None.
+
+        Optional *target_interface_id* / *target_group_id* place the clone
+        under a specific interface or group instead of the library root.
+        """
         if self._db_manager is None:
             return None
 
@@ -1250,17 +1297,29 @@ class ObjectTree(QWidget):
             id_map = {}
             new_obj = self._clone_object(source, id_map)
 
-            # Place in target library.
-            if hasattr(new_obj, 'library_id'):
-                new_obj.library_id = target_lib_id
-            # If duplicating into a different library, clear group ownership
-            # so the object lands at the library root.
-            source_lib_id = getattr(source, 'library_id', None)
-            if source_lib_id != target_lib_id:
+            # Clear all parent references first, then set the target.
+            if hasattr(new_obj, 'interface_id'):
+                new_obj.interface_id = None
+            if hasattr(new_obj, 'group_id'):
+                new_obj.group_id = None
+            if hasattr(new_obj, 'parent_group_id'):
+                new_obj.parent_group_id = None
+
+            if target_interface_id is not None and hasattr(new_obj, 'interface_id'):
+                new_obj.interface_id = target_interface_id
+                # Addresses under interfaces don't carry library_id.
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = None
+            elif target_group_id is not None:
                 if hasattr(new_obj, 'group_id'):
-                    new_obj.group_id = None
-                if hasattr(new_obj, 'parent_group_id'):
-                    new_obj.parent_group_id = None
+                    new_obj.group_id = target_group_id
+                elif hasattr(new_obj, 'parent_group_id'):
+                    new_obj.parent_group_id = target_group_id
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = target_lib_id
+            else:
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = target_lib_id
 
             # Make name unique within the target scope.
             new_obj.name = self._make_name_unique(session, new_obj)
@@ -1382,6 +1441,38 @@ class ObjectTree(QWidget):
             current = current.parent()
         return None
 
+    @staticmethod
+    def _get_paste_context(item):
+        """Determine the paste target from *item*'s position in the tree.
+
+        Returns ``(interface_id, group_id)`` — at most one is non-None.
+        If both are None the paste lands at the library root.
+        """
+        # Walk from the clicked item upwards to find the nearest container.
+        current = item
+        while current is not None:
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            obj_id = current.data(0, Qt.ItemDataRole.UserRole)
+            if obj_type == 'Interface' and obj_id:
+                return uuid.UUID(obj_id), None
+            if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup') and obj_id:
+                return None, uuid.UUID(obj_id)
+            if obj_type == 'Library':
+                break
+            # Skip devices and rule sets — paste on a firewall means
+            # library root, not inside the device.
+            if obj_type in (
+                'Cluster',
+                'Firewall',
+                'Host',
+                'NAT',
+                'Policy',
+                'Routing',
+            ):
+                break
+            current = current.parent()
+        return None, None
+
     def _ctx_move(self, item, target_lib_id):
         """Move the object referenced by *item* to *target_lib_id*."""
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
@@ -1431,6 +1522,121 @@ class ObjectTree(QWidget):
             session.close()
 
         return True
+
+    # ------------------------------------------------------------------
+    # Copy / Cut / Paste
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _ctx_copy(item):
+        """Copy the object reference to the tree and policy-view clipboards."""
+        global _tree_clipboard
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_id and obj_type:
+            _tree_clipboard = {'id': obj_id, 'type': obj_type, 'cut': False}
+            # Also populate the policy-view object clipboard so that
+            # paste into rule element cells works across components.
+            from firewallfabrik.gui.policy_view import PolicyView
+
+            PolicyView._object_clipboard = {
+                'id': obj_id,
+                'name': item.text(0),
+                'type': obj_type,
+            }
+
+    @staticmethod
+    def _ctx_cut(item):
+        """Cut the object reference to the module-level clipboard.
+
+        Also populates the policy-view clipboard (like Copy) so that
+        paste into rule element cells works across components.
+        """
+        global _tree_clipboard
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_id and obj_type:
+            _tree_clipboard = {'id': obj_id, 'type': obj_type, 'cut': True}
+            from firewallfabrik.gui.policy_view import PolicyView
+
+            PolicyView._object_clipboard = {
+                'id': obj_id,
+                'name': item.text(0),
+                'type': obj_type,
+            }
+
+    def _ctx_paste(self, item):
+        """Paste the clipboard object relative to *item*.
+
+        Copy-paste duplicates; cut-paste moves.
+        The paste target is determined by *item*'s position in the tree:
+        paste on/near an Interface → under that interface; on/near a
+        Group → under that group; otherwise → library root.
+        """
+        global _tree_clipboard
+        if _tree_clipboard is None or self._db_manager is None:
+            return
+
+        cb = _tree_clipboard
+        cb_id = uuid.UUID(cb['id'])
+        cb_type = cb['type']
+        model_cls = _MODEL_MAP.get(cb_type)
+        if model_cls is None:
+            return
+
+        target_lib_id = self._get_item_library_id(item)
+        if target_lib_id is None:
+            return
+
+        target_iface_id, target_group_id = self._get_paste_context(item)
+
+        if cb['cut']:
+            # Cut-paste = move to target library.
+            if self._move_object(cb_id, model_cls, target_lib_id):
+                _tree_clipboard = None
+                self.tree_changed.emit()
+                QTimer.singleShot(0, lambda: self.select_object(cb_id))
+        else:
+            # Copy-paste = duplicate into target context.
+            new_id = self._duplicate_object(
+                cb_id,
+                model_cls,
+                target_lib_id,
+                target_interface_id=target_iface_id,
+                target_group_id=target_group_id,
+            )
+            if new_id is not None:
+                self.tree_changed.emit()
+                QTimer.singleShot(0, lambda: self.select_object(new_id))
+                self.object_activated.emit(str(new_id), cb_type)
+
+    def _shortcut_copy(self):
+        """Handle Ctrl+C on the currently selected tree item."""
+        item = self._tree.currentItem()
+        if item is None:
+            return
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_type and obj_type not in _NO_COPY_TYPES:
+            self._ctx_copy(item)
+
+    def _shortcut_cut(self):
+        """Handle Ctrl+X on the currently selected tree item."""
+        item = self._tree.currentItem()
+        if item is None:
+            return
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+        if obj_type and obj_type not in _NO_COPY_TYPES and not effective_ro:
+            self._ctx_cut(item)
+
+    def _shortcut_paste(self):
+        """Handle Ctrl+V — paste into the selected item's library."""
+        item = self._tree.currentItem()
+        if item is None:
+            return
+        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+        if not effective_ro:
+            self._ctx_paste(item)
 
     # ------------------------------------------------------------------
     # Shared helpers

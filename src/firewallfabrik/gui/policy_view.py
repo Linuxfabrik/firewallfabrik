@@ -1337,6 +1337,41 @@ class PolicyView(QTreeView):
         if indices:
             model.cut_rules(indices)
 
+    def copy_object(self):
+        """Copy element or rules — context-aware like fwbuilder.
+
+        If a single element is selected in an element column, copy that
+        element to the object clipboard.  Otherwise copy whole rules.
+        """
+        if self._selected_element is not None:
+            _rule_id, _slot, target_id = self._selected_element
+            idx = self._selected_index
+            if idx.isValid() and idx.column() in _ELEMENT_COLS:
+                elements = idx.data(ELEMENTS_ROLE) or []
+                for eid, ename, etype in elements:
+                    if eid == target_id:
+                        self._copy_element(target_id, ename, etype)
+                        return
+        self.copy_selection()
+
+    def cut_object(self):
+        """Cut element or rules — context-aware like fwbuilder.
+
+        If a single element is selected in an element column, cut that
+        element.  Otherwise cut whole rules.
+        """
+        if self._selected_element is not None:
+            _rule_id, slot, target_id = self._selected_element
+            idx = self._selected_index
+            model = self.model()
+            if idx.isValid() and idx.column() in _ELEMENT_COLS and model is not None:
+                elements = idx.data(ELEMENTS_ROLE) or []
+                for eid, ename, etype in elements:
+                    if eid == target_id:
+                        self._cut_element(model, idx, slot, target_id, ename, etype)
+                        return
+        self.cut_selection()
+
     def paste_below(self):
         """Paste rules from clipboard below the current rule."""
         model = self.model()
@@ -1345,6 +1380,37 @@ class PolicyView(QTreeView):
         idx = self.currentIndex()
         if idx.isValid() and not model.is_group(idx):
             self._paste_and_scroll(model, idx)
+
+    def paste_object(self):
+        """Paste clipboard content — object into cell or rules below.
+
+        Mimics fwbuilder's ``RuleSetView::pasteObject()``: if the
+        object clipboard holds a regular object and the current cell
+        can accept it, paste it there; otherwise fall back to rule
+        paste.
+        """
+        model = self.model()
+        if model is None:
+            return
+        idx = self.currentIndex()
+        if not idx.isValid() or model.is_group(idx):
+            return
+
+        # If the object clipboard has a compatible object for the
+        # current cell's slot, paste the object into that cell.
+        col = idx.column()
+        if col in _ELEMENT_COLS:
+            slot = _COL_TO_SLOT[col]
+            valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
+            if (
+                PolicyView._object_clipboard is not None
+                and PolicyView._object_clipboard.get('type', '') in valid_types
+            ):
+                self._paste_element(model, index=idx, slot=slot)
+                return
+
+        # Fall back to rule paste.
+        self._paste_and_scroll(model, idx)
 
     # ------------------------------------------------------------------
     # Selection helpers

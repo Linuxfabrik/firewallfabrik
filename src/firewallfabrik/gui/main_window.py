@@ -35,6 +35,7 @@ from PySide6.QtGui import (
     QKeySequence,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -286,10 +287,10 @@ class FWWindow(QMainWindow):
         self.editMenu.insertAction(first_action, self._undo_action)
         self.editMenu.insertAction(first_action, self._redo_action)
 
-        # Clipboard actions — forward to the active PolicyView.
-        self.editCopyAction.triggered.connect(self._on_edit_copy)
-        self.editCutAction.triggered.connect(self._on_edit_cut)
-        self.editPasteAction.triggered.connect(self._on_edit_paste)
+        # Clipboard actions — route to tree or policy view based on focus.
+        self.editCopyAction.triggered.connect(self.editCopy)
+        self.editCutAction.triggered.connect(self.editCut)
+        self.editPasteAction.triggered.connect(self.editPaste)
 
         # History list and callback.
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
@@ -1054,23 +1055,65 @@ class FWWindow(QMainWindow):
                 return widget
         return None
 
-    @Slot()
-    def _on_edit_copy(self):
-        view = self._active_policy_view()
-        if view is not None:
-            view.copy_selection()
+    def _tree_has_focus(self):
+        """Return True if the object tree widget has keyboard focus.
+
+        Specifically checks for the tree widget itself (not the filter
+        QLineEdit) so that Ctrl+C in the filter field still copies text.
+        """
+        focus = QApplication.focusWidget()
+        if focus is None:
+            return False
+        tree_widget = self._object_tree._tree
+        return focus is tree_widget or tree_widget.isAncestorOf(focus)
 
     @Slot()
-    def _on_edit_cut(self):
+    def editCopy(self):
+        """Handle Ctrl+C — route to tree or policy view based on focus.
+
+        In the policy view this mimics fwbuilder: if a single element
+        is selected in an element column, copy that element; otherwise
+        copy whole rules.
+        """
+        if self._tree_has_focus():
+            self._object_tree._shortcut_copy()
+            return
         view = self._active_policy_view()
         if view is not None:
-            view.cut_selection()
+            view.copy_object()
 
     @Slot()
-    def _on_edit_paste(self):
+    def editCut(self):
+        """Handle Ctrl+X — route to tree or policy view based on focus.
+
+        In the policy view this mimics fwbuilder: if a single element
+        is selected in an element column, cut that element; otherwise
+        cut whole rules.
+        """
+        if self._tree_has_focus():
+            self._object_tree._shortcut_cut()
+            return
         view = self._active_policy_view()
         if view is not None:
-            view.paste_below()
+            view.cut_object()
+
+    @Slot()
+    def editPaste(self):
+        """Handle Ctrl+V — route to tree or policy view based on focus.
+
+        Connected via the .ui file: ``editPasteAction.triggered() → editPaste()``.
+
+        In the policy view, this mimics fwbuilder's
+        ``RuleSetView::pasteObject()`` — if the clipboard holds a
+        regular object (not a rule), paste it into the current cell;
+        otherwise paste rules below.
+        """
+        if self._tree_has_focus():
+            self._object_tree._shortcut_paste()
+            return
+        view = self._active_policy_view()
+        if view is not None:
+            view.paste_object()
 
     def _reload_rule_set_views(self):
         """Reload all open PolicyTreeModel views (after replace)."""
