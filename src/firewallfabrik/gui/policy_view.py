@@ -1372,6 +1372,27 @@ class PolicyView(QTreeView):
                         return
         self.cut_selection()
 
+    def delete_selection(self):
+        """Delete element or rules — context-aware like fwbuilder.
+
+        If a single element is selected in an element column, remove
+        that element from the cell.  Otherwise delete whole rules.
+        """
+        if self._selected_element is not None:
+            _rule_id, slot, target_id = self._selected_element
+            idx = self._selected_index
+            model = self.model()
+            if idx.isValid() and idx.column() in _ELEMENT_COLS and model is not None:
+                model.remove_element(idx, slot, target_id)
+                self._clear_element_selection()
+                return
+        model = self.model()
+        if model is None:
+            return
+        indices = self._selected_rule_indices()
+        if indices:
+            model.delete_rules(indices)
+
     def paste_below(self):
         """Paste rules from clipboard below the current rule."""
         model = self.model()

@@ -287,10 +287,11 @@ class FWWindow(QMainWindow):
         self.editMenu.insertAction(first_action, self._undo_action)
         self.editMenu.insertAction(first_action, self._redo_action)
 
-        # Clipboard actions — route to tree or policy view based on focus.
+        # Clipboard and delete actions — route based on focus.
         self.editCopyAction.triggered.connect(self.editCopy)
         self.editCutAction.triggered.connect(self.editCut)
         self.editPasteAction.triggered.connect(self.editPaste)
+        self.editDeleteAction.triggered.connect(self.editDelete)
 
         # History list and callback.
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
@@ -1114,6 +1115,16 @@ class FWWindow(QMainWindow):
         view = self._active_policy_view()
         if view is not None:
             view.paste_object()
+
+    @Slot()
+    def editDelete(self):
+        """Handle Delete key — route to tree or policy view based on focus."""
+        if self._tree_has_focus():
+            self._object_tree._shortcut_delete()
+            return
+        view = self._active_policy_view()
+        if view is not None:
+            view.delete_selection()
 
     def _reload_rule_set_views(self):
         """Reload all open PolicyTreeModel views (after replace)."""

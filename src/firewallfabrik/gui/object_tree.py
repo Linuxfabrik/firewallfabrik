@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLineEdit,
     QMenu,
+    QMessageBox,
     QTreeWidget,
     QTreeWidgetItem,
     QTreeWidgetItemIterator,
@@ -511,6 +512,14 @@ _NO_COPY_TYPES = frozenset(
         'NAT',
         'Policy',
         'Routing',
+    }
+)
+
+# Types that cannot be deleted.
+_NO_DELETE_TYPES = frozenset(
+    {
+        'AttachedNetworks',
+        'Library',
     }
 )
 
@@ -1224,6 +1233,14 @@ class ObjectTree(QWidget):
         paste_action.setEnabled(can_paste)
         paste_action.triggered.connect(lambda: self._ctx_paste(item))
 
+        # Delete
+        menu.addSeparator()
+        can_delete = obj_type not in _NO_DELETE_TYPES and not effective_ro
+        delete_action = menu.addAction('Delete')
+        delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+        delete_action.setEnabled(can_delete)
+        delete_action.triggered.connect(lambda: self._ctx_delete(item))
+
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
     def _ctx_edit(self, item):
@@ -1636,6 +1653,196 @@ class ObjectTree(QWidget):
         effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
         if not effective_ro:
             self._ctx_paste(item)
+
+    # ------------------------------------------------------------------
+    # Delete
+    # ------------------------------------------------------------------
+
+    def _ctx_delete(self, item):
+        """Delete the object referenced by *item* after confirmation.
+
+        Mimics fwbuilder's ``ObjectManipulator::delObj()``:
+        shows a confirmation dialog listing all groups and rules that
+        reference the object, then removes those references and deletes
+        the object itself.
+        """
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if not obj_id or not obj_type:
+            return
+        model_cls = _MODEL_MAP.get(obj_type)
+        if model_cls is None:
+            return
+        obj_name = item.text(0)
+
+        # Collect references for the confirmation dialog.
+        ref_lines = self._find_references(uuid.UUID(obj_id))
+
+        # Build confirmation message.
+        msg = f"Delete '{obj_name}'?"
+        if ref_lines:
+            msg += (
+                '\n\nThis object is referenced in the following places. '
+                'All references will be removed:\n\n' + '\n'.join(ref_lines)
+            )
+
+        result = QMessageBox.question(
+            self,
+            'Delete',
+            msg,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        if self._delete_object(uuid.UUID(obj_id), model_cls, obj_name, obj_type):
+            self.tree_changed.emit()
+
+    def _find_references(self, obj_id):
+        """Return a list of human-readable strings describing references to *obj_id*.
+
+        Searches group_membership and rule_elements tables.
+        Also recursively checks children (interfaces, addresses) of
+        devices so that references to children are reported.
+        """
+        if self._db_manager is None:
+            return []
+
+        lines = []
+        with self._db_manager.session() as session:
+            ids_to_check = self._collect_child_ids(session, obj_id)
+            ids_to_check.add(obj_id)
+
+            for check_id in ids_to_check:
+                # Groups containing this object.
+                grp_rows = session.execute(
+                    sqlalchemy.select(group_membership.c.group_id).where(
+                        group_membership.c.member_id == check_id
+                    )
+                ).all()
+                for (grp_id,) in grp_rows:
+                    grp = session.get(Group, grp_id)
+                    if grp is not None:
+                        lines.append(f'  Group: {grp.name}')
+
+                # Rules referencing this object.
+                from firewallfabrik.core.objects import Rule, RuleSet
+
+                rule_rows = session.execute(
+                    sqlalchemy.select(
+                        rule_elements.c.slot,
+                        Rule.position,
+                        Rule.rule_set_id,
+                    )
+                    .join(Rule, Rule.id == rule_elements.c.rule_id)
+                    .where(rule_elements.c.target_id == check_id)
+                ).all()
+                for slot, position, rule_set_id in rule_rows:
+                    rs = session.get(RuleSet, rule_set_id)
+                    if rs is not None:
+                        fw_name = rs.device.name if rs.device else '?'
+                        lines.append(
+                            f'  {fw_name} / {rs.type} / Rule #{position} / {slot}'
+                        )
+
+        # Deduplicate and sort for readability.
+        return sorted(set(lines))
+
+    @staticmethod
+    def _collect_child_ids(session, obj_id):
+        """Collect IDs of all children (interfaces, addresses) of a device."""
+        child_ids = set()
+        # Check if it's a device with interfaces.
+        obj = session.get(Host, obj_id)
+        if obj is not None:
+            for iface in obj.interfaces:
+                child_ids.add(iface.id)
+                for addr in iface.addresses:
+                    child_ids.add(addr.id)
+        # Check if it's an interface with addresses.
+        iface = session.get(Interface, obj_id)
+        if iface is not None:
+            for addr in iface.addresses:
+                child_ids.add(addr.id)
+        return child_ids
+
+    def _delete_object(self, obj_id, model_cls, obj_name, obj_type):
+        """Delete *obj_id* and clean up all references.  Returns True on success."""
+        if self._db_manager is None:
+            return False
+
+        session = self._db_manager.create_session()
+        try:
+            obj = session.get(model_cls, obj_id)
+            if obj is None:
+                session.close()
+                return False
+
+            child_ids = self._collect_child_ids(session, obj_id)
+            all_ids = child_ids | {obj_id}
+
+            # Remove from group_membership (as member).
+            for del_id in all_ids:
+                session.execute(
+                    group_membership.delete().where(
+                        group_membership.c.member_id == del_id
+                    )
+                )
+
+            # Remove from rule_elements.
+            for del_id in all_ids:
+                session.execute(
+                    rule_elements.delete().where(rule_elements.c.target_id == del_id)
+                )
+
+            # Delete child addresses of interfaces.
+            if isinstance(obj, Host):
+                for iface in obj.interfaces:
+                    for addr in iface.addresses:
+                        session.delete(addr)
+                    session.delete(iface)
+                # Delete rule sets, rules, and rule elements.
+                for rs in obj.rule_sets:
+                    for rule in rs.rules:
+                        session.execute(
+                            rule_elements.delete().where(
+                                rule_elements.c.rule_id == rule.id
+                            )
+                        )
+                        session.delete(rule)
+                    session.delete(rs)
+            elif isinstance(obj, Interface):
+                for addr in obj.addresses:
+                    session.delete(addr)
+            elif isinstance(obj, Group):
+                # Remove group_membership rows where this group is the group.
+                session.execute(
+                    group_membership.delete().where(
+                        group_membership.c.group_id == obj_id
+                    )
+                )
+
+            session.delete(obj)
+            session.commit()
+            self._db_manager.save_state(f'Delete {obj_type} {obj_name}')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return True
+
+    def _shortcut_delete(self):
+        """Handle Delete key on the currently selected tree item."""
+        item = self._tree.currentItem()
+        if item is None:
+            return
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+        if obj_type and obj_type not in _NO_DELETE_TYPES and not effective_ro:
+            self._ctx_delete(item)
 
     # ------------------------------------------------------------------
     # Shared helpers
