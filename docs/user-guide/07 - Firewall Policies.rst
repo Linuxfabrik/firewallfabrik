@@ -2,7 +2,7 @@ Firewall Policies
 =================
 
 .. sectnum::
-   :start: 1
+   :start: 7
 
 .. contents::
    :local:
@@ -20,9 +20,9 @@ Each firewall object has several sets of rules associated with it: access policy
 * NAT rules describe address and port transformations that the firewall should make to packets flowing through it.
 * Routing rules establish static routes in the firewall.
 
-Firewall software varies widely in the way it can process packets. For example, some firewalls perform address and port transformations first and then apply policy rules, while some others do it the other way around. There are many other variations and features specific to particular implementations. In Firewall Builder though, you work with an abstract firewall that looks and behaves the same regardless of the target firewall platform. You can build and install firewall polices for one platform, then switch the target and use the exact same policies to generate rules for an entirely different platform. (This assumes both platforms support the features you need.)
+Firewall software varies widely in the way it can process packets. For example, some firewalls perform address and port transformations first and then apply policy rules, while some others do it the other way around. There are many other variations and features specific to particular implementations. In FirewallFabrik though, you work with an abstract firewall that looks and behaves the same regardless of the target firewall platform. You can build and install firewall polices for one platform, then switch the target and use the exact same policies to generate rules for an entirely different platform. (This assumes both platforms support the features you need.)
 
-Firewall Builder compensates for differences in implementation between firewall platforms. For example, Cisco PIX applies its access list rules to the packet before it performs address and port transformations according to the NAT rules. As a result, a policy rule that controls access to a server behind the firewall doing NAT should be written using the firewall object instead of the server object. The meaning of such a rule is not obvious at a glance since you have to keep in mind all the NAT rules as well as remember that this policy rule controls access not to the firewall machine, but rather to the server behind it. Firewall Builder takes into account these variations like this by using smart algorithms to transform rules defined in the GUI into rules that achieve the desired effect in the target firewall platform. Using Firewall Builder, you write your rules as if NAT translation happens before the access rules are applied.
+FirewallFabrik compensates for differences in implementation between firewall platforms. For example, some firewalls apply their access list rules to the packet before they perform address and port transformations according to the NAT rules. As a result, a policy rule that controls access to a server behind the firewall doing NAT should be written using the firewall object instead of the server object. The meaning of such a rule is not obvious at a glance since you have to keep in mind all the NAT rules as well as remember that this policy rule controls access not to the firewall machine, but rather to the server behind it. FirewallFabrik takes into account these variations like this by using smart algorithms to transform rules defined in the GUI into rules that achieve the desired effect in the target firewall platform. Using FirewallFabrik, you write your rules as if NAT translation happens before the access rules are applied.
 
 Firewall Access Policy Rule Sets
 ---------------------------------
@@ -75,7 +75,7 @@ As in the Source and Destination rule elements, you can exclude, or "negate" a s
 Interface
 ~~~~~~~~~
 
-The Interface rule element matches packets based on which firewall interface the packet traverses. (Note that this rule element refers to firewall interfaces, not host interfaces.) By default, all rules created in Firewall Builder affect all firewall interfaces. (This is true in all target platforms.) For cases where you want a rule to match on only a particular interface or set of interfaces, you can drag a firewall interface object or set of firewall interface objects into the field.
+The Interface rule element matches packets based on which firewall interface the packet traverses. (Note that this rule element refers to firewall interfaces, not host interfaces.) By default, all rules created in FirewallFabrik affect all firewall interfaces. (This is true in all target platforms.) For cases where you want a rule to match on only a particular interface or set of interfaces, you can drag a firewall interface object or set of firewall interface objects into the field.
 
 Direction
 ~~~~~~~~~
@@ -84,11 +84,11 @@ The Direction rule element matches the direction a packet is travelling as it tr
 
 * A direction of Inbound matches traffic that is ingressing through a firewall interface.
 * A direction of Outbound matches traffic that is egressing through a firewall interface.
-* A direction of Both matches traffic either ingressing or egressing from the firewall. When you use the Both direction in a rule and compile the rule, Firewall Builder converts the rule into two rules: one for direction Inbound and one for direction Outbound. Firewall Builder then validates each rule to make sure they both make sense by looking at the defined source and destination addresses, dropping one of the rules if necessary.
+* A direction of Both matches traffic either ingressing or egressing from the firewall. When you use the Both direction in a rule and compile the rule, FirewallFabrik converts the rule into two rules: one for direction Inbound and one for direction Outbound. FirewallFabrik then validates each rule to make sure they both make sense by looking at the defined source and destination addresses, dropping one of the rules if necessary.
 
-If you build a rule with a firewall object in the Destination field and with direction of Both, the result for PF platforms should be a rule with **pass in**, which is equivalent to a direction of Outbound in the original Firewall Builder rule. For iptables platforms, the rule is placed in the **INPUT** chain. If the firewall object is defined in the Source field of the rule, then Firewall Builder automatically changes the direction Both to Outbound and processes the rule accordingly.
+For iptables platforms, rules with the firewall object in the Destination field and with direction of Both are placed in the **INPUT** chain. If the firewall object is defined in the Source field of the rule, then FirewallFabrik automatically changes the direction Both to Outbound and processes the rule accordingly.
 
-This automatic change of the direction is only performed when the direction is Both. If the direction is Inbound or Outbound, Firewall Builder complies with the setting without changing the rule. (This is how anti-spoofing rules are constructed, for example, because in rules of that kind, the firewall object and the objects representing addresses and networks behind it are in the Source field, yet the direction must be set to Inbound.)
+This automatic change of the direction is only performed when the direction is Both. If the direction is Inbound or Outbound, FirewallFabrik complies with the setting without changing the rule. (This is how anti-spoofing rules are constructed, for example, because in rules of that kind, the firewall object and the objects representing addresses and networks behind it are in the Source field, yet the direction must be set to Inbound.)
 
 Note that traffic direction is defined with respect to the firewall device, not with respect to the network behind it. For example, packets that leave the internal network through the firewall are considered "inbound" on firewall's internal interface and "outbound" on its external interface. Likewise, packets that come from the Internet are "inbound" on the firewall's external interface and "outbound" on its internal interface. Figure 7.3 illustrates directions for packets entering or exiting the firewall interface.
 
@@ -97,7 +97,7 @@ Note that traffic direction is defined with respect to the firewall device, not 
 
    Traffic Directions
 
-Many supported firewall platforms allow for rules to be written without explicitly specifying a direction of "in" or "out"; for example, **pass quick proto tcp ...** in PF configuration or iptables rules in the **FORWARD** chain without the **-i interface** or **-o interface** clauses. Firewall Builder always tries to use this construct for rules with direction Both, unless addresses in the source and destination indicate that the rule can be made more specific.
+For iptables, FirewallFabrik can generate rules in the **FORWARD** chain without the **-i interface** or **-o interface** clauses when appropriate. FirewallFabrik always tries to use this construct for rules with direction Both, unless addresses in the source and destination indicate that the rule can be made more specific.
 
 .. figure:: img/policy-modifying-direction.png
    :alt: Modifying the Direction of a Policy Rule
@@ -109,9 +109,9 @@ Action
 
 The Action is the action taken on a rule that matches on the Source, Destination, Service, Interface, Direction, and Time fields.
 
-The policy rule action can be any of the actions types listed below. Not all firewalls support every action; however, Firewall Builder is aware of the capabilities of each platform and allows only the options valid for the specified firewall target. Note also that the same action may be referred to by a different name on different target platforms.
+The policy rule action can be any of the actions types listed below. Not all firewalls support every action; however, FirewallFabrik is aware of the capabilities of each platform and allows only the options valid for the specified firewall target. Note also that the same action may be referred to by a different name on different target platforms.
 
-Some actions have parameters. For these actions, Firewall Builder opens the action dialog when you select the action for you to specify the setting. To change the parameter setting for an existing action, double-click the action icon in the Action field or right-click it and select Parameters from the context menu. This opens the dialog for the action, where you can change the parameter setting.
+Some actions have parameters. For these actions, FirewallFabrik opens the action dialog when you select the action for you to specify the setting. To change the parameter setting for an existing action, double-click the action icon in the Action field or right-click it and select Parameters from the context menu. This opens the dialog for the action, where you can change the parameter setting.
 
 * **Accept**: Allows the packet through the firewall. No subsequent rules are applied. This action has no parameters.
 
@@ -126,11 +126,11 @@ Some actions have parameters. For these actions, Firewall Builder opens the acti
 
 * **Accounting**: Counts packets matching the rule, but makes no decision on the packet. Even if the packet matches, the inspection process continues with subsequent rules. For iptables this action has one parameter which is the name of the rule chain that will be created. Traffic that matches this rule will have a target of the defined accounting user chain. In this case the traffic is neither accepted nor denied, so in order for the traffic to be passed through the firewall another rule must be defined with the Action set to Accept.
 
-* **Queue**: Supported only for iptables and ipfw target platforms. Passes the packet to a user-space process for inspection. It is translated into **QUEUE** for iptables and the **divert** for ipfw. This action has no parameters.
+* **Queue**: Supported only for iptables. Passes the packet to a user-space process for inspection. It is translated into **QUEUE** for iptables. This action has no parameters.
 
-* **Custom**: Supported for iptables, ipf, and ipfw target platforms. Allows you to specify an arbitrary string, for example defining iptables module 'recent' parameters as shown in :doc:`05 - Working with Objects`. This action has one parameter: when you select Custom as the action, the action dialog automatically opens for you to specify the custom string.
+* **Custom**: Supported for iptables. Allows you to specify an arbitrary string, for example defining iptables module 'recent' parameters as shown in :doc:`05 - Working with Objects`. This action has one parameter: when you select Custom as the action, the action dialog automatically opens for you to specify the custom string.
 
-* **Branch**: Supported only for iptables and PF target platforms, which provide suitable syntax for allowing control to return to the higher-level rule set if the branch cannot make a final decision about the packet. Used to branch to a different rule set. For iptables, this action is translated into a user-defined chain. The name of the chain is the name of the Policy rule set object that the branch jumps to. For PF, this action is translated into an anchor with the same name as the Policy rule set that the branch jumps to. This action has one parameter: when you select Branch as the action, the action dialog automatically opens for you with a drop area to drag-and-drop the Policy rule set which will be branched to.
+* **Branch**: Supported only for iptables, which provides suitable syntax for allowing control to return to the higher-level rule set if the branch cannot make a final decision about the packet. Used to branch to a different rule set. For iptables, this action is translated into a user-defined chain. The name of the chain is the name of the Policy rule set object that the branch jumps to. This action has one parameter: when you select Branch as the action, the action dialog automatically opens for you with a drop area to drag-and-drop the Policy rule set which will be branched to.
 
 * **Continue**: Continue is, essentially, an empty action. You can use this option when you want to assign an option, such as logging or packet marking, to a matched packet but take no other action in that rule. This action has no parameters. On iptables systems, using just the Continue action results generates a rule that has no **-j** target defined. If the action is set to Continue and the logging option has been applied, the generated rule has the **-j LOG** target set.
 
@@ -149,7 +149,7 @@ The Time rule element allows you to restrict a match to a particular time interv
 Options and Logging
 ~~~~~~~~~~~~~~~~~~~
 
-The Options rule element allows you to enable and disable logging, set logging values, and set certain options (such as tagging and classifying) to be applied when a packet matches the rule. Not all firewalls support all log settings or a full set of options; however, Firewall Builder is aware of the capabilities of each platform and shows only the options valid for the specified firewall target. Note that options apply only to the current rule.
+The Options rule element allows you to enable and disable logging, set logging values, and set certain options (such as tagging and classifying) to be applied when a packet matches the rule. Not all firewalls support all log settings or a full set of options; however, FirewallFabrik is aware of the capabilities of each platform and shows only the options valid for the specified firewall target. Note that options apply only to the current rule.
 
 The right-click Options context menu contains three selections:
 
@@ -165,21 +165,17 @@ Rule options may include the following, depending on the target platform:
 
 * **Logging**: Depending on the target platform, log settings may include the log level, logging interval, log facility, log prefix, the Netlink group, and/or a checkbox to disable logging for the current rule.
 
-* **Route**: Supported only for ipfilter and PF targets. For iptables, this option is deprecated. Directs the firewall to route matching packets through a specified interface. For PF and ipfilter, you can specify the interface and next hop. This information is translated into the **route** option. You can also specify whether to reroute the packet, reroute the reply to the packet, or make the changes to a copy of the packet, allowing the original packet to proceed normally. This information is translated into the **route-to**, **reply-to**, and **dup-to** options, respectively. The PF platform also supports a fast-route option, translated as the **fastroute** option, and supports selecting from a set of load-balancing algorithms.
+* **State Tracking**: Allows you to specify a number of options for tracking the progress of a connection. Keeping state can help you develop rule sets that are simpler and result in better packet filtering performance. For iptables, this option allows you to make packet inspection to be stateless rather than stateful, which is the default. (For this platform, this option is located on the General tab.)
 
-* **State Tracking**: Allows you to specify a number of options for tracking the progress of a connection. Keeping state can help you develop rule sets that are simpler and result in better packet filtering performance. For iptables, ipfilter, and ipfw target platforms, this option allows you to make packet inspection to be stateless rather than stateful, which is the default. (For these platforms, this option is located on the General tab.) PF targets support a number of additional state tracking settings. The **Force "keep state"** setting directs the firewall to make a state entry even if the default for the rule is to be stateless. The **Activate source tracking** setting enables tracking the number of states created per source IP address. The **Maximum number of source addresses** setting controls the maximum number of source addresses that can simultaneously have state table entries; this is the PF **max-src-nodes** option. The **Maximum of simultaneous state entries** setting controls the maximum number of simultaneous state entries that can be created per source IP address; this is the PF **max-src-states** option. Note that this limit controls only states created by this rule. State tracking is not supported for Cisco FWSM, Cisco Router IOS ACL, or Cisco ASA/Cisco PIX target platforms.
+* **Tag**: Supported only for iptables. Associates a tag, or mark, with the packet. When you enable this option, you must specify a TagService object which defines the tag to be applied to matching packets. For iptables, the Tag operation is translated into a **MARK** target with corresponding **--set-mark** parameter and, optionally, additional rule with a **CONNMARK --save-mark** target. If the option that activates the **CONNMARK** target is used, the compiler also adds a rule at the very top of the policy to restore the mark. Rules are placed in the **INPUT**, **OUTPUT**, and **FORWARD** chain of the mangle table, which ensures that DNAT happens before rules in the mangle table interact with the packet. The **PREROUTING** chain in the mangle table is executed before the **PREROUTING** chain in the NAT table, so placing tagging rules in the **PREROUTING** chain would make them fire before DNAT. The **POSTROUTING** chain of the mangle table, as well as its **FORWARD** and **OUTPUT** chains, work before corresponding chains of the NAT table. In all cases, the goal is to make sure DNAT rules process the packet before, and SNAT rules process the packet after, filtering and tagging rules.
 
-* **Tag**: Supported only for iptables and PF platforms. Associates a tag, or mark, with the packet. When you enable this option, you must specify a TagService object which defines the tag to be applied to matching packets. For iptables, the Tag operation is translated into a **MARK** target with corresponding **--set-mark** parameter and, optionally, additional rule with a **CONNMARK --save-mark** target. If the option that activates the **CONNMARK** target is used, the compiler also adds a rule at the very top of the policy to restore the mark. Rules are placed in the **INPUT**, **OUTPUT**, and **FORWARD** chain of the mangle table, which ensures that DNAT happens before rules in the mangle table interact with the packet. The **PREROUTING** chain in the mangle table is executed before the **PREROUTING** chain in the NAT table, so placing tagging rules in the **PREROUTING** chain would make them fire before DNAT. The **POSTROUTING** chain of the mangle table, as well as its **FORWARD** and **OUTPUT** chains, work before corresponding chains of the NAT table. In all cases, the goal is to make sure DNAT rules process the packet before, and SNAT rules process the packet after, filtering and tagging rules. For PF, this option is translated into the **tag** option.
-
-* **Classify**: Supported only for iptables, PF, and ipfw. Allows the firewall to define a QoS class for the packet that matches the rule. It is translated into **CLASSIFY** for iptables, with the **--set-class** parameter. For PF, it is translated into **queue**. The compiler for ipfw can use **pipe**, **queue**, or **divert**, depending on how the action is configured in Firewall Builder. When you enable this option, you must specify a Classify string.
+* **Classify**: Supported only for iptables. Allows the firewall to define a QoS class for the packet that matches the rule. It is translated into **CLASSIFY** for iptables, with the **--set-class** parameter. When you enable this option, you must specify a Classify string.
 
 * **limit**: Supported only for iptables. Implements the iptables **limit** module, directing the firewall to perform rate-limiting on the connection. This option is useful for preventing, for example, TCP SYN flood attacks. You specify the maximum average matching rate; this translates into the iptables **--limit rate** option, limiting incoming connections once the limit is reached. You can also specify a burst level; this is the maximum initial number of packets to match. The burst number is incremented by one every time the rate-limit is not reached, up to this number; this value translates into the iptables **--limit-burst** option. You can also reverse the meaning of the rate-limit rule (that is, accept everything above a given limit) by checking the Negate checkbox.
 
 * **connlimit**: Supported only for iptables. Implements the iptables **connlimit** module, directing the firewall to restrict the number of parallel TCP connections for this source/destination pair. You specify the maximum number of existing parallel connections; this translates into the iptables **--connlimit-above** option. You can also specify a network mask to limit the number of connections to networks of a particular size; this value translates into the iptables **--connlimit-mask** option. You can reverse the meaning of the connection-limiting rule (that is, accept everything above a given limit) by checking the Negate checkbox.
 
 * **hashlimit**: Supported only for iptables. Implements the iptables **hashlimit** module. The hashlimit matching option is similar to the rate-limiting option, implemented per destination IP or per destination-IP/destination-port tuple. You must provide a name for this hash-limiting entry, specify the rate and burst level. You can also select the mode of the module, which specifies whether to match on IP address alone (**srcip** or **dstip**) or on an address/port combination (**srcport** or **dstport**). The **htable-size** setting controls the number of buckets of the hash table. The **htable-max** setting controls the maximum number of entries in the hash table. The **htable-expire** setting controls the interval (in milliseconds) after which a hash entry expires. The **htable-gcinterval** setting controls the interval (in milliseconds) between garbage collection operations. On some older iptables systems, this module is named **dstlimit**. If your target platform is one of these systems, check the checkbox.
-
-* **Mirror rules**: Supported only for Cisco Router IOS ACL. Directs the compiler to create a rule reversing the specified source and destination address and service fields, which can be used to match "reply" packets for address and service characteristics in packets matched by this rule. Detailed information about mirror rule settings is provided in the Rule Options dialog for this platform.
 
 Figure 7.7 shows the Tag tab of the Options dialog for the **iptables** platform.
 
@@ -195,7 +191,7 @@ You can set multiple options and combine them with the policy's action so that t
 Working with Multiple Policy Rule Sets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Every firewall object created in Firewall Builder begins with a single policy rule set. For many firewalls, this is all you need. However, Firewall Builder allows you to create multiple access policy rule sets for a single firewall object and, if your platform supports it, branch between the rule sets. This can help you modularize your policy.
+Every firewall object created in FirewallFabrik begins with a single policy rule set. For many firewalls, this is all you need. However, FirewallFabrik allows you to create multiple access policy rule sets for a single firewall object and, if your platform supports it, branch between the rule sets. This can help you modularize your policy.
 
 In the following example, the firewall object "fw" has three policy rule sets: **Policy**, **Policy_2**, and **mgmt**:
 
@@ -220,8 +216,6 @@ The IPv4/IPv6 pull-down menu lets you select whether the rule set should be comp
 When multiple rule sets have been defined, one rule set is tagged as the "top" rule set by checking the Top rule set checkbox when the rule set is added. The top rule set is the primary rule set assigned to the device. Only one rule set of each type can be marked as the top rule set. The top rule set is always used (if it has any rules). Other rule sets are only used if they are the targets of branching. Scripts are generated as follows for target platforms.
 
 * **iptables**: Rules defined in the top rule set are placed into the built-in INPUT, OUTPUT, and FORWARD chains. Rules defined in rule sets where the Top rule set checkbox is not checked are placed into a user-defined chain with the same name as the rule set.
-* **PF**: Rules defined in rule sets other than the top rule set are placed into an anchor with the name of the rule set.
-* **Cisco IOS ACLs**: If the rule set is not the top rule set, rules are placed into an access list and the rule set name is prefixed to the access list name; this access list is not assigned to interfaces using the **ip access-group** command. Top rule sets generate ACLs with names consisting of a shortened interface name plus traffic direction. Only these lists are assigned to interfaces.
 
 You fork processing between rule sets using the Branch rule action. In the example, this rule causes packets headed for the **fw-mgmt** host to be passed to the **mgmt** rule set.
 
@@ -237,12 +231,12 @@ Network Address Translation Rules
 
 .. note::
 
-   As with access policy rule sets, you can create multiple NAT rule sets. However, in older versions of Firewall Builder, it was not possible to branch between rule sets; only the rule set marked as "top" was used in v3.x. Beginning with Release 4.0, Firewall Builder supports building branches in NAT rule sets.
+   As with access policy rule sets, you can create multiple NAT rule sets. However, in older versions of FirewallFabrik, it was not possible to branch between rule sets; only the rule set marked as "top" was used in v3.x. Beginning with Release 4.0, FirewallFabrik supports building branches in NAT rule sets.
 
 Basic NAT Rules
 ~~~~~~~~~~~~~~~
 
-Address translation is useful when you need to provide Internet access to machines on the internal network using private address space (10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16, as defined in RFC 1918). Private addresses are not routable on the Internet, which means clients out on the Internet cannot connect to servers with private addresses. Conversely, machines on the network using one of these addresses cannot connect to servers on the Internet directly. In order to allow internal machines to establish connections with external machines, the firewall must convert the private addresses to public addresses, and vice versa. In other words, the firewall must perform Network Address Translation (NAT). In Firewall Builder, NAT rules are added in the NAT rule set, located under the firewall object in the tree.
+Address translation is useful when you need to provide Internet access to machines on the internal network using private address space (10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16, as defined in RFC 1918). Private addresses are not routable on the Internet, which means clients out on the Internet cannot connect to servers with private addresses. Conversely, machines on the network using one of these addresses cannot connect to servers on the Internet directly. In order to allow internal machines to establish connections with external machines, the firewall must convert the private addresses to public addresses, and vice versa. In other words, the firewall must perform Network Address Translation (NAT). In FirewallFabrik, NAT rules are added in the NAT rule set, located under the firewall object in the tree.
 
 .. figure:: img/nat-rule-set.png
    :alt: NAT Rule Set
@@ -268,9 +262,9 @@ As in firewall policies, NAT rules are inspected by the firewall in the order th
 
 * **Translated Srv** -- If the original source, destination, and service all matched, this object becomes the new service (port number) of the packet.
 
-* **Interface In** -- The inbound interface for the NAT rule. On iptables systems this will result in the ``-i`` parameter being set. The default is Auto, which means Firewall Builder will attempt to determine the appropriate interface(s) the rule should include. This option is available in Firewall Builder Release 4.2 and later.
+* **Interface In** -- The inbound interface for the NAT rule. On iptables systems this will result in the ``-i`` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include. This option is available in FirewallFabrik Release 4.2 and later.
 
-* **Interface Out** -- The outbound interface for the NAT rule. On iptables systems this will result in the ``-o`` parameter being set. The default is Auto, which means Firewall Builder will attempt to determine the appropriate interface(s) the rule should include. This option is available in Firewall Builder Release 4.2 and later.
+* **Interface Out** -- The outbound interface for the NAT rule. On iptables systems this will result in the ``-o`` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include. This option is available in FirewallFabrik Release 4.2 and later.
 
 * **Options** -- This field lets you specify platform-specific options for the packet. Right-click in the field and select Rule Options to see options for your platform. Click Help in the Options dialog to see help for available parameters for your platform. See `Options and Logging`_ for more information.
 
@@ -299,7 +293,7 @@ Source Address Translation
 
 Using NAT to translate private IP addresses to public, and vice versa, is often called "masquerading". When configured this way, the firewall rewrites the source IP address of each packet sent by internal machines to the Internet, replacing the private IP address with the address of its external interface.
 
-In Firewall Builder, this type of NAT rule is composed as shown in Rule 1 in Figure 7.12.
+In FirewallFabrik, this type of NAT rule is composed as shown in Rule 1 in Figure 7.12.
 
 In this rule, objects representing internal networks are placed in Original Src and the firewall's outside interface object is placed in Translated Src, indicating that we want the source address of the packets to be translated. As before, we do not need to worry about reply packets, because the underlying firewall software keeps track of translations done for all the connections opened through the firewall and rewrites addresses in all reply packets automatically.
 
@@ -353,32 +347,12 @@ This rule translates into the following simple iptables command:
    $IPTABLES -t nat -A POSTROUTING -o eth0  -s 172.16.22.0/24  \
        -j SNAT --to-source 192.0.2.1
 
-Note that Firewall Builder uses the chain *POSTROUTING* for the source address translation rules. It will use *PREROUTING* for the destination translation rules.
-
-For PF, Firewall Builder uses *nat* rule:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat on en0 proto {tcp udp icmp} from 172.16.22.0/24 to any -> 192.0.2.1
-
-Finally, for PIX, Firewall Builder knows to use global pool in combination with the "nat" command and automatically determines which interfaces to associate ``global`` and ``nat`` commands with:
-
-.. code-block:: text
-
-   ! Rule  0 (NAT)
-   !
-   global (outside) 1 interface
-   access-list id43442X30286.0 permit ip 172.16.22.0 255.255.255.0   any
-   nat (inside) 1 access-list id43442X30286.0 tcp 0 0
-
-Note that the generated PIX configuration has been optimized and the "global" command takes address from the interface "outside" regardless of how this address is assigned, statically or dynamically.
+Note that FirewallFabrik uses the chain *POSTROUTING* for the source address translation rules. It will use *PREROUTING* for the destination translation rules.
 
 Source Address Translation Using Interface with Dynamic Address
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-The generated configurations in the previous examples used the IP address of the external interface for translation. Let's see what configuration Firewall Builder will produce if the external interface has a dynamic address that is not known at the time when configuration is generated.
+The generated configurations in the previous examples used the IP address of the external interface for translation. Let's see what configuration FirewallFabrik will produce if the external interface has a dynamic address that is not known at the time when configuration is generated.
 
 .. figure:: img/nat-dynamic-interface-config.png
    :alt: Dynamic interface configuration
@@ -387,7 +361,7 @@ The generated configurations in the previous examples used the IP address of the
 
 The NAT rule looks exactly the same as in examples above: we still put interface *eth0* in Translated Src even though its address is unknown.
 
-iptables uses target MASQUERADE when the source NAT is requested with a dynamic interface. Firewall Builder generates the following command:
+iptables uses target MASQUERADE when the source NAT is requested with a dynamic interface. FirewallFabrik generates the following command:
 
 .. code-block:: text
 
@@ -395,20 +369,10 @@ iptables uses target MASQUERADE when the source NAT is requested with a dynamic 
    #
    $IPTABLES -t nat -A POSTROUTING -o eth0  -s 172.16.22.0/24 -j MASQUERADE
 
-PF supports special syntax for the dynamic interface, *(en0)*, which makes it take the address of the interface automatically:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat on en0 proto {tcp udp icmp} from 172.16.22.0/24 to any -> (en0)
-
-There is no difference in the generated PIX configuration because fwbuilder optimizes it and uses the "global (outside) 1 interface" command which takes the address from the outside interface regardless of whether the address is assigned statically or dynamically.
-
 Port Translation
 ''''''''''''''''
 
-Firewall Builder can generate configurations for the NAT rules that manipulate not only addresses, but also ports and port ranges. Consider this hypothetical example where we want to squeeze a source port range from the whole unprivileged range 1024 - 65535 to the rather limited range 10000 - 20000 on all connections from internal network to the server on the DMZ:
+FirewallFabrik can generate configurations for the NAT rules that manipulate not only addresses, but also ports and port ranges. Consider this hypothetical example where we want to squeeze a source port range from the whole unprivileged range 1024 - 65535 to the rather limited range 10000 - 20000 on all connections from internal network to the server on the DMZ:
 
 .. figure:: img/nat-port-translation-rule.png
    :alt: Port translation NAT rule
@@ -422,7 +386,7 @@ TCP Service object "sport range 10000-20000" is defined as follows:
 
    TCP Service object with source port range 10000-20000
 
-For iptables, Firewall Builder generates the following command for this rule:
+For iptables, FirewallFabrik generates the following command for this rule:
 
 .. code-block:: text
 
@@ -431,12 +395,12 @@ For iptables, Firewall Builder generates the following command for this rule:
    $IPTABLES -t nat -A POSTROUTING -o eth+  -p tcp -m tcp  -s 172.16.22.0/24 \
        --sport 1024:65535  -d 192.168.2.10 -j SNAT --to-source :10000-20000
 
-This rule matches source port range "1024-65535" and original destination address 192.168.2.10 and only translates source ports to the range 10000-20000. Firewall Builder generated a SNAT rule because the object in the Translated Source requested a change in the source port range. If this object had zeros in the source port range but defined some non-zero destination port range, the program would have generated a DNAT rule to translate destination ports.
+This rule matches source port range "1024-65535" and original destination address 192.168.2.10 and only translates source ports to the range 10000-20000. FirewallFabrik generated a SNAT rule because the object in the Translated Source requested a change in the source port range. If this object had zeros in the source port range but defined some non-zero destination port range, the program would have generated a DNAT rule to translate destination ports.
 
 Load Balancing NAT Rules
 ''''''''''''''''''''''''
 
-Many firewall platforms can use NAT to perform simple load balancing of outgoing sessions across a pool of IP addresses. To set this up in Firewall Builder, we start with an address range object:
+Many firewall platforms can use NAT to perform simple load balancing of outgoing sessions across a pool of IP addresses. To set this up in FirewallFabrik, we start with an address range object:
 
 .. figure:: img/nat-address-range-object.png
    :alt: Address range object for load balancing
@@ -459,25 +423,6 @@ Here is what we get for the iptables firewall:
    $IPTABLES -t nat -A POSTROUTING -o eth+  -s 172.16.22.0/24 \
        -j SNAT --to-source 192.0.2.10-192.0.2.20
 
-In case of PIX, fwbuilder builds complex global pool to reflect requested address range:
-
-.. code-block:: text
-
-   ! Rule  0 (NAT)
-   !
-   global (outside) 1 192.0.2.10-192.0.2.20 netmask 255.255.255.0
-   access-list id54756X30286.0 permit ip 172.16.22.0 255.255.255.0   any
-   nat (inside) 1 access-list id54756X30286.0 tcp 0 0
-
-For PF, compiler converted range 192.0.2.10-192.0.2.20 to the minimal set of subnets and produced the following configuration line:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat proto {tcp udp icmp} from 172.16.22.0/24 to any -> \
-       { 192.0.2.10/31 , 192.0.2.12/30 , 192.0.2.16/30 , 192.0.2.20 }
-
 It is possible to use a network object of smaller size in Translated Source which is equivalent to using a small address range:
 
 .. figure:: img/nat-network-object-small.png
@@ -492,30 +437,7 @@ We can use it in the rule just like the range object:
 
    Network object used in NAT rule for load balancing
 
-This yields for PF:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat proto {tcp udp icmp} from 172.16.22.0/24 to any -> 192.0.2.0/27
-
 Unfortunately, the smaller network object in Translated Source is not supported for iptables because in iptables, SNAT target can only accept a single IP address or a range of addresses, but not a subnet specification.
-
-PF supports different modes of load balancing for rules like this. To add configuration parameters that control this, open the NAT rule options dialog by double-clicking in the "Options" column of the NAT rule:
-
-.. figure:: img/nat-pf-pool-type-options.png
-   :alt: PF pool type options for NAT rule
-
-   PF pool type options for NAT rule
-
-When the "source-hash" option is checked, the generated command becomes
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat proto {tcp udp icmp} from 172.16.22.0/24 to any -> 192.0.2.0/27 source-hash
 
 Destination Address Translation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -543,7 +465,7 @@ Rule #0 in Figure 7.24 has limited scope because of the service object "http" in
 
    Translations done to packets going in different directions: (A) when firewall object is used in ODst in the NAT rule and (B) when interface eth1 is used in ODst in the NAT rule
 
-Examples of Destination Address Translation Rules in Firewall Builder
+Examples of Destination Address Translation Rules in FirewallFabrik
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This section demonstrates examples of NAT rules that manipulate the destination address and ports of packets.
@@ -587,7 +509,7 @@ Both NAT rules demonstrated in this example provide translation for the destinat
 
 You always need a combination of the NAT rule and a policy rule to do both address translation and then permit the translated packet.
 
-Here is what Firewall Builder generates for iptables using these NAT and policy rules:
+Here is what FirewallFabrik generates for iptables using these NAT and policy rules:
 
 .. code-block:: text
 
@@ -601,93 +523,19 @@ Here is what Firewall Builder generates for iptables using these NAT and policy 
    $IPTABLES -A FORWARD  -i + -p tcp -m tcp  -m multiport  -d 172.16.22.100 \
        --dports 21,25  -m state --state NEW  -j ACCEPT
 
-For PF:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   #
-   rdr on eth0 proto tcp from any to 192.0.2.1 port 21 -> 172.16.22.100 port 21
-   rdr on eth0 proto tcp from any to 192.0.2.1 port 25 -> 172.16.22.100 port 25
-
-   # Rule  0 (global)
-   #
-   #
-   pass in quick inet proto tcp  from any  to 172.16.22.100 port { 21, 25 }
-
-These are rather standard destination translation rules. Let's see what Firewall Builder generates for the same rules in the GUI when target firewall platform is set to "PIX":
-
-.. code-block:: text
-
-   class-map inspection_default
-     match default-inspection-traffic
-
-   policy-map global_policy
-     class inspection_default
-       inspect ftp
-       inspect esmtp
-
-   service-policy global_policy global
-
-   clear config access-list
-   clear config object-group
-   clear config icmp
-   clear config telnet
-   clear config ssh
-
-   object-group service outside.id13228X30286.srv.tcp.0 tcp
-    port-object eq 21
-    port-object eq 25
-    exit
-
-   ! Rule  0 (global)
-   !
-   !
-   access-list outside_acl_in  remark 0 (global)
-   access-list outside_acl_in permit tcp any host 172.16.22.100 object-group
-       outside.id13228X30286.srv.tcp.0
-   access-list inside_acl_in  remark 0 (global)
-   access-list inside_acl_in permit tcp any host 172.16.22.100 object-group
-       outside.id13228X30286.srv.tcp.0
-   access-list dmz50_acl_in  remark 0 (global)
-   access-list dmz50_acl_in permit tcp any host 172.16.22.100 object-group
-       outside.id13228X30286.srv.tcp.0
-
-
-   access-group dmz50_acl_in in interface dmz50
-   access-group inside_acl_in in interface inside
-   access-group outside_acl_in in interface outside
-
-   ! NAT compiler errors and warnings:
-   !
-
-   clear xlate
-   clear config static
-   clear config global
-   clear config nat
-   !
-   ! Rule  0 (NAT)
-   !
-   !
-   access-list id13242X30286.0 permit tcp host 172.16.22.100   eq 21 any
-   static (inside,outside) tcp interface 21  access-list id13242X30286.0 tcp 0 0
-   access-list id13242X30286.1 permit tcp host 172.16.22.100   eq 25 any
-   static (inside,outside) tcp interface 25  access-list id13242X30286.1 tcp 0 0
-
-PIX configuration is considerably more complex. First, protocol inspectors have been activated to set up protocol support. TCP ports were arranged in an object group that is then used in all rules. Access lists were created and attached to all interfaces with "access-group" commands. Destination address translation in PIX configuration is done using "static" commands, which use small access lists to match packets that should be translated. All of this, however, was generated from exactly the same rules and objects in the GUI. All we did is change the firewall platform in the firewall object dialog and make sure network zones and security levels were configured properly. We did not have to configure two interfaces for each NAT rule for PIX: Firewall Builder automatically determined which interfaces it should use for the "static" command.
+These are rather standard destination translation rules.
 
 Configuring NAT for the Server Using a Dedicated Public IP Address
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Suppose for some reason you do not want to add an address that should be used for NAT to an interface of the firewall. You can use any address object in the "Original Destination" even if this address object is not attached to the interface of the firewall. The problem with this is that the firewall must "own" public address used for NAT in order for it to answer ARP requests for this address from the upstream routers. If the firewall does not "own" the address and does not answer ARP requests, the router will not know where to send packets with this address in destination. To help you solve this problem, Firewall Builder can automatically add a virtual address to the firewall's interface when you use an address in a NAT rule. This is controlled by a checkbox Add virtual addresses for NAT in the "Script" tab of the firewall's platform "advanced" settings dialog. If this checkbox is turned on, and you use an address object that does not belong to any interface of the firewall, the program adds a code fragment to the generated script to create virtual address of the interface of the firewall to make sure NAT rule will work. If this is not the desired behavior, you can turn this automation off by unchecking this option.
+Suppose for some reason you do not want to add an address that should be used for NAT to an interface of the firewall. You can use any address object in the "Original Destination" even if this address object is not attached to the interface of the firewall. The problem with this is that the firewall must "own" public address used for NAT in order for it to answer ARP requests for this address from the upstream routers. If the firewall does not "own" the address and does not answer ARP requests, the router will not know where to send packets with this address in destination. To help you solve this problem, FirewallFabrik can automatically add a virtual address to the firewall's interface when you use an address in a NAT rule. This is controlled by a checkbox Add virtual addresses for NAT in the "Script" tab of the firewall's platform "advanced" settings dialog. If this checkbox is turned on, and you use an address object that does not belong to any interface of the firewall, the program adds a code fragment to the generated script to create virtual address of the interface of the firewall to make sure NAT rule will work. If this is not the desired behavior, you can turn this automation off by unchecking this option.
 
-If you use this feature, the NAT rules look exactly the same as shown above, except address objects are taken from the *Objects/Addresses* branch of the tree instead of the interfaces of the firewall. In case of iptables, generated script adds virtual addresses to the firewall with a label that starts with "FWB:" prefix. This helps the script identify and remove addresses it controls when you remove them in Firewall Builder GUI.
+If you use this feature, the NAT rules look exactly the same as shown above, except address objects are taken from the *Objects/Addresses* branch of the tree instead of the interfaces of the firewall. In case of iptables, generated script adds virtual addresses to the firewall with a label that starts with "FWB:" prefix. This helps the script identify and remove addresses it controls when you remove them in FirewallFabrik GUI.
 
 NAT Rules Using an Address of Dynamic External Interface
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-In all previous examples, the external interface of the firewall had a static IP address that was used in the destination address translation rules. But what if the address is dynamic and not known at the time when Firewall Builder processes rules? Let's see what happens.
+In all previous examples, the external interface of the firewall had a static IP address that was used in the destination address translation rules. But what if the address is dynamic and not known at the time when FirewallFabrik processes rules? Let's see what happens.
 
 Configuration of objects used in this example:
 
@@ -703,7 +551,7 @@ The only difference is that interface *eth0* of the firewall is dynamic and has 
 
    DNAT rule using dynamic interface
 
-Firewall Builder uses the method specific to the target firewall platform that allows it to use an interface with dynamic address in policy and NAT rules. For example, the iptables script generated by Firewall Builder includes a shell function that determines the address of an interface. This function is then used in the generated iptables commands:
+FirewallFabrik uses the method specific to the target firewall platform that allows it to use an interface with dynamic address in policy and NAT rules. For example, the iptables script generated by FirewallFabrik includes a shell function that determines the address of an interface. This function is then used in the generated iptables commands:
 
 .. code-block:: text
 
@@ -713,23 +561,6 @@ Firewall Builder uses the method specific to the target firewall platform that a
    #
    $IPTABLES -t nat -A PREROUTING  -p tcp -m tcp  -d $i_eth0 \
        --dport 80 -j DNAT --to-destination 172.16.22.100
-
-For PF, the dynamic interface syntax *(en0)* is used:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   rdr on en0 proto tcp from any to (en0) port 80 -> 172.16.22.100 port 80
-
-For PIX, Firewall Builder uses the ``interface`` clause in the ``static`` command which automatically refers to the address of the interface:
-
-.. code-block:: text
-
-   ! Rule  0 (NAT)
-   !
-   access-list id13242X30286.0 permit tcp host 172.16.22.100  eq 80 any
-   static (inside,outside) tcp interface 80  access-list id13242X30286.0 tcp 0 0
 
 Port Translation
 ''''''''''''''''
@@ -757,27 +588,10 @@ For iptables:
    $IPTABLES -t nat -A PREROUTING  -p tcp -m tcp  -d 192.0.2.1 \
        --dport 8080 -j DNAT --to-destination 172.16.22.100:80
 
-For PF:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   rdr on eth0 proto tcp from any to 192.0.2.1 port 8080 -> 172.16.22.100 port 80
-
-For PIX:
-
-.. code-block:: text
-
-   ! Rule  0 (NAT)
-   !
-   access-list id13242X30286.0 permit tcp host 172.16.22.100  eq 80 any
-   static (inside,outside) tcp 192.0.2.1 8080  access-list id13242X30286.0 tcp 0 0
-
 Routing Ruleset
 ---------------
 
-Though not strictly a firewall function, Firewall Builder also lets you configure the routing tables of Linux, BSD, Cisco ASA/PIX and Cisco IOS firewalls. Routing rules are ignored for other firewalls.
+Though not strictly a firewall function, FirewallFabrik also lets you configure the routing tables of Linux firewalls. Routing rules are ignored for other firewalls.
 
 Construct these rules the same way you construct access policy or NAT rules, by dragging the appropriate objects into the rules. When you run the compiled script on the target firewall, the routing rule set rules create static routes in the firewall.
 
@@ -787,11 +601,9 @@ Construct these rules the same way you construct access policy or NAT rules, by 
 
 .. warning::
 
-   RedHat seems to reset routing rules explicitly upon system startup. Therefore, it's hard to distinguish interface routes from routes set up by the user. On RedHat systems, you need to include the interface basic routing rules into your Firewall Builder routing setup.
+   Some Linux distributions reset routing rules explicitly upon system startup. If your distribution does this, you need to include the interface basic routing rules in your FirewallFabrik routing setup.
 
-   **IF YOU DO NOT FOLLOW THIS HINT, YOUR MACHINE WILL FREEZE ANY NETWORK TRAFFIC UPON START OF THE FIREWALL SCRIPT.** This means, for example, if eth0 has network 192.168.3.0/24 attached to it, you need to add a route with Destination=Network(192.168.3.0/24), Gateway empty, and Interface=eth0.
-
-   This problem was encountered on RedHat 8.0, but other versions and distributions might be affected too. (Debian sarge and SuSE Linux work fine without interface routing rules being included in Firewall Builder routing rules.)
+   **IF YOU DO NOT FOLLOW THIS HINT, YOUR MACHINE MAY LOSE NETWORK CONNECTIVITY UPON START OF THE FIREWALL SCRIPT.** This means, for example, if eth0 has network 192.168.3.0/24 attached to it, you need to add a route with Destination=Network(192.168.3.0/24), Gateway empty, and Interface=eth0.
 
 If you want to use ECMP (Equal Cost Multi Path) routing rules with your iptables-based firewall, make sure your kernel is compiled with the ``CONFIG_IP_ROUTE_MULTIPATH`` option. See `ECMP routes`_ for instructions on creating multiple paths to a destination.
 
@@ -816,7 +628,7 @@ The routing rule contains the following elements:
 
 * **Metric**
 
-  The metric of the route. The default metric for PIX is 1, so a "0" in a rule is automatically changed to 1 at compilation. This option is not available for BSD firewalls.
+  The metric of the route. This option is not available for BSD firewalls.
 
 * **Comment**
 
@@ -826,9 +638,9 @@ The routing rule contains the following elements:
 Handling of the Default Route
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-"Default route" is special in that it is critical for your ability to access the firewall machine when it is managed remotely. To make sure you do not cut off access accidentally by not adding default to the routing rules in Firewall Builder, Firewall Builder treats the default route in a special way.
+"Default route" is special in that it is critical for your ability to access the firewall machine when it is managed remotely. To make sure you do not cut off access accidentally by not adding default to the routing rules in FirewallFabrik, FirewallFabrik treats the default route in a special way.
 
-If the default route is configured in the routing rule set in Firewall Builder, then the default route found in the routing table is deleted and replaced with the one configured in Firewall Builder. However, if there is no default route in the routing rule set in Firewall Builder configuration, then the original default route found in the routing table is not deleted.
+If the default route is configured in the routing rule set in FirewallFabrik, then the default route found in the routing table is deleted and replaced with the one configured in FirewallFabrik. However, if there is no default route in the routing rule set in FirewallFabrik configuration, then the original default route found in the routing table is not deleted.
 
 Additionally, the script checks if the installation of routing entries was successful and rolls changes back in case of errors. This ensures that the firewall machine will not be left with no default route and therefore no way to access it remotely.
 
@@ -836,7 +648,7 @@ Additionally, the script checks if the installation of routing entries was succe
 ECMP routes
 ~~~~~~~~~~~
 
-Firewall Builder supports ECMP routes in Linux-based firewalls using iptables. To create an ECMP rule simply specify several rules with different paths (i.e., different combinations of Gateway and Interface, for the same Destination and with the same metric).
+FirewallFabrik supports ECMP routes in Linux-based firewalls using iptables. To create an ECMP rule simply specify several rules with different paths (i.e., different combinations of Gateway and Interface, for the same Destination and with the same metric).
 
 In this example, there are three different paths to HostA.
 
@@ -1019,9 +831,9 @@ Rule options and log settings are described in detail in `Options and Logging`_.
 Configuring Multiple Operations per Rule
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Suppose you have a scenario where you want the firewall to perform a number of operations on packets that match a particular firewall rule. For example, you might want packets matching the rule to be marked (tagged), classified and then accepted. Instead of defining multiple single-action rules to accomplish this behavior, Firewall Builder allows you to combine a set of rule options with an action in a single rule. The ability to specify multiple operations for a single rule helps keep the number of required rules to a minimum, and keeps your rule set simpler and more readable.
+Suppose you have a scenario where you want the firewall to perform a number of operations on packets that match a particular firewall rule. For example, you might want packets matching the rule to be marked (tagged), classified and then accepted. Instead of defining multiple single-action rules to accomplish this behavior, FirewallFabrik allows you to combine a set of rule options with an action in a single rule. The ability to specify multiple operations for a single rule helps keep the number of required rules to a minimum, and keeps your rule set simpler and more readable.
 
-Some target firewall platforms, such as PF, natively support performing multiple operations per rule. Other firewall platforms, such as iptables, do not explicitly support configuring multiple operations per rule. For these platforms, Firewall Builder automatically transforms the configured policy into however many rules are required by the target platform.
+For iptables, which does not explicitly support configuring multiple operations per rule, FirewallFabrik automatically transforms the configured policy into however many rules are required by the target platform.
 
 
 Configuring an iptables rule to Accept and Classify
@@ -1067,74 +879,6 @@ Using the :doc:`10 - Compiling and Installing` feature you can see that this rul
    # Allow SSH to server
    $IPTABLES -t mangle -A POSTROUTING -p tcp -m tcp -d 192.168.2.10 --dport 22 -m state \
    --state NEW  -j CLASSIFY --set-class 1:20
-
-
-Configuring a PF rule to Tag packets
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In this example traffic matching a rule on a PF firewall should be tagged with a tag value that identifies that the traffic is from an internal network that entered the firewall inbound on its internal (em1) network interface.
-
-First, a TagService object needs to be created that will identify the tag value that should be applied to the matching traffic. In this case the tag value will be set to "Internal_Net".
-
-1. In the object tree right-click on the TagServices folder and select New TagService
-
-2. Enter a name for the TagService object
-
-3. Enter the tag value that should be applied, in this case "Internal_Net"
-
-The TagService should look like the figure below.
-
-.. figure:: img/policy-tagservice-settings.png
-   :alt: TagService object settings
-
-   TagService object settings
-
-Next, the rule shown below matches the internal network traffic inbound on networking interface em1 needs to be created.
-
-.. note::
-
-   If we set the Action to Accept for this rule the packets will be tagged, but they will also be accepted and no other rules will be processed. To tag the packets, but have the firewall continue processing the packets against additional rules we need to set the Action to Continue.
-
-   Using the Continue action will allow you to define rules farther down in the policy that make use of the tag. Depending on the version of PF that you are using, this will result in either "pass" or "match" rules being generated by Firewall Builder.
-
-.. figure:: img/policy-basic-rule-no-tag.png
-   :alt: Basic rule without tag being set
-
-   Basic rule without tag being set
-
-To set the tag value that will be added to packets that match this rule, do the following:
-
-1. Right-click on the Options column of the rule and select Rule Options
-
-2. Click on the Tag tab in the Editor panel at the bottom
-
-3. Drag-and-drop the TagService object created earlier from the object tree to the drop target in the Editor panel as shown below
-
-.. figure:: img/policy-tagservice-in-rule.png
-   :alt: Setting the TagService object to use in the rule
-
-   Setting the TagService object to use in the rule
-
-After the TagService object has been added to the rule, the final rule should look like the figure below.
-
-.. figure:: img/policy-completed-tag-rule.png
-   :alt: Completed tag rule for PF
-
-   Completed tag rule for PF
-
-Using the :doc:`10 - Compiling and Installing` feature you can see that this rule will result in the following PF command being generated.
-
-.. code-block:: text
-
-   # Tag internal traffic
-   pass in on em1 inet from 192.168.1.0/24 to any tag Internal_Net label "RULE 0 --  "
-
-On more recent versions of PF using the Continue Action in a rule will result in the "match" keyword being used. Here's an example of the same rule from above, but with a configuration generated for a firewall that is running PF 4.7.
-
-.. code-block:: text
-
-   # Tag internal traffic
-   match in on em1 inet from 192.168.1.0/24 to any tag Internal_Net no state label "RULE 0 -- "
 
 
 Using Rule Groups
@@ -1228,7 +972,7 @@ You can modify a rule group after you have created it. Options are as follows:
 Support for Rule Elements and Features on Various Firewalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Certain fields in the rules are only available if the target firewall platform supports them. For example, the iptables firewall provides controls for logging of matched packets, while Cisco PIX does not; PIX always logs every packet it drops. Where possible, the policy compiler tries to emulate the missing feature. For example, OpenBSD PF does not support negation natively, but the policy compiler provides a workaround and tries to emulate this feature for PF. Another example is policy rules with "Outbound" direction. Cisco PIX supports only inbound access lists, so the policy compiler emulates outbound Access Lists while generating configuration for PIX. The table below represents a list of fields in the rules and which firewall platforms support them. Information about these fields and features is available for Firewall Builder GUI that disables corresponding menu items and hides associated policy elements when they are not supported.
+Certain fields in the rules are only available if the target firewall platform supports them. For example, the iptables firewall provides controls for logging of matched packets. Where possible, the policy compiler tries to emulate the missing feature. The table below represents a list of fields in the rules and which firewall platforms support them. Information about these fields and features is available for FirewallFabrik GUI that disables corresponding menu items and hides associated policy elements when they are not supported.
 
 .. list-table:: Rule Features Available on Different Platforms
    :header-rows: 1
@@ -1256,43 +1000,20 @@ Certain fields in the rules are only available if the target firewall platform s
      - \+
      - \+
      - \+
-   * - ipfilter
-     - \+
-     - \+
-     - \+
-     - \-
-     - \+
-     - \+
-     - \+
-     - \+
-     - \+
-     - \-
-   * - pf
-     - \+
-     - \+
-     - \+
-     - \-
+   * - nftables
      - \+
      - \+
      - \+
      - \+
      - \+
      - \+
-   * - Cisco PIX
      - \+
      - \+
      - \+
-     - \-
      - \+
-     - \+
-     - \-
-     - \+
-     - \-
-     - \-
 
 
 Compiling and Installing Your Policy
 -------------------------------------
 
 See :doc:`10 - Compiling and Installing` for full details on compiling and installing your firewall policy.
-

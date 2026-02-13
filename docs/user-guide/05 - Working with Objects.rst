@@ -2,7 +2,7 @@ Working with Objects
 ====================
 
 .. sectnum::
-   :start: 1
+   :start: 5
 
 .. contents::
    :local:
@@ -12,16 +12,16 @@ Working with Objects
 Types of Objects
 ----------------
 
-Firewall Builder supports a variety of object types, both simple and complex. Simple object types include Address, Network, Host, and IP, TCP, UDP and ICMP service objects. More complex object types are Firewall, Address Table, DNS Name, and User Service.
+FirewallFabrik supports a variety of object types, both simple and complex. Simple object types include Address, Network, Host, and IP, TCP, UDP and ICMP service objects. More complex object types are Firewall, Address Table, DNS Name, and User Service.
 
-There are the following types of objects in Firewall Builder:
+There are the following types of objects in FirewallFabrik:
 
 * Addressable objects: Section 5.2 describes objects that have, either directly or indirectly, an address of some kind. This category includes the physical objects (firewalls, hosts, interfaces) as well as some logical objects (networks, address ranges, individual addresses). Addressable objects can be grouped together into Object groups.
 * Service objects: Section 5.3 describes objects that represent services. They include IP, TCP, UDP, and ICMP services, as well as user services. Service objects can be grouped together into Service groups.
 * Time Interval objects: Described in Section 5.4, these represent a discreet or recurring period of time. They can be used as part of a rule in the firewall. For example, you could have a rule that matches on weekends, but not during the week.
 * Rule set objects: Described in Section 5.2.4, these represent the various rule sets in a firewall. By default, a firewall starts with one access policy, one NAT, and one routing rule set, but you can add more of each. Rule set objects only exist as child objects of a firewall.
 
-All objects in Firewall Builder have some characteristics in common.
+All objects in FirewallFabrik have some characteristics in common.
 
 All objects have a Name field and a Comment field. The Name field can contain white spaces and can be arbitrarily long (though shorter names work better in the GUI). The Comment field can contain any text of any length.
 
@@ -45,11 +45,11 @@ A firewall object represents a real firewall device in your network. This firewa
 
 By default, a firewall has one Policy rule set, one NAT rule set, and one routing rule set. However, you can create more than one rule set of each type for a firewall. On the other hand, you don't have to populate all the default rule sets. You can, for example, create a Policy rule set and leave the NAT and Routing rule sets empty. Section 7.1 explains more about policies and rule sets.
 
-To speed up the creation of a firewall object, Firewall Builder has a wizard that walks you through creating the object. The wizard has three options for creating a firewall object:
+To speed up the creation of a firewall object, FirewallFabrik has a wizard that walks you through creating the object. The wizard has three options for creating a firewall object:
 
-* From a template: Firewall Builder comes with several pre-defined templates. You can use these to create a firewall that is close to your configuration, then modify it to fit your needs.
+* From a template: FirewallFabrik comes with several pre-defined templates. You can use these to create a firewall that is close to your configuration, then modify it to fit your needs.
 * Manually: You can provide interface IP address, subnet mask, gateway, and other parameters manually. You can add this information when you create the firewall, or you can add it later. Section 5.2.2.1 describes this process.
-* Using SNMP: Firewall Builder uses SNMP queries to learn about the network. Section 5.2.2.3 describes this process.
+* Using SNMP: FirewallFabrik uses SNMP queries to learn about the network. Section 5.2.2.3 describes this process.
 
 
 Creating a Firewall Object Manually
@@ -85,8 +85,8 @@ To add an IP address to the interface, click in the table cell in the "Address" 
 
 The following elements are available on this page of the wizard:
 
-* Name: The name of the interface object in Firewall Builder must match exactly the name of the interface of the firewall machine it represents. This will be something like "eth0", "eth1", "en0", "br0", and so on.
-* Label: On most OSs this field is not used and serves the purpose of a descriptive label. On the Cisco PIX, however, the label is mandatory, and must reflect the network topology. Firewall Builder GUI uses the label, if it is not blank, to label interfaces in the tree. One of the suggested uses for this field is to mark interfaces to reflect the network topology ("outside" or "inside", for example) or interface purpose ("web frontend" or "backup subnet", for example).
+* Name: The name of the interface object in FirewallFabrik must match exactly the name of the interface of the firewall machine it represents. This will be something like "eth0", "eth1", "en0", "br0", and so on.
+* Label: This field serves the purpose of a descriptive label. FirewallFabrik GUI uses the label, if it is not blank, to label interfaces in the tree. One of the suggested uses for this field is to mark interfaces to reflect the network topology ("outside" or "inside", for example) or interface purpose ("web frontend" or "backup subnet", for example).
 * MAC: If you like, you can also specify the interface physical address. The MAC address is not necessary, but it can be used to prevent spoofing. If the feature is turned on and available, the firewall only accepts packets from the given IP address if the MAC address matches the one specified. Section 5.2.9.1 has more information.
 * Interface type: Indicates the type of interface. Section 5.2.5 explains the interface types in more detail. Briefly, though, a Regular interface has a static IP addresses, a Dynamic address interface has a dynamic address provided by something like DHCP, an Unnumbered interface never has an IP address (a PPPoE connection, for example), and a Bridge port is an interface that is bridged in the firewall.
 * Comment: free-form text field used for the comment.
@@ -108,14 +108,14 @@ Another method you can use to create new firewall object is based on the use of 
 .. figure:: img/obj-preconfigured-firewall-templates.png
    :alt: List of preconfigured firewall templates
 
-The program comes with several template objects. These include firewalls with two or three interfaces, a couple of firewall configurations intended for a server with one interface, templates for OpenWRT, DD-WRT, and IPCOP firewalls, and a Cisco router. Each template is configured with IP addresses and basic rules. Some templates assume all interfaces have static IP addresses, while other assume some interfaces have dynamic addresses. These template objects are intended to be a start, something you can and should edit and modify to match your network configuration and security policy.
+The program comes with several template objects. These include firewalls with two or three interfaces and a couple of firewall configurations intended for a server with one interface. Each template is configured with IP addresses and basic rules. Some templates assume all interfaces have static IP addresses, while others assume some interfaces have dynamic addresses. These template objects are intended to be a starting point that you can and should edit and modify to match your network configuration and security policy.
 
 Choose the template that is closest to your configuration and click Next.
 
 .. figure:: img/obj-editing-template-interfaces.png
    :alt: Editing addresses of interfaces of a new firewall created from a template
 
-This page of the wizard allows you to change IP addresses used in the template. This is a new feature in Release 4.0 relative to Release 3.0. You can add and remove addresses using the Add address and Remove buttons. Since configuration of the template object depends on its interfaces, the dialog does not let you add or remove interfaces for objects created from a template. Each interface is represented by a tab in the tabbed widget; you can switch between them clicking the tabs with the interface names. Section 5.2.2.1 lists all elements of this page of the dialog and explains their purpose.
+This page of the wizard allows you to change IP addresses used in the template. You can add and remove addresses using the Add address and Remove buttons. Since configuration of the template object depends on its interfaces, the dialog does not let you add or remove interfaces for objects created from a template. Each interface is represented by a tab in the tabbed widget; you can switch between them clicking the tabs with the interface names. Section 5.2.2.1 lists all elements of this page of the dialog and explains their purpose.
 
 Each template firewall object comes preconfigured with some basic rules that use the firewall object, its interfaces, and network objects that represent subnets attached to interfaces. If you change addresses of interfaces in this page of the wizard, the program automatically finds all network objects used in the template rules matching old addresses and replaces them with new network objects representing subnets with addresses you entered in the wizard. This feature saves you from having to find and replace these objects manually.
 
@@ -148,7 +148,7 @@ When configuration of all interfaces is correct, click Finish to create the new 
 Editing a Firewall Object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The firewall object represents the firewall machine and is the most complex object in Firewall Builder. It has three sets of controls that you can modify, not including the policy rule sets. All these controls become available when you double-click the firewall object in the tree.
+The firewall object represents the firewall machine and is the most complex object in FirewallFabrik. It has three sets of controls that you can modify, not including the policy rule sets. All these controls become available when you double-click the firewall object in the tree.
 
 .. figure:: img/obj-firewall-controls.png
    :alt: Firewall controls
@@ -208,7 +208,7 @@ Using this menu option or toolbar button opens a wizard that guides you through 
 .. figure:: img/obj-cluster-wizard-members.png
    :alt: Using the wizard to choose firewall cluster members
 
-Another method is to select two or more firewall objects that are to become cluster members, then right-click and select the "New cluster from selected firewalls" menu item. You can select two or more objects in the tree by clicking the object while holding the "Ctrl" key ("Cmd" on the Macintosh).
+Another method is to select two or more firewall objects that are to become cluster members, then right-click and select the "New cluster from selected firewalls" menu item. You can select two or more objects in the tree by clicking the object while holding the Ctrl key.
 
 .. figure:: img/obj-cluster-right-click-menu.png
    :alt: Using the right-click menu to choose firewall cluster members
@@ -221,10 +221,10 @@ Using the right-click options launches the same wizard, but the list on its firs
 Reducing the number of firewall objects displayed in the wizard can be helpful when you have many of firewall objects defined in the object tree.
 
 * The program guides you through the process of creating new cluster objects using a wizard-like dialog. You start with the list of firewall objects where you choose which firewalls should become members of the cluster. Next, the program finds interfaces of the member firewalls that have the same name and can be part of the cluster and creates cluster interfaces with the same name. Not all interfaces are eligible: for example, bridge ports, bonding interface slaves, and parents of VLAN interfaces cannot be used for the cluster. Cluster interfaces define failover groups. You can add, remove, or rename cluster interfaces, as well as change which interfaces of the member firewalls are used with each one. On the next page of the wizard you can change failover protocols and add, remove, or change IP addresses of cluster interfaces. Not all failover protocols require IP addresses: for example, VRRP or CARP do but heartbeat or OpenAIS do not. Finally, you can choose to use policy and NAT rules of one of the member firewalls to populate policy and NAT rule sets of the new cluster. If you do this, all references to the original member firewall and its interfaces in rules are replaced with references to the cluster and its interfaces. The program also creates backup copies of the member firewall objects with the name with suffix "-bak" and clears policy and NAT rule sets of the member firewall objects used with the cluster before the new cluster is created.
-* OpenBSD or FreeBSD clusters are assigned with CARP interfaces. Name them "carp0", "carp1", and so on (or whatever indexes the addresses are assigned on your machines). You can add the CARP password and ID at the same time or you can add them later.
-* If you use heartbeat or OpenAIS (on Linux) for failover, cluster interfaces should have the same names as the corresponding member firewall interfaces. In this case, cluster interfaces are virtual entities that represent interfaces of the corresponding member firewalls. The program makes the necessary substitutions when it compiles the rules. This is also how PIX failover configuration works.
+* If you use VRRP for failover, cluster interfaces are assigned virtual IP addresses. You can add the VRRP settings at the same time or add them later.
+* If you use heartbeat or Corosync for failover, cluster interfaces should have the same names as the corresponding member firewall interfaces. In this case, cluster interfaces are virtual entities that represent interfaces of the corresponding member firewalls. The program makes the necessary substitutions when it compiles the rules.
 * Each cluster interface has a child "Failover group" object with the name "firewall:carp0:members", or similar. This is the object where you configure associated member firewall interfaces. Double-click this object in the tree and then click "Manage Members" button in the dialog. Select interfaces of the member firewalls in the panel on the left-and side and click the Arrow button to add them to the list on the right. Use the checkbox to select the master. Click OK when done. The platform and host OS of the cluster object and members must match, otherwise firewall objects do not appear in the "members" dialog panel.
-* Besides interfaces, the Cluster object has a new child object "State Sync Group". This group represents state synchronization protocol. Currently *pfsync* is supported for OpenBSD and *conntrackd* for Linux. To configure, double-click this object in the tree to open it in the dialog and click "Manage Members". Select the interfaces of the member firewalls in the panel on the left hand side and click the Arrow button to add them to the list on the right. Use the checkbox to select the master. Click OK when done. The new objects should appear in the "members" table in the State Sync Group dialog. The platform and host OS of the cluster object and members must match, otherwise firewall objects do not appear in the "members" dialog panel.
+* Besides interfaces, the Cluster object has a new child object "State Sync Group". This group represents state synchronization protocol. Currently *conntrackd* is supported for Linux. To configure, double-click this object in the tree to open it in the dialog and click "Manage Members". Select the interfaces of the member firewalls in the panel on the left hand side and click the Arrow button to add them to the list on the right. Use the checkbox to select the master. Click OK when done. The new objects should appear in the "members" table in the State Sync Group dialog. The platform and host OS of the cluster object and members must match, otherwise firewall objects do not appear in the "members" dialog panel.
 * The "Edit protocol parameters" button allows you to edit some parameters for the chosen failover protocol. This is how you configure an address and port for heartbeat and OpenAIS.
 * There are few additional checkboxes in the "Script" tab of the firewall object dialog. These allow you to control whether the program add shells commands for creating and configuring bonding, bridge, and VLAN interfaces.
 * Compile by right-clicking the cluster object and selecting "Compile". This compiles each member firewall separately, resulting in .fw and .conf files for both of them.
@@ -236,9 +236,7 @@ Reducing the number of firewall objects displayed in the wizard can be helpful w
   * Create a rule with action "Branch" in the main Policy or NAT rule set of the cluster, drag rule set object "member_override" that belongs to the cluster to the well in the Branch action parameters dialog.
   * Leave "member_override" rule set that is a child of the cluster object empty (no rules)
   * Add rules to the rule set "member_override" in each member firewall
-  * Make sure rule set "member_override" is not marked as "Top ruleset" in the cluster and each member. This rule set translates into user-defined chain (iptables) or anchor (PF) and should not be the "top ruleset".
-
-  This method works for both policy and NAT rules for all platforms.
+  * Make sure rule set "member_override" is not marked as "Top ruleset" in the cluster and each member. This rule set translates into a user-defined chain (iptables) and should not be the "top ruleset".
 
 
 Editing Rule Set Objects
@@ -248,7 +246,7 @@ Firewalls and clusters can have one or more of the following types of rule sets:
 
 Rule sets are child objects of a firewall object. They cannot stand alone.
 
-As objects, rule sets have parameters. In Firewall Builder, rule sets have the following parameters:
+As objects, rule sets have parameters. In FirewallFabrik, rule sets have the following parameters:
 
 * Name: The name of the rule set. If you only have one of each type of rule set, you can leave this at its default.
 * Rule set family: This pull-down menu lets you specify whether policy compiler should treat the rule set as an IPv4 rule set, an IPv6 rule set, or a combined rule set. If set to IPv4, then only IPv4 rules are processed and IPv6 rules are ignored. The opposite is true if you specify an IPv6 rule set. If you select This is combined IPv4 and IPv6 rule set, then the compiler processes both types of rules and places them into the appropriate places in the install script.
@@ -275,77 +273,37 @@ The dialog for the interface object that belongs to the firewall or host provide
 
    Figure 5.19. Interface Object
 
-* **Name:** The name of the interface object in Firewall Builder must match exactly the name of the interface of the firewall machine it represents. This will be something like "eth0", "eth1", "en0", "br0", and so on.
+* **Name:** The name of the interface object in FirewallFabrik must match exactly the name of the interface of the firewall machine it represents. This will be something like "eth0", "eth1", "en0", "br0", and so on.
 
-* **Label:** On most OSs this field is not used and serves the purpose of a descriptive label. Firewall Builder GUI uses a label, if it is not blank, to show interfaces in the tree. One of the suggested uses for this field is to mark interfaces to reflect the network topology (for example, "outside," "inside") or the purpose ("web frontend" or "backup subnet"). The label is mandatory for Cisco PIX though, where it must reflect the network topology.
+* **Label:** This field serves the purpose of a descriptive label. FirewallFabrik GUI uses the label, if it is not blank, to show interfaces in the tree. One of the suggested uses for this field is to mark interfaces to reflect the network topology (for example, "outside," "inside") or the purpose ("web frontend" or "backup subnet").
 
-* **Management interface:** When a firewall has several network interfaces, one of them can be marked as the "management interface". The management interface is used for all communication between Firewall Builder and the firewall. For example, the built-in policy installer uses the address of the management interface to connect to the firewall via SSH when it copies a generated script or configuration file. (This object applies to firewall objects only.)
+* **Management interface:** When a firewall has several network interfaces, one of them can be marked as the "management interface". The management interface is used for all communication between FirewallFabrik and the firewall. For example, the built-in policy installer uses the address of the management interface to connect to the firewall via SSH when it copies a generated script or configuration file. (This object applies to firewall objects only.)
 
 * **External interface (insecure):** Marks an interface that connects to the Internet, or to an area that is outside the network protected by the firewall. (This obect applies to firewall objects only.)
 
-* **Unprotected interface:** Marks interface to which Firewall Builder should not assign any access lists or firewall rules. Unprotected interfaces are recognized by policy compilers for Cisco IOS access lists and PF. Compiler for IOS ACL just skips unprotected interfaces and does not assign any ACL. The compiler for PF generates a "set skip on" clause for unprotected interfaces. (This obect applies to firewall objects only.)
+* **Unprotected interface:** Marks interface to which FirewallFabrik should not assign any firewall rules. The policy compiler skips unprotected interfaces and does not generate rules for them. (This object applies to firewall objects only.)
 
 * **Regular Interface:** Use this option if the interface has an IP address assigned to it manually (static IP address).
 
-* **Address is assigned dynamically:** Use this option if the interface has a dynamic address (obtained by means of DHCP or PPP or another protocol). In this case, an address is unknown at the moment when Firewall Builder generates the firewall policy. Some firewalls allow for using the interface name in the policy instead of its IP address; the firewall engine then picks an address either when the policy is activated or even at run-time. Some other firewalls support special syntax for rules that are supposed to match packets headed to or from the firewall machine. Examples of these two cases are OpenBSD PF and Netfilter. PF rules can be constructed using interface names; PF automatically uses the current interface address when it loads rules into the memory. Netfilter supports special "chains" called "INPUT" and "OUPUT" that are guaranteed to inspect only packets destined for the firewall machine ("INPUT") or originated on it ("OUTPUT"). Both methods allow Firewall Builder to build correct firewall policy rules that affect the interface with a dynamic IP address; however, the interface must be marked as such for the policy compiler to use proper technique depending on the target firewall platform. In cases where the rule has to use actual IP address of the interface (for example, anti-spoofing rules), the compiler emulates this feature by adding a shell script fragment to determine the address at the time when firewall script is executed and then uses the address in rules. Such emulation is only possible on platforms where firewall configuration is in the form of the shell script; most notably, an iptables script on Linux.
+* **Address is assigned dynamically:** Use this option if the interface has a dynamic address (obtained via DHCP, PPP, or another protocol). In this case, the address is unknown at the moment when FirewallFabrik generates the firewall policy. Netfilter supports special chains called "INPUT" and "OUTPUT" that are guaranteed to inspect only packets destined for the firewall machine ("INPUT") or originated on it ("OUTPUT"). This allows FirewallFabrik to build correct firewall policy rules that affect the interface with a dynamic IP address; however, the interface must be marked as such for the policy compiler to use the proper technique. In cases where a rule requires the actual IP address of the interface (for example, anti-spoofing rules), the compiler adds a shell script fragment to determine the address at the time the firewall script is executed and then uses the address in rules.
 
-* **Unnumbered interface:** Use this option if the interface can never have an IP address, such as the Ethernet interface used to run PPPoE communication on some ADSL connections, or a tunnel endpoint interface. Although an unnumbered interface does not have an address, firewall policy rules or access lists can be associated with it.
+* **Unnumbered interface:** Use this option if the interface can never have an IP address, such as the Ethernet interface used to run PPPoE communication on some DSL connections, or a tunnel endpoint interface. Although an unnumbered interface does not have an address, firewall policy rules can be associated with it.
 
-* **Bridge port:** This option is used for a port of a bridged firewall. The compilers skip bridge ports when they pick interfaces to attach policy and NAT rules to. For target firewall platforms that support bridging and require special configuration parameters to match bridged packets, compilers use this attribute to generate a proper configuration. For example, in case of iptables, the compiler uses *-m physdev --physdev-in* or *-m physdev --physdev-out* for bridge port interfaces. (This obect applies to firewall objects only.)
+* **Bridge port:** This option is used for a port of a bridged firewall. The compiler skips bridge ports when picking interfaces to attach policy and NAT rules to. For iptables, the compiler uses *-m physdev --physdev-in* or *-m physdev --physdev-out* for bridge port interfaces. (This object applies to firewall objects only.)
 
-* **Security level:** Depending on the firewall platform, the security level is either *External/Internal* or a numeric value between 0 and 100, with 0 being least secure and 100 being most secure. This field in the GUI dialog automatically shows controls appropriate to the current firewall. Not all firewall support the concept of a security zone. (This obect applies to firewall objects only.)
-
-* **Network zone:** Used only with Cisco PIX (ASA). The Network zone drop-down list shows all network objects and groups of addresses and networks present in the tree. Choose one of them to tell the compiler which networks and blocks of addresses can be reached through this interface. Usually the external interface (the one that connects your firewall to the Internet) has the Network Zone set to *Any*. It is also recommended that you create a group of objects to represent Network Zones for all other interfaces on the firewall. The compiler uses this information to decide which interface each ACL rule should be associated with based on the addresses used in the destination of the rule. (This obect applies to firewall objects only.)
+* **Security level:** The security level is either *External* or *Internal*. This helps the compiler distinguish between trusted and untrusted interfaces. (This object applies to firewall objects only.)
 
 
-More about Security Levels and Network Zones
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+More about Security Levels
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Consider the network layout as in Figure 5.20.
-
-.. figure:: img/obj-network-zones-diagram.png
-   :alt: Choosing Network Zones
-
-   Figure 5.20. Choosing Network Zones
-
-In this example, the firewall has three interfaces: "outside," "dmz," and "inside." Behind the firewall, there is a router which in turn is connected to three subnets: "subnet A," "subnet B," and "subnet C." Subnet A is shared between the router and the firewall (each device has an interface on this subnet). Let's suppose we have created Network objects for each subnet and called them "subnet DMZ," "subnet A," "subnet B" and "subnet C." (Recall that spaces are allowed in object names.) For this set-up, network zones should be configured as follows:
-
-===========  ==============================
-Interface    Network Zone
-===========  ==============================
-outside      *ANY*
-dmz          *subnet DMZ*
-inside       *subnet A, subnet B, subnet C*
-===========  ==============================
-
-Since the network zone for the *"inside"* interface consists of multiple objects, you must create a group so that you can use this group as a Network Zone object.
-
-Table 5.1 explains the differences in the way firewall platforms interpret values in the Security Level and Network Zone parameters of the firewall interfaces.
-
-.. table:: Table 5.1. Platform-Specific Interface Parameters
-
-   +--------------------+-------------------------------------+-----------------------------------+
-   | Firewall Platform  | Security Level Values               | Network Zone                      |
-   +====================+=====================================+===================================+
-   | iptables           | two values: "External" or "Internal"| N/A                               |
-   +--------------------+-------------------------------------+-----------------------------------+
-   | ipfilter           | two values: "External" or "Internal"| N/A                               |
-   +--------------------+-------------------------------------+-----------------------------------+
-   | pf                 | two values: "External" or "Internal"| N/A                               |
-   +--------------------+-------------------------------------+-----------------------------------+
-   | Cisco PIX          | numeric, 0 - 100                    | a reference to a group or network |
-   |                    |                                     | object                            |
-   +--------------------+-------------------------------------+-----------------------------------+
-
-Note that the "external" interface option may be deprecated in the future versions of the program.
-
-In PIX, access lists must always be attached to interfaces. The policy compiler for PIX uses information about the network zones of interfaces to decide which interface a rule should be associated with if its "Interface" column does not specify one (is left set to "All"). Instead of placing this rule in access lists attached to all interfaces, it compares addresses in the Source and Destination of the rule with network zones of interfaces and only uses interfaces that match. This helps generate a PIX configuration that is more compact.
+For iptables and nftables firewalls, the security level has two values: "External" or "Internal". Marking an interface as "External" tells the compiler that it faces an untrusted network (typically the Internet), while "Internal" indicates a trusted network. This distinction is used by the compiler when generating anti-spoofing and default policy rules.
 
 
 Using Interface Objects in Rules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Policy rules in Firewall Builder have a rule element called Interface. You can drag-and-drop, or copy/paste interface object into this column of a rule to make the firewall match not only the source and destination address and service, but also the interface of the firewall through which packets enter or exit. The direction of the packet is defined in column Direction. Consider the following example:
+Policy rules in FirewallFabrik have a rule element called Interface. You can drag-and-drop, or copy/paste interface object into this column of a rule to make the firewall match not only the source and destination address and service, but also the interface of the firewall through which packets enter or exit. The direction of the packet is defined in column Direction. Consider the following example:
 
 .. figure:: img/obj-rule-using-interface.png
    :alt: Rule Using an Interface Object
@@ -393,34 +351,7 @@ Here is what we get if we compile the same rules for PF:
    pass in    quick on en1 inet  from 172.16.22.0/24  to any keep state
    #
 
-For PF, the compiler generated a "block in log quick on eth0" clause to make the rule match interface and direction.
-
-In the case of Cisco IOS access lists, defining an interface in the rule makes the compiler place code generated for this rule into the ACL attached to the given interface. The compiler for IOS ACL always generates both inbound and outbound access lists for each interface, but if the rule specifies both interface and direction ("Inbound" or "Outbound"), the generated configuration goes only into the corresponding access list. Here is the output produced for the rules shown above for Cisco IOS ACL:
-
-.. code-block:: text
-
-   ip access-list extended inside_in
-   ! Rule  1 (eth1)
-   !
-     permit ip 172.16.22.0 0.0.0.255 any
-   exit
-
-   ip access-list extended outside_in
-   ! Rule  0 (eth0)
-   !
-     deny   ip host 192.0.2.1 any   log
-     deny   ip host 192.168.2.1 any  log
-     deny   ip 172.16.22.0 0.0.0.255 any  log
-   exit
-
-   interface FastEthernet1
-     ip access-group inside_in in
-   exit
-   interface FastEthernet0
-     ip access-group outside_in in
-   exit
-
-So far, the examples in this section have demonstrated how to use Interface objects to associate policy rules with interfaces so as to match packets crossing certain interface. An interface object can be used in the "source" and "destination" of rules just like any other addressable object. In this case, Firewall Builder replaces the interface object with the set of its addresses, picking only those addresses that match the address family (IPv4 or IPv6 or both) assigned to the rule set.
+So far, the examples in this section have demonstrated how to use Interface objects to associate policy rules with interfaces so as to match packets crossing certain interface. An interface object can be used in the "source" and "destination" of rules just like any other addressable object. In this case, FirewallFabrik replaces the interface object with the set of its addresses, picking only those addresses that match the address family (IPv4 or IPv6 or both) assigned to the rule set.
 
 For example, we start with a firewall configuration where interface eth1 has two IP addresses, one IPv4 and another is IPv6. Note that this could be a host object as well because interfaces can belong either to a Firewall or a Host object.
 
@@ -453,22 +384,6 @@ This policy rule set is configured as a mixed IPv4+IPv6 rule set. For iptables, 
    $IP6TABLES -A INPUT -p tcp -m tcp  -d fe80::21d:9ff:fe8b:8e94  --dport 22 \
     -m state --state NEW  -j ACCEPT
 
-For PF we get the following:
-
-.. code-block:: text
-
-   # Rule  0 (global)
-   #
-   #
-   pass in    quick inet proto tcp  from any  to 172.16.22.1 port 22 keep state
-   pass out   quick inet proto tcp  from any  to 172.16.22.1 port 22 keep state
-
-   # Rule  0 (global)
-   #
-   pass in    quick inet6 proto tcp  from any  to fe80::21d:9ff:fe8b:8e94 port 22 \
-   keep state
-   pass out   quick inet6 proto tcp  from any  to fe80::21d:9ff:fe8b:8e94 port 22 \
-   keep state
 
 Since the interface has two addresses, one IPv4 and another IPv6, the compiler generates commands in both the IPv4 and IPv6 sections of the script, but it uses only the appropriate address in each. Other than that, the interface object behaves just like a set of addresses when used in the source or destination element of a rule. It can also be used in NAT rules. Here is an example:
 
@@ -491,23 +406,10 @@ This generates the following code for iptables:
    $IPTABLES -t nat -A PREROUTING  -p tcp -m tcp  -d 192.0.2.1 --dport 80 \
    -j DNAT --to-destination 172.16.22.100
 
-And for PF:
-
-.. code-block:: text
-
-   # Rule  0 (NAT)
-   #
-   nat on eth0 proto {tcp udp icmp} from 172.16.22.0/24 to any -> 192.0.2.1
-   #
-   # Rule  1 (NAT)
-   #
-   rdr on eth0 proto tcp from any to 192.0.2.1 port 80 -> 172.16.22.100 port 80
-
-
 Using Interface Object with Dynamic Address in Rules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The examples above demonstrated what happens when an interface with one or several IP addresses is used in policy and NAT rules. Let's look at the case when an interface has an address assigned dynamically. This means the address is unknown to the Firewall Builder policy compiler when it generates the configuration script. The compiler uses features of the target firewall to work around this. Here is the configuration of the interface object eth0. The radio-button Address is assigned dynamically is selected.
+The examples above demonstrated what happens when an interface with one or several IP addresses is used in policy and NAT rules. Let's look at the case when an interface has an address assigned dynamically. This means the address is unknown to the FirewallFabrik policy compiler when it generates the configuration script. The compiler uses features of the target firewall to work around this. Here is the configuration of the interface object eth0. The radio-button Address is assigned dynamically is selected.
 
 .. figure:: img/obj-interface-dynamic-address.png
    :alt: Interface with Dynamic Address
@@ -544,27 +446,11 @@ Here is the result for iptables:
 
 The shell functions "getaddr" and "getaddr6" are defined earlier in the script. The generated script determines IPv4 and IPv6 addresses of interface eth0 at the time of execution and then uses the values in iptables commands. If the interface does not have an address, the corresponding variable gets an empty string for its value and the iptables command using it is skipped.
 
-PF allows for using interface name in rules and gets its current IP address automatically. This is the result generated for PF:
-
-.. code-block:: text
-
-   # Rule  0 (global)
-   #
-   pass in    quick inet proto tcp  from any  to (en0) port 22 keep state
-   pass out   quick inet proto tcp  from any  to (en0) port 22 keep state
-
-   # Rule  0 (global)
-   #
-   pass in    quick inet6 proto tcp  from any  to (en0) port 22 keep state
-   pass out   quick inet6 proto tcp  from any  to (en0) port 22 keep state
-
-We still get two separate parts for IPv4 and IPv6 because the rule set is configured as IPv4+IPv6 mix, but in both cases compiler just used the interface name because its actual IP address is dynamic and was unknown at the time the configuration was generated.
-
 
 Using Interface Object in Rules of Bridging iptables Firewall
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In case of the "normal" iptables firewall, Firewall Builder adds an "-i eth0" or "-o eth0" parameter to the generated iptables command to make it match interface and direction. If radio button "Bridge port" is turned on in the interface object, the compiler uses a different option to make iptables match packets crossing bridge ports. Here is the interface "eth1" which is configured as a bridge port:
+In case of the "normal" iptables firewall, FirewallFabrik adds an "-i eth0" or "-o eth0" parameter to the generated iptables command to make it match interface and direction. If radio button "Bridge port" is turned on in the interface object, the compiler uses a different option to make iptables match packets crossing bridge ports. Here is the interface "eth1" which is configured as a bridge port:
 
 .. figure:: img/obj-bridge-interface.png
    :alt: Bridge Interface
@@ -620,7 +506,7 @@ Its dialog provides the following entry fields:
 
 * **Netmask**
 
-  This is a netmask assigned to the interface. You can enter the netmask using the traditional method (255.255.255.0) or using network bit length notation ("24"). Bit length notation is converted to a traditional netmask by Firewall Builder.
+  This is a netmask assigned to the interface. You can enter the netmask using the traditional method (255.255.255.0) or using network bit length notation ("24"). Bit length notation is converted to a traditional netmask by FirewallFabrik.
 
 * **DNS Lookup**
 
@@ -637,7 +523,7 @@ Here we use our IPv4 address in a rule (remember, it belongs to the interface):
 
    Figure 5.30. IPv4 Address Object Assigned to an Interface and Used in a Rule
 
-Firewall Builder's iptables compiler, for example, generates the following command from this rule:
+FirewallFabrik's iptables compiler, for example, generates the following command from this rule:
 
 .. code-block:: bash
 
@@ -646,7 +532,7 @@ Firewall Builder's iptables compiler, for example, generates the following comma
 
 Note how even though the address object has a netmask, the generated command matches the address as a host address, not as a subnet. This is because the netmask is used only to describe the subnet for the interface, not to describe the subnet. When this address object is used in a rule, it is understood that the intention is to match the address of the interface it belongs to rather than any address on the subnet. Use the network object if you need to match a whole subnet.
 
-This iptables rule was placed in the INPUT chain because the object in the "Destination" was an address of an interface of the firewall. While processing the policy for the iptables target firewall platform, Firewall Builder compares addresses in the source and destination of a rule to the addresses of all interfaces of the firewall to find rules that control access to and from the firewall. Firewall Builder places these rules into INPUT or OUTPUT chains. This is only necessary for iptables.
+This iptables rule was placed in the INPUT chain because the object in the "Destination" was an address of an interface of the firewall. While processing the policy for the iptables target firewall platform, FirewallFabrik compares addresses in the source and destination of a rule to the addresses of all interfaces of the firewall to find rules that control access to and from the firewall. FirewallFabrik places these rules into INPUT or OUTPUT chains. This is only necessary for iptables.
 
 
 When Used as Stand-Alone Object
@@ -700,7 +586,7 @@ Consider the rule shown in the screenshot below where we use two IPv6 address ob
 
    Figure 5.34. IPv6 Address Objects in a Rule
 
-For iptables, Firewall Builder generates the following commands from this rule:
+For iptables, FirewallFabrik generates the following commands from this rule:
 
 .. code-block:: bash
 
@@ -709,7 +595,7 @@ For iptables, Firewall Builder generates the following commands from this rule:
    $IP6TABLES -A FORWARD -p tcp -m tcp  -d 2001:470:1f0e:162::2  --dport 80  \
    -m state --state NEW  -j ACCEPT
 
-The rule that matches the address described by *object guardian-2:eth1:ipv6* went to the INPUT chain because compiler detected that this rule matches packets that are headed for the firewall itself, which iptables inspects in the INPUT chain. The rule that matches the address described by the object *ipv6.fwbuilder.org* went to the FORWARD chain because these packets go through the firewall.
+The rule that matches the address described by *object guardian-2:eth1:ipv6* went to the INPUT chain because compiler detected that this rule matches packets that are headed for the firewall itself, which iptables inspects in the INPUT chain. The rule that matches the address described by the object *ipv6.FirewallFabrik.org* went to the FORWARD chain because these packets go through the firewall.
 
 
 Attached Network Objects
@@ -773,19 +659,7 @@ Compiling this rule for an iptables firewall results in the output shown below.
 
 .. note::
 
-   You can also use the Attached Network object with interfaces that are configured as "Address is assigned dynamically". In this case the script generated by Firewall Builder will determine the attached network based on the IP address that is assigned to the interface at the time that the script is run.
-
-
-Attached Networks - Cisco ASA/PIX
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The Attached Network object on Cisco ASA/PIX firewalls works the same way as it does for iptables firewalls where the Attached Network object will be expanded to include all networks that are associated with the IP address(es) assigned to the interface.
-
-
-Attached Networks - PF
-^^^^^^^^^^^^^^^^^^^^^^
-
-On PF firewalls the Attached Networks object translates into the "<interface>:network" configuration parameter. For example, if you create an Attached Network object on interface *em0*, and use that Attached Network object in a rule, the generated configuration will use the *em0:network* parameter in the generated configuration.
+   You can also use the Attached Network object with interfaces that are configured as "Address is assigned dynamically". In this case the script generated by FirewallFabrik will determine the attached network based on the IP address that is assigned to the interface at the time that the script is run.
 
 
 Physical Address Objects
@@ -816,7 +690,7 @@ The physical address object can only be a child of an interface; it cannot exist
 Using in Policy Rules
 ^^^^^^^^^^^^^^^^^^^^^
 
-Only a few firewall platforms really support physical address filtering. Currently, Netfilter/iptables is the only firewall platform supported by Firewall Builder that can do physical address filtering.
+Netfilter/iptables supports physical address (MAC) filtering.
 
 As described in Section 5.2.10.4, if an interface object that has multiple child address objects is used in a rule element (either *Source* or *Destination*), then the policy compiler tries to generate a rule using all of them. Section 5.2.10.4 explains that the compiler actually does this by generating multiple rules using each address in turn. This roughly corresponds to using the logical operation "OR" on the IP addresses: if our interface has two addresses, *Address1* and *Address2*, then the generated rule matches if the address in the packet is either *Address1* OR *Address2*. The case of a physical address is different, though. If the interface has a physical address, then the compiler builds a rule that has to match an IP address *and* the MAC address. The reason is to combat IP spoofing.
 
@@ -842,7 +716,7 @@ Both a real packet originated from this host and a spoofed packet have a source 
 
      Figure 5.42. Policy Rule Using Only Address Object
 
-  Firewall Builder generates the following simple iptables command for this rule:
+  FirewallFabrik generates the following simple iptables command for this rule:
 
   .. code-block:: bash
 
@@ -896,21 +770,21 @@ For this rule, the following iptables commands are generated:
    $IPTABLES -A FORWARD  -m mac --mac-source 00:1D:09:8B:8E:94 -m state --state NEW \
    -j ACCEPT
 
-As described in Section 5.2.10.4, using an multiple objects in the rule element is like bundling them together using logical operation *OR*. If we were to put address and physical address in the rule as in Figure 5.46, we would end up with a policy matching packets that have the source address 10.3.14.44 or MAC address 00:1D:09:8B:8E:94, but not necessarily both at the same time. Any host that manages to pretend to have the IP address 10.3.14.44 would be able to send packets through our firewall even if its MAC address is different. To achieve our goal and make sure packets with the source 10.3.14.44 really belong to our important host, we should be checking its IP address and MAC address at the same time and let a packet through only if its IP address *AND* MAC address are what we expect them to be. That is why Firewall Builder treats physical addresses differently and generates firewall code that inspects both IP address and physical address.
+As described in Section 5.2.10.4, using an multiple objects in the rule element is like bundling them together using logical operation *OR*. If we were to put address and physical address in the rule as in Figure 5.46, we would end up with a policy matching packets that have the source address 10.3.14.44 or MAC address 00:1D:09:8B:8E:94, but not necessarily both at the same time. Any host that manages to pretend to have the IP address 10.3.14.44 would be able to send packets through our firewall even if its MAC address is different. To achieve our goal and make sure packets with the source 10.3.14.44 really belong to our important host, we should be checking its IP address and MAC address at the same time and let a packet through only if its IP address *AND* MAC address are what we expect them to be. That is why FirewallFabrik treats physical addresses differently and generates firewall code that inspects both IP address and physical address.
 
-Firewall Builder generates firewall code to inspect MAC address only for host objects with the option MAC address filtering turned on. If this option is off, the physical address object is ignored even if it is present in the host object's interface. This is because host objects created using the Network Discovery Druid (Section 6.2) are often populated with both IP address and MAC address information (available through SNMP query), but inspection of MAC addresses is rarely needed. Use the MAC address filtering option in the host object to specify that you want the MAC address to be verified for the host.
+FirewallFabrik generates firewall code to inspect MAC address only for host objects with the option MAC address filtering turned on. If this option is off, the physical address object is ignored even if it is present in the host object's interface. This is because host objects created using the Network Discovery Druid (Section 6.2) are often populated with both IP address and MAC address information (available through SNMP query), but inspection of MAC addresses is rarely needed. Use the MAC address filtering option in the host object to specify that you want the MAC address to be verified for the host.
 
 .. note::
 
-   The target firewall imposes certain restrictions on rules matching the MAC address. For example, only source MAC addresses can be matched. Firewall Builder is aware of these restrictions, and the policy compiler issues an error if a physical address object is used in a rule that would lead to an impossible iptables command.
+   The target firewall imposes certain restrictions on rules matching the MAC address. For example, only source MAC addresses can be matched. FirewallFabrik is aware of these restrictions, and the policy compiler issues an error if a physical address object is used in a rule that would lead to an impossible iptables command.
 
 
 Host Object
 ~~~~~~~~~~~~
 
-The host object in Firewall Builder is designed to represent real hosts in the network: workstations, servers, and any other network node with an address. Just like real hosts, host objects have interfaces that represent different physical connections to the network.
+The host object in FirewallFabrik is designed to represent real hosts in the network: workstations, servers, and any other network node with an address. Just like real hosts, host objects have interfaces that represent different physical connections to the network.
 
-Most hosts have just a single (visible) interface with a single IP address. In that case the actual interface and its name do not matter. For most foreign hosts, Firewall Builder assigns an arbitrary name, like "interface1", to the host's interface. However, by using the tree-like hierarchy of hosts -> interfaces -> addresses, it is possible to specify the exact address and/or interface of a host in cases where it does matter.
+Most hosts have just a single (visible) interface with a single IP address. In that case the actual interface and its name do not matter. For most foreign hosts, FirewallFabrik assigns an arbitrary name, like "interface1", to the host's interface. However, by using the tree-like hierarchy of hosts -> interfaces -> addresses, it is possible to specify the exact address and/or interface of a host in cases where it does matter.
 
 As in the Firewall object, interfaces and addresses are represented by objects that are organized in a tree. An interface can have multiple addresses. An example of a host with one interface and multiple addresses is shown in Figure 5.47. Host "test server" is located on the LAN and has three virtual IP addresses that all belong to the same interface, "eth0".
 
@@ -919,7 +793,7 @@ As in the Firewall object, interfaces and addresses are represented by objects t
 
    Figure 5.47. A Host Object with One Interface and Multiple Virtual Addresses
 
-Note that in Firewall Builder, the host object is an abstraction. It does not have to conform to an individual host. This host object may in fact represent a web farm that accepts connections on three IP addresses, each on a different computer.
+Note that in FirewallFabrik, the host object is an abstraction. It does not have to conform to an individual host. This host object may in fact represent a web farm that accepts connections on three IP addresses, each on a different computer.
 
 .. note::
 
@@ -941,7 +815,7 @@ Section 5.2.2 shows how to use the firewall object wizard. The host object wizar
 
 * From template
 
-  The Host object templates are different than those for Firewall objects. Browse through the list in Firewall Builder to see what's available.
+  The Host object templates are different than those for Firewall objects. Browse through the list in FirewallFabrik to see what's available.
 
 * Manually
 
@@ -998,7 +872,7 @@ Let's put this host object in a rule as follows:
 
    Figure 5.50. Host in a Rule
 
-The rule set is configured as "IPv4 only", so even though interface he-ipv6 has IPv6 address, Firewall Builder will ignore it while generating iptables commands for this rule. Interface eth0 has two IPv4 addresses and both will be used. Here are iptables commands generated for this rule:
+The rule set is configured as "IPv4 only", so even though interface he-ipv6 has IPv6 address, FirewallFabrik will ignore it while generating iptables commands for this rule. Interface eth0 has two IPv4 addresses and both will be used. Here are iptables commands generated for this rule:
 
 .. code-block:: bash
 
@@ -1015,7 +889,7 @@ Let's see what we get for the same rule if we configure rule set object as "IPv4
 
    Figure 5.51. Host in a Rule with both IPv4 and IPv6
 
-Since the rule is now configured to compile for both address families, Firewall Builder processes it twice, once for each address family. Here is what we get (these are relevant fragments of the generated script):
+Since the rule is now configured to compile for both address families, FirewallFabrik processes it twice, once for each address family. Here is what we get (these are relevant fragments of the generated script):
 
 .. code-block:: bash
 
@@ -1056,7 +930,7 @@ Consider example Figure 5.52, Figure 5.53. Here interface *eth0* of "test server
 
    Figure 5.54. Equivalent Rules
 
-Firewall Builder takes care of this situation automatically and generates the firewall policy described in Figure 5.53 as if a user had built a policy in the GUI using the three rules as shown in Figure 5.54.
+FirewallFabrik takes care of this situation automatically and generates the firewall policy described in Figure 5.53 as if a user had built a policy in the GUI using the three rules as shown in Figure 5.54.
 
 In fact, the algorithm used is even more general. In the example Figure 5.53, host "test server" has a single interface with multiple addresses that the compiler used to generate the target firewall code. The policy compiler works in a similar way even if the host or firewall object used in the rule has multiple interfaces and each interface, in turn, has multiple addresses. If a host (or firewall) object is used in the rule, then the compiler scans all its interfaces, finds all corresponding addresses, and uses them to generate the firewall configuration. If an interface object is used in the rule, then the compiler uses all its addresses. And finally, if an address or physical address object is used in the rule, then the compiler uses only this parameter to generate the firewall configuration. In other words, the compiler always traverses the tree, starting from the object found in the policy rule, and uses the parameters of all address and physical address objects it finds.
 IPv4 Network Object
@@ -1079,13 +953,13 @@ The network object describes an IP network or subnet. Use main menu Net Object /
 
 * Netmask:
 
-  The netmask, in combination with an address, defines the subnet. You can enter either a string octet representation of the mask or its bit length here; however the program always converts it to the octet representation. The netmask in the network object is always entered in the "natural" way, such as "255.255.255.0", even if the object is going to be used to build Cisco IOS access lists which require reversed "bit mask" presentation instead (e.g., "0.0.0.255" for the netmask above). The Firewall Builder policy compiler automatically makes the required conversion.
+  The netmask, in combination with an address, defines the subnet. You can enter either a string octet representation of the mask or its bit length here; however the program always converts it to the octet representation.
 
 * Comment:
 
   This is a free-form text field used for comments.
 
-Let's use the network object shown above in a policy rule compiled for different target platforms.
+Let's use the network object shown above in a policy rule.
 
 .. figure:: img/obj-ipv4-network-in-rule.png
    :alt: IPv4 Network Object Used in a Rule
@@ -1098,29 +972,6 @@ Here is what we get for iptables:
 
    $IPTABLES -A FORWARD -p tcp -m tcp  -s 172.16.22.0/24  --dport 80  -m state \
    --state NEW  -j ACCEPT
-
-Here is the output produced for PF:
-
-.. code-block:: none
-
-   pass in   quick inet proto tcp  from 172.16.22.0/24  to any port 80 keep state
-   pass out  quick inet proto tcp  from 172.16.22.0/24  to any port 80 keep state
-
-Here is how the output looks like when the rule is compiled into Cisco IOS access lists. (This is one of the generated access lists.)
-
-.. code-block:: none
-
-   ip access-list extended outside_out
-     permit tcp 172.16.22.0 0.0.0.255 any  eq 80
-   exit
-
-Here is what we get when the rule is compiled into Cisco ASA (PIX) configuration. Note how the compiler uses netmask 255.255.255.0 for PIX, while for IOS it was converted to 0.0.0.255. Also, the interface "inside" was configured with network zone 172.16.0.0/12, which matched network object used in the source element of the rule. Because of that, the compiler put the rule only into the access list attached to interface "inside."
-
-.. code-block:: none
-
-   access-list inside_acl_in permit tcp 172.16.22.0 255.255.255.0 any eq 80
-   access-group inside_acl_in in interface inside
-
 
 IPv6 Network Object
 ~~~~~~~~~~~~~~~~~~~~
@@ -1145,28 +996,6 @@ Here is the command generated for iptables:
 
    $IP6TABLES -A FORWARD -p tcp -m tcp  -s 2001:470:1f0e:162::/64  --dport 80  \
    -m state --state NEW  -j ACCEPT
-
-Here is what we get for PF:
-
-.. code-block:: none
-
-   pass in   quick inet6 proto tcp  from 2001:470:1f0e:162::/64  to any port 80 keep state
-   pass out  quick inet6 proto tcp  from 2001:470:1f0e:162::/64  to any port 80 keep state
-
-Here is the output for Cisco IOS access lists (only one ACL is shown):
-
-.. code-block:: none
-
-   ipv6 access-list ipv6_outside_out
-     permit tcp 2001:470:1f0e:162::/64 any  eq 80
-   exit
-
-   interface eth0
-     ipv6 traffic-filter ipv6_outside_out out
-   exit
-
-There is no IPv6 support for Cisco ASA (PIX) in Firewall Builder at this time.
-
 
 Address Range Object
 ~~~~~~~~~~~~~~~~~~~~
@@ -1196,7 +1025,7 @@ The address range object describes a continuous range of IPv4 addresses. (Arbitr
 
 The address range is inclusive; that is, both the start and the end addresses are included in the range.
 
-When the address range object is used in a rule, Firewall Builder replaces it with a list of addresses equivalent to the specified range. The program tries to generate the most economical representation of the range using a combination of subnets of different lengths. Consider the address range object shown above. This address range object represents IP addresses between 192.168.1.100 and 192.168.1.160 (inclusively). It would be wasteful to generate 61 iptables commands to represent this range. Instead, the compiler uses a combination of several subnets of different lengths and ends up with the following:
+When the address range object is used in a rule, FirewallFabrik replaces it with a list of addresses equivalent to the specified range. The program tries to generate the most economical representation of the range using a combination of subnets of different lengths. Consider the address range object shown above. This address range object represents IP addresses between 192.168.1.100 and 192.168.1.160 (inclusively). It would be wasteful to generate 61 iptables commands to represent this range. Instead, the compiler uses a combination of several subnets of different lengths and ends up with the following:
 
 .. code-block:: bash
 
@@ -1205,32 +1034,6 @@ When the address range object is used in a rule, Firewall Builder replaces it wi
    $IPTABLES -A FORWARD  -s 192.168.1.112/28  -m state --state NEW  -j ACCEPT
    $IPTABLES -A FORWARD  -s 192.168.1.128/27  -m state --state NEW  -j ACCEPT
    $IPTABLES -A FORWARD  -s 192.168.1.160  -m state --state NEW -j ACCEPT
-
-Here is how the generated configuration looks for PF (this is essentially the same, except it uses tables for brevity):
-
-.. code-block:: none
-
-   table <tbl.r0.s> { 192.168.1.100/30 , 192.168.1.104/29 , 192.168.1.112/28 , \
-   192.168.1.128/27 , 192.168.1.160 }
-
-   pass in   quick inet  from <tbl.r0.s>  to any keep state
-
-Just for completeness, let's look at the configuration generated for the same rule for Cisco IOS access lists. This is really just a fragment of the generate router access list configuration because generated ACLs are attached to interfaces and, since the rule in the example was not associated with any interfaces, it is attached to all of them. Here we show only one generated ACL:
-
-.. code-block:: none
-
-   ip access-list extended inside_in
-   !
-   ! Rule  0 (global)
-   !
-   !
-     permit ip 192.168.1.100 0.0.0.3 any
-     permit ip 192.168.1.104 0.0.0.7 any
-     permit ip 192.168.1.112 0.0.0.15 any
-     permit ip 192.168.1.128 0.0.0.31 any
-     permit ip host 192.168.1.160 any
-   exit
-
 
 Address Tables Object
 ~~~~~~~~~~~~~~~~~~~~~
@@ -1262,15 +1065,15 @@ The address table object has the following fields:
 
 * Edit File button:
 
-  Once the File name field is populated, use this button to view and update the file. If the file does not already exist, Firewall Builder will generate a warning message.
+  Once the File name field is populated, use this button to view and update the file. If the file does not already exist, FirewallFabrik will generate a warning message.
 
 * Comment:
 
   A free-form text field used for comments
 
-The Compile Time and Run Time radio buttons define when the addresses will be read from the file: when the firewall script is generated by Firewall Builder or when the firewall runs the script.
+The Compile Time and Run Time radio buttons define when the addresses will be read from the file: when the firewall script is generated by FirewallFabrik or when the firewall runs the script.
 
-If object is configured as Compile Time, the Firewall Builder policy compiler opens the file during compilation and replaces the address table object in policy rules with the set of addresses from the file. This means the file with addresses must be accessible on the machine where the Firewall Builder GUI and policy compilers run.
+If object is configured as Compile Time, the FirewallFabrik policy compiler opens the file during compilation and replaces the address table object in policy rules with the set of addresses from the file. This means the file with addresses must be accessible on the machine where the FirewallFabrik GUI and policy compilers run.
 
 If the object is configured as Run Time, policy compiler does not try to find and open the file but instead generates a firewall script that will do this when it is activated. This means the file with addresses must be located where it is accessible by the firewall, and the object must be configured with the full path to it on the firewall.
 
@@ -1283,9 +1086,9 @@ Here is an example of the file contents (this is what you see if you click the E
 
 Note that comments in the file can start with "#" or ";", that a comment can follow an address on the same line or take the whole line, and that lines can start with white space for formatting. This example file contains both IPv4 and IPv6 addresses for illustration purposes.
 
-Compile-time address table objects are supported on all target firewall platforms because addresses are read by the compiler. The compiler then generates normal configuration lines or script commands. Run-time address table objects require special support from the target firewall and are therefore supported only on some of them. Currently run-time address table objects can be used in rules for iptables and PF firewalls.
+Compile-time address table objects are supported because addresses are read by the compiler, which then generates normal script commands. Run-time address table objects require special support from the target firewall. Currently run-time address table objects can be used in rules for iptables firewalls.
 
-Let's look at the firewall script generated by Firewall Builder for the iptables and PF when the Address Table object used in the policy rule is configured first as "Compile Time" and then as "Run Time". The rule is very simple and looks like (Figure 5.62):
+Let's look at the firewall script generated by FirewallFabrik for iptables when the Address Table object used in the policy rule is configured first as "Compile Time" and then as "Run Time". The rule is very simple and looks like (Figure 5.62):
 
 .. figure:: img/obj-address-table-rule.png
    :alt: Rule Using an Address Object
@@ -1307,18 +1110,7 @@ This rule, with the object set to Compile Time, generates the following output:
 
 The compiler replaced the object address_table_1 in the Destination with addresses it took from the file. Option assume firewall is part of any was turned off in the firewall object settings, which is why compiler did not generate rules in the OUTPUT chain. However, one of the addresses in the file matched the address of one of the interfaces of the firewall (192.168.1.1) and the corresponding rule went into the INPUT chain. Other addresses were copied from the file verbatim, including netmask specifications. The policy object of this firewall was configured as "IPv4 rule set", because of this the compiler dropped the IPv6 addresses it found in the file. If the rule set was configured as a mix of IPv4 and IPv6, compiler would use IPv4 addresses in IPv4 rules and IPv6 addresses in IPv6 rules.
 
-.. code-block:: none
-
-   # Tables: (1)
-   table  { 192.168.1.1 , 192.168.1.2 , 192.168.1.3/30 , 192.168.2.128/25 , \
-   192.168.1.200 , 192.168.1.201 }
-
-   # Rule  0 (global)
-   #
-   block in   quick inet  from any  to <tbl.r0.d>
-   block out  quick inet  from any  to <tbl.r0.d>
-
-The output for PF is simple because Firewall Builder can use the built-in table facility. All addresses are copied from the file verbatim into the table tbl.r0.d.
+Now let's switch the address table object to "Run Time". The generated iptables script:
 
 .. code-block:: bash
 
@@ -1350,73 +1142,12 @@ Here is what you get if the option "Assume firewall is part of any" is turned on
 
 The difference is that compiler generated two sets of commands, one in chain OUTPUT and another in chain FORWARD. The original rule has "any" in source, and if the option Assume firewall is part of any is turned on, the compiler assumes the source of the rule can have either an unknown address or the firewall. The former makes it generate iptables command in the FORWARD chain and the latter makes it generate iptables command in the OUTPUT chain. This logic is not specific to the address table object type; the compiler does this regardless of the type of the object used in destination if source is "any" and option Assume firewall is part of any is turned on.
 
-.. code-block:: none
-
-   # Tables: (1)
-   table  persist file "/home/vadim/addr-table-1.tbl"
-   # Rule  0 (global)
-   #
-   #
-   block in   quick inet  from any  to <address_table_1>
-   block out  quick inet  from any  to <address_table_1>
-
-PF is even easier in the case of run time address tables. The compiler just uses *table* facility with *persist* and *file* options to direct pfctl to open the file and read its contents. In this case, the file should follow the formatting requirements of PF.
-
-Policy compiler for PF treats address table objects with empty file name in a special way. It just generates the line "table <table_name>" at the beginning of the .conf file with no file specification. This table will not be populated when .conf file is loaded and therefore will remain empty, but it can be used in the rules.
-
-Addresses can be added to the table later using external scripts that call pfctl like this:
-
-.. code-block:: none
-
-   pfctl -t bad_hosts -T add 192.0.2.1
-
-Another interesting possibility is to automatically populate the table if option "overload" is used in combination with other rate limiting options on a rule. Taking an example from the man page for pf.conf, here is how it looks:
-
-.. code-block:: none
-
-   block quick from <bad_hosts>
-   pass in on $ext_if proto tcp to $webserver port www keep state \
-                   (max-src-conn-rate 100/10, overload <bad_hosts> flush global)
-
-The idea behind these rules is that if some host tries to connect to the web server too often -- more often than is allowed by max-src-conn-rate 100/10 -- its address will be added to the table <bad_hosts> by PF. The next time this host tries to connect, the packet coming from it will be denied by the blocking rule right away.
-
-To implement these rules in Firewall Builder, you would create an Address Table object with the name "bad_hosts" but a blank file name, configured to resolve at run time:
-
-.. figure:: img/obj-address-table-bad-hosts.png
-   :alt: Address Table Object bad_hosts
-
-   Address Table Object bad_hosts
-
-Then, use this address table object in the source field of a policy rule with action "Deny". This is rule #0 in the screenshot below. Another rule, rule #1 in the screenshot, has action "Accept" and matches destination against address of the web server, protocol http, and has limiting options set up to restrict the number of connections and to turn overload table on, with the name of the overload table "bad_hosts" that matches the name of the address table object.
-
-.. figure:: img/obj-address-table-bad-hosts-rules.png
-   :alt: Address Table Object bad_hosts Rules
-
-   Address Table Object bad_hosts Rules
-
-These two rules, as shown on the screen shots, yield the following PF configuration that matches the one given in the man page:
-
-.. code-block:: none
-
-   # Tables: (1)
-   table <bad_hosts> persist
-
-   # Rule  0 (global)
-   #
-   block in   log  quick inet  from <bad_hosts>  to any
-   #
-   # Rule  1 (global)
-   #
-   pass in   quick inet proto tcp  from any  to 192.168.1.1 port 80 \
-     keep state  ( max-src-conn-rate 100/10, overload <bad_hosts> flush global )
-
-
 Using Address Tables with iptables IP Sets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Beginning with Firewall Builder version 4.1, there is support for iptables firewalls to use the netfilter *ipset* module. The ipset module provides a method for storing a list of IP addresses or IP subnets in memory. This allows firewall administrators to define a single iptables rule that matches multiple IP addresses or IP subnets as the source and/or destination. In Firewall Builder an "ipset" is associated with an address table object where the list of addresses and subnets are defined in a file.
+FirewallFabrik supports using the netfilter *ipset* module with iptables firewalls. The ipset module provides a method for storing a list of IP addresses or IP subnets in memory. This allows firewall administrators to define a single iptables rule that matches multiple IP addresses or IP subnets as the source and/or destination. In FirewallFabrik an "ipset" is associated with an address table object where the list of addresses and subnets are defined in a file.
 
-Using the IP sets feature requires an iptables version of at least 1.4.1.1 and requires that the target firewall have the ipset module installed. There are instructions for installing the ipset module for some distributions described in the Appendix Section 16.1.1. If you have installation instructions for installing the ipset module on a distribution not listed in the Appendix please e-mail info@fwbuilder.org.
+Using the IP sets feature requires the *ipset* package to be installed on the target firewall. On RHEL 8+ and derivatives, install it with ``dnf install ipset``. On Debian/Ubuntu, use ``apt install ipset``.
 
 You can find more information about the netfilter ipset module at the `netfilter IP sets page <http://ipset.netfilter.org/features.html>`_.
 
@@ -1443,7 +1174,7 @@ You can find more information about the netfilter ipset module at the `netfilter
       ipset v4.1: Couldn't verify kernel module version!
       fwadmin@guardian:~$
 
-To enable the iptables "IP sets" functionality in Firewall Builder, you must explicitly set the version of the iptables firewall that you want to use with the ipset module. Navigate to the firewall and double-click to open the object in the editor window. Set the iptables version number to a version that is at least 1.4.1.1.
+To enable the iptables "IP sets" functionality in FirewallFabrik, you must explicitly set the version of the iptables firewall that you want to use with the ipset module. Navigate to the firewall and double-click to open the object in the editor window. Set the iptables version number to a version that is at least 1.4.1.1.
 
 .. figure:: img/obj-ipset-firewall-version.png
    :alt: Set the firewall iptables version number
@@ -1469,9 +1200,9 @@ You can only use address tables that are set to Run Time with the ipset module. 
 
    **Mixed IP addresses and IP Subnets in IP Sets**
 
-   Normally the ipset module requires you to create separate "sets" for IP addresses and IP subnets. Firewall Builder, through its abstraction layer, enables you to create mixed IP addresses and IP subnets in the same file. This creates what is known as a "set list" that contains two "sets", one "set" that includes only IP addresses and another "set" that includes only IP subnets.
+   Normally the ipset module requires you to create separate "sets" for IP addresses and IP subnets. FirewallFabrik, through its abstraction layer, enables you to create mixed IP addresses and IP subnets in the same file. This creates what is known as a "set list" that contains two "sets", one "set" that includes only IP addresses and another "set" that includes only IP subnets.
 
-The following example shows the Firewall Builder configuration steps for setting up an Address Table called "bad_hosts", using that address table in a rule, and confirming the ipset configuration.
+The following example shows the FirewallFabrik configuration steps for setting up an Address Table called "bad_hosts", using that address table in a rule, and confirming the ipset configuration.
 
 .. figure:: img/obj-ipset-address-table.png
    :alt: Address Table Object
@@ -1488,7 +1219,7 @@ The following example shows the Firewall Builder configuration steps for setting
 
    Rule Using Address Table Object
 
-You can use the ipset tools to view the configuration of your "sets" once they have been created by Firewall Builder on your firewall. For example, the command **ipset --list** will list all the configured "sets" on your firewall.
+You can use the ipset tools to view the configuration of your "sets" once they have been created by FirewallFabrik on your firewall. For example, the command **ipset --list** will list all the configured "sets" on your firewall.
 
 If you install a firewall that is using address tables with ipset enabled you can update the list of addresses that are stored in memory for that "set" by updating the file associated with the address table object and then running the **firewallscript.fw reload_address_table** command. For the examples shown above you would enter:
 
@@ -1496,13 +1227,13 @@ If you install a firewall that is using address tables with ipset enabled you ca
 
    guardian.fw reload_address_table bad_hosts /etc/fw/bad_hosts
 
-where "guardian.fw" matches the name of your Firewall Builder script file and "bad_hosts" is your address table object. This dynamically updates the list of addresses stored in memory for the bad_hosts set while iptables is running.
+where "guardian.fw" matches the name of your FirewallFabrik script file and "bad_hosts" is your address table object. This dynamically updates the list of addresses stored in memory for the bad_hosts set while iptables is running.
 
 .. note::
 
    **Naming Convention for Address Table Objects and Sets**
 
-   When Firewall Builder creates the "set" it substitutes an underscore ("_") for any spaces. For example, the address table named "My Address List" would have a "set" name of "My_Address_List". Also, note that the name of the address table object cannot start with colon (":") due to restrictions in the ipset module.
+   When FirewallFabrik creates the "set" it substitutes an underscore ("_") for any spaces. For example, the address table named "My Address List" would have a "set" name of "My_Address_List". Also, note that the name of the address table object cannot start with colon (":") due to restrictions in the ipset module.
 
 There are two primary benefits of using the ipset module. First, the performance for matching a single rule that is using a set to hold a large number of addresses is better than having individual rules for each of these addresses. Second, the ipset module and tools provide a way to dynamically update the addresses in a list while the firewall is still running.
 
@@ -1510,13 +1241,13 @@ There are two primary benefits of using the ipset module. First, the performance
 Special-Case Addresses
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Policy compilers treat some addresses in policy rules in special ways, depending on the requirements of the target firewall platform. For example, the compiler for iptables checks if the address found in "Destination" or "Source" of a rule matches the address of any interface of the firewall to determine if the rule should be placed in INPUT or OUTPUT chain. The compiler for PIX uses the command ssh <address> <netmask>> inside when it detects such an address in the destination of a rule where the service is TCP Service object "SSH". There are other special cases as well.
+Policy compilers treat some addresses in policy rules in special ways. For example, the compiler for iptables checks if the address found in "Destination" or "Source" of a rule matches the address of any interface of the firewall to determine if the rule should be placed in the INPUT or OUTPUT chain.
 
 
 Broadcast and Multicast Addresses, iptables Firewall
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Two important special cases are broadcast and multicast addresses. It is important to place rules in the correct chain in generated iptables script, because even though these addresses are not equal to those of the firewall's interfaces, iptables processes packets with broadcast or multicast destination in the INPUT chain. Firewall Builder is aware of this and generates the correct iptables commands.
+Two important special cases are broadcast and multicast addresses. It is important to place rules in the correct chain in generated iptables script, because even though these addresses are not equal to those of the firewall's interfaces, iptables processes packets with broadcast or multicast destination in the INPUT chain. FirewallFabrik is aware of this and generates the correct iptables commands.
 
 In order to match broadcast or multicast addresses in the rules, we need to create objects to describe them. The choice of object type to describe broadcast or multicast address depends on whether this is just a single address, a range or a block. An address object is good for defining a single address, address range is good for sets of consecutive addresses and network object is good for describing a block. For example, you can use an address object with address "255.255.255.255" to describe a broadcast. address range with addresses "224.0.0.5 - 224.0.0.6" would work well to describe two multicast groups used by OSPF. A network object with address "224.0.0.0" and netmask "240.0.0.0" can be used to describe a whole multicast address block.
 
@@ -1588,7 +1319,7 @@ This produces the following iptables commands:
    $IPTABLES -A FORWARD  -d 172.16.22.255  -m state --state NEW  -j ACCEPT
    $IPTABLES -A INPUT  -d 172.16.22.255  -m state --state NEW  -j ACCEPT
 
-Rules went into both INPUT and FORWARD chains because the bridging firewall passes broadcasts through, but at the same time accepts them as packets headed for itself. Since the rule did not specify which interface it should look at, Firewall Builder assumed that the generated rule should inspect packets crossing all interfaces, both bridge ports and "normal" ones, and therefore placed the rule in both INPUT and FORWARD chains.
+Rules went into both INPUT and FORWARD chains because the bridging firewall passes broadcasts through, but at the same time accepts them as packets headed for itself. Since the rule did not specify which interface it should look at, FirewallFabrik assumed that the generated rule should inspect packets crossing all interfaces, both bridge ports and "normal" ones, and therefore placed the rule in both INPUT and FORWARD chains.
 
 
 DNS Name Objects
@@ -1619,11 +1350,11 @@ The DNS Name object dialog looks like this:
 
   A free-form text field used for comments
 
-The DNS Record parameter is the name of the A or AAAA record we want to resolve. In this example, it is the host name of the Firewall Builder project web site "www.fwbuilder.org". Note that IPv6 web server for the project is accessible as "ipv6.fwbuilder.org" so we are going to need second DNS name object for IPv6 examples. Compile Time and Run Time options have the same meaning as those in the address table object, that is, a compile-time DNS name object is converted to the IP address by the policy compiler, while a run-time DNS name object is not. In the latter case, the compiler puts the DNS record name into the generated script or configuration file and leaves it up to the firewall to resolve it when the script is activated.
+The DNS Record parameter is the name of the A or AAAA record we want to resolve. In this example, it is the host name of the FirewallFabrik project web site "www.FirewallFabrik.org". Note that IPv6 web server for the project is accessible as "ipv6.FirewallFabrik.org" so we are going to need second DNS name object for IPv6 examples. Compile Time and Run Time options have the same meaning as those in the address table object, that is, a compile-time DNS name object is converted to the IP address by the policy compiler, while a run-time DNS name object is not. In the latter case, the compiler puts the DNS record name into the generated script or configuration file and leaves it up to the firewall to resolve it when the script is activated.
 
 Both compile-time and run-time DNS name objects are supported on all target firewall platforms.
 
-Let's look at how the simple rule shown in Figure 5.89 compiles for iptables and PF, both for compile-time and run-time DNS name objects.
+Let's look at how the simple rule shown in Figure 5.89 compiles for iptables, both for compile-time and run-time DNS name objects.
 
 .. figure:: img/obj-dns-name-in-rule.png
    :alt: Rule Using DNS Name Object
@@ -1636,21 +1367,15 @@ Let's look at how the simple rule shown in Figure 5.89 compiles for iptables and
    #
    $IPTABLES -A FORWARD  -d 70.85.175.170  -m state --state NEW  -j ACCEPT
 
-In this trivial case, the compiler simply resolved "www.fwbuilder.org" to an IP address and used it in the iptables command. However, if the policy rule was in a rule set configured as an IPv6-only rule set, the rule would not produce any iptables command at all because there is no AAAA DNS record with name "www.fwbuilder.org". If the rule set was both IPv4+IPv6, then the rule would generate iptables command only in the IPv4 part. The opposite is also true: the DNS name object with record "ipv6.fwbuilder.org" will only produce iptables commands when used in IPv6 rule set because there is only an AAAA record with this name.
+In this trivial case, the compiler simply resolved "www.FirewallFabrik.org" to an IP address and used it in the iptables command. However, if the policy rule was in a rule set configured as an IPv6-only rule set, the rule would not produce any iptables command at all because there is no AAAA DNS record with name "www.FirewallFabrik.org". If the rule set was both IPv4+IPv6, then the rule would generate iptables command only in the IPv4 part. The opposite is also true: the DNS name object with record "ipv6.FirewallFabrik.org" will only produce iptables commands when used in IPv6 rule set because there is only an AAAA record with this name.
 
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet  from any  to 70.85.175.170 keep state
-
-The same is true in the case of PF: the compiler simply resolved the name "www.fwbuilder.org" and put the address in the generated pf.conf file. Since this name does not resolve into any IPv6 address, IPv6 PF policy would not have any line for this rule. The DNS record "ipv6.fwbuilder.org" resolves only into an IPv6 address, and therefore DNS name object with this record would only produce pf.conf configuration for IPv6 and not for IPv4.
+Now let's see the same with a run-time DNS name object:
 
 .. code-block:: bash
 
    # Rule 0 (global)
    #
-   $IPTABLES -A FORWARD  -d www.fwbuilder.org -m state --state NEW  -j ACCEPT
+   $IPTABLES -A FORWARD  -d www.FirewallFabrik.org -m state --state NEW  -j ACCEPT
 
 Here the compiler used the line entered in the DNS record parameter literally, leaving it up to iptables on the firewall machine to resolve this name into an IP address. Using a run time DNS name object in IPv6 policy generates the following iptables command:
 
@@ -1658,19 +1383,9 @@ Here the compiler used the line entered in the DNS record parameter literally, l
 
    # Rule 0 (global)
    #
-   $IP6TABLES -A FORWARD  -d ipv6.fwbuilder.org -m state --state NEW  -j ACCEPT
+   $IP6TABLES -A FORWARD  -d ipv6.FirewallFabrik.org -m state --state NEW  -j ACCEPT
 
 $IP6TABLES is the shell variable defined at the beginning of the generated script; the value of this variable is the full path to the **ip6tables** command line utility. **ip6tables** will try to resolve given name to an IPv6 address since it processes IPv6 iptables policy.
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet  from any  to www.fwbuilder.org keep state
-   pass out  quick inet  from any  to www.fwbuilder.org keep state
-
-Run-time DNS name object translates into PF configuration lines that also use the name of the DNS record and leave it up to PF to actually resolve it to an IP address when the configuration is loaded.
-
 
 Object Groups
 ~~~~~~~~~~~~~
@@ -1715,7 +1430,7 @@ Within a filter rule, the logic between the Object Type and Tag fields is "AND" 
 Dynamic Group Example
 ^^^^^^^^^^^^^^^^^^^^^
 
-In this example the Firewall Builder data file includes a number of objects that have already been defined. Some of these objects have been configured with keywords like "New York" and "London" to identify the city where the element the object represents is located.
+In this example the FirewallFabrik data file includes a number of objects that have already been defined. Some of these objects have been configured with keywords like "New York" and "London" to identify the city where the element the object represents is located.
 
 To create a rule that matches all the network objects that are associated with New York, we create a new Dynamic Group called New York Networks as shown in Figure 5.91.
 
@@ -1756,7 +1471,7 @@ Recompiling a rule that uses the "New York Networks" Dynamic Group object will a
 Service Objects
 ---------------
 
-In Firewall Builder, service objects represent IP, ICMP, TCP, and UDP services such as "host unreachable" in ICMP, HTTP in TCP, GRE in IP, and DNS in UDP. Firewall Builder provides service objects for hundreds of well-known and frequently-used services in ICMP (IP protocol number 1), TCP (IP protocol number 6), and UDP (IP protocol number 17).
+In FirewallFabrik, service objects represent IP, ICMP, TCP, and UDP services such as "host unreachable" in ICMP, HTTP in TCP, GRE in IP, and DNS in UDP. FirewallFabrik provides service objects for hundreds of well-known and frequently-used services in ICMP (IP protocol number 1), TCP (IP protocol number 6), and UDP (IP protocol number 17).
 
 IP Service
 ~~~~~~~~~~
@@ -1772,17 +1487,14 @@ The IP service object describes protocols that are not ICMP, TCP, or UDP. (ICMP,
 
    Protocol numbers are assigned by IANA; you can look up the number for a particular protocol at the following URL: http://www.iana.org/assignments/protocol-numbers/
 
-Besides the protocol number, the header of the IP packet also has a field called "Options" which is a variable-length list of optional information for the packet. Not all firewalls can examine options, and those that can usually have certain limitations as to what options they can match against. Firewall Builder tries to provide controls for many popular options supported by the most sophisticated firewalls. Not all options supported by Firewall Builder are supported by all target firewall platforms (Table 5.3).
+Besides the protocol number, the header of the IP packet also has a field called "Options" which is a variable-length list of optional information for the packet. Not all firewalls can examine options, and those that can usually have certain limitations as to what options they can match against. FirewallFabrik tries to provide controls for many popular options supported by the most sophisticated firewalls. Not all options supported by FirewallFabrik are supported by all target firewall platforms (Table 5.3).
 
-.. table:: Table 5.3. Support for IP options and fragmentation on various firewall platforms
+.. table:: Table 5.3. Support for IP options and fragmentation in iptables
 
    ==========  ======  ======  ====  ===========  ==============  ================
    Firewall    lsrr    ssrr    rr    timestamp    all fragments   'short' packets
    ==========  ======  ======  ====  ===========  ==============  ================
    iptables    \+      \+      \+    \+           \+              \-
-   ipfilter    \-      \+      \+    \+           \+              \+
-   pf          \-      \-      \-    \-           \+              \-
-   Cisco PIX   \-      \-      \-    \-           \-              \-
    ==========  ======  ======  ====  ===========  ==============  ================
 
 **Source route options: LSRR, SSRR**
@@ -1795,9 +1507,9 @@ Besides the protocol number, the header of the IP packet also has a field called
    This option tells routers that handle the packet to record their timestamps and sometimes addresses (like in the case of the record route option). This option is seldom used, but can potentially be exploited to gather information about the protected network, so some firewall administrators prefer to block packets with this option set.
 
 **Fragment options:**
-   IP packets may sometimes become fragmented. This happens if the original datagram is larger than what a physical network layer can transmit. The IP packet header has special fields (called "Flags" and "Fragmentation Offset") that detect fragmented packets and help reassemble them. Many firewalls can check these bits as well. Certain combinations of flags and fragmentation offsets can never happen during normal operation but were seen to be used by attackers. Firewall Builder provides two options for handling the most commonly used cases: the "all fragments" option matches the second and further fragments, while the "short" option is used to match packets that are too short to contain even a complete IP header.
+   IP packets may sometimes become fragmented. This happens if the original datagram is larger than what a physical network layer can transmit. The IP packet header has special fields (called "Flags" and "Fragmentation Offset") that detect fragmented packets and help reassemble them. Many firewalls can check these bits as well. Certain combinations of flags and fragmentation offsets can never happen during normal operation but were seen to be used by attackers. FirewallFabrik provides two options for handling the most commonly used cases: the "all fragments" option matches the second and further fragments, while the "short" option is used to match packets that are too short to contain even a complete IP header.
 
-Standard IP service objects that come with Firewall Builder appear in the Standard tree, in the Services/IP branch.
+Standard IP service objects that come with FirewallFabrik appear in the Standard tree, in the Services/IP branch.
 
 You can create your own IP Service objects in the User library.
 
@@ -1816,7 +1528,7 @@ The IP Service dialog provides the following controls:
 
 * **Protocol:** This is the protocol number.
 
-* **DiffServ:** You can specify DSCP or TOS using the radio buttons. In either case, specify a code (or class) in the field. If you do not specify a code or class, Firewall Builder ignores the DiffServ type (DSCP or TOS).
+* **DiffServ:** You can specify DSCP or TOS using the radio buttons. In either case, specify a code (or class) in the field. If you do not specify a code or class, FirewallFabrik ignores the DiffServ type (DSCP or TOS).
 
 * **Options:** These flags represent "Options" flags in the IP header:
 
@@ -1881,47 +1593,14 @@ When compiled for IPv6, these rules yield the following iptables commands:
    $IP6TABLES -A FORWARD  -o +  -m dscp --dscp-class EF  -m state --state NEW  -j ACCEPT
    $IP6TABLES -A FORWARD  -o +  -m tos --tos 0x10  -m state --state NEW  -j ACCEPT
 
-*ip6tables* does not have the *-f* command line flag; instead, it uses the *frag* module to match fragments. Firewall Builder currently does not support the ip6tables *ipv6header* module, and source routing options do not exist in IPv6, so object "lsrr" cannot be used in rules.
-
-PF cannot match DSCP bits and source routing options, but it can match TOS. Trying the same IP Service object "tos 0x10" in policy rules for PF:
-
-.. figure:: img/obj-ip-service-pf-rule.png
-   :alt: IP Service PF rule
-
-   Figure 5.99. IP Service object "tos 0x10" in PF rule
-
-.. code-block:: none
-
-   pass out  quick inet  from any  to (eth0)  tos 0x10 keep state
-
-Cisco IOS access lists cannot match source route options but can match fragments and TOS and DSCP bits. Here is what we get if we try to compile the same rules using the same IP service objects for Cisco IOS:
-
-.. figure:: img/obj-ip-service-cisco-rule.png
-   :alt: IP Service Cisco IOS rule
-
-   Figure 5.100. IP Service objects in Cisco IOS rules
-
-.. code-block:: none
-
-   ip access-list extended e1_0_out
-   !
-   ! Rule  0 (global)
-   !
-     deny   ip any  any  log fragments
-   !
-   ! Rule  1 (global)
-   !
-     permit ip any  any  tos 0x10
-     permit ip any  any  dscp EF
-   exit
-
+*ip6tables* does not have the *-f* command line flag; instead, it uses the *frag* module to match fragments. FirewallFabrik currently does not support the ip6tables *ipv6header* module, and source routing options do not exist in IPv6, so object "lsrr" cannot be used in rules.
 
 ICMP and ICMP6 Service Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ICMP service object is a generalized representation of the ICMP protocol. ICMP packets are often used to communicate error messages that are acted upon by either the IP layer or higher-layer protocols (TCP or UDP). ICMP can also be used as a simple query protocol.
 
-Firewall Builder has service objects for both IPv4 and IPv6. ICMP service objects for IPv6 are called ICMP6 service. The standard ICMP service objects that come with Firewall Builder appear in the *Standard Objects* library, in the *Services/ICMP* branch. User-defined ICMP and ICMP6 service objects appear in the library *User* in the same *Services/ICMP* branch.
+FirewallFabrik has service objects for both IPv4 and IPv6. ICMP service objects for IPv6 are called ICMP6 service. The standard ICMP service objects that come with FirewallFabrik appear in the *Standard Objects* library, in the *Services/ICMP* branch. User-defined ICMP and ICMP6 service objects appear in the library *User* in the same *Services/ICMP* branch.
 
 Standard service objects are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the ICMP folder in the User tree and select New ICMP Service to create a service object from scratch.
 
@@ -1993,19 +1672,6 @@ If the rule set this rule belongs to is configured as combined IPv4 and IPv6, th
    $IP6TABLES -A FORWARD  -i + -p ipv6-icmp  -m icmp6 --icmpv6-type 128/0 \
        -m state --state NEW  -j ACCEPT
 
-Here is generated PF 4.x configuration:
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet proto icmp  from any  to any icmp-type 8 code 0
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet6 proto icmp6  from any  to any
-
-
 TCP Service
 ~~~~~~~~~~~
 
@@ -2013,7 +1679,7 @@ The TCP service object is a generalization of the TCP protocol, which provides a
 
 Since port numbers are used to distinguish applications using the data stream provided by the TCP protocol, each application should use a unique port number. To ensure interoperability, these numbers must be assigned by a central authority in a coordinated manner. Internet Assigned Numbers Authority (IANA) does just that. Assigned TCP and UDP port numbers can be looked up at http://www.iana.org/assignments/port-numbers. Most Unix systems also come with a /etc/services file that contains a list of assigned port numbers.
 
-Firewall Builder comes with a collection of predefined TCP Service objects with port numbers already configured. You can simply use these objects in your policy rules, so you do not have to look up port numbers every time you need them. These objects are part of the *Standard Objects* library and are located in the *Services / TCP* branch.
+FirewallFabrik comes with a collection of predefined TCP Service objects with port numbers already configured. You can simply use these objects in your policy rules, so you do not have to look up port numbers every time you need them. These objects are part of the *Standard Objects* library and are located in the *Services / TCP* branch.
 
 .. figure:: img/obj-tcp-service-ssh.png
    :alt: TCP Service List
@@ -2027,14 +1693,14 @@ The typical TCP Service object is represented in the following screenshot:
 
    Figure 5.107. TCP Service object: smtp (destination port 25)
 
-In Firewall Builder, the TCP service object is a generalization of TCP protocol. The TCP header of a packet carries only one fixed value for the source port and one fixed value for the destination port. The TCP Service object allows a range of values to be used for the source and destination ports. This allows a single TCP Service object to describe either a family of protocols using consecutive port numbers, or a protocol that may use variable port numbers or simply many protocols that use port numbers from a certain range. For example, on Unix systems, TCP sessions opened by a privileged process always have their source port number assigned from a range below 1024, while unprivileged processes use source port numbers from a range starting from 1024 and above. The TCP Service object with a source port range defined as shown in the following screenshot describes all privileged TCP sessions.
+In FirewallFabrik, the TCP service object is a generalization of TCP protocol. The TCP header of a packet carries only one fixed value for the source port and one fixed value for the destination port. The TCP Service object allows a range of values to be used for the source and destination ports. This allows a single TCP Service object to describe either a family of protocols using consecutive port numbers, or a protocol that may use variable port numbers or simply many protocols that use port numbers from a certain range. For example, on Unix systems, TCP sessions opened by a privileged process always have their source port number assigned from a range below 1024, while unprivileged processes use source port numbers from a range starting from 1024 and above. The TCP Service object with a source port range defined as shown in the following screenshot describes all privileged TCP sessions.
 
 .. figure:: img/obj-tcp-service-source-port.png
    :alt: TCP Service privileged TCP
 
    Figure 5.108. TCP Service: privileged TCP (source port 0-1023)
 
-Using "0" as both start and end values for a range means "any value" for that range. The source port range of the "privileged TCP" object starts from 0 and ends at 1023 (port ranges are inclusive in Firewall Builder), while its destination port range's start and end are both set to zero, which means "any destination port". This object describes any TCP protocol with a source port in range 0-1023 and any destination port.
+Using "0" as both start and end values for a range means "any value" for that range. The source port range of the "privileged TCP" object starts from 0 and ends at 1023 (port ranges are inclusive in FirewallFabrik), while its destination port range's start and end are both set to zero, which means "any destination port". This object describes any TCP protocol with a source port in range 0-1023 and any destination port.
 
 If all you need is to create an object to describe the TCP protocol with a particular destination port, just use the same port number for both the start and end of a destination port range (which effectively creates a range that consists of a single value).
 
@@ -2057,9 +1723,9 @@ There are six flags in the TCP header. We just briefly mention them here; more i
 
 "Established" is not a TCP flag. Instead, checking this box causes the firewall to match any packet in an established session. Checking this checkbox disables the other TCP flag controls.
 
-Firewall Builder supports all six flags, although not all target firewall platforms can match all combinations of TCP flags or any flags at all. For example, iptables, pf, ipfilter and ipfw can match flags and their combinations, but Cisco PIX cannot.
+FirewallFabrik supports all six flags. The iptables compiler can match any combination of TCP flags.
 
-Usually the firewall cannot only match a combination of flags, but can also examine only a given subset of TCP flags. Firewall Builder provides two sets of checkboxes for TCP flags and flag masks (see screenshot below). Checkboxes in the first row control TCP flags that we want the firewall to examine and checkboxes in the second row tell it whether they should be set or cleared. Only flags whose checkboxes in the first row are set will be looked at by the firewall. (If you check a box in the bottom row while leaving the checkbox above it unchecked, the flag will be ignored.)
+Usually the firewall cannot only match a combination of flags, but can also examine only a given subset of TCP flags. FirewallFabrik provides two sets of checkboxes for TCP flags and flag masks (see screenshot below). Checkboxes in the first row control TCP flags that we want the firewall to examine and checkboxes in the second row tell it whether they should be set or cleared. Only flags whose checkboxes in the first row are set will be looked at by the firewall. (If you check a box in the bottom row while leaving the checkbox above it unchecked, the flag will be ignored.)
 
 The object in the screenshot matches a TCP packet with any combination of port numbers, the TCP flag SYN set, and all other flags cleared. The firewall will examine all TCP flags.
 
@@ -2125,20 +1791,6 @@ This rule compiles into the following for iptables:
    $IP6TABLES -A FORWARD -p tcp -m tcp  -d 2001:470:1f0e:162::2 \
         --dport 80  -m state --state NEW  -j ACCEPT
 
-And for PF we get the following. Note that PF version was set to "any" or "3.x", this is why "keep state" was added. "Keep state" is default for PF 4.x and if version was configured as "4.x" in this firewall object, policy compiler would have dropped "keep state" from the generated configuration.
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet proto tcp  from any  to 70.85.175.170 port 80 keep state
-   pass out  quick inet proto tcp  from any  to 70.85.175.170 port 80 keep state
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet6 proto tcp  from any  to 2001:470:1f0e:162::2 port 80 keep state
-   pass out  quick inet6 proto tcp  from any  to 2001:470:1f0e:162::2 port 80 keep state
-
 Source port range
 '''''''''''''''''
 
@@ -2164,35 +1816,10 @@ To make the rule slightly more realistic, we made it stateless using its options
    #
    $IPTABLES -A FORWARD  -i + -p tcp -m tcp  --sport 1024:65535  -j ACCEPT
 
-Here is what is generated for PF 3.x:
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet proto tcp  from any port >= 1024  to any
-
-And for PF 4.x we get "no state" because the rule is stateless and state matching is the default in PF 4.x:
-
-.. code-block:: none
-
-   pass in   quick inet proto tcp  from any port >= 1024  to any no state
-
-Cisco IOS access list statement looks like this:
-
-.. code-block:: none
-
-   ip access-list extended e1_1_in
-   !
-   ! Rule  0 (global)
-   !
-     permit tcp any  gt 1024 any
-   exit
-
 Established
 '''''''''''
 
-Some of the supported firewalls understand special flag "established" intended to match reply packets of the TCP session. Stateless systems, such as Cisco IOS extended access lists, match combination of tcp flags where flag "ACK" is set but flag "SYN" is cleared when this keyword is used in the acl rule. Stateful firewalls such as iptables or PF offer much better way to track and match reply packets because they can follow the states a tcp session goes through when it is opened, data transferred and finally session is closed. Firewall Builder provides an option of using flag "established" but supports it only for those firewall platforms where there is no better alternative. An attempt to use a TCP service object with this flag set in rules for a firewall that supports stateful inspection causes an error.
+Stateful firewalls such as iptables offer a much better way to track and match reply packets because they can follow the states a TCP session goes through when it is opened, data is transferred, and finally the session is closed. An attempt to use a TCP service object with the "Established" flag set in rules for iptables causes an error, because iptables supports stateful inspection natively and should be used instead.
 
 Here is an example of the TCP service object with flag "Established" set and source port range "80-80", that is, this object describes TCP packets coming from the web server operating on the standard port 80 back to the client.
 
@@ -2208,33 +1835,12 @@ Using this object in a rule:
 
    Figure 5.116. Rule using TCP Service with Established flag
 
-Here is the access list generated for Cisco IOS:
-
-.. code-block:: none
-
-   ip access-list extended e1_0_in
-   !
-   ! Rule  0 (global)
-   !
-     permit tcp any  eq 80 any  established
-   !
-
-Here we have source port specification "eq 80" and keyword "established".
-
-Attempt to compile this rule for iptables or PF causes an error:
-
-.. code-block:: none
-
-   Error (pf): TCPService object with option "established" is not supported
-      by firewall platform "pf". Use stateful rule instead.
-
-
 UDP Service
 ~~~~~~~~~~~
 
 The UDP service object is a generalization of the UDP protocol, which is a connectionless transport layer protocol. Many well-known applications use UDP as their transport, such as DNS (Domain Name System), DHCP (Dynamic Host Configuration Protocol), NTP (Network Time Protocol), and SNMP (Simple Network Management Protocol).
 
-As in TCP, UDP uses port numbers to distinguish applications from one another. The UDP packet header carries two port numbers: the source port and the destination port. The UDP service object in Firewall Builder allows for a definition of ranges for both the source and the destination ports. The meaning of values assigned to the start and end of the range is the same as in the TCP service object: ranges are inclusive, that is, both start and end ports of the range are included. Using "0" for both the start and end of the range means "any port". These rules work for both the source and destination ranges. The following screenshot shows the "dns" UDP Service object that represents the Domain Name System protocol, which uses destination port 53.
+As in TCP, UDP uses port numbers to distinguish applications from one another. The UDP packet header carries two port numbers: the source port and the destination port. The UDP service object in FirewallFabrik allows for a definition of ranges for both the source and the destination ports. The meaning of values assigned to the start and end of the range is the same as in the TCP service object: ranges are inclusive, that is, both start and end ports of the range are included. Using "0" for both the start and end of the range means "any port". These rules work for both the source and destination ranges. The following screenshot shows the "dns" UDP Service object that represents the Domain Name System protocol, which uses destination port 53.
 
 .. figure:: img/obj-udp-service-dns.png
    :alt: UDP Service dns
@@ -2276,28 +1882,6 @@ Here is iptables command generated for this rule:
 
 This rule got a *"-i +"* clause because direction was set to *Inbound* but *"Interface"* column was left empty. To enforce inbound direction compiler uses "-i" option but since interface was not specified, the rule got attached to all interfaces which is defined by the +.
 
-Here is the generated PF 4.x configuration:
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   pass in   quick inet proto udp  from any  to any port 53
-
-In the pf configuration, direction is defined by the *"in"* keyword, and since no interface was requested, there is no *"on <interface>"*.
-
-The generated Cisco access list statement is quite trivial:
-
-.. code-block:: none
-
-   ip access-list extended fe0_0_in
-   !
-   ! Rule  0 (global)
-   !
-     permit udp any  any  eq 53
-   !
-   exit
-
 Source Port Range
 '''''''''''''''''
 
@@ -2317,32 +1901,10 @@ Using this object in policy rule yields the following code for iptables:
    $IPTABLES -A FORWARD  -i + -p udp -m udp  --sport 1024:65535  -m state \
    --state NEW  -j ACCEPT
 
-And for PF:
-
-.. code-block:: none
-
-   # Rule  0 (global)
-   #
-   #
-   pass in   quick inet proto udp  from any port >= 1024  to any
-
-The Cisco access list statement:
-
-.. code-block:: none
-
-   ip access-list extended e1_0_in
-   !
-   ! Rule  0 (global)
-   !
-     permit udp any  gt 1024 any
-   !
-   exit
-
-
 User Service
 ~~~~~~~~~~~~
 
-User service object matches the owner of the process on the firewall that send the packet. It translates to the "owner" match in iptables and "user" parameter for PF.
+User service object matches the owner of the process on the firewall that sent the packet. It translates to the "owner" match in iptables.
 
 .. figure:: img/obj-user-service-dialog.png
    :alt: User Service Dialog
@@ -2357,9 +1919,9 @@ User service object matches the owner of the process on the firewall that send t
 
 The user service object has only one parameter besides the name and comment: it is the user ID that the firewall should use to match packets.
 
-The user service object is only supported for iptables and PF.
+The user service object is only supported for iptables.
 
-Let's look at how the simple rule shown in Figure 5.121 compiles for iptables and PF.
+Let's look at how the simple rule shown in Figure 5.121 compiles for iptables.
 
 .. figure:: img/obj-user-service-rule.png
    :alt: User Service Rule Example
@@ -2378,21 +1940,7 @@ The firewall can associate a packet with a user only if the packet originated on
 
 The user service translated into the *owner* match for iptables. See the iptables man page for a more detailed explanation of this match.
 
-**Figure 5.123. User Service, PF Compile Output**
-
-.. code-block:: none
-
-   # Tables: (1)
-   table  { en0 , 192.168.1.1 }
-
-   # Rule  0 (global)
-   #
-   #
-   block out  quick inet  from   to any user 500
-
-Here the table *tbl.r0.s* was created to hold IP addresses that belong to the firewall. The rule matches source addresses and also the user ID of the owner using the "user" clause.
-
-The user service object is actually one of the simplest service object types in Firewall Builder, but it provides the facility for a basic per-user control on Linux and BSD machines. This service object can be used in rules with actions that reroute packets ("Route" action) or in the NAT rules; for example, to redirect web access via proxy.
+The user service object is one of the simplest service object types in FirewallFabrik, but it provides the facility for basic per-user control on Linux machines. This service object can be used in rules with actions that reroute packets ("Route" action) or in the NAT rules; for example, to redirect web access via proxy.
 
 
 Custom Service
@@ -2404,7 +1952,7 @@ The following screenshot represents a custom service object that uses the capabi
 
 .. note::
 
-   The code specified in the custom service object is used literally; no validation is done either by the Firewall Builder GUI or the policy compilers.
+   The code specified in the custom service object is used literally; no validation is done either by the FirewallFabrik GUI or the policy compilers.
 
 .. figure:: img/obj-custom-service-string.png
    :alt: Custom Service string module
@@ -2415,7 +1963,7 @@ The Custom Service dialog provides the following controls:
 
 * **Name:** This is the name of the object.
 
-* **Platform:** This is a pull-down menu that shows a list of all firewall platform targets available in Firewall Builder.
+* **Platform:** This is a pull-down menu that shows a list of all firewall platform targets available in FirewallFabrik.
 
 * **Code String:** This is a line of code in the target firewall language. (This is the heart of the custom service object.)
 
@@ -2428,7 +1976,7 @@ The Custom Service dialog provides the following controls:
 Using Custom Service Object in Rules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The following example uses iptables module "recent". Quoting from the iptables manual, this module "allows you to dynamically create a list of IP addresses and then match against that list in a few different ways". We can use this module to throttle brute-force ssh scanning attacks where an attacker repeatedly connects to the ssh daemon trying to guess login name and password. The full explanation of how to use the custom service object in combination with *swatch* script on Linux to stop these attacks can be found in the Firewall Builder Cookbook (Chapter 14). Here we focus only on the Custom Service object and iptables rules that can be obtained with it.
+The following example uses iptables module "recent". Quoting from the iptables manual, this module "allows you to dynamically create a list of IP addresses and then match against that list in a few different ways". We can use this module to throttle brute-force ssh scanning attacks where an attacker repeatedly connects to the ssh daemon trying to guess login name and password. The full explanation of how to use the custom service object in combination with *swatch* script on Linux to stop these attacks can be found in the FirewallFabrik Cookbook (Chapter 14). Here we focus only on the Custom Service object and iptables rules that can be obtained with it.
 
 .. figure:: img/obj-custom-service-ssh-throttling.png
    :alt: Custom Service ssh with throttling
@@ -2444,7 +1992,7 @@ The second custom service object also matches port 22 and checks if the address 
 
    Figure 5.126. Custom Service: ssh throttled to 2 per min
 
-Note that our goal is to match protocol SSH (tcp port 22) and at the same time activate iptables module "recent" and add some parameters for it. Both are done by means of a service object in Firewall Builder; however placing two service objects in the "Service" field of a rule joins them by a logical OR operation. That is, if we were to put TCP service object "ssh" and custom service object that defines parameter for module "recent" in the "Service" field of the same rule, we would end up with two iptables commands, one matching tcp port 22 and another trying to use module "recent". Since we need to match both in the same rule, we have to add "--dport 22" to the code defined in the custom service object.
+Note that our goal is to match protocol SSH (tcp port 22) and at the same time activate iptables module "recent" and add some parameters for it. Both are done by means of a service object in FirewallFabrik; however placing two service objects in the "Service" field of a rule joins them by a logical OR operation. That is, if we were to put TCP service object "ssh" and custom service object that defines parameter for module "recent" in the "Service" field of the same rule, we would end up with two iptables commands, one matching tcp port 22 and another trying to use module "recent". Since we need to match both in the same rule, we have to add "--dport 22" to the code defined in the custom service object.
 
 Now, the rules using these objects:
 
@@ -2473,7 +2021,7 @@ Here are the iptables commands generated for these two rules:
 
 First, we match port 22 and check if we have seen this source address during the past minute at least 2 times. If yes, module "recent" returns a match and the packet matches the first iptables rule. Iptables passes control to the rules in chain "In_RULE_0" where the packet is logged and dropped. If the packet does not match the conditions set for the module "recent", it does not match the first iptables rule and will be inspected by the next one (generated for the original rule #1). If this is the opening packet of a new session, it matches state "NEW" and will be permitted. Since module "recent" was also called in this rule, the source address of the packet was added to the internal table of the module "recent" so it can be used in the previous iptables rule.
 
-The custom service object allows you to inject arbitrary strings into the generated firewall configuration in the place where port matching normally occurs. Another feature in Firewall Builder that also allows for insertion of a code in the generated code is the custom action feature. The combination of custom service with custom action provides for a very flexible system where you can compose pretty much any required configuration line if it is not otherwise supported by the standard means. Suppose instead of just dropping SSH scan connections coming to our system, we want to slow them down, thus tying up the attacker's resources. Iptables has a target just for that called TARPIT. This target is specific for iptables and does not exist on the other firewalls supported by Firewall Builder and there is no standard action for it. You can use the custom action mechanism to generate an iptables command with this target. In the rule, the action in it is set to "Custom Action". Double-clicking the action in the rule opens a dialog with its parameters (if any). The custom action object has one parameter: a free-form string where you enter the code you want to appear in the generated command:
+The custom service object allows you to inject arbitrary strings into the generated firewall configuration in the place where port matching normally occurs. Another feature in FirewallFabrik that also allows for insertion of a code in the generated code is the custom action feature. The combination of custom service with custom action provides for a very flexible system where you can compose pretty much any required configuration line if it is not otherwise supported by the standard means. Suppose instead of just dropping SSH scan connections coming to our system, we want to slow them down, thus tying up the attacker's resources. Iptables has a target just for that called TARPIT. This target is specific for iptables and does not exist on the other firewalls supported by FirewallFabrik and there is no standard action for it. You can use the custom action mechanism to generate an iptables command with this target. In the rule, the action in it is set to "Custom Action". Double-clicking the action in the rule opens a dialog with its parameters (if any). The custom action object has one parameter: a free-form string where you enter the code you want to appear in the generated command:
 
 .. figure:: img/obj-custom-service-tarpit.png
    :alt: Custom Service TARPIT action
@@ -2607,7 +2155,7 @@ Another example is shown in Figure 5.136 where all the objects are being filtere
 Creating and Using a User-Defined Library of Objects
 -----------------------------------------------------
 
-The User library that comes with Firewall Builder is all you need if you are the only person administering firewalls in your enterprise. If you have several administrators, however, each with a different workstation, then you may want to create a user library that you can distribute. That way, user-defined objects can be created once, by one person.
+The User library that comes with FirewallFabrik is all you need if you are the only person administering firewalls in your enterprise. If you have several administrators, however, each with a different workstation, then you may want to create a user library that you can distribute. That way, user-defined objects can be created once, by one person.
 
 Let's create and distribute a simple user-defined library. Start by selecting the New Object/New Library option from the Object menu.
 
@@ -2661,7 +2209,7 @@ A file system Save dialog appears. Here you can specify a name and location for 
 
 You can now move or e-mail the library to someone else.
 
-To load a library, copy the file to the directory where you have Firewall Builder store your object files. Then, select Import Library from the Firewall Builder File menu. (You may have to restart Firewall Builder to get it to locate the file. Until then, the "Import Library" option may be grayed out.)
+To load a library, copy the file to the directory where you have FirewallFabrik store your object files. Then, select Import Library from the FirewallFabrik File menu. (You may have to restart FirewallFabrik to get it to locate the file. Until then, the "Import Library" option may be grayed out.)
 
 You can now use this library like any other library. Keep in mind that changes to one copy of the user-defined library has no effect on other copies. To propagate changes, you have to redistribute the library.
 

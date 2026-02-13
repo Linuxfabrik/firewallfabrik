@@ -2,14 +2,14 @@ Cluster Configuration
 =====================
 
 .. sectnum::
-   :start: 1
+   :start: 8
 
 .. contents::
    :local:
    :depth: 2
 
 
-Firewall Builder 4.0 introduced support for firewall clusters. Firewall Builder helps you create configuration for iptables, PF, or PIX rules and in some cases cluster configuration as well. The following state synchronization and failover protocols are supported at this time:
+FirewallFabrik supports firewall clusters for Linux. FirewallFabrik helps you create configuration for iptables/nftables rules and in some cases cluster configuration as well. The following state synchronization and failover protocols are supported:
 
 .. list-table:: Supported State Synchronization and Failover Software
    :header-rows: 1
@@ -21,30 +21,17 @@ Firewall Builder 4.0 introduced support for firewall clusters. Firewall Builder 
    * - Linux
      - conntrackd
      - vrrpd, heartbeat, keepalived, OpenAIS
-   * - OpenBSD/FreeBSD
-     - pfsync
-     - CARP
-   * - Cisco ASA (PIX)
-     - PIX state sync protocol
-     - PIX failover protocol
-   * - Cisco IOS Router
-     - None
-     - None
 
-Firewall Builder automatically generates policy rules to permit packets of these protocols when it sees firewall cluster configured with one of them. You can use cluster object and its interfaces instead of the member firewall objects or their interfaces in policy and NAT rules and the program will substitute correct addresses when it generates iptables script or PF or PIX configuration.
-
-.. note::
-
-   Cisco IOS router firewall objects can be used in a cluster, but Firewall Builder does not support a failover protocol for IOS router clusters, so no rules are automatically created for this type of cluster.
+FirewallFabrik automatically generates policy rules to permit packets of these protocols when it sees firewall cluster configured with one of them. You can use cluster object and its interfaces instead of the member firewall objects or their interfaces in policy and NAT rules and the program will substitute correct addresses when it generates iptables script.
 
 Detailed description of the Cluster object is provided in :doc:`05 - Working with Objects`.
 
-Linux cluster configuration with Firewall Builder
---------------------------------------------------
+Linux cluster configuration with FirewallFabrik
+------------------------------------------------
 
-Detailed walk-through examples for different Linux, BSD and PIX cluster configurations can be found in Firewall Builder Cookbook chapter Section 14.4.
+Detailed walk-through examples for Linux cluster configurations can be found in :doc:`14 - FirewallFabrik Cookbook`.
 
-High Availability (HA) configurations on Linux can be built using different software packages, such as vrrpd (VRRPD) or heartbeat (Linux-HA). Firewall Builder focuses on the firewall configuration and provides independent way of configuring iptables rules for Linux HA clusters and can be used with any HA software package, including home-grown scripts and packages that will appear in the future. At this time Firewall Builder does not generate configuration or command line for the HA software.
+High Availability (HA) configurations on Linux can be built using different software packages, such as vrrpd (VRRPD) or heartbeat (Linux-HA). FirewallFabrik focuses on the firewall configuration and provides independent way of configuring iptables rules for Linux HA clusters and can be used with any HA software package, including home-grown scripts and packages that will appear in the future. At this time FirewallFabrik does not generate configuration or command line for the HA software.
 
 Like with all other supported firewall platforms, interface objects that belong to a cluster object serve to establish association between actual interfaces of the member firewalls. Cluster interface object should have the same name as corresponding member firewall interfaces. It should have Failover Group child object configured with interfaces of the member firewalls. You can create Failover Group object using context menu item "Add Failover Group", the menu appears when you right mouse click on the cluster interface object. If you create new cluster using "New object" menu or toolbar button, the wizard that creates new cluster object will create Failover Group objects automatically. Here is how it should look like:
 
@@ -85,7 +72,7 @@ Secondary IP address 10.3.14.150 that was added by heartbeat is highlighted in r
              UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
              Interrupt:18 Base address:0x2000
 
-It is important to understand the distinction because iptables does not recognize eth0:0 as an interface and does not allow it in "-i" or "-o" clause. Firewall Builder follows the same rules as the target firewall platform it prepares configuration for. This means you should build configuration in fwbuilder using interface "eth0" and not "eth0:0".
+It is important to understand the distinction because iptables does not recognize eth0:0 as an interface and does not allow it in "-i" or "-o" clause. FirewallFabrik follows the same rules as the target firewall platform it prepares configuration for. This means you should build configuration in FirewallFabrik using interface "eth0" and not "eth0:0".
 
 Each cluster interface should have a Failover Group child object configured with corresponding interfaces of the member firewalls. Configuration of this object implements interface mapping illustrated by the figure above and is shown below:
 
@@ -94,7 +81,7 @@ Each cluster interface should have a Failover Group child object configured with
 
    Failover Group object configuration
 
-Firewall Builder GUI provides a way to configure some parameters for the failover protocols *heartbeat* and *OpenAIS*. Click *Edit protocol parameters* button to open dialog for this:
+FirewallFabrik GUI provides a way to configure some parameters for the failover protocols *heartbeat* and *OpenAIS*. Click *Edit protocol parameters* button to open dialog for this:
 
 .. figure:: img/cluster-heartbeat-parameters.png
    :alt: Editing parameters for the heartbeat protocol
@@ -106,7 +93,7 @@ Firewall Builder GUI provides a way to configure some parameters for the failove
 
    Editing parameters for the OpenAIS protocol
 
-Firewall Builder only supports multicast or unicast heartbeat configuration. You can enter the address and port number in the dialog. If you turn checkbox "Use unicast address" on, generated iptables commands will match source and destination addresses of the corresponding interface of both member firewalls. If this checkbox is off, it is assumed heartbeat is configured to use multicast and generated iptables commands will only match this multicast address in both INPUT and OUTPUT chains.
+FirewallFabrik only supports multicast or unicast heartbeat configuration. You can enter the address and port number in the dialog. If you turn checkbox "Use unicast address" on, generated iptables commands will match source and destination addresses of the corresponding interface of both member firewalls. If this checkbox is off, it is assumed heartbeat is configured to use multicast and generated iptables commands will only match this multicast address in both INPUT and OUTPUT chains.
 
 As with heartbeat, you can configure ip address and port number for the OpenAIS protocol. There is no unicast option here.
 
@@ -124,73 +111,17 @@ The State Synchronization group object should look like this:
 
    State synchronization group object parameters
 
-Member firewalls and their interfaces appear in the panel in the right hand side of the dialog. Firewall Builder uses this information to automatically generate iptables rules to permit conntrackd packets. Firewall Builder assumes conntrackd is configured to send synchronization packets over dedicated interface (which generally is a good idea anyway). You may use internal interface of the firewall for this purpose as well. See examples of conntrackd configuration in Firewall Builder CookBook. You can configure ip address and port number for the conntrack as well.
+Member firewalls and their interfaces appear in the panel in the right hand side of the dialog. FirewallFabrik uses this information to automatically generate iptables rules to permit conntrackd packets. FirewallFabrik assumes conntrackd is configured to send synchronization packets over dedicated interface (which generally is a good idea anyway). You may use internal interface of the firewall for this purpose as well. See examples of conntrackd configuration in :doc:`14 - FirewallFabrik Cookbook`. You can configure ip address and port number for the conntrack as well.
 
 .. figure:: img/cluster-conntrack-parameters.png
    :alt: Editing parameters for the Conntrack state synchronization protocol
 
    Editing parameters for the Conntrack state synchronization protocol
 
-OpenBSD cluster configuration with Firewall Builder
-----------------------------------------------------
-
-Documentation for BSD clusters coming soon...
-
-PIX cluster configuration with Firewall Builder
-------------------------------------------------
-
-Firewall Builder supports PIX "lan based" failover configuration. Unlike in Linux or BSD, where each interface of the firewall runs its own instance of failover protocol, PIX runs one instance of failover protocol over dedicated interface. PIX can also run state synchronization protocol over the same or another dedicated interface. These dedicated interfaces should be connected via separate switch and do not see regular traffic. Here is how this is implemented in Firewall Builder:
-
-Like with all other supported firewall platforms, interface objects that belong to a cluster object serve to establish association between actual interfaces of the member firewalls. Cluster interface object should have the same name as corresponding member firewall interfaces. It should have Failover Group child object which should be configured with interfaces of the member firewalls. You can create Failover Group object using context menu item "Add Failover Group", the menu appears when you right mouse click on the cluster interface object. Here is an example of correct interface mapping between cluster and member firewalls:
-
-.. figure:: img/cluster-pix-failover-group-mapping.png
-   :alt: Failover group objects and mapping between cluster and member interfaces
-
-   Failover group objects and mapping between cluster and member interfaces
-
-The Failover Group object "cluster1:e0.101:members" is configured with interfaces "Ethernet0.101" of both members:
-
-.. figure:: img/cluster-pix-failover-group-object.png
-   :alt: Example of failover group object
-
-   Example of failover group object
-
-Interface that is configured for the failover on the member firewall should be marked as "Dedicated Failover". Use checkbox with this name in the interface object dialog to do this.
-
-Cluster interface that corresponds to the failover interface of the members should be configured with protocol "PIX failover protocol". Click on the "Edit protocol parameters" button to edit timeout, poll time and the key.
-
-Cluster interfaces that represent regular interfaces of the members also must have failover group objects; that is where you add interfaces of the member firewalls. There is no need to configure protocol in these failover groups because PIX does not run it over these interfaces. Regular interfaces should not be marked as "Dedicated Failover".
-
-Cluster object should have State Synchronization group child object. Create it using context menu "Add State Synchronization Group" item if this object does not exist. In this object you need to configure member interfaces that should be used for state synchronization. You can use separate dedicated interfaces or the same interfaces used for failover. If these are separate, corresponding interface objects of the member firewalls must be marked as "Dedicated Failover".
-
-One of the member firewall interfaces used in the State Synchronization group must be marked as "master". This is where you define which PIX unit is going to be the primary and which is going to be the secondary in the HA pair.
-
-Here is an example of the state synchronization and failover using the same interface Ethernet2:
-
-.. figure:: img/cluster-pix-state-sync-failover.png
-   :alt: Example of the state synchronization and failover using the same interface Ethernet2
-
-   Example of the state synchronization and failover using the same interface Ethernet2
-
-The State Synchronization Group object "State Sync Group" is configured with interfaces "Ethernet2" of both members:
-
-.. figure:: img/cluster-pix-state-sync-group-object.png
-   :alt: Example of state synchronization group object
-
-   Example of state synchronization group object
-
-Dedicated failover interfaces of the member firewalls must have IP addresses and these addresses must be different but belong to the same subnet.
-
-Built-in policy installer treats PIX clusters in a special way:
-
-* For the PIX cluster, built-in installer installs generated configuration only on the master PIX unit. It determines which one is the master by looking in the StateSyncGroup object (state synchronization cluster group).
-
-* Dialog where user enters authentication credentials and other parameters for the installer has a checkbox that makes installer initiate copy of the configuration to the standby PIX if installation was successful.
-
 Handling of the cluster rule set and member firewalls rule sets
 ---------------------------------------------------------------
 
-Normally, only the cluster object should have non-empty policy, NAT and routing rule sets, while member firewall objects should have empty rule sets. In this case, Firewall Builder policy compilers will use rules they find in the cluster. However, if a member firewall has rule set object of any type (Policy, NAT, Routing) with the name the same as the name of the cluster object and the same type, then compilers will use rules from the member firewall and ignore those found in the cluster. They also issue a warning that looks like shown in the figure below:
+Normally, only the cluster object should have non-empty policy, NAT and routing rule sets, while member firewall objects should have empty rule sets. In this case, FirewallFabrik policy compilers will use rules they find in the cluster. However, if a member firewall has rule set object of any type (Policy, NAT, Routing) with the name the same as the name of the cluster object and the same type, then compilers will use rules from the member firewall and ignore those found in the cluster. They also issue a warning that looks like shown in the figure below:
 
 .. figure:: img/cluster-rule-set-override-warning.png
    :alt: A warning shown when a rule set that belongs to the member firewall overrides rule set that belongs to the cluster

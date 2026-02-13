@@ -2,7 +2,7 @@ Configlets
 ==========
 
 .. sectnum::
-   :start: 1
+   :start: 13
 
 .. contents::
    :local:
@@ -33,20 +33,18 @@ For example, to customize the nftables shell script wrapper, copy ``resources/te
 Configlet Example (iptables)
 ----------------------------
 
-In this section, we'll show how modifying a configlet lets you tailor your generated configuration file.
+In this section, we show how modifying a configlet lets you tailor your generated configuration file.
 
-First, we'll generate a basic firewall policy using the "fw template 1" template. (See the Firewall Object section in :doc:`05 - Working with Objects` for details.)
-
-Then, we'll tell the firewall to always accept SSH connections from the management server at 192.168.1.100. To do this, we select Firewall Settings from the firewall's object editor panel, then enter the management server IP address in the "Always permit ssh access from the management workstation with this address" field.
+First, generate a basic firewall policy using a template. Then, tell the firewall to always accept SSH connections from the management server at 192.168.1.100 by entering that address in the "Always permit ssh access from the management workstation with this address" field in Firewall Settings.
 
 .. figure:: img/configlet-firewall-settings-dialog.png
    :alt: Firewall Settings Dialog showing iptables compiler options and SSH access configuration
 
    Firewall Settings Dialog (iptables).
 
-We then save and compile the firewall. If we look into the generated .fw file, we see the following:
+Save and compile the firewall. The generated ``.fw`` file contains:
 
-.. code-block:: text
+.. code-block:: bash
 
    # --------------- Table 'filter', automatic rules
    # accept established sessions
@@ -59,11 +57,17 @@ We then save and compile the firewall. If we look into the generated .fw file, w
    $IPTABLES -A OUTPUT  -p tcp -m tcp  -d 192.168.1.100/255.255.255.255 \
        --sport 22  -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-Now suppose we want to limit SSH access from the management workstation so that it can only connect to the management interface of the firewall.
+Now suppose we want to limit SSH access to the management interface of the firewall.
 
 First, we copy the bundled ``resources/configlets/linux24/automatic_rules`` to ``$HOME/firewallfabrik/configlets/linux24/automatic_rules``.
 
-Then, we open our copy of automatic_rules in a text editor and look for this section of the code:
+.. code-block:: bash
+
+   mkdir -p $HOME/fwbuilder/configlets/linux24
+   cp <firewallfabrik-package>/resources/configlets/linux24/automatic_rules \
+       $HOME/fwbuilder/configlets/linux24/automatic_rules
+
+Then, open the copy in a text editor and find this section:
 
 .. code-block:: text
 
@@ -75,7 +79,7 @@ Then, we open our copy of automatic_rules in a text editor and look for this sec
            -m state --state ESTABLISHED,RELATED -j ACCEPT {{$end_rule}}
    {{endif}}
 
-To limit SSH connections to the management interface of the firewall, we modify the configlet as follows:
+Modify it to restrict SSH to a specific interface:
 
 .. code-block:: text
 
@@ -89,17 +93,12 @@ To limit SSH connections to the management interface of the firewall, we modify 
            -m state --state ESTABLISHED,RELATED -j ACCEPT {{$end_rule}}
    {{endif}}
 
-The variable ``{{$management_interface}}`` is not used by the original configlet, but it is documented in the comment at the top of the configlet file.
+The variable ``{{$management_interface}}`` is documented in the comment at the top of the configlet file.
 
-Now we can save the configlet and recompile the firewall. Then, we look at the generated .fw file again.
+After saving and recompiling, the generated script now specifies the interface:
 
-.. code-block:: text
+.. code-block:: bash
 
-   # --------------- Table 'filter', automatic rules
-   # accept established sessions
-   $IPTABLES -A INPUT    -m state --state ESTABLISHED,RELATED -j ACCEPT
-   $IPTABLES -A OUTPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
-   $IPTABLES -A FORWARD  -m state --state ESTABLISHED,RELATED -j ACCEPT
    # backup ssh access
    $IPTABLES -A INPUT -i eth1 -p tcp -m tcp \
            -s 192.168.1.100/255.255.255.255  --dport 22 \
@@ -107,5 +106,3 @@ Now we can save the configlet and recompile the firewall. Then, we look at the g
    $IPTABLES -A OUTPUT  -o eth1 -p tcp -m tcp \
            -d 192.168.1.100/255.255.255.255  --sport 22 \
            -m state --state ESTABLISHED,RELATED -j ACCEPT
-
-As you can see, the rules, instead of being general, now specify eth1.
