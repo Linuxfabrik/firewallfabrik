@@ -221,7 +221,7 @@ class IptablesSettingsDialog(QDialog):
         self.nlgroup.setValue(int(opts.get('ulog_nlgroup', 1)))
 
         # IPv4 before IPv6 combo
-        if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_before_ipv4':
+        if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_first':
             self.ipv4before.setCurrentIndex(1)
         else:
             self.ipv4before.setCurrentIndex(0)
@@ -285,9 +285,7 @@ class IptablesSettingsDialog(QDialog):
 
         # IPv4/IPv6 order
         opts['ipv4_6_order'] = (
-            'ipv6_before_ipv4'
-            if self.ipv4before.currentIndex() == 1
-            else 'ipv4_before_ipv6'
+            'ipv6_first' if self.ipv4before.currentIndex() == 1 else 'ipv4_first'
         )
 
         # Reassign to trigger SQLAlchemy JSON mutation detection.
