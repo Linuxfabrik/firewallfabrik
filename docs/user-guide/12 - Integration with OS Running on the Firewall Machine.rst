@@ -27,7 +27,7 @@ Create a service unit file that runs the generated firewall script at boot. The 
 
 .. code-block:: bash
 
-   sudo vim /etc/systemd/system/firewallfabrik.service
+   sudo $EDITOR /etc/systemd/system/firewallfabrik.service
 
 Add the following content (adjust the script path to match your setup):
 
@@ -91,7 +91,7 @@ On modern systems using NetworkManager, you can use a dispatcher script:
 
 .. code-block:: bash
 
-   sudo vim /etc/NetworkManager/dispatcher.d/99-firewallfabrik
+   sudo $EDITOR /etc/NetworkManager/dispatcher.d/99-firewallfabrik
 
 Add the following content:
 

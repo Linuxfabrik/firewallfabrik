@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="/">
     <!-- Toolbar icons (referenced by direct path in .ui files) -->
+    <file alias="Icons/Add">Icons/add.png</file>
     <file>Icons/back_25.png</file>
     <file>Icons/forward_25.png</file>
     <file>Icons/newfile_25.png</file>
