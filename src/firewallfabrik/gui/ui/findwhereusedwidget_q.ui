@@ -120,7 +120,7 @@
   <customwidget>
    <class>FWObjectDropArea</class>
    <extends>QWidget</extends>
-   <header>FWObjectDropArea.h</header>
+   <header>firewallfabrik.gui.drop_area</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

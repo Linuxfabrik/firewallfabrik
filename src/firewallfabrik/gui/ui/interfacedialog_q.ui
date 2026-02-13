@@ -333,7 +333,7 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Bridge Port Interface</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
           </widget>
          </item>
