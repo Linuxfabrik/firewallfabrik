@@ -3064,8 +3064,8 @@ class ObjectTree(QWidget):
             new_id = uuid.uuid4()
             kwargs = {'id': new_id}
 
-            # Library has no 'type' column; all other models use STI.
-            if model_cls is not Library:
+            # Only set 'type' for STI models that have a type column.
+            if hasattr(model_cls, 'type'):
                 kwargs['type'] = type_name
 
             # Library objects use database_id instead of library_id.
