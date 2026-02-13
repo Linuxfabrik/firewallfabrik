@@ -13,6 +13,7 @@
 import importlib.resources
 import logging
 import subprocess
+import traceback
 import uuid
 from pathlib import Path
 
@@ -63,6 +64,7 @@ from firewallfabrik.core.objects import (
     RuleSet,
     Service,
     group_membership,
+    rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
@@ -858,6 +860,221 @@ class FWWindow(QMainWindow):
         )
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
+
+    @Slot()
+    def toolsUpdateStandardLibrary(self):
+        """Replace the Standard Library with the latest bundled version."""
+        if self._current_file is None:
+            QMessageBox.warning(
+                self,
+                'FirewallFabrik',
+                self.tr('No file is loaded. Open or create a file first.'),
+            )
+            return
+
+        answer = QMessageBox.question(
+            self,
+            'FirewallFabrik',
+            self.tr(
+                'Replace the Standard Library with the latest version?\n'
+                'Your user libraries and rules will be preserved.'
+            ),
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        self._close_editor()
+
+        # Build old ref map: paths belonging to the current Standard Library.
+        old_ref_map = {
+            path: uid
+            for path, uid in self._db_manager.ref_index.items()
+            if path == 'Library:Standard' or path.startswith('Library:Standard/')
+        }
+
+        # Parse the bundled Standard Library.
+        std_path = (
+            Path(str(importlib.resources.files('firewallfabrik') / 'resources'))
+            / 'libraries'
+            / 'standard.fwf'
+        )
+        from firewallfabrik.core._yaml_reader import YamlReader
+
+        reader = YamlReader()
+        try:
+            parse_result = reader.parse(std_path)
+        except Exception:
+            logger.exception(
+                'Failed to parse standard library from %s',
+                std_path,
+            )
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr('Failed to parse the standard object library.'),
+            )
+            return
+
+        # Find the Standard library in the parse result.
+        new_std = None
+        for lib in parse_result.database.libraries:
+            if lib.name == 'Standard':
+                new_std = lib
+                break
+        if new_std is None:
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'The bundled standard library file does not contain '
+                    'a "Standard" library.'
+                ),
+            )
+            return
+
+        # Phase 1: Delete old Standard Library.
+        # Use a dedicated session so the identity map is clean for phase 2
+        # (the YAML uses fixed UUIDs, so old and new objects share PKs).
+        session = self._db_manager.create_session()
+        try:
+            db_obj_id = session.scalars(
+                sqlalchemy.select(FWObjectDatabase.id),
+            ).first()
+            old_std = session.scalars(
+                sqlalchemy.select(Library).where(Library.name == 'Standard'),
+            ).first()
+
+            if old_std is None:
+                session.close()
+                QMessageBox.warning(
+                    self,
+                    'FirewallFabrik',
+                    self.tr('No Standard Library found in the current file.'),
+                )
+                return
+
+            # Collect all object IDs belonging to the old Standard Library.
+            old_ids = {old_std.id}
+            for rel in (
+                'addresses',
+                'devices',
+                'groups',
+                'interfaces',
+                'intervals',
+                'services',
+            ):
+                for obj in getattr(old_std, rel, ()):
+                    old_ids.add(obj.id)
+                    # Devices may own interfaces which own addresses.
+                    if rel == 'devices':
+                        for iface in getattr(obj, 'interfaces', ()):
+                            old_ids.add(iface.id)
+                            for addr in getattr(iface, 'addresses', ()):
+                                old_ids.add(addr.id)
+
+            # Delete group_membership rows where group_id is an old
+            # Standard Library group (FK constraint requires this before
+            # deleting the group objects themselves).
+            session.execute(
+                group_membership.delete().where(
+                    group_membership.c.group_id.in_(old_ids),
+                ),
+            )
+
+            # Delete the old Standard Library (cascade removes children).
+            session.delete(old_std)
+            session.commit()
+        except Exception:
+            session.rollback()
+            logger.exception('Failed to delete old Standard Library')
+            self._show_traceback_error(
+                'Failed to delete the old Standard Library.',
+            )
+            return
+        finally:
+            session.close()
+
+        # Phase 2: Insert new Standard Library in a fresh session
+        # (clean identity map avoids stale-PK conflicts).
+        # Use set_committed_value to set database_id and clear the
+        # database relationship WITHOUT triggering attribute events.
+        # Normal assignment (new_std.database = None) cascades through
+        # back-references and sets library_id = None on all child groups.
+        from sqlalchemy.orm.attributes import set_committed_value
+
+        set_committed_value(new_std, 'database', None)
+        set_committed_value(new_std, 'database_id', db_obj_id)
+        session = self._db_manager.create_session()
+        try:
+            session.add(new_std)
+            session.flush()
+
+            # Insert new group memberships (internal to Standard Library).
+            if parse_result.memberships:
+                session.execute(
+                    group_membership.insert(),
+                    parse_result.memberships,
+                )
+
+            # Remap user references: build old_uuid -> new_uuid mapping.
+            new_ref_map = {
+                path: uid
+                for path, uid in parse_result.ref_index.items()
+                if path == 'Library:Standard' or path.startswith('Library:Standard/')
+            }
+            uuid_remap = {}
+            for path, old_uuid in old_ref_map.items():
+                new_uuid = new_ref_map.get(path)
+                if new_uuid is not None and new_uuid != old_uuid:
+                    uuid_remap[old_uuid] = new_uuid
+
+            for old_uuid, new_uuid in uuid_remap.items():
+                session.execute(
+                    rule_elements.update()
+                    .where(rule_elements.c.target_id == old_uuid)
+                    .values(target_id=new_uuid),
+                )
+                session.execute(
+                    group_membership.update()
+                    .where(group_membership.c.member_id == old_uuid)
+                    .values(member_id=new_uuid),
+                )
+
+            session.commit()
+        except Exception:
+            session.rollback()
+            logger.exception('Failed to insert new Standard Library')
+            self._show_traceback_error(
+                'Failed to insert the new Standard Library.',
+            )
+            return
+        finally:
+            session.close()
+
+        # Merge ref_index: remove old Standard entries, add new ones.
+        ref_index = {
+            path: uid
+            for path, uid in self._db_manager.ref_index.items()
+            if path != 'Library:Standard' and not path.startswith('Library:Standard/')
+        }
+        ref_index.update(parse_result.ref_index)
+        self._db_manager.ref_index = ref_index
+
+        # Save undo state and refresh UI.
+        self._db_manager.save_state('Update Standard Library')
+
+        file_key = (
+            str(self._display_file) if getattr(self, '_display_file', None) else ''
+        )
+        with self._db_manager.session() as sess:
+            self._object_tree.populate(sess, file_key=file_key)
+        self._reload_rule_set_views()
+
+        QMessageBox.information(
+            self,
+            'FirewallFabrik',
+            self.tr('Standard Library has been updated successfully.'),
+        )
 
     @Slot()
     def debug(self):
@@ -1907,6 +2124,22 @@ class FWWindow(QMainWindow):
         self._editor_obj_id = None
         self._editor_obj_type = None
         self.editorDockWidget.setWindowTitle('Editor')
+
+    def _show_traceback_error(self, summary):
+        """Show a critical error dialog with the current traceback.
+
+        The traceback is placed in a scrollable detailed-text area so
+        it does not dominate the screen and can easily be copied.
+        """
+        dlg = QMessageBox(
+            QMessageBox.Icon.Critical,
+            'FirewallFabrik',
+            summary,
+            QMessageBox.StandardButton.Ok,
+            self,
+        )
+        dlg.setDetailedText(traceback.format_exc())
+        dlg.exec()
 
     @staticmethod
     def _gather_all_tags(session):

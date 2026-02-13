@@ -15,7 +15,7 @@
 import socket
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
-from firewallfabrik.gui.platform_settings import PLATFORMS
+from firewallfabrik.gui.platform_settings import get_enabled_platforms
 
 _PROTOCOL_CHOICES = ('any', 'icmp', 'ipv6-icmp', 'tcp', 'udp')
 
@@ -32,10 +32,6 @@ class CustomServiceDialog(BaseObjectDialog):
         self._all_codes = {}
         self._current_platform = ''
 
-        # Populate platform combo with all known platforms.
-        for key, display in sorted(PLATFORMS.items()):
-            self.platform.addItem(display, key)
-
         # Populate protocol combo with standard choices.
         for proto in _PROTOCOL_CHOICES:
             self.protocol.addItem(proto)
@@ -48,10 +44,20 @@ class CustomServiceDialog(BaseObjectDialog):
         # Build the per-platform code map from the model.
         self._all_codes = dict(self._obj.codes or {})
 
-        # Select the first platform and show its code.
-        if self.platform.count() > 0:
-            self._current_platform = self.platform.itemData(0) or ''
-            self.platform.setCurrentIndex(0)
+        # Refresh platform combo with currently enabled platforms.
+        self.platform.blockSignals(True)
+        self.platform.clear()
+        for key, display in sorted(
+            get_enabled_platforms().items(), key=lambda t: t[1].casefold()
+        ):
+            self.platform.addItem(display, key)
+        # Default to nftables if enabled, otherwise first entry.
+        idx = self.platform.findData('nftables')
+        if idx >= 0:
+            self.platform.setCurrentIndex(idx)
+        self.platform.blockSignals(False)
+
+        self._current_platform = self.platform.currentData() or ''
         self.code.setText(self._all_codes.get(self._current_platform, ''))
 
         # Protocol

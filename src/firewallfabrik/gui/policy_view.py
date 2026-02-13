@@ -232,7 +232,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
             x += icon_sz + self._ICON_TEXT_GAP
 
         text = index.data(Qt.ItemDataRole.DisplayRole)
-        if text:
+        if text is not None and text != '':
             text_rect = QRect(x, rect.top(), rect.right() - x, line_h)
             painter.drawText(
                 text_rect,

@@ -736,11 +736,11 @@ class PolicyTreeModel(QAbstractItemModel):
                 return _options_tooltip(row_data)
             return self._display_value(row_data, col)
         if role == Qt.ItemDataRole.BackgroundRole:
-            if row_data.color_hex:
+            if row_data.color_hex and col != self._position_col:
                 return QColor(row_data.color_hex)
             return None
         if role == Qt.ItemDataRole.ForegroundRole:
-            if row_data.color_hex:
+            if row_data.color_hex and col != self._position_col:
                 return _contrast_color(QColor(row_data.color_hex))
             return None
         if role == Qt.ItemDataRole.TextAlignmentRole:

@@ -793,6 +793,7 @@
     <addaction name="fileCompareAction"/>
     <addaction name="ImportAddressesFromFileAction"/>
     <addaction name="SNMPDiscoveryAction"/>
+    <addaction name="UpdateStandardLibraryAction"/>
    </widget>
    <widget class="QMenu" name="helpMenu">
     <property name="title">
@@ -1422,6 +1423,14 @@
    </property>
    <property name="toolTip">
     <string>Discover networks and hosts using SNMP</string>
+   </property>
+  </action>
+  <action name="UpdateStandardLibraryAction">
+   <property name="text">
+    <string>Update Standard Library</string>
+   </property>
+   <property name="toolTip">
+    <string>Replace the Standard Library with the latest version shipped with FirewallFabrik. User libraries and firewall rules are preserved.</string>
    </property>
   </action>
   <action name="forwardAction">
@@ -2227,6 +2236,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>UpdateStandardLibraryAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>toolsUpdateStandardLibrary()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>571</x>
+     <y>422</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clearRecentFilesMenu()</slot>
@@ -2242,6 +2267,7 @@
   <slot>inspect()</slot>
   <slot>toolsImportAddressesFromFile()</slot>
   <slot>toolsSNMPDiscovery()</slot>
+  <slot>toolsUpdateStandardLibrary()</slot>
   <slot>back()</slot>
   <slot>forward()</slot>
  </slots>
