@@ -933,7 +933,7 @@
     <string>Save As</string>
    </property>
    <property name="shortcut">
-    <string/>
+    <string>Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="filePrintAction">

@@ -690,6 +690,9 @@ Keyboard Shortcuts
     * - ``Ctrl+S``
       - Menu "File"
       - Save file
+    * - ``Ctrl+Shift+S``
+      - Menu "File"
+      - Save file as
     * - ``Ctrl+F4``
       - Menu "File"
       - Close file
