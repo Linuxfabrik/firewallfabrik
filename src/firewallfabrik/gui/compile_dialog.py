@@ -139,6 +139,9 @@ class CompileDialog(QDialog):
                 platform = data.get('platform', '')
                 inactive = data.get('inactive', '') == 'True'
                 supported = platform in _PLATFORM_CLI
+                last_modified = int(data.get('lastModified', 0) or 0)
+                last_compiled = int(data.get('lastCompiled', 0) or 0)
+                needs_compile = last_modified > last_compiled or last_compiled == 0
 
                 tree_path = _fw_tree_path(fw)
 
@@ -162,12 +165,13 @@ class CompileDialog(QDialog):
                     Qt.ItemDataRole.UserRole + 6,
                     options.get('compiler', ''),
                 )
+                item.setData(0, Qt.ItemDataRole.UserRole + 7, needs_compile)
 
                 item.setText(0, fw.name)
 
                 # Col 1 (Compile): checkbox
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                if supported and not inactive:
+                if supported and not inactive and needs_compile:
                     item.setCheckState(1, Qt.CheckState.Checked)
                 else:
                     item.setCheckState(1, Qt.CheckState.Unchecked)
@@ -184,6 +188,12 @@ class CompileDialog(QDialog):
                         0, f'Platform "{platform or "(none)"}" is not supported yet'
                     )
 
+                if needs_compile and supported:
+                    font = item.font(0)
+                    font.setBold(True)
+                    for col in range(self.selectTable.columnCount()):
+                        item.setFont(col, font)
+
                 self.selectTable.addTopLevelItem(item)
 
     # Slots declared in .ui connections
@@ -199,6 +209,17 @@ class CompileDialog(QDialog):
         for i in range(self.selectTable.topLevelItemCount()):
             item = self.selectTable.topLevelItem(i)
             item.setCheckState(1, Qt.CheckState.Unchecked)
+
+    @Slot()
+    def selectChangedFirewalls(self):
+        for i in range(self.selectTable.topLevelItemCount()):
+            item = self.selectTable.topLevelItem(i)
+            if item.flags() & Qt.ItemFlag.ItemIsEnabled and item.data(
+                0, Qt.ItemDataRole.UserRole + 7
+            ):
+                item.setCheckState(1, Qt.CheckState.Checked)
+            else:
+                item.setCheckState(1, Qt.CheckState.Unchecked)
 
     @Slot(QTreeWidgetItem, int)
     def tableItemChanged(self, item, col):
