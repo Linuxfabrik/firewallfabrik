@@ -3,30 +3,6 @@
  * Uses palette() references so rules work with both light and dark themes.
  */
 
-/* Input fields — clearly editable on all platforms */
-QLineEdit, QSpinBox, QComboBox {
-    border: 1px solid palette(dark);
-    border-radius: 2px;
-    padding: 2px 4px;
-    background-color: palette(base);
-    min-height: 24px;
-}
-
-QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
-    border: 2px solid palette(highlight);
-    padding: 1px 3px;
-}
-
-QLineEdit:hover:!focus, QSpinBox:hover:!focus,
-QComboBox:hover:!focus {
-    border: 1px solid palette(shadow);
-}
-
-QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {
-    background-color: palette(window);
-    border: 1px solid palette(mid);
-}
-
 /* Drop area for drag-and-drop */
 FWObjectDropArea {
     border: 1px solid palette(mid);
