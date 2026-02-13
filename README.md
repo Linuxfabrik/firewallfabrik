@@ -1,3 +1,30 @@
+<h1 align="center">
+  <!--<a href="https://linuxfabrik.ch" target="_blank">
+    <picture>
+      <img width="600" src="https://download.linuxfabrik.ch/assets/linuxfabrik-fwf-teaser.png">
+    </picture>
+  </a>-->
+  <br />
+  Linuxfabrik FirewallFabrik
+</h1>
+<p align="center">
+  <em>FirewallFabrik</em>
+  <span>&#8226;</span>
+  <b>made by <a href="https://linuxfabrik.ch/">Linuxfabrik</a></b>
+</p>
+<div align="center">
+
+![GitHub](https://img.shields.io/github/license/linuxfabrik/firewallfabrik)
+![GitHub last commit](https://img.shields.io/github/last-commit/linuxfabrik/firewallfabrik)
+![Version](https://img.shields.io/github/v/release/linuxfabrik/firewallfabrik?sort=semver)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Linuxfabrik/firewallfabrik/badge)](https://scorecard.dev/viewer/?uri=github.com/Linuxfabrik/firewallfabrik)
+[![GitHubSponsors](https://img.shields.io/github/sponsors/Linuxfabrik?label=GitHub%20Sponsors)](https://github.com/sponsors/Linuxfabrik)
+[![PayPal](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7AW3VVX62TR4A&source=url)
+
+</div>
+
+<br />
+
 # FirewallFabrik
 
 FirewallFabrik is a Qt-based GUI tool for managing firewall configurations across multiple platforms (iptables, nftables, etc.). Firewall configuration data is stored in a central file that can scale to hundreds of firewalls managed from a single UI.
