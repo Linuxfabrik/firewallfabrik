@@ -122,7 +122,16 @@
          <property name="verticalSpacing">
           <number>8</number>
          </property>
-         <property name="margin" stdset="0">
+         <property name="leftMargin">
+          <number>8</number>
+         </property>
+         <property name="topMargin">
+          <number>8</number>
+         </property>
+         <property name="rightMargin">
+          <number>8</number>
+         </property>
+         <property name="bottomMargin">
           <number>8</number>
          </property>
          <item row="0" column="0">
@@ -146,7 +155,16 @@ QGroupBox::title {
             <string>Source Port Range</string>
            </property>
            <layout class="QGridLayout">
-            <property name="margin" stdset="0">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <property name="spacing">
@@ -222,7 +240,16 @@ QGroupBox::title {
             <string>Destination Port Range</string>
            </property>
            <layout class="QGridLayout">
-            <property name="margin" stdset="0">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
              <number>0</number>
             </property>
             <property name="spacing">

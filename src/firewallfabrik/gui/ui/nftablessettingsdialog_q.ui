@@ -874,7 +874,16 @@ packets to IPv6 policies</string>
        <string>Prolog/Epilog</string>
       </attribute>
       <layout class="QGridLayout">
-       <property name="margin" stdset="0">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
         <number>6</number>
        </property>
        <property name="verticalSpacing">
@@ -911,7 +920,16 @@ packets to IPv6 policies</string>
           <string/>
          </property>
          <layout class="QGridLayout">
-          <property name="margin" stdset="0">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
            <number>6</number>
           </property>
           <item row="1" column="0" colspan="3">
@@ -975,7 +993,16 @@ packets to IPv6 policies</string>
        <string>Logging</string>
       </attribute>
       <layout class="QGridLayout">
-       <property name="margin" stdset="0">
+       <property name="leftMargin">
+        <number>20</number>
+       </property>
+       <property name="topMargin">
+        <number>20</number>
+       </property>
+       <property name="rightMargin">
+        <number>20</number>
+       </property>
+       <property name="bottomMargin">
         <number>20</number>
        </property>
        <property name="verticalSpacing">
@@ -1027,7 +1054,16 @@ packets to IPv6 policies</string>
             </property>
             <widget class="QWidget" name="WStackPage0">
              <layout class="QGridLayout">
-              <property name="margin" stdset="0">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item row="0" column="0" colspan="2">
@@ -1075,7 +1111,16 @@ packets to IPv6 policies</string>
             </widget>
             <widget class="QWidget" name="WStackPage1">
              <layout class="QGridLayout">
-              <property name="margin" stdset="0">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
                <number>0</number>
               </property>
               <item row="0" column="1">

@@ -89,7 +89,16 @@
       <string>Scope for search and replace :</string>
      </property>
      <layout class="QGridLayout">
-      <property name="margin" stdset="0">
+      <property name="leftMargin">
+       <number>4</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>4</number>
+      </property>
+      <property name="bottomMargin">
        <number>4</number>
       </property>
       <item row="0" column="0">

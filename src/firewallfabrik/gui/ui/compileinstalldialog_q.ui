@@ -90,7 +90,16 @@
             <enum>QFrame::Shadow::Plain</enum>
            </property>
            <layout class="QHBoxLayout">
-            <property name="margin">
+            <property name="leftMargin">
+             <number>11</number>
+            </property>
+            <property name="topMargin">
+             <number>11</number>
+            </property>
+            <property name="rightMargin">
+             <number>11</number>
+            </property>
+            <property name="bottomMargin">
              <number>11</number>
             </property>
             <item>
@@ -171,7 +180,16 @@
                <enum>QFrame::Shadow::Plain</enum>
               </property>
               <layout class="QGridLayout">
-               <property name="margin">
+               <property name="leftMargin">
+                <number>11</number>
+               </property>
+               <property name="topMargin">
+                <number>11</number>
+               </property>
+               <property name="rightMargin">
+                <number>11</number>
+               </property>
+               <property name="bottomMargin">
                 <number>11</number>
                </property>
                <item row="0" column="3">
@@ -263,7 +281,16 @@
      </widget>
      <widget class="QWidget" name="progress_page">
       <layout class="QHBoxLayout">
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
@@ -275,7 +302,16 @@
           <enum>QFrame::Shadow::Plain</enum>
          </property>
          <layout class="QGridLayout">
-          <property name="margin">
+          <property name="leftMargin">
+           <number>11</number>
+          </property>
+          <property name="topMargin">
+           <number>11</number>
+          </property>
+          <property name="rightMargin">
+           <number>11</number>
+          </property>
+          <property name="bottomMargin">
            <number>11</number>
           </property>
           <item row="2" column="1">
@@ -434,7 +470,16 @@
                <string>Process log</string>
               </property>
               <layout class="QGridLayout">
-               <property name="margin">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
                 <number>0</number>
                </property>
                <item row="1" column="0" colspan="3">
@@ -510,7 +555,16 @@
              <enum>QFrame::Shadow::Plain</enum>
             </property>
             <layout class="QGridLayout" name="_2">
-             <property name="margin">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
               <number>0</number>
              </property>
             </layout>
