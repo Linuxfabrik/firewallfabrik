@@ -74,7 +74,7 @@ class FirewallDialog(BaseObjectDialog):
         self._set_combo_text(self.version, data.get('version', ''))
         host_os = data.get('host_OS', '')
         self._set_combo_text(self.hostOS, HOST_OS.get(host_os, host_os))
-        self.inactive.setChecked(data.get('inactive') == 'True')
+        self.inactive.setChecked(data.get('inactive') in (True, 'True'))
         for attr, key in (
             ('last_modified', 'lastModified'),
             ('last_compiled', 'lastCompiled'),
@@ -99,7 +99,7 @@ class FirewallDialog(BaseObjectDialog):
         data['version'] = self.version.currentText()
         host_os_text = self.hostOS.currentText()
         data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
-        data['inactive'] = str(self.inactive.isChecked())
+        data['inactive'] = self.inactive.isChecked()
         self._obj.data = data
 
     def _update_settings_buttons(self):

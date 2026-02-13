@@ -213,7 +213,7 @@ class CompileDialog(QDialog):
                 data = fw.data or {}
                 options = fw.options or {}
                 platform = data.get('platform', '')
-                inactive = data.get('inactive', '') == 'True'
+                inactive = data.get('inactive') in (True, 'True')
                 supported = platform in _PLATFORM_CLI
                 last_modified = int(data.get('lastModified', 0) or 0)
                 last_compiled = int(data.get('lastCompiled', 0) or 0)

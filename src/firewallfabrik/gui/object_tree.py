@@ -241,7 +241,7 @@ def _obj_display_name(obj):
 def _is_inactive(obj):
     """Return True if the object is marked inactive/disabled."""
     data = getattr(obj, 'data', None) or {}
-    return data.get('inactive') == 'True'
+    return data.get('inactive') in (True, 'True')
 
 
 def _needs_compile(obj):
