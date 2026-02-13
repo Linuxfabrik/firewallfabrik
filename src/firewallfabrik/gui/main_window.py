@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import importlib.resources
 import logging
 import subprocess
 import uuid
@@ -67,7 +68,11 @@ from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
-from firewallfabrik.gui.object_tree import ICON_MAP, ObjectTree
+from firewallfabrik.gui.object_tree import (
+    ICON_MAP,
+    ObjectTree,
+    create_library_folder_structure,
+)
 from firewallfabrik.gui.policy_model import (
     PolicyTreeModel,
     _action_label,
@@ -620,13 +625,33 @@ class FWWindow(QMainWindow):
         self._object_tree._filter.clear()
         self.undoView.clear()
 
-        # Create new database with an empty "User" library.
+        # Create new database: load the Standard library, then add an
+        # empty "User" library (mirrors fwbuilder's loadStandardObjects).
         self._db_manager = DatabaseManager()
         self._db_manager.on_history_changed = self._on_history_changed
+        std_path = (
+            Path(str(importlib.resources.files('firewallfabrik') / 'resources'))
+            / 'libraries'
+            / 'standard.fwf'
+        )
+        try:
+            self._db_manager._load_yaml(std_path)
+        except Exception:
+            logger.exception('Failed to load standard library from %s', std_path)
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr('Failed to load the standard object library.'),
+            )
+            return
         with self._db_manager.session(description='New file') as session:
-            db_obj = FWObjectDatabase(id=uuid.uuid4())
-            Library(id=uuid.uuid4(), name='User', database=db_obj)
-            session.add(db_obj)
+            db_obj = session.scalars(
+                sqlalchemy.select(FWObjectDatabase),
+            ).first()
+            user_lib = Library(id=uuid.uuid4(), name='User', database=db_obj)
+            session.add(user_lib)
+            session.flush()  # ensure user_lib.id is available
+            create_library_folder_structure(session, user_lib.id)
 
         # Save to the chosen path.
         try:

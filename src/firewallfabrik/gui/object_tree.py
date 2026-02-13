@@ -42,9 +42,12 @@ from firewallfabrik.core.objects import (
     Host,
     Interface,
     Interval,
+    IntervalGroup,
     Library,
+    ObjectGroup,
     RuleSet,
     Service,
+    ServiceGroup,
     group_membership,
     rule_elements,
 )
@@ -89,6 +92,134 @@ ICON_MAP = {
 
 _CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
 _LOCK_ICON = ':/Icons/lock'
+
+# Maps object type discriminators to their standard two-level group path
+# inside a library.  Mirrors fwbuilder's ``systemGroupPaths`` map
+# (FWBTree.cpp:125-152).
+_SYSTEM_GROUP_PATHS = {
+    'AddressRange': 'Objects/Address Ranges',
+    'AddressTable': 'Objects/Address Tables',
+    'Cluster': 'Clusters',
+    'CustomService': 'Services/Custom',
+    'DNSName': 'Objects/DNS Names',
+    'DynamicGroup': 'Objects/Groups',
+    'Firewall': 'Firewalls',
+    'Host': 'Objects/Hosts',
+    'ICMP6Service': 'Services/ICMP',
+    'ICMPService': 'Services/ICMP',
+    'IPService': 'Services/IP',
+    'IPv4': 'Objects/Addresses',
+    'IPv6': 'Objects/Addresses',
+    'Interval': 'Time',
+    'Network': 'Objects/Networks',
+    'NetworkIPv6': 'Objects/Networks',
+    'ObjectGroup': 'Objects/Groups',
+    'ServiceGroup': 'Services/Groups',
+    'TCPService': 'Services/TCP',
+    'TagService': 'Services/TagServices',
+    'UDPService': 'Services/UDP',
+    'UserService': 'Services/Users',
+}
+
+# Full folder structure created for every new library.  Mirrors
+# fwbuilder's ``FWBTree::createNewLibrary()`` (FWBTree.cpp:513-601).
+# Each entry is ``(group_type, name, children | None)``.
+_LIBRARY_FOLDER_STRUCTURE = [
+    ('ObjectGroup', 'Clusters', None),
+    ('ObjectGroup', 'Firewalls', None),
+    (
+        'ObjectGroup',
+        'Objects',
+        [
+            ('ObjectGroup', 'Address Ranges'),
+            ('ObjectGroup', 'Address Tables'),
+            ('ObjectGroup', 'Addresses'),
+            ('ObjectGroup', 'DNS Names'),
+            ('ObjectGroup', 'Groups'),
+            ('ObjectGroup', 'Hosts'),
+            ('ObjectGroup', 'Networks'),
+        ],
+    ),
+    (
+        'ServiceGroup',
+        'Services',
+        [
+            ('ServiceGroup', 'Custom'),
+            ('ServiceGroup', 'Groups'),
+            ('ServiceGroup', 'ICMP'),
+            ('ServiceGroup', 'IP'),
+            ('ServiceGroup', 'TCP'),
+            ('ServiceGroup', 'TagServices'),
+            ('ServiceGroup', 'UDP'),
+            ('ServiceGroup', 'Users'),
+        ],
+    ),
+    ('IntervalGroup', 'Time', None),
+]
+
+_GROUP_TYPE_CLS = {
+    'IntervalGroup': IntervalGroup,
+    'ObjectGroup': ObjectGroup,
+    'ServiceGroup': ServiceGroup,
+}
+
+
+def _find_group_by_path(session, lib_id, path):
+    """Resolve a ``"Level1/Level2"`` group path inside a library.
+
+    Returns the deepest :class:`Group`, or *None* if any segment is
+    missing (the caller should fall back to virtual ``data.folder``).
+    """
+    if not path:
+        return None
+    parts = path.split('/')
+    parent_id = None
+    group = None
+    for part in parts:
+        stmt = sqlalchemy.select(Group).where(
+            Group.library_id == lib_id,
+            Group.name == part,
+        )
+        if parent_id is None:
+            stmt = stmt.where(Group.parent_group_id.is_(None))
+        else:
+            stmt = stmt.where(Group.parent_group_id == parent_id)
+        group = session.scalars(stmt).first()
+        if group is None:
+            return None
+        parent_id = group.id
+    return group
+
+
+def create_library_folder_structure(session, lib_id):
+    """Create the standard folder hierarchy for a library.
+
+    Mirrors fwbuilder's ``FWBTree::createNewLibrary()`` which creates
+    ``Clusters``, ``Firewalls``, ``Objects`` (with sub-groups),
+    ``Services`` (with sub-groups), and ``Time`` groups.
+    """
+    for group_type, name, children in _LIBRARY_FOLDER_STRUCTURE:
+        cls = _GROUP_TYPE_CLS[group_type]
+        parent = cls(
+            id=uuid.uuid4(),
+            type=group_type,
+            library_id=lib_id,
+            name=name,
+        )
+        session.add(parent)
+        if children:
+            session.flush()  # ensure parent.id is available
+            for child_type, child_name in children:
+                child_cls = _GROUP_TYPE_CLS[child_type]
+                session.add(
+                    child_cls(
+                        id=uuid.uuid4(),
+                        type=child_type,
+                        library_id=lib_id,
+                        parent_group_id=parent.id,
+                        name=child_name,
+                    )
+                )
 
 
 def _obj_sort_key(obj):
@@ -2709,20 +2840,14 @@ class ObjectTree(QWidget):
                 if hasattr(model_cls, 'library_id'):
                     kwargs['library_id'] = lib_id
 
-            # If a folder name is given, prefer placing the object in an
-            # existing Group with that name (matching fwbuilder's
-            # getStandardSlotForObject).  Only fall back to the virtual
-            # data.folder mechanism when no such Group exists.
+            # Use _SYSTEM_GROUP_PATHS to resolve the correct (possibly
+            # nested) group for this object type.  Falls back to the
+            # virtual data.folder mechanism when the group doesn't exist.
             if folder and hasattr(model_cls, 'group_id') and 'group_id' not in kwargs:
-                existing_group = session.scalars(
-                    sqlalchemy.select(Group).where(
-                        Group.library_id == lib_id,
-                        Group.name == folder,
-                        Group.parent_group_id.is_(None),
-                    )
-                ).first()
-                if existing_group is not None:
-                    kwargs['group_id'] = existing_group.id
+                path = _SYSTEM_GROUP_PATHS.get(type_name, '')
+                target_group = _find_group_by_path(session, lib_id, path)
+                if target_group is not None:
+                    kwargs['group_id'] = target_group.id
                     folder = None  # Don't also set data.folder.
 
             # Build data dict: merge folder and extra_data.
@@ -2829,15 +2954,19 @@ class ObjectTree(QWidget):
         session = self._db_manager.create_session()
         try:
             host_id = uuid.uuid4()
-            data = {}
-            if folder:
-                data['folder'] = folder
-            host = Host(
-                id=host_id,
-                type='Host',
-                library_id=lib_id,
-                data=data,
-            )
+            host_kwargs = {
+                'id': host_id,
+                'type': 'Host',
+                'library_id': lib_id,
+            }
+            # Place in the nested group (Objects/Hosts) if it exists.
+            path = _SYSTEM_GROUP_PATHS.get('Host', '')
+            target_group = _find_group_by_path(session, lib_id, path)
+            if target_group is not None:
+                host_kwargs['group_id'] = target_group.id
+            elif folder:
+                host_kwargs['data'] = {'folder': folder}
+            host = Host(**host_kwargs)
             host.name = name or 'New Host'
             host.name = self._make_name_unique(session, host)
             session.add(host)
