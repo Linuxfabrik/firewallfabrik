@@ -658,10 +658,15 @@ class FWWindow(QMainWindow):
         self.actionUndo_view.setChecked(undo_visible)
 
     def _apply_no_file_state(self):
-        """Hide panels when no database file is loaded."""
+        """Hide panels and disable file-dependent actions when no database file is loaded."""
         self._object_tree.setVisible(False)
         self.editorDockWidget.setVisible(False)
         self.undoDockWidget.setVisible(False)
+        self.compileAction.setEnabled(False)
+        self.fileSaveAction.setEnabled(False)
+        self.fileSaveAsAction.setEnabled(False)
+        self.installAction.setEnabled(False)
+        self.toolbarFileSave.setEnabled(False)
 
     def _apply_file_loaded_state(self):
         """Restore panel visibility from QSettings after loading a file."""
@@ -672,6 +677,11 @@ class FWWindow(QMainWindow):
         editor_visible = settings.value('View/EditorPanel', True, type=bool)
         self.editorDockWidget.setVisible(editor_visible)
         self.actionEditor_panel.setChecked(editor_visible)
+        self.compileAction.setEnabled(True)
+        self.fileSaveAction.setEnabled(True)
+        self.fileSaveAsAction.setEnabled(True)
+        self.installAction.setEnabled(True)
+        self.toolbarFileSave.setEnabled(True)
         undo_visible = settings.value('View/UndoStack', False, type=bool)
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
