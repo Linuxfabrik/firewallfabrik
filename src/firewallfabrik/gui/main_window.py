@@ -932,19 +932,18 @@ class FWWindow(QMainWindow):
             )
             return
 
-        # Phase 1: Delete old Standard Library.
-        # Use a dedicated session so the identity map is clean for phase 2
-        # (the YAML uses fixed UUIDs, so old and new objects share PKs).
+        # Phase 1: Delete old Standard Library using Core SQL.
+        # The Library relationships have no cascade="delete", so children
+        # must be removed explicitly before the Library row itself.
         session = self._db_manager.create_session()
         try:
-            db_obj_id = session.scalars(
-                sqlalchemy.select(FWObjectDatabase.id),
-            ).first()
-            old_std = session.scalars(
-                sqlalchemy.select(Library).where(Library.name == 'Standard'),
+            old_std_id = session.scalars(
+                sqlalchemy.select(Library.id).where(
+                    Library.name == 'Standard',
+                ),
             ).first()
 
-            if old_std is None:
+            if old_std_id is None:
                 session.close()
                 QMessageBox.warning(
                     self,
@@ -953,36 +952,122 @@ class FWWindow(QMainWindow):
                 )
                 return
 
-            # Collect all object IDs belonging to the old Standard Library.
-            old_ids = {old_std.id}
-            for rel in (
-                'addresses',
-                'devices',
-                'groups',
-                'interfaces',
-                'intervals',
-                'services',
-            ):
-                for obj in getattr(old_std, rel, ()):
-                    old_ids.add(obj.id)
-                    # Devices may own interfaces which own addresses.
-                    if rel == 'devices':
-                        for iface in getattr(obj, 'interfaces', ()):
-                            old_ids.add(iface.id)
-                            for addr in getattr(iface, 'addresses', ()):
-                                old_ids.add(addr.id)
+            # Subqueries for objects reachable via device/interface FKs
+            # (these may have library_id=NULL but still belong to the
+            # Standard Library through their parent device).
+            std_device_ids = sqlalchemy.select(Host.id).where(
+                Host.library_id == old_std_id,
+            )
+            std_iface_ids = sqlalchemy.select(Interface.id).where(
+                sqlalchemy.or_(
+                    Interface.library_id == old_std_id,
+                    Interface.device_id.in_(std_device_ids),
+                ),
+            )
+            std_ruleset_ids = sqlalchemy.select(RuleSet.id).where(
+                RuleSet.device_id.in_(std_device_ids),
+            )
+            std_rule_ids = sqlalchemy.select(Rule.id).where(
+                Rule.rule_set_id.in_(std_ruleset_ids),
+            )
 
-            # Delete group_membership rows where group_id is an old
-            # Standard Library group (FK constraint requires this before
-            # deleting the group objects themselves).
+            # Collect all object IDs for group_membership cleanup.
+            old_ids = {old_std_id}
+            for cls in (Address, Group, Host, Interface, Interval, Service):
+                for (oid,) in session.execute(
+                    sqlalchemy.select(cls.id).where(
+                        cls.library_id == old_std_id,
+                    ),
+                ):
+                    old_ids.add(oid)
+            # Also include device-owned interfaces/addresses with
+            # NULL library_id.
+            for (oid,) in session.execute(
+                sqlalchemy.select(Interface.id).where(
+                    Interface.device_id.in_(std_device_ids),
+                ),
+            ):
+                old_ids.add(oid)
+            for (oid,) in session.execute(
+                sqlalchemy.select(Address.id).where(
+                    Address.interface_id.in_(std_iface_ids),
+                ),
+            ):
+                old_ids.add(oid)
+
+            # Delete group_membership rows referencing old objects.
             session.execute(
                 group_membership.delete().where(
                     group_membership.c.group_id.in_(old_ids),
                 ),
             )
 
-            # Delete the old Standard Library (cascade removes children).
-            session.delete(old_std)
+            # Delete children via Core SQL in FK-safe order.
+            # 1. rule_elements → rules → rule_sets (device children)
+            session.execute(
+                rule_elements.delete().where(
+                    rule_elements.c.rule_id.in_(std_rule_ids),
+                ),
+            )
+            session.execute(
+                sqlalchemy.delete(Rule).where(
+                    Rule.rule_set_id.in_(std_ruleset_ids),
+                ),
+            )
+            session.execute(
+                sqlalchemy.delete(RuleSet).where(
+                    RuleSet.device_id.in_(std_device_ids),
+                ),
+            )
+            # 2. addresses (by library_id OR interface_id)
+            session.execute(
+                sqlalchemy.delete(Address).where(
+                    sqlalchemy.or_(
+                        Address.library_id == old_std_id,
+                        Address.interface_id.in_(std_iface_ids),
+                    ),
+                ),
+            )
+            # 3. interfaces (by library_id OR device_id)
+            session.execute(
+                sqlalchemy.delete(Interface).where(
+                    sqlalchemy.or_(
+                        Interface.library_id == old_std_id,
+                        Interface.device_id.in_(std_device_ids),
+                    ),
+                ),
+            )
+            # 4. services, intervals, devices
+            session.execute(
+                sqlalchemy.delete(Service).where(
+                    Service.library_id == old_std_id,
+                ),
+            )
+            session.execute(
+                sqlalchemy.delete(Interval).where(
+                    Interval.library_id == old_std_id,
+                ),
+            )
+            session.execute(
+                sqlalchemy.delete(Host).where(
+                    Host.library_id == old_std_id,
+                ),
+            )
+            # 5. groups: clear self-referencing FK first, then delete
+            session.execute(
+                sqlalchemy.update(Group)
+                .where(Group.library_id == old_std_id)
+                .values(parent_group_id=None),
+            )
+            session.execute(
+                sqlalchemy.delete(Group).where(
+                    Group.library_id == old_std_id,
+                ),
+            )
+            # 6. library itself
+            session.execute(
+                sqlalchemy.delete(Library).where(Library.id == old_std_id),
+            )
             session.commit()
         except Exception:
             session.rollback()
@@ -994,18 +1079,16 @@ class FWWindow(QMainWindow):
         finally:
             session.close()
 
-        # Phase 2: Insert new Standard Library in a fresh session
-        # (clean identity map avoids stale-PK conflicts).
-        # Use set_committed_value to set database_id and clear the
-        # database relationship WITHOUT triggering attribute events.
-        # Normal assignment (new_std.database = None) cascades through
-        # back-references and sets library_id = None on all child groups.
-        from sqlalchemy.orm.attributes import set_committed_value
-
-        set_committed_value(new_std, 'database', None)
-        set_committed_value(new_std, 'database_id', db_obj_id)
+        # Phase 2: Insert new Standard Library.
+        # Link the transient Library to the *existing* persistent
+        # FWObjectDatabase — this is safe because the ORM simply
+        # updates the FK and back-ref without touching child groups.
         session = self._db_manager.create_session()
         try:
+            db_obj = session.scalars(
+                sqlalchemy.select(FWObjectDatabase),
+            ).first()
+            new_std.database = db_obj
             session.add(new_std)
             session.flush()
 

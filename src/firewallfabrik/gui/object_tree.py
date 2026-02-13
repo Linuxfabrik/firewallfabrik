@@ -15,7 +15,6 @@
 import copy
 import json
 import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 
 import sqlalchemy
@@ -53,6 +52,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.gui.platform_settings import HOST_OS
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
+from firewallfabrik.gui.tooltip_helpers import get_library_name, obj_tooltip
 
 # Map ORM type discriminator strings to QRC icon aliases.
 ICON_MAP = {
@@ -358,218 +358,8 @@ def _obj_brief_attrs(obj, under_interface=False):
     return ''
 
 
-def _get_library_name(obj):
-    """Return the name of the library containing *obj*, or empty string."""
-    type_str = getattr(obj, 'type', type(obj).__name__)
-    if type_str == 'Library':
-        return obj.name
-    try:
-        lib = getattr(obj, 'library', None)
-        if lib is not None:
-            return lib.name
-        # Address → interface → device → library
-        iface = getattr(obj, 'interface', None)
-        if iface is not None:
-            lib = getattr(iface, 'library', None)
-            if lib is not None:
-                return lib.name
-            device = getattr(iface, 'device', None)
-            if device is not None:
-                lib = getattr(device, 'library', None)
-                if lib is not None:
-                    return lib.name
-        # RuleSet → device → library
-        device = getattr(obj, 'device', None)
-        if device is not None:
-            lib = getattr(device, 'library', None)
-            if lib is not None:
-                return lib.name
-    except Exception:
-        pass
-    return ''
-
-
-def _obj_tooltip(obj):
-    """Return an HTML tooltip string for *obj*, matching fwbuilder's detailed format."""
-    type_str = getattr(obj, 'type', type(obj).__name__)
-    name = getattr(obj, 'name', '')
-    lines = []
-
-    # Library header (skip for Library objects themselves).
-    if type_str != 'Library':
-        lib_name = _get_library_name(obj)
-        if lib_name:
-            lines.append(f'<b>Library:</b> {lib_name}')
-
-    lines.append(f'<b>Object Type:</b> {type_str}')
-    lines.append(f'<b>Object Name:</b> {name}')
-
-    # -- Addresses --
-    if type_str in ('IPv4', 'IPv6') or type_str in ('Network', 'NetworkIPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        mask = iam.get('netmask', '')
-        if addr:
-            lines.append(f'{addr}/{mask}' if mask else addr)
-
-    elif type_str == 'AddressRange':
-        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
-        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
-        if start or end:
-            lines.append(f'{start} - {end}')
-
-    elif type_str == 'PhysAddress':
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        mac = iam.get('address', '')
-        if mac:
-            lines.append(mac)
-
-    # -- Devices --
-    elif type_str in ('Cluster', 'Firewall'):
-        data = getattr(obj, 'data', None) or {}
-        platform = data.get('platform', '')
-        version = data.get('version', '') or '- any -'
-        host_os = data.get('host_OS', '')
-        host_os = HOST_OS.get(host_os, host_os)
-        ts_modified = int(data.get('lastModified', 0) or 0)
-        ts_compiled = int(data.get('lastCompiled', 0) or 0)
-        ts_installed = int(data.get('lastInstalled', 0) or 0)
-        # Bold the most recent timestamp, show '-' for zero.
-        ts_vals = {
-            'Modified': ts_modified,
-            'Compiled': ts_compiled,
-            'Installed': ts_installed,
-        }
-        ts_max = max(ts_vals.values())
-        ts_rows = ''
-        for label, ts in ts_vals.items():
-            if ts:
-                text = datetime.fromtimestamp(ts, tz=UTC).strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                text = '-'
-            if ts and ts == ts_max:
-                text = f'<b>{text}</b>'
-            ts_rows += f'<tr><td>{label}:&nbsp;</td><td>{text}</td></tr>'
-        lines.append(
-            '<table cellspacing="0" cellpadding="0">'
-            f'<tr><td>Platform:&nbsp;</td><td>{platform}</td></tr>'
-            f'<tr><td>Version:&nbsp;</td><td>{version}</td></tr>'
-            f'<tr><td>Host OS:&nbsp;</td><td>{host_os}</td></tr>'
-            f'{ts_rows}'
-            '</table>'
-        )
-
-    elif type_str == 'Host':
-        # Show interfaces with their brief attributes.
-        for iface in sorted(
-            getattr(obj, 'interfaces', []), key=lambda o: o.name.lower()
-        ):
-            attrs = _obj_brief_attrs(iface)
-            lines.append(f'{iface.name}: {attrs}')
-
-    elif type_str == 'Interface':
-        # Parent device.
-        device = getattr(obj, 'device', None)
-        if device is not None:
-            lines.append(f'<b>Parent: </b>{device.name}')
-        data = getattr(obj, 'data', None) or {}
-        label = data.get('label', '')
-        lines.append(f'<b>Label: </b>{label}')
-        # IP addresses.
-        for addr in getattr(obj, 'addresses', []):
-            if getattr(addr, 'type', '') == 'PhysAddress':
-                continue
-            iam = getattr(addr, 'inet_addr_mask', None) or {}
-            a = iam.get('address', '')
-            if a:
-                m = iam.get('netmask', '')
-                lines.append(f'{a}/{m}' if m else a)
-        # Interface type.
-        options = getattr(obj, 'options', None) or {}
-        intf_type = options.get('type', '')
-        if intf_type:
-            type_text = intf_type
-            if intf_type == '8021q':
-                vlan_id = options.get('vlan_id', '')
-                if vlan_id:
-                    type_text += f' VLAN ID={vlan_id}'
-            lines.append(f'<b>Interface Type: </b>{type_text}')
-        # MAC address.
-        for addr in getattr(obj, 'addresses', []):
-            if getattr(addr, 'type', '') == 'PhysAddress':
-                iam = getattr(addr, 'inet_addr_mask', None) or {}
-                mac = iam.get('address', '')
-                if mac:
-                    lines.append(f'MAC: {mac}')
-        # Flags.
-        flags = []
-        if getattr(obj, 'is_dynamic', lambda: False)():
-            flags.append('dyn')
-        if getattr(obj, 'is_unnumbered', lambda: False)():
-            flags.append('unnum')
-        if getattr(obj, 'is_bridge_port', lambda: False)():
-            flags.append('bridge port')
-        if getattr(obj, 'is_slave', lambda: False)():
-            flags.append('slave')
-        if flags:
-            lines.append(f'({" ".join(flags)})')
-
-    # -- Services --
-    elif type_str in ('TCPService', 'UDPService'):
-        ss = getattr(obj, 'src_range_start', None) or 0
-        se = getattr(obj, 'src_range_end', None) or 0
-        ds = getattr(obj, 'dst_range_start', None) or 0
-        de = getattr(obj, 'dst_range_end', None) or 0
-        lines.append(
-            '<table cellspacing="0" cellpadding="0">'
-            f'<tr><td>source port range&nbsp;</td><td>{ss}:{se}</td></tr>'
-            f'<tr><td>destination port range&nbsp;</td><td>{ds}:{de}</td></tr>'
-            '</table>'
-        )
-
-    elif type_str in ('ICMP6Service', 'ICMPService'):
-        codes = getattr(obj, 'codes', None) or {}
-        icmp_type = codes.get('type', -1)
-        code = codes.get('code', -1)
-        lines.append(f'type: {icmp_type}  code: {code}')
-
-    elif type_str == 'IPService':
-        named = getattr(obj, 'named_protocols', None) or {}
-        protocol_num = named.get('protocol_num', '')
-        if protocol_num:
-            lines.append(f'protocol {protocol_num}')
-
-    # -- Groups --
-    elif type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-        members = []
-        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
-            val = getattr(obj, attr, None)
-            if val:
-                members.extend(val)
-        count = len(members)
-        lines.append(f'{count} objects')
-        for m in sorted(members, key=lambda o: o.name.lower())[:20]:
-            m_type = getattr(m, 'type', type(m).__name__)
-            lines.append(f'{m_type}  <b>{m.name}</b>')
-        if count > 20:
-            lines.append('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.&nbsp;.&nbsp;.')
-
-    # -- Library --
-    elif type_str == 'Library':
-        if getattr(obj, 'ro', False):
-            lines.append('Read-only')
-
-    # -- Comment --
-    comment = getattr(obj, 'comment', None) or ''
-    if comment:
-        if len(comment) > 200:
-            comment = comment[:200] + '\u2026'
-        comment = (
-            comment.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-        )
-        lines.append(f'<br><i>{comment}</i>')
-
-    return '<br>'.join(lines)
+_obj_tooltip = obj_tooltip
+_get_library_name = get_library_name
 
 
 # Rule set types that can be opened via double-click.

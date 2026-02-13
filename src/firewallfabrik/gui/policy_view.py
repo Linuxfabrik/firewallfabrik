@@ -17,6 +17,7 @@ import json
 import uuid
 
 from PySide6.QtCore import (
+    QEvent,
     QItemSelectionModel,
     QMimeData,
     QModelIndex,
@@ -36,6 +37,7 @@ from PySide6.QtWidgets import (
     QStyle,
     QStyledItemDelegate,
     QToolButton,
+    QToolTip,
     QTreeView,
     QVBoxLayout,
     QWidget,
@@ -142,7 +144,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
         elements = index.data(ELEMENTS_ROLE)
         if elements:
             height = line_h * len(elements) + 2 * self._V_PAD
-            max_text_w = max(fm.horizontalAdvance(name) for _, name, _ in elements)
+            max_text_w = max(fm.horizontalAdvance(name) for _, name, *_ in elements)
             width = icon_sz + self._ICON_TEXT_GAP + max_text_w + 2 * self._H_PAD
             return QSize(width, height)
         return QSize(super().sizeHint(option, index).width(), line_h + 2 * self._V_PAD)
@@ -267,7 +269,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
         if fg:
             painter.setPen(fg.color() if hasattr(fg, 'color') else fg)
         default_pen = painter.pen()
-        for target_id, name, obj_type in elements:
+        for target_id, name, obj_type, *_ in elements:
             # Draw per-element selection highlight.
             if sel_target_id is not None and target_id == sel_target_id:
                 elem_rect = QRect(rect.left(), rect.top(), rect.width(), line_h)
@@ -378,6 +380,33 @@ class PolicyView(QTreeView):
             self._highlight_rule_id = None
             self._highlight_col = None
             self.viewport().update()
+
+    def viewportEvent(self, event):
+        """Show an instructional tooltip when hovering over empty space."""
+        if event.type() == QEvent.Type.ToolTip:
+            if not QSettings().value('UI/ObjTooltips', True, type=bool):
+                return super().viewportEvent(event)
+            index = self.indexAt(event.pos())
+            if not index.isValid():
+                QToolTip.showText(
+                    event.globalPos(),
+                    '<html>'
+                    'Policy, NAT and routing rules are shown here.'
+                    '<ul>'
+                    '<li><b>Rules use objects</b> &ndash; to use an object '
+                    'like an IP address in a rule, first create it in the '
+                    'object tree.</li>'
+                    '<li><b>Drag and drop</b> objects from the tree to the '
+                    'desired field (Source, Destination, etc.) in the rule.</li>'
+                    '<li><b>To add a rule</b>, click the &ldquo;+&rdquo; '
+                    'button at the top of the window.</li>'
+                    '<li><b>To open the context menu</b> with operations such '
+                    "as 'Add rule', 'Remove rule', etc., right-click.</li>"
+                    '</ul></html>',
+                    self,
+                )
+                return True
+        return super().viewportEvent(event)
 
     # ------------------------------------------------------------------
     # Model setup
@@ -518,7 +547,7 @@ class PolicyView(QTreeView):
             return
         elem = self._element_at_pos(index, vp_pos)
         if elem is not None:
-            tid, _n, _t = elem
+            tid, _n, _t, *_ = elem
             rd = model.get_row_data(index)
             if rd is not None:
                 self._select_element(index, tid, slot, rd.rule_id)
@@ -573,7 +602,7 @@ class PolicyView(QTreeView):
                 col = index.column()
                 elem = self._element_at_pos(index, pos)
                 if elem is not None:
-                    target_id, _name, _obj_type = elem
+                    target_id, _name, _obj_type, *_ = elem
                     slot = col_to_slot.get(col)
                     row_data = model.get_row_data(index)
                     if row_data is not None and slot:
@@ -632,7 +661,7 @@ class PolicyView(QTreeView):
         elements = getattr(row_data, slot, [])
         name = ''
         obj_type = ''
-        for eid, ename, etype in elements:
+        for eid, ename, etype, *_ in elements:
             if eid == target_id:
                 name = ename
                 obj_type = etype
@@ -714,7 +743,7 @@ class PolicyView(QTreeView):
                 if self._selected_element is not None:
                     sel_rid, sel_slot, sel_tid = self._selected_element
                     if sel_rid == row_data.rule_id and sel_slot == slot:
-                        for eid, ename, etype in elements:
+                        for eid, ename, etype, *_ in elements:
                             if eid == sel_tid:
                                 target = (eid, ename, etype)
                                 break
@@ -797,7 +826,7 @@ class PolicyView(QTreeView):
             # Hit-test for per-element selection on right-click.
             elem = self._element_at_pos(index, vp_pos)
             if elem is not None:
-                tid, _n, _t = elem
+                tid, _n, _t, *_ = elem
                 rd = model.get_row_data(index)
                 slot = col_to_slot.get(col)
                 if rd is not None and slot:
@@ -1139,11 +1168,11 @@ class PolicyView(QTreeView):
         # Determine the target element (clicked or first).
         target_id = target_name = target_type = None
         if elements:
-            target_id, target_name, target_type = elements[0]
+            target_id, target_name, target_type, *_ = elements[0]
             if self._selected_element is not None:
                 sel_rid, sel_slot, sel_tid = self._selected_element
                 if sel_rid == row_data.rule_id and sel_slot == slot:
-                    for eid, ename, etype in elements:
+                    for eid, ename, etype, *_ in elements:
                         if eid == sel_tid:
                             target_id, target_name, target_type = eid, ename, etype
                             break
@@ -1443,7 +1472,7 @@ class PolicyView(QTreeView):
             element_cols = _model_element_cols(model)
             if idx.isValid() and idx.column() in element_cols:
                 elements = idx.data(ELEMENTS_ROLE) or []
-                for eid, ename, etype in elements:
+                for eid, ename, etype, *_ in elements:
                     if eid == target_id:
                         self._copy_element(target_id, ename, etype)
                         return
@@ -1462,7 +1491,7 @@ class PolicyView(QTreeView):
             element_cols = _model_element_cols(model)
             if idx.isValid() and idx.column() in element_cols and model is not None:
                 elements = idx.data(ELEMENTS_ROLE) or []
-                for eid, ename, etype in elements:
+                for eid, ename, etype, *_ in elements:
                     if eid == target_id:
                         self._cut_element(model, idx, slot, target_id, ename, etype)
                         return

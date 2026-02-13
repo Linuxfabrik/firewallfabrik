@@ -45,6 +45,7 @@ from firewallfabrik.gui.label_settings import (
     get_label_color,
     get_label_text,
 )
+from firewallfabrik.gui.tooltip_helpers import obj_tooltip
 
 ELEMENTS_ROLE = Qt.ItemDataRole.UserRole + 1
 NEGATED_ROLE = Qt.ItemDataRole.UserRole + 2
@@ -407,9 +408,9 @@ class PolicyTreeModel(QAbstractItemModel):
                 ).where(rule_elements.c.rule_id.in_(rule_ids)),
             ).all()
             for rule_id, slot, target_id in re_rows:
-                name, obj_type = name_map.get(target_id, (str(target_id), ''))
-                triple = (target_id, name, obj_type)
-                slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(triple)
+                name, obj_type, tip = name_map.get(target_id, (str(target_id), '', ''))
+                quad = (target_id, name, obj_type, tip)
+                slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(quad)
 
             # Build tree: group nodes created on first occurrence.
             group_nodes: dict[str, _TreeNode] = {}
@@ -526,21 +527,12 @@ class PolicyTreeModel(QAbstractItemModel):
 
     @staticmethod
     def _build_name_map(session):
-        """Build a {uuid: (name, type)} lookup from all name-bearing tables."""
+        """Build a {uuid: (name, type, tooltip)} lookup from all name-bearing tables."""
         name_map = {}
         for cls in _NAME_CLASSES:
-            if hasattr(cls, 'type'):
-                for obj_id, name, obj_type in session.execute(
-                    sqlalchemy.select(cls.id, cls.name, cls.type),
-                ):
-                    name_map[obj_id] = (name, obj_type)
-            else:
-                # Interface, Interval — fixed type name.
-                type_name = cls.__name__
-                for obj_id, name in session.execute(
-                    sqlalchemy.select(cls.id, cls.name),
-                ):
-                    name_map[obj_id] = (name, type_name)
+            for obj in session.scalars(sqlalchemy.select(cls)):
+                obj_type = getattr(obj, 'type', None) or cls.__name__
+                name_map[obj.id] = (obj.name, obj_type, obj_tooltip(obj))
         return name_map
 
     # ------------------------------------------------------------------
@@ -732,9 +724,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.ToolTipRole:
             if not QSettings().value('UI/ObjTooltips', True, type=bool):
                 return None
-            if col == self._options_col:
-                return _options_tooltip(row_data)
-            return self._display_value(row_data, col)
+            return self._tooltip_value(row_data, col)
         if role == Qt.ItemDataRole.BackgroundRole:
             if row_data.color_hex and col != self._position_col:
                 return QColor(row_data.color_hex)
@@ -785,6 +775,66 @@ class PolicyTreeModel(QAbstractItemModel):
         if desc.col_type == 'comment':
             return row_data.comment
         return ''
+
+    def _tooltip_value(self, row_data, col):
+        """Return the tooltip for *col* of *row_data*.
+
+        Mirrors fwbuilder's ``RuleSetView::showToolTip()`` per-column logic:
+        instructional hints for interactive columns and "drag and drop"
+        guidance for empty element slots.
+        """
+        if col >= len(self._cols):
+            return None
+        desc = self._cols[col]
+
+        if desc.col_type == 'position':
+            return (
+                '<b>To open the context menu</b> with operations such as '
+                "'Add rule', 'Remove rule', etc., right-click.<br>"
+                '<b>To compile this rule</b> and see the generated firewall '
+                'configuration, select it and press <b>X</b>.'
+            )
+
+        if desc.col_type == 'element':
+            elements = getattr(row_data, desc.slot, [])
+            if not elements:
+                return (
+                    'To modify this field, drag and drop\nan object from the tree here.'
+                )
+            # Show the detailed tooltip for each element (matching fwbuilder's
+            # getObjectPropertiesDetailed).  For multi-element cells, separate
+            # with a horizontal rule.
+            tips = [tip for *_, tip in elements if tip]
+            if tips:
+                return '<hr>'.join(tips)
+            return '\n'.join(name for _, name, *_ in elements)
+
+        if desc.col_type == 'direction':
+            direction = row_data.direction or 'Both'
+            return (
+                f'<b>Direction:</b> {direction}<br>'
+                '<b>To change the direction</b>, right-click to open '
+                'the list of possible settings.'
+            )
+
+        if desc.col_type == 'action':
+            action = self._display_value(row_data, col)
+            return (
+                f'<b>Action:</b> {action}<br>'
+                '<b>To change the action</b>, right-click to open '
+                'the list of possible settings.'
+            )
+
+        if desc.col_type == 'options':
+            return _options_tooltip(row_data)
+
+        if desc.col_type == 'comment':
+            return row_data.comment or None
+
+        if desc.col_type == 'metric':
+            return str(row_data.metric) if row_data.metric else None
+
+        return None
 
     def _decoration_value(self, row_data, col):
         """Return the icon for *col* of *row_data*, or None."""
@@ -1428,7 +1478,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         elem_name = ''
-        for eid, ename, _etype in getattr(row_data, slot, []):
+        for eid, ename, _etype, *_ in getattr(row_data, slot, []):
             if eid == target_id:
                 elem_name = ename
                 break
@@ -1866,7 +1916,7 @@ def _contrast_color(bg):
 
 
 def _format_elements(triples):
-    """Format a list of (uuid, name, type) triples for display."""
+    """Format a list of (uuid, name, type, ...) tuples for display."""
     if not triples:
         return 'Any'
-    return '\n'.join(name for _, name, _ in triples)
+    return '\n'.join(name for _, name, *_ in triples)
