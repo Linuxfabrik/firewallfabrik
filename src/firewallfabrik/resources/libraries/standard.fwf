@@ -632,12 +632,12 @@ libraries:
         members:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:Groups/ServiceGroup:Windows NT'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP GC 3268'
-        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP GC 3268 SSL'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP GC SSL 3269'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:SMB 445'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:DNS 53'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Kerberos 88'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP 389'
-        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP 389s'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAPS 636'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:DNS 53'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:Kerberos 88'
       - type: 'ServiceGroup'
@@ -669,7 +669,7 @@ libraries:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:klogin 543'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:kshell 544'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:Kerberos 88'
-        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:Kerberos 88-adm'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:Kerberos admin 749-750'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:kpasswd 464'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:krb524 4444'
       - type: 'ServiceGroup'
@@ -688,7 +688,7 @@ libraries:
         members:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:icslap 2869'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:UPnP 5000'
-        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:UPnP 5000-5431'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:UPnP 5431'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:SSDP 1900'
       - type: 'ServiceGroup'
         name: 'Useful_ICMP'
@@ -959,11 +959,68 @@ libraries:
     - type: 'ServiceGroup'
       name: 'TCP'
       children:
+      - type: TCPService
+        name: 3CX HTTP 5000
+        comment: 3CX Phone System Management Console/Web Client (HTTP)
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: 3CX HTTPS 5001
+        comment: 3CX Phone System Management Console/Web Client (HTTPS)
+        dst_range_start: 5001
+        dst_range_end: 5001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'AFP 548'
         comment: 'Apple Filing Protocol over TCP'
         dst_range_start: 548
         dst_range_end: 548
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: AirPlay Receiver 5000
+        comment: Apple's AirPlay Receiver
+        dst_range_start: 5000
+        dst_range_end: 5000
         tcp_flags:
           urg: false
           ack: false
@@ -994,6 +1051,7 @@ libraries:
           rst: false
           syn: false
           fin: false
+        comment: Matches any TCP traffic regardless of port. Use with caution.
       - type: 'TCPService'
         name: 'All TCP established'
         comment: 'Some firewall platforms can match TCP packets with flags ACK or RST set; the option is usually called "established".
@@ -1040,6 +1098,196 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: AMQP 5672
+        comment: Advanced Message Queuing Protocol. Used by RabbitMQ, Apache Qpid, and other message brokers.
+        dst_range_start: 5672
+        dst_range_end: 5672
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Android ADB WiFi 5555
+        comment: Wireless adb (Android Debug Bridge) control of an Android device over the network.
+        dst_range_start: 5555
+        dst_range_end: 5555
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Apache Derby 1527
+        comment: Apache Derby Network Server
+        dst_range_start: 1527
+        dst_range_end: 1527
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Apache Kafka 9092
+        comment: Apache Kafka A Distributed Streaming Platform
+        dst_range_start: 9092
+        dst_range_end: 9092
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Apple Push 5223
+        comment: Apple Push Notification Service
+        dst_range_start: 5223
+        dst_range_end: 5223
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Apple Remote Desktop 3283
+        comment: Apple Remote Desktop 2.0 or later
+        dst_range_start: 3283
+        dst_range_end: 3283
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Apple SASL 3659
+        comment: Apple SASL, used by macOS Server Password Server
+        dst_range_start: 3659
+        dst_range_end: 3659
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ASP.NET Core Dev 5000
+        comment: ASP.NET Core — Development Webserver
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Asterisk HTTP 8088
+        comment: Asterisk management access via HTTP
+        dst_range_start: 8088
+        dst_range_end: 8088
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: AT&T U-verse PEG 5000
+        comment: AT&T U-verse public, educational, and government access (PEG) streaming over HTTP
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'auth 113'
         dst_range_start: 113
@@ -1059,6 +1307,120 @@ libraries:
           syn: false
           fin: false
         comment: Ident / Authentication Service
+      - type: TCPService
+        name: Auth 113
+        comment: Authentication Service (auth), the predecessor to identification protocol. Used to determine a user's identity of a particular TCP connection.
+        dst_range_start: 113
+        dst_range_end: 113
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Avira Console 7000
+        comment: Avira Server Management Console
+        dst_range_start: 7000
+        dst_range_end: 7000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: AWS EB Proxy 5000
+        comment: AWS Elastic Beanstalk Proxy server
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: BackupExec 10000
+        comment: Veritas/Symantec Backup Exec agent and server communication.
+        dst_range_start: 10000
+        dst_range_end: 10000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: BACnet 47808
+        comment: BACnet/IP for building automation (HVAC, lighting, access). Common in OT/BMS environments.
+        dst_range_start: 47808
+        dst_range_end: 47808
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Battle.net 6112
+        comment: Blizzard's Battle.net gaming service and some games, ArenaNet gaming service, Relic gaming service
+        dst_range_start: 6112
+        dst_range_end: 6112
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'BGP 179'
         dst_range_start: 179
@@ -1078,6 +1440,139 @@ libraries:
           syn: false
           fin: false
         comment: Border Gateway Protocol
+      - type: TCPService
+        name: Bitcoin 8333
+        comment: Bitcoin peer-to-peer network protocol for node communication.
+        dst_range_start: 8333
+        dst_range_end: 8333
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: BitTorrent Tracker 6969
+        comment: BitTorrent tracker for coordinating peer-to-peer file sharing.
+        dst_range_start: 6969
+        dst_range_end: 6969
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: BMC Control-M 6005
+        comment: Default for BMC Software Control-M/Server—Socket used for communication between Control-M processes—though often changed during installation
+        dst_range_start: 6005
+        dst_range_end: 6005
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Bun 3000
+        comment: Bun JavaScript runtime default development server port.
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: CDDB 888
+        comment: cddbp, CD DataBase (CDDB) protocol (CDDBP)
+        dst_range_start: 888
+        dst_range_end: 888
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Cherokee Admin 9090
+        comment: Cherokee Admin panel
+        dst_range_start: 9090
+        dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Cisco SSM URL 465
+        comment: URL Rendezvous Directory for Cisco SSM
+        dst_range_start: 465
+        dst_range_end: 465
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'Citrix ICA 1494'
         dst_range_start: 1494
@@ -1097,6 +1592,215 @@ libraries:
           syn: false
           fin: false
         comment: Citrix Independent Computing Architecture
+      - type: TCPService
+        name: ClickHouse 9000
+        comment: ClickHouse default port
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Cockpit 9090
+        comment: Cockpit web-based Linux server administration interface.
+        dst_range_start: 9090
+        dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Coda Auth 370
+        comment: codaauth2, Coda authentication server
+        dst_range_start: 370
+        dst_range_end: 370
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Confluence 8090
+        comment: Atlassian Confluence
+        dst_range_start: 8090
+        dst_range_end: 8090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Coral CDN 8090
+        comment: Coral Content Distribution Network (legacy; 80 and 8080 now supported)
+        dst_range_start: 8090
+        dst_range_end: 8090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: cPanel TLS 2083
+        comment: cPanel default TLS
+        dst_range_start: 2083
+        dst_range_end: 2083
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: CrashPlan 4243
+        comment: CrashPlan backup client-server communication.
+        dst_range_start: 4243
+        dst_range_end: 4243
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Create React App 3000
+        comment: Create React App, script to create single-page React applications
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Cruse Scan 5232
+        comment: Cruse Scanning System Service
+        dst_range_start: 5232
+        dst_range_end: 5232
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: CUPS 631
+        comment: Common Unix Printing System (CUPS) administration console (extension to IPP)
+        dst_range_start: 631
+        dst_range_end: 631
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Dash Crypto 9999
+        comment: Dash (cryptocurrency)
+        dst_range_start: 9999
+        dst_range_end: 9999
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'daytime 13'
         dst_range_start: 13
@@ -1116,11 +1820,239 @@ libraries:
           syn: false
           fin: false
         comment: Daytime Protocol (RFC 867)
+      - type: TCPService
+        name: DBGp 9000
+        comment: DBGp debugging protocol, used by Xdebug for PHP remote debugging.
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DBGp Proxy 9001
+        comment: DBGp proxy for multiplexing debug connections from multiple developers.
+        dst_range_start: 9001
+        dst_range_end: 9001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DCE Endpoint 135
+        comment: DCE endpoint resolution
+        dst_range_start: 135
+        dst_range_end: 135
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Dell OpenManage 1311
+        comment: Dell OpenManage HTTPS
+        dst_range_start: 1311
+        dst_range_end: 1311
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Deno 8000
+        comment: Deno JavaScript/TypeScript runtime default HTTP server port.
+        dst_range_start: 8000
+        dst_range_end: 8000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DHCPv6 client 546
+        comment: DHCPv6 client port. Hosts listen here for DHCPv6 server responses.
+        dst_range_start: 546
+        dst_range_end: 546
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DHCPv6 server 547
+        comment: DHCPv6 server port. DHCP servers and relay agents listen here.
+        dst_range_start: 547
+        dst_range_end: 547
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DICOM 104
+        comment: Digital Imaging and Communications in Medicine
+        dst_range_start: 104
+        dst_range_end: 104
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DirectAdmin 2222
+        comment: DirectAdmin Access
+        dst_range_start: 2222
+        dst_range_end: 2222
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Discard 9
+        comment: Discard Protocol (RFC 863)
+        dst_range_start: 9
+        dst_range_end: 9
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'distcc 3632'
         comment: 'Distributed compiler'
         dst_range_start: 3632
         dst_range_end: 3632
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Django 8000
+        comment: Django Development Webserver
+        dst_range_start: 8000
+        dst_range_end: 8000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DNP3 SCADA 20000
+        comment: Distributed Network Protocol 3 (DNP3). Used in SCADA/ICS for communication between RTUs and master stations.
+        dst_range_start: 20000
+        dst_range_end: 20000
         tcp_flags:
           urg: false
           ack: false
@@ -1154,6 +2086,234 @@ libraries:
           syn: false
           fin: false
         comment: Domain Name System
+      - type: TCPService
+        name: DNS over TLS 853
+        comment: DNS over TLS (RFC 7858)
+        dst_range_start: 853
+        dst_range_end: 853
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DNSIX 90
+        comment: dnsix (DNSIX Security Attribute Token Map)
+        dst_range_start: 90
+        dst_range_end: 90
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Docker 2375
+        comment: 'Docker REST API (unencrypted, unauthenticated). SECURITY RISK: never expose to untrusted networks. Use 2376/TLS instead.'
+        dst_range_start: 2375
+        dst_range_end: 2375
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Docker Alt 4243
+        comment: Docker implementations, redistributions, and setups default
+        dst_range_start: 4243
+        dst_range_end: 4243
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Docker Registry 5000
+        comment: Docker Registry HTTP API for storing and distributing container images.
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Docker TLS 2376
+        comment: Docker REST API over TLS with client certificate authentication.
+        dst_range_start: 2376
+        dst_range_end: 2376
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: dtspcd 6112
+        comment: dtspcd, execute commands and launch applications remotely
+        dst_range_start: 6112
+        dst_range_end: 6112
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: DynamoDB Local 8000
+        comment: Amazon DynamoDB Local development emulator.
+        dst_range_start: 8000
+        dst_range_end: 8000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Echo 7
+        comment: Echo Protocol (RFC 862)
+        dst_range_start: 7
+        dst_range_end: 7
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: EFS 520
+        comment: efs, extended file name server
+        dst_range_start: 520
+        dst_range_end: 520
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Elastic APM 8200
+        comment: Elastic APM Server
+        dst_range_start: 8200
+        dst_range_end: 8200
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Elasticsearch 9200
+        comment: 'Elasticsearch REST API for search and analytics. WARNING: no authentication in older versions; use X-Pack security or network restrictions.'
+        dst_range_start: 9200
+        dst_range_end: 9200
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'Entrust Admin 709'
         comment: 'Entrust CA Administration Service'
@@ -1178,6 +2338,253 @@ libraries:
         comment: 'Entrust CA Key Management Service'
         dst_range_start: 710
         dst_range_end: 710
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ESET Remote Admin 2222
+        comment: ESET Remote administrator
+        dst_range_start: 2222
+        dst_range_end: 2222
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ESRI SDE Instance 5151
+        comment: ESRI ArcSDE (Spatial Database Engine) geodatabase server instance.
+        dst_range_start: 5151
+        dst_range_end: 5151
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: etcd 2379
+        comment: etcd distributed key-value store. Used by Kubernetes for cluster state. Restrict access tightly.
+        dst_range_start: 2379
+        dst_range_end: 2379
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: etcd Alt 4001
+        comment: etcd client communication (legacy/alternative port). Used by Kubernetes for cluster state.
+        dst_range_start: 4001
+        dst_range_end: 4001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: EtherNet/IP 2222
+        comment: EtherNet/IP implicit messaging for IO data
+        dst_range_start: 2222
+        dst_range_end: 2222
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: FILEMQ 5670
+        comment: FILEMQ ZeroMQ File Message Queuing Protocol
+        dst_range_start: 5670
+        dst_range_end: 5670
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Finger 79
+        comment: 'Finger user information protocol (RFC 1288). WARNING: leaks user information; generally disabled on modern systems.'
+        dst_range_start: 79
+        dst_range_end: 79
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Flash Comm Server 1935
+        comment: Adobe Flash Media Server (formerly Macromedia Flash Communication Server). Legacy streaming protocol.
+        dst_range_start: 1935
+        dst_range_end: 1935
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Flask 5000
+        comment: Flask Development Webserver
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: FlexNet Publisher 27000
+        comment: FlexNet Publisher's License server (from the range of default ports)
+        dst_range_start: 27000
+        dst_range_end: 27000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Freeciv 5555
+        comment: 'Multi-purpose port: Freeciv game, HP Data Protector, McAfee EPE Database, SAP, MS Dynamics CRM, SoftEther VPN.'
+        dst_range_start: 5555
+        dst_range_end: 5555
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Freenet 8888
+        comment: Freenet web UI (localhost only)
+        dst_range_start: 8888
+        dst_range_end: 8888
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: FritzBox TR-069 8089
+        comment: Fritz!Box automatic TR-069 configuration
+        dst_range_start: 8089
+        dst_range_end: 8089
         tcp_flags:
           urg: false
           ack: false
@@ -1251,6 +2658,196 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: FTPS control 990
+        comment: FTP over TLS/SSL control
+        dst_range_start: 990
+        dst_range_end: 990
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: FTPS data 989
+        comment: FTP over TLS/SSL data
+        dst_range_start: 989
+        dst_range_end: 989
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Git 9418
+        comment: Git daemon
+        dst_range_start: 9418
+        dst_range_end: 9418
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: GNUnet 2086
+        comment: GNUnet decentralized peer-to-peer networking framework.
+        dst_range_start: 2086
+        dst_range_end: 2086
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Gogs Gitea 3000
+        comment: Gogs and Gitea (self-hosted Git service)
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Google Cloud Msg 5228
+        comment: Google Play, Android Cloud to Device Messaging Service, Google Cloud Messaging
+        dst_range_start: 5228
+        dst_range_end: 5228
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Gopher 70
+        comment: Gopher document retrieval protocol. Legacy predecessor to HTTP; rarely used today.
+        dst_range_start: 70
+        dst_range_end: 70
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Grafana 3000
+        comment: Grafana monitoring and observability dashboard web interface.
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Groove GLRPC 9080
+        comment: glrpc, Groove Collaboration software GLRPC
+        dst_range_start: 9080
+        dst_range_end: 9080
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: GStreamer Daemon 5000
+        comment: RidgeRun GStreamer Daemon (GSTD)
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'H.323 1720'
         dst_range_start: 1720
@@ -1270,6 +2867,158 @@ libraries:
           syn: false
           fin: false
         comment: H.323 call signaling
+      - type: TCPService
+        name: H2 Database 9092
+        comment: H2 (DBMS) Database server
+        dst_range_start: 9092
+        dst_range_end: 9092
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Hadoop NameNode 9000
+        comment: Hadoop NameNode default port
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Heroku 5000
+        comment: Heroku console access
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Home Assistant 8123
+        comment: Home Assistant home automation platform web interface.
+        dst_range_start: 8123
+        dst_range_end: 8123
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Hotline 5500
+        comment: Hotline control connection
+        dst_range_start: 5500
+        dst_range_end: 5500
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: HP Virtual Room 5228
+        comment: HP Virtual Room Service
+        dst_range_start: 5228
+        dst_range_end: 5228
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: HSMS 5000
+        comment: High-Speed SECS Message Services
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: HSQLDB 9001
+        comment: HSQLDB default port
+        dst_range_start: 9001
+        dst_range_end: 9001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'HTTP 80'
         dst_range_start: 80
@@ -1289,6 +3038,44 @@ libraries:
           syn: false
           fin: false
         comment: Hypertext Transfer Protocol
+      - type: TCPService
+        name: HTTP Alt 8008
+        comment: Alternative port for HTTP. See also ports 80 and 8080.
+        dst_range_start: 8008
+        dst_range_end: 8008
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: HTTP alt 8080
+        comment: HTTP alternate (commonly used for proxies)
+        dst_range_start: 8080
+        dst_range_end: 8080
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'HTTPS 443'
         dst_range_start: 443
@@ -1308,11 +3095,220 @@ libraries:
           syn: false
           fin: false
         comment: HTTP over TLS/SSL
+      - type: TCPService
+        name: HTTPS alt 8443
+        comment: HTTPS alternate
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Hyper-V Live 6600
+        comment: Microsoft Hyper-V Live
+        dst_range_start: 6600
+        dst_range_end: 6600
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: I2P Proxy 4444
+        comment: I2P HTTP/S proxy
+        dst_range_start: 4444
+        dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IBM Endpoint Manager 888
+        comment: IBM Endpoint Manager Remote Control
+        dst_range_start: 888
+        dst_range_end: 888
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IBM HTTP Admin 8008
+        comment: IBM HTTP Server administration default
+        dst_range_start: 8008
+        dst_range_end: 8008
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IBM Tivoli Storage 1581
+        comment: IBM Tivoli Storage Manager web client
+        dst_range_start: 1581
+        dst_range_end: 1581
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: iCal 8008
+        comment: iCal, a calendar application by Apple
+        dst_range_start: 8008
+        dst_range_end: 8008
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: iCal SSL 8443
+        comment: iCal over SSL
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: iChat FTP Proxy 7777
+        comment: iChat server file transfer proxy
+        dst_range_start: 7777
+        dst_range_end: 7777
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'icslap 2869'
         comment: 'SSDP/DSPP event notification'
         dst_range_start: 2869
         dst_range_end: 2869
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Ident 113
+        comment: Ident, authentication service/identification protocol, used by IRC servers to identify users
+        dst_range_start: 113
+        dst_range_end: 113
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IKE 500
+        comment: Internet Key Exchange (IKE/ISAKMP) for IPsec VPN negotiation. See also NAT-T on port 4500.
+        dst_range_start: 500
+        dst_range_end: 500
         tcp_flags:
           urg: false
           ack: false
@@ -1365,6 +3361,158 @@ libraries:
           syn: false
           fin: false
         comment: IMAP over TLS/SSL
+      - type: TCPService
+        name: IMAPv3 220
+        comment: Internet Message Access Protocol v3
+        dst_range_start: 220
+        dst_range_end: 220
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Infoseek 1234
+        comment: Infoseek search agent
+        dst_range_start: 1234
+        dst_range_end: 1234
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Iperf 5001
+        comment: Iperf (Tool for measuring TCP and UDP bandwidth performance)
+        dst_range_start: 5001
+        dst_range_end: 5001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IPFS RPC 5001
+        comment: InterPlanetary File System RPC API
+        dst_range_start: 5001
+        dst_range_end: 5001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IPFS Swarm 4001
+        comment: InterPlanetary File System swarm node
+        dst_range_start: 4001
+        dst_range_end: 4001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IPP 631
+        comment: Internet Printing Protocol (IPP)
+        dst_range_start: 631
+        dst_range_end: 631
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IPsec 1293
+        comment: Internet Protocol Security
+        dst_range_start: 1293
+        dst_range_end: 1293
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: IRC 194
+        comment: Internet Relay Chat (official IANA port)
+        dst_range_start: 194
+        dst_range_end: 194
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'IRC 6667'
         dst_range_start: 6667
@@ -1384,6 +3532,139 @@ libraries:
           syn: false
           fin: false
         comment: Internet Relay Chat
+      - type: TCPService
+        name: IRC SSL 6679
+        comment: Internet Relay Chat (IRC) SSL (Secure Internet Relay Chat)—often used
+        dst_range_start: 6679
+        dst_range_end: 6679
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: iSCSI 860
+        comment: iSCSI (RFC 3720)
+        dst_range_start: 860
+        dst_range_end: 860
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: iSCSI target 3260
+        comment: iSCSI target portal for network-attached block storage access.
+        dst_range_start: 3260
+        dst_range_end: 3260
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ISO-TSAP 102
+        comment: ISO Transport Service Access Point
+        dst_range_start: 102
+        dst_range_end: 102
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: JIRA 8080
+        comment: Atlassian JIRA applications
+        dst_range_start: 8080
+        dst_range_end: 8080
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Jupyter 8888
+        comment: Default for IPython / Jupyter notebook dashboards
+        dst_range_start: 8888
+        dst_range_end: 8888
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Kaspersky Agent 15000
+        comment: Kaspersky Network Agent
+        dst_range_start: 15000
+        dst_range_end: 15000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'Kerberos 88'
         dst_range_start: 88
@@ -1402,7 +3683,64 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Kerberos authentication system
+        comment: Kerberos v5 authentication. Core protocol for Active Directory and many SSO implementations.
+      - type: TCPService
+        name: Kerberos admin 749
+        comment: Kerberos administration
+        dst_range_start: 749
+        dst_range_end: 749
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Kerberos prop 754
+        comment: krb5_prop, Kerberos v5 slave propagation
+        dst_range_start: 754
+        dst_range_end: 754
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: KGS Go Server 2379
+        comment: KGS Go Server, online platform for the board game Go.
+        dst_range_start: 2379
+        dst_range_end: 2379
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'klogin 543'
         dst_range_start: 543
@@ -1422,6 +3760,25 @@ libraries:
           syn: false
           fin: false
         comment: Kerberos login
+      - type: TCPService
+        name: kpasswd 464
+        comment: Kerberos Change/Set password
+        dst_range_start: 464
+        dst_range_end: 464
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'kshell 544'
         dst_range_start: 544
@@ -1441,6 +3798,63 @@ libraries:
           syn: false
           fin: false
         comment: Kerberos remote shell
+      - type: TCPService
+        name: Kubernetes API 6443
+        comment: Kubernetes API server (HTTPS). Central control plane endpoint for cluster management.
+        dst_range_start: 6443
+        dst_range_end: 6443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: L2F 1701
+        comment: Layer 2 Forwarding Protocol (L2F)
+        dst_range_start: 1701
+        dst_range_end: 1701
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: L2TP 1701
+        comment: Layer 2 Tunneling Protocol. Often paired with IPsec (L2TP/IPsec VPN). See also ports 500, 4500.
+        dst_range_start: 1701
+        dst_range_end: 1701
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'LDAP 389'
         dst_range_start: 389
@@ -1459,7 +3873,7 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Lightweight Directory Access Protocol
+        comment: Lightweight Directory Access Protocol for directory services (Active Directory, OpenLDAP). Unencrypted; prefer LDAPS (636) or StartTLS.
       - type: 'TCPService'
         name: 'LDAP GC 3268'
         dst_range_start: 3268
@@ -1500,9 +3914,47 @@ libraries:
         comment: Microsoft Global Catalog over SSL
       - type: 'TCPService'
         name: 'LDAPS 636'
-        comment: 'LDAP over TLS/SSL'
+        comment: 'LDAP over TLS/SSL. Encrypted directory service access; preferred over plain LDAP (389).'
         dst_range_start: 636
         dst_range_end: 636
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Linux-HA 694
+        comment: Linux-HA high-availability heartbeat
+        dst_range_start: 694
+        dst_range_end: 694
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: LLMNR 5355
+        comment: 'Link-Local Multicast Name Resolution. WARNING: can be exploited for NTLM relay attacks; consider disabling.'
+        dst_range_start: 5355
+        dst_range_end: 5355
         tcp_flags:
           urg: false
           ack: false
@@ -1536,6 +3988,405 @@ libraries:
           syn: false
           fin: false
         comment: Line Printer Daemon
+      - type: TCPService
+        name: MAMP 8888
+        comment: MAMP (macOS/Apache/MySQL/PHP) local development stack web server.
+        dst_range_start: 8888
+        dst_range_end: 8888
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Matrix Federation 8008
+        comment: Matrix homeserver federation over HTTP
+        dst_range_start: 8008
+        dst_range_end: 8008
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Matrix Identity 8090
+        comment: Matrix identity server
+        dst_range_start: 8090
+        dst_range_end: 8090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: mDNS 5353
+        comment: Multicast DNS (Bonjour/Avahi) for zero-configuration service discovery on local networks.
+        dst_range_start: 5353
+        dst_range_end: 5353
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Memcached 11211
+        comment: 'Memcached distributed memory cache. WARNING: no authentication; do not expose to the internet (UDP amplification attack vector).'
+        dst_range_start: 11211
+        dst_range_end: 11211
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Metasploit 4444
+        comment: Metasploit Framework default reverse shell listener. Commonly seen in penetration testing and malware.
+        dst_range_start: 4444
+        dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Meteor 3000
+        comment: Meteor development default
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MIL STD 2045 VMF 1581
+        comment: MIL STD 2045-47001 VMF
+        dst_range_start: 1581
+        dst_range_end: 1581
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Minecraft Java 25565
+        comment: Minecraft (Java Edition) multiplayer server
+        dst_range_start: 25565
+        dst_range_end: 25565
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MineOS 8443
+        comment: MineOs WebUi
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MiniDLNA 8200
+        comment: MiniDLNA media server Web Interface
+        dst_range_start: 8200
+        dst_range_end: 8200
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Mobile IP 434
+        comment: Mobile IP Agent (RFC 5944)
+        dst_range_start: 434
+        dst_range_end: 434
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Modbus 502
+        comment: Modbus/TCP industrial control protocol. Common in SCADA/ICS environments; restrict to OT networks.
+        dst_range_start: 502
+        dst_range_end: 502
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MongoDB 27017
+        comment: 'MongoDB NoSQL database. WARNING: older versions had no authentication by default; always enable access control.'
+        dst_range_start: 27017
+        dst_range_end: 27017
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MPD 6600
+        comment: Music Player Daemon (MPD)
+        dst_range_start: 6600
+        dst_range_end: 6600
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MQTT 1883
+        comment: MQTT (Message Queuing Telemetry Transport). Lightweight IoT messaging protocol. Unencrypted; use 8883/TLS for production.
+        dst_range_start: 1883
+        dst_range_end: 1883
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MQTT TLS 8883
+        comment: MQTT over TLS/SSL. Encrypted IoT messaging; preferred over unencrypted port 1883.
+        dst_range_start: 8883
+        dst_range_end: 8883
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MS EPMAP 135
+        comment: Microsoft EPMAP (End Point Mapper), also known as DCE/RPC Locator service, used to remotely manage services including DHCP server, DNS server and WINS. Also used by DCOM
+        dst_range_start: 135
+        dst_range_end: 135
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MS SharePoint 9001
+        comment: Microsoft SharePoint authoring environment
+        dst_range_start: 9001
+        dst_range_end: 9001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MS-DS AD 445
+        comment: Microsoft-DS (Directory Services) Active Directory, Windows shares
+        dst_range_start: 445
+        dst_range_end: 445
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MS-DS SMB 445
+        comment: Microsoft-DS (Directory Services) SMB file sharing
+        dst_range_start: 445
+        dst_range_end: 445
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'MS-RPC 135'
         dst_range_start: 135
@@ -1554,12 +4405,31 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Microsoft RPC Endpoint Mapper
+        comment: Microsoft RPC Endpoint Mapper. Required for many Windows services (AD, Exchange, SCCM). Restrict carefully.
       - type: 'TCPService'
         name: 'MS-SQL 1433'
         comment: 'Microsoft SQL Server'
         dst_range_start: 1433
         dst_range_end: 1433
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: MS-SQL monitor 1434
+        comment: Microsoft SQL Server monitor/browser
+        dst_range_start: 1434
+        dst_range_end: 1434
         tcp_flags:
           urg: false
           ack: false
@@ -1593,6 +4463,63 @@ libraries:
           syn: false
           fin: false
         comment: MySQL database system
+      - type: TCPService
+        name: nCUBE License 1521
+        comment: nCUBE License Manager
+        dst_range_start: 1521
+        dst_range_end: 1521
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: NDMP 10000
+        comment: Network Data Management Protocol (NDMP) Control stream for network backup and restore.
+        dst_range_start: 10000
+        dst_range_end: 10000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Net Assistant 3283
+        comment: Net Assistant, a predecessor to Apple Remote Desktop
+        dst_range_start: 3283
+        dst_range_end: 3283
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'NetBIOS-SSN 139'
         dst_range_start: 139
@@ -1612,6 +4539,25 @@ libraries:
           syn: false
           fin: false
         comment: NetBIOS Session Service
+      - type: TCPService
+        name: NETCONF 830
+        comment: NETCONF network configuration protocol over SSH (RFC 6241). Used for automated network device management.
+        dst_range_start: 830
+        dst_range_end: 830
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'NFS 2049'
         dst_range_start: 2049
@@ -1630,7 +4576,7 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Network File System
+        comment: Network File System. Additional ports (mountd, statd, lockd) may be needed; consider rpcbind (111) as well.
       - type: 'TCPService'
         name: 'NNTP 119'
         dst_range_start: 119
@@ -1649,7 +4595,7 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Network News Transfer Protocol
+        comment: Network News Transfer Protocol for Usenet newsgroups. Typically unencrypted; use NNTPS (563) instead.
       - type: 'TCPService'
         name: 'NNTPS 563'
         comment: 'NNTP over TLS/SSL'
@@ -1676,6 +4622,462 @@ libraries:
           established: false
         dst_range_start: 5666
         dst_range_end: 5666
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: NTRIP 2101
+        comment: Networked Transport of RTCM via Internet Protocol (NTRIP)
+        dst_range_start: 2101
+        dst_range_end: 2101
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Openfire Admin 9090
+        comment: Openfire Administration console
+        dst_range_start: 9090
+        dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Openfire Admin SSL 9091
+        comment: Openfire Administration console (SSL secured)
+        dst_range_start: 9091
+        dst_range_end: 9091
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenOCD Telnet 4444
+        comment: OpenOCD (Telnet)
+        dst_range_start: 4444
+        dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenTTD 3978
+        comment: OpenTTD game (masterserver and content service)
+        dst_range_start: 3978
+        dst_range_end: 3978
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenVPN 1194
+        comment: OpenVPN SSL/TLS-based VPN tunnel. Can run over TCP or UDP (UDP preferred).
+        dst_range_start: 1194
+        dst_range_end: 1194
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenWebNet 20000
+        comment: OpenWebNet, communications protocol used in Bticino products
+        dst_range_start: 20000
+        dst_range_end: 20000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle DB 1521
+        comment: Oracle Database TNS listener. Default port for Oracle database connections.
+        dst_range_start: 1521
+        dst_range_end: 1521
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle DB SSL 2484
+        comment: Oracle database listener (SSL)
+        dst_range_start: 2484
+        dst_range_end: 2484
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle Intradoc 5555
+        comment: 'Oracle WebCenter Content: Inbound Refinery—Intradoc Socket port. (formerly known as Oracle Universal Content Management). Port though often changed during installation'
+        dst_range_start: 5555
+        dst_range_end: 5555
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle Net 1527
+        comment: Oracle Net Services, formerly known as SQL*Net
+        dst_range_start: 1527
+        dst_range_end: 1527
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle OCFS2 7777
+        comment: Oracle Cluster File System 2
+        dst_range_start: 7777
+        dst_range_end: 7777
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle WC Imaging 16000
+        comment: 'Oracle WebCenter Content: Imaging (formerly known as Oracle Universal Content Management). Port though often changed during installation'
+        dst_range_start: 16000
+        dst_range_end: 16000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle WC Portable 6201
+        comment: 'Oracle WebCenter Content Portable: Admin'
+        dst_range_start: 6201
+        dst_range_end: 6201
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Oracle WebCenter 4444
+        comment: 'Oracle WebCenter Content: Content Server—Intradoc Socket port. (formerly known as Oracle Universal Content Management).'
+        dst_range_start: 4444
+        dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Orthanc DICOM 4242
+        comment: Orthanc – DICOM server
+        dst_range_start: 4242
+        dst_range_end: 4242
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OSAUT 6679
+        comment: Osorno Automation Protocol (OSAUT)
+        dst_range_start: 6679
+        dst_range_end: 6679
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: PAN Panorama HA-1 28770
+        comment: Palo Alto Networks' Panorama HA-1 backup sync port.
+        dst_range_start: 28770
+        dst_range_end: 28770
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: PAN Panorama Mgmt 3978
+        comment: Palo Alto Networks' Panorama management of firewalls and log collectors & pre-PAN-OS 8.0 Panorama-to-managed devices software updates.
+        dst_range_start: 3978
+        dst_range_end: 3978
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: PHP-FPM 9000
+        comment: PHP-FPM default port
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Play Framework 9000
+        comment: Play Framework web server
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Plesk 8443
+        comment: SW Soft Plesk Control Panel
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: PointCast 90
+        comment: PointCast (dotcom)
+        dst_range_start: 90
+        dst_range_end: 90
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: POP2 109
+        comment: Post Office Protocol v2. Obsolete; superseded by POP3 (110) and IMAP (143).
+        dst_range_start: 109
+        dst_range_end: 109
         tcp_flags:
           urg: false
           ack: false
@@ -1747,9 +5149,218 @@ libraries:
           syn: false
           fin: false
         comment: PostgreSQL database system
+      - type: TCPService
+        name: PowerBuilder SySAM 27000
+        comment: PowerBuilder SySAM license server
+        dst_range_start: 27000
+        dst_range_end: 27000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ProjectWise 5800
+        comment: ProjectWise Server
+        dst_range_start: 5800
+        dst_range_end: 5800
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Prometheus 9090
+        comment: Prometheus metrics / various admin interfaces
+        dst_range_start: 9090
+        dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Promise WebPAM 8443
+        comment: Promise WebPAM SSL
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Proxmox Backup 8007
+        comment: Proxmox Backup Server web-based management interface (HTTPS).
+        dst_range_start: 8007
+        dst_range_end: 8007
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Proxmox VE 8006
+        comment: Proxmox Virtual Environment web-based management interface (HTTPS).
+        dst_range_start: 8006
+        dst_range_end: 8006
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Python http.server 8000
+        comment: Python 3 http.server
+        dst_range_start: 8000
+        dst_range_end: 8000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: qBittorrent Tracker 9000
+        comment: qBittorrent's embedded torrent tracker default port
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Quest AppAssure API 8006
+        comment: Quest AppAssure 5 API
+        dst_range_start: 8006
+        dst_range_end: 8006
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Quest AppAssure Engine 8007
+        comment: Quest AppAssure 5 Engine
+        dst_range_start: 8007
+        dst_range_end: 8007
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: RADIUS 1645
+        comment: RADIUS authentication (legacy/pre-RFC port). Modern deployments use port 1812.
+        dst_range_start: 1645
+        dst_range_end: 1645
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'RADIUS 1812'
-        comment: 'RADIUS authentication protocol'
+        comment: 'RADIUS authentication protocol (RFC 2865). Used for network access control (802.1X, VPN, WiFi). Typically UDP.'
         dst_range_start: 1812
         dst_range_end: 1812
         tcp_flags:
@@ -1768,7 +5379,7 @@ libraries:
           fin: false
       - type: 'TCPService'
         name: 'RADIUS acct 1813'
-        comment: 'RADIUS accounting protocol'
+        comment: 'RADIUS accounting protocol (RFC 2866). Records session usage data for billing and auditing. Typically UDP.'
         dst_range_start: 1813
         dst_range_end: 1813
         tcp_flags:
@@ -1785,11 +5396,182 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: RadSec 2083
+        comment: Secure RADIUS Service (radsec)
+        dst_range_start: 2083
+        dst_range_end: 2083
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'RDP 3389'
-        comment: 'Remote Desktop Protocol (Microsoft Terminal Server)'
+        comment: 'Remote Desktop Protocol (Microsoft). WARNING: frequently targeted; use NLA, strong passwords, and restrict source IPs.'
         dst_range_start: 3389
         dst_range_end: 3389
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Redis 6379
+        comment: 'Redis in-memory data store. WARNING: no authentication by default; do not expose to untrusted networks without ACL/password.'
+        dst_range_start: 6379
+        dst_range_end: 6379
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Resilio Sync 3000
+        comment: Resilio Sync, spun from BitTorrent Sync.
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Rexec 512
+        comment: 'Remote Process Execution (rexec). WARNING: credentials sent in cleartext. Legacy Berkeley r-command; use SSH instead.'
+        dst_range_start: 512
+        dst_range_end: 512
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: RFB 5900
+        comment: Remote Frame Buffer protocol (RFB)
+        dst_range_start: 5900
+        dst_range_end: 5900
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: rlogin 513
+        comment: Remote login (Berkeley r-command). Unencrypted, use SSH instead.
+        dst_range_start: 513
+        dst_range_end: 513
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: RNDC 953
+        comment: BIND Remote Name Daemon Control for managing DNS server configuration. Restrict to localhost or management hosts only.
+        dst_range_start: 953
+        dst_range_end: 953
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: RRH 753
+        comment: Reverse Routing Header (RRH)
+        dst_range_start: 753
+        dst_range_end: 753
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: rsh 514
+        comment: 'Remote Shell (rsh/remsh). WARNING: no encryption, host-based authentication only. Legacy Berkeley r-command; use SSH instead.'
+        dst_range_start: 514
+        dst_range_end: 514
         tcp_flags:
           urg: false
           ack: false
@@ -1863,6 +5645,25 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: Ruby on Rails 3000
+        comment: Ruby on Rails development default
+        dst_range_start: 3000
+        dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'RWhois 4321'
         dst_range_start: 4321
@@ -1882,6 +5683,158 @@ libraries:
           syn: false
           fin: false
         comment: Referral Whois Protocol
+      - type: TCPService
+        name: SCCM HTTP 8005
+        comment: Windows SCCM HTTP listener service
+        dst_range_start: 8005
+        dst_range_end: 8005
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SGI dgld 5232
+        comment: Silicon Graphics Distributed Graphics Library daemon (dgld)
+        dst_range_start: 5232
+        dst_range_end: 5232
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SHOUTcast 8000
+        comment: Commonly used for Internet radio streams such as SHOUTcast, Icecast and iTunes Radio
+        dst_range_start: 8000
+        dst_range_end: 8000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SIP 5060
+        comment: Session Initiation Protocol for VoIP signaling. Unencrypted; use 5061/TLS for secure environments.
+        dst_range_start: 5060
+        dst_range_end: 5060
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SIP TLS 5061
+        comment: Session Initiation Protocol over TLS. Encrypted VoIP signaling; preferred over 5060.
+        dst_range_start: 5061
+        dst_range_end: 5061
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SlimProto 3483
+        comment: Slim Devices SlimProto protocol
+        dst_range_start: 3483
+        dst_range_end: 3483
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Slingbox 5001
+        comment: Slingbox and Slingplayer
+        dst_range_start: 5001
+        dst_range_end: 5001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SLP 427
+        comment: Service Location Protocol
+        dst_range_start: 427
+        dst_range_end: 427
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'SMB 445'
         comment: 'SMB over TCP (without NetBIOS)'
@@ -1920,6 +5873,25 @@ libraries:
           syn: false
           fin: false
         comment: Simple Mail Transfer Protocol
+      - type: TCPService
+        name: SMTP submission 587
+        comment: Email message submission (RFC 6409)
+        dst_range_start: 587
+        dst_range_end: 587
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'SMTPS 465'
         dst_range_start: 465
@@ -1957,7 +5929,45 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: SOCKS proxy
+        comment: SOCKS proxy protocol for routing traffic through a proxy server. Used by SSH tunnels, Tor, etc.
+      - type: TCPService
+        name: SonarQube 9000
+        comment: SonarQube Web Server
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Splunk Mgmt 8089
+        comment: Splunk daemon management
+        dst_range_start: 8089
+        dst_range_end: 8089
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'SQLNet 1521'
         dst_range_start: 1521
@@ -1977,6 +5987,44 @@ libraries:
           syn: false
           fin: false
         comment: Oracle SQL*Net / Oracle Net Services
+      - type: TCPService
+        name: SqueezeCenter 9000
+        comment: SqueezeCenter web server & streaming
+        dst_range_start: 9000
+        dst_range_end: 9000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: SqueezeCenter CLI 9090
+        comment: SqueezeCenter control (CLI)
+        dst_range_start: 9090
+        dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'Squid 3128'
         dst_range_start: 3128
@@ -1995,7 +6043,7 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Squid caching web proxy
+        comment: Squid caching HTTP proxy. Also commonly used for content filtering and access control.
       - type: 'TCPService'
         name: 'SSH 22'
         dst_range_start: 22
@@ -2014,7 +6062,102 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Secure Shell
+        comment: Secure Shell for encrypted remote administration, file transfer (SCP/SFTP), and tunneling.
+      - type: TCPService
+        name: STUN 3478
+        comment: STUN, a protocol for NAT traversal
+        dst_range_start: 3478
+        dst_range_end: 3478
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: STUN Behavior 3478
+        comment: STUN Behavior Discovery. See also port 5349.
+        dst_range_start: 3478
+        dst_range_end: 3478
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: STUN Behavior TLS 5349
+        comment: STUN Behavior Discovery over TLS. See also port 3478.
+        dst_range_start: 5349
+        dst_range_end: 5349
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: STUN TLS 5349
+        comment: STUN over TLS/DTLS, a protocol for NAT traversal
+        dst_range_start: 5349
+        dst_range_end: 5349
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: STUN/TURN 3478
+        comment: STUN/TURN (Session Traversal for NAT)
+        dst_range_start: 3478
+        dst_range_end: 3478
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'SunRPC 111'
         dst_range_start: 111
@@ -2034,6 +6177,44 @@ libraries:
           syn: false
           fin: false
         comment: Open Network Computing Remote Procedure Call
+      - type: TCPService
+        name: Synology 5000
+        comment: Synology Inc. Management Console, File Station, Audio Station
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Synology SSL 5001
+        comment: Synology Inc. Secured Management Console, File Station, Audio Station
+        dst_range_start: 5001
+        dst_range_end: 5001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'TACACS+ 49'
         dst_range_start: 49
@@ -2052,10 +6233,10 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: TACACS+ authentication protocol
+        comment: TACACS+ authentication, authorization, and accounting for network device management. Encrypts full payload (unlike RADIUS).
       - type: 'TCPService'
         name: 'TCP high ports'
-        comment: 'TCP high ports'
+        comment: 'Dynamic/ephemeral ports (1024-65535). Used for client-side connections and return traffic.'
         dst_range_start: 1024
         dst_range_end: 65535
         tcp_flags:
@@ -2088,6 +6269,45 @@ libraries:
           rst: true
           syn: true
           fin: true
+        comment: Matches TCP SYN packets (connection initiation only).
+      - type: TCPService
+        name: TeamViewer 5938
+        comment: TeamViewer remote desktop
+        dst_range_start: 5938
+        dst_range_end: 5938
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: tell send 754
+        comment: Kerberos "tell send" service for ticket propagation.
+        dst_range_start: 754
+        dst_range_end: 754
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'Telnet 23'
         dst_range_start: 23
@@ -2106,7 +6326,235 @@ libraries:
           rst: false
           syn: false
           fin: false
-        comment: Telnet protocol (unencrypted)
+        comment: 'Telnet remote terminal. WARNING: all traffic including credentials sent in cleartext. Use SSH instead.'
+      - type: TCPService
+        name: Telnets 992
+        comment: Telnet protocol over TLS/SSL
+        dst_range_start: 992
+        dst_range_end: 992
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Terraria 7777
+        comment: Terraria default server
+        dst_range_start: 7777
+        dst_range_end: 7777
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Thermo-Calc 6201
+        comment: 'Thermo-Calc Software AB: Management of service nodes in a processing grid for thermodynamic calculations'
+        dst_range_start: 6201
+        dst_range_end: 6201
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Time 37
+        comment: Time Protocol (RFC 868)
+        dst_range_start: 37
+        dst_range_end: 37
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Tinc 655
+        comment: Tinc mesh VPN daemon. Supports automatic mesh routing between nodes.
+        dst_range_start: 655
+        dst_range_end: 655
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Tomcat 8080
+        comment: Apache Tomcat
+        dst_range_start: 8080
+        dst_range_end: 8080
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Tomcat Shutdown 8005
+        comment: Tomcat remote shutdown
+        dst_range_start: 8005
+        dst_range_end: 8005
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Tomcat SSL 8443
+        comment: Apache Tomcat SSL
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Tor ORPort 9001
+        comment: Tor network default (ORPort)
+        dst_range_start: 9001
+        dst_range_end: 9001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Transmission Web 9091
+        comment: Transmission (BitTorrent client) Web interface
+        dst_range_start: 9091
+        dst_range_end: 9091
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: TURN 3478
+        comment: TURN, a protocol for NAT traversal (extension to STUN)
+        dst_range_start: 3478
+        dst_range_end: 3478
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: TURN TLS 5349
+        comment: TURN over TLS/DTLS, a protocol for NAT traversal
+        dst_range_start: 5349
+        dst_range_end: 5349
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'UPnP 5000'
         dst_range_start: 5000
@@ -2131,6 +6579,139 @@ libraries:
         comment: 'UPnP (Linksys/Sveasoft variant)'
         dst_range_start: 5431
         dst_range_end: 5431
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Urchin Analytics 9999
+        comment: Urchin Web Analytics
+        dst_range_start: 9999
+        dst_range_end: 9999
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Usermin 20000
+        comment: Usermin, Web-based Unix/Linux user administration tool (default port)
+        dst_range_start: 20000
+        dst_range_end: 20000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Ventrilo Auth 6100
+        comment: Ventrilo authentication for version 3
+        dst_range_start: 6100
+        dst_range_end: 6100
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Vizrt 6100
+        comment: Vizrt System
+        dst_range_start: 6100
+        dst_range_end: 6100
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VMware ESXi 902
+        comment: VMware ESXi host management, vSphere Client communication, and NFC (Network File Copy).
+        dst_range_start: 902
+        dst_range_end: 902
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VMware vCenter 9443
+        comment: VMware vCenter Server web management interface (HTTPS).
+        dst_range_start: 9443
+        dst_range_end: 9443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VMware VI HTTPS 8333
+        comment: VMware VI Web Access via HTTPS
+        dst_range_start: 8333
+        dst_range_end: 8333
         tcp_flags:
           urg: false
           ack: false
@@ -2183,6 +6764,196 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: VNC HTTP 5800
+        comment: VNC Remote Frame Buffer RFB protocol over HTTP
+        dst_range_start: 5800
+        dst_range_end: 5800
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VNC Listener 5500
+        comment: VNC Remote Frame Buffer RFB protocol—for incoming listening viewer
+        dst_range_start: 5500
+        dst_range_end: 5500
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VoIP 20000
+        comment: Voice over IP telephony traffic (used by Google Voice, MagicJack, Vonage, and similar providers).
+        dst_range_start: 20000
+        dst_range_end: 20000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: VTun 5000
+        comment: VTun, VPN Software
+        dst_range_start: 5000
+        dst_range_end: 5000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WebDAV Source 9800
+        comment: WebDAV (Web Distributed Authoring and Versioning) source port for remote file management.
+        dst_range_start: 9800
+        dst_range_end: 9800
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WebLogic 7001
+        comment: Default for BEA WebLogic Server's HTTP server, though often changed during installation
+        dst_range_start: 7001
+        dst_range_end: 7001
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Webmin 10000
+        comment: Webmin web-based administration
+        dst_range_start: 10000
+        dst_range_end: 10000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WebSphere HTTP 9080
+        comment: WebSphere Application Server HTTP Transport (port 1) default
+        dst_range_start: 9080
+        dst_range_end: 9080
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WebSphere SOAP 8880
+        comment: IBM WebSphere Application Server SOAP connector
+        dst_range_start: 8880
+        dst_range_end: 8880
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WHM 2086
+        comment: WebHost Manager default
+        dst_range_start: 2086
+        dst_range_end: 2086
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'WHOIS 43'
         dst_range_start: 43
@@ -2202,6 +6973,63 @@ libraries:
           syn: false
           fin: false
         comment: WHOIS protocol
+      - type: TCPService
+        name: Windows RxMon 1311
+        comment: Windows RxMon.exe
+        dst_range_start: 1311
+        dst_range_end: 1311
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Windward vdmplay 1707
+        comment: Windward Studios games (vdmplay)
+        dst_range_start: 1707
+        dst_range_end: 1707
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WINS 1512
+        comment: Microsoft Windows Internet Name Service
+        dst_range_start: 1512
+        dst_range_end: 1512
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'WINS replication 42'
         dst_range_start: 42
@@ -2220,11 +7048,50 @@ libraries:
           rst: false
           syn: false
           fin: false
+        comment: Microsoft WINS database replication between WINS servers.
       - type: 'TCPService'
         name: 'X11 6000-6063'
         comment: 'X Window System'
         dst_range_start: 6000
         dst_range_end: 6063
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: XDMCP 177
+        comment: X Display Manager Control Protocol
+        dst_range_start: 177
+        dst_range_end: 177
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: XFER 82
+        comment: xfer (XFER Utility)
+        dst_range_start: 82
+        dst_range_end: 82
         tcp_flags:
           urg: false
           ack: false
@@ -2357,6 +7224,82 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: XMPP SSL 5223
+        comment: Extensible Messaging and Presence Protocol (XMPP) client connection over SSL
+        dst_range_start: 5223
+        dst_range_end: 5223
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Xvfb 4444
+        comment: Xvfb X server virtual frame buffer service
+        dst_range_start: 4444
+        dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: YARN ResourceMgr 8088
+        comment: YARN ResourceManager Web UI
+        dst_range_start: 8088
+        dst_range_end: 8088
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: ZooKeeper 2101
+        comment: Apache ZooKeeper default client port
+        dst_range_start: 2101
+        dst_range_end: 2101
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
     - type: 'ServiceGroup'
       name: 'TagServices'
     - type: 'ServiceGroup'
@@ -2369,11 +7312,67 @@ libraries:
         comment: Andrew File System
       - type: 'UDPService'
         name: 'All UDP'
+        comment: Matches any UDP traffic regardless of port. Use with caution.
       - type: 'UDPService'
         name: 'ALL UDP Masqueraded'
         comment: 'ipchains used to use this port range for masqueraded packets'
         src_range_start: 61000
         src_range_end: 65095
+      - type: UDPService
+        name: AMQP 5672
+        comment: Advanced Message Queuing Protocol. Used by RabbitMQ, Apache Qpid, and other message brokers.
+        dst_range_start: 5672
+        dst_range_end: 5672
+      - type: UDPService
+        name: Apple FaceTime RTP 16384
+        comment: Real-time Transport Protocol (RTP), RTP Control Protocol (RTCP), used by Apple's FaceTime and Game Center
+        dst_range_start: 16384
+        dst_range_end: 16384
+      - type: UDPService
+        name: Apple iChat RTP 16384
+        comment: Real-time Transport Protocol (RTP), RTP Control Protocol (RTCP), used by Apple's iChat for audio and video
+        dst_range_start: 16384
+        dst_range_end: 16384
+      - type: UDPService
+        name: Apple Remote Desktop 3283
+        comment: Apple Remote Desktop 2.0 or later
+        dst_range_start: 3283
+        dst_range_end: 3283
+      - type: UDPService
+        name: Apple SASL 3659
+        comment: Apple SASL, used by macOS Server Password Server
+        dst_range_start: 3659
+        dst_range_end: 3659
+      - type: UDPService
+        name: Auth 113
+        comment: Authentication Service (auth), the predecessor to identification protocol. Used to determine a user's identity of a particular TCP connection.
+        dst_range_start: 113
+        dst_range_end: 113
+      - type: UDPService
+        name: BackupExec 10000
+        comment: Veritas/Symantec Backup Exec agent and server communication.
+        dst_range_start: 10000
+        dst_range_end: 10000
+      - type: UDPService
+        name: BACnet 47808
+        comment: BACnet/IP for building automation (HVAC, lighting, access). Common in OT/BMS environments.
+        dst_range_start: 47808
+        dst_range_end: 47808
+      - type: UDPService
+        name: Battle.net 6112
+        comment: Blizzard's Battle.net gaming service and some games, ArenaNet gaming service, Relic gaming service
+        dst_range_start: 6112
+        dst_range_end: 6112
+      - type: UDPService
+        name: Battlefield 4 3659
+        comment: Battlefield 4 game server communication.
+        dst_range_start: 3659
+        dst_range_end: 3659
+      - type: UDPService
+        name: BitTorrent Tracker 6969
+        comment: BitTorrent tracker for coordinating peer-to-peer file sharing.
+        dst_range_start: 6969
+        dst_range_end: 6969
       - type: 'UDPService'
         name: 'BOOTP client 68'
         dst_range_start: 68
@@ -2384,31 +7383,256 @@ libraries:
         dst_range_start: 67
         dst_range_end: 67
         comment: Bootstrap Protocol server (DHCP)
+      - type: UDPService
+        name: Cisco RTP Min 16384
+        comment: CISCO Default RTP MIN
+        dst_range_start: 16384
+        dst_range_end: 16384
+      - type: UDPService
+        name: Coda Auth 370
+        comment: codaauth2, Coda authentication server
+        dst_range_start: 370
+        dst_range_end: 370
+      - type: UDPService
+        name: comsat 512
+        comment: comsat, together with biff
+        dst_range_start: 512
+        dst_range_end: 512
+      - type: UDPService
+        name: Confluence 8090
+        comment: Atlassian Confluence
+        dst_range_start: 8090
+        dst_range_end: 8090
+      - type: UDPService
+        name: CUPS 631
+        comment: Common Unix Printing System (CUPS) administration console (extension to IPP)
+        dst_range_start: 631
+        dst_range_end: 631
       - type: 'UDPService'
         name: 'daytime 13'
         dst_range_start: 13
         dst_range_end: 13
         comment: Daytime Protocol (RFC 867)
+      - type: UDPService
+        name: DCE Endpoint 135
+        comment: DCE endpoint resolution
+        dst_range_start: 135
+        dst_range_end: 135
+      - type: UDPService
+        name: DHCPv6 client 546
+        comment: DHCPv6 client port. Hosts listen here for DHCPv6 server responses.
+        dst_range_start: 546
+        dst_range_end: 546
+      - type: UDPService
+        name: DHCPv6 server 547
+        comment: DHCPv6 server port. DHCP servers and relay agents listen here.
+        dst_range_start: 547
+        dst_range_end: 547
+      - type: UDPService
+        name: DirectAdmin 2222
+        comment: DirectAdmin Access
+        dst_range_start: 2222
+        dst_range_end: 2222
+      - type: UDPService
+        name: Discard 9
+        comment: Discard Protocol (RFC 863)
+        dst_range_start: 9
+        dst_range_end: 9
+      - type: UDPService
+        name: Django 8000
+        comment: Django Development Webserver
+        dst_range_start: 8000
+        dst_range_end: 8000
+      - type: UDPService
+        name: DNP3 SCADA 20000
+        comment: Distributed Network Protocol 3 (DNP3). Used in SCADA/ICS for communication between RTUs and master stations.
+        dst_range_start: 20000
+        dst_range_end: 20000
       - type: 'UDPService'
         name: 'DNS 53'
         dst_range_start: 53
         dst_range_end: 53
         comment: Domain Name System
+      - type: UDPService
+        name: DNS over QUIC 853
+        comment: DNS over QUIC or DNS over DTLS
+        dst_range_start: 853
+        dst_range_end: 853
+      - type: UDPService
+        name: DNS over TLS 853
+        comment: DNS over TLS (RFC 7858)
+        dst_range_start: 853
+        dst_range_end: 853
+      - type: UDPService
+        name: DNSIX 90
+        comment: dnsix (DNSIX Security Attribute Token Map)
+        dst_range_start: 90
+        dst_range_end: 90
+      - type: UDPService
+        name: Docker Registry 5000
+        comment: Docker Registry HTTP API for storing and distributing container images.
+        dst_range_start: 5000
+        dst_range_end: 5000
+      - type: UDPService
+        name: dtspcd 6112
+        comment: dtspcd, execute commands and launch applications remotely
+        dst_range_start: 6112
+        dst_range_end: 6112
+      - type: UDPService
+        name: DynamoDB Local 8000
+        comment: Amazon DynamoDB Local development emulator.
+        dst_range_start: 8000
+        dst_range_end: 8000
+      - type: UDPService
+        name: Echo 7
+        comment: Echo Protocol (RFC 862)
+        dst_range_start: 7
+        dst_range_end: 7
+      - type: UDPService
+        name: ESRI SDE Remote 5151
+        comment: ESRI ArcSDE (Spatial Database Engine) remote start service.
+        dst_range_start: 5151
+        dst_range_end: 5151
+      - type: UDPService
+        name: EtherNet/IP 2222
+        comment: EtherNet/IP implicit messaging for IO data
+        dst_range_start: 2222
+        dst_range_end: 2222
+      - type: UDPService
+        name: Finger 79
+        comment: 'Finger user information protocol (RFC 1288). WARNING: leaks user information; generally disabled on modern systems.'
+        dst_range_start: 79
+        dst_range_end: 79
+      - type: UDPService
+        name: Flash Comm Server 1935
+        comment: Adobe Flash Media Server (formerly Macromedia Flash Communication Server). Legacy streaming protocol.
+        dst_range_start: 1935
+        dst_range_end: 1935
+      - type: UDPService
+        name: FlexNet Publisher 27000
+        comment: FlexNet Publisher's License server (from the range of default ports)
+        dst_range_start: 27000
+        dst_range_end: 27000
+      - type: UDPService
+        name: FlightGear 5000
+        comment: FlightGear multiplayer
+        dst_range_start: 5000
+        dst_range_end: 5000
+      - type: UDPService
+        name: FTPS control 990
+        comment: FTP over TLS/SSL control
+        dst_range_start: 990
+        dst_range_end: 990
+      - type: UDPService
+        name: FTPS data 989
+        comment: FTP over TLS/SSL data
+        dst_range_start: 989
+        dst_range_end: 989
+      - type: UDPService
+        name: GNUnet 2086
+        comment: GNUnet decentralized peer-to-peer networking framework.
+        dst_range_start: 2086
+        dst_range_end: 2086
+      - type: UDPService
+        name: Gopher 70
+        comment: Gopher document retrieval protocol. Legacy predecessor to HTTP; rarely used today.
+        dst_range_start: 70
+        dst_range_end: 70
+      - type: UDPService
+        name: Groove GLRPC 9080
+        comment: glrpc, Groove Collaboration software GLRPC
+        dst_range_start: 9080
+        dst_range_end: 9080
+      - type: UDPService
+        name: HSMS 5000
+        comment: High-Speed SECS Message Services
+        dst_range_start: 5000
+        dst_range_end: 5000
+      - type: UDPService
+        name: HTTP Alt 8008
+        comment: Alternative port for HTTP. See also ports 80 and 8080.
+        dst_range_start: 8008
+        dst_range_end: 8008
       - type: 'UDPService'
         name: 'IKE 500'
         dst_range_start: 500
         dst_range_end: 500
-        comment: Internet Key Exchange (ISAKMP/IKE)
+        comment: Internet Key Exchange (IKE/ISAKMP) for IPsec VPN negotiation. See also NAT-T on port 4500.
+      - type: UDPService
+        name: IMAPS 993
+        comment: IMAP over TLS/SSL
+        dst_range_start: 993
+        dst_range_end: 993
+      - type: UDPService
+        name: IMAPv3 220
+        comment: Internet Message Access Protocol v3
+        dst_range_start: 220
+        dst_range_end: 220
+      - type: UDPService
+        name: Infoseek 1234
+        comment: Infoseek search agent
+        dst_range_start: 1234
+        dst_range_end: 1234
+      - type: UDPService
+        name: Iperf 5001
+        comment: Iperf (Tool for measuring TCP and UDP bandwidth performance)
+        dst_range_start: 5001
+        dst_range_end: 5001
+      - type: UDPService
+        name: IPFS Swarm 4001
+        comment: InterPlanetary File System swarm node
+        dst_range_start: 4001
+        dst_range_end: 4001
+      - type: UDPService
+        name: IPMI 623
+        comment: 'IPMI/BMC Remote Management (RMCP/RMCP+). WARNING: known security vulnerabilities; restrict to dedicated management network.'
+        dst_range_start: 623
+        dst_range_end: 623
+      - type: UDPService
+        name: IPP 631
+        comment: Internet Printing Protocol (IPP)
+        dst_range_start: 631
+        dst_range_end: 631
+      - type: UDPService
+        name: IPsec 1293
+        comment: Internet Protocol Security
+        dst_range_start: 1293
+        dst_range_end: 1293
+      - type: UDPService
+        name: IPsec NAT-T 4500
+        comment: IPsec NAT Traversal (RFC 3947). Required when IPsec peers are behind NAT. See also IKE on port 500.
+        dst_range_start: 4500
+        dst_range_end: 4500
+      - type: UDPService
+        name: IRC 194
+        comment: Internet Relay Chat (official IANA port)
+        dst_range_start: 194
+        dst_range_end: 194
+      - type: UDPService
+        name: JACK Sound 19000
+        comment: JACK sound server
+        dst_range_start: 19000
+        dst_range_end: 19000
+      - type: UDPService
+        name: Jupyter 8888
+        comment: Default for IPython / Jupyter notebook dashboards
+        dst_range_start: 8888
+        dst_range_end: 8888
       - type: 'UDPService'
         name: 'Kerberos 88'
         dst_range_start: 88
         dst_range_end: 88
-        comment: Kerberos authentication system
+        comment: Kerberos v5 authentication. Core protocol for Active Directory and many SSO implementations.
       - type: 'UDPService'
         name: 'Kerberos admin 749-750'
         dst_range_start: 749
         dst_range_end: 750
         comment: Kerberos administration
+      - type: UDPService
+        name: Kerberos userreg 753
+        comment: userreg_server, Kerberos userreg server
+        dst_range_start: 753
+        dst_range_end: 753
       - type: 'UDPService'
         name: 'kpasswd 464'
         dst_range_start: 464
@@ -2419,11 +7643,136 @@ libraries:
         dst_range_start: 4444
         dst_range_end: 4444
         comment: Kerberos v5 to v4 ticket translator
+      - type: UDPService
+        name: L2F 1701
+        comment: Layer 2 Forwarding Protocol (L2F)
+        dst_range_start: 1701
+        dst_range_end: 1701
+      - type: UDPService
+        name: L2TP 1701
+        comment: Layer 2 Tunneling Protocol. Often paired with IPsec (L2TP/IPsec VPN). See also ports 500, 4500.
+        dst_range_start: 1701
+        dst_range_end: 1701
+      - type: UDPService
+        name: L2TP IPsec Init 1707
+        comment: L2TP/IPsec, for establishing an initial connection
+        dst_range_start: 1707
+        dst_range_end: 1707
+      - type: UDPService
+        name: Linux-HA 694
+        comment: Linux-HA high-availability heartbeat
+        dst_range_start: 694
+        dst_range_end: 694
+      - type: UDPService
+        name: LLMNR 5355
+        comment: 'Link-Local Multicast Name Resolution. WARNING: can be exploited for NTLM relay attacks; consider disabling.'
+        dst_range_start: 5355
+        dst_range_end: 5355
+      - type: UDPService
+        name: LoL 5000
+        comment: League of Legends, a multiplayer online battle arena video game
+        dst_range_start: 5000
+        dst_range_end: 5000
+      - type: UDPService
+        name: MAMP 8888
+        comment: MAMP (macOS/Apache/MySQL/PHP) local development stack.
+        dst_range_start: 8888
+        dst_range_end: 8888
+      - type: UDPService
+        name: Matrix Identity 8090
+        comment: Matrix identity server
+        dst_range_start: 8090
+        dst_range_end: 8090
+      - type: UDPService
+        name: mDNS 5353
+        comment: Multicast DNS (Bonjour/Avahi) for zero-configuration service discovery on local networks.
+        dst_range_start: 5353
+        dst_range_end: 5353
+      - type: UDPService
+        name: Memcached 11211
+        comment: 'Memcached distributed memory cache. WARNING: do not expose to the internet — known UDP amplification/DDoS attack vector.'
+        dst_range_start: 11211
+        dst_range_end: 11211
+      - type: UDPService
+        name: Metasploit 4444
+        comment: Metasploit Framework default reverse shell listener. Commonly seen in penetration testing and malware.
+        dst_range_start: 4444
+        dst_range_end: 4444
+      - type: UDPService
+        name: MIL STD 2045 VMF 1581
+        comment: MIL STD 2045-47001 VMF
+        dst_range_start: 1581
+        dst_range_end: 1581
+      - type: UDPService
+        name: Mobile IP 434
+        comment: Mobile IP Agent (RFC 5944)
+        dst_range_start: 434
+        dst_range_end: 434
+      - type: UDPService
+        name: Modbus 502
+        comment: Modbus industrial control protocol. Common in SCADA/ICS environments; restrict to OT networks.
+        dst_range_start: 502
+        dst_range_end: 502
+      - type: UDPService
+        name: MQTT 1883
+        comment: MQTT (Message Queuing Telemetry Transport). Lightweight IoT messaging protocol. Unencrypted; use 8883/TLS for production.
+        dst_range_start: 1883
+        dst_range_end: 1883
+      - type: UDPService
+        name: MQTT TLS 8883
+        comment: MQTT over TLS/SSL. Encrypted IoT messaging; preferred over unencrypted port 1883.
+        dst_range_start: 8883
+        dst_range_end: 8883
+      - type: UDPService
+        name: MS EPMAP 135
+        comment: Microsoft EPMAP (End Point Mapper), also known as DCE/RPC Locator service, used to remotely manage services including DHCP server, DNS server and WINS. Also used by DCOM
+        dst_range_start: 135
+        dst_range_end: 135
+      - type: UDPService
+        name: MS SharePoint 9001
+        comment: Microsoft SharePoint authoring environment
+        dst_range_start: 9001
+        dst_range_end: 9001
+      - type: UDPService
+        name: MS Teams 3478
+        comment: Microsoft Teams media traffic (audio/video) via STUN/TURN relay.
+        dst_range_start: 3478
+        dst_range_end: 3478
+      - type: UDPService
+        name: MS-DS AD 445
+        comment: Microsoft-DS (Directory Services) Active Directory, Windows shares
+        dst_range_start: 445
+        dst_range_end: 445
+      - type: UDPService
+        name: MS-DS SMB 445
+        comment: Microsoft-DS (Directory Services) SMB file sharing
+        dst_range_start: 445
+        dst_range_end: 445
       - type: 'UDPService'
         name: 'MS-RPC 135'
         dst_range_start: 135
         dst_range_end: 135
-        comment: Microsoft RPC Endpoint Mapper
+        comment: Microsoft RPC Endpoint Mapper. Required for many Windows services (AD, Exchange, SCCM). Restrict carefully.
+      - type: UDPService
+        name: MS-SQL monitor 1434
+        comment: Microsoft SQL Server monitor/browser
+        dst_range_start: 1434
+        dst_range_end: 1434
+      - type: UDPService
+        name: nCUBE License 1521
+        comment: nCUBE License Manager
+        dst_range_start: 1521
+        dst_range_end: 1521
+      - type: UDPService
+        name: NDMP 10000
+        comment: Network Data Management Protocol (NDMP) Control stream for network backup and restore.
+        dst_range_start: 10000
+        dst_range_end: 10000
+      - type: UDPService
+        name: Net Assistant 3283
+        comment: Net Assistant, a predecessor to Apple Remote Desktop
+        dst_range_start: 3283
+        dst_range_end: 3283
       - type: 'UDPService'
         name: 'NetBIOS-DGM 138'
         dst_range_start: 138
@@ -2443,47 +7792,177 @@ libraries:
         name: 'NFS 2049'
         dst_range_start: 2049
         dst_range_end: 2049
-        comment: Network File System
+        comment: Network File System. Additional ports (mountd, statd, lockd) may be needed; consider rpcbind (111) as well.
       - type: 'UDPService'
         name: 'NTP 123'
         dst_range_start: 123
         dst_range_end: 123
-        comment: Network Time Protocol
+        comment: Network Time Protocol. Essential for authentication, logging, and certificate validation. Restrict to trusted NTP servers.
+      - type: UDPService
+        name: OpenTTD 3978
+        comment: OpenTTD game (masterserver and content service)
+        dst_range_start: 3978
+        dst_range_end: 3978
       - type: 'UDPService'
         name: 'OpenVPN 1194'
         dst_range_start: 1194
         dst_range_end: 1194
-        comment: OpenVPN
+        comment: OpenVPN SSL/TLS-based VPN tunnel. UDP is the preferred transport.
+      - type: UDPService
+        name: OpenWebNet 20000
+        comment: OpenWebNet, communications protocol used in Bticino products
+        dst_range_start: 20000
+        dst_range_end: 20000
+      - type: UDPService
+        name: Oracle Intradoc 5555
+        comment: 'Oracle WebCenter Content: Inbound Refinery—Intradoc Socket port. (formerly known as Oracle Universal Content Management). Port though often changed during installation'
+        dst_range_start: 5555
+        dst_range_end: 5555
+      - type: UDPService
+        name: Oracle Net 1527
+        comment: Oracle Net Services, formerly known as SQL*Net
+        dst_range_start: 1527
+        dst_range_end: 1527
+      - type: UDPService
+        name: Oracle WebCenter 4444
+        comment: 'Oracle WebCenter Content: Content Server—Intradoc Socket port. (formerly known as Oracle Universal Content Management).'
+        dst_range_start: 4444
+        dst_range_end: 4444
+      - type: UDPService
+        name: OSAUT 6679
+        comment: Osorno Automation Protocol (OSAUT)
+        dst_range_start: 6679
+        dst_range_end: 6679
+      - type: UDPService
+        name: PointCast 90
+        comment: PointCast (dotcom)
+        dst_range_start: 90
+        dst_range_end: 90
+      - type: UDPService
+        name: POP3S 995
+        comment: POP3 over TLS/SSL
+        dst_range_start: 995
+        dst_range_end: 995
+      - type: UDPService
+        name: Python http.server 8000
+        comment: Python 3 http.server
+        dst_range_start: 8000
+        dst_range_end: 8000
       - type: 'UDPService'
         name: 'RADIUS 1645'
         dst_range_start: 1645
         dst_range_end: 1645
-        comment: RADIUS (legacy port, see also 1812)
+        comment: RADIUS authentication (legacy/pre-RFC port). Modern deployments use port 1812.
+      - type: UDPService
+        name: RADIUS 1812
+        comment: RADIUS authentication protocol (RFC 2865). Used for network access control (802.1X, VPN, WiFi).
+        dst_range_start: 1812
+        dst_range_end: 1812
+      - type: UDPService
+        name: RADIUS acct 1813
+        comment: RADIUS accounting protocol (RFC 2866). Records session usage data for billing and auditing.
+        dst_range_start: 1813
+        dst_range_end: 1813
+      - type: UDPService
+        name: RadSec 2083
+        comment: Secure RADIUS Service (radsec)
+        dst_range_start: 2083
+        dst_range_end: 2083
+      - type: UDPService
+        name: Resilio Sync 3000
+        comment: Resilio Sync, spun from BitTorrent Sync.
+        dst_range_start: 3000
+        dst_range_end: 3000
+      - type: UDPService
+        name: RFB 5900
+        comment: Remote Frame Buffer protocol (RFB)
+        dst_range_start: 5900
+        dst_range_end: 5900
       - type: 'UDPService'
         name: 'RIP 520'
         comment: 'Routing Information Protocol'
         dst_range_start: 520
         dst_range_end: 520
+      - type: UDPService
+        name: RRH 753
+        comment: Reverse Routing Header (RRH)
+        dst_range_start: 753
+        dst_range_end: 753
       - type: 'UDPService'
         name: 'rsync 873'
         dst_range_start: 873
         dst_range_end: 873
         comment: rsync file synchronization protocol
+      - type: UDPService
+        name: RTMP 1935
+        comment: Real Time Messaging Protocol (RTMP), primarily used in Adobe Flash
+        dst_range_start: 1935
+        dst_range_end: 1935
+      - type: UDPService
+        name: rwho 513
+        comment: rwho daemon (rwhod). Broadcasts user login information on the local network. Unencrypted legacy protocol.
+        dst_range_start: 513
+        dst_range_end: 513
+      - type: UDPService
+        name: SecureCast 370
+        comment: securecast1, outgoing packets to NAI's SecureCast servers
+        dst_range_start: 370
+        dst_range_end: 370
+      - type: UDPService
+        name: SIP 5060
+        comment: Session Initiation Protocol for VoIP signaling. Unencrypted; use 5061/TLS for secure environments.
+        dst_range_start: 5060
+        dst_range_end: 5060
+      - type: UDPService
+        name: SIP TLS 5061
+        comment: Session Initiation Protocol over DTLS. Encrypted VoIP signaling; preferred over 5060.
+        dst_range_start: 5061
+        dst_range_end: 5061
+      - type: UDPService
+        name: Slim Discovery 3483
+        comment: Slim Devices discovery protocol
+        dst_range_start: 3483
+        dst_range_end: 3483
+      - type: UDPService
+        name: SLP 427
+        comment: Service Location Protocol
+        dst_range_start: 427
+        dst_range_end: 427
       - type: 'UDPService'
         name: 'SNMP 161'
         dst_range_start: 161
         dst_range_end: 161
-        comment: Simple Network Management Protocol
+        comment: 'Simple Network Management Protocol. WARNING: SNMPv1/v2c send community strings in cleartext; prefer SNMPv3.'
       - type: 'UDPService'
         name: 'SNMP trap 162'
         dst_range_start: 162
         dst_range_end: 162
-        comment: SNMP Trap
+        comment: SNMP Trap receiver. Agents send unsolicited alerts/notifications to this port on the management station.
       - type: 'UDPService'
         name: 'SSDP 1900'
-        comment: 'Simple Service Discovery Protocol (UPnP)'
+        comment: 'Simple Service Discovery Protocol (UPnP). WARNING: can be abused for DDoS amplification; do not expose to the internet.'
         dst_range_start: 1900
         dst_range_end: 1900
+      - type: UDPService
+        name: STUN 3478
+        comment: STUN, a protocol for NAT traversal
+        dst_range_start: 3478
+        dst_range_end: 3478
+      - type: UDPService
+        name: STUN Behavior 3478
+        comment: STUN Behavior Discovery. See also port 5349.
+        dst_range_start: 3478
+        dst_range_end: 3478
+      - type: UDPService
+        name: STUN TLS 5349
+        comment: STUN over TLS/DTLS, a protocol for NAT traversal
+        dst_range_start: 5349
+        dst_range_end: 5349
+      - type: UDPService
+        name: STUN/TURN 3478
+        comment: STUN/TURN (Session Traversal for NAT)
+        dst_range_start: 3478
+        dst_range_end: 3478
       - type: 'UDPService'
         name: 'SunRPC 111'
         dst_range_start: 111
@@ -2493,21 +7972,187 @@ libraries:
         name: 'syslog 514'
         dst_range_start: 514
         dst_range_end: 514
-        comment: Syslog
+        comment: BSD Syslog protocol for centralized log collection. Unencrypted; consider syslog-TLS (6514) for untrusted networks.
+      - type: UDPService
+        name: Syslog 514
+        comment: Syslog, used for system logging
+        dst_range_start: 514
+        dst_range_end: 514
+      - type: UDPService
+        name: TeamViewer 5938
+        comment: TeamViewer remote desktop
+        dst_range_start: 5938
+        dst_range_end: 5938
+      - type: UDPService
+        name: tell send 754
+        comment: Kerberos "tell send" service for ticket propagation.
+        dst_range_start: 754
+        dst_range_end: 754
+      - type: UDPService
+        name: Telnets 992
+        comment: Telnet protocol over TLS/SSL
+        dst_range_start: 992
+        dst_range_end: 992
       - type: 'UDPService'
         name: 'TFTP 69'
         dst_range_start: 69
         dst_range_end: 69
         comment: Trivial File Transfer Protocol
+      - type: UDPService
+        name: Thermo-Calc 6201
+        comment: 'Thermo-Calc Software AB: Management of service nodes in a processing grid for thermodynamic calculations'
+        dst_range_start: 6201
+        dst_range_end: 6201
+      - type: UDPService
+        name: Time 37
+        comment: Time Protocol (RFC 868)
+        dst_range_start: 37
+        dst_range_end: 37
+      - type: UDPService
+        name: Tinc 655
+        comment: Tinc mesh VPN daemon. Supports automatic mesh routing between nodes.
+        dst_range_start: 655
+        dst_range_end: 655
+      - type: UDPService
+        name: Tor ORPort 9001
+        comment: Tor network default (ORPort)
+        dst_range_start: 9001
+        dst_range_end: 9001
+      - type: UDPService
+        name: TorPark 82
+        comment: TorPark control
+        dst_range_start: 82
+        dst_range_end: 82
       - type: 'UDPService'
         name: 'traceroute 33434-33524'
         dst_range_start: 33434
         dst_range_end: 33524
-        comment: traceroute
+        comment: UDP-based traceroute probe packets. Unix/Linux traceroute uses incrementing destination ports in this range.
+      - type: UDPService
+        name: TURN 3478
+        comment: TURN, a protocol for NAT traversal (extension to STUN)
+        dst_range_start: 3478
+        dst_range_end: 3478
+      - type: UDPService
+        name: TURN TLS 5349
+        comment: TURN over TLS/DTLS, a protocol for NAT traversal
+        dst_range_start: 5349
+        dst_range_end: 5349
       - type: 'UDPService'
         name: 'UDP high ports'
         dst_range_start: 1024
         dst_range_end: 65535
+        comment: Dynamic/ephemeral ports (1024-65535). Used for client-side connections and return traffic.
+      - type: UDPService
+        name: UDPCast 9000
+        comment: UDPCast file transfer tool using UDP multicast for one-to-many distribution.
+        dst_range_start: 9000
+        dst_range_end: 9000
+      - type: UDPService
+        name: Urchin Analytics 9999
+        comment: Urchin Web Analytics
+        dst_range_start: 9999
+        dst_range_end: 9999
+      - type: UDPService
+        name: Usermin 20000
+        comment: Usermin, Web-based Unix/Linux user administration tool (default port)
+        dst_range_start: 20000
+        dst_range_end: 20000
+      - type: UDPService
+        name: VLC 1234
+        comment: VLC media player default port for UDP/RTP stream
+        dst_range_start: 1234
+        dst_range_end: 1234
+      - type: UDPService
+        name: VMware ESXi 902
+        comment: VMware ESXi host management and vSphere Client communication.
+        dst_range_start: 902
+        dst_range_end: 902
+      - type: UDPService
+        name: VMware VI HTTPS 8333
+        comment: VMware VI Web Access via HTTPS
+        dst_range_start: 8333
+        dst_range_end: 8333
+      - type: UDPService
+        name: VoIP 10000
+        comment: Voice over IP telephony traffic (used by Google Voice, MagicJack, Vonage, and similar providers).
+        dst_range_start: 10000
+        dst_range_end: 10000
+      - type: UDPService
+        name: VoIP 20000
+        comment: Voice over IP telephony traffic (used by Google Voice, MagicJack, Vonage, and similar providers).
+        dst_range_start: 20000
+        dst_range_end: 20000
+      - type: UDPService
+        name: VTun 5000
+        comment: VTun, VPN Software
+        dst_range_start: 5000
+        dst_range_end: 5000
+      - type: UDPService
+        name: VXLAN 4789
+        comment: VXLAN (Virtual Extensible LAN) overlay network encapsulation for data center network virtualization.
+        dst_range_start: 4789
+        dst_range_end: 4789
+      - type: UDPService
+        name: Wake-on-LAN 9
+        comment: Wake-on-LAN magic packet for remotely powering on machines. Typically sent as broadcast.
+        dst_range_start: 9
+        dst_range_end: 9
+      - type: UDPService
+        name: WebDAV Source 9800
+        comment: WebDAV (Web Distributed Authoring and Versioning) source port for remote file management.
+        dst_range_start: 9800
+        dst_range_end: 9800
+      - type: UDPService
+        name: Webmin 10000
+        comment: Webmin, Web-based Unix/Linux system administration tool (default port)
+        dst_range_start: 10000
+        dst_range_end: 10000
+      - type: UDPService
+        name: WebSphere SOAP 8880
+        comment: IBM WebSphere Application Server SOAP connector
+        dst_range_start: 8880
+        dst_range_end: 8880
+      - type: UDPService
+        name: Windows RxMon 1311
+        comment: Windows RxMon.exe
+        dst_range_start: 1311
+        dst_range_end: 1311
+      - type: UDPService
+        name: Windward vdmplay 1707
+        comment: Windward Studios games (vdmplay)
+        dst_range_start: 1707
+        dst_range_end: 1707
+      - type: UDPService
+        name: WINS 1512
+        comment: Microsoft Windows Internet Name Service
+        dst_range_start: 1512
+        dst_range_end: 1512
+      - type: UDPService
+        name: WireGuard 51820
+        comment: WireGuard VPN tunnel. Modern, high-performance kernel-level VPN. Default transport is UDP.
+        dst_range_start: 51820
+        dst_range_end: 51820
+      - type: UDPService
+        name: XDMCP 177
+        comment: X Display Manager Control Protocol
+        dst_range_start: 177
+        dst_range_end: 177
+      - type: UDPService
+        name: XFER 82
+        comment: xfer (XFER Utility)
+        dst_range_start: 82
+        dst_range_end: 82
+      - type: UDPService
+        name: Xvfb 4444
+        comment: Xvfb X server virtual frame buffer service
+        dst_range_start: 4444
+        dst_range_end: 4444
+      - type: UDPService
+        name: ZRE Discovery 5670
+        comment: ZRE-DISC ZeroMQ Realtime Exchange Protocol (Discovery)
+        dst_range_start: 5670
+        dst_range_end: 5670
     - type: 'ServiceGroup'
       name: 'UserServices'
   - type: 'IntervalGroup'
