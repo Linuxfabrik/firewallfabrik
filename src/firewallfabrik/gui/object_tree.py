@@ -2270,7 +2270,11 @@ class ObjectTree(QWidget):
         session = self._db_manager.create_session()
         try:
             new_id = uuid.uuid4()
-            kwargs = {'id': new_id, 'type': type_name}
+            kwargs = {'id': new_id}
+
+            # Library has no 'type' column; all other models use STI.
+            if model_cls is not Library:
+                kwargs['type'] = type_name
 
             # Library objects use database_id instead of library_id.
             if model_cls is Library:
@@ -2297,6 +2301,22 @@ class ObjectTree(QWidget):
             else:
                 if hasattr(model_cls, 'library_id'):
                     kwargs['library_id'] = lib_id
+
+            # If a folder name is given, prefer placing the object in an
+            # existing Group with that name (matching fwbuilder's
+            # getStandardSlotForObject).  Only fall back to the virtual
+            # data.folder mechanism when no such Group exists.
+            if folder and hasattr(model_cls, 'group_id') and 'group_id' not in kwargs:
+                existing_group = session.scalars(
+                    sqlalchemy.select(Group).where(
+                        Group.library_id == lib_id,
+                        Group.name == folder,
+                        Group.parent_group_id.is_(None),
+                    )
+                ).first()
+                if existing_group is not None:
+                    kwargs['group_id'] = existing_group.id
+                    folder = None  # Don't also set data.folder.
 
             # Build data dict: merge folder and extra_data.
             data = {}
