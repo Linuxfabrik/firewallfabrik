@@ -244,6 +244,14 @@ def _is_inactive(obj):
     return data.get('inactive') == 'True'
 
 
+def _needs_compile(obj):
+    """Return True if the object has been modified since the last compile."""
+    data = getattr(obj, 'data', None) or {}
+    last_modified = int(data.get('lastModified', 0) or 0)
+    last_compiled = int(data.get('lastCompiled', 0) or 0)
+    return last_modified > last_compiled
+
+
 def _obj_tags(obj):
     """Return the tags (keywords) of *obj* as a set, or empty set."""
     return getattr(obj, 'keywords', None) or set()
@@ -1249,9 +1257,11 @@ class ObjectTree(QWidget):
             icon_path = ICON_MAP.get(type_str)
             if icon_path:
                 item.setIcon(0, QIcon(icon_path))
-        if inactive:
+        needs_compile = _needs_compile(obj) if obj is not None else False
+        if inactive or needs_compile:
             font = item.font(0)
-            font.setStrikeOut(True)
+            font.setStrikeOut(inactive)
+            font.setBold(not inactive and needs_compile)
             item.setFont(0, font)
         if obj is not None:
             tip = _obj_tooltip(obj)
@@ -1278,8 +1288,10 @@ class ObjectTree(QWidget):
 
             item.setText(0, _obj_display_name(obj))
 
+            inactive = _is_inactive(obj)
             font = item.font(0)
-            font.setStrikeOut(_is_inactive(obj))
+            font.setStrikeOut(inactive)
+            font.setBold(not inactive and _needs_compile(obj))
             item.setFont(0, font)
 
             attrs = _obj_brief_attrs(obj)
