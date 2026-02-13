@@ -409,6 +409,9 @@ class PolicyTreeModel(QAbstractItemModel):
             ).all()
             for rule_id, slot, target_id in re_rows:
                 name, obj_type, tip = name_map.get(target_id, (str(target_id), '', ''))
+                # Skip "Any" sentinel objects — empty element list = "any".
+                if name == 'Any':
+                    continue
                 quad = (target_id, name, obj_type, tip)
                 slot_map.setdefault(rule_id, {}).setdefault(slot, []).append(quad)
 

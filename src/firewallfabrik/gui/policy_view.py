@@ -346,11 +346,6 @@ def _model_element_cols(model):
     return _ELEMENT_COLS
 
 
-def _is_default_any(elements, target_name):
-    """Return True if the cell contains only the default 'Any' element."""
-    return len(elements) == 1 and target_name == 'Any'
-
-
 def _model_selectable_cols(model):
     """Return the selectable column frozenset from the model or Policy default."""
     if model is not None and hasattr(model, 'selectable_cols'):
@@ -1221,7 +1216,6 @@ class PolicyView(QTreeView):
                             break
 
         has_element = target_id is not None
-        is_default = _is_default_any(elements, target_name)
 
         # Edit.
         edit_act = menu.addAction(
@@ -1249,7 +1243,7 @@ class PolicyView(QTreeView):
                 model, index, slot, tid, n, t
             ),
         )
-        cut_act.setEnabled(has_element and not is_default)
+        cut_act.setEnabled(has_element)
 
         # Paste.
         paste_act = menu.addAction(
@@ -1268,7 +1262,7 @@ class PolicyView(QTreeView):
             'Delete',
             lambda tid=target_id: model.remove_element(index, slot, tid),
         )
-        delete_act.setEnabled(has_element and not is_default)
+        delete_act.setEnabled(has_element)
         menu.addSeparator()
 
         # Where Used.
@@ -1537,8 +1531,6 @@ class PolicyView(QTreeView):
                 elements = idx.data(ELEMENTS_ROLE) or []
                 for eid, ename, etype, *_ in elements:
                     if eid == target_id:
-                        if _is_default_any(elements, ename):
-                            return
                         self._cut_element(model, idx, slot, target_id, ename, etype)
                         return
         self.cut_selection()
@@ -1559,10 +1551,6 @@ class PolicyView(QTreeView):
             _rule_id, slot, target_id = self._selected_element
             idx = self._selected_index
             if idx.isValid() and idx.column() in element_cols and model is not None:
-                elements = idx.data(ELEMENTS_ROLE) or []
-                for eid, ename, _etype, *_ in elements:
-                    if eid == target_id and _is_default_any(elements, ename):
-                        return
                 model.remove_element(idx, slot, target_id)
                 self._clear_element_selection()
                 return
