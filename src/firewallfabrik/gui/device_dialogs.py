@@ -117,7 +117,9 @@ class FirewallDialog(BaseObjectDialog):
 
     @Slot()
     def openOSDialog(self):
-        dlg = LinuxSettingsDialog(self._obj, parent=self.window())
+        dlg = LinuxSettingsDialog(
+            self._obj, platform=self.platform.currentText(), parent=self.window()
+        )
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.changed.emit()
 

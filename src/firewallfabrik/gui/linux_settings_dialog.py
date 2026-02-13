@@ -13,6 +13,7 @@
 """Linux host OS settings dialog."""
 
 from pathlib import Path
+from typing import ClassVar
 
 from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
@@ -82,7 +83,31 @@ _VALUE_TO_COMBO_TEXT = {v: k for k, v in _COMBO_TEXT_TO_VALUE.items()}
 class LinuxSettingsDialog(QDialog):
     """Modal dialog for Linux host OS settings."""
 
-    def __init__(self, firewall_obj, parent=None):
+    # Combo boxes on the Options tab that are not supported by nftables.
+    _NFTABLES_UNSUPPORTED_COMBOS: ClassVar[list[str]] = [
+        'linux24_rp_filter',
+        'linux24_icmp_echo_ignore_broadcasts',
+        'linux24_icmp_echo_ignore_all',
+        'linux24_accept_source_route',
+        'linux24_accept_redirects',
+        'linux24_icmp_ignore_bogus_error_responses',
+        'linux24_ip_dynaddr',
+        'linux24_log_martians',
+    ]
+
+    # Labels that accompany the unsupported combos (from the .ui file).
+    _NFTABLES_UNSUPPORTED_LABELS: ClassVar[list[str]] = [
+        'label369',
+        'label370',
+        'label386',
+        'label371',
+        'label373',
+        'label374',
+        'label375',
+        'label380',
+    ]
+
+    def __init__(self, firewall_obj, *, platform='', parent=None):
         super().__init__(parent)
         self._fw = firewall_obj
 
@@ -97,7 +122,25 @@ class LinuxSettingsDialog(QDialog):
             )
 
         self._populate()
+        if platform == 'nftables':
+            self._disable_for_nftables()
         self.accepted.connect(self._save_settings)
+
+    def _disable_for_nftables(self):
+        """Disable widgets that are not supported by the nftables compiler."""
+        # Disable unsupported combo boxes and their labels on the Options tab.
+        for name in self._NFTABLES_UNSUPPORTED_COMBOS:
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(False)
+        for name in self._NFTABLES_UNSUPPORTED_LABELS:
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(False)
+
+        # Disable entire tabs: TCP (1), Path (2), conntrack (3), Data (4).
+        for idx in (1, 2, 3, 4):
+            self.tabWidget.setTabEnabled(idx, False)
 
     def _populate(self):
         opts = self._fw.options or {}
