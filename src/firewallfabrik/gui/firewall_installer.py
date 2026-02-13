@@ -163,7 +163,7 @@ def build_job_list(config: InstallConfig) -> list[InstallJob]:
         script_dir = str(Path(config.script_path).parent)
         for local_name, remote_name in manifest.items():
             local_path = str(Path(script_dir) / local_name)
-            jobs.append(InstallJob(JobType.COPY_FILE, local_path, {remote_name}))
+            jobs.append(InstallJob(JobType.COPY_FILE, local_path, remote_name))
 
     # Optionally copy the .fwf database file.
     if config.copy_fwb and config.fwb_file:

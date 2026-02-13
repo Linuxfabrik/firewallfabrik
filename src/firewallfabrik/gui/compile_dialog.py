@@ -681,7 +681,7 @@ class CompileDialog(QDialog):
         config = InstallConfig(
             user=options.get('admUser', '') or 'root',
             mgmt_address=mgmt_addr,
-            firewall_dir=options.get('firewall_dir', '/etc') or '/etc',
+            firewall_dir=options.get('firewall_dir', '/etc/fw'),
             ssh_args=options.get('sshArgs', ''),
             scp_args=options.get('scpArgs', ''),
             activation_cmd=options.get('activationCmd', ''),
