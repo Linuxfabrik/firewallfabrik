@@ -783,9 +783,10 @@ class FWWindow(QMainWindow):
 
     def _update_title(self):
         display = getattr(self, '_display_file', None) or self._current_file
+        dirty = '*' if self._db_manager.is_dirty else ''
         if display:
             self.setWindowTitle(
-                f'{display.name} - FirewallFabrik {__version__}',
+                f'{dirty}{display.name} - FirewallFabrik {__version__}',
             )
         else:
             self.setWindowTitle(f'FirewallFabrik {__version__}')
@@ -2428,6 +2429,7 @@ class FWWindow(QMainWindow):
     def _on_history_changed(self):
         self._update_undo_actions()
         self._update_undo_list()
+        self._update_title()
 
     def _update_undo_actions(self):
         self._undo_action.setEnabled(self._db_manager.can_undo)
