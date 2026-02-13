@@ -606,10 +606,30 @@ class FWWindow(QMainWindow):
         qrc = ui_path / 'MainRes.qrc'
         rcc = ui_path / 'MainRes.rcc'
         if not rcc.exists() or rcc.stat().st_mtime < qrc.stat().st_mtime:
-            subprocess.run(
-                ['pyside6-rcc', '--binary', str(qrc), '-o', str(rcc)],
-                check=True,
-            )
+            try:
+                result = subprocess.run(
+                    ['pyside6-rcc', '--binary', str(qrc), '-o', str(rcc)],
+                    capture_output=True,
+                    text=True,
+                )
+            except FileNotFoundError:
+                QMessageBox.critical(
+                    None,
+                    'FirewallFabrik',
+                    QMainWindow.tr(
+                        'pyside6-rcc was not found.\n\n'
+                        'Install the PySide6 tools package and try again.'
+                    ),
+                )
+                raise SystemExit(1) from None
+            if result.returncode != 0:
+                QMessageBox.critical(
+                    None,
+                    'FirewallFabrik',
+                    QMainWindow.tr('Failed to compile Qt resources.\n\n')
+                    + result.stderr.strip(),
+                )
+                raise SystemExit(1) from None
         QResource.registerResource(str(rcc))
 
     def _restore_view_state(self):
