@@ -19,7 +19,7 @@ from html import escape
 from pathlib import Path
 
 import sqlalchemy
-from PySide6.QtCore import QProcess, Qt, QUrl, Slot
+from PySide6.QtCore import QByteArray, QProcess, QSettings, Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
@@ -171,6 +171,30 @@ class CompileDialog(QDialog):
         self.infoMCLabel.setText('')
 
         self._populate_select_table()
+        self._restore_geometry()
+
+    # ------------------------------------------------------------------
+    # Geometry persistence
+    # ------------------------------------------------------------------
+
+    def _restore_geometry(self):
+        """Restore saved dialog geometry, falling back to centered default."""
+        settings = QSettings()
+        geometry = settings.value('CompileDialog/geometry', type=QByteArray)
+        if geometry and self.restoreGeometry(geometry):
+            return
+        # No saved geometry — center on parent.
+        self.resize(900, 600)
+        parent = self.parentWidget()
+        if parent is not None:
+            center = parent.geometry().center()
+            geo = self.geometry()
+            geo.moveCenter(center)
+            self.setGeometry(geo)
+
+    def done(self, result):
+        QSettings().setValue('CompileDialog/geometry', self.saveGeometry())
+        super().done(result)
 
     # ------------------------------------------------------------------
     # Page 0 — Firewall selection
