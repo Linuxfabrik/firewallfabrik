@@ -16,10 +16,11 @@ import copy
 import json
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QMimeData, QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QDrag, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QColor, QDrag, QFont, QIcon, QKeySequence, QPainter, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -535,6 +536,21 @@ _NO_DELETE_TYPES = frozenset(
     }
 )
 
+# Service object types used to detect group type for "Group" action.
+_SERVICE_OBJ_TYPES = frozenset(
+    {
+        'CustomService',
+        'ICMP6Service',
+        'ICMPService',
+        'IPService',
+        'ServiceGroup',
+        'TCPService',
+        'TagService',
+        'UDPService',
+        'UserService',
+    }
+)
+
 # New object types offered for device context (sorted alphabetically).
 _NEW_TYPES_FOR_PARENT = {
     'Cluster': [
@@ -648,7 +664,9 @@ _NO_SUBFOLDER_TYPES = frozenset(
 )
 
 # Module-level clipboard shared across all ObjectTree instances.
-_tree_clipboard: dict | None = None  # {'id': str, 'type': str, 'cut': bool}
+_tree_clipboard: list[dict] | None = (
+    None  # [{'id': str, 'type': str, 'cut': bool}, ...]
+)
 
 
 class _DraggableTree(QTreeWidget):
@@ -660,37 +678,75 @@ class _DraggableTree(QTreeWidget):
     def mimeData(self, items):
         if not items:
             return None
-        item = items[0]
-        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if not obj_id or not obj_type or obj_type in _NON_DRAGGABLE_TYPES:
+        entries = []
+        for item in items:
+            obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+            obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if not obj_id or not obj_type or obj_type in _NON_DRAGGABLE_TYPES:
+                continue
+            entries.append(
+                {
+                    'id': obj_id,
+                    'name': item.text(0),
+                    'type': obj_type,
+                }
+            )
+        if not entries:
             return None
-        payload = json.dumps(
-            {
-                'id': obj_id,
-                'name': item.text(0),
-                'type': obj_type,
-            }
-        ).encode()
+        payload = json.dumps(entries).encode()
         mime = QMimeData()
         mime.setData(FWF_MIME_TYPE, payload)
         return mime
 
     def startDrag(self, supported_actions):
-        """Start a drag with the object's type icon as cursor pixmap."""
+        """Start a drag with the object's type icon as cursor pixmap.
+
+        When dragging 2+ items, a red circle with the count number is
+        drawn on top of the first item's icon (matches fwbuilder's
+        ``ObjectTreeView::startDrag`` badge).
+        """
         items = self.selectedItems()
         mime = self.mimeData(items)
         if mime is None:
             return
-        item = items[0]
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+
+        # Count valid (non-category, non-structural) items.
+        valid_items = [
+            it
+            for it in items
+            if it.data(0, Qt.ItemDataRole.UserRole)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1) not in _NON_DRAGGABLE_TYPES
+        ]
+        first = valid_items[0] if valid_items else items[0]
+        obj_type = first.data(0, Qt.ItemDataRole.UserRole + 1)
 
         drag = QDrag(self)
         drag.setMimeData(mime)
 
         icon_path = ICON_MAP.get(obj_type)
         if icon_path:
-            drag.setPixmap(QIcon(icon_path).pixmap(25, 25))
+            pm = QIcon(icon_path).pixmap(25, 25)
+            if len(valid_items) > 1:
+                # Composite pixmap with red count badge.
+                from PySide6.QtGui import QPixmap
+
+                npm = QPixmap(32, 32)
+                npm.fill(QColor(0, 0, 0, 0))
+                p = QPainter(npm)
+                p.drawPixmap(0, 32 - pm.height(), pm)
+                p.setPen(QColor('red'))
+                p.setBrush(QColor('red'))
+                p.drawEllipse(16, 0, 16, 16)
+                txt = str(len(valid_items))
+                p.setPen(QColor('white'))
+                p.setFont(QFont('sans-serif', 8, QFont.Weight.Bold))
+                br = p.boundingRect(16, 0, 16, 16, Qt.AlignmentFlag.AlignCenter, txt)
+                p.drawText(br, Qt.AlignmentFlag.AlignCenter, txt)
+                p.end()
+                drag.setPixmap(npm)
+            else:
+                drag.setPixmap(pm)
 
         drag.exec(supported_actions)
 
@@ -1282,11 +1338,49 @@ class ObjectTree(QWidget):
             self.object_activated.emit(obj_id, type_str)
 
     # ------------------------------------------------------------------
+    # Selection helpers
+    # ------------------------------------------------------------------
+
+    def _get_simplified_selection(self):
+        """Return selected object items with redundant children removed.
+
+        Filters out category folders (no ``obj_id``) and items whose
+        ancestor is also in the selection (prevents double-processing
+        when a parent and its children are both selected).  Matches
+        fwbuilder's ``ObjectTreeView::getSimplifiedSelection()``.
+        """
+        raw = self._tree.selectedItems()
+        # Keep only items that represent actual objects.
+        items = [it for it in raw if it.data(0, Qt.ItemDataRole.UserRole) is not None]
+        # Remove items whose ancestor is also selected.
+        item_set = {id(it) for it in items}
+        result = []
+        for it in items:
+            parent = it.parent()
+            skip = False
+            while parent is not None:
+                if id(parent) in item_set:
+                    skip = True
+                    break
+                parent = parent.parent()
+            if not skip:
+                result.append(it)
+        return result
+
+    # ------------------------------------------------------------------
     # Context menu
     # ------------------------------------------------------------------
 
     def _on_context_menu(self, pos):
-        """Build and show the context menu for the right-clicked tree item."""
+        """Build and show the context menu for the right-clicked tree item.
+
+        Menu items are gated on the number of selected objects (matching
+        fwbuilder's ``ObjectManipulator::contextMenuRequested``):
+
+        - Edit/Inspect, Duplicate, Move, New*, Subfolder: single-select only
+        - Copy/Cut/Delete: enabled for both single and multi-select
+        - Group: multi-select only (>= 2 items)
+        """
         item = self._tree.itemAt(pos)
         if item is None:
             return
@@ -1299,10 +1393,13 @@ class ObjectTree(QWidget):
             return
 
         effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+        selection = self._get_simplified_selection()
+        num_selected = len(selection)
+        multi = num_selected > 1
 
         menu = QMenu(self)
 
-        # Expand / Collapse (only for items with children)
+        # Expand / Collapse (always for clicked item)
         if item.childCount() > 0:
             if item.isExpanded():
                 collapse_action = menu.addAction('Collapse')
@@ -1316,13 +1413,14 @@ class ObjectTree(QWidget):
                 )
             menu.addSeparator()
 
-        # Edit / Inspect
-        label = 'Inspect' if effective_ro else 'Edit'
-        edit_action = menu.addAction(label)
-        edit_action.triggered.connect(lambda: self._ctx_edit(item))
+        # Edit / Inspect — single-select only
+        if not multi:
+            label = 'Inspect' if effective_ro else 'Edit'
+            edit_action = menu.addAction(label)
+            edit_action.triggered.connect(lambda: self._ctx_edit(item))
 
-        # Duplicate ...
-        if obj_type not in _NO_DUPLICATE_TYPES:
+        # Duplicate ... — single-select only
+        if not multi and obj_type not in _NO_DUPLICATE_TYPES:
             libraries = self._get_writable_libraries()
             if len(libraries) == 1:
                 dup_action = menu.addAction('Duplicate ...')
@@ -1339,8 +1437,8 @@ class ObjectTree(QWidget):
                 dup_action = menu.addAction('Duplicate ...')
                 dup_action.setEnabled(False)
 
-        # Move ...
-        if obj_type not in _NO_MOVE_TYPES and not effective_ro:
+        # Move ... — single-select only
+        if not multi and obj_type not in _NO_MOVE_TYPES and not effective_ro:
             current_lib_id = self._get_item_library_id(item)
             libraries = [
                 (lid, lname)
@@ -1362,20 +1460,31 @@ class ObjectTree(QWidget):
                 move_action = menu.addAction('Move ...')
                 move_action.setEnabled(False)
 
-        # Copy / Cut / Paste
+        # Copy / Cut / Paste — enabled for single and multi
         menu.addSeparator()
 
-        can_copy = obj_type not in _NO_COPY_TYPES
+        if multi:
+            can_copy = all(
+                (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
+                for it in selection
+            )
+            can_cut = can_copy and all(
+                not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
+                for it in selection
+            )
+        else:
+            can_copy = obj_type not in _NO_COPY_TYPES
+            can_cut = can_copy and not effective_ro
+
         copy_action = menu.addAction('Copy')
         copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         copy_action.setEnabled(can_copy)
-        copy_action.triggered.connect(lambda: self._ctx_copy(item))
+        copy_action.triggered.connect(lambda: self._ctx_copy())
 
-        can_cut = can_copy and not effective_ro
         cut_action = menu.addAction('Cut')
         cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         cut_action.setEnabled(can_cut)
-        cut_action.triggered.connect(lambda: self._ctx_cut(item))
+        cut_action.triggered.connect(lambda: self._ctx_cut())
 
         can_paste = _tree_clipboard is not None and not effective_ro
         paste_action = menu.addAction('Paste')
@@ -1383,13 +1492,29 @@ class ObjectTree(QWidget):
         paste_action.setEnabled(can_paste)
         paste_action.triggered.connect(lambda: self._ctx_paste(item))
 
-        # Delete
+        # Delete — enabled for single and multi
         menu.addSeparator()
-        can_delete = obj_type not in _NO_DELETE_TYPES and not effective_ro
-        delete_action = menu.addAction('Delete')
-        delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-        delete_action.setEnabled(can_delete)
-        delete_action.triggered.connect(lambda: self._ctx_delete(item))
+        if multi:
+            can_delete = any(
+                (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_DELETE_TYPES
+                and not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
+                for it in selection
+            )
+            delete_action = menu.addAction('Delete')
+            delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+            delete_action.setEnabled(can_delete)
+            delete_action.triggered.connect(lambda: self._delete_selected())
+        else:
+            can_delete = obj_type not in _NO_DELETE_TYPES and not effective_ro
+            delete_action = menu.addAction('Delete')
+            delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+            delete_action.setEnabled(can_delete)
+            delete_action.triggered.connect(lambda: self._ctx_delete(item))
+
+        # Group — multi-select only (>= 2 items)
+        if num_selected >= 2:
+            group_act = menu.addAction('Group')
+            group_act.triggered.connect(lambda: self._ctx_group_objects())
 
         # "New Cluster from selected firewalls" (matching fwbuilder).
         if obj_type == 'Firewall':
@@ -1403,25 +1528,28 @@ class ObjectTree(QWidget):
                 lambda: self._ctx_new_cluster_from_selected(),
             )
 
-        # New [Type] + New Subfolder (grouped in one section)
-        new_types = self._get_new_object_types(item, obj_type)
-        show_subfolder = obj_type == 'Library' or obj_type not in _NO_SUBFOLDER_TYPES
-        if new_types or show_subfolder:
-            menu.addSeparator()
-        for type_name, display_name in new_types:
-            icon_path = ICON_MAP.get(type_name, '')
-            act = menu.addAction(QIcon(icon_path), f'New {display_name}')
-            act.setEnabled(not effective_ro)
-            act.triggered.connect(
-                lambda checked=False, t=type_name: self._ctx_new_object(item, t)
+        # New [Type] + New Subfolder — single-select only
+        if not multi:
+            new_types = self._get_new_object_types(item, obj_type)
+            show_subfolder = (
+                obj_type == 'Library' or obj_type not in _NO_SUBFOLDER_TYPES
             )
-        if show_subfolder:
-            sf_action = menu.addAction(
-                QIcon(_CATEGORY_ICON),
-                'New Subfolder',
-            )
-            sf_action.setEnabled(not effective_ro)
-            sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
+            if new_types or show_subfolder:
+                menu.addSeparator()
+            for type_name, display_name in new_types:
+                icon_path = ICON_MAP.get(type_name, '')
+                act = menu.addAction(QIcon(icon_path), f'New {display_name}')
+                act.setEnabled(not effective_ro)
+                act.triggered.connect(
+                    lambda checked=False, t=type_name: self._ctx_new_object(item, t)
+                )
+            if show_subfolder:
+                sf_action = menu.addAction(
+                    QIcon(_CATEGORY_ICON),
+                    'New Subfolder',
+                )
+                sf_action.setEnabled(not effective_ro)
+                sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
 
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
@@ -1828,46 +1956,62 @@ class ObjectTree(QWidget):
     # Copy / Cut / Paste
     # ------------------------------------------------------------------
 
-    @staticmethod
-    def _ctx_copy(item):
-        """Copy the object reference to the tree and policy-view clipboards."""
+    def _ctx_copy(self):
+        """Copy all selected object references to the tree clipboard.
+
+        Also populates the policy-view object clipboard with the *first*
+        item so paste into rule element cells works across components.
+        """
         global _tree_clipboard
-        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if obj_id and obj_type:
-            _tree_clipboard = {'id': obj_id, 'type': obj_type, 'cut': False}
-            # Also populate the policy-view object clipboard so that
-            # paste into rule element cells works across components.
-            from firewallfabrik.gui.policy_view import PolicyView
+        selection = self._get_simplified_selection()
+        entries = []
+        for it in selection:
+            oid = it.data(0, Qt.ItemDataRole.UserRole)
+            otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
+            if oid and otype and otype not in _NO_COPY_TYPES:
+                entries.append({'id': oid, 'type': otype, 'cut': False})
+        if not entries:
+            return
+        _tree_clipboard = entries
+        # Policy-view clipboard stays single-item for rule cell paste.
+        first = selection[0]
+        from firewallfabrik.gui.policy_view import PolicyView
 
-            PolicyView._object_clipboard = {
-                'id': obj_id,
-                'name': item.text(0),
-                'type': obj_type,
-            }
+        PolicyView._object_clipboard = {
+            'id': first.data(0, Qt.ItemDataRole.UserRole),
+            'name': first.text(0),
+            'type': first.data(0, Qt.ItemDataRole.UserRole + 1),
+        }
 
-    @staticmethod
-    def _ctx_cut(item):
-        """Cut the object reference to the module-level clipboard.
+    def _ctx_cut(self):
+        """Cut all selected object references to the tree clipboard.
 
         Also populates the policy-view clipboard (like Copy) so that
         paste into rule element cells works across components.
         """
         global _tree_clipboard
-        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if obj_id and obj_type:
-            _tree_clipboard = {'id': obj_id, 'type': obj_type, 'cut': True}
-            from firewallfabrik.gui.policy_view import PolicyView
+        selection = self._get_simplified_selection()
+        entries = []
+        for it in selection:
+            oid = it.data(0, Qt.ItemDataRole.UserRole)
+            otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
+            ro = it.data(0, Qt.ItemDataRole.UserRole + 5) or False
+            if oid and otype and otype not in _NO_COPY_TYPES and not ro:
+                entries.append({'id': oid, 'type': otype, 'cut': True})
+        if not entries:
+            return
+        _tree_clipboard = entries
+        first = selection[0]
+        from firewallfabrik.gui.policy_view import PolicyView
 
-            PolicyView._object_clipboard = {
-                'id': obj_id,
-                'name': item.text(0),
-                'type': obj_type,
-            }
+        PolicyView._object_clipboard = {
+            'id': first.data(0, Qt.ItemDataRole.UserRole),
+            'name': first.text(0),
+            'type': first.data(0, Qt.ItemDataRole.UserRole + 1),
+        }
 
     def _ctx_paste(self, item):
-        """Paste the clipboard object relative to *item*.
+        """Paste all clipboard objects relative to *item*.
 
         Copy-paste duplicates; cut-paste moves.
         The paste target is determined by *item*'s position in the tree:
@@ -1878,60 +2022,68 @@ class ObjectTree(QWidget):
         if _tree_clipboard is None or self._db_manager is None:
             return
 
-        cb = _tree_clipboard
-        cb_id = uuid.UUID(cb['id'])
-        cb_type = cb['type']
-        model_cls = _MODEL_MAP.get(cb_type)
-        if model_cls is None:
-            return
-
         target_lib_id = self._get_item_library_id(item)
         if target_lib_id is None:
             return
 
         target_iface_id, target_group_id = self._get_paste_context(item)
-
         prefix = self._get_device_prefix(item)
+        any_cut = False
+        last_id = None
 
-        if cb['cut']:
-            # Cut-paste = move to target library.
-            if self._move_object(cb_id, model_cls, target_lib_id):
-                _tree_clipboard = None
-                self.tree_changed.emit()
-                QTimer.singleShot(0, lambda: self.select_object(cb_id))
-        else:
-            # Copy-paste = duplicate into target context.
-            new_id = self._duplicate_object(
-                cb_id,
-                model_cls,
-                target_lib_id,
-                prefix=prefix,
-                target_interface_id=target_iface_id,
-                target_group_id=target_group_id,
-            )
-            if new_id is not None:
-                self.tree_changed.emit()
-                QTimer.singleShot(0, lambda: self.select_object(new_id))
-                self.object_activated.emit(str(new_id), cb_type)
+        for cb in _tree_clipboard:
+            cb_id = uuid.UUID(cb['id'])
+            cb_type = cb['type']
+            model_cls = _MODEL_MAP.get(cb_type)
+            if model_cls is None:
+                continue
+
+            if cb['cut']:
+                any_cut = True
+                if self._move_object(cb_id, model_cls, target_lib_id):
+                    last_id = cb_id
+            else:
+                new_id = self._duplicate_object(
+                    cb_id,
+                    model_cls,
+                    target_lib_id,
+                    prefix=prefix,
+                    target_interface_id=target_iface_id,
+                    target_group_id=target_group_id,
+                )
+                if new_id is not None:
+                    last_id = new_id
+
+        if any_cut:
+            _tree_clipboard = None
+
+        if last_id is not None:
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda lid=last_id: self.select_object(lid))
 
     def _shortcut_copy(self):
-        """Handle Ctrl+C on the currently selected tree item."""
-        item = self._tree.currentItem()
-        if item is None:
+        """Handle Ctrl+C — copy all selected objects."""
+        selection = self._get_simplified_selection()
+        if not selection:
             return
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if obj_type and obj_type not in _NO_COPY_TYPES:
-            self._ctx_copy(item)
+        # Check that at least one item is copyable.
+        if any(
+            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
+            for it in selection
+        ):
+            self._ctx_copy()
 
     def _shortcut_cut(self):
-        """Handle Ctrl+X on the currently selected tree item."""
-        item = self._tree.currentItem()
-        if item is None:
+        """Handle Ctrl+X — cut all selected objects."""
+        selection = self._get_simplified_selection()
+        if not selection:
             return
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
-        if obj_type and obj_type not in _NO_COPY_TYPES and not effective_ro:
-            self._ctx_cut(item)
+        if any(
+            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
+            and not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
+            for it in selection
+        ):
+            self._ctx_cut()
 
     def _shortcut_paste(self):
         """Handle Ctrl+V — paste into the selected item's library."""
@@ -2059,15 +2211,36 @@ class ObjectTree(QWidget):
 
         return True
 
+    def _delete_selected(self):
+        """Delete all selected objects, filtering out non-deletable and read-only items."""
+        selection = self._get_simplified_selection()
+        any_deleted = False
+        for it in selection:
+            obj_id = it.data(0, Qt.ItemDataRole.UserRole)
+            obj_type = it.data(0, Qt.ItemDataRole.UserRole + 1)
+            effective_ro = it.data(0, Qt.ItemDataRole.UserRole + 5) or False
+            if not obj_id or not obj_type:
+                continue
+            if obj_type in _NO_DELETE_TYPES or effective_ro:
+                continue
+            model_cls = _MODEL_MAP.get(obj_type)
+            if model_cls is None:
+                continue
+            prefix = self._get_device_prefix(it)
+            if self._delete_object(
+                uuid.UUID(obj_id),
+                model_cls,
+                it.text(0),
+                obj_type,
+                prefix=prefix,
+            ):
+                any_deleted = True
+        if any_deleted:
+            self.tree_changed.emit()
+
     def _shortcut_delete(self):
-        """Handle Delete key on the currently selected tree item."""
-        item = self._tree.currentItem()
-        if item is None:
-            return
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
-        if obj_type and obj_type not in _NO_DELETE_TYPES and not effective_ro:
-            self._ctx_delete(item)
+        """Handle Delete key — delete all selected objects."""
+        self._delete_selected()
 
     # ------------------------------------------------------------------
     # New [Type]
@@ -2194,6 +2367,111 @@ class ObjectTree(QWidget):
                 if obj_id:
                     ids.append(obj_id)
         return ids
+
+    def _ctx_group_objects(self):
+        """Create a new group containing all selected objects.
+
+        The group type is auto-detected from the first selected item:
+        Service types → ServiceGroup, Interval → IntervalGroup,
+        everything else → ObjectGroup.  Matches fwbuilder's
+        ``ObjectManipulator::groupObjects()``.
+        """
+        if self._db_manager is None:
+            return
+        selection = self._get_simplified_selection()
+        if len(selection) < 2:
+            return
+
+        # Determine group type from the first selected item.
+        first_type = selection[0].data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        if first_type in _SERVICE_OBJ_TYPES:
+            group_type = 'ServiceGroup'
+        elif first_type == 'Interval' or first_type == 'IntervalGroup':
+            group_type = 'IntervalGroup'
+        else:
+            group_type = 'ObjectGroup'
+
+        # Show the New Group dialog.
+        from PySide6.QtWidgets import QComboBox
+
+        from firewallfabrik.gui.ui_loader import FWFUiLoader
+
+        ui_path = Path(__file__).resolve().parent / 'ui' / 'newgroupdialog_q.ui'
+        dlg = QDialog(self._tree.window())
+        loader = FWFUiLoader(dlg)
+        loader.load(str(ui_path))
+
+        # Fill the library combo with writable libraries.
+        libs_combo = dlg.findChild(QComboBox, 'libs')
+        writable_libs = self._get_writable_libraries()
+        for lib_id, lib_name in writable_libs:
+            libs_combo.addItem(lib_name, lib_id)
+
+        obj_name_widget = dlg.findChild(QLineEdit, 'obj_name')
+        obj_name_widget.setFocus()
+
+        # Center on parent window.
+        parent_geom = self._tree.window().geometry()
+        dlg.move(
+            parent_geom.center().x() - dlg.width() // 2,
+            parent_geom.center().y() - dlg.height() // 2,
+        )
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        group_name = obj_name_widget.text().strip() if obj_name_widget else ''
+        if not group_name:
+            return
+
+        lib_id = libs_combo.currentData()
+        if lib_id is None and writable_libs:
+            lib_id = writable_libs[0][0]
+        if lib_id is None:
+            return
+
+        # Determine the folder for this group type.
+        folder = None
+        for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
+            if any(tn == group_type for tn, _dn in type_list):
+                folder = f
+                break
+
+        # Create the group.
+        new_id = self._create_new_object(
+            _MODEL_MAP[group_type],
+            group_type,
+            lib_id,
+            folder=folder,
+            name=group_name,
+        )
+        if new_id is None:
+            return
+
+        # Add group_membership entries for each selected item.
+        session = self._db_manager.create_session()
+        try:
+            for pos, it in enumerate(selection):
+                member_id = it.data(0, Qt.ItemDataRole.UserRole)
+                if member_id:
+                    session.execute(
+                        group_membership.insert().values(
+                            group_id=new_id,
+                            member_id=uuid.UUID(member_id),
+                            position=pos,
+                        )
+                    )
+            session.commit()
+            self._db_manager.save_state(f'Group {len(selection)} objects')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        self.tree_changed.emit()
+        QTimer.singleShot(0, lambda: self.select_object(new_id))
+        self.object_activated.emit(str(new_id), group_type)
 
     def _ctx_new_cluster_from_selected(self):
         """Open the New Cluster wizard with the currently selected firewalls."""

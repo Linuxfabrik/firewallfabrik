@@ -1703,9 +1703,16 @@ class PolicyView(QTreeView):
             event.ignore()
             return
 
-        obj_id = payload.get('id')
-        obj_type = payload.get('type', '')
-        if not obj_id:
+        # Normalise payload: old format (single dict) → list.
+        if isinstance(payload, dict):
+            items = [payload]
+        elif isinstance(payload, list):
+            items = payload
+        else:
+            event.ignore()
+            return
+
+        if not items:
             event.ignore()
             return
 
@@ -1714,28 +1721,28 @@ class PolicyView(QTreeView):
             event.ignore()
             return
         valid_types = _VALID_TYPES_BY_SLOT.get(slot, frozenset())
-        if obj_type not in valid_types:
-            event.ignore()
-            return
 
-        source_rule_id = payload.get('source_rule_id')
-        source_slot = payload.get('source_slot')
+        # Cell-to-cell drag (always single item).
+        first = items[0]
+        source_rule_id = first.get('source_rule_id')
+        source_slot = first.get('source_slot')
 
         if source_rule_id and source_slot:
-            # Drag from another cell (or same cell).
+            obj_id = first.get('id')
+            obj_type = first.get('type', '')
+            if not obj_id or obj_type not in valid_types:
+                event.ignore()
+                return
             row_data = model.get_row_data(index)
             if row_data is None:
                 event.ignore()
                 return
-            # Same cell -> no-op.
             if str(row_data.rule_id) == source_rule_id and source_slot == slot:
                 event.ignore()
                 return
             if event.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier:
-                # Copy (Ctrl+drag).
                 model.add_element(index, slot, uuid.UUID(obj_id))
             else:
-                # Move.
                 model.move_element(
                     uuid.UUID(source_rule_id),
                     source_slot,
@@ -1744,8 +1751,12 @@ class PolicyView(QTreeView):
                     uuid.UUID(obj_id),
                 )
         else:
-            # Tree drop (existing behavior).
-            model.add_element(index, slot, uuid.UUID(obj_id))
+            # Tree drop — add all valid items.
+            for entry in items:
+                obj_id = entry.get('id')
+                obj_type = entry.get('type', '')
+                if obj_id and obj_type in valid_types:
+                    model.add_element(index, slot, uuid.UUID(obj_id))
 
         event.acceptProposedAction()
 
