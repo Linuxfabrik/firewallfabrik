@@ -15,6 +15,7 @@ import logging
 import subprocess
 import traceback
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 import sqlalchemy
@@ -54,6 +55,7 @@ from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager, duplicate_object_name
 from firewallfabrik.core.objects import (
     Address,
+    Firewall,
     FWObjectDatabase,
     Group,
     Host,
@@ -1686,6 +1688,15 @@ class FWWindow(QMainWindow):
         if not (session.new or session.dirty or session.deleted):
             return
 
+        # Stamp the lastModified timestamp on Firewall/Cluster objects
+        # so the compile dialog knows recompilation is needed.
+        now_epoch = None
+        if isinstance(obj, Firewall):
+            now_epoch = int(datetime.now(tz=UTC).timestamp())
+            data = dict(obj.data or {})
+            data['lastModified'] = now_epoch
+            obj.data = data
+
         try:
             session.commit()
         except sqlalchemy.exc.IntegrityError as e:
@@ -1722,6 +1733,16 @@ class FWWindow(QMainWindow):
         else:
             desc = 'Editor change'
         self._db_manager.save_state(desc)
+
+        # Update the editor panel's "Modified" label for firewalls.
+        if now_epoch is not None:
+            label = getattr(editor, 'last_modified', None)
+            if label is not None:
+                label.setText(
+                    datetime.fromtimestamp(now_epoch, tz=UTC).strftime(
+                        '%Y-%m-%d %H:%M:%S'
+                    )
+                )
 
         # Keep the tree in sync with the editor.
         if obj is not None:
