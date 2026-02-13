@@ -41,10 +41,38 @@ def _find_fixture(
     return None
 
 
+_db_cache: dict[Path, tuple[bytes, dict]] = {}
+
+
+def _get_db(fixture_path: Path) -> firewallfabrik.core.DatabaseManager:
+    """Return a DatabaseManager loaded from a cached in-memory SQLite snapshot.
+
+    The fixture file is parsed once and its database serialized via
+    ``sqlite3.Connection.serialize()``.  Each call creates a fresh
+    DatabaseManager and restores the snapshot with ``deserialize()``
+    so that every test is fully isolated.
+    """
+    resolved = fixture_path.resolve()
+    if resolved not in _db_cache:
+        db = firewallfabrik.core.DatabaseManager()
+        db.load(str(fixture_path))
+        conn = db.engine.raw_connection()
+        snapshot = conn.dbapi_connection.serialize()
+        conn.close()
+        _db_cache[resolved] = (snapshot, db.ref_index)
+
+    snapshot, ref_index = _db_cache[resolved]
+    copy = firewallfabrik.core.DatabaseManager()
+    conn = copy.engine.raw_connection()
+    conn.dbapi_connection.deserialize(snapshot)
+    conn.close()
+    copy.ref_index = ref_index
+    return copy
+
+
 def _find_firewalls(fixture_path: Path) -> list[str]:
     """Return all firewall names in a .fwf or .fwb file."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
     with db.session() as session:
         firewalls = session.execute(sqlalchemy.select(Firewall)).scalars().all()
         return [fw.name for fw in firewalls]
@@ -62,8 +90,7 @@ def _compile(fixture_path: Path, fw_name: str, tmp_path: Path, platform: str) ->
     Returns:
         Path to the generated output file.
     """
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         fw = session.execute(

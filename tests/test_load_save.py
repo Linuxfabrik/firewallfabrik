@@ -18,7 +18,7 @@ import sqlalchemy
 import firewallfabrik.core
 from firewallfabrik.core.objects import Host, Library, Rule, RuleSet, Service
 
-from .conftest import FIXTURES_DIR
+from .conftest import FIXTURES_DIR, _get_db
 
 _FWF_FILES = sorted(FIXTURES_DIR.glob('*.fwf'))
 _FWB_FILES = sorted(FIXTURES_DIR.glob('*.fwb'))
@@ -67,8 +67,7 @@ def _assert_no_string_bools(d, context):
 )
 def test_fwb_rule_options_are_booleans(fixture_path):
     """XML rule options must be coerced from strings to Python bools."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for rule in session.execute(sqlalchemy.select(Rule)).scalars():
@@ -85,8 +84,7 @@ def test_fwb_rule_options_are_booleans(fixture_path):
 )
 def test_fwb_rule_negations_are_booleans(fixture_path):
     """XML rule negation flags must be Python bools, not strings."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for rule in session.execute(sqlalchemy.select(Rule)).scalars():
@@ -103,8 +101,7 @@ def test_fwb_rule_negations_are_booleans(fixture_path):
 )
 def test_fwb_service_tcp_flags_are_booleans(fixture_path):
     """XML TCP flag dicts must contain Python bools, not strings."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for svc in session.execute(sqlalchemy.select(Service)).scalars():
@@ -125,8 +122,7 @@ def test_fwb_service_tcp_flags_are_booleans(fixture_path):
 )
 def test_fwb_device_management_are_booleans(fixture_path):
     """XML management dict ``enabled`` fields must be Python bools, not strings."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for host in session.execute(sqlalchemy.select(Host)).scalars():
@@ -143,8 +139,7 @@ def test_fwb_device_management_are_booleans(fixture_path):
 )
 def test_fwb_ruleset_options_are_booleans(fixture_path):
     """XML RuleSet options must not contain string booleans after loading."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for rs in session.execute(sqlalchemy.select(RuleSet)).scalars():
@@ -161,8 +156,7 @@ def test_fwb_ruleset_options_are_booleans(fixture_path):
 )
 def test_fwb_library_and_host_ro_are_booleans(fixture_path):
     """XML ``ro`` fields on Libraries and Hosts must be Python bools."""
-    db = firewallfabrik.core.DatabaseManager()
-    db.load(str(fixture_path))
+    db = _get_db(fixture_path)
 
     with db.session() as session:
         for lib in session.execute(sqlalchemy.select(Library)).scalars():
