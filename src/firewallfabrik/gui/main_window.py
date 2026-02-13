@@ -253,6 +253,8 @@ def _build_editor_path(obj):
             current = current.interface or current.group or current.library
         elif isinstance(current, Interface):
             current = current.device or current.library
+        elif isinstance(current, RuleSet):
+            current = current.device
         elif isinstance(current, (Host, Service, Interval)):
             current = current.group or current.library
         elif isinstance(current, Group):
@@ -285,10 +287,13 @@ _MODEL_MAP = {
     'Interval': Interval,
     'IntervalGroup': Group,
     'Library': Library,
+    'NAT': RuleSet,
     'Network': Address,
     'NetworkIPv6': Address,
     'ObjectGroup': Group,
     'PhysAddress': Address,
+    'Policy': RuleSet,
+    'Routing': RuleSet,
     'ServiceGroup': Group,
     'TCPService': Service,
     'TagService': Service,
@@ -441,10 +446,13 @@ class FWWindow(QMainWindow):
             'Interval': self.w_TimeDialog,
             'IntervalGroup': self.w_IntervalGroupDialog,
             'Library': self.w_LibraryDialog,
+            'NAT': self.w_NATDialog,
             'Network': self.w_NetworkDialog,
             'NetworkIPv6': self.w_NetworkDialogIPv6,
             'ObjectGroup': self.w_ObjectGroupDialog,
             'PhysAddress': self.w_PhysicalAddressDialog,
+            'Policy': self.w_PolicyDialog,
+            'Routing': self.w_RoutingDialog,
             'ServiceGroup': self.w_ServiceGroupDialog,
             'TCPService': self.w_TCPServiceDialog,
             'TagService': self.w_TagServiceDialog,
@@ -746,12 +754,7 @@ class FWWindow(QMainWindow):
             '',
             type=str,
         )
-        if (
-            obj_id
-            and self._object_tree.select_object(obj_id)
-            and obj_type
-            and obj_type not in ('Policy', 'NAT', 'Routing')
-        ):
+        if obj_id and self._object_tree.select_object(obj_id) and obj_type:
             self._open_object_editor(obj_id, obj_type)
 
     def _save_if_modified(self):

@@ -46,7 +46,7 @@ CUSTOM_WIDGET_MAP = {
     'PhysicalAddressDialog': QWidget,
     'RoutingRuleOptionsDialog': QWidget,
     'RuleOptionsDialog': QWidget,
-    'RuleSetDialog': QWidget,
+    'RuleSetDialog': QWidget,  # replaced by RuleSetDialog at module bottom
     'TagServiceDialog': QWidget,
     'TCPServiceDialog': QWidget,
     'TimeDialog': QWidget,
@@ -196,6 +196,12 @@ def _register_service_type_dialogs():
     CUSTOM_WIDGET_MAP['UserDialog'] = UserServiceDialog
 
 
+def _register_ruleset_dialog():
+    from firewallfabrik.gui.ruleset_dialog import RuleSetDialog
+
+    CUSTOM_WIDGET_MAP['RuleSetDialog'] = RuleSetDialog
+
+
 _register_actions_dialog()
 _register_address_dialogs()
 _register_comment_editor_panel()
@@ -206,6 +212,7 @@ _register_group_dialog()
 _register_group_type_dialogs()
 _register_library_dialog()
 _register_rule_options_panel()
+_register_ruleset_dialog()
 _register_service_dialogs()
 _register_service_type_dialogs()
 _register_time_dialog()
