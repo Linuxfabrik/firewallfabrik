@@ -758,15 +758,16 @@ _NEW_TYPES_FOR_FOLDER = {
         ('Firewall', 'Firewall'),
     ],
     'Groups': [
-        ('ObjectGroup', 'Object Group'),
         ('DynamicGroup', 'Dynamic Group'),
+        ('ObjectGroup', 'Object Group'),
+        ('ServiceGroup', 'Service Group'),
     ],
     'Hosts': [
         ('Host', 'Host'),
     ],
     'ICMP': [
-        ('ICMPService', 'ICMP Service'),
         ('ICMP6Service', 'ICMP6 Service'),
+        ('ICMPService', 'ICMP Service'),
     ],
     'IP': [
         ('IPService', 'IP Service'),
@@ -774,9 +775,6 @@ _NEW_TYPES_FOR_FOLDER = {
     'Networks': [
         ('Network', 'Network'),
         ('NetworkIPv6', 'Network IPv6'),
-    ],
-    'Service Groups': [
-        ('ServiceGroup', 'Service Group'),
     ],
     'TCP': [
         ('TCPService', 'TCP Service'),
@@ -791,6 +789,95 @@ _NEW_TYPES_FOR_FOLDER = {
         ('UDPService', 'UDP Service'),
     ],
     'Users': [
+        ('UserService', 'User Service'),
+    ],
+}
+
+# Context menu "New [Type]" entries for real group nodes, keyed by
+# ``(group_type, group_name)``.  This disambiguates folders with the
+# same name under different parents (e.g. "Groups" under Objects vs.
+# under Services) and provides correct entries for top-level groups.
+# Mirrors fwbuilder's ``ObjectManipulator::addSubfolderActions()`` logic.
+_NEW_TYPES_FOR_GROUP_NODE = {
+    ('IntervalGroup', 'Time'): [
+        ('Interval', 'Time Interval'),
+    ],
+    ('ObjectGroup', 'Address Ranges'): [
+        ('AddressRange', 'Address Range'),
+    ],
+    ('ObjectGroup', 'Address Tables'): [
+        ('AddressTable', 'Address Table'),
+    ],
+    ('ObjectGroup', 'Addresses'): [
+        ('IPv4', 'Address'),
+        ('IPv6', 'Address IPv6'),
+    ],
+    ('ObjectGroup', 'Clusters'): [
+        ('Cluster', 'Cluster'),
+    ],
+    ('ObjectGroup', 'DNS Names'): [
+        ('DNSName', 'DNS Name'),
+    ],
+    ('ObjectGroup', 'Firewalls'): [
+        ('Firewall', 'Firewall'),
+    ],
+    ('ObjectGroup', 'Groups'): [
+        ('DynamicGroup', 'Dynamic Group'),
+        ('ObjectGroup', 'Object Group'),
+    ],
+    ('ObjectGroup', 'Hosts'): [
+        ('Host', 'Host'),
+    ],
+    ('ObjectGroup', 'Networks'): [
+        ('Network', 'Network'),
+        ('NetworkIPv6', 'Network IPv6'),
+    ],
+    ('ObjectGroup', 'Objects'): [
+        ('AddressRange', 'Address Range'),
+        ('AddressTable', 'Address Table'),
+        ('DNSName', 'DNS Name'),
+        ('DynamicGroup', 'Dynamic Group'),
+        ('Host', 'Host'),
+        ('IPv4', 'Address'),
+        ('IPv6', 'Address IPv6'),
+        ('Network', 'Network'),
+        ('NetworkIPv6', 'Network IPv6'),
+        ('ObjectGroup', 'Object Group'),
+    ],
+    ('ServiceGroup', 'Custom'): [
+        ('CustomService', 'Custom Service'),
+    ],
+    ('ServiceGroup', 'Groups'): [
+        ('ServiceGroup', 'Service Group'),
+    ],
+    ('ServiceGroup', 'ICMP'): [
+        ('ICMP6Service', 'ICMP6 Service'),
+        ('ICMPService', 'ICMP Service'),
+    ],
+    ('ServiceGroup', 'IP'): [
+        ('IPService', 'IP Service'),
+    ],
+    ('ServiceGroup', 'Services'): [
+        ('CustomService', 'Custom Service'),
+        ('ICMP6Service', 'ICMP6 Service'),
+        ('ICMPService', 'ICMP Service'),
+        ('IPService', 'IP Service'),
+        ('ServiceGroup', 'Service Group'),
+        ('TCPService', 'TCP Service'),
+        ('TagService', 'Tag Service'),
+        ('UDPService', 'UDP Service'),
+        ('UserService', 'User Service'),
+    ],
+    ('ServiceGroup', 'TCP'): [
+        ('TCPService', 'TCP Service'),
+    ],
+    ('ServiceGroup', 'TagServices'): [
+        ('TagService', 'Tag Service'),
+    ],
+    ('ServiceGroup', 'UDP'): [
+        ('UDPService', 'UDP Service'),
+    ],
+    ('ServiceGroup', 'Users'): [
         ('UserService', 'User Service'),
     ],
 }
@@ -978,6 +1065,10 @@ class ObjectTree(QWidget):
         """
         had_tree = self._tree.topLevelItemCount() > 0
         expanded = self._save_expanded_state()
+        # Detach selection before clearing to prevent a segfault in
+        # Shiboken::Object::setParent() when clear() destroys the
+        # currently selected QTreeWidgetItem during a nested signal chain.
+        self._tree.setCurrentItem(None)
         self._tree.clear()
         self._filter.clear()
 
@@ -1001,6 +1092,33 @@ class ObjectTree(QWidget):
                 sqlalchemy.select(group_membership.c.group_id).distinct(),
             ).all()
         )
+
+        # System folder groups get the generic folder icon; user-created
+        # groups keep their type-specific icon.  System folders are the
+        # top two levels of the library hierarchy created by
+        # create_library_folder_structure():
+        #   depth 0: Objects, Services, Firewalls, Clusters, Time
+        #   depth 1: Addresses, Hosts, TCP, ICMP, Groups, ...
+        # User-created groups live at depth 2+ (under "Groups" etc.).
+        root_ids = set(
+            session.scalars(
+                sqlalchemy.select(Group.id).where(
+                    Group.parent_group_id.is_(None),
+                ),
+            ).all()
+        )
+        child_ids = (
+            set(
+                session.scalars(
+                    sqlalchemy.select(Group.id).where(
+                        Group.parent_group_id.in_(root_ids),
+                    ),
+                ).all()
+            )
+            if root_ids
+            else set()
+        )
+        self._system_folder_groups = root_ids | child_ids
 
         for lib in libraries:
             self._building_lib_ro = getattr(lib, 'ro', False)
@@ -1218,7 +1336,11 @@ class ObjectTree(QWidget):
         )
         if isinstance(obj, Group):
             self._add_group_children(obj, item)
-            if obj.id not in self._groups_with_members:
+            # System folder groups (those with child sub-groups, like
+            # "Objects", "Services", "Addresses", etc.) get the generic
+            # folder icon.  User-created groups keep their type icon
+            # from ICON_MAP even when empty.
+            if obj.id in self._system_folder_groups:
                 item.setIcon(0, QIcon(_CATEGORY_ICON))
         elif isinstance(obj, Host):
             saved_device_ro = self._building_device_ro
@@ -1344,6 +1466,8 @@ class ObjectTree(QWidget):
         if obj is not None:
             tip = _obj_tooltip(obj)
             item.setData(0, Qt.ItemDataRole.UserRole + 4, tip)
+            comment = getattr(obj, 'comment', None) or ''
+            item.setData(0, Qt.ItemDataRole.UserRole + 6, comment.lower())
             if self._tooltips_enabled:
                 item.setToolTip(0, tip)
                 if self._show_attrs:
@@ -1369,6 +1493,8 @@ class ObjectTree(QWidget):
             item.setText(1, attrs)
 
             item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(_obj_tags(obj)))
+            comment = getattr(obj, 'comment', None) or ''
+            item.setData(0, Qt.ItemDataRole.UserRole + 6, comment.lower())
 
             tip = _obj_tooltip(obj)
             item.setData(0, Qt.ItemDataRole.UserRole + 4, tip)
@@ -1431,7 +1557,10 @@ class ObjectTree(QWidget):
             if item.data(0, Qt.ItemDataRole.UserRole) is None:
                 continue
             tags_str = item.data(0, Qt.ItemDataRole.UserRole + 2) or ''
-            match = text in item.text(0).lower() or text in tags_str
+            comment_str = item.data(0, Qt.ItemDataRole.UserRole + 6) or ''
+            match = (
+                text in item.text(0).lower() or text in tags_str or text in comment_str
+            )
             if self._show_attrs:
                 attrs_str = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
                 match = match or text in attrs_str.lower()
@@ -2709,11 +2838,16 @@ class ObjectTree(QWidget):
         if obj_type in ('Library', *_RULE_SET_TYPES):
             return []
 
-        # Group types: offer new items based on the group's name
-        # (e.g. right-clicking the "Networks" ObjectGroup offers
-        # "New Network" and "New Network IPv6").
+        # Group types: offer new items based on (group_type, group_name).
+        # Uses _NEW_TYPES_FOR_GROUP_NODE which disambiguates folders
+        # with the same name under different parents (e.g. "Groups"
+        # under Objects vs. under Services).
         if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
             name = item.text(0)
+            types = _NEW_TYPES_FOR_GROUP_NODE.get((obj_type, name))
+            if types is not None:
+                return list(types)
+            # Fall back to folder-name-only lookup.
             types = _NEW_TYPES_FOR_FOLDER.get(name, [])
             if types:
                 return list(types)
@@ -2722,9 +2856,14 @@ class ObjectTree(QWidget):
         # directly under a category folder or group.  Objects under
         # devices or interfaces get nothing (matches fwbuilder's strict
         # path check).
-        folder = self._find_folder_context(item)
-        if folder is not None:
-            return list(_NEW_TYPES_FOR_FOLDER.get(folder, []))
+        folder_info = self._find_folder_context(item)
+        if folder_info is not None:
+            folder_name, folder_type = folder_info
+            if folder_type is not None:
+                types = _NEW_TYPES_FOR_GROUP_NODE.get((folder_type, folder_name))
+                if types is not None:
+                    return list(types)
+            return list(_NEW_TYPES_FOR_FOLDER.get(folder_name, []))
 
         return []
 
@@ -2732,19 +2871,21 @@ class ObjectTree(QWidget):
     def _find_folder_context(item):
         """Walk up the tree to find the enclosing category folder or group.
 
-        Returns the folder name string, or ``None`` if the item lives
-        under a device or interface (where no folder-based "New" items
-        are offered).
+        Returns ``(folder_name, group_type)`` where *group_type* is the
+        STI discriminator (e.g. ``'ObjectGroup'``, ``'ServiceGroup'``)
+        for real group folders, or ``None`` for virtual category folders.
+        Returns ``None`` if the item lives under a device or interface
+        (where no folder-based "New" items are offered).
         """
         current = item.parent()
         while current is not None:
             current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
             if current_type is None:
                 # Virtual category folder (no obj_id/obj_type).
-                return current.text(0)
+                return (current.text(0), None)
             if current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
                 # Real group acting as a folder container.
-                return current.text(0)
+                return (current.text(0), current_type)
             if current_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
                 # Under a device or interface — no folder-based items.
                 return None
@@ -3169,6 +3310,19 @@ class ObjectTree(QWidget):
                     kwargs['group_id'] = target_group.id
                     folder = None  # Don't also set data.folder.
 
+            # Group-type objects use parent_group_id (not group_id) to
+            # nest inside a folder group (e.g. ObjectGroup → Objects/Groups).
+            if (
+                folder
+                and hasattr(model_cls, 'parent_group_id')
+                and 'parent_group_id' not in kwargs
+            ):
+                path = _SYSTEM_GROUP_PATHS.get(type_name, '')
+                target_group = _find_group_by_path(session, lib_id, path)
+                if target_group is not None:
+                    kwargs['parent_group_id'] = target_group.id
+                    folder = None  # Don't also set data.folder.
+
             # Build data dict: merge folder and extra_data.
             data = {}
             if folder:
@@ -3207,10 +3361,12 @@ class ObjectTree(QWidget):
         Optional *name* overrides the default ``"New {type}"``.
         Optional *extra_data* is merged into the object's ``data`` dict
         (e.g. platform / host_OS for Firewall/Cluster).
+
+        Returns the new object's UUID, or ``None`` on failure.
         """
         model_cls = _MODEL_MAP.get(type_name)
         if model_cls is None:
-            return
+            return None
 
         # Library creation has no folder.
         folder = None
@@ -3232,12 +3388,15 @@ class ObjectTree(QWidget):
             self.tree_changed.emit()
             QTimer.singleShot(0, lambda: self.select_object(new_id))
             self.object_activated.emit(str(new_id), type_name)
+        return new_id
 
     def create_host_in_library(self, lib_id, *, name=None, interfaces=None):
         """Create a new Host (with interfaces) in library *lib_id*.
 
         This is the toolbar/menu variant — it places the Host in the
         standard ``Hosts`` folder.
+
+        Returns the new Host's UUID, or ``None`` on failure.
         """
         new_id = self._create_host_with_interfaces(
             lib_id,
@@ -3249,6 +3408,7 @@ class ObjectTree(QWidget):
             self.tree_changed.emit()
             QTimer.singleShot(0, lambda: self.select_object(new_id))
             self.object_activated.emit(str(new_id), 'Host')
+        return new_id
 
     def _create_host_with_interfaces(
         self,

@@ -62,6 +62,7 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
+    group_membership,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
@@ -366,6 +367,13 @@ class FWWindow(QMainWindow):
         for widget in set(self._editor_map.values()):
             if isinstance(widget, BaseObjectDialog):
                 widget.changed.connect(self._on_editor_changed)
+
+        # Connect "Create new object and add to group" from group dialogs.
+        from firewallfabrik.gui.group_dialog import GroupObjectDialog
+
+        for widget in set(self._editor_map.values()):
+            if isinstance(widget, GroupObjectDialog):
+                widget.member_create_requested.connect(self._on_create_group_member)
 
         self._current_editor = None
         self._editor_session = None
@@ -955,6 +963,78 @@ class FWWindow(QMainWindow):
         else:
             self._object_tree.create_new_object_in_library(type_name, lib_id)
 
+    def _on_create_group_member(self, type_name, group_id_hex):
+        """Handle 'Create new object and add to this group'.
+
+        Creates the new object in its standard folder, adds a
+        ``group_membership`` entry linking it to the group, then
+        opens the new object's editor.  Mirrors fwbuilder's
+        ``GroupObjectDialog::newObject()`` → ``createNewObject()``
+        → ``addRef()`` flow.
+        """
+        # Save group info before the editor switches away.
+        group_id = uuid.UUID(group_id_hex)
+        editor = self._current_editor
+        if editor is None or self._editor_session is None:
+            return
+        lib_id = editor._obj.library_id
+
+        # Flush pending editor changes.
+        self._flush_editor_changes()
+
+        # Create the object (this refreshes tree and opens new editor).
+        if type_name == 'Cluster':
+            from firewallfabrik.gui.new_cluster_dialog import NewClusterDialog
+
+            dlg = NewClusterDialog(
+                db_manager=self._db_manager,
+                parent=self,
+            )
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+            new_id = self._object_tree.create_new_object_in_library(
+                type_name, lib_id, extra_data=extra_data, name=name
+            )
+        elif type_name in ('Firewall', 'Host'):
+            from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
+
+            dlg = NewDeviceDialog(type_name, parent=self)
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+            if type_name == 'Host' and extra_data.get('interfaces'):
+                interfaces = extra_data.pop('interfaces')
+                new_id = self._object_tree.create_host_in_library(
+                    lib_id, name=name, interfaces=interfaces
+                )
+            else:
+                new_id = self._object_tree.create_new_object_in_library(
+                    type_name, lib_id, extra_data=extra_data, name=name
+                )
+        else:
+            new_id = self._object_tree.create_new_object_in_library(type_name, lib_id)
+
+        if new_id is None:
+            return
+
+        # Add group_membership entry.
+        session = self._db_manager.create_session()
+        try:
+            session.execute(
+                group_membership.insert().values(
+                    group_id=group_id,
+                    member_id=new_id,
+                )
+            )
+            session.commit()
+            self._db_manager.save_state('Add to group')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
     # ------------------------------------------------------------------
     # File loading & recent-files menu
     # ------------------------------------------------------------------
@@ -1114,9 +1194,17 @@ class FWWindow(QMainWindow):
     @Slot(str, str, str, str)
     def _open_rule_set(self, rule_set_id, fw_name, rs_name, rs_type='Policy'):
         """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
+        rs_uuid = uuid.UUID(rule_set_id)
+
+        # Reuse an existing sub-window for this rule set if one is open.
+        for sub in self.m_space.subWindowList():
+            if getattr(sub, '_fwf_rule_set_id', None) == rs_uuid:
+                self.m_space.setActiveSubWindow(sub)
+                return
+
         model = PolicyTreeModel(
             self._db_manager,
-            uuid.UUID(rule_set_id),
+            rs_uuid,
             rule_set_type=rs_type,
             object_name=fw_name,
         )
@@ -1127,8 +1215,19 @@ class FWWindow(QMainWindow):
         sub.setWidget(panel)
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        sub._fwf_rule_set_id = rs_uuid
+        sub._fwf_device_id = None  # set below if available
         self.m_space.addSubWindow(sub)
         sub.showMaximized()
+
+        # Store the owning device ID for _ensure_parent_rule_set_open().
+        try:
+            with self._db_manager.session() as sess:
+                rs = sess.get(RuleSet, rs_uuid)
+                if rs is not None:
+                    sub._fwf_device_id = rs.device_id
+        except Exception:
+            pass
 
     @Slot(str, str)
     def _open_object_editor(self, obj_id, obj_type):
@@ -1180,6 +1279,55 @@ class FWWindow(QMainWindow):
         if not self.editorDockWidget.isVisible():
             self.editorDockWidget.setVisible(True)
             self.actionEditor_panel.setChecked(True)
+
+        # Focus the first editable widget in the editor panel.
+        dialog_widget.setFocus()
+        dialog_widget.focusNextChild()
+
+        # If the object lives under a Firewall/Cluster, ensure the
+        # parent device's policy rule set is open in the MDI area.
+        # Mirrors fwbuilder's FWWindow::openEditor() which calls
+        # Host::getParentHost() and opens the policy automatically.
+        self._ensure_parent_rule_set_open(obj, obj_type)
+
+    def _ensure_parent_rule_set_open(self, obj, obj_type):
+        """Open the parent firewall's policy if no rule set is shown.
+
+        When the user double-clicks an object that belongs to a Firewall
+        or Cluster (e.g. an interface address), fwbuilder automatically
+        opens the device's policy rules in the main area.  This method
+        replicates that by walking up the ORM relationships to find the
+        owning device and opening its first Policy rule set.
+        """
+        device = None
+        if isinstance(obj, Address) and obj.interface_id is not None:
+            iface = obj.interface
+            if iface is not None:
+                device = iface.device
+        elif isinstance(obj, Interface):
+            device = obj.device
+
+        if device is None or device.type not in ('Cluster', 'Firewall'):
+            return
+
+        # Check if any MDI sub-window already shows this device's rules.
+        device_id = device.id
+        for sub in self.m_space.subWindowList():
+            if getattr(sub, '_fwf_device_id', None) == device_id:
+                return
+
+        # Find the first Policy rule set for this device.
+        policy_rs = None
+        for rs in device.rule_sets:
+            if rs.type == 'Policy':
+                policy_rs = rs
+                break
+        if policy_rs is None:
+            return
+
+        self._open_rule_set(
+            str(policy_rs.id), device.name, policy_rs.name, policy_rs.type
+        )
 
     @Slot()
     def _on_editor_changed(self):
@@ -1756,6 +1904,8 @@ class FWWindow(QMainWindow):
             self._editor_session.close()
         self._editor_session = None
         self._current_editor = None
+        self._editor_obj_id = None
+        self._editor_obj_type = None
         self.editorDockWidget.setWindowTitle('Editor')
 
     @staticmethod
