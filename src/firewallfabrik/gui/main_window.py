@@ -930,6 +930,9 @@ class FWWindow(QMainWindow):
         if self._current_file:
             fd.setDirectory(str(self._current_file.parent))
             fd.selectFile(self._current_file.name)
+        elif self._display_file:
+            fd.setDirectory(str(self._display_file.parent))
+            fd.selectFile(self._display_file.with_suffix('.fwf').name)
         if not fd.exec():
             return
 
@@ -1629,7 +1632,14 @@ class FWWindow(QMainWindow):
             )
             return
 
-        self._current_file = file_path
+        # When importing a .fwb file, the save target is the corresponding
+        # .fwf.  If that .fwf already exists on disk, leave _current_file
+        # unset so the first Ctrl+S routes through fileSaveAs() — its native
+        # dialog will ask the user to confirm the overwrite.
+        if original_path.suffix == '.fwb' and file_path.exists():
+            self._current_file = None
+        else:
+            self._current_file = file_path
         self._display_file = original_path
         self._update_title()
         self._add_to_recent(str(original_path))
