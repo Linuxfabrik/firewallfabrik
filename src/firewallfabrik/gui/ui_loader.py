@@ -140,6 +140,22 @@ def _register_group_dialog():
     CUSTOM_WIDGET_MAP['GroupObjectDialog'] = GroupObjectDialog
 
 
+def _register_group_type_dialogs():
+    from firewallfabrik.gui.address_table_dialog import AddressTableDialog
+    from firewallfabrik.gui.dns_name_dialog import DNSNameDialog
+    from firewallfabrik.gui.dynamic_group_dialog import DynamicGroupDialog
+
+    CUSTOM_WIDGET_MAP['AddressTableDialog'] = AddressTableDialog
+    CUSTOM_WIDGET_MAP['DNSNameDialog'] = DNSNameDialog
+    CUSTOM_WIDGET_MAP['DynamicGroupDialog'] = DynamicGroupDialog
+
+
+def _register_library_dialog():
+    from firewallfabrik.gui.library_dialog import LibraryDialog
+
+    CUSTOM_WIDGET_MAP['LibraryDialog'] = LibraryDialog
+
+
 def _register_time_dialog():
     from firewallfabrik.gui.time_dialog import TimeDialog
 
@@ -170,6 +186,16 @@ def _register_rule_options_panel():
     CUSTOM_WIDGET_MAP['RuleOptionsDialog'] = RuleOptionsPanel
 
 
+def _register_service_type_dialogs():
+    from firewallfabrik.gui.custom_service_dialog import CustomServiceDialog
+    from firewallfabrik.gui.tag_service_dialog import TagServiceDialog
+    from firewallfabrik.gui.user_service_dialog import UserServiceDialog
+
+    CUSTOM_WIDGET_MAP['CustomServiceDialog'] = CustomServiceDialog
+    CUSTOM_WIDGET_MAP['TagServiceDialog'] = TagServiceDialog
+    CUSTOM_WIDGET_MAP['UserDialog'] = UserServiceDialog
+
+
 _register_actions_dialog()
 _register_address_dialogs()
 _register_comment_editor_panel()
@@ -177,6 +203,9 @@ _register_comment_tags()
 _register_device_dialogs()
 _register_drop_area()
 _register_group_dialog()
+_register_group_type_dialogs()
+_register_library_dialog()
 _register_rule_options_panel()
 _register_service_dialogs()
+_register_service_type_dialogs()
 _register_time_dialog()

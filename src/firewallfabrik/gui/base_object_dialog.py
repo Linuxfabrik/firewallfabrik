@@ -85,7 +85,8 @@ class BaseObjectDialog(QWidget):
         comment_widget = self.findChild(CommentTags, 'commentKeywords')
         if comment_widget is not None and self._obj is not None:
             self._obj.comment = comment_widget.get_comment()
-            self._obj.keywords = comment_widget.get_tags()
+            if hasattr(type(self._obj), 'keywords'):
+                self._obj.keywords = comment_widget.get_tags()
 
     def _is_read_only(self):
         """Return ``True`` if the current object must not be modified."""
