@@ -564,6 +564,7 @@ class FWWindow(QMainWindow):
         Returns ``True`` if the caller may proceed (saved or discarded),
         ``False`` if the user chose Cancel.
         """
+        self._flush_editor_changes()
         if not self._db_manager.is_dirty:
             return True
         display = getattr(self, '_display_file', None) or self._current_file
@@ -705,6 +706,7 @@ class FWWindow(QMainWindow):
         if not self._current_file:
             self.fileSaveAs()
             return
+        self._flush_editor_changes()
         try:
             self._db_manager.save(self._current_file)
         except Exception:
@@ -738,6 +740,7 @@ class FWWindow(QMainWindow):
         if file_path.suffix == '':
             file_path = file_path.with_suffix('.fwf')
 
+        self._flush_editor_changes()
         try:
             self._db_manager.save(file_path)
         except Exception:
@@ -1137,6 +1140,9 @@ class FWWindow(QMainWindow):
         model_cls = _MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
+
+        # Flush pending changes from the current editor before switching.
+        self._flush_editor_changes()
 
         # Close any previous editor session to avoid leaks.
         if self._editor_session is not None:
@@ -1713,7 +1719,21 @@ class FWWindow(QMainWindow):
         if obj_id is not None:
             self._open_object_editor(obj_id, obj_type)
 
+    def _flush_editor_changes(self):
+        """Apply any pending editor widget changes to the database.
+
+        QLineEdit only fires ``editingFinished`` on focus loss or Enter.
+        When the user presses Ctrl+S (or switches objects, closes files,
+        etc.) while a QLineEdit still has focus, the signal hasn't fired
+        yet.  Calling this method ensures the current widget values are
+        written to the ORM object and committed before any save/close
+        operation.
+        """
+        if self._current_editor is not None and self._editor_session is not None:
+            self._on_editor_changed()
+
     def _close_editor(self):
+        self._flush_editor_changes()
         if self._editor_session is not None:
             self._editor_session.close()
         self._editor_session = None
