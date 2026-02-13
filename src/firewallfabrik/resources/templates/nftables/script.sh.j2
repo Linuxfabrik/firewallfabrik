@@ -154,7 +154,7 @@ case "$cmd" in
 {% if prolog_place == 'after_flush' %}
         prolog_commands
 {% endif %}
-        script_body
+        script_body || run_epilog_and_exit 1
 {% if routing_output %}
         routing_script
 {% endif %}
