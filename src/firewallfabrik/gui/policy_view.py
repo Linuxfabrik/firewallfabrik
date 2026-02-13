@@ -162,6 +162,28 @@ class _CellBorderDelegate(QStyledItemDelegate):
                 option.palette.color(QPalette.ColorRole.Highlight),
             )
 
+        # Always highlight the position column for the current row (like
+        # Excel row headers) so the user can orient themselves.
+        view = self.parent()
+        model = index.model()
+        if (
+            isinstance(view, PolicyView)
+            and model is not None
+            and hasattr(model, 'position_col')
+            and index.column() == model.position_col
+            and not (option.state & QStyle.StateFlag.State_Selected)
+        ):
+            cur = view.currentIndex()
+            if (
+                cur.isValid()
+                and cur.row() == index.row()
+                and cur.parent() == index.parent()
+            ):
+                painter.fillRect(
+                    option.rect,
+                    option.palette.color(QPalette.ColorRole.Highlight),
+                )
+
         # Highlight matched cell (Find / Where Used navigation).
         view = self.parent()
         if (
@@ -324,6 +346,11 @@ def _model_element_cols(model):
     return _ELEMENT_COLS
 
 
+def _is_default_any(elements, target_name):
+    """Return True if the cell contains only the default 'Any' element."""
+    return len(elements) == 1 and target_name == 'Any'
+
+
 def _model_selectable_cols(model):
     """Return the selectable column frozenset from the model or Policy default."""
     if model is not None and hasattr(model, 'selectable_cols'):
@@ -340,7 +367,7 @@ class PolicyView(QTreeView):
         super().__init__(parent)
         self._highlight_rule_id = None
         self._highlight_col = None
-        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setRootIsDecorated(True)
         self.setItemDelegate(_CellBorderDelegate(self))
@@ -449,7 +476,7 @@ class PolicyView(QTreeView):
         self._saved_row_rule_ids = []
         self._saved_current_rule_id = None
         if model is not None:
-            for idx in self.selectionModel().selectedRows():
+            for idx in self._selected_rule_indices():
                 rd = model.get_row_data(idx)
                 if rd is not None:
                     self._saved_row_rule_ids.append(rd.rule_id)
@@ -494,8 +521,7 @@ class PolicyView(QTreeView):
                 if idx.isValid():
                     sel_model.select(
                         idx,
-                        QItemSelectionModel.SelectionFlag.Select
-                        | QItemSelectionModel.SelectionFlag.Rows,
+                        QItemSelectionModel.SelectionFlag.Select,
                     )
             self._saved_row_rule_ids = []
 
@@ -575,6 +601,23 @@ class PolicyView(QTreeView):
         if 0 <= elem_index < len(elements):
             return elements[elem_index]
         return None
+
+    # ------------------------------------------------------------------
+    # Current-index tracking (position column highlight)
+    # ------------------------------------------------------------------
+
+    def currentChanged(self, current, previous):
+        super().currentChanged(current, previous)
+        model = self.model()
+        if model is None or not hasattr(model, 'position_col'):
+            return
+        pos_col = model.position_col
+        # Repaint the position column cell for the old and new row so the
+        # "row header" highlight follows the cursor (like Excel).
+        for idx in (previous, current):
+            if idx.isValid():
+                pos_idx = model.index(idx.row(), pos_col, idx.parent())
+                self.update(pos_idx)
 
     # ------------------------------------------------------------------
     # Mouse events for per-element selection and drag
@@ -1178,6 +1221,7 @@ class PolicyView(QTreeView):
                             break
 
         has_element = target_id is not None
+        is_default = _is_default_any(elements, target_name)
 
         # Edit.
         edit_act = menu.addAction(
@@ -1205,7 +1249,7 @@ class PolicyView(QTreeView):
                 model, index, slot, tid, n, t
             ),
         )
-        cut_act.setEnabled(has_element)
+        cut_act.setEnabled(has_element and not is_default)
 
         # Paste.
         paste_act = menu.addAction(
@@ -1224,7 +1268,7 @@ class PolicyView(QTreeView):
             'Delete',
             lambda tid=target_id: model.remove_element(index, slot, tid),
         )
-        delete_act.setEnabled(has_element)
+        delete_act.setEnabled(has_element and not is_default)
         menu.addSeparator()
 
         # Where Used.
@@ -1493,6 +1537,8 @@ class PolicyView(QTreeView):
                 elements = idx.data(ELEMENTS_ROLE) or []
                 for eid, ename, etype, *_ in elements:
                     if eid == target_id:
+                        if _is_default_any(elements, ename):
+                            return
                         self._cut_element(model, idx, slot, target_id, ename, etype)
                         return
         self.cut_selection()
@@ -1513,6 +1559,10 @@ class PolicyView(QTreeView):
             _rule_id, slot, target_id = self._selected_element
             idx = self._selected_index
             if idx.isValid() and idx.column() in element_cols and model is not None:
+                elements = idx.data(ELEMENTS_ROLE) or []
+                for eid, ename, _etype, *_ in elements:
+                    if eid == target_id and _is_default_any(elements, ename):
+                        return
                 model.remove_element(idx, slot, target_id)
                 self._clear_element_selection()
                 return
