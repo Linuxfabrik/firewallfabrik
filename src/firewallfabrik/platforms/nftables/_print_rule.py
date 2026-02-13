@@ -24,7 +24,7 @@ separately in _nat_print_rule.py.
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
@@ -456,6 +456,45 @@ class PrintRule_nft(PolicyRuleProcessor):
             return str(start)
         return f'{start}-{end}'
 
+    _ICMP_TYPE_NAMES: ClassVar[dict[int, str]] = {
+        0: 'echo-reply',
+        3: 'destination-unreachable',
+        4: 'source-quench',
+        5: 'redirect',
+        8: 'echo-request',
+        9: 'router-advertisement',
+        10: 'router-solicitation',
+        11: 'time-exceeded',
+        12: 'parameter-problem',
+        13: 'timestamp-request',
+        14: 'timestamp-reply',
+        15: 'info-request',
+        16: 'info-reply',
+        17: 'address-mask-request',
+        18: 'address-mask-reply',
+    }
+
+    _ICMPV6_TYPE_NAMES: ClassVar[dict[int, str]] = {
+        1: 'destination-unreachable',
+        2: 'packet-too-big',
+        3: 'time-exceeded',
+        4: 'parameter-problem',
+        128: 'echo-request',
+        129: 'echo-reply',
+        130: 'mld-listener-query',
+        131: 'mld-listener-report',
+        132: 'mld-listener-done',
+        133: 'nd-router-solicit',
+        134: 'nd-router-advert',
+        135: 'nd-neighbor-solicit',
+        136: 'nd-neighbor-advert',
+        137: 'nd-redirect',
+        138: 'router-renumbering',
+        141: 'ind-neighbor-solicit',
+        142: 'ind-neighbor-advert',
+        143: 'mld2-listener-report',
+    }
+
     def _print_icmp_service(self, srv) -> str:
         """Print ICMP type/code matching."""
         codes = getattr(srv, 'codes', None) or srv.data or {}
@@ -465,12 +504,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         icmp_code = -1 if raw_code is None else int(raw_code)
 
         proto = 'icmpv6' if self.compiler.ipv6_policy else 'icmp'
+        type_names = (
+            self._ICMPV6_TYPE_NAMES
+            if self.compiler.ipv6_policy
+            else self._ICMP_TYPE_NAMES
+        )
+        type_str = type_names.get(icmp_type, str(icmp_type))
 
         if icmp_type < 0:
             return f'meta l4proto {proto}'
         if icmp_code < 0:
-            return f'{proto} type {icmp_type}'
-        return f'{proto} type {icmp_type} code {icmp_code}'
+            return f'{proto} type {type_str}'
+        return f'{proto} type {type_str} {proto} code {icmp_code}'
 
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""
