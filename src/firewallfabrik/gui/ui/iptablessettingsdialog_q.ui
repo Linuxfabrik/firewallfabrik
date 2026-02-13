@@ -886,39 +886,10 @@ packets to IPv6 policies</string>
           <string/>
          </property>
          <layout class="QGridLayout">
-          <property name="margin" stdset="0">
-           <number>6</number>
-          </property>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="edit_epilog_button">
-            <property name="text">
-             <string>Edit</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <spacer>
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="sizeType">
-             <enum>QSizePolicy::Policy::Expanding</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QTextEdit" name="epilog_script"/>
-          </item>
           <item row="0" column="0" colspan="2">
            <widget class="QLabel" name="textLabel2_2_2">
             <property name="text">
-             <string>The following commands will be added verbatim after generated configuration</string>
+             <string>Epilog - The following commands will be added verbatim after generated configuration</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignVCenter</set>
@@ -927,6 +898,9 @@ packets to IPv6 policies</string>
              <bool>true</bool>
             </property>
            </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QTextEdit" name="epilog_script"/>
           </item>
          </layout>
         </widget>
@@ -946,20 +920,13 @@ packets to IPv6 policies</string>
           <item row="0" column="0" colspan="3">
            <widget class="QLabel" name="textLabel2_2">
             <property name="text">
-             <string>The following commands will be added verbatim on top of generated configuration</string>
+             <string>Prolog - The following commands will be added verbatim on top of generated configuration</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QPushButton" name="edit_prolog_button">
-            <property name="text">
-             <string>Edit</string>
             </property>
            </widget>
           </item>
@@ -1628,9 +1595,7 @@ packets to IPv6 policies</string>
   <tabstop>installScriptArgs</tabstop>
   <tabstop>prolog_script</tabstop>
   <tabstop>prologPlace</tabstop>
-  <tabstop>edit_prolog_button</tabstop>
   <tabstop>epilog_script</tabstop>
-  <tabstop>edit_epilog_button</tabstop>
   <tabstop>useLOG</tabstop>
   <tabstop>useULOG</tabstop>
   <tabstop>logTCPseq</tabstop>
@@ -1703,38 +1668,6 @@ packets to IPv6 policies</string>
     <hint type="sourcelabel">
      <x>45</x>
      <y>66</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>edit_prolog_button</sender>
-   <signal>clicked()</signal>
-   <receiver>iptAdvancedDialog_q</receiver>
-   <slot>editProlog()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>822</x>
-     <y>329</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>edit_epilog_button</sender>
-   <signal>clicked()</signal>
-   <receiver>iptAdvancedDialog_q</receiver>
-   <slot>editEpilog()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>822</x>
-     <y>633</y>
     </hint>
     <hint type="destinationlabel">
      <x>20</x>
