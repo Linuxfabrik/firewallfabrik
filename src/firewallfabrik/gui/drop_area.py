@@ -49,19 +49,6 @@ class FWObjectDropArea(QFrame):
         self.setMinimumSize(100, 80)
         self.setMaximumSize(200, 80)
 
-        self.setStyleSheet(
-            'FWObjectDropArea {'
-            '  border: 1px solid palette(mid);'
-            '  background-color: palette(base);'
-            '  border-radius: 3px;'
-            '  max-width: 200px;'
-            '  max-height: 80px;'
-            '}'
-            'FWObjectDropArea[dragOver="true"] {'
-            '  border: 2px solid palette(highlight);'
-            '}'
-        )
-
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setContentsMargins(4, 4, 4, 4)

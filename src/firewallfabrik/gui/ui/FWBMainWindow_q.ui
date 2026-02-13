@@ -739,6 +739,9 @@
    <property name="orientation">
     <enum>Qt::Orientation::Horizontal</enum>
    </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonStyle::ToolButtonTextUnderIcon</enum>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>

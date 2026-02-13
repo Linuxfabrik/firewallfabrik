@@ -63,8 +63,14 @@ def main():
     QApplication.setDesktopFileName('ch.linuxfabrik.firewallfabrik')
 
     app = QApplication(remaining)
+    app.setStyle('Fusion')
     app.setOrganizationName('Linuxfabrik')
     app.setApplicationName('FirewallFabrik')
+
+    # Load global stylesheet
+    _style_path = pathlib.Path(__file__).resolve().parent / 'ui' / 'style.qss'
+    if _style_path.is_file():
+        app.setStyleSheet(_style_path.read_text())
 
     # Load Qt's own translations for the current locale
     locale = QLocale.system().name()

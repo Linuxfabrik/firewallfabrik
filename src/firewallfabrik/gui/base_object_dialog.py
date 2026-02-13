@@ -49,32 +49,6 @@ class BaseObjectDialog(QWidget):
         loader = FWFUiLoader(self)
         loader.load(str(_UI_DIR / ui_filename))
 
-        # Ensure input fields look clearly editable on all platforms.
-        # Some Linux themes (Breeze, Adwaita) render QLineEdit/QSpinBox
-        # flat inside sunken QFrames, making them hard to distinguish
-        # from labels.  The focus/hover states follow Qt HIG: accent-
-        # coloured border on focus, subtle darkening on hover.
-        self.setStyleSheet(
-            'QLineEdit, QSpinBox, QComboBox {'
-            '  border: 1px solid palette(dark);'
-            '  border-radius: 2px;'
-            '  padding: 2px 4px;'
-            '  background-color: palette(base);'
-            '}'
-            'QLineEdit:focus, QSpinBox:focus, QComboBox:focus {'
-            '  border: 2px solid palette(highlight);'
-            '  padding: 1px 3px;'
-            '}'
-            'QLineEdit:hover:!focus, QSpinBox:hover:!focus,'
-            ' QComboBox:hover:!focus {'
-            '  border: 1px solid palette(shadow);'
-            '}'
-            'QLineEdit:disabled, QSpinBox:disabled, QComboBox:disabled {'
-            '  background-color: palette(window);'
-            '  border: 1px solid palette(mid);'
-            '}'
-        )
-
     def load_object(self, obj, *, all_tags=None):
         """Load *obj* into the editor: populate widgets and connect signals."""
         self._obj = obj

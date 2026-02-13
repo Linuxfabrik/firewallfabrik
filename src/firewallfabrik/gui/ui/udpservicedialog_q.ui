@@ -135,15 +135,10 @@
 	padding-left: 2px;
 }
 
-QGroupBox::title {  
+QGroupBox::title {
 	subcontrol-origin: margin;
 	subcontrol-position: top left;
 	padding: 0 3px;
-}
-
-QSpinBox {
-	margin: 0px;
-	padding: 0px;
 }
 </string>
            </property>
@@ -216,15 +211,10 @@ QSpinBox {
 	padding-left: 2px;
 }
 
-QGroupBox::title {  
+QGroupBox::title {
 	subcontrol-origin: margin;
 	subcontrol-position: top left;
 	padding: 0 3px;
-}
-
-QSpinBox {
-	margin: 0px;
-	padding: 0px;
 }
 </string>
            </property>
