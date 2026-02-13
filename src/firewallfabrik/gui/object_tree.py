@@ -663,9 +663,39 @@ _NO_COPY_TYPES = frozenset(
 _NO_DELETE_TYPES = frozenset(
     {
         'AttachedNetworks',
-        'Library',
     }
 )
+
+# System folder names that match fwbuilder's ``deleteMenuState`` map
+# (FWBTree.cpp:344-364).  These structural groups cannot be deleted.
+_SYSTEM_ROOT_FOLDERS = frozenset(
+    {'Clusters', 'Firewalls', 'Objects', 'Services', 'Time'}
+)
+_SYSTEM_SUB_FOLDERS = {
+    'Objects': frozenset(
+        {
+            'Address Ranges',
+            'Address Tables',
+            'Addresses',
+            'DNS Names',
+            'Groups',
+            'Hosts',
+            'Networks',
+        }
+    ),
+    'Services': frozenset(
+        {
+            'Custom',
+            'Groups',
+            'ICMP',
+            'IP',
+            'TCP',
+            'TagServices',
+            'UDP',
+            'Users',
+        }
+    ),
+}
 
 # Service object types used to detect group type for "Group" action.
 _SERVICE_OBJ_TYPES = frozenset(
@@ -1626,17 +1656,13 @@ class ObjectTree(QWidget):
         # Delete — enabled for single and multi
         menu.addSeparator()
         if multi:
-            can_delete = any(
-                (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_DELETE_TYPES
-                and not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
-                for it in selection
-            )
+            can_delete = any(self._is_deletable(it) for it in selection)
             delete_action = menu.addAction('Delete')
             delete_action.setShortcut(QKeySequence.StandardKey.Delete)
             delete_action.setEnabled(can_delete)
             delete_action.triggered.connect(lambda: self._delete_selected())
         else:
-            can_delete = obj_type not in _NO_DELETE_TYPES and not effective_ro
+            can_delete = self._is_deletable(item)
             delete_action = menu.addAction('Delete')
             delete_action.setShortcut(QKeySequence.StandardKey.Delete)
             delete_action.setEnabled(can_delete)
@@ -1744,6 +1770,13 @@ class ObjectTree(QWidget):
         sf_action = menu.addAction(QIcon(_CATEGORY_ICON), 'New Subfolder')
         sf_action.setEnabled(not effective_ro)
         sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
+
+        # Delete folder
+        menu.addSeparator()
+        delete_action = menu.addAction('Delete')
+        delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+        delete_action.setEnabled(not effective_ro)
+        delete_action.triggered.connect(lambda: self._ctx_delete_folder(item))
 
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 
@@ -2240,6 +2273,10 @@ class ObjectTree(QWidget):
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not obj_type:
             return
+        if obj_type == 'Library':
+            if self._delete_library(item):
+                self.tree_changed.emit()
+            return
         model_cls = _MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
@@ -2328,6 +2365,80 @@ class ObjectTree(QWidget):
                         group_membership.c.group_id == obj_id
                     )
                 )
+                # Delete child objects and sub-groups (cascade).
+                for addr in list(obj.addresses):
+                    session.execute(
+                        rule_elements.delete().where(
+                            rule_elements.c.target_id == addr.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == addr.id
+                        )
+                    )
+                    session.delete(addr)
+                for svc in list(obj.services):
+                    session.execute(
+                        rule_elements.delete().where(
+                            rule_elements.c.target_id == svc.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == svc.id
+                        )
+                    )
+                    session.delete(svc)
+                for itv in list(obj.intervals):
+                    session.execute(
+                        rule_elements.delete().where(
+                            rule_elements.c.target_id == itv.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == itv.id
+                        )
+                    )
+                    session.delete(itv)
+                for dev in list(obj.devices):
+                    for iface in dev.interfaces:
+                        for addr in iface.addresses:
+                            session.delete(addr)
+                        session.delete(iface)
+                    for rs in dev.rule_sets:
+                        for rule in rs.rules:
+                            session.execute(
+                                rule_elements.delete().where(
+                                    rule_elements.c.rule_id == rule.id
+                                )
+                            )
+                            session.delete(rule)
+                        session.delete(rs)
+                    session.execute(
+                        rule_elements.delete().where(
+                            rule_elements.c.target_id == dev.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == dev.id
+                        )
+                    )
+                    session.delete(dev)
+                for child_grp in list(obj.child_groups):
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.group_id == child_grp.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == child_grp.id
+                        )
+                    )
+                    session.delete(child_grp)
 
             session.delete(obj)
             session.commit()
@@ -2349,10 +2460,13 @@ class ObjectTree(QWidget):
         for it in selection:
             obj_id = it.data(0, Qt.ItemDataRole.UserRole)
             obj_type = it.data(0, Qt.ItemDataRole.UserRole + 1)
-            effective_ro = it.data(0, Qt.ItemDataRole.UserRole + 5) or False
             if not obj_id or not obj_type:
                 continue
-            if obj_type in _NO_DELETE_TYPES or effective_ro:
+            if not self._is_deletable(it):
+                continue
+            if obj_type == 'Library':
+                if self._delete_library(it):
+                    any_deleted = True
                 continue
             model_cls = _MODEL_MAP.get(obj_type)
             if model_cls is None:
@@ -2369,9 +2483,200 @@ class ObjectTree(QWidget):
         if any_deleted:
             self.tree_changed.emit()
 
+    def _delete_library(self, item):
+        """Delete a library after confirmation.
+
+        Mirrors fwbuilder's library deletion: shows a warning dialog
+        explaining that all objects in the library will be removed.
+        Returns True on success.
+        """
+        if self._db_manager is None:
+            return False
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if not obj_id:
+            return False
+        lib_name = item.text(0)
+        result = QMessageBox.warning(
+            self._tree,
+            'FirewallFabrik',
+            f'When you delete a library, all objects that belong to it '
+            f'disappear from the tree and all groups and rules that '
+            f'reference them.\n\n'
+            f'Do you still want to delete library "{lib_name}"?',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if result != QMessageBox.StandardButton.Yes:
+            return False
+
+        lib_uuid = uuid.UUID(obj_id)
+        session = self._db_manager.create_session()
+        try:
+            lib = session.get(Library, lib_uuid)
+            if lib is None:
+                return False
+
+            # Remove all rule_elements referencing objects in this library.
+            for cls in (Address, Group, Host, Interface, Interval, Service):
+                if not hasattr(cls, 'library_id'):
+                    continue
+                for obj in session.scalars(
+                    sqlalchemy.select(cls).where(cls.library_id == lib_uuid)
+                ).all():
+                    session.execute(
+                        rule_elements.delete().where(
+                            rule_elements.c.target_id == obj.id
+                        )
+                    )
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == obj.id
+                        )
+                    )
+                    if isinstance(obj, Group):
+                        session.execute(
+                            group_membership.delete().where(
+                                group_membership.c.group_id == obj.id
+                            )
+                        )
+
+            # Delete rules and rule elements for devices in this library.
+            for dev in session.scalars(
+                sqlalchemy.select(Host).where(Host.library_id == lib_uuid)
+            ).all():
+                for rs in dev.rule_sets:
+                    for rule in rs.rules:
+                        session.execute(
+                            rule_elements.delete().where(
+                                rule_elements.c.rule_id == rule.id
+                            )
+                        )
+                        session.delete(rule)
+                    session.delete(rs)
+                for iface in dev.interfaces:
+                    for addr in iface.addresses:
+                        session.delete(addr)
+                    session.delete(iface)
+
+            # Delete all objects in this library (order matters for FKs).
+            for cls in (Address, Interval, Service, Host, Group):
+                for obj in session.scalars(
+                    sqlalchemy.select(cls).where(cls.library_id == lib_uuid)
+                ).all():
+                    session.delete(obj)
+            for iface in session.scalars(
+                sqlalchemy.select(Interface).where(Interface.library_id == lib_uuid)
+            ).all():
+                for addr in iface.addresses:
+                    session.delete(addr)
+                session.delete(iface)
+
+            session.delete(lib)
+            session.commit()
+            self._db_manager.save_state(f'Delete Library {lib_name}')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+        return True
+
+    def _ctx_delete_folder(self, item):
+        """Delete a user-created subfolder.
+
+        Moves all child objects to the parent level (removes their
+        ``data.folder`` field) and removes the subfolder from
+        ``Library.data['subfolders']``.  Mirrors fwbuilder's
+        ``deleteUserFolder()`` behaviour.
+        """
+        if self._db_manager is None:
+            return
+        folder_name = item.text(0)
+        lib_id = self._get_item_library_id(item)
+        if lib_id is None:
+            return
+
+        session = self._db_manager.create_session()
+        try:
+            # Remove data.folder from all objects in this folder.
+            for cls in (Address, Group, Host, Interface, Interval, Service):
+                if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
+                    continue
+                for obj in (
+                    session.scalars(
+                        sqlalchemy.select(cls).where(cls.library_id == lib_id)
+                    )
+                    .unique()
+                    .all()
+                ):
+                    obj_data = obj.data or {}
+                    if obj_data.get('folder') == folder_name:
+                        new_data = {k: v for k, v in obj_data.items() if k != 'folder'}
+                        obj.data = new_data or None
+
+            # Remove from Library.data['subfolders'].
+            lib = session.get(Library, lib_id)
+            if lib is not None:
+                lib_data = dict(lib.data or {})
+                subfolders = list(lib_data.get('subfolders', []))
+                if folder_name in subfolders:
+                    subfolders.remove(folder_name)
+                    if subfolders:
+                        lib_data['subfolders'] = subfolders
+                    else:
+                        lib_data.pop('subfolders', None)
+                    lib.data = lib_data
+
+            session.commit()
+            self._db_manager.save_state(f'Delete folder "{folder_name}"')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        self.tree_changed.emit()
+
     def _shortcut_delete(self):
         """Handle Delete key — delete all selected objects."""
         self._delete_selected()
+
+    @staticmethod
+    def _is_system_group(item):
+        """Return True if *item* represents a system-structure group.
+
+        System groups (Clusters, Firewalls, Objects, Objects/Addresses,
+        Services/TCP, Time, etc.) mirror fwbuilder's ``deleteMenuState``
+        map and must not be deleted.
+        """
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        if obj_type not in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+            return False
+        name = item.text(0)
+        parent = item.parent()
+        if parent is None:
+            return False
+        parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        # Root-level system folder directly under Library.
+        if parent_type == 'Library' and name in _SYSTEM_ROOT_FOLDERS:
+            return True
+        # Sub-folder under a root-level system folder.
+        parent_name = parent.text(0)
+        if parent_type in ('ObjectGroup', 'ServiceGroup'):
+            allowed = _SYSTEM_SUB_FOLDERS.get(parent_name)
+            if allowed and name in allowed:
+                return True
+        return False
+
+    def _is_deletable(self, item):
+        """Return True if *item* can be deleted."""
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
+        if effective_ro:
+            return False
+        if obj_type in _NO_DELETE_TYPES:
+            return False
+        return not self._is_system_group(item)
 
     # ------------------------------------------------------------------
     # New [Type]
@@ -2386,6 +2691,7 @@ class ObjectTree(QWidget):
         - Interface → dynamic list (addresses, subinterface, etc.).
         - Rule sets (Policy/NAT/Routing) → no "New" items.
         - Library → no "New" items (only subfolder, handled elsewhere).
+        - Group types → folder-based items matching the group name.
         - Objects in category folders → folder-based items.
         - Objects under devices/interfaces → no "New" items.
         """
@@ -2403,9 +2709,19 @@ class ObjectTree(QWidget):
         if obj_type in ('Library', *_RULE_SET_TYPES):
             return []
 
+        # Group types: offer new items based on the group's name
+        # (e.g. right-clicking the "Networks" ObjectGroup offers
+        # "New Network" and "New Network IPv6").
+        if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+            name = item.text(0)
+            types = _NEW_TYPES_FOR_FOLDER.get(name, [])
+            if types:
+                return list(types)
+
         # All other objects: only get folder-based items if they live
-        # directly under a category folder.  Objects under devices or
-        # interfaces get nothing (matches fwbuilder's strict path check).
+        # directly under a category folder or group.  Objects under
+        # devices or interfaces get nothing (matches fwbuilder's strict
+        # path check).
         folder = self._find_folder_context(item)
         if folder is not None:
             return list(_NEW_TYPES_FOR_FOLDER.get(folder, []))
@@ -2414,7 +2730,7 @@ class ObjectTree(QWidget):
 
     @staticmethod
     def _find_folder_context(item):
-        """Walk up the tree to find the enclosing category folder.
+        """Walk up the tree to find the enclosing category folder or group.
 
         Returns the folder name string, or ``None`` if the item lives
         under a device or interface (where no folder-based "New" items
@@ -2424,7 +2740,10 @@ class ObjectTree(QWidget):
         while current is not None:
             current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
             if current_type is None:
-                # Category folder (no obj_id/obj_type) — this is what we want.
+                # Virtual category folder (no obj_id/obj_type).
+                return current.text(0)
+            if current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+                # Real group acting as a folder container.
                 return current.text(0)
             if current_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
                 # Under a device or interface — no folder-based items.
