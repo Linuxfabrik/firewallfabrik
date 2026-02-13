@@ -1754,6 +1754,7 @@ class FWWindow(QMainWindow):
         sub = QMdiSubWindow()
         sub.setWidget(panel)
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
+        sub.setWindowIcon(self.windowIcon())
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         sub._fwf_rule_set_id = rs_uuid
         sub._fwf_device_id = None  # set below if available
@@ -2353,6 +2354,7 @@ class FWWindow(QMainWindow):
         sub = QMdiSubWindow()
         sub.setWidget(panel)
         sub.setWindowTitle(f'{fw_name} / {rs_name}')
+        sub.setWindowIcon(self.windowIcon())
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.m_space.addSubWindow(sub)
         sub.showMaximized()
