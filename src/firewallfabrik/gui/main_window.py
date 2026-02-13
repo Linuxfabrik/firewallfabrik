@@ -401,7 +401,6 @@ class FWWindow(QMainWindow):
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
         self.setWindowIcon(QIcon(':/Icons/FirewallFabrik/scalable'))
-        self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.newObjectAction.setEnabled(False)
 
         # Attach a menu to the "New Object" action so the toolbar button
@@ -1863,69 +1862,91 @@ class FWWindow(QMainWindow):
         obj_path = _build_editor_path(obj) if obj else None
 
         # Nothing to persist (e.g. checkbox toggled back to the same
-        # value) — skip the commit and undo-stack entry entirely.
-        if not (session.new or session.dirty or session.deleted):
-            return
+        # value) — skip the commit and undo-stack entry but still
+        # refresh the tree/MDI below.
+        has_changes = bool(session.new or session.dirty or session.deleted)
 
-        # Stamp the lastModified timestamp on Firewall/Cluster objects
-        # so the compile dialog knows recompilation is needed.
-        now_epoch = None
-        if isinstance(obj, Firewall):
-            now_epoch = int(datetime.now(tz=UTC).timestamp())
-            data = dict(obj.data or {})
-            data['lastModified'] = now_epoch
-            obj.data = data
+        if has_changes:
+            # Stamp the lastModified timestamp on Firewall/Cluster objects
+            # so the compile dialog knows recompilation is needed.
+            now_epoch = None
+            if isinstance(obj, Firewall):
+                now_epoch = int(datetime.now(tz=UTC).timestamp())
+                data = dict(obj.data or {})
+                data['lastModified'] = now_epoch
+                obj.data = data
 
-        try:
-            session.commit()
-        except sqlalchemy.exc.IntegrityError as e:
-            session.rollback()
-            if 'UNIQUE constraint failed' in str(e):
-                if obj_path:
-                    detail = obj_path.replace(' / ', ' > ')
-                    msg = self.tr(f'Duplicate names are not allowed: {detail}')
+            try:
+                session.commit()
+            except sqlalchemy.exc.IntegrityError as e:
+                session.rollback()
+                if 'UNIQUE constraint failed' in str(e):
+                    if obj_path:
+                        detail = obj_path.replace(' / ', ' > ')
+                        msg = self.tr(f'Duplicate names are not allowed: {detail}')
+                    else:
+                        msg = self.tr('Duplicate names are not allowed.')
+                    QMessageBox.critical(self, 'FirewallFabrik', msg)
                 else:
-                    msg = self.tr('Duplicate names are not allowed.')
-                QMessageBox.critical(self, 'FirewallFabrik', msg)
-            else:
-                logger.exception('Commit failed')
-            return
+                    logger.exception('Commit failed')
+                return
 
-        # Build a human-readable undo description.
-        obj = getattr(editor, '_obj', None)
-        if obj is not None:
-            prefix = _device_prefix(obj)
-            obj_type = getattr(obj, 'type', type(obj).__name__)
-            old_name = getattr(self, '_editor_obj_name', '')
-            new_name = obj.name
-            if old_name and new_name != old_name:
-                desc = _undo_desc(
-                    'Rename',
-                    obj_type,
-                    new_name,
-                    old_name=old_name,
-                    prefix=prefix,
-                )
-            else:
-                desc = _undo_desc('Edit', obj_type, new_name, prefix=prefix)
-            self._editor_obj_name = new_name
-        else:
-            desc = 'Editor change'
-        self._db_manager.save_state(desc)
-
-        # Update the editor panel's "Modified" label for firewalls.
-        if now_epoch is not None:
-            label = getattr(editor, 'last_modified', None)
-            if label is not None:
-                label.setText(
-                    datetime.fromtimestamp(now_epoch, tz=UTC).strftime(
-                        '%Y-%m-%d %H:%M:%S'
+            # Build a human-readable undo description.
+            obj = getattr(editor, '_obj', None)
+            if obj is not None:
+                prefix = _device_prefix(obj)
+                obj_type = getattr(obj, 'type', type(obj).__name__)
+                old_name = getattr(self, '_editor_obj_name', '')
+                new_name = obj.name
+                if old_name and new_name != old_name:
+                    desc = _undo_desc(
+                        'Rename',
+                        obj_type,
+                        new_name,
+                        old_name=old_name,
+                        prefix=prefix,
                     )
-                )
+                else:
+                    desc = _undo_desc('Edit', obj_type, new_name, prefix=prefix)
+                self._editor_obj_name = new_name
+            else:
+                desc = 'Editor change'
+            self._db_manager.save_state(desc)
 
-        # Keep the tree in sync with the editor.
+            # Update the editor panel's "Modified" label for firewalls.
+            if now_epoch is not None:
+                label = getattr(editor, 'last_modified', None)
+                if label is not None:
+                    label.setText(
+                        datetime.fromtimestamp(now_epoch, tz=UTC).strftime(
+                            '%Y-%m-%d %H:%M:%S'
+                        )
+                    )
+
+        # Always keep the tree in sync with the editor — even when
+        # SQLAlchemy does not flag the session as dirty (JSON column
+        # change detection can miss dict value changes).
         if obj is not None:
             self._object_tree.update_item(obj)
+
+        # Keep MDI sub-window titles in sync (e.g. after rename or
+        # toggling inactive).
+        if isinstance(obj, Firewall):
+            fw_id = obj.id
+            fw_name = obj.name
+            for sub in self.m_space.subWindowList():
+                if getattr(sub, '_fwf_device_id', None) != fw_id:
+                    continue
+                rs_uuid = getattr(sub, '_fwf_rule_set_id', None)
+                if rs_uuid is None:
+                    continue
+                try:
+                    with self._db_manager.session() as sess:
+                        rs = sess.get(RuleSet, rs_uuid)
+                        rs_name = rs.name if rs else '?'
+                except Exception:
+                    rs_name = '?'
+                sub.setWindowTitle(f'{fw_name} / {rs_name}')
 
     def _on_tree_changed(self):
         """Refresh the tree and editor after a CRUD operation (e.g. duplicate, delete)."""

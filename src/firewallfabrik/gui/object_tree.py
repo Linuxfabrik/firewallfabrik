@@ -1278,6 +1278,10 @@ class ObjectTree(QWidget):
 
             item.setText(0, _obj_display_name(obj))
 
+            font = item.font(0)
+            font.setStrikeOut(_is_inactive(obj))
+            item.setFont(0, font)
+
             attrs = _obj_brief_attrs(obj)
             item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs)
             item.setText(1, attrs)
