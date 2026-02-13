@@ -431,6 +431,14 @@ class FWWindow(QMainWindow):
         )
         self.undoDockWidget.visibilityChanged.connect(self._on_undo_visibility_changed)
 
+        # Hide panels until a file is loaded — block signals so the
+        # visibility-changed slots don't overwrite saved QSettings.
+        self.editorDockWidget.blockSignals(True)
+        self.undoDockWidget.blockSignals(True)
+        self._apply_no_file_state()
+        self.editorDockWidget.blockSignals(False)
+        self.undoDockWidget.blockSignals(False)
+
     def showEvent(self, event):
         super().showEvent(event)
         if self._start_maximized:
@@ -450,9 +458,12 @@ class FWWindow(QMainWindow):
         settings = QSettings()
         # Capture dock visibility *before* saveState() / destruction can
         # change it.  These explicit keys are what _restore_view_state()
-        # reads after restoreState().
-        settings.setValue('View/EditorPanel', self.editorDockWidget.isVisible())
-        settings.setValue('View/UndoStack', self.undoDockWidget.isVisible())
+        # reads after restoreState().  Only save when a file was loaded;
+        # otherwise the hidden-by-default state would overwrite the
+        # user's saved preferences.
+        if self._current_file is not None:
+            settings.setValue('View/EditorPanel', self.editorDockWidget.isVisible())
+            settings.setValue('View/UndoStack', self.undoDockWidget.isVisible())
         # Save normal (non-maximized) geometry so restore works both ways.
         if not self.isMaximized():
             settings.setValue('Window/geometry', self.saveGeometry())
@@ -518,6 +529,25 @@ class FWWindow(QMainWindow):
         self.editorDockWidget.setVisible(editor_visible)
         self.actionEditor_panel.setChecked(editor_visible)
 
+        undo_visible = settings.value('View/UndoStack', False, type=bool)
+        self.undoDockWidget.setVisible(undo_visible)
+        self.actionUndo_view.setChecked(undo_visible)
+
+    def _apply_no_file_state(self):
+        """Hide panels when no database file is loaded."""
+        self._object_tree.setVisible(False)
+        self.editorDockWidget.setVisible(False)
+        self.undoDockWidget.setVisible(False)
+
+    def _apply_file_loaded_state(self):
+        """Restore panel visibility from QSettings after loading a file."""
+        settings = QSettings()
+        tree_visible = settings.value('View/ObjectTree', True, type=bool)
+        self._object_tree.setVisible(tree_visible)
+        self.actionObject_Tree.setChecked(tree_visible)
+        editor_visible = settings.value('View/EditorPanel', True, type=bool)
+        self.editorDockWidget.setVisible(editor_visible)
+        self.actionEditor_panel.setChecked(editor_visible)
         undo_visible = settings.value('View/UndoStack', False, type=bool)
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
@@ -889,6 +919,7 @@ class FWWindow(QMainWindow):
         self.newObjectAction.setEnabled(
             bool(self._object_tree._get_writable_libraries())
         )
+        self._apply_file_loaded_state()
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):
