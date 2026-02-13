@@ -67,8 +67,8 @@ class NewDeviceDialog(QDialog):
                 platforms.items(), key=lambda t: t[1].casefold()
             ):
                 self.platform.addItem(display, key)
-            # Default to iptables if available.
-            idx = self.platform.findData('iptables')
+            # Default to nftables if enabled, otherwise first entry.
+            idx = self.platform.findData('nftables')
             if idx >= 0:
                 self.platform.setCurrentIndex(idx)
 
