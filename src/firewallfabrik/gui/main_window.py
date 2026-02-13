@@ -29,6 +29,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QAction,
+    QCursor,
     QDesktopServices,
     QGuiApplication,
     QIcon,
@@ -36,10 +37,12 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFileDialog,
     QLabel,
     QMainWindow,
     QMdiSubWindow,
+    QMenu,
     QMessageBox,
     QSplitter,
     QVBoxLayout,
@@ -63,7 +66,7 @@ from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
-from firewallfabrik.gui.object_tree import ObjectTree
+from firewallfabrik.gui.object_tree import ICON_MAP, ObjectTree
 from firewallfabrik.gui.policy_model import (
     PolicyTreeModel,
     _action_label,
@@ -146,6 +149,43 @@ _ANY_ICON_TYPE = {
     'tsrv': 'IPService',
     'when': 'Interval',
 }
+
+# Menu entries for the "New Object" popup (toolbar / Object menu / Ctrl+N).
+# Order matches fwbuilder's buildNewObjectMenu() exactly:
+#   1. Library
+#   2. getObjectTypes()  — devices first, then addresses, then groups
+#   3. getServiceTypes() — individual services, then ServiceGroup last
+#   4. Interval
+_NEW_OBJECT_MENU_ENTRIES = (
+    ('Library', 'New Library'),
+    None,  # separator
+    # -- getObjectTypes() --
+    ('Firewall', 'New Firewall'),
+    ('Cluster', 'New Cluster'),
+    ('Host', 'New Host'),
+    ('Network', 'New Network'),
+    ('NetworkIPv6', 'New Network IPv6'),
+    ('IPv4', 'New Address'),
+    ('IPv6', 'New Address IPv6'),
+    ('DNSName', 'New DNS Name'),
+    ('AddressTable', 'New Address Table'),
+    ('AddressRange', 'New Address Range'),
+    ('ObjectGroup', 'New Object Group'),
+    ('DynamicGroup', 'New Dynamic Group'),
+    None,  # separator
+    # -- getServiceTypes() --
+    ('CustomService', 'New Custom Service'),
+    ('IPService', 'New IP Service'),
+    ('ICMPService', 'New ICMP Service'),
+    ('ICMP6Service', 'New ICMP6 Service'),
+    ('TCPService', 'New TCP Service'),
+    ('UDPService', 'New UDP Service'),
+    ('TagService', 'New TagService'),
+    ('UserService', 'New User Service'),
+    ('ServiceGroup', 'New Service Group'),
+    None,  # separator
+    ('Interval', 'New Time Interval'),
+)
 
 
 def _device_prefix(obj):
@@ -258,6 +298,14 @@ class FWWindow(QMainWindow):
         self.setWindowTitle(f'FirewallFabrik {__version__}')
         self.setWindowIcon(QIcon(':/Icons/FirewallFabrik/scalable'))
         self.toolBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.newObjectAction.setEnabled(False)
+
+        # Attach a menu to the "New Object" action so the toolbar button
+        # shows a dropdown arrow (matching fwbuilder).  The menu is
+        # populated dynamically via aboutToShow.
+        self._new_object_menu = QMenu(self)
+        self._new_object_menu.aboutToShow.connect(self._populate_new_object_menu)
+        self.newObjectAction.setMenu(self._new_object_menu)
 
         # Object tree + splitter layout
         self._object_tree = ObjectTree()
@@ -657,6 +705,72 @@ class FWWindow(QMainWindow):
         dlg = AboutDialog(self)
         dlg.exec()
 
+    @Slot()
+    def newObject(self):
+        """Show the "New Object" popup at the cursor position.
+
+        Called via keyboard shortcut (Ctrl+N) or the Object menu entry.
+        The toolbar button uses the attached QMenu directly (dropdown
+        arrow), which also calls :meth:`_populate_new_object_menu`.
+        """
+        self._new_object_menu.popup(QCursor.pos())
+
+    def _get_target_library_id(self):
+        """Return the writable library id for new-object creation, or None."""
+        if self._db_manager is None:
+            return None
+        libs = self._object_tree._get_writable_libraries()
+        if not libs:
+            return None
+        writable_ids = {lid for lid, _name in libs}
+        lib_id = None
+        item = self._object_tree._tree.currentItem()
+        if item is not None:
+            item_lib_id = ObjectTree._get_item_library_id(item)
+            if item_lib_id in writable_ids:
+                lib_id = item_lib_id
+        if lib_id is None:
+            lib_id = libs[0][0]
+        return lib_id
+
+    def _populate_new_object_menu(self):
+        """Rebuild the "New Object" dropdown menu entries."""
+        self._new_object_menu.clear()
+        lib_id = self._get_target_library_id()
+        if lib_id is None:
+            return
+        for entry in _NEW_OBJECT_MENU_ENTRIES:
+            if entry is None:
+                self._new_object_menu.addSeparator()
+                continue
+            type_name, label = entry
+            icon_path = ICON_MAP.get(type_name, '')
+            action = self._new_object_menu.addAction(QIcon(icon_path), label)
+            action.setData(type_name)
+            action.triggered.connect(
+                lambda checked=False, t=type_name, lid=lib_id: (
+                    self._on_new_object_action(t, lid)
+                )
+            )
+
+    def _on_new_object_action(self, type_name, lib_id):
+        """Handle a selection from the "New Object" menu."""
+        if type_name in ('Cluster', 'Firewall', 'Host'):
+            from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
+
+            dlg = NewDeviceDialog(type_name, parent=self)
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+            self._object_tree.create_new_object_in_library(
+                type_name,
+                lib_id,
+                extra_data=extra_data,
+                name=name,
+            )
+        else:
+            self._object_tree.create_new_object_in_library(type_name, lib_id)
+
     # ------------------------------------------------------------------
     # File loading & recent-files menu
     # ------------------------------------------------------------------
@@ -742,6 +856,9 @@ class FWWindow(QMainWindow):
         self._where_used_panel.set_db_manager(self._db_manager)
         self._where_used_panel.reset()
 
+        self.newObjectAction.setEnabled(
+            bool(self._object_tree._get_writable_libraries())
+        )
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):

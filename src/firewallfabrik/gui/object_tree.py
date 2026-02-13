@@ -22,6 +22,7 @@ from PySide6.QtCore import QMimeData, QSettings, Qt, QTimer, Signal
 from PySide6.QtGui import QDrag, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QDialog,
     QHeaderView,
     QInputDialog,
     QLineEdit,
@@ -534,18 +535,20 @@ _NO_DELETE_TYPES = frozenset(
     }
 )
 
-# New object types offered for device context (fwbuilder order).
+# New object types offered for device context (sorted alphabetically).
 _NEW_TYPES_FOR_PARENT = {
     'Cluster': [
         ('Interface', 'Interface'),
-        ('Policy', 'Policy Rule Set'),
         ('NAT', 'NAT Rule Set'),
+        ('Policy', 'Policy Rule Set'),
+        ('Routing', 'Routing Rule Set'),
         ('StateSyncClusterGroup', 'State Sync Group'),
     ],
     'Firewall': [
         ('Interface', 'Interface'),
-        ('Policy', 'Policy Rule Set'),
         ('NAT', 'NAT Rule Set'),
+        ('Policy', 'Policy Rule Set'),
+        ('Routing', 'Routing Rule Set'),
     ],
     'Host': [
         ('Interface', 'Interface'),
@@ -2064,6 +2067,8 @@ class ObjectTree(QWidget):
             return self._get_interface_new_types(item)
 
         # Rule sets and Library: no "New" items.
+        # fwbuilder's Library context menu has no "New <type>" entries —
+        # new objects are created via the toolbar / Object menu instead.
         if obj_type in ('Library', *_RULE_SET_TYPES):
             return []
 
@@ -2153,6 +2158,17 @@ class ObjectTree(QWidget):
         if model_cls is None:
             return
 
+        # Firewall/Cluster/Host: show creation dialog first.
+        extra_data = None
+        name = None
+        if type_name in ('Cluster', 'Firewall', 'Host'):
+            from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
+
+            dlg = NewDeviceDialog(type_name, parent=self._tree.window())
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+
         # Determine where to place the new object.
         lib_id = self._get_item_library_id(item)
         if lib_id is None:
@@ -2221,8 +2237,10 @@ class ObjectTree(QWidget):
             type_name,
             lib_id,
             device_id=device_id,
+            extra_data=extra_data,
             folder=folder,
             interface_id=interface_id,
+            name=name,
             parent_interface_id=parent_interface_id,
             prefix=prefix,
         )
@@ -2238,8 +2256,10 @@ class ObjectTree(QWidget):
         lib_id,
         *,
         device_id=None,
+        extra_data=None,
         folder=None,
         interface_id=None,
+        name=None,
         parent_interface_id=None,
         prefix='',
     ):
@@ -2252,8 +2272,17 @@ class ObjectTree(QWidget):
             new_id = uuid.uuid4()
             kwargs = {'id': new_id, 'type': type_name}
 
-            # Set parent references based on context.
-            if interface_id is not None and hasattr(model_cls, 'interface_id'):
+            # Library objects use database_id instead of library_id.
+            if model_cls is Library:
+                existing_lib = session.scalars(
+                    sqlalchemy.select(Library).limit(1),
+                ).first()
+                if existing_lib is not None:
+                    kwargs['database_id'] = existing_lib.database_id
+                else:
+                    session.close()
+                    return None
+            elif interface_id is not None and hasattr(model_cls, 'interface_id'):
                 kwargs['interface_id'] = interface_id
             elif parent_interface_id is not None and hasattr(
                 model_cls, 'parent_interface_id'
@@ -2269,12 +2298,17 @@ class ObjectTree(QWidget):
                 if hasattr(model_cls, 'library_id'):
                     kwargs['library_id'] = lib_id
 
-            # Set data.folder for proper tree placement.
-            if folder and hasattr(model_cls, 'data'):
-                kwargs['data'] = {'folder': folder}
+            # Build data dict: merge folder and extra_data.
+            data = {}
+            if folder:
+                data['folder'] = folder
+            if extra_data:
+                data.update(extra_data)
+            if data and hasattr(model_cls, 'data'):
+                kwargs['data'] = data
 
             new_obj = model_cls(**kwargs)
-            new_obj.name = f'New {type_name}'
+            new_obj.name = name or f'New {type_name}'
 
             # Make name unique.
             new_obj.name = self._make_name_unique(session, new_obj)
@@ -2289,6 +2323,44 @@ class ObjectTree(QWidget):
             session.close()
 
         return new_id
+
+    def create_new_object_in_library(
+        self, type_name, lib_id, *, extra_data=None, name=None
+    ):
+        """Create a new object of *type_name* in library *lib_id*.
+
+        This is the toolbar/menu variant of ``_ctx_new_object()`` — it
+        does not require a tree selection.  The object is placed in its
+        standard folder as defined by :data:`_NEW_TYPES_FOR_FOLDER`.
+
+        Optional *name* overrides the default ``"New {type}"``.
+        Optional *extra_data* is merged into the object's ``data`` dict
+        (e.g. platform / host_OS for Firewall/Cluster).
+        """
+        model_cls = _MODEL_MAP.get(type_name)
+        if model_cls is None:
+            return
+
+        # Library creation has no folder.
+        folder = None
+        if model_cls is not Library:
+            for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
+                if any(tn == type_name for tn, _dn in type_list):
+                    folder = f
+                    break
+
+        new_id = self._create_new_object(
+            model_cls,
+            type_name,
+            lib_id,
+            extra_data=extra_data,
+            folder=folder,
+            name=name,
+        )
+        if new_id is not None:
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+            self.object_activated.emit(str(new_id), type_name)
 
     # ------------------------------------------------------------------
     # New Subfolder
@@ -2423,10 +2495,11 @@ class ObjectTree(QWidget):
 
     @staticmethod
     def _make_name_unique(session, obj):
-        """Return a unique name like 'name-1', 'name-2', etc.
+        """Return a unique name, appending '-1', '-2', ... only if needed.
 
-        Queries the appropriate table for existing names to find the
-        next available suffix.
+        Queries the appropriate table for existing names.  If the base
+        name is already free it is returned as-is (matching fwbuilder's
+        ``makeNameUnique()``).
         """
         base_name = obj.name
         model_cls = type(obj)
@@ -2438,6 +2511,9 @@ class ObjectTree(QWidget):
         if hasattr(obj, 'library_id') and obj.library_id is not None:
             stmt = stmt.where(model_cls.library_id == obj.library_id)
         existing = set(session.scalars(stmt).all())
+
+        if base_name not in existing:
+            return base_name
 
         suffix = 1
         while True:
