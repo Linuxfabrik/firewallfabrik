@@ -26,7 +26,7 @@ _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui
 # The compiler reads options by the canonical key (right-hand side).
 _CHECKBOX_MAP: dict[str, str] = {
     'assumeFwIsPartOfAny': 'firewall_is_part_of_any_and_networks',
-    'acceptSessions': 'drop_new_tcp_with_no_syn',  # INVERTED semantics
+    'acceptSessions': 'accept_new_tcp_with_no_syn',
     'acceptESTBeforeFirst': 'accept_established',
     'dropInvalid': 'drop_invalid',
     'logInvalid': 'log_invalid',
@@ -148,15 +148,10 @@ class IptablesSettingsDialog(QDialog):
                 val = str(opts[key]).lower() == 'true'
             elif widget_name in opts:
                 val = str(opts[widget_name]).lower() == 'true'
-            elif key == 'drop_new_tcp_with_no_syn':
-                # Third fallback: C++ XML key with inverted semantics
-                xml_val = opts.get('accept_new_tcp_with_no_syn', '')
-                val = str(xml_val).lower() != 'true'
             else:
                 val = False
             # acceptSessions checkbox has inverted semantics:
-            # checked = accept sessions = do NOT drop new TCP without SYN.
-            if key == 'drop_new_tcp_with_no_syn':
+            if key == 'accept_new_tcp_with_no_syn':
                 widget.setChecked(not val)
             else:
                 widget.setChecked(val)
@@ -238,16 +233,13 @@ class IptablesSettingsDialog(QDialog):
             # Store as Python bool (not string) so that raw
             # ``options.get(key, False)`` in the compiler works correctly.
             # acceptSessions has inverted semantics.
-            if key == 'drop_new_tcp_with_no_syn':
+            if key == 'accept_new_tcp_with_no_syn':
                 opts[key] = not widget.isChecked()
             else:
                 opts[key] = widget.isChecked()
             # Clean up stale widget-name key.
             if widget_name != key:
                 opts.pop(widget_name, None)
-                # Also remove the C++ XML key variant.
-                if key == 'drop_new_tcp_with_no_syn':
-                    opts.pop('accept_new_tcp_with_no_syn', None)
 
         # Line edits — always write under canonical key.
         for widget_name, key in _LINE_EDIT_MAP.items():
