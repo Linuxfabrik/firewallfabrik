@@ -109,6 +109,26 @@ _PROLOG_PLACES = [
     'after_flush',
 ]
 
+# Widgets for options that are not supported by the iptables compiler.
+# These are disabled in the UI to prevent users from setting options
+# that would be silently ignored.
+_UNSUPPORTED_WIDGETS = (
+    # Compiler tab — not implemented / hardcoded off
+    'acceptSessions',
+    'useKernelTz',
+    'mgmt_ssh',
+    'mgmt_addr',
+    'add_mgmt_ssh_rule_when_stoped',
+    # Logging tab — warns only
+    'logTCPseq',
+    'logTCPopt',
+    'logIPopt',
+    'logNumsyslog',
+    'logAll',
+    # Script tab — warns only
+    'configure_bridge_interfaces',
+)
+
 
 class IptablesSettingsDialog(QDialog):
     """Modal dialog for iptables firewall settings."""
@@ -133,7 +153,15 @@ class IptablesSettingsDialog(QDialog):
         self.logLimitSuffix.addItems(_LOG_LIMIT_SUFFIXES)
 
         self._populate()
+        self._disable_unsupported()
         self.accepted.connect(self._save_settings)
+
+    def _disable_unsupported(self):
+        """Disable widgets for options not supported by the iptables compiler."""
+        for name in _UNSUPPORTED_WIDGETS:
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(False)
 
     def _populate(self):
         opts = self._fw.options or {}

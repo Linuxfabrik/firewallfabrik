@@ -109,6 +109,36 @@ _PROLOG_PLACES = [
     'after_flush',
 ]
 
+# Widgets for options that are not supported by the nftables compiler.
+# These are disabled in the UI to prevent users from setting options
+# that would be silently ignored.
+_UNSUPPORTED_WIDGETS = (
+    # Compiler tab — not implemented / N/A for nftables
+    'acceptSessions',
+    'clampMSStoMTU',
+    'bridge',
+    'ipv6NeighborDiscovery',
+    'useModuleSet',
+    'useKernelTz',
+    'add_mgmt_ssh_rule_when_stoped',
+    # Logging tab — warns only / not implemented
+    'logTCPseq',
+    'logTCPopt',
+    'logIPopt',
+    'logNumsyslog',
+    'logAll',
+    'logLimitVal',
+    'logLimitSuffix',
+    'textLabel6',  # "Logging limit:" label
+    # Script tab — not implemented / N/A for nftables
+    'loadModules',
+    'configure_vlan_interfaces',
+    'configure_bridge_interfaces',
+    'configure_bonding_interfaces',
+    'addVirtualsforNAT',
+    'iptablesRestoreActivation',
+)
+
 
 class NftablesSettingsDialog(QDialog):
     """Modal dialog for nftables firewall settings."""
@@ -133,7 +163,15 @@ class NftablesSettingsDialog(QDialog):
         self.logLimitSuffix.addItems(_LOG_LIMIT_SUFFIXES)
 
         self._populate()
+        self._disable_unsupported()
         self.accepted.connect(self._save_settings)
+
+    def _disable_unsupported(self):
+        """Disable widgets for options not supported by the nftables compiler."""
+        for name in _UNSUPPORTED_WIDGETS:
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(False)
 
     def _populate(self):
         opts = self._fw.options or {}
