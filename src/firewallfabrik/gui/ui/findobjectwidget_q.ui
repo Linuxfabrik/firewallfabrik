@@ -282,7 +282,7 @@
    <sender>findAttr</sender>
    <signal>activated(int)</signal>
    <receiver>findObjectWidget_q</receiver>
-   <slot>findAttrChanged(QString)</slot>
+   <slot>findAttrChanged(int)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>
@@ -314,7 +314,7 @@
    <sender>attribute</sender>
    <signal>activated(int)</signal>
    <receiver>findObjectWidget_q</receiver>
-   <slot>findAttrChanged(QString)</slot>
+   <slot>findAttrChanged(int)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>
@@ -473,6 +473,7 @@
  </connections>
  <slots>
   <slot>find()</slot>
+  <slot>findAttrChanged(int)</slot>
   <slot>findAttrChanged(QString)</slot>
   <slot>reset()</slot>
   <slot>scopeChanged()</slot>
