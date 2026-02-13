@@ -53,6 +53,7 @@ from PySide6.QtWidgets import (
 
 from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager, duplicate_object_name
+from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
@@ -296,6 +297,91 @@ _MODEL_MAP = {
 }
 
 
+def _build_library_path_map(session, library):
+    """Build a ``{tree_path: UUID}`` map for every object in *library*.
+
+    The paths use the same format as the YAML reader's ``ref_index`` so
+    that old UUIDs can be matched to new ones by path after a re-import.
+    """
+    lib_path = f'Library:{escape_obj_name(library.name)}'
+    path_map = {}
+
+    # 1. Groups (hierarchical via parent_group_id).
+    all_groups = (
+        session.scalars(
+            sqlalchemy.select(Group).where(Group.library_id == library.id),
+        )
+        .unique()
+        .all()
+    )
+    group_by_id = {g.id: g for g in all_groups}
+    group_paths = {}
+
+    def _group_path(g):
+        if g.id in group_paths:
+            return group_paths[g.id]
+        if g.parent_group_id is None or g.parent_group_id not in group_by_id:
+            p = f'{lib_path}/{g.type}:{escape_obj_name(g.name)}'
+        else:
+            parent_p = _group_path(group_by_id[g.parent_group_id])
+            p = f'{parent_p}/{g.type}:{escape_obj_name(g.name)}'
+        group_paths[g.id] = p
+        path_map[p] = g.id
+        return p
+
+    for g in all_groups:
+        _group_path(g)
+
+    # 2. Services.
+    for svc in session.scalars(
+        sqlalchemy.select(Service).where(Service.library_id == library.id),
+    ).all():
+        parent = group_paths.get(svc.group_id, lib_path)
+        path_map[f'{parent}/{svc.type}:{escape_obj_name(svc.name)}'] = svc.id
+
+    # 3. Addresses (library-owned; interface-owned handled under devices).
+    for addr in session.scalars(
+        sqlalchemy.select(Address).where(Address.library_id == library.id),
+    ).all():
+        parent = group_paths.get(addr.group_id, lib_path)
+        path_map[f'{parent}/{addr.type}:{escape_obj_name(addr.name)}'] = addr.id
+
+    # 4. Intervals.
+    for itv in session.scalars(
+        sqlalchemy.select(Interval).where(Interval.library_id == library.id),
+    ).all():
+        parent = group_paths.get(itv.group_id, lib_path)
+        path_map[f'{parent}/Interval:{escape_obj_name(itv.name)}'] = itv.id
+
+    # 5. Devices + interfaces + interface addresses.
+    for dev in (
+        session.scalars(
+            sqlalchemy.select(Host).where(Host.library_id == library.id),
+        )
+        .unique()
+        .all()
+    ):
+        parent = group_paths.get(dev.group_id, lib_path)
+        dev_path = f'{parent}/{dev.type}:{escape_obj_name(dev.name)}'
+        path_map[dev_path] = dev.id
+
+        def _walk_ifaces(ifaces, parent_iface_path):
+            for iface in ifaces:
+                iface_path = (
+                    f'{parent_iface_path}/Interface:{escape_obj_name(iface.name)}'
+                )
+                path_map[iface_path] = iface.id
+                for addr in iface.addresses:
+                    path_map[
+                        f'{iface_path}/{addr.type}:{escape_obj_name(addr.name)}'
+                    ] = addr.id
+                _walk_ifaces(iface.sub_interfaces, iface_path)
+
+        _walk_ifaces(dev.interfaces, dev_path)
+
+    return path_map
+
+
 class FWWindow(QMainWindow):
     """Main application window, equivalent to FWWindow in the C++ codebase."""
 
@@ -472,6 +558,7 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
+            self._save_last_object_state()
         self._closing = True
         settings = QSettings()
         # Capture dock visibility *before* saveState() / destruction can
@@ -570,6 +657,74 @@ class FWWindow(QMainWindow):
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
 
+    def _save_last_object_state(self):
+        """Save the last selected tree object and active MDI ruleset to QSettings."""
+        display = getattr(self, '_display_file', None)
+        if not display:
+            return
+        file_key = str(display)
+        settings = QSettings()
+
+        # Active MDI ruleset.
+        active_sub = self.m_space.activeSubWindow()
+        rs_id = ''
+        if active_sub is not None:
+            rs_uuid = getattr(active_sub, '_fwf_rule_set_id', None)
+            if rs_uuid is not None:
+                rs_id = str(rs_uuid)
+        settings.setValue(f'LastObject/{file_key}/ruleset', rs_id)
+
+        # Selected tree object.
+        current = self._object_tree._tree.currentItem()
+        obj_id = ''
+        obj_type = ''
+        if current is not None:
+            obj_id = current.data(0, Qt.ItemDataRole.UserRole) or ''
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        settings.setValue(f'LastObject/{file_key}/tree_id', obj_id)
+        settings.setValue(f'LastObject/{file_key}/tree_type', obj_type)
+
+    def _restore_last_object_state(self, file_key):
+        """Restore the last selected tree object and active MDI ruleset from QSettings."""
+        settings = QSettings()
+
+        # Restore MDI ruleset first (so the tab is visible when tree
+        # selection triggers the editor).
+        rs_id_str = settings.value(f'LastObject/{file_key}/ruleset', '', type=str)
+        if rs_id_str:
+            try:
+                rs_uuid = uuid.UUID(rs_id_str)
+                with self._db_manager.session() as session:
+                    rs = session.get(RuleSet, rs_uuid)
+                    if rs is not None:
+                        device = rs.device
+                        fw_name = device.name if device else ''
+                        rs_name = rs.name
+                        rs_type = rs.type
+                        self._open_rule_set(
+                            str(rs_uuid),
+                            fw_name,
+                            rs_name,
+                            rs_type,
+                        )
+            except (ValueError, Exception):
+                pass
+
+        # Restore tree selection.
+        obj_id = settings.value(f'LastObject/{file_key}/tree_id', '', type=str)
+        obj_type = settings.value(
+            f'LastObject/{file_key}/tree_type',
+            '',
+            type=str,
+        )
+        if (
+            obj_id
+            and self._object_tree.select_object(obj_id)
+            and obj_type
+            and obj_type not in ('Policy', 'NAT', 'Routing')
+        ):
+            self._open_object_editor(obj_id, obj_type)
+
     def _save_if_modified(self):
         """Prompt the user to save unsaved changes.
 
@@ -630,6 +785,7 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
+            self._save_last_object_state()
 
         # Close current state (mirrors fileClose but without the save prompt).
         self._close_editor()
@@ -776,6 +932,7 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
+            self._save_last_object_state()
         self._close_editor()
         self.m_space.closeAllSubWindows()
         self._object_tree._tree.clear()
@@ -926,12 +1083,9 @@ class FWWindow(QMainWindow):
 
         self._close_editor()
 
-        # Build old ref map: paths belonging to the current Standard Library.
-        old_ref_map = {
-            path: uid
-            for path, uid in self._db_manager.ref_index.items()
-            if path == 'Library:Standard' or path.startswith('Library:Standard/')
-        }
+        # Close MDI sub-windows — Standard Library device UUIDs will
+        # change, making stale rule-set views unusable.
+        self.m_space.closeAllSubWindows()
 
         # Parse the bundled Standard Library.
         std_path = (
@@ -973,18 +1127,18 @@ class FWWindow(QMainWindow):
             )
             return
 
-        # Phase 1: Delete old Standard Library using Core SQL.
-        # The Library relationships have no cascade="delete", so children
-        # must be removed explicitly before the Library row itself.
+        # Phase 1: Build old path map from the DB, then delete.
+        # We build the map by traversing the live objects (not from
+        # ref_index, which may be empty for XML-imported files).
         session = self._db_manager.create_session()
         try:
-            old_std_id = session.scalars(
-                sqlalchemy.select(Library.id).where(
+            old_std = session.scalars(
+                sqlalchemy.select(Library).where(
                     Library.name == 'Standard',
                 ),
             ).first()
 
-            if old_std_id is None:
+            if old_std is None:
                 session.close()
                 QMessageBox.warning(
                     self,
@@ -992,6 +1146,9 @@ class FWWindow(QMainWindow):
                     self.tr('No Standard Library found in the current file.'),
                 )
                 return
+
+            old_std_id = old_std.id
+            old_ref_map = _build_library_path_map(session, old_std)
 
             # Subqueries for objects reachable via device/interface FKs
             # (these may have library_id=NULL but still belong to the
@@ -1140,11 +1297,12 @@ class FWWindow(QMainWindow):
                     parse_result.memberships,
                 )
 
-            # Remap user references: build old_uuid -> new_uuid mapping.
+            # Remap user references: build old_uuid -> new_uuid mapping
+            # by matching tree-paths between old and new Standard Library.
             new_ref_map = {
                 path: uid
                 for path, uid in parse_result.ref_index.items()
-                if path == 'Library:Standard' or path.startswith('Library:Standard/')
+                if path.startswith('Library:Standard/')
             }
             uuid_remap = {}
             for path, old_uuid in old_ref_map.items():
@@ -1179,7 +1337,7 @@ class FWWindow(QMainWindow):
         ref_index = {
             path: uid
             for path, uid in self._db_manager.ref_index.items()
-            if path != 'Library:Standard' and not path.startswith('Library:Standard/')
+            if not path.startswith('Library:Standard')
         }
         ref_index.update(parse_result.ref_index)
         self._db_manager.ref_index = ref_index
@@ -1192,7 +1350,6 @@ class FWWindow(QMainWindow):
         )
         with self._db_manager.session() as sess:
             self._object_tree.populate(sess, file_key=file_key)
-        self._reload_rule_set_views()
 
         QMessageBox.information(
             self,
@@ -1397,6 +1554,7 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
+            self._save_last_object_state()
 
         self._close_editor()
         self.m_space.closeAllSubWindows()
@@ -1465,6 +1623,7 @@ class FWWindow(QMainWindow):
             bool(self._object_tree._get_writable_libraries())
         )
         self._apply_file_loaded_state()
+        self._restore_last_object_state(str(original_path))
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):
