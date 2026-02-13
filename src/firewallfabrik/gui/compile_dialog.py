@@ -147,9 +147,21 @@ class CompileDialog(QDialog):
                 item.setData(0, Qt.ItemDataRole.UserRole + 1, fw.name)
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, platform)
                 item.setData(
-                    0, Qt.ItemDataRole.UserRole + 3, options.get('output_file', '')
+                    0,
+                    Qt.ItemDataRole.UserRole + 3,
+                    options.get('output_file', '') or options.get('outputFileName', ''),
                 )
                 item.setData(0, Qt.ItemDataRole.UserRole + 4, str(fw.id))
+                item.setData(
+                    0,
+                    Qt.ItemDataRole.UserRole + 5,
+                    options.get('cmdline', '') or options.get('compilerArgs', ''),
+                )
+                item.setData(
+                    0,
+                    Qt.ItemDataRole.UserRole + 6,
+                    options.get('compiler', ''),
+                )
 
                 item.setText(0, fw.name)
 
@@ -207,7 +219,11 @@ class CompileDialog(QDialog):
                 fw_name = item.data(0, Qt.ItemDataRole.UserRole + 1)
                 platform = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 output_file = item.data(0, Qt.ItemDataRole.UserRole + 3)
-                self._compile_queue.append((fw_id, fw_name, platform, output_file))
+                cmdline = item.data(0, Qt.ItemDataRole.UserRole + 5) or ''
+                compiler_path = item.data(0, Qt.ItemDataRole.UserRole + 6) or ''
+                self._compile_queue.append(
+                    (fw_id, fw_name, platform, output_file, cmdline, compiler_path)
+                )
 
         if not self._compile_queue:
             QMessageBox.information(
@@ -226,7 +242,7 @@ class CompileDialog(QDialog):
         # Populate fwWorkList sidebar
         self.fwWorkList.clear()
         self._work_items = {}
-        for fw_id, fw_name, _platform, _output_file in self._compile_queue:
+        for fw_id, fw_name, *_rest in self._compile_queue:
             item = QTreeWidgetItem()
             item.setText(0, fw_name)
             item.setText(1, 'Waiting')
@@ -294,7 +310,9 @@ class CompileDialog(QDialog):
             self._finish_compilation()
             return
 
-        fw_id, fw_name, platform, output_file = self._compile_queue.pop(0)
+        fw_id, fw_name, platform, output_file, cmdline, compiler_path = (
+            self._compile_queue.pop(0)
+        )
         self._current_fw_name = fw_name
         self._current_fw_id = fw_id
 
@@ -312,17 +330,27 @@ class CompileDialog(QDialog):
             f'<p><b>Compiling {escape(fw_name)} ...</b></p>'
         )
 
+        # Resolve compiler binary: custom path from settings, else PATH lookup.
         cli_tool = _PLATFORM_CLI[platform]
-        program = shutil.which(cli_tool) or cli_tool
-        args = [
-            fw_id,
-            '-p',
-            '-f',
-            str(self._current_file),
-            '-d',
-            str(self._dest_dir),
-            '-v',
-        ]
+        program = compiler_path or shutil.which(cli_tool) or cli_tool
+
+        # Build CLI args matching legacy C++ instDialog_compile behaviour:
+        # custom cmdline args first, then standard flags.
+        args = []
+        if cmdline:
+            args.extend(cmdline.split())
+
+        args.extend(
+            [
+                fw_id,
+                '-p',
+                '-f',
+                str(self._current_file),
+                '-d',
+                str(self._dest_dir),
+                '-v',
+            ]
+        )
         if output_file:
             args.extend(['-o', output_file])
 

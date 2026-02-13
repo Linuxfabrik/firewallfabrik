@@ -1025,20 +1025,7 @@ packets to IPv6 policies</string>
          <property name="checkable">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout">
-          <property name="verticalSpacing">
-           <number>20</number>
-          </property>
-          <property name="margin" stdset="0">
-           <number>12</number>
-          </property>
-          <item row="0" column="1">
-           <widget class="QRadioButton" name="useULOG">
-            <property name="text">
-             <string>use ULOG</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QGridLayout" name="gridLayout_11">
           <item row="0" column="0">
            <widget class="QRadioButton" name="useLOG">
             <property name="text">
@@ -1046,7 +1033,27 @@ packets to IPv6 policies</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="0" column="1">
+           <widget class="QRadioButton" name="useULOG">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>use ULOG</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QRadioButton" name="useNFLOG">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>use NFLOG</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
            <widget class="QStackedWidget" name="logTargetStack">
             <property name="currentIndex">
              <number>0</number>

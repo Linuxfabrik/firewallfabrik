@@ -22,57 +22,58 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui'
 
-# Checkbox widget names that map directly to boolean option keys.
-_CHECKBOXES = [
-    'assumeFwIsPartOfAny',
-    'acceptSessions',
-    'acceptESTBeforeFirst',
-    'dropInvalid',
-    'logInvalid',
-    'localNAT',
-    'shadowing',
-    'emptyGroups',
-    'clampMSStoMTU',
-    'bridge',
-    'ipv6NeighborDiscovery',
-    'mgmt_ssh',
-    'add_mgmt_ssh_rule_when_stoped',
-    'useModuleSet',
-    'useKernelTz',
-    'logTCPseq',
-    'logTCPopt',
-    'logIPopt',
-    'logNumsyslog',
-    'logAll',
-    'loadModules',
-    'iptDebug',
-    'verifyInterfaces',
-    'configureInterfaces',
-    'clearUnknownInterfaces',
-    'configure_vlan_interfaces',
-    'configure_bridge_interfaces',
-    'configure_bonding_interfaces',
-    'addVirtualsforNAT',
-    'iptablesRestoreActivation',
-]
+# Checkbox widget → canonical compiler option key.
+# The compiler reads options by the canonical key (right-hand side).
+_CHECKBOX_MAP: dict[str, str] = {
+    'assumeFwIsPartOfAny': 'firewall_is_part_of_any_and_networks',
+    'acceptSessions': 'drop_new_tcp_with_no_syn',  # INVERTED semantics
+    'acceptESTBeforeFirst': 'accept_established',
+    'dropInvalid': 'drop_invalid',
+    'logInvalid': 'log_invalid',
+    'localNAT': 'local_nat',
+    'shadowing': 'check_shading',
+    'emptyGroups': 'ignore_empty_groups',
+    'clampMSStoMTU': 'clamp_mss_to_mtu',
+    'bridge': 'bridging_fw',
+    'ipv6NeighborDiscovery': 'ipv6_neighbor_discovery',
+    'mgmt_ssh': 'mgmt_ssh',
+    'add_mgmt_ssh_rule_when_stoped': 'add_mgmt_ssh_rule_when_stoped',
+    'useModuleSet': 'use_m_set',
+    'useKernelTz': 'use_kerneltz',
+    'logTCPseq': 'log_tcp_seq',
+    'logTCPopt': 'log_tcp_opt',
+    'logIPopt': 'log_ip_opt',
+    'logNumsyslog': 'use_numeric_log_levels',
+    'logAll': 'log_all',
+    'loadModules': 'load_modules',
+    'iptDebug': 'debug',
+    'verifyInterfaces': 'verify_interfaces',
+    'configureInterfaces': 'configure_interfaces',
+    'clearUnknownInterfaces': 'clear_unknown_interfaces',
+    'configure_vlan_interfaces': 'configure_vlan_interfaces',
+    'configure_bridge_interfaces': 'configure_bridge_interfaces',
+    'configure_bonding_interfaces': 'configure_bonding_interfaces',
+    'addVirtualsforNAT': 'manage_virtual_addr',
+    'iptablesRestoreActivation': 'use_iptables_restore',
+}
 
-# Line-edit widget names that map directly to string option keys.
-_LINE_EDITS = [
-    'compiler',
-    'compilerArgs',
-    'outputFileName',
-    'fileNameOnFw',
-    'mgmt_addr',
-    'logprefix',
-    'ipt_fw_dir',
-    'ipt_user',
-    'altAddress',
-    'activationCmd',
-    'sshArgs',
-    'scpArgs',
-    'installScript',
-    'installScriptArgs',
-]
+# Line-edit widget → canonical compiler option key.
+_LINE_EDIT_MAP: dict[str, str] = {
+    'compiler': 'compiler',
+    'compilerArgs': 'cmdline',
+    'outputFileName': 'output_file',
+    'fileNameOnFw': 'script_name_on_firewall',
+    'mgmt_addr': 'mgmt_addr',
+    'logprefix': 'log_prefix',
+    'ipt_fw_dir': 'firewall_dir',
+    'ipt_user': 'admUser',
+    'altAddress': 'altAddress',
+    'activationCmd': 'activationCmd',
+    'sshArgs': 'sshArgs',
+    'scpArgs': 'scpArgs',
+    'installScript': 'installScript',
+    'installScriptArgs': 'installScriptArgs',
+}
 
 # LOG level syslog names matching the C++ dialog.
 _LOG_LEVELS = [
@@ -137,18 +138,40 @@ class IptablesSettingsDialog(QDialog):
     def _populate(self):
         opts = self._fw.options or {}
 
-        # Checkboxes
-        for name in _CHECKBOXES:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                val = opts.get(name, '')
-                widget.setChecked(str(val).lower() == 'true')
+        # Checkboxes — read canonical key, fall back to widget name for
+        # backward compat with old .fwf files that stored widget names.
+        for widget_name, key in _CHECKBOX_MAP.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            if key in opts:
+                val = str(opts[key]).lower() == 'true'
+            elif widget_name in opts:
+                val = str(opts[widget_name]).lower() == 'true'
+            elif key == 'drop_new_tcp_with_no_syn':
+                # Third fallback: C++ XML key with inverted semantics
+                xml_val = opts.get('accept_new_tcp_with_no_syn', '')
+                val = str(xml_val).lower() != 'true'
+            else:
+                val = False
+            # acceptSessions checkbox has inverted semantics:
+            # checked = accept sessions = do NOT drop new TCP without SYN.
+            if key == 'drop_new_tcp_with_no_syn':
+                widget.setChecked(not val)
+            else:
+                widget.setChecked(val)
 
-        # Line edits
-        for name in _LINE_EDITS:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.setText(opts.get(name, ''))
+        # Line edits — read canonical key, fall back to widget name.
+        for widget_name, key in _LINE_EDIT_MAP.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            if key in opts:
+                widget.setText(str(opts[key]))
+            elif widget_name in opts:
+                widget.setText(str(opts[widget_name]))
+            else:
+                widget.setText('')
 
         # Text edits (prolog / epilog)
         self.prolog_script.setPlainText(opts.get('prolog_script', ''))
@@ -162,9 +185,11 @@ class IptablesSettingsDialog(QDialog):
             idx = 0
         self.prologPlace.setCurrentIndex(idx)
 
-        # LOG vs. ULOG radio buttons
+        # LOG, ULOG, and NFLOG radio buttons
         if str(opts.get('use_ULOG', '')).lower() == 'true':
             self.useULOG.setChecked(True)
+        elif str(opts.get('use_NFLOG', '')).lower() == 'true':
+            self.useNFLOG.setChecked(True)
         else:
             self.useLOG.setChecked(True)
         self._update_log_stack()
@@ -204,17 +229,34 @@ class IptablesSettingsDialog(QDialog):
     def _save_settings(self):
         opts = dict(self._fw.options or {})
 
-        # Checkboxes
-        for name in _CHECKBOXES:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                opts[name] = str(widget.isChecked())
+        # Checkboxes — always write under canonical key; remove stale
+        # widget-name key if it differs from the canonical key.
+        for widget_name, key in _CHECKBOX_MAP.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            # Store as Python bool (not string) so that raw
+            # ``options.get(key, False)`` in the compiler works correctly.
+            # acceptSessions has inverted semantics.
+            if key == 'drop_new_tcp_with_no_syn':
+                opts[key] = not widget.isChecked()
+            else:
+                opts[key] = widget.isChecked()
+            # Clean up stale widget-name key.
+            if widget_name != key:
+                opts.pop(widget_name, None)
+                # Also remove the C++ XML key variant.
+                if key == 'drop_new_tcp_with_no_syn':
+                    opts.pop('accept_new_tcp_with_no_syn', None)
 
-        # Line edits
-        for name in _LINE_EDITS:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                opts[name] = widget.text()
+        # Line edits — always write under canonical key.
+        for widget_name, key in _LINE_EDIT_MAP.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            opts[key] = widget.text()
+            if widget_name != key:
+                opts.pop(widget_name, None)
 
         # Text edits
         opts['prolog_script'] = self.prolog_script.toPlainText()
@@ -226,8 +268,9 @@ class IptablesSettingsDialog(QDialog):
             _PROLOG_PLACES[idx] if idx < len(_PROLOG_PLACES) else 'top'
         )
 
-        # LOG / ULOG
-        opts['use_ULOG'] = str(self.useULOG.isChecked())
+        # LOG / ULOG / NFLOG
+        opts['use_ULOG'] = self.useULOG.isChecked()
+        opts['use_NFLOG'] = self.useNFLOG.isChecked()
 
         # Log options
         opts['log_level'] = self.logLevel.currentText()
