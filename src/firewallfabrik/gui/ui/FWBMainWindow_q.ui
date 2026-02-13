@@ -1849,6 +1849,9 @@
    </property>
   </action>
   <action name="UpdateStandardLibraryAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Update Standard Library</string>
    </property>

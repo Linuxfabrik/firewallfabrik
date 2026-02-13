@@ -52,6 +52,7 @@ class TimeDialog(BaseObjectDialog):
             self.endDate.setDate(QDate.fromString(end_date, 'yyyy-MM-dd'))
         if end_time:
             self.endTime.setTime(QTime.fromString(end_time, 'HH:mm'))
+        self.useStartOrEndDate()
 
         days_str = data.get('days_of_week', '')
         active_days = set(days_str.split(',')) if days_str else set()
@@ -88,5 +89,6 @@ class TimeDialog(BaseObjectDialog):
 
     @Slot()
     def useStartOrEndDate(self):
-        # TODO
-        pass
+        """Enable/disable date pickers based on their checkbox state."""
+        self.startDate.setEnabled(self.useStartDate.isChecked())
+        self.endDate.setEnabled(self.useEndDate.isChecked())

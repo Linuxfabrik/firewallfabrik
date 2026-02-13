@@ -17,6 +17,17 @@ from PySide6.QtCore import Slot
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 _TCP_FLAGS = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+_TCP_FLAG_LABELS = (
+    'flags_lbl_1',
+    'flags_lbl_2',
+    'flags_lbl_3',
+    'flags_lbl_a',
+    'flags_lbl_f',
+    'flags_lbl_p',
+    'flags_lbl_r',
+    'flags_lbl_s',
+    'flags_lbl_u',
+)
 
 
 class TCPServiceDialog(BaseObjectDialog):
@@ -40,9 +51,15 @@ class TCPServiceDialog(BaseObjectDialog):
                 mask_cb.setChecked(bool(masks.get(flag)))
             if set_cb:
                 set_cb.setChecked(bool(flags.get(flag)))
+        self.toggleEstablished()
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
+        # Port range start must be <= end (fwbuilder bug #1695481).
+        if self.ss.value() > self.se.value():
+            self.se.setValue(self.ss.value())
+        if self.ds.value() > self.de.value():
+            self.de.setValue(self.ds.value())
         self._obj.src_range_start = self.ss.value()
         self._obj.src_range_end = self.se.value()
         self._obj.dst_range_start = self.ds.value()
@@ -64,8 +81,17 @@ class TCPServiceDialog(BaseObjectDialog):
 
     @Slot()
     def toggleEstablished(self):
-        # TODO
-        pass
+        """Disable TCP flag controls when 'established' is checked."""
+        using_est = self.established.isChecked()
+        for flag in _TCP_FLAGS:
+            for suffix in ('_m', '_s'):
+                widget = getattr(self, f'{flag}{suffix}', None)
+                if widget:
+                    widget.setEnabled(not using_est)
+        for lbl_name in _TCP_FLAG_LABELS:
+            lbl = getattr(self, lbl_name, None)
+            if lbl:
+                lbl.setEnabled(not using_est)
 
 
 class UDPServiceDialog(BaseObjectDialog):
@@ -81,6 +107,11 @@ class UDPServiceDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
+        # Port range start must be <= end (fwbuilder bug #1695481).
+        if self.ss.value() > self.se.value():
+            self.se.setValue(self.ss.value())
+        if self.ds.value() > self.de.value():
+            self.de.setValue(self.ds.value())
         self._obj.src_range_start = self.ss.value()
         self._obj.src_range_end = self.se.value()
         self._obj.dst_range_start = self.ds.value()
@@ -103,6 +134,9 @@ class ICMPServiceDialog(BaseObjectDialog):
         data['type'] = str(self.icmpType.value())
         data['code'] = str(self.icmpCode.value())
         self._obj.data = data
+
+
+_IP_OPTION_CHECKBOXES = ('lsrr', 'router_alert', 'rr', 'ssrr', 'timestamp')
 
 
 class IPServiceDialog(BaseObjectDialog):
@@ -130,6 +164,7 @@ class IPServiceDialog(BaseObjectDialog):
         self.router_alert.setChecked(data.get('router_alert') == 'True')
         self.all_fragments.setChecked(data.get('fragm') == 'True')
         self.short_fragments.setChecked(data.get('short_fragm') == 'True')
+        self.anyOptionsStateChanged()
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
@@ -153,5 +188,11 @@ class IPServiceDialog(BaseObjectDialog):
 
     @Slot()
     def anyOptionsStateChanged(self):
-        # TODO
-        pass
+        """Uncheck and disable individual IP options when 'any option' is checked."""
+        any_checked = self.any_opt.isChecked()
+        for cb_name in _IP_OPTION_CHECKBOXES:
+            cb = getattr(self, cb_name, None)
+            if cb:
+                if any_checked:
+                    cb.setChecked(False)
+                cb.setEnabled(not any_checked)
