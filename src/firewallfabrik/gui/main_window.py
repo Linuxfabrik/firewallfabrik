@@ -1316,6 +1316,14 @@ class FWWindow(QMainWindow):
         from firewallfabrik.platforms.iptables._compiler_driver import (
             CompilerDriver_ipt,
         )
+        from firewallfabrik.platforms.nftables._compiler_driver import (
+            CompilerDriver_nft,
+        )
+
+        _PLATFORM_DRIVER = {
+            'iptables': CompilerDriver_ipt,
+            'nftables': CompilerDriver_nft,
+        }
 
         with self._db_manager.session() as session:
             rs = session.get(RuleSet, rule_set_id)
@@ -1327,10 +1335,20 @@ class FWWindow(QMainWindow):
             device_id = device.id
             fw_name = device.name
             rs_name = rs.name
+            platform = (device.data or {}).get('platform', '')
             rule = session.get(Rule, rule_id)
             rule_position = rule.position if rule is not None else '?'
 
-        driver = CompilerDriver_ipt(self._db_manager)
+        driver_cls = _PLATFORM_DRIVER.get(platform)
+        if driver_cls is None:
+            self.output_box.setHtml(
+                f'<p style="color: red;"><b>Unsupported platform: '
+                f'{escape(platform or "(none)")}</b></p>'
+            )
+            self._show_output_panel()
+            return
+
+        driver = driver_cls(self._db_manager)
         driver.single_rule_compile_on = True
         driver.single_rule_id = str(rule_id)
 
