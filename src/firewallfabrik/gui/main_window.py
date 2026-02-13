@@ -769,7 +769,23 @@ class FWWindow(QMainWindow):
 
     def _on_new_object_action(self, type_name, lib_id):
         """Handle a selection from the "New Object" menu."""
-        if type_name in ('Cluster', 'Firewall', 'Host'):
+        if type_name == 'Cluster':
+            from firewallfabrik.gui.new_cluster_dialog import NewClusterDialog
+
+            dlg = NewClusterDialog(
+                db_manager=self._db_manager,
+                parent=self,
+            )
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+            self._object_tree.create_new_object_in_library(
+                type_name,
+                lib_id,
+                extra_data=extra_data,
+                name=name,
+            )
+        elif type_name in ('Firewall', 'Host'):
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
 
             dlg = NewDeviceDialog(type_name, parent=self)

@@ -719,6 +719,9 @@ class ObjectTree(QWidget):
 
         self._tree = _DraggableTree()
         self._tree.setHeaderLabels(['Object', 'Attribute'])
+        self._tree.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection,
+        )
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1388,6 +1391,18 @@ class ObjectTree(QWidget):
         delete_action.setEnabled(can_delete)
         delete_action.triggered.connect(lambda: self._ctx_delete(item))
 
+        # "New Cluster from selected firewalls" (matching fwbuilder).
+        if obj_type == 'Firewall':
+            cluster_act = menu.addAction(
+                QIcon(ICON_MAP.get('Cluster', '')),
+                'New Cluster from selected firewalls',
+            )
+            can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
+            cluster_act.setEnabled(can_cluster)
+            cluster_act.triggered.connect(
+                lambda: self._ctx_new_cluster_from_selected(),
+            )
+
         # New [Type] + New Subfolder (grouped in one section)
         new_types = self._get_new_object_types(item, obj_type)
         show_subfolder = obj_type == 'Library' or obj_type not in _NO_SUBFOLDER_TYPES
@@ -1453,6 +1468,18 @@ class ObjectTree(QWidget):
             act.setEnabled(not effective_ro)
             act.triggered.connect(
                 lambda checked=False, t=type_name: self._ctx_new_object(item, t)
+            )
+
+        # "New Cluster from selected firewalls" on the Firewalls folder.
+        if folder_name == 'Firewalls':
+            cluster_act = menu.addAction(
+                QIcon(ICON_MAP.get('Cluster', '')),
+                'New Cluster from selected firewalls',
+            )
+            can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
+            cluster_act.setEnabled(can_cluster)
+            cluster_act.triggered.connect(
+                lambda: self._ctx_new_cluster_from_selected(),
             )
 
         sf_action = menu.addAction(QIcon(_CATEGORY_ICON), 'New Subfolder')
@@ -2150,6 +2177,65 @@ class ObjectTree(QWidget):
 
         return result
 
+    def _count_selected_firewalls(self):
+        """Return the number of currently selected Firewall items in the tree."""
+        count = 0
+        for sel_item in self._tree.selectedItems():
+            if sel_item.data(0, Qt.ItemDataRole.UserRole + 1) == 'Firewall':
+                count += 1
+        return count
+
+    def _get_selected_firewall_ids(self):
+        """Return a list of obj_id strings for selected Firewall items."""
+        ids = []
+        for sel_item in self._tree.selectedItems():
+            if sel_item.data(0, Qt.ItemDataRole.UserRole + 1) == 'Firewall':
+                obj_id = sel_item.data(0, Qt.ItemDataRole.UserRole)
+                if obj_id:
+                    ids.append(obj_id)
+        return ids
+
+    def _ctx_new_cluster_from_selected(self):
+        """Open the New Cluster wizard with the currently selected firewalls."""
+        if self._db_manager is None:
+            return
+        fw_ids = self._get_selected_firewall_ids()
+        if len(fw_ids) < 2:
+            return
+
+        from firewallfabrik.gui.new_cluster_dialog import NewClusterDialog
+
+        dlg = NewClusterDialog(
+            db_manager=self._db_manager,
+            parent=self._tree.window(),
+            preselected_fw_ids=fw_ids,
+        )
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        name, extra_data = dlg.get_result()
+
+        # Place the new cluster in the first writable library.
+        libs = self._get_writable_libraries()
+        if not libs:
+            return
+        lib_id = libs[0][0]
+
+        # Find the "Clusters" folder.
+        folder = 'Clusters'
+
+        new_id = self._create_new_object(
+            _MODEL_MAP['Cluster'],
+            'Cluster',
+            lib_id,
+            extra_data=extra_data,
+            folder=folder,
+            name=name,
+        )
+        if new_id is not None:
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+            self.object_activated.emit(str(new_id), 'Cluster')
+
     def _ctx_new_object(self, item, type_name):
         """Create a new object of *type_name* in the context of *item*."""
         if self._db_manager is None:
@@ -2161,7 +2247,17 @@ class ObjectTree(QWidget):
         # Firewall/Cluster/Host: show creation dialog first.
         extra_data = None
         name = None
-        if type_name in ('Cluster', 'Firewall', 'Host'):
+        if type_name == 'Cluster':
+            from firewallfabrik.gui.new_cluster_dialog import NewClusterDialog
+
+            dlg = NewClusterDialog(
+                db_manager=self._db_manager,
+                parent=self._tree.window(),
+            )
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, extra_data = dlg.get_result()
+        elif type_name in ('Firewall', 'Host'):
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
 
             dlg = NewDeviceDialog(type_name, parent=self._tree.window())
