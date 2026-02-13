@@ -108,6 +108,19 @@ class IPv4Dialog(_BaseAddressDialog):
         super()._apply_changes()
 
     @Slot()
+    def addressEntered(self):
+        """Parse CIDR notation (e.g. '192.168.1.1/24') into address + netmask."""
+        text = self.address.text().strip()
+        if '/' not in text:
+            return
+        try:
+            net = ipaddress.IPv4Network(text, strict=False)
+            self.address.setText(str(ipaddress.IPv4Address(text.split('/')[0])))
+            self.netmask.setText(str(net.netmask))
+        except ValueError:
+            pass
+
+    @Slot()
     def DNSlookup(self):
         # TODO
         pass
@@ -140,6 +153,19 @@ class IPv6Dialog(_BaseAddressDialog):
                 )
                 return
         super()._apply_changes()
+
+    @Slot()
+    def addressEntered(self):
+        """Parse CIDR notation (e.g. '2001:db8::1/64') into address + prefix length."""
+        text = self.address.text().strip()
+        if '/' not in text:
+            return
+        try:
+            net = ipaddress.IPv6Network(text, strict=False)
+            self.address.setText(str(ipaddress.IPv6Address(text.split('/')[0])))
+            self.netmask.setText(str(net.prefixlen))
+        except ValueError:
+            pass
 
     @Slot()
     def changed(self):

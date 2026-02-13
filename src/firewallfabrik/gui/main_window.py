@@ -1807,8 +1807,9 @@ class FWWindow(QMainWindow):
         self._show_editor_panel()
 
         path = _build_editor_path(obj)
-        if self._current_file:
-            path = f'[{self._current_file}] / {path}'
+        display = getattr(self, '_display_file', None) or self._current_file
+        if display:
+            path = f'[{display}] / {path}'
         self.editorDockWidget.setWindowTitle(path)
 
         icon_path = f':/Icons/{obj_type}/icon-big'

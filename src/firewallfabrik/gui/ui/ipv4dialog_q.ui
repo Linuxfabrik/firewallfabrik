@@ -193,7 +193,7 @@
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   
+
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -223,8 +223,41 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>address</sender>
+   <signal>editingFinished()</signal>
+   <receiver>IPv4Dialog_q</receiver>
+   <slot>addressEntered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>218</x>
+     <y>106</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>355</x>
+     <y>143</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>address</sender>
+   <signal>returnPressed()</signal>
+   <receiver>IPv4Dialog_q</receiver>
+   <slot>addressEntered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>218</x>
+     <y>106</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>355</x>
+     <y>143</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>DNSlookup()</slot>
+  <slot>addressEntered()</slot>
  </slots>
 </ui>

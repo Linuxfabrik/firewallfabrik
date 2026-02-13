@@ -228,7 +228,7 @@
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   
+
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -244,7 +244,23 @@
    <sender>address</sender>
    <signal>editingFinished()</signal>
    <receiver>IPv6Dialog_q</receiver>
-   <slot>changed()</slot>
+   <slot>addressEntered()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>address</sender>
+   <signal>returnPressed()</signal>
+   <receiver>IPv6Dialog_q</receiver>
+   <slot>addressEntered()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>20</x>
@@ -290,6 +306,7 @@
   </connection>
  </connections>
  <slots>
+  <slot>addressEntered()</slot>
   <slot>changed()</slot>
  </slots>
 </ui>
