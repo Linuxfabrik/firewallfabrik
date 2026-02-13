@@ -64,7 +64,10 @@ where = ["src"]
 testpaths = ["tests"]
 
 
-# === ruff ===
+# === linters ===
+[tool.pyright]
+exclude = ["src/firewallfabrik/gui", "venv"]
+
 [tool.ruff]
 target-version = "py313" # py314 does not exist yet as of 2026-02-09
 

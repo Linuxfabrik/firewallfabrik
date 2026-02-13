@@ -259,7 +259,7 @@ class Compiler(BaseCompiler):
             else '255.255.255.255'
         )
         for info in infos:
-            ip_str = info[4][0]
+            ip_str = str(info[4][0])
             if ip_str in seen:
                 continue
             seen.add(ip_str)

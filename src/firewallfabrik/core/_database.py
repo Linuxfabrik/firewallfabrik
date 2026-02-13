@@ -19,6 +19,7 @@ import re
 import time
 
 import sqlalchemy
+import sqlalchemy.event
 import sqlalchemy.orm
 
 from . import objects

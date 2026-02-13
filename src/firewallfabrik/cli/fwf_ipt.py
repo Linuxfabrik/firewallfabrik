@@ -187,8 +187,8 @@ def main(argv=None):
 
     print(f'Loading database from {args.FILE} ...', file=sys.stderr)
 
+    db = firewallfabrik.core.DatabaseManager()
     try:
-        db = firewallfabrik.core.DatabaseManager()
         db.load(args.FILE)
     except sqlalchemy.exc.IntegrityError as e:
         msg = f'Error: failed to load database from {args.FILE}: '
