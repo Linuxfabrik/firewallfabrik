@@ -325,20 +325,35 @@ class AddressRangeDialog(BaseObjectDialog):
 
     @Slot()
     def addressEntered(self):
-        """Parse CIDR notation in rangeStart into start/end host addresses."""
+        """Adjust rangeEnd when rangeStart loses focus.
+
+        If the start address contains a ``/``, parse it as CIDR and fill
+        both start and end with the first/last host.  Otherwise, copy
+        start to end when the end is empty or a different IP family.
+        """
         text = self.rangeStart.text().strip()
-        if '/' not in text:
+        if not text:
             return
         try:
-            net = ipaddress.ip_network(text, strict=False)
-            hosts = list(net.hosts())
-            if hosts:
-                self.rangeStart.setText(str(hosts[0]))
-                self.rangeEnd.setText(str(hosts[-1]))
+            if '/' in text:
+                net = ipaddress.ip_network(text, strict=False)
+                hosts = list(net.hosts())
+                if hosts:
+                    self.rangeStart.setText(str(hosts[0]))
+                    self.rangeEnd.setText(str(hosts[-1]))
+                else:
+                    # Single-host network (e.g. /32 or /128).
+                    self.rangeStart.setText(str(net.network_address))
+                    self.rangeEnd.setText(str(net.network_address))
             else:
-                # Single-host network (e.g. /32 or /128).
-                self.rangeStart.setText(str(net.network_address))
-                self.rangeEnd.setText(str(net.network_address))
+                start_addr = ipaddress.ip_address(text)
+                end_text = self.rangeEnd.text().strip()
+                if not end_text:
+                    self.rangeEnd.setText(text)
+                else:
+                    end_addr = ipaddress.ip_address(end_text)
+                    if end_addr.version != start_addr.version:
+                        self.rangeEnd.setText(text)
         except ValueError:
             pass
 
