@@ -310,6 +310,10 @@ class CompilerDriver_nft(CompilerDriver):
                     errors_str = '\n'.join(self.all_errors)
                     return errors_str + nft_rules_body + routing_output
 
+                # --- Determine output file names (needed for manifest) ---
+                cluster_name = ''
+                self.determine_output_file_names(fw, cluster_name)
+
                 # --- Assemble shell script ---
                 script = self._assemble_shell_script(
                     fw,
@@ -319,9 +323,6 @@ class CompilerDriver_nft(CompilerDriver):
                 )
 
                 # --- Write output file ---
-                cluster_name = ''
-                self.determine_output_file_names(fw, cluster_name)
-
                 fw_id_str = str(fw.id)
                 output_path = self.file_names.get(fw_id_str, '')
                 if output_path:
@@ -629,6 +630,14 @@ class CompilerDriver_nft(CompilerDriver):
                 raw = textwrap.dedent(oscnf.print_verify_interfaces_commands()).strip()
                 verify_interfaces_code = textwrap.indent(raw, '    ')
 
+        # Build manifest line for installer
+        fw_id_str = str(fw.id)
+        local_name = Path(self.file_names.get(fw_id_str, '')).name
+        manifest = f'# files: * {local_name}'
+        remote = self.remote_file_names.get(fw_id_str, '')
+        if remote:
+            manifest += f' {remote}'
+
         context = {
             'version': firewallfabrik.__version__,
             'timestamp': timestr,
@@ -636,6 +645,7 @@ class CompilerDriver_nft(CompilerDriver):
             'user': user_name,
             'comment': comment,
             'errors_and_warnings': errors_and_warnings,
+            'manifest': manifest,
             'shell_debug': shell_debug,
             'nft_path': nft_path,
             'prolog_script': prolog_script,

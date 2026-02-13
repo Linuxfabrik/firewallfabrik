@@ -617,7 +617,7 @@ packets to IPv6 policies</string>
           <item row="1" column="0">
            <widget class="QLabel" name="textLabel1_2">
             <property name="text">
-             <string>User name used to authenticate to the firewall (leave this empty if you use putty session):</string>
+             <string>User name used to authenticate to the firewall</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
@@ -646,7 +646,7 @@ packets to IPv6 policies</string>
           <item row="2" column="0">
            <widget class="QLabel" name="textLabel1_3">
             <property name="text">
-             <string>Alternative name or address used to communicate with the firewall (also putty session name on Windows)</string>
+             <string>Alternative name or address used to communicate with the firewall</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>

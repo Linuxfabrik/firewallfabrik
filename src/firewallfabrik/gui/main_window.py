@@ -862,6 +862,45 @@ class FWWindow(QMainWindow):
             self._object_tree.populate(session, file_key=file_key)
 
     @Slot()
+    def install(self):
+        if not self._current_file:
+            QMessageBox.warning(
+                self,
+                'FirewallFabrik',
+                self.tr('No file is loaded. Open or create a file first.'),
+            )
+            return
+        if self._db_manager.is_dirty:
+            result = QMessageBox.question(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'The file must be saved before installing.\nDo you want to save now?'
+                ),
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            )
+            if result != QMessageBox.StandardButton.Save:
+                return
+        self.fileSave()
+
+        from firewallfabrik.gui.compile_dialog import CompileDialog
+
+        dlg = CompileDialog(
+            self._db_manager,
+            self._current_file,
+            parent=self,
+            install_mode=True,
+        )
+        dlg.exec()
+
+        # Refresh the tree to show updated lastInstalled timestamps.
+        file_key = (
+            str(self._display_file) if getattr(self, '_display_file', None) else ''
+        )
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session, file_key=file_key)
+
+    @Slot()
     def toolsUpdateStandardLibrary(self):
         """Replace the Standard Library with the latest bundled version."""
         if self._current_file is None:
