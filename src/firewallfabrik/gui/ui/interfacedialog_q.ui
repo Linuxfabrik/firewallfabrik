@@ -339,6 +339,9 @@ If network zone for this interface consists of only one subnet, you can simply c
          </item>
          <item>
           <widget class="QPushButton" name="advancedconfig">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Advanced Interface Settings ...</string>
            </property>

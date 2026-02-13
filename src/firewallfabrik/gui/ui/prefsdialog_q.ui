@@ -81,6 +81,9 @@
       <layout class="QGridLayout" name="prefs_gridLayout_2">
        <item row="2" column="0">
         <widget class="QCheckBox" name="deletedObj">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="toolTip">
           <string>When enabled, objects that have been marked as deleted
 are still shown in the object tree. This can be useful
@@ -93,6 +96,9 @@ for reviewing or restoring recently removed items.</string>
        </item>
        <item row="1" column="0">
         <widget class="QCheckBox" name="advTooltipMode">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="toolTip">
           <string>When enabled, tooltips show only essential information
 such as name and type, omitting detailed attributes
@@ -175,6 +181,9 @@ tags are matched.</string>
        </item>
        <item row="4" column="0" colspan="2">
         <widget class="QCheckBox" name="enableCustomTemplates">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="toolTip">
           <string>The program comes with a library of template objects that can
 be used to create new firewalls, however you can create your
@@ -197,6 +206,9 @@ own library of templates and use it in addition to the one we provide</string>
           <number>0</number>
          </property>
          <widget class="QWidget" name="DNSName">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <attribute name="title">
            <string>DNS Name</string>
           </attribute>
@@ -278,6 +290,9 @@ own library of templates and use it in addition to the one we provide</string>
           </layout>
          </widget>
          <widget class="QWidget" name="AddressTable">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <attribute name="title">
            <string>Address Table</string>
           </attribute>
@@ -352,6 +367,9 @@ own library of templates and use it in addition to the one we provide</string>
           </layout>
          </widget>
          <widget class="QWidget" name="tab">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <attribute name="title">
            <string>Policy Rules</string>
           </attribute>
@@ -588,6 +606,9 @@ own library of templates and use it in addition to the one we provide</string>
           </widget>
          </widget>
          <widget class="QWidget" name="tab_2">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <attribute name="title">
            <string>Interface</string>
           </attribute>
@@ -667,6 +688,9 @@ own library of templates and use it in addition to the one we provide</string>
       </layout>
      </widget>
      <widget class="QWidget" name="tabData">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Data File</string>
       </attribute>
@@ -759,6 +783,9 @@ own library of templates and use it in addition to the one we provide</string>
       </layout>
      </widget>
      <widget class="QWidget" name="tabSSH">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Installer</string>
       </attribute>
@@ -1248,6 +1275,9 @@ are never stored permanently)</string>
       </layout>
      </widget>
      <widget class="QWidget" name="tabAppearance">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Appearance</string>
       </attribute>
@@ -1488,6 +1518,9 @@ Easier to distinguish object types at a glance.</string>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_3">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <attribute name="title">
        <string>Diff</string>
       </attribute>

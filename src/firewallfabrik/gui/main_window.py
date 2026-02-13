@@ -2463,6 +2463,75 @@ class FWWindow(QMainWindow):
         dlg.setDetailedText(traceback.format_exc())
         dlg.exec()
 
+    # ------------------------------------------------------------------
+    # Stub slots for .ui connections not yet implemented
+    # ------------------------------------------------------------------
+
+    @Slot()
+    def editFind(self):
+        # TODO
+        pass
+
+    @Slot(int)
+    def editorPanelTabChanged(self, _index):
+        # TODO
+        pass
+
+    @Slot()
+    def fileCompare(self):
+        # TODO
+        pass
+
+    @Slot()
+    def fileExport(self):
+        # TODO
+        pass
+
+    @Slot()
+    def fileImport(self):
+        # TODO
+        pass
+
+    @Slot()
+    def filePrint(self):
+        # TODO
+        pass
+
+    @Slot()
+    def helpContents(self):
+        # TODO
+        pass
+
+    @Slot()
+    def helpIndex(self):
+        # TODO
+        pass
+
+    @Slot()
+    def importPolicy(self):
+        # TODO
+        pass
+
+    @Slot()
+    def lockObject(self):
+        # TODO
+        pass
+
+    @Slot()
+    def toolsImportAddressesFromFile(self):
+        # TODO
+        pass
+
+    @Slot()
+    def toolsSNMPDiscovery(self):
+        # TODO
+        pass
+
+    @Slot()
+    def unlockObject(self):
+        # TODO
+        pass
+
     @staticmethod
     def _gather_all_tags(session):
         """Collect every tag used across all object tables."""

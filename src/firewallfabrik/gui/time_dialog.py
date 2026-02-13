@@ -12,7 +12,7 @@
 
 """Editor panel dialog for time/interval objects."""
 
-from PySide6.QtCore import QDate, QTime
+from PySide6.QtCore import QDate, QTime, Slot
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
@@ -85,3 +85,8 @@ class TimeDialog(BaseObjectDialog):
                 active_days.append(str(idx))
         data['days_of_week'] = ','.join(active_days) if active_days else ''
         self._obj.data = data
+
+    @Slot()
+    def useStartOrEndDate(self):
+        # TODO
+        pass

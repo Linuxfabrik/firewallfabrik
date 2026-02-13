@@ -12,6 +12,8 @@
 
 """Editor panel dialogs for service objects."""
 
+from PySide6.QtCore import Slot
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 _TCP_FLAGS = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
@@ -59,6 +61,11 @@ class TCPServiceDialog(BaseObjectDialog):
                 flags[flag] = set_cb.isChecked()
         self._obj.tcp_flags = flags
         self._obj.tcp_flags_masks = masks
+
+    @Slot()
+    def toggleEstablished(self):
+        # TODO
+        pass
 
 
 class UDPServiceDialog(BaseObjectDialog):
@@ -143,3 +150,8 @@ class IPServiceDialog(BaseObjectDialog):
         data['fragm'] = str(self.all_fragments.isChecked())
         data['short_fragm'] = str(self.short_fragments.isChecked())
         self._obj.data = data
+
+    @Slot()
+    def anyOptionsStateChanged(self):
+        # TODO
+        pass

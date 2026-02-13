@@ -78,8 +78,12 @@ class FindWhereUsedPanel(QWidget):
 
         self.dropArea.set_helper_text('Drop an object to find its usages')
 
-        self.resListView.itemClicked.connect(self._on_item_clicked)
         self.resListView.itemDoubleClicked.connect(self._on_item_clicked)
+
+    @Slot(QTreeWidgetItem, int)
+    def itemClicked(self, item, column):
+        # TODO
+        self._on_item_clicked(item, column)
 
     def set_tree(self, tree: QTreeWidget):
         """Set the object tree widget for resolving names/types."""

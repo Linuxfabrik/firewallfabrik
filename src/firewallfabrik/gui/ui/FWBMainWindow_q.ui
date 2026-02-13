@@ -1005,6 +1005,9 @@
    </property>
   </action>
   <action name="editFindAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string/>
    </property>
@@ -1016,6 +1019,9 @@
    </property>
   </action>
   <action name="helpContentsAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Contents...</string>
    </property>
@@ -1027,6 +1033,9 @@
    </property>
   </action>
   <action name="helpIndexAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>&amp;Index...</string>
    </property>
@@ -1256,6 +1265,9 @@
    </property>
   </action>
   <action name="filePropAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Propert&amp;ies</string>
    </property>
@@ -1292,6 +1304,9 @@
    </property>
   </action>
   <action name="DiscoveryDruidAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Object Discovery</string>
    </property>
@@ -1300,6 +1315,9 @@
    </property>
   </action>
   <action name="new_itemAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>new item</string>
    </property>
@@ -1371,6 +1389,9 @@
    </property>
   </action>
   <action name="actionRules">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -1395,6 +1416,9 @@
    </property>
   </action>
   <action name="inspectAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MainRes.qrc">
      <normaloff>:/Icons/Inspect</normaloff>:/Icons/Inspect</iconset>
@@ -1434,6 +1458,9 @@
    </property>
   </action>
   <action name="forwardAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="MainRes.qrc">
      <normaloff>:/Icons/forward_25.png</normaloff>:/Icons/forward_25.png</iconset>

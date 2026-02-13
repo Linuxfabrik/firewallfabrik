@@ -12,6 +12,8 @@
 
 """Editor panel dialogs for address objects."""
 
+from PySide6.QtCore import Slot
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
@@ -36,20 +38,45 @@ class IPv4Dialog(_BaseAddressDialog):
     def __init__(self, parent=None):
         super().__init__('ipv4dialog_q.ui', parent)
 
+    @Slot()
+    def DNSlookup(self):
+        # TODO
+        pass
+
 
 class IPv6Dialog(_BaseAddressDialog):
     def __init__(self, parent=None):
         super().__init__('ipv6dialog_q.ui', parent)
+
+    @Slot()
+    def changed(self):
+        # TODO
+        pass
+
+    @Slot()
+    def DNSlookup(self):
+        # TODO
+        pass
 
 
 class NetworkDialog(_BaseAddressDialog):
     def __init__(self, parent=None):
         super().__init__('networkdialog_q.ui', parent)
 
+    @Slot()
+    def addressEntered(self):
+        # TODO
+        pass
+
 
 class NetworkDialogIPv6(_BaseAddressDialog):
     def __init__(self, parent=None):
         super().__init__('networkdialogipv6_q.ui', parent)
+
+    @Slot()
+    def addressEntered(self):
+        # TODO
+        pass
 
 
 class AddressRangeDialog(BaseObjectDialog):
@@ -72,6 +99,11 @@ class AddressRangeDialog(BaseObjectDialog):
         end['address'] = self.rangeEnd.text()
         self._obj.end_address = end
 
+    @Slot()
+    def addressEntered(self):
+        # TODO
+        pass
+
 
 class PhysAddressDialog(BaseObjectDialog):
     def __init__(self, parent=None):
@@ -87,3 +119,8 @@ class PhysAddressDialog(BaseObjectDialog):
         inet = dict(self._obj.inet_addr_mask or {})
         inet['address'] = self.pAddress.text()
         self._obj.inet_addr_mask = inet
+
+    @Slot()
+    def changed(self):
+        # TODO
+        pass

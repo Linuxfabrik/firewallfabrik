@@ -161,3 +161,8 @@ class InterfaceDialog(BaseObjectDialog):
         data['dyn'] = self.dynamic.isChecked()
         data['unnum'] = self.unnumbered.isChecked()
         self._obj.data = data
+
+    @Slot()
+    def openIfaceDialog(self):
+        # TODO
+        pass

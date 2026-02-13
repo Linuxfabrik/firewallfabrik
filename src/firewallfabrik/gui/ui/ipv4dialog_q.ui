@@ -129,6 +129,9 @@
            </item>
            <item row="3" column="0" colspan="3">
             <widget class="QPushButton" name="dnsLookup">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>

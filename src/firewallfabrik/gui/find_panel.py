@@ -163,6 +163,7 @@ class FindPanel(QWidget):
 
         self._find_next()
 
+    @Slot(int)
     @Slot(str)
     def findAttrChanged(self, _text=''):
         """Reset results when search parameters change."""

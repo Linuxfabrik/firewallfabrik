@@ -280,7 +280,7 @@
   </connection>
   <connection>
    <sender>findAttr</sender>
-   <signal>activated(QString)</signal>
+   <signal>activated(int)</signal>
    <receiver>findObjectWidget_q</receiver>
    <slot>findAttrChanged(QString)</slot>
    <hints>
@@ -312,7 +312,7 @@
   </connection>
   <connection>
    <sender>attribute</sender>
-   <signal>activated(QString)</signal>
+   <signal>activated(int)</signal>
    <receiver>findObjectWidget_q</receiver>
    <slot>findAttrChanged(QString)</slot>
    <hints>
