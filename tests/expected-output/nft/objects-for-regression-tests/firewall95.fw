@@ -208,11 +208,13 @@ verify_interfaces() {
 prolog_commands() {
     echo "Running prolog script"
 
+    echo "Prolog script done"
 }
 
 epilog_commands() {
     echo "Running epilog script"
 
+    echo "Epilog script done"
 }
 
 run_epilog_and_exit() {
@@ -311,9 +313,10 @@ case "$cmd" in
         configure_interfaces
         verify_interfaces
         stop_action
-        script_body
+        script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
+        log "Firewall script is done"
         RETVAL=$?
         ;;
 

@@ -208,11 +208,13 @@ verify_interfaces() {
 prolog_commands() {
     echo "Running prolog script"
 
+    echo "Prolog script done"
 }
 
 epilog_commands() {
     echo "Running epilog script"
 
+    echo "Epilog script done"
 }
 
 run_epilog_and_exit() {
@@ -248,7 +250,7 @@ table ip filter {
         #
         # SSH Access to the host; useful ICMP
         # types; ping request
-        icmp type 3 ct state new accept
+        icmp type destination-unreachable ct state new accept
         tcp dport 22 ct state new accept
         #
         # Rule 3 (global)
@@ -286,7 +288,7 @@ table ip filter {
         #
         # SSH Access to the host; useful ICMP
         # types; ping request
-        ip daddr 10.3.14.58 icmp type 3 ct state new accept
+        ip daddr 10.3.14.58 icmp type destination-unreachable ct state new accept
         ip daddr 10.3.14.58 tcp dport 22 ct state new accept
         #
         # Rule 3 (global)
@@ -354,9 +356,10 @@ case "$cmd" in
         configure_interfaces
         verify_interfaces
         stop_action
-        script_body
+        script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
+        log "Firewall script is done"
         RETVAL=$?
         ;;
 

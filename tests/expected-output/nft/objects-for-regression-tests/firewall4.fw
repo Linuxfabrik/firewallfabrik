@@ -197,11 +197,13 @@ check_nft() {
 prolog_commands() {
     echo "Running prolog script"
 
+    echo "Prolog script done"
 }
 
 epilog_commands() {
     echo "Running epilog script"
 
+    echo "Epilog script done"
 }
 
 run_epilog_and_exit() {
@@ -237,7 +239,7 @@ table ip filter {
         #
         # Rule 2 (eth1)
         #
-        iifname "eth1" ip saddr != 192.168.2.0/24 icmp type 8 code 0 log level debug drop
+        iifname "eth1" ip saddr != 192.168.2.0/24 icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 3 (eth1)
         #
@@ -245,7 +247,7 @@ table ip filter {
         #
         # Rule 4 (eth1)
         #
-        iifname "eth1" icmp type 8 code 0 log level debug drop
+        iifname "eth1" icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 6 (global)
         #
@@ -256,7 +258,7 @@ table ip filter {
         #
         # Rule 11 (global)
         #
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type 3 log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable log level debug drop
         #
         # Rule 15 (global)
         #
@@ -299,13 +301,13 @@ table ip filter {
         #
         # Rule 2 (eth1)
         #
-        iifname "eth1" ip saddr != 192.168.2.0/24 icmp type 8 code 0 log level debug drop
-        oifname "eth1" ip saddr != 192.168.2.0/24 icmp type 8 code 0 log level debug drop
+        iifname "eth1" ip saddr != 192.168.2.0/24 icmp type echo-request icmp code 0 log level debug drop
+        oifname "eth1" ip saddr != 192.168.2.0/24 icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 4 (eth1)
         #
-        iifname "eth1" icmp type 8 code 0 log level debug drop
-        oifname "eth1" icmp type 8 code 0 log level debug drop
+        iifname "eth1" icmp type echo-request icmp code 0 log level debug drop
+        oifname "eth1" icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 7 (global)
         #
@@ -320,7 +322,7 @@ table ip filter {
         # Rule 12 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type 3 log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable log level debug drop
         #
         # Rule 13 (global)
         #
@@ -353,11 +355,11 @@ table ip filter {
         #
         # Rule 2 (eth1)
         #
-        oifname "eth1" ip saddr != 192.168.2.0/24 icmp type 8 code 0 log level debug drop
+        oifname "eth1" ip saddr != 192.168.2.0/24 icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 4 (eth1)
         #
-        oifname "eth1" icmp type 8 code 0 log level debug drop
+        oifname "eth1" icmp type echo-request icmp code 0 log level debug drop
         #
         # Rule 5 (global)
         #
@@ -498,9 +500,10 @@ case "$cmd" in
         prolog_commands
         configure_interfaces
         stop_action
-        script_body
+        script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
+        log "Firewall script is done"
         RETVAL=$?
         ;;
 

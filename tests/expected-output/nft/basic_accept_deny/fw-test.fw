@@ -29,11 +29,13 @@ check_nft() {
 prolog_commands() {
     echo "Running prolog script"
 
+    echo "Prolog script done"
 }
 
 epilog_commands() {
     echo "Running epilog script"
 
+    echo "Epilog script done"
 }
 
 run_epilog_and_exit() {
@@ -56,7 +58,7 @@ table ip filter {
         #
         # Rule 1 (global)
         #
-        ip daddr { 192.168.1.1, 203.0.113.1 } icmp type 8 code 0 ct state new accept
+        ip daddr { 192.168.1.1, 203.0.113.1 } icmp type echo-request icmp code 0 ct state new accept
     }
 
     chain forward {
@@ -135,9 +137,10 @@ case "$cmd" in
         check_nft
         prolog_commands
         stop_action
-        script_body
+        script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands
+        log "Firewall script is done"
         RETVAL=$?
         ;;
 
