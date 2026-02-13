@@ -22,6 +22,7 @@ from firewallfabrik.gui.iptables_settings_dialog import IptablesSettingsDialog
 from firewallfabrik.gui.linux_settings_dialog import LinuxSettingsDialog
 from firewallfabrik.gui.platform_settings import (
     HOST_OS,
+    PLATFORMS,
     get_enabled_os,
     get_enabled_platforms,
 )
@@ -80,6 +81,10 @@ class FirewallDialog(BaseObjectDialog):
             )
             getattr(self, attr).setText(text)
 
+        self.platform.currentTextChanged.connect(self._update_settings_buttons)
+        self.hostOS.currentTextChanged.connect(self._update_settings_buttons)
+        self._update_settings_buttons()
+
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
         data = dict(self._obj.data or {})
@@ -89,6 +94,10 @@ class FirewallDialog(BaseObjectDialog):
         data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
         data['inactive'] = str(self.inactive.isChecked())
         self._obj.data = data
+
+    def _update_settings_buttons(self):
+        self.fwAdvanced.setEnabled(self.platform.currentText() in PLATFORMS.values())
+        self.osAdvanced.setEnabled(self.hostOS.currentText() in HOST_OS.values())
 
     @Slot()
     def openFWDialog(self):
