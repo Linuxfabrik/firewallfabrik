@@ -52,6 +52,7 @@ from firewallfabrik import __version__
 from firewallfabrik.core import DatabaseManager, duplicate_object_name
 from firewallfabrik.core.objects import (
     Address,
+    FWObjectDatabase,
     Group,
     Host,
     Interface,
@@ -589,8 +590,11 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def fileNew(self):
-        # Like C++ ProjectPanel::fileNew() / chooseNewFileName():
-        # prompt for a location, enforce .fwf suffix, then create the file.
+        """Create a new object file (mirrors fwbuilder ProjectPanel::fileNew())."""
+        if not self._save_if_modified():
+            return
+
+        # Show save dialog to choose filename.
         fd = QFileDialog(self)
         fd.setFileMode(QFileDialog.FileMode.AnyFile)
         fd.setDefaultSuffix('fwf')
@@ -604,10 +608,60 @@ class FWWindow(QMainWindow):
         if file_path.suffix == '':
             file_path = file_path.with_suffix('.fwf')
 
-        file_path.touch()
+        # Save tree state for the current file before closing.
+        display = getattr(self, '_display_file', None)
+        if display:
+            self._object_tree.save_tree_state(str(display))
+
+        # Close current state (mirrors fileClose but without the save prompt).
+        self._close_editor()
+        self.m_space.closeAllSubWindows()
+        self._object_tree._tree.clear()
+        self._object_tree._filter.clear()
+        self.undoView.clear()
+
+        # Create new database with an empty "User" library.
+        self._db_manager = DatabaseManager()
+        self._db_manager.on_history_changed = self._on_history_changed
+        with self._db_manager.session(description='New file') as session:
+            db_obj = FWObjectDatabase(id=uuid.uuid4())
+            Library(id=uuid.uuid4(), name='User', database=db_obj)
+            session.add(db_obj)
+
+        # Save to the chosen path.
+        try:
+            self._db_manager.save(file_path)
+        except Exception:
+            logger.exception('Failed to save %s', file_path)
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr(f"Failed to save '{file_path}'"),
+            )
+            return
+
+        # Set up UI.
         self._current_file = file_path
         self._display_file = file_path
         self._update_title()
+        self._add_to_recent(str(file_path))
+
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session, file_key=str(file_path))
+
+        self._object_tree.set_db_manager(self._db_manager)
+        self._find_panel.set_db_manager(self._db_manager)
+        self._find_panel.set_tree(self._object_tree._tree)
+        self._find_panel.set_reload_callback(self._reload_rule_set_views)
+        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self._find_panel.reset()
+        self._where_used_panel.set_db_manager(self._db_manager)
+        self._where_used_panel.set_tree(self._object_tree._tree)
+        self._where_used_panel.reset()
+
+        self.newObjectAction.setEnabled(True)
+        self._apply_file_loaded_state()
+        self._object_tree.focus_filter()
 
     @Slot()
     def fileOpen(self):

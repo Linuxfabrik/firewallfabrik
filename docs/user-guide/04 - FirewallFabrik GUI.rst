@@ -128,8 +128,8 @@ The File menu provides standard file management options.
 
    * - File Menu Entry
      - Explanation
-   * - New Object File
-     - Opens a "file" dialog that lets you name your new object file. Object file names end with ".fwf".
+   * - New Object File (Ctrl+Shift+N)
+     - Opens a "file" dialog that lets you name your new object file. Object file names end with ".fwf". If the current file has unsaved changes, you are prompted to save, discard, or cancel first.
    * - Open...
      - Opens a standard "file" dialog that lets you select an existing file. The file dialog shows FirewallFabrik files (.fwf), Firewall Builder files (.fwb), or all files.
    * - Open Recent
@@ -684,6 +684,9 @@ Keyboard Shortcuts
     * - ``Ctrl+1`` .. ``Ctrl+9``
       - Menu "File"
       - Open most recent file
+    * - ``Ctrl+Shift+N``
+      - Menu "File"
+      - New object file
     * - ``Ctrl+O``
       - Menu "File"
       - Open file
