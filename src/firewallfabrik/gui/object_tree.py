@@ -1476,6 +1476,11 @@ class ObjectTree(QWidget):
         - Edit/Inspect, Duplicate, Move, New*, Subfolder: single-select only
         - Copy/Cut/Delete: enabled for both single and multi-select
         - Group: multi-select only (>= 2 items)
+
+        Tree-modifying callbacks are stored in *handlers* and executed
+        **after** ``menu.exec()`` returns to avoid destroying
+        ``QTreeWidgetItem`` objects while the menu's nested event loop
+        is still active (which causes a SIGSEGV in Shiboken).
         """
         item = self._tree.itemAt(pos)
         if item is None:
@@ -1494,8 +1499,10 @@ class ObjectTree(QWidget):
         multi = num_selected > 1
 
         menu = QMenu(self)
+        handlers = {}
 
-        # Expand / Collapse (always for clicked item)
+        # Expand / Collapse (always for clicked item) — safe to run
+        # inside exec() since these don't modify the tree structure.
         if item.childCount() > 0:
             if item.isExpanded():
                 collapse_action = menu.addAction('Collapse')
@@ -1513,7 +1520,7 @@ class ObjectTree(QWidget):
         if not multi:
             label = 'Inspect' if effective_ro else 'Edit'
             edit_action = menu.addAction(label)
-            edit_action.triggered.connect(lambda: self._ctx_edit(item))
+            handlers[edit_action] = lambda: self._ctx_edit(item)
 
         # Duplicate ... — single-select only
         if not multi and obj_type not in _NO_DUPLICATE_TYPES:
@@ -1521,14 +1528,12 @@ class ObjectTree(QWidget):
             if len(libraries) == 1:
                 dup_action = menu.addAction('Duplicate ...')
                 lib_id = libraries[0][0]
-                dup_action.triggered.connect(lambda: self._ctx_duplicate(item, lib_id))
+                handlers[dup_action] = lambda: self._ctx_duplicate(item, lib_id)
             elif libraries:
                 dup_menu = menu.addMenu('Duplicate ...')
                 for lib_id, lib_name in libraries:
                     act = dup_menu.addAction(f'place in library {lib_name}')
-                    act.triggered.connect(
-                        lambda checked=False, lid=lib_id: self._ctx_duplicate(item, lid)
-                    )
+                    handlers[act] = lambda lid=lib_id: self._ctx_duplicate(item, lid)
             else:
                 dup_action = menu.addAction('Duplicate ...')
                 dup_action.setEnabled(False)
@@ -1544,14 +1549,12 @@ class ObjectTree(QWidget):
             if len(libraries) == 1:
                 move_action = menu.addAction('Move ...')
                 lib_id = libraries[0][0]
-                move_action.triggered.connect(lambda: self._ctx_move(item, lib_id))
+                handlers[move_action] = lambda: self._ctx_move(item, lib_id)
             elif libraries:
                 move_menu = menu.addMenu('Move ...')
                 for lib_id, lib_name in libraries:
                     act = move_menu.addAction(f'to library {lib_name}')
-                    act.triggered.connect(
-                        lambda checked=False, lid=lib_id: self._ctx_move(item, lid)
-                    )
+                    handlers[act] = lambda lid=lib_id: self._ctx_move(item, lid)
             else:
                 move_action = menu.addAction('Move ...')
                 move_action.setEnabled(False)
@@ -1575,18 +1578,18 @@ class ObjectTree(QWidget):
         copy_action = menu.addAction('Copy')
         copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         copy_action.setEnabled(can_copy)
-        copy_action.triggered.connect(lambda: self._ctx_copy())
+        handlers[copy_action] = lambda: self._ctx_copy()
 
         cut_action = menu.addAction('Cut')
         cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         cut_action.setEnabled(can_cut)
-        cut_action.triggered.connect(lambda: self._ctx_cut())
+        handlers[cut_action] = lambda: self._ctx_cut()
 
         can_paste = _tree_clipboard is not None and not effective_ro
         paste_action = menu.addAction('Paste')
         paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         paste_action.setEnabled(can_paste)
-        paste_action.triggered.connect(lambda: self._ctx_paste(item))
+        handlers[paste_action] = lambda: self._ctx_paste(item)
 
         # Delete — enabled for single and multi
         menu.addSeparator()
@@ -1595,18 +1598,18 @@ class ObjectTree(QWidget):
             delete_action = menu.addAction('Delete')
             delete_action.setShortcut(QKeySequence.StandardKey.Delete)
             delete_action.setEnabled(can_delete)
-            delete_action.triggered.connect(lambda: self._delete_selected())
+            handlers[delete_action] = lambda: self._delete_selected()
         else:
             can_delete = self._is_deletable(item)
             delete_action = menu.addAction('Delete')
             delete_action.setShortcut(QKeySequence.StandardKey.Delete)
             delete_action.setEnabled(can_delete)
-            delete_action.triggered.connect(lambda: self._ctx_delete(item))
+            handlers[delete_action] = lambda: self._ctx_delete(item)
 
         # Group — multi-select only (>= 2 items)
         if num_selected >= 2:
             group_act = menu.addAction('Group')
-            group_act.triggered.connect(lambda: self._ctx_group_objects())
+            handlers[group_act] = lambda: self._ctx_group_objects()
 
         # "New Cluster from selected firewalls" (matching fwbuilder).
         if obj_type == 'Firewall':
@@ -1616,9 +1619,7 @@ class ObjectTree(QWidget):
             )
             can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
             cluster_act.setEnabled(can_cluster)
-            cluster_act.triggered.connect(
-                lambda: self._ctx_new_cluster_from_selected(),
-            )
+            handlers[cluster_act] = lambda: self._ctx_new_cluster_from_selected()
 
         # New [Type] + New Subfolder — single-select only
         if not multi:
@@ -1632,21 +1633,26 @@ class ObjectTree(QWidget):
                 icon_path = ICON_MAP.get(type_name, '')
                 act = menu.addAction(QIcon(icon_path), f'New {display_name}')
                 act.setEnabled(not effective_ro)
-                act.triggered.connect(
-                    lambda checked=False, t=type_name: self._ctx_new_object(item, t)
-                )
+                handlers[act] = lambda t=type_name: self._ctx_new_object(item, t)
             if show_subfolder:
                 sf_action = menu.addAction(
                     QIcon(_CATEGORY_ICON),
                     'New Subfolder',
                 )
                 sf_action.setEnabled(not effective_ro)
-                sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
+                handlers[sf_action] = lambda: self._ctx_new_subfolder(item)
 
-        menu.exec(self._tree.viewport().mapToGlobal(pos))
+        triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
+        handler = handlers.get(triggered)
+        if handler is not None:
+            handler()
 
     def _on_category_context_menu(self, item, pos):
-        """Show a context menu for category folder items (New + Subfolder)."""
+        """Show a context menu for category folder items (New + Subfolder).
+
+        As in :meth:`_on_context_menu`, tree-modifying callbacks are
+        executed after ``menu.exec()`` returns to avoid SIGSEGV.
+        """
         folder_name = item.text(0)
         new_types = _NEW_TYPES_FOR_FOLDER.get(folder_name, [])
 
@@ -1660,8 +1666,9 @@ class ObjectTree(QWidget):
             parent = parent.parent()
 
         menu = QMenu(self)
+        handlers = {}
 
-        # Expand / Collapse
+        # Expand / Collapse — safe inside exec().
         if item.childCount() > 0:
             if item.isExpanded():
                 collapse_action = menu.addAction('Collapse')
@@ -1678,7 +1685,7 @@ class ObjectTree(QWidget):
         # Edit (rename folder)
         edit_action = menu.addAction('Edit')
         edit_action.setEnabled(not effective_ro)
-        edit_action.triggered.connect(lambda: self._ctx_rename_folder(item))
+        handlers[edit_action] = lambda: self._ctx_rename_folder(item)
 
         menu.addSeparator()
 
@@ -1686,9 +1693,7 @@ class ObjectTree(QWidget):
             icon_path = ICON_MAP.get(type_name, '')
             act = menu.addAction(QIcon(icon_path), f'New {display_name}')
             act.setEnabled(not effective_ro)
-            act.triggered.connect(
-                lambda checked=False, t=type_name: self._ctx_new_object(item, t)
-            )
+            handlers[act] = lambda t=type_name: self._ctx_new_object(item, t)
 
         # "New Cluster from selected firewalls" on the Firewalls folder.
         if folder_name == 'Firewalls':
@@ -1698,22 +1703,23 @@ class ObjectTree(QWidget):
             )
             can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
             cluster_act.setEnabled(can_cluster)
-            cluster_act.triggered.connect(
-                lambda: self._ctx_new_cluster_from_selected(),
-            )
+            handlers[cluster_act] = lambda: self._ctx_new_cluster_from_selected()
 
         sf_action = menu.addAction(QIcon(_CATEGORY_ICON), 'New Subfolder')
         sf_action.setEnabled(not effective_ro)
-        sf_action.triggered.connect(lambda: self._ctx_new_subfolder(item))
+        handlers[sf_action] = lambda: self._ctx_new_subfolder(item)
 
         # Delete folder
         menu.addSeparator()
         delete_action = menu.addAction('Delete')
         delete_action.setShortcut(QKeySequence.StandardKey.Delete)
         delete_action.setEnabled(not effective_ro)
-        delete_action.triggered.connect(lambda: self._ctx_delete_folder(item))
+        handlers[delete_action] = lambda: self._ctx_delete_folder(item)
 
-        menu.exec(self._tree.viewport().mapToGlobal(pos))
+        triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
+        handler = handlers.get(triggered)
+        if handler is not None:
+            handler()
 
     def _ctx_edit(self, item):
         """Open the editor for the context-menu item (Edit / Inspect)."""
