@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Creation dialog for Firewall, Cluster, and Host objects."""
+"""Creation dialog for Firewall objects (name + platform + host OS)."""
 
 from pathlib import Path
 
@@ -24,16 +24,14 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 _TITLES = {
     'Cluster': 'Create New Cluster',
     'Firewall': 'Create New Firewall',
-    'Host': 'Create New Host',
 }
 
 
 class NewDeviceDialog(QDialog):
-    """Modal dialog for creating a new Firewall, Cluster, or Host.
+    """Modal dialog for creating a new Firewall (name + platform + host OS).
 
-    Mirrors fwbuilder's ``newFirewallDialog`` / ``newHostDialog`` first
-    page (name + platform + host OS).  For Host objects the platform and
-    host OS rows are hidden.
+    Mirrors fwbuilder's ``newFirewallDialog`` first page.  Host objects
+    use :class:`~firewallfabrik.gui.new_host_dialog.NewHostDialog` instead.
     """
 
     def __init__(self, type_name, parent=None):
@@ -54,30 +52,19 @@ class NewDeviceDialog(QDialog):
         self.obj_name.setText(f'New {type_name}')
         self.obj_name.selectAll()
 
-        if type_name == 'Host':
-            # Host objects have no platform/host OS fields.
-            self.platformLabel.setVisible(False)
-            self.platform.setVisible(False)
-            self.hostOSLabel.setVisible(False)
-            self.hostOS.setVisible(False)
-        else:
-            # Populate platform combo.
-            platforms = get_enabled_platforms()
-            for key, display in sorted(
-                platforms.items(), key=lambda t: t[1].casefold()
-            ):
-                self.platform.addItem(display, key)
-            # Default to nftables if enabled, otherwise first entry.
-            idx = self.platform.findData('nftables')
-            if idx >= 0:
-                self.platform.setCurrentIndex(idx)
+        # Populate platform combo.
+        platforms = get_enabled_platforms()
+        for key, display in sorted(platforms.items(), key=lambda t: t[1].casefold()):
+            self.platform.addItem(display, key)
+        # Default to nftables if enabled, otherwise first entry.
+        idx = self.platform.findData('nftables')
+        if idx >= 0:
+            self.platform.setCurrentIndex(idx)
 
-            # Populate host OS combo.
-            os_entries = get_enabled_os()
-            for key, display in sorted(
-                os_entries.items(), key=lambda t: t[1].casefold()
-            ):
-                self.hostOS.addItem(display, key)
+        # Populate host OS combo.
+        os_entries = get_enabled_os()
+        for key, display in sorted(os_entries.items(), key=lambda t: t[1].casefold()):
+            self.hostOS.addItem(display, key)
 
         self.adjustSize()
 
@@ -106,11 +93,9 @@ class NewDeviceDialog(QDialog):
         """Return ``(name, extra_data)`` for object creation.
 
         *extra_data* is a dict with ``platform``, ``host_OS``, and
-        ``version`` keys for Firewall/Cluster, or an empty dict for Host.
+        ``version`` keys.
         """
         name = self.obj_name.text().strip()
-        if self._type_name == 'Host':
-            return name, {}
         return name, {
             'host_OS': self.hostOS.currentData() or '',
             'platform': self.platform.currentData() or '',

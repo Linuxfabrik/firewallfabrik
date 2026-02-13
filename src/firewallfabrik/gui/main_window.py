@@ -899,7 +899,19 @@ class FWWindow(QMainWindow):
                 extra_data=extra_data,
                 name=name,
             )
-        elif type_name in ('Firewall', 'Host'):
+        elif type_name == 'Host':
+            from firewallfabrik.gui.new_host_dialog import NewHostDialog
+
+            dlg = NewHostDialog(parent=self)
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, interfaces = dlg.get_result()
+            self._object_tree.create_host_in_library(
+                lib_id,
+                name=name,
+                interfaces=interfaces,
+            )
+        elif type_name == 'Firewall':
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
 
             dlg = NewDeviceDialog(type_name, parent=self)

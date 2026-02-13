@@ -2535,7 +2535,40 @@ class ObjectTree(QWidget):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
             name, extra_data = dlg.get_result()
-        elif type_name in ('Firewall', 'Host'):
+        elif type_name == 'Host':
+            from firewallfabrik.gui.new_host_dialog import NewHostDialog
+
+            dlg = NewHostDialog(parent=self._tree.window())
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+            name, interfaces = dlg.get_result()
+
+            # Determine where to place the new host.
+            lib_id = self._get_item_library_id(item)
+            if lib_id is None:
+                return
+
+            obj_type_item = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            folder = None
+            if obj_type_item is None:
+                folder = item.text(0)
+            if folder is None:
+                folder = 'Hosts'
+
+            prefix = self._get_device_prefix(item)
+            new_id = self._create_host_with_interfaces(
+                lib_id,
+                name=name,
+                interfaces=interfaces,
+                folder=folder,
+                prefix=prefix,
+            )
+            if new_id is not None:
+                self.tree_changed.emit()
+                QTimer.singleShot(0, lambda: self.select_object(new_id))
+                self.object_activated.emit(str(new_id), type_name)
+            return
+        elif type_name == 'Firewall':
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
 
             dlg = NewDeviceDialog(type_name, parent=self._tree.window())
@@ -2755,6 +2788,114 @@ class ObjectTree(QWidget):
             self.tree_changed.emit()
             QTimer.singleShot(0, lambda: self.select_object(new_id))
             self.object_activated.emit(str(new_id), type_name)
+
+    def create_host_in_library(self, lib_id, *, name=None, interfaces=None):
+        """Create a new Host (with interfaces) in library *lib_id*.
+
+        This is the toolbar/menu variant — it places the Host in the
+        standard ``Hosts`` folder.
+        """
+        new_id = self._create_host_with_interfaces(
+            lib_id,
+            name=name,
+            interfaces=interfaces or [],
+            folder='Hosts',
+        )
+        if new_id is not None:
+            self.tree_changed.emit()
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+            self.object_activated.emit(str(new_id), 'Host')
+
+    def _create_host_with_interfaces(
+        self,
+        lib_id,
+        *,
+        name=None,
+        interfaces=None,
+        folder=None,
+        prefix='',
+    ):
+        """Create a Host with interfaces and addresses in one operation.
+
+        Mirrors fwbuilder's ``newHostDialog::finishClicked()`` which
+        creates the Host, its Interface children, and their IPv4/IPv6
+        address children as a single undo-able action.
+
+        Returns the new Host UUID, or None on failure.
+        """
+        if self._db_manager is None:
+            return None
+
+        session = self._db_manager.create_session()
+        try:
+            host_id = uuid.uuid4()
+            data = {}
+            if folder:
+                data['folder'] = folder
+            host = Host(
+                id=host_id,
+                type='Host',
+                library_id=lib_id,
+                data=data,
+            )
+            host.name = name or 'New Host'
+            host.name = self._make_name_unique(session, host)
+            session.add(host)
+
+            for iface_data in interfaces or []:
+                iface_id = uuid.uuid4()
+                iface_name = iface_data.get('name', '')
+                if not iface_name:
+                    continue
+                itype = iface_data.get('type', 0)
+                iface = Interface(
+                    id=iface_id,
+                    type='Interface',
+                    device_id=host_id,
+                    library_id=lib_id,
+                    name=iface_name,
+                    comment=iface_data.get('comment', ''),
+                    data={
+                        'dyn': str(itype == 1),
+                        'label': iface_data.get('label', ''),
+                        'security_level': '0',
+                        'unnum': str(itype == 2),
+                    },
+                )
+                session.add(iface)
+
+                # Create IPv4/IPv6 address children (static interfaces only).
+                if itype == 0:
+                    for addr_info in iface_data.get('addresses', []):
+                        addr_str = addr_info.get('address', '')
+                        mask_str = addr_info.get('netmask', '')
+                        is_v4 = addr_info.get('ipv4', True)
+                        if not addr_str:
+                            continue
+                        addr_type = 'IPv4' if is_v4 else 'IPv6'
+                        suffix = 'ip' if is_v4 else 'ip6'
+                        addr_name = f'{host.name}:{iface_name}:{suffix}'
+                        addr = Address(
+                            id=uuid.uuid4(),
+                            type=addr_type,
+                            interface_id=iface_id,
+                            name=addr_name,
+                            inet_addr_mask={
+                                'address': addr_str,
+                                'netmask': mask_str,
+                            },
+                        )
+                        session.add(addr)
+
+            session.commit()
+            self._db_manager.save_state(f'{prefix}New Host {host.name}')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+        return host_id
 
     # ------------------------------------------------------------------
     # New Subfolder
