@@ -676,6 +676,36 @@ class FWWindow(QMainWindow):
         self._add_to_recent(str(file_path))
 
     @Slot()
+    def fileClose(self):
+        if not self._save_if_modified():
+            return
+        display = getattr(self, '_display_file', None)
+        if display:
+            self._object_tree.save_tree_state(str(display))
+        self._close_editor()
+        self.m_space.closeAllSubWindows()
+        self._object_tree._tree.clear()
+        self._object_tree._filter.clear()
+        self.undoView.clear()
+        self._db_manager = DatabaseManager()
+        self._db_manager.on_history_changed = self._on_history_changed
+        self._current_file = None
+        self._display_file = None
+        self._update_title()
+        self.newObjectAction.setEnabled(False)
+        self._update_undo_actions()
+        self._find_panel.set_db_manager(self._db_manager)
+        self._find_panel.reset()
+        self._where_used_panel.set_db_manager(self._db_manager)
+        self._where_used_panel.reset()
+        self._object_tree.set_db_manager(self._db_manager)
+        self.editorDockWidget.blockSignals(True)
+        self.undoDockWidget.blockSignals(True)
+        self._apply_no_file_state()
+        self.editorDockWidget.blockSignals(False)
+        self.undoDockWidget.blockSignals(False)
+
+    @Slot()
     def fileExit(self):
         self.close()
 

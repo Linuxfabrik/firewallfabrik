@@ -827,7 +827,6 @@
     <addaction name="fileSaveAsAction"/>
     <addaction name="fileCloseAction"/>
     <addaction name="separator"/>
-    <addaction name="separator"/>
     <addaction name="policyImportAction"/>
     <addaction name="separator"/>
     <addaction name="libImportAction"/>
@@ -1087,6 +1086,9 @@
    </property>
    <property name="iconText">
     <string>Close</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F4</string>
    </property>
   </action>
   <action name="compileAction">

@@ -138,6 +138,8 @@ The File menu provides standard file management options.
      - Saves the current file. Files are always saved in the FirewallFabrik YAML format (.fwf), even if the original file was a Firewall Builder XML file (.fwb).
    * - Save As...
      - Opens a "file" dialog that lets you save the object file under a new name.
+   * - Close
+     - Closes the current file. If there are unsaved changes, you are prompted to save, discard, or cancel. All panels are hidden and the workspace returns to its initial empty state.
    * - Exit
      - Closes FirewallFabrik.
 
@@ -688,6 +690,9 @@ Keyboard Shortcuts
     * - ``Ctrl+S``
       - Menu "File"
       - Save file
+    * - ``Ctrl+F4``
+      - Menu "File"
+      - Close file
     * - ``Ctrl+,``
       - Menu "Edit"
       - Preferences
