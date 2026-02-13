@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QDialog
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.iptables_settings_dialog import IptablesSettingsDialog
 from firewallfabrik.gui.linux_settings_dialog import LinuxSettingsDialog
+from firewallfabrik.gui.nftables_settings_dialog import NftablesSettingsDialog
 from firewallfabrik.gui.platform_settings import (
     HOST_OS,
     PLATFORMS,
@@ -29,6 +30,12 @@ from firewallfabrik.gui.platform_settings import (
 
 # Reverse mapping: display name → internal key for host OS.
 _HOST_OS_INTERNAL = {v: k for k, v in HOST_OS.items()}
+
+# Platform display name → settings dialog class.
+_PLATFORM_SETTINGS_DIALOG = {
+    'iptables': IptablesSettingsDialog,
+    'nftables': NftablesSettingsDialog,
+}
 
 
 class HostDialog(BaseObjectDialog):
@@ -101,7 +108,10 @@ class FirewallDialog(BaseObjectDialog):
 
     @Slot()
     def openFWDialog(self):
-        dlg = IptablesSettingsDialog(self._obj, parent=self.window())
+        dialog_cls = _PLATFORM_SETTINGS_DIALOG.get(self.platform.currentText())
+        if dialog_cls is None:
+            return
+        dlg = dialog_cls(self._obj, parent=self.window())
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self.changed.emit()
 
