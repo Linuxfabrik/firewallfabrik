@@ -371,7 +371,7 @@ class TreeOperations:
 
             session.commit()
             self._db_manager.save_state(
-                f'{prefix}Duplicate {source.type} {source.name}',
+                f'{prefix}Duplicate {model_cls.__name__} {source.name}',
             )
             new_id = new_obj.id
         except Exception:
