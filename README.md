@@ -5,7 +5,7 @@
     </picture>
   </a>-->
   <br />
-  Linuxfabrik FirewallFabrik
+  Linuxfabrik's FirewallFabrik
 </h1>
 <p align="center">
   <em>FirewallFabrik</em>
@@ -27,7 +27,7 @@
 
 # FirewallFabrik
 
-FirewallFabrik is a Qt-based GUI tool for managing firewall configurations across multiple platforms (iptables, nftables, etc.). Firewall configuration data is stored in a central file that can scale to hundreds of firewalls managed from a single UI.
+FirewallFabrik is a modern successor to [Firewall Builder](https://github.com/fwbuilder/fwbuilder), preserving its core design philosophy while updating it for current firewall technologies. It is a Qt-based GUI that manages firewall policies for multiple platforms, including iptables and nftables, from a single unified interface. All objects, rules, and device definitions are stored in a centralized policy database, allowing consistent reuse of services, networks, and rule sets. This architecture scales cleanly from a handful of devices to hundreds of firewalls, all managed from one policy file and one UI, with platform-specific configuration generated automatically.
 
 
 ## Installation
