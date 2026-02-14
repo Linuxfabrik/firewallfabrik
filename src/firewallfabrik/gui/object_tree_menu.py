@@ -34,8 +34,8 @@ from firewallfabrik.gui.object_tree_data import (
     NO_COPY_TYPES,
     NO_DUPLICATE_TYPES,
     NO_MOVE_TYPES,
-    NO_SUBFOLDER_TYPES,
     RULE_SET_TYPES,
+    SUBFOLDER_TYPES,
 )
 
 
@@ -197,6 +197,10 @@ def build_object_context_menu(
     effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
     num_selected = len(selection)
     multi = num_selected > 1
+    is_sys = is_system_group_fn(item)
+    is_firewalls_folder = (
+        obj_type == 'ObjectGroup' and item.text(0) == 'Firewalls' and is_sys
+    )
 
     menu = QMenu(parent_widget)
     handlers = {}
@@ -211,19 +215,19 @@ def build_object_context_menu(
             act.triggered.connect(lambda: item.setExpanded(True))
         menu.addSeparator()
 
-    # ── 2. Edit / Inspect ─────────────────────────────────────────────
-    if not multi:
-        label = 'Inspect' if effective_ro else 'Edit'
-        act = menu.addAction(label)
-        handlers[act] = ('_ctx_edit', item)
+    # ── 2. Edit / Inspect — always shown; disabled if multi or system group
+    label = 'Inspect' if effective_ro else 'Edit'
+    act = menu.addAction(label)
+    act.setEnabled(not multi and not is_sys)
+    handlers[act] = ('_ctx_edit', item)
 
     # ── 3. Open (RuleSet only) ────────────────────────────────────────
     if not multi and obj_type in RULE_SET_TYPES:
         act = menu.addAction('Open')
         handlers[act] = ('_ctx_open_ruleset', item)
 
-    # ── 4. Duplicate ... ──────────────────────────────────────────────
-    if not multi and obj_type not in NO_DUPLICATE_TYPES:
+    # ── 4. Duplicate ... — hidden for system groups ───────────────────
+    if not multi and obj_type not in NO_DUPLICATE_TYPES and not is_sys:
         if len(writable_libraries) == 1:
             act = menu.addAction('Duplicate ...')
             lib_id = writable_libraries[0][0]
@@ -237,8 +241,8 @@ def build_object_context_menu(
             act = menu.addAction('Duplicate ...')
             act.setEnabled(False)
 
-    # ── 5. Move ... ───────────────────────────────────────────────────
-    if not multi and obj_type not in NO_MOVE_TYPES and not effective_ro:
+    # ── 5. Move ... — hidden for system groups ────────────────────────
+    if not multi and obj_type not in NO_MOVE_TYPES and not effective_ro and not is_sys:
         current_lib_id = get_item_library_id_fn(item)
         move_libs = [
             (lid, lname) for lid, lname in writable_libraries if lid != current_lib_id
@@ -259,22 +263,26 @@ def build_object_context_menu(
     # ── 6. Copy / Cut / Paste ─────────────────────────────────────────
     menu.addSeparator()
 
+    # Copy — disabled for NO_COPY_TYPES + system groups.
     if multi:
         can_copy = all(
             (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in NO_COPY_TYPES
+            and not is_system_group_fn(it)
             for it in selection
         )
-        can_cut = can_copy and all(
-            not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False) for it in selection
-        )
     else:
-        can_copy = obj_type not in NO_COPY_TYPES
-        can_cut = can_copy and not effective_ro
+        can_copy = obj_type not in NO_COPY_TYPES and not is_sys
 
     act = menu.addAction('Copy')
     act.setShortcut(QKeySequence.StandardKey.Copy)
     act.setEnabled(can_copy)
     handlers[act] = ('_ctx_copy',)
+
+    # Cut — same enabled state as Delete.
+    if multi:
+        can_cut = any(is_deletable_fn(it) for it in selection)
+    else:
+        can_cut = is_deletable_fn(item)
 
     act = menu.addAction('Cut')
     act.setShortcut(QKeySequence.StandardKey.Cut)
@@ -305,7 +313,12 @@ def build_object_context_menu(
     # ── 8. New [Type] + New Subfolder (single-select only) ────────────
     if not multi:
         new_types = _get_new_object_types(item, obj_type)
-        show_subfolder = obj_type == 'Library' or obj_type not in NO_SUBFOLDER_TYPES
+        show_subfolder = obj_type == 'Library' or obj_type in SUBFOLDER_TYPES
+        # Path exception: user ObjectGroup under "Groups" → no subfolder.
+        if show_subfolder and obj_type == 'ObjectGroup' and not is_sys:
+            folder_info = _find_folder_context(item)
+            if folder_info is not None and folder_info[0] == 'Groups':
+                show_subfolder = False
         if new_types or show_subfolder:
             menu.addSeparator()
         for type_name, display_name in new_types:
@@ -320,7 +333,6 @@ def build_object_context_menu(
 
     # ── 9. Find / Where used ──────────────────────────────────────────
     menu.addSeparator()
-    is_sys = is_system_group_fn(item) if not multi else True
     can_find = not multi and not is_sys
 
     act = menu.addAction('Find')
@@ -359,7 +371,7 @@ def build_object_context_menu(
         remove_kw_menu.setEnabled(False)
 
     # ── 12. New Cluster from selected firewalls ───────────────────────
-    if obj_type == 'Firewall':
+    if obj_type == 'Firewall' or is_firewalls_folder:
         act = menu.addAction(
             QIcon(ICON_MAP.get('Cluster', '')),
             'New Cluster from selected firewalls',
@@ -368,8 +380,9 @@ def build_object_context_menu(
         act.setEnabled(can_cluster)
         handlers[act] = ('_ctx_new_cluster_from_selected',)
 
-    # ── 13. Compile / Install (Firewall, Cluster) ─────────────────────
-    if obj_type in COMPILABLE_TYPES:
+    # ── 13. Compile / Install ─────────────────────────────────────────
+    if obj_type in COMPILABLE_TYPES or is_firewalls_folder:
+        menu.addSeparator()
         act = menu.addAction('Compile')
         act.setEnabled(not effective_ro)
         handlers[act] = ('_ctx_compile',)
@@ -387,18 +400,16 @@ def build_object_context_menu(
             act = sub_menu.addAction(iface_name)
             handlers[act] = ('_ctx_make_subinterface', item, iface_id)
 
-    # ── 15. Lock / Unlock ─────────────────────────────────────────────
-    if obj_type in LOCKABLE_TYPES:
-        menu.addSeparator()
-        # Lock: enabled when object is not locked and library is writable.
-        lock_act = menu.addAction('Lock')
-        lock_act.setEnabled(not lib_is_ro and not obj_is_locked)
-        handlers[lock_act] = ('_ctx_lock',)
+    # ── 15. Lock / Unlock — always shown; enabled per lockability ─────
+    menu.addSeparator()
+    can_lock = obj_type in LOCKABLE_TYPES
+    lock_act = menu.addAction('Lock')
+    lock_act.setEnabled(can_lock and not lib_is_ro and not obj_is_locked)
+    handlers[lock_act] = ('_ctx_lock',)
 
-        # Unlock: enabled when object IS locked and library is writable.
-        unlock_act = menu.addAction('Unlock')
-        unlock_act.setEnabled(not lib_is_ro and obj_is_locked)
-        handlers[unlock_act] = ('_ctx_unlock',)
+    unlock_act = menu.addAction('Unlock')
+    unlock_act.setEnabled(can_lock and not lib_is_ro and obj_is_locked)
+    handlers[unlock_act] = ('_ctx_unlock',)
 
     return menu, handlers
 
@@ -439,84 +450,53 @@ def _resolve_category_folder(item):
     return None
 
 
-def build_category_context_menu(
-    parent_widget,
-    item,
-    *,
-    clipboard,
-    count_selected_firewalls_fn,
-    effective_ro,
-):
-    """Build context menu for a category folder item.
+def build_category_context_menu(parent_widget, item, *, has_mixed_selection):
+    """Build context menu for a user subfolder item.
+
+    Matches fwbuilder's subfolder menu: Delete, Rename, New [types].
 
     Returns ``(menu, handlers)`` where *handlers* maps
     ``QAction -> ('method_name', *args)`` tuples.
     """
+    from PySide6.QtCore import Qt
+
     effective_folder = _resolve_category_folder(item)
     new_types = (
         NEW_TYPES_FOR_FOLDER.get(effective_folder, []) if effective_folder else []
     )
 
+    # Determine read-only state from parent library.
+    effective_ro = False
+    parent = item.parent()
+    while parent is not None:
+        if parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
+            effective_ro = parent.data(0, Qt.ItemDataRole.UserRole + 5) or False
+            break
+        parent = parent.parent()
+
+    disabled = has_mixed_selection or effective_ro
+
     menu = QMenu(parent_widget)
     handlers = {}
 
-    # Expand / Collapse — safe inside exec().
-    if item.childCount() > 0:
-        if item.isExpanded():
-            act = menu.addAction('Collapse')
-            act.triggered.connect(lambda: item.setExpanded(False))
-        else:
-            act = menu.addAction('Expand')
-            act.triggered.connect(lambda: item.setExpanded(True))
-        menu.addSeparator()
+    # Delete folder.
+    act = menu.addAction('Delete')
+    act.setShortcut(QKeySequence.StandardKey.Delete)
+    act.setEnabled(not disabled)
+    handlers[act] = ('_ctx_delete_folder', item)
 
-    # Edit (rename folder)
-    act = menu.addAction('Edit')
-    act.setEnabled(not effective_ro)
+    # Rename folder.
+    act = menu.addAction('Rename')
+    act.setEnabled(not disabled)
     handlers[act] = ('_ctx_rename_folder', item)
 
-    menu.addSeparator()
-
+    # New [types].
+    if new_types:
+        menu.addSeparator()
     for type_name, display_name in new_types:
         icon_path = ICON_MAP.get(type_name, '')
         act = menu.addAction(QIcon(icon_path), f'New {display_name}')
         act.setEnabled(not effective_ro)
         handlers[act] = ('_ctx_new_object', item, type_name)
-
-    # "New Cluster from selected firewalls" on the Firewalls folder.
-    if effective_folder == 'Firewalls':
-        act = menu.addAction(
-            QIcon(ICON_MAP.get('Cluster', '')),
-            'New Cluster from selected firewalls',
-        )
-        can_cluster = not effective_ro and count_selected_firewalls_fn() >= 2
-        act.setEnabled(can_cluster)
-        handlers[act] = ('_ctx_new_cluster_from_selected',)
-
-    # Paste
-    menu.addSeparator()
-    can_paste = clipboard is not None and not effective_ro
-    act = menu.addAction('Paste')
-    act.setShortcut(QKeySequence.StandardKey.Paste)
-    act.setEnabled(can_paste)
-    handlers[act] = ('_ctx_paste', item)
-
-    # Compile / Install on the Firewalls folder.
-    if effective_folder == 'Firewalls':
-        menu.addSeparator()
-        act = menu.addAction('Compile')
-        act.setEnabled(not effective_ro)
-        handlers[act] = ('_ctx_compile',)
-
-        act = menu.addAction('Install')
-        act.setEnabled(not effective_ro)
-        handlers[act] = ('_ctx_install',)
-
-    # Delete folder
-    menu.addSeparator()
-    act = menu.addAction('Delete')
-    act.setShortcut(QKeySequence.StandardKey.Delete)
-    act.setEnabled(not effective_ro)
-    handlers[act] = ('_ctx_delete_folder', item)
 
     return menu, handlers

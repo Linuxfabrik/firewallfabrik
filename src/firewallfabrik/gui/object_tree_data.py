@@ -220,7 +220,7 @@ NO_COPY_TYPES = frozenset(
 )
 
 # Types that cannot be deleted.
-NO_DELETE_TYPES = frozenset({'AttachedNetworks'})
+NO_DELETE_TYPES = frozenset({'AttachedNetworks', 'NAT', 'Policy', 'Routing'})
 
 # System folder names that match fwbuilder's ``deleteMenuState`` map
 # (FWBTree.cpp:344-364).  These structural groups cannot be deleted.
@@ -461,34 +461,10 @@ LOCKABLE_TYPES = frozenset(
     }
 )
 
-# Types that do NOT get "New Subfolder" in their context menu.
-# Matches fwbuilder's exclusion list in addSubfolderActions().
-NO_SUBFOLDER_TYPES = frozenset(
-    {
-        'AddressRange',
-        'AddressTable',
-        'AttachedNetworks',
-        'Cluster',
-        'CustomService',
-        'DNSName',
-        'DynamicGroup',
-        'Firewall',
-        'Host',
-        'ICMP6Service',
-        'ICMPService',
-        'IPService',
-        'IPv4',
-        'IPv6',
-        'Interval',
-        'Network',
-        'NetworkIPv6',
-        'ServiceGroup',
-        'TCPService',
-        'TagService',
-        'UDPService',
-        'UserService',
-    }
-)
+# Types that DO get "New Subfolder" in their context menu.
+# Matches fwbuilder's addSubfolderActions() exclusion list (lines 420-444):
+# types NOT listed there get addSubfolder=true.
+SUBFOLDER_TYPES = frozenset({'Interface', 'IntervalGroup', 'ObjectGroup'})
 
 
 # ------------------------------------------------------------------

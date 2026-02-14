@@ -567,11 +567,14 @@ class ObjectTree(QWidget):
                 inactive=is_inactive(rs),
                 obj=rs,
             )
-        for iface in sorted(device.interfaces, key=lambda o: o.name.lower()):
+        # Only add top-level interfaces; sub-interfaces are added
+        # recursively inside _add_interface().
+        top_ifaces = [i for i in device.interfaces if i.parent_interface_id is None]
+        for iface in sorted(top_ifaces, key=lambda o: o.name.lower()):
             self._add_interface(iface, parent_item)
 
     def _add_interface(self, iface, parent_item):
-        """Add an Interface node with its child addresses."""
+        """Add an Interface node with sub-interfaces and addresses."""
         effective_ro = self._building_lib_ro or self._building_device_ro
         iface_item = self._make_item(
             obj_display_name(iface),
@@ -584,6 +587,9 @@ class ObjectTree(QWidget):
             obj=iface,
             tags=obj_tags(iface),
         )
+        # Sub-interfaces (recursive).
+        for sub in sorted(iface.sub_interfaces, key=lambda o: o.name.lower()):
+            self._add_interface(sub, iface_item)
         for addr in sorted(iface.addresses, key=obj_sort_key):
             self._make_item(
                 obj_display_name(addr),
@@ -892,21 +898,16 @@ class ObjectTree(QWidget):
 
     def _on_category_context_menu(self, item, pos):
         """Show a context menu for category folder items."""
-        # Determine read-only state from parent library.
-        effective_ro = False
-        parent = item.parent()
-        while parent is not None:
-            if parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
-                effective_ro = parent.data(0, Qt.ItemDataRole.UserRole + 5) or False
-                break
-            parent = parent.parent()
+        has_mixed = any(
+            it.data(0, Qt.ItemDataRole.UserRole)
+            for it in self._tree.selectedItems()
+            if it is not item
+        )
 
         menu, handlers = build_category_context_menu(
             self,
             item,
-            clipboard=_tree_clipboard,
-            count_selected_firewalls_fn=self._count_selected_firewalls,
-            effective_ro=effective_ro,
+            has_mixed_selection=has_mixed,
         )
 
         triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
