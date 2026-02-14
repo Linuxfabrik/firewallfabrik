@@ -425,7 +425,18 @@ class FWWindow(QMainWindow):
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
         self._object_tree.rule_set_activated.connect(self._open_rule_set)
         self._object_tree.object_activated.connect(self._open_object_editor)
-        self._object_tree.tree_changed.connect(self._on_tree_changed)
+        # Use a queued connection so tree_changed.emit() returns
+        # immediately without calling _on_tree_changed synchronously.
+        # This lets the emitting handler finish and release all local
+        # QTreeWidgetItem references before populate() → clear()
+        # destroys the items (avoiding a Shiboken setParent segfault).
+        self._object_tree.tree_changed.connect(
+            self._on_tree_changed, Qt.ConnectionType.QueuedConnection
+        )
+        self._object_tree.find_requested.connect(self._on_find_from_tree)
+        self._object_tree.where_used_requested.connect(self._on_where_used_from_tree)
+        self._object_tree.compile_requested.connect(self.compile)
+        self._object_tree.install_requested.connect(self.install)
         self._object_tree.set_db_manager(self._db_manager)
 
         self._editor_map = {
@@ -1974,10 +1985,13 @@ class FWWindow(QMainWindow):
                     rs_name = '?'
                 sub.setWindowTitle(f'{fw_name} / {rs_name}')
 
-    def _on_tree_changed(self):
-        """Refresh the tree and editor after a CRUD operation (e.g. duplicate, delete)."""
-        obj_id = getattr(self, '_editor_obj_id', None)
-        obj_type = getattr(self, '_editor_obj_type', None)
+    def _on_tree_changed(self, activate_obj_id='', activate_obj_type=''):
+        """Refresh the tree and editor after a CRUD operation.
+
+        When *activate_obj_id* is non-empty, the editor for that object is
+        opened after the rebuild.  When empty, no editor is opened (the
+        previous one was already closed).
+        """
         self._close_editor()
 
         file_key = (
@@ -1986,9 +2000,9 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
 
-        # Re-open the editor for the same object (refreshes all fields).
-        if obj_id is not None:
-            self._open_object_editor(obj_id, obj_type)
+        # Open the requested editor (if any).
+        if activate_obj_id:
+            self._open_object_editor(activate_obj_id, activate_obj_type)
 
     @Slot()
     def toggleViewObjectTree(self):
@@ -2216,6 +2230,15 @@ class FWWindow(QMainWindow):
         """Show where-used results for the given object."""
         self._show_where_used_panel()
         self._where_used_panel.find_object(obj_id, name, obj_type)
+
+    def _on_find_from_tree(self, obj_id, name, obj_type):
+        """Handle Find request from the object tree context menu."""
+        self._show_find_panel()
+        self._find_panel.focus_input()
+
+    def _on_where_used_from_tree(self, obj_id, name, obj_type):
+        """Handle Where Used request from the object tree context menu."""
+        self.show_where_used(obj_id, name, obj_type)
 
     @staticmethod
     def _policy_view_from_widget(widget):

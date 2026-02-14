@@ -12,7 +12,6 @@
 
 """Object tree panel for the main window."""
 
-import copy
 import json
 import uuid
 from pathlib import Path
@@ -26,7 +25,6 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QInputDialog,
     QLineEdit,
-    QMenu,
     QMessageBox,
     QTreeWidget,
     QTreeWidgetItem,
@@ -40,674 +38,47 @@ from firewallfabrik.core.objects import (
     Group,
     Host,
     Interface,
-    Interval,
-    IntervalGroup,
     Library,
-    ObjectGroup,
     RuleSet,
-    Service,
-    ServiceGroup,
     group_membership,
-    rule_elements,
 )
-from firewallfabrik.gui.platform_settings import HOST_OS
+from firewallfabrik.gui.object_tree_data import (
+    CATEGORY_ICON,
+    ICON_MAP,
+    LOCK_ICON,
+    LOCKABLE_TYPES,
+    MODEL_MAP,
+    NEW_TYPES_FOR_FOLDER,
+    NO_COPY_TYPES,
+    NO_DELETE_TYPES,
+    NON_DRAGGABLE_TYPES,
+    RULE_SET_TYPES,
+    SERVICE_OBJ_TYPES,
+    SYSTEM_ROOT_FOLDERS,
+    SYSTEM_SUB_FOLDERS,
+    create_library_folder_structure,
+    is_inactive,
+    needs_compile,
+    normalize_subfolders,
+    obj_brief_attrs,
+    obj_display_name,
+    obj_sort_key,
+    obj_tags,
+    tags_to_str,
+)
+from firewallfabrik.gui.object_tree_menu import (
+    build_category_context_menu,
+    build_object_context_menu,
+)
+from firewallfabrik.gui.object_tree_ops import TreeOperations
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 from firewallfabrik.gui.tooltip_helpers import get_library_name, obj_tooltip
 
-# Map ORM type discriminator strings to QRC icon aliases.
-ICON_MAP = {
-    'AddressRange': ':/Icons/AddressRange/icon-tree',
-    'AddressTable': ':/Icons/AddressTable/icon-tree',
-    'AttachedNetworks': ':/Icons/AttachedNetworks/icon-tree',
-    'Cluster': ':/Icons/Cluster/icon-tree',
-    'CustomService': ':/Icons/CustomService/icon-tree',
-    'DNSName': ':/Icons/DNSName/icon-tree',
-    'DynamicGroup': ':/Icons/DynamicGroup/icon-tree',
-    'FailoverClusterGroup': ':/Icons/FailoverClusterGroup/icon-tree',
-    'Firewall': ':/Icons/Firewall/icon-tree',
-    'Host': ':/Icons/Host/icon-tree',
-    'ICMP6Service': ':/Icons/ICMP6Service/icon-tree',
-    'ICMPService': ':/Icons/ICMPService/icon-tree',
-    'Interface': ':/Icons/Interface/icon-tree',
-    'Interval': ':/Icons/Interval/icon-tree',
-    'IntervalGroup': ':/Icons/IntervalGroup/icon-tree',
-    'IPService': ':/Icons/IPService/icon-tree',
-    'IPv4': ':/Icons/IPv4/icon-tree',
-    'IPv6': ':/Icons/IPv6/icon-tree',
-    'Library': ':/Icons/Library/icon-tree',
-    'NAT': ':/Icons/NAT/icon-tree',
-    'Network': ':/Icons/Network/icon-tree',
-    'NetworkIPv6': ':/Icons/NetworkIPv6/icon-tree',
-    'ObjectGroup': ':/Icons/ObjectGroup/icon-tree',
-    'PhysAddress': ':/Icons/PhysAddress/icon-tree',
-    'Policy': ':/Icons/Policy/icon-tree',
-    'Routing': ':/Icons/Routing/icon-tree',
-    'ServiceGroup': ':/Icons/ServiceGroup/icon-tree',
-    'StateSyncClusterGroup': ':/Icons/StateSyncClusterGroup/icon-tree',
-    'TCPService': ':/Icons/TCPService/icon-tree',
-    'TagService': ':/Icons/TagService/icon-tree',
-    'UDPService': ':/Icons/UDPService/icon-tree',
-    'UserService': ':/Icons/UserService/icon-tree',
-}
-
-_CATEGORY_ICON = ':/Icons/SystemGroup/icon-tree'
-_LOCK_ICON = ':/Icons/lock'
-
-# Maps object type discriminators to their standard two-level group path
-# inside a library.  Mirrors fwbuilder's ``systemGroupPaths`` map
-# (FWBTree.cpp:125-152).
-_SYSTEM_GROUP_PATHS = {
-    'AddressRange': 'Objects/Address Ranges',
-    'AddressTable': 'Objects/Address Tables',
-    'Cluster': 'Clusters',
-    'CustomService': 'Services/Custom',
-    'DNSName': 'Objects/DNS Names',
-    'DynamicGroup': 'Objects/Groups',
-    'Firewall': 'Firewalls',
-    'Host': 'Objects/Hosts',
-    'ICMP6Service': 'Services/ICMP',
-    'ICMPService': 'Services/ICMP',
-    'IPService': 'Services/IP',
-    'IPv4': 'Objects/Addresses',
-    'IPv6': 'Objects/Addresses',
-    'Interval': 'Time',
-    'Network': 'Objects/Networks',
-    'NetworkIPv6': 'Objects/Networks',
-    'ObjectGroup': 'Objects/Groups',
-    'ServiceGroup': 'Services/Groups',
-    'TCPService': 'Services/TCP',
-    'TagService': 'Services/TagServices',
-    'UDPService': 'Services/UDP',
-    'UserService': 'Services/Users',
-}
-
-# Full folder structure created for every new library.  Mirrors
-# fwbuilder's ``FWBTree::createNewLibrary()`` (FWBTree.cpp:513-601).
-# Each entry is ``(group_type, name, children | None)``.
-_LIBRARY_FOLDER_STRUCTURE = [
-    ('ObjectGroup', 'Clusters', None),
-    ('ObjectGroup', 'Firewalls', None),
-    (
-        'ObjectGroup',
-        'Objects',
-        [
-            ('ObjectGroup', 'Address Ranges'),
-            ('ObjectGroup', 'Address Tables'),
-            ('ObjectGroup', 'Addresses'),
-            ('ObjectGroup', 'DNS Names'),
-            ('ObjectGroup', 'Groups'),
-            ('ObjectGroup', 'Hosts'),
-            ('ObjectGroup', 'Networks'),
-        ],
-    ),
-    (
-        'ServiceGroup',
-        'Services',
-        [
-            ('ServiceGroup', 'Custom'),
-            ('ServiceGroup', 'Groups'),
-            ('ServiceGroup', 'ICMP'),
-            ('ServiceGroup', 'IP'),
-            ('ServiceGroup', 'TCP'),
-            ('ServiceGroup', 'TagServices'),
-            ('ServiceGroup', 'UDP'),
-            ('ServiceGroup', 'Users'),
-        ],
-    ),
-    ('IntervalGroup', 'Time', None),
-]
-
-_GROUP_TYPE_CLS = {
-    'IntervalGroup': IntervalGroup,
-    'ObjectGroup': ObjectGroup,
-    'ServiceGroup': ServiceGroup,
-}
-
-
-def _find_group_by_path(session, lib_id, path):
-    """Resolve a ``"Level1/Level2"`` group path inside a library.
-
-    Returns the deepest :class:`Group`, or *None* if any segment is
-    missing (the caller should fall back to virtual ``data.folder``).
-    """
-    if not path:
-        return None
-    parts = path.split('/')
-    parent_id = None
-    group = None
-    for part in parts:
-        stmt = sqlalchemy.select(Group).where(
-            Group.library_id == lib_id,
-            Group.name == part,
-        )
-        if parent_id is None:
-            stmt = stmt.where(Group.parent_group_id.is_(None))
-        else:
-            stmt = stmt.where(Group.parent_group_id == parent_id)
-        group = session.scalars(stmt).first()
-        if group is None:
-            return None
-        parent_id = group.id
-    return group
-
-
-def create_library_folder_structure(session, lib_id):
-    """Create the standard folder hierarchy for a library.
-
-    Mirrors fwbuilder's ``FWBTree::createNewLibrary()`` which creates
-    ``Clusters``, ``Firewalls``, ``Objects`` (with sub-groups),
-    ``Services`` (with sub-groups), and ``Time`` groups.
-    """
-    for group_type, name, children in _LIBRARY_FOLDER_STRUCTURE:
-        cls = _GROUP_TYPE_CLS[group_type]
-        parent = cls(
-            id=uuid.uuid4(),
-            type=group_type,
-            library_id=lib_id,
-            name=name,
-        )
-        session.add(parent)
-        if children:
-            session.flush()  # ensure parent.id is available
-            for child_type, child_name in children:
-                child_cls = _GROUP_TYPE_CLS[child_type]
-                session.add(
-                    child_cls(
-                        id=uuid.uuid4(),
-                        type=child_type,
-                        library_id=lib_id,
-                        parent_group_id=parent.id,
-                        name=child_name,
-                    )
-                )
-
-
-def _obj_sort_key(obj):
-    """Sort key: (label, name), case-insensitive."""
-    data = getattr(obj, 'data', None) or {}
-    label = (data.get('label') or '').lower()
-    return (label, obj.name.lower())
-
-
-def _obj_display_name(obj):
-    """Return 'name (label)' when a label exists, else just 'name'."""
-    data = getattr(obj, 'data', None) or {}
-    label = data.get('label') or ''
-    if label:
-        return f'{obj.name} ({label})'
-    return obj.name
-
-
-def _is_inactive(obj):
-    """Return True if the object is marked inactive/disabled."""
-    data = getattr(obj, 'data', None) or {}
-    return data.get('inactive') in (True, 'True')
-
-
-def _needs_compile(obj):
-    """Return True if the object has been modified since the last compile."""
-    data = getattr(obj, 'data', None) or {}
-    last_modified = int(data.get('lastModified', 0) or 0)
-    last_compiled = int(data.get('lastCompiled', 0) or 0)
-    return last_modified > last_compiled
-
-
-def _obj_tags(obj):
-    """Return the tags (keywords) of *obj* as a set, or empty set."""
-    return getattr(obj, 'keywords', None) or set()
-
-
-def _tags_to_str(tags):
-    """Convert a tag set to a lowercased, space-joined string for filtering."""
-    if not tags:
-        return ''
-    return ' '.join(t.lower() for t in sorted(tags))
-
-
-def _obj_brief_attrs(obj, under_interface=False):
-    """Return a display-friendly attribute string for the tree's second column.
-
-    Matches the format of fwbuilder's ``getObjectPropertiesBrief()``.
-    The same string serves as visible column text **and** filter search text.
-    """
-    type_str = getattr(obj, 'type', type(obj).__name__)
-
-    # -- Addresses --
-    if type_str in ('IPv4', 'IPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        if under_interface:
-            mask = iam.get('netmask', '')
-            return f'{addr}/{mask}' if addr else ''
-        return addr or ''
-
-    if type_str in ('Network', 'NetworkIPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        mask = iam.get('netmask', '')
-        return f'{addr}/{mask}' if addr else ''
-
-    if type_str == 'AddressRange':
-        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
-        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
-        if start or end:
-            return f'{start} - {end}'
-        return ''
-
-    if type_str == 'PhysAddress':
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        return iam.get('address', '') or ''
-
-    # -- Devices --
-    if type_str in ('Cluster', 'Firewall'):
-        data = getattr(obj, 'data', None) or {}
-        platform = data.get('platform', '')
-        version = data.get('version', '')
-        host_os = data.get('host_OS', '')
-        host_os = HOST_OS.get(host_os, host_os)
-        if platform:
-            return f'{platform}({version or "- any -"}) / {host_os}'
-        return ''
-
-    # -- Services --
-    if type_str in ('TCPService', 'UDPService'):
-        ss = getattr(obj, 'src_range_start', None) or 0
-        se = getattr(obj, 'src_range_end', None) or 0
-        ds = getattr(obj, 'dst_range_start', None) or 0
-        de = getattr(obj, 'dst_range_end', None) or 0
-        return f'{ss}:{se} / {ds}:{de}'
-
-    if type_str in ('ICMP6Service', 'ICMPService'):
-        codes = getattr(obj, 'codes', None) or {}
-        icmp_type = codes.get('type', -1)
-        code = codes.get('code', -1)
-        return f'type: {icmp_type}  code: {code}'
-
-    if type_str == 'IPService':
-        named = getattr(obj, 'named_protocols', None) or {}
-        protocol_num = named.get('protocol_num', '')
-        if protocol_num:
-            return f'protocol: {protocol_num}'
-        return ''
-
-    # -- Interface --
-    if type_str == 'Interface':
-        data = getattr(obj, 'data', None) or {}
-        label = data.get('label', '')
-        flags = []
-        if getattr(obj, 'is_dynamic', lambda: False)():
-            flags.append('dyn')
-        if getattr(obj, 'is_unnumbered', lambda: False)():
-            flags.append('unnum')
-        if getattr(obj, 'is_bridge_port', lambda: False)():
-            flags.append('bridge port')
-        if getattr(obj, 'is_slave', lambda: False)():
-            flags.append('slave')
-        parts = [label] if label else []
-        if flags:
-            parts.append(','.join(flags))
-        return ' '.join(parts)
-
-    # -- Groups --
-    if type_str in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-        count = 0
-        for attr in ('addresses', 'child_groups', 'devices', 'intervals', 'services'):
-            val = getattr(obj, attr, None)
-            if val:
-                count += len(val)
-        return f'{count} objects'
-
-    # -- Library --
-    if type_str == 'Library':
-        if getattr(obj, 'ro', False):
-            return '(read only)'
-        return ''
-
-    return ''
-
+# Re-export for backward compatibility (main_window.py imports these).
+__all__ = ['ICON_MAP', 'ObjectTree', 'create_library_folder_structure']
 
 _obj_tooltip = obj_tooltip
 _get_library_name = get_library_name
-
-
-# Rule set types that can be opened via double-click.
-_RULE_SET_TYPES = frozenset({'Policy', 'NAT', 'Routing'})
-
-# Types that cannot be dragged (structural / container items).
-_NON_DRAGGABLE_TYPES = frozenset(
-    {
-        'Library',
-        'NAT',
-        'Policy',
-        'Routing',
-    }
-)
-
-
-# Map type discriminator strings to their SQLAlchemy base model class.
-_MODEL_MAP = {
-    'AddressRange': Address,
-    'AddressTable': Group,
-    'AttachedNetworks': Group,
-    'Cluster': Host,
-    'CustomService': Service,
-    'DNSName': Group,
-    'DynamicGroup': Group,
-    'FailoverClusterGroup': Group,
-    'Firewall': Host,
-    'Host': Host,
-    'ICMP6Service': Service,
-    'ICMPService': Service,
-    'IPService': Service,
-    'IPv4': Address,
-    'IPv6': Address,
-    'Interface': Interface,
-    'Interval': Interval,
-    'IntervalGroup': Group,
-    'Library': Library,
-    'NAT': RuleSet,
-    'Network': Address,
-    'NetworkIPv6': Address,
-    'ObjectGroup': Group,
-    'PhysAddress': Address,
-    'Policy': RuleSet,
-    'Routing': RuleSet,
-    'ServiceGroup': Group,
-    'StateSyncClusterGroup': Group,
-    'TCPService': Service,
-    'TagService': Service,
-    'UDPService': Service,
-    'UserService': Service,
-}
-
-# Types for which "Duplicate ..." is not offered (structural / internal).
-_NO_DUPLICATE_TYPES = frozenset(
-    {
-        'AttachedNetworks',
-        'Interface',
-        'Library',
-        'NAT',
-        'PhysAddress',
-        'Policy',
-        'Routing',
-    }
-)
-
-# Types for which "Move" is not offered.
-_NO_MOVE_TYPES = frozenset(
-    {
-        'AttachedNetworks',
-        'Interface',
-        'Library',
-        'NAT',
-        'PhysAddress',
-        'Policy',
-        'Routing',
-    }
-)
-
-# Types that cannot be copied / cut.
-_NO_COPY_TYPES = frozenset(
-    {
-        'AttachedNetworks',
-        'Library',
-        'NAT',
-        'Policy',
-        'Routing',
-    }
-)
-
-# Types that cannot be deleted.
-_NO_DELETE_TYPES = frozenset(
-    {
-        'AttachedNetworks',
-    }
-)
-
-# System folder names that match fwbuilder's ``deleteMenuState`` map
-# (FWBTree.cpp:344-364).  These structural groups cannot be deleted.
-_SYSTEM_ROOT_FOLDERS = frozenset(
-    {'Clusters', 'Firewalls', 'Objects', 'Services', 'Time'}
-)
-_SYSTEM_SUB_FOLDERS = {
-    'Objects': frozenset(
-        {
-            'Address Ranges',
-            'Address Tables',
-            'Addresses',
-            'DNS Names',
-            'Groups',
-            'Hosts',
-            'Networks',
-        }
-    ),
-    'Services': frozenset(
-        {
-            'Custom',
-            'Groups',
-            'ICMP',
-            'IP',
-            'TCP',
-            'TagServices',
-            'UDP',
-            'Users',
-        }
-    ),
-}
-
-# Service object types used to detect group type for "Group" action.
-_SERVICE_OBJ_TYPES = frozenset(
-    {
-        'CustomService',
-        'ICMP6Service',
-        'ICMPService',
-        'IPService',
-        'ServiceGroup',
-        'TCPService',
-        'TagService',
-        'UDPService',
-        'UserService',
-    }
-)
-
-# New object types offered for device context (sorted alphabetically).
-_NEW_TYPES_FOR_PARENT = {
-    'Cluster': [
-        ('Interface', 'Interface'),
-        ('NAT', 'NAT Rule Set'),
-        ('Policy', 'Policy Rule Set'),
-        ('Routing', 'Routing Rule Set'),
-        ('StateSyncClusterGroup', 'State Sync Group'),
-    ],
-    'Firewall': [
-        ('Interface', 'Interface'),
-        ('NAT', 'NAT Rule Set'),
-        ('Policy', 'Policy Rule Set'),
-        ('Routing', 'Routing Rule Set'),
-    ],
-    'Host': [
-        ('Interface', 'Interface'),
-    ],
-}
-
-# New object types offered based on the data.folder of the clicked item
-# (or its siblings).  Matches fwbuilder's addSubfolderActions() order.
-_NEW_TYPES_FOR_FOLDER = {
-    'Address Ranges': [
-        ('AddressRange', 'Address Range'),
-    ],
-    'Address Tables': [
-        ('AddressTable', 'Address Table'),
-    ],
-    'Addresses': [
-        ('IPv4', 'Address'),
-        ('IPv6', 'Address IPv6'),
-    ],
-    'Clusters': [
-        ('Cluster', 'Cluster'),
-    ],
-    'Custom': [
-        ('CustomService', 'Custom Service'),
-    ],
-    'DNS Names': [
-        ('DNSName', 'DNS Name'),
-    ],
-    'Firewalls': [
-        ('Firewall', 'Firewall'),
-    ],
-    'Groups': [
-        ('DynamicGroup', 'Dynamic Group'),
-        ('ObjectGroup', 'Object Group'),
-        ('ServiceGroup', 'Service Group'),
-    ],
-    'Hosts': [
-        ('Host', 'Host'),
-    ],
-    'ICMP': [
-        ('ICMP6Service', 'ICMP6 Service'),
-        ('ICMPService', 'ICMP Service'),
-    ],
-    'IP': [
-        ('IPService', 'IP Service'),
-    ],
-    'Networks': [
-        ('Network', 'Network'),
-        ('NetworkIPv6', 'Network IPv6'),
-    ],
-    'TCP': [
-        ('TCPService', 'TCP Service'),
-    ],
-    'TagServices': [
-        ('TagService', 'Tag Service'),
-    ],
-    'Time': [
-        ('Interval', 'Time Interval'),
-    ],
-    'UDP': [
-        ('UDPService', 'UDP Service'),
-    ],
-    'Users': [
-        ('UserService', 'User Service'),
-    ],
-}
-
-# Context menu "New [Type]" entries for real group nodes, keyed by
-# ``(group_type, group_name)``.  This disambiguates folders with the
-# same name under different parents (e.g. "Groups" under Objects vs.
-# under Services) and provides correct entries for top-level groups.
-# Mirrors fwbuilder's ``ObjectManipulator::addSubfolderActions()`` logic.
-_NEW_TYPES_FOR_GROUP_NODE = {
-    ('IntervalGroup', 'Time'): [
-        ('Interval', 'Time Interval'),
-    ],
-    ('ObjectGroup', 'Address Ranges'): [
-        ('AddressRange', 'Address Range'),
-    ],
-    ('ObjectGroup', 'Address Tables'): [
-        ('AddressTable', 'Address Table'),
-    ],
-    ('ObjectGroup', 'Addresses'): [
-        ('IPv4', 'Address'),
-        ('IPv6', 'Address IPv6'),
-    ],
-    ('ObjectGroup', 'Clusters'): [
-        ('Cluster', 'Cluster'),
-    ],
-    ('ObjectGroup', 'DNS Names'): [
-        ('DNSName', 'DNS Name'),
-    ],
-    ('ObjectGroup', 'Firewalls'): [
-        ('Firewall', 'Firewall'),
-    ],
-    ('ObjectGroup', 'Groups'): [
-        ('DynamicGroup', 'Dynamic Group'),
-        ('ObjectGroup', 'Object Group'),
-    ],
-    ('ObjectGroup', 'Hosts'): [
-        ('Host', 'Host'),
-    ],
-    ('ObjectGroup', 'Networks'): [
-        ('Network', 'Network'),
-        ('NetworkIPv6', 'Network IPv6'),
-    ],
-    ('ObjectGroup', 'Objects'): [
-        ('AddressRange', 'Address Range'),
-        ('AddressTable', 'Address Table'),
-        ('DNSName', 'DNS Name'),
-        ('DynamicGroup', 'Dynamic Group'),
-        ('Host', 'Host'),
-        ('IPv4', 'Address'),
-        ('IPv6', 'Address IPv6'),
-        ('Network', 'Network'),
-        ('NetworkIPv6', 'Network IPv6'),
-        ('ObjectGroup', 'Object Group'),
-    ],
-    ('ServiceGroup', 'Custom'): [
-        ('CustomService', 'Custom Service'),
-    ],
-    ('ServiceGroup', 'Groups'): [
-        ('ServiceGroup', 'Service Group'),
-    ],
-    ('ServiceGroup', 'ICMP'): [
-        ('ICMP6Service', 'ICMP6 Service'),
-        ('ICMPService', 'ICMP Service'),
-    ],
-    ('ServiceGroup', 'IP'): [
-        ('IPService', 'IP Service'),
-    ],
-    ('ServiceGroup', 'Services'): [
-        ('CustomService', 'Custom Service'),
-        ('ICMP6Service', 'ICMP6 Service'),
-        ('ICMPService', 'ICMP Service'),
-        ('IPService', 'IP Service'),
-        ('ServiceGroup', 'Service Group'),
-        ('TCPService', 'TCP Service'),
-        ('TagService', 'Tag Service'),
-        ('UDPService', 'UDP Service'),
-        ('UserService', 'User Service'),
-    ],
-    ('ServiceGroup', 'TCP'): [
-        ('TCPService', 'TCP Service'),
-    ],
-    ('ServiceGroup', 'TagServices'): [
-        ('TagService', 'Tag Service'),
-    ],
-    ('ServiceGroup', 'UDP'): [
-        ('UDPService', 'UDP Service'),
-    ],
-    ('ServiceGroup', 'Users'): [
-        ('UserService', 'User Service'),
-    ],
-}
-
-# Types that do NOT get "New Subfolder" in their context menu.
-# Matches fwbuilder's exclusion list in addSubfolderActions().
-_NO_SUBFOLDER_TYPES = frozenset(
-    {
-        'AddressRange',
-        'AddressTable',
-        'AttachedNetworks',
-        'Cluster',
-        'CustomService',
-        'DNSName',
-        'DynamicGroup',
-        'Firewall',
-        'Host',
-        'ICMP6Service',
-        'ICMPService',
-        'IPService',
-        'IPv4',
-        'IPv6',
-        'Interval',
-        'Network',
-        'NetworkIPv6',
-        'ServiceGroup',
-        'TCPService',
-        'TagService',
-        'UDPService',
-        'UserService',
-    }
-)
 
 # Module-level clipboard shared across all ObjectTree instances.
 _tree_clipboard: list[dict] | None = (
@@ -728,7 +99,7 @@ class _DraggableTree(QTreeWidget):
         for item in items:
             obj_id = item.data(0, Qt.ItemDataRole.UserRole)
             obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-            if not obj_id or not obj_type or obj_type in _NON_DRAGGABLE_TYPES:
+            if not obj_id or not obj_type or obj_type in NON_DRAGGABLE_TYPES:
                 continue
             entries.append(
                 {
@@ -762,7 +133,7 @@ class _DraggableTree(QTreeWidget):
             for it in items
             if it.data(0, Qt.ItemDataRole.UserRole)
             and it.data(0, Qt.ItemDataRole.UserRole + 1)
-            and it.data(0, Qt.ItemDataRole.UserRole + 1) not in _NON_DRAGGABLE_TYPES
+            and it.data(0, Qt.ItemDataRole.UserRole + 1) not in NON_DRAGGABLE_TYPES
         ]
         first = valid_items[0] if valid_items else items[0]
         obj_type = first.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -806,8 +177,25 @@ class ObjectTree(QWidget):
     object_activated = Signal(str, str)
     """Emitted when a non-rule-set object is double-clicked: (obj_id, obj_type)."""
 
-    tree_changed = Signal()
-    """Emitted after a CRUD operation (e.g. duplicate) to trigger a tree refresh."""
+    tree_changed = Signal(str, str)
+    """Emitted after a CRUD operation to trigger a tree refresh.
+
+    Args: ``(activate_obj_id, activate_obj_type)``.
+    When non-empty, the editor for that object is opened after the rebuild.
+    When both are empty strings, no editor is opened.
+    """
+
+    find_requested = Signal(str, str, str)
+    """Emitted when "Find" is chosen from the context menu: (obj_id, name, obj_type)."""
+
+    where_used_requested = Signal(str, str, str)
+    """Emitted when "Where used" is chosen: (obj_id, name, obj_type)."""
+
+    compile_requested = Signal()
+    """Emitted when "Compile" is chosen from the context menu."""
+
+    install_requested = Signal()
+    """Emitted when "Install" is chosen from the context menu."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -830,6 +218,7 @@ class ObjectTree(QWidget):
         self._tree.customContextMenuRequested.connect(self._on_context_menu)
 
         self._db_manager = None
+        self._ops = TreeOperations()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -891,13 +280,6 @@ class ObjectTree(QWidget):
             ).all()
         )
 
-        # System folder groups get the generic folder icon; user-created
-        # groups keep their type-specific icon.  System folders are the
-        # top two levels of the library hierarchy created by
-        # create_library_folder_structure():
-        #   depth 0: Objects, Services, Firewalls, Clusters, Time
-        #   depth 1: Addresses, Hosts, TCP, ICMP, Groups, ...
-        # User-created groups live at depth 2+ (under "Groups" etc.).
         root_ids = set(
             session.scalars(
                 sqlalchemy.select(Group.id).where(
@@ -925,7 +307,7 @@ class ObjectTree(QWidget):
                 lib.name,
                 'Library',
                 str(lib.id),
-                attrs=_obj_brief_attrs(lib),
+                attrs=obj_brief_attrs(lib),
                 effective_readonly=self._building_lib_ro,
                 obj=lib,
                 readonly=self._building_lib_ro,
@@ -950,13 +332,13 @@ class ObjectTree(QWidget):
         # otherwise ResizeToContents computes zero width for column 1.
         QTimer.singleShot(0, self._apply_column_setup)
 
+    # ------------------------------------------------------------------
+    # Tree state persistence
+    # ------------------------------------------------------------------
+
     @staticmethod
     def _item_path(item):
-        """Build a stable path key from *item* to the tree root.
-
-        Uses display text at each level (e.g. ``User/Firewalls/fw1``),
-        which is deterministic across file reloads unlike object UUIDs.
-        """
+        """Build a stable path key from *item* to the tree root."""
         parts = []
         current = item
         while current:
@@ -998,11 +380,7 @@ class ObjectTree(QWidget):
             item.setExpanded(item.text(0) != 'Standard')
 
     def save_tree_state(self, file_key):
-        """Persist current tree expand/collapse state to QSettings.
-
-        *file_key* should be the same string passed to :meth:`populate`
-        (typically ``str(file_path)``).
-        """
+        """Persist current tree expand/collapse state to QSettings."""
         if not file_key or self._tree.topLevelItemCount() == 0:
             return
         expanded = self._save_expanded_state()
@@ -1022,11 +400,7 @@ class ObjectTree(QWidget):
 
     @staticmethod
     def _read_all_tree_states(settings):
-        """Return the full ``{file_key: [ids]}`` dict from QSettings.
-
-        Handles the QSettings INI-backend quirk where a quoted string
-        containing commas may be returned as a list instead of a str.
-        """
+        """Return the full ``{file_key: [ids]}`` dict from QSettings."""
         raw = settings.value('UI/TreeExpandState')
         if raw is None:
             return {}
@@ -1048,6 +422,7 @@ class ObjectTree(QWidget):
     def set_db_manager(self, db_manager):
         """Set the database manager for context menu operations."""
         self._db_manager = db_manager
+        self._ops = TreeOperations(db_manager)
 
     def set_tooltips_enabled(self, enabled):
         """Enable or disable tooltips on all existing tree items."""
@@ -1060,8 +435,6 @@ class ObjectTree(QWidget):
                 item.setToolTip(0, '')
                 item.setToolTip(1, '')
             else:
-                # Re-derive tooltip from stored data; only object items
-                # (those with an id in UserRole) carry tooltips.
                 tip = item.data(0, Qt.ItemDataRole.UserRole + 4) or ''
                 if tip:
                     item.setToolTip(0, tip)
@@ -1109,7 +482,9 @@ class ObjectTree(QWidget):
         children += [g for g in lib.groups if g.parent_group_id is None]
         children += [i for i in lib.interfaces if i.device_id is None]
         # Include user-created subfolders stored in lib.data.
-        user_subfolders = (getattr(lib, 'data', None) or {}).get('subfolders', [])
+        user_subfolders = normalize_subfolders(
+            (getattr(lib, 'data', None) or {}).get('subfolders', [])
+        )
         self._add_objects_with_folders(
             children,
             parent_item,
@@ -1122,24 +497,20 @@ class ObjectTree(QWidget):
         obj_ro = getattr(obj, 'ro', False)
         effective_ro = self._building_lib_ro or obj_ro
         item = self._make_item(
-            _obj_display_name(obj),
+            obj_display_name(obj),
             type_str,
             str(obj.id),
             parent_item,
-            attrs=_obj_brief_attrs(obj),
+            attrs=obj_brief_attrs(obj),
             effective_readonly=effective_ro,
-            inactive=_is_inactive(obj),
+            inactive=is_inactive(obj),
             obj=obj,
-            tags=_obj_tags(obj),
+            tags=obj_tags(obj),
         )
         if isinstance(obj, Group):
             self._add_group_children(obj, item)
-            # System folder groups (those with child sub-groups, like
-            # "Objects", "Services", "Addresses", etc.) get the generic
-            # folder icon.  User-created groups keep their type icon
-            # from ICON_MAP even when empty.
             if obj.id in self._system_folder_groups:
-                item.setIcon(0, QIcon(_CATEGORY_ICON))
+                item.setIcon(0, QIcon(CATEGORY_ICON))
         elif isinstance(obj, Host):
             saved_device_ro = self._building_device_ro
             self._building_device_ro = obj_ro
@@ -1155,12 +526,16 @@ class ObjectTree(QWidget):
             + list(group.devices)
             + list(group.child_groups)
         )
-        self._add_objects_with_folders(children, parent_item)
+        user_subfolders = normalize_subfolders(
+            (getattr(group, 'data', None) or {}).get('subfolders', [])
+        )
+        self._add_objects_with_folders(
+            children, parent_item, extra_folders=user_subfolders
+        )
 
     def _add_objects_with_folders(self, objects, parent_item, *, extra_folders=None):
         """Add *objects* under *parent_item*, grouping by ``data.folder``."""
-        sorted_objects = sorted(objects, key=_obj_sort_key)
-        # Pre-create folder items (sorted) so they appear above ungrouped objects.
+        sorted_objects = sorted(objects, key=obj_sort_key)
         folder_names = {self._get_folder_name(obj) for obj in sorted_objects} - {''}
         if extra_folders:
             folder_names |= set(extra_folders)
@@ -1182,14 +557,14 @@ class ObjectTree(QWidget):
     def _add_device_children(self, device, parent_item):
         """Add rule sets and interfaces of *device*."""
         effective_ro = self._building_lib_ro or self._building_device_ro
-        for rs in sorted(device.rule_sets, key=_obj_sort_key):
+        for rs in sorted(device.rule_sets, key=obj_sort_key):
             self._make_item(
-                _obj_display_name(rs),
+                obj_display_name(rs),
                 rs.type,
                 str(rs.id),
                 parent_item,
                 effective_readonly=effective_ro,
-                inactive=_is_inactive(rs),
+                inactive=is_inactive(rs),
                 obj=rs,
             )
         for iface in sorted(device.interfaces, key=lambda o: o.name.lower()):
@@ -1199,33 +574,33 @@ class ObjectTree(QWidget):
         """Add an Interface node with its child addresses."""
         effective_ro = self._building_lib_ro or self._building_device_ro
         iface_item = self._make_item(
-            _obj_display_name(iface),
+            obj_display_name(iface),
             'Interface',
             str(iface.id),
             parent_item,
-            attrs=_obj_brief_attrs(iface),
+            attrs=obj_brief_attrs(iface),
             effective_readonly=effective_ro,
-            inactive=_is_inactive(iface),
+            inactive=is_inactive(iface),
             obj=iface,
-            tags=_obj_tags(iface),
+            tags=obj_tags(iface),
         )
-        for addr in sorted(iface.addresses, key=_obj_sort_key):
+        for addr in sorted(iface.addresses, key=obj_sort_key):
             self._make_item(
-                _obj_display_name(addr),
+                obj_display_name(addr),
                 addr.type,
                 str(addr.id),
                 iface_item,
-                attrs=_obj_brief_attrs(addr, under_interface=True),
+                attrs=obj_brief_attrs(addr, under_interface=True),
                 effective_readonly=effective_ro,
-                inactive=_is_inactive(addr),
+                inactive=is_inactive(addr),
                 obj=addr,
-                tags=_obj_tags(addr),
+                tags=obj_tags(addr),
             )
 
     def _make_category(self, label, parent_item):
         """Create a non-selectable category folder item."""
         item = QTreeWidgetItem(parent_item, [label])
-        item.setIcon(0, QIcon(_CATEGORY_ICON))
+        item.setIcon(0, QIcon(CATEGORY_ICON))
         return item
 
     def _make_item(
@@ -1246,22 +621,25 @@ class ObjectTree(QWidget):
         item = QTreeWidgetItem([name])
         item.setData(0, Qt.ItemDataRole.UserRole, obj_id)
         item.setData(0, Qt.ItemDataRole.UserRole + 1, type_str)
-        item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(tags))
+        item.setData(0, Qt.ItemDataRole.UserRole + 2, tags_to_str(tags))
         item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs or '')
         item.setData(0, Qt.ItemDataRole.UserRole + 5, effective_readonly)
+        # Store object's own ro flag (for Lock/Unlock context menu).
+        obj_ro = getattr(obj, 'ro', False) if obj is not None else False
+        item.setData(0, Qt.ItemDataRole.UserRole + 7, obj_ro)
         if attrs:
             item.setText(1, attrs)
         if readonly:
-            item.setIcon(0, QIcon(_LOCK_ICON))
+            item.setIcon(0, QIcon(LOCK_ICON))
         else:
             icon_path = ICON_MAP.get(type_str)
             if icon_path:
                 item.setIcon(0, QIcon(icon_path))
-        needs_compile = _needs_compile(obj) if obj is not None else False
-        if inactive or needs_compile:
+        needs_comp = needs_compile(obj) if obj is not None else False
+        if inactive or needs_comp:
             font = item.font(0)
             font.setStrikeOut(inactive)
-            font.setBold(not inactive and needs_compile)
+            font.setBold(not inactive and needs_comp)
             item.setFont(0, font)
         if obj is not None:
             tip = _obj_tooltip(obj)
@@ -1286,19 +664,19 @@ class ObjectTree(QWidget):
             if item.data(0, Qt.ItemDataRole.UserRole) != obj_id:
                 continue
 
-            item.setText(0, _obj_display_name(obj))
+            item.setText(0, obj_display_name(obj))
 
-            inactive = _is_inactive(obj)
+            inactive = is_inactive(obj)
             font = item.font(0)
             font.setStrikeOut(inactive)
-            font.setBold(not inactive and _needs_compile(obj))
+            font.setBold(not inactive and needs_compile(obj))
             item.setFont(0, font)
 
-            attrs = _obj_brief_attrs(obj)
+            attrs = obj_brief_attrs(obj)
             item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs)
             item.setText(1, attrs)
 
-            item.setData(0, Qt.ItemDataRole.UserRole + 2, _tags_to_str(_obj_tags(obj)))
+            item.setData(0, Qt.ItemDataRole.UserRole + 2, tags_to_str(obj_tags(obj)))
             comment = getattr(obj, 'comment', None) or ''
             item.setData(0, Qt.ItemDataRole.UserRole + 6, comment.lower())
 
@@ -1328,7 +706,6 @@ class ObjectTree(QWidget):
             item = it.value()
             it += 1
             if item.data(0, Qt.ItemDataRole.UserRole) == obj_id_str:
-                # Expand all ancestors so the item is visible.
                 parent = item.parent()
                 while parent:
                     parent.setExpanded(True)
@@ -1343,12 +720,7 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _apply_filter(self, text):
-        """Hide items whose name does not match *text* (case-insensitive).
-
-        When an item matches, all its descendants are shown too so the
-        user can interact with children (e.g. double-click a Policy
-        child of a matched Firewall).
-        """
+        """Hide items whose name does not match *text* (case-insensitive)."""
         text = text.strip().lower()
         if not text:
             self._reset_visibility()
@@ -1425,8 +797,7 @@ class ObjectTree(QWidget):
         type_str = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not type_str:
             return
-        if type_str in _RULE_SET_TYPES:
-            # The firewall is the parent of this rule set node.
+        if type_str in RULE_SET_TYPES:
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
             self.rule_set_activated.emit(obj_id, fw_name, item.text(0), type_str)
@@ -1438,17 +809,9 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _get_simplified_selection(self):
-        """Return selected object items with redundant children removed.
-
-        Filters out category folders (no ``obj_id``) and items whose
-        ancestor is also in the selection (prevents double-processing
-        when a parent and its children are both selected).  Matches
-        fwbuilder's ``ObjectTreeView::getSimplifiedSelection()``.
-        """
+        """Return selected object items with redundant children removed."""
         raw = self._tree.selectedItems()
-        # Keep only items that represent actual objects.
         items = [it for it in raw if it.data(0, Qt.ItemDataRole.UserRole) is not None]
-        # Remove items whose ancestor is also selected.
         item_set = {id(it) for it in items}
         result = []
         for it in items:
@@ -1464,24 +827,11 @@ class ObjectTree(QWidget):
         return result
 
     # ------------------------------------------------------------------
-    # Context menu
+    # Context menu dispatch
     # ------------------------------------------------------------------
 
     def _on_context_menu(self, pos):
-        """Build and show the context menu for the right-clicked tree item.
-
-        Menu items are gated on the number of selected objects (matching
-        fwbuilder's ``ObjectManipulator::contextMenuRequested``):
-
-        - Edit/Inspect, Duplicate, Move, New*, Subfolder: single-select only
-        - Copy/Cut/Delete: enabled for both single and multi-select
-        - Group: multi-select only (>= 2 items)
-
-        Tree-modifying callbacks are stored in *handlers* and executed
-        **after** ``menu.exec()`` returns to avoid destroying
-        ``QTreeWidgetItem`` objects while the menu's nested event loop
-        is still active (which causes a SIGSEGV in Shiboken).
-        """
+        """Build and show the context menu for the right-clicked tree item."""
         item = self._tree.itemAt(pos)
         if item is None:
             return
@@ -1493,169 +843,55 @@ class ObjectTree(QWidget):
             self._on_category_context_menu(item, pos)
             return
 
-        effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
         selection = self._get_simplified_selection()
-        num_selected = len(selection)
-        multi = num_selected > 1
+        writable_libraries = self._get_writable_libraries()
 
-        menu = QMenu(self)
-        handlers = {}
+        # Gather tags for the Keywords submenu.
+        all_tags = TreeOperations.get_all_tags(self._db_manager)
+        selected_tags = self._get_selected_tags(selection)
 
-        # Expand / Collapse (always for clicked item) — safe to run
-        # inside exec() since these don't modify the tree structure.
-        if item.childCount() > 0:
-            if item.isExpanded():
-                collapse_action = menu.addAction('Collapse')
-                collapse_action.triggered.connect(
-                    lambda: item.setExpanded(False),
-                )
-            else:
-                expand_action = menu.addAction('Expand')
-                expand_action.triggered.connect(
-                    lambda: item.setExpanded(True),
-                )
-            menu.addSeparator()
+        # Determine Lock/Unlock state.
+        obj_is_locked = item.data(0, Qt.ItemDataRole.UserRole + 7) or False
+        lib_is_ro = self._get_library_ro(item)
 
-        # Edit / Inspect — single-select only
-        if not multi:
-            label = 'Inspect' if effective_ro else 'Edit'
-            edit_action = menu.addAction(label)
-            handlers[edit_action] = lambda: self._ctx_edit(item)
+        # Gather sibling interfaces for "Make subinterface of ...".
+        sibling_interfaces = self._get_sibling_interfaces(item, obj_type)
 
-        # Duplicate ... — single-select only
-        if not multi and obj_type not in _NO_DUPLICATE_TYPES:
-            libraries = self._get_writable_libraries()
-            if len(libraries) == 1:
-                dup_action = menu.addAction('Duplicate ...')
-                lib_id = libraries[0][0]
-                handlers[dup_action] = lambda: self._ctx_duplicate(item, lib_id)
-            elif libraries:
-                dup_menu = menu.addMenu('Duplicate ...')
-                for lib_id, lib_name in libraries:
-                    act = dup_menu.addAction(f'place in library {lib_name}')
-                    handlers[act] = lambda lid=lib_id: self._ctx_duplicate(item, lid)
-            else:
-                dup_action = menu.addAction('Duplicate ...')
-                dup_action.setEnabled(False)
-
-        # Move ... — single-select only
-        if not multi and obj_type not in _NO_MOVE_TYPES and not effective_ro:
-            current_lib_id = self._get_item_library_id(item)
-            libraries = [
-                (lid, lname)
-                for lid, lname in self._get_writable_libraries()
-                if lid != current_lib_id
-            ]
-            if len(libraries) == 1:
-                move_action = menu.addAction('Move ...')
-                lib_id = libraries[0][0]
-                handlers[move_action] = lambda: self._ctx_move(item, lib_id)
-            elif libraries:
-                move_menu = menu.addMenu('Move ...')
-                for lib_id, lib_name in libraries:
-                    act = move_menu.addAction(f'to library {lib_name}')
-                    handlers[act] = lambda lid=lib_id: self._ctx_move(item, lid)
-            else:
-                move_action = menu.addAction('Move ...')
-                move_action.setEnabled(False)
-
-        # Copy / Cut / Paste — enabled for single and multi
-        menu.addSeparator()
-
-        if multi:
-            can_copy = all(
-                (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
-                for it in selection
-            )
-            can_cut = can_copy and all(
-                not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
-                for it in selection
-            )
-        else:
-            can_copy = obj_type not in _NO_COPY_TYPES
-            can_cut = can_copy and not effective_ro
-
-        copy_action = menu.addAction('Copy')
-        copy_action.setShortcut(QKeySequence.StandardKey.Copy)
-        copy_action.setEnabled(can_copy)
-        handlers[copy_action] = lambda: self._ctx_copy()
-
-        cut_action = menu.addAction('Cut')
-        cut_action.setShortcut(QKeySequence.StandardKey.Cut)
-        cut_action.setEnabled(can_cut)
-        handlers[cut_action] = lambda: self._ctx_cut()
-
-        can_paste = _tree_clipboard is not None and not effective_ro
-        paste_action = menu.addAction('Paste')
-        paste_action.setShortcut(QKeySequence.StandardKey.Paste)
-        paste_action.setEnabled(can_paste)
-        handlers[paste_action] = lambda: self._ctx_paste(item)
-
-        # Delete — enabled for single and multi
-        menu.addSeparator()
-        if multi:
-            can_delete = any(self._is_deletable(it) for it in selection)
-            delete_action = menu.addAction('Delete')
-            delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-            delete_action.setEnabled(can_delete)
-            handlers[delete_action] = lambda: self._delete_selected()
-        else:
-            can_delete = self._is_deletable(item)
-            delete_action = menu.addAction('Delete')
-            delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-            delete_action.setEnabled(can_delete)
-            handlers[delete_action] = lambda: self._ctx_delete(item)
-
-        # Group — multi-select only (>= 2 items)
-        if num_selected >= 2:
-            group_act = menu.addAction('Group')
-            handlers[group_act] = lambda: self._ctx_group_objects()
-
-        # "New Cluster from selected firewalls" (matching fwbuilder).
-        if obj_type == 'Firewall':
-            cluster_act = menu.addAction(
-                QIcon(ICON_MAP.get('Cluster', '')),
-                'New Cluster from selected firewalls',
-            )
-            can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
-            cluster_act.setEnabled(can_cluster)
-            handlers[cluster_act] = lambda: self._ctx_new_cluster_from_selected()
-
-        # New [Type] + New Subfolder — single-select only
-        if not multi:
-            new_types = self._get_new_object_types(item, obj_type)
-            show_subfolder = (
-                obj_type == 'Library' or obj_type not in _NO_SUBFOLDER_TYPES
-            )
-            if new_types or show_subfolder:
-                menu.addSeparator()
-            for type_name, display_name in new_types:
-                icon_path = ICON_MAP.get(type_name, '')
-                act = menu.addAction(QIcon(icon_path), f'New {display_name}')
-                act.setEnabled(not effective_ro)
-                handlers[act] = lambda t=type_name: self._ctx_new_object(item, t)
-            if show_subfolder:
-                sf_action = menu.addAction(
-                    QIcon(_CATEGORY_ICON),
-                    'New Subfolder',
-                )
-                sf_action.setEnabled(not effective_ro)
-                handlers[sf_action] = lambda: self._ctx_new_subfolder(item)
+        menu, handlers = build_object_context_menu(
+            self,
+            item,
+            selection,
+            all_tags=all_tags,
+            clipboard=_tree_clipboard,
+            count_selected_firewalls_fn=self._count_selected_firewalls,
+            get_item_library_id_fn=self._get_item_library_id,
+            is_deletable_fn=self._is_deletable,
+            is_system_group_fn=self._is_system_group,
+            lib_is_ro=lib_is_ro,
+            obj_is_locked=obj_is_locked,
+            selected_tags=selected_tags,
+            sibling_interfaces=sibling_interfaces,
+            writable_libraries=writable_libraries,
+        )
 
         triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
         handler = handlers.get(triggered)
+        # Schedule menu deletion so that Expand/Collapse lambdas
+        # (which capture ``item``) release their references before
+        # the next populate() → clear() cycle.
+        menu.deleteLater()
         if handler is not None:
-            handler()
+            method_name, *args = handler
+            # Defer to the next event-loop iteration so all local
+            # QTreeWidgetItem references (item, selection, handlers)
+            # are released before the handler calls populate() →
+            # clear().  Running clear() inside the
+            # customContextMenuRequested signal chain causes a
+            # Shiboken::Object::setParent() segfault.
+            QTimer.singleShot(0, lambda m=method_name, a=args: getattr(self, m)(*a))
 
     def _on_category_context_menu(self, item, pos):
-        """Show a context menu for category folder items (New + Subfolder).
-
-        As in :meth:`_on_context_menu`, tree-modifying callbacks are
-        executed after ``menu.exec()`` returns to avoid SIGSEGV.
-        """
-        folder_name = item.text(0)
-        new_types = _NEW_TYPES_FOR_FOLDER.get(folder_name, [])
-
+        """Show a context menu for category folder items."""
         # Determine read-only state from parent library.
         effective_ro = False
         parent = item.parent()
@@ -1665,88 +901,243 @@ class ObjectTree(QWidget):
                 break
             parent = parent.parent()
 
-        menu = QMenu(self)
-        handlers = {}
-
-        # Expand / Collapse — safe inside exec().
-        if item.childCount() > 0:
-            if item.isExpanded():
-                collapse_action = menu.addAction('Collapse')
-                collapse_action.triggered.connect(
-                    lambda: item.setExpanded(False),
-                )
-            else:
-                expand_action = menu.addAction('Expand')
-                expand_action.triggered.connect(
-                    lambda: item.setExpanded(True),
-                )
-            menu.addSeparator()
-
-        # Edit (rename folder)
-        edit_action = menu.addAction('Edit')
-        edit_action.setEnabled(not effective_ro)
-        handlers[edit_action] = lambda: self._ctx_rename_folder(item)
-
-        menu.addSeparator()
-
-        for type_name, display_name in new_types:
-            icon_path = ICON_MAP.get(type_name, '')
-            act = menu.addAction(QIcon(icon_path), f'New {display_name}')
-            act.setEnabled(not effective_ro)
-            handlers[act] = lambda t=type_name: self._ctx_new_object(item, t)
-
-        # "New Cluster from selected firewalls" on the Firewalls folder.
-        if folder_name == 'Firewalls':
-            cluster_act = menu.addAction(
-                QIcon(ICON_MAP.get('Cluster', '')),
-                'New Cluster from selected firewalls',
-            )
-            can_cluster = not effective_ro and self._count_selected_firewalls() >= 2
-            cluster_act.setEnabled(can_cluster)
-            handlers[cluster_act] = lambda: self._ctx_new_cluster_from_selected()
-
-        sf_action = menu.addAction(QIcon(_CATEGORY_ICON), 'New Subfolder')
-        sf_action.setEnabled(not effective_ro)
-        handlers[sf_action] = lambda: self._ctx_new_subfolder(item)
-
-        # Delete folder
-        menu.addSeparator()
-        delete_action = menu.addAction('Delete')
-        delete_action.setShortcut(QKeySequence.StandardKey.Delete)
-        delete_action.setEnabled(not effective_ro)
-        handlers[delete_action] = lambda: self._ctx_delete_folder(item)
+        menu, handlers = build_category_context_menu(
+            self,
+            item,
+            clipboard=_tree_clipboard,
+            count_selected_firewalls_fn=self._count_selected_firewalls,
+            effective_ro=effective_ro,
+        )
 
         triggered = menu.exec(self._tree.viewport().mapToGlobal(pos))
         handler = handlers.get(triggered)
+        menu.deleteLater()
         if handler is not None:
-            handler()
+            method_name, *args = handler
+            # Same deferred dispatch as _on_context_menu — see comment
+            # there for the rationale (Shiboken segfault prevention).
+            QTimer.singleShot(0, lambda m=method_name, a=args: getattr(self, m)(*a))
+
+    # ------------------------------------------------------------------
+    # Context menu helpers
+    # ------------------------------------------------------------------
+
+    def _get_selected_tags(self, selection):
+        """Return the union of keywords across all selected objects."""
+        if self._db_manager is None:
+            return set()
+        tags = set()
+        with self._db_manager.session() as session:
+            for it in selection:
+                oid = it.data(0, Qt.ItemDataRole.UserRole)
+                otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
+                if not oid or not otype:
+                    continue
+                model_cls = MODEL_MAP.get(otype)
+                if model_cls is None or not hasattr(model_cls, 'keywords'):
+                    continue
+                obj = session.get(model_cls, uuid.UUID(oid))
+                if obj is not None and obj.keywords:
+                    tags.update(obj.keywords)
+        return tags
+
+    @staticmethod
+    def _get_library_ro(item):
+        """Walk up the tree to find the Library and return its ro flag."""
+        current = item
+        while current is not None:
+            if current.data(0, Qt.ItemDataRole.UserRole + 1) == 'Library':
+                return current.data(0, Qt.ItemDataRole.UserRole + 7) or False
+            current = current.parent()
+        return False
+
+    @staticmethod
+    def _get_folder_parent_group_id(folder_item):
+        """Return the parent group UUID for a virtual folder item, or None.
+
+        Virtual folder items (no obj_id) sit under either a real Group
+        or a Library.  If the parent is a Group, returns its UUID so
+        subfolder operations target the group's ``data.subfolders``
+        instead of the library's.
+        """
+        parent = folder_item.parent()
+        if parent is not None:
+            parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+            parent_id = parent.data(0, Qt.ItemDataRole.UserRole)
+            if (
+                parent_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup')
+                and parent_id
+            ):
+                return uuid.UUID(parent_id)
+        return None
+
+    @staticmethod
+    def _get_sibling_interfaces(item, obj_type):
+        """Return ``[(iface_id, iface_name), ...]`` for "Make subinterface of ..." menu.
+
+        Collects all top-level Interface siblings under the same device,
+        excluding the current interface.
+        """
+        if obj_type != 'Interface':
+            return []
+        parent = item.parent()
+        if parent is None:
+            return []
+        parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+        if parent_type not in ('Cluster', 'Firewall', 'Host'):
+            return []
+        current_id = item.data(0, Qt.ItemDataRole.UserRole)
+        result = []
+        for i in range(parent.childCount()):
+            child = parent.child(i)
+            child_type = child.data(0, Qt.ItemDataRole.UserRole + 1)
+            child_id = child.data(0, Qt.ItemDataRole.UserRole)
+            if child_type == 'Interface' and child_id and child_id != current_id:
+                result.append((child_id, child.text(0)))
+        result.sort(key=lambda t: t[1].casefold())
+        return result
+
+    # ------------------------------------------------------------------
+    # Context menu action handlers
+    # ------------------------------------------------------------------
 
     def _ctx_edit(self, item):
         """Open the editor for the context-menu item (Edit / Inspect)."""
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if obj_type in _RULE_SET_TYPES:
+        if obj_type in RULE_SET_TYPES:
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
             self.rule_set_activated.emit(obj_id, fw_name, item.text(0), obj_type)
         else:
             self.object_activated.emit(obj_id, obj_type)
 
-    # ------------------------------------------------------------------
-    # Duplicate
-    # ------------------------------------------------------------------
+    def _ctx_open_ruleset(self, item):
+        """Open a rule set (distinct from Edit — shows the rule editor)."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_type in RULE_SET_TYPES:
+            fw_item = item.parent()
+            fw_name = fw_item.text(0) if fw_item else ''
+            self.rule_set_activated.emit(obj_id, fw_name, item.text(0), obj_type)
+
+    # -- Find / Where used --
+
+    def _ctx_find(self, item):
+        """Emit find_requested for the given item."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole) or ''
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        name = item.text(0)
+        self.find_requested.emit(obj_id, name, obj_type)
+
+    def _ctx_where_used(self, item):
+        """Emit where_used_requested for the given item."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole) or ''
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+        name = item.text(0)
+        self.where_used_requested.emit(obj_id, name, obj_type)
+
+    # -- Compile / Install --
+
+    def _ctx_compile(self):
+        """Emit compile_requested."""
+        self.compile_requested.emit()
+
+    def _ctx_install(self):
+        """Emit install_requested."""
+        self.install_requested.emit()
+
+    # -- Lock / Unlock --
+
+    def _ctx_lock(self):
+        """Lock all selected objects that support locking."""
+        selection = self._get_simplified_selection()
+        items = [
+            (
+                it.data(0, Qt.ItemDataRole.UserRole),
+                it.data(0, Qt.ItemDataRole.UserRole + 1),
+            )
+            for it in selection
+            if it.data(0, Qt.ItemDataRole.UserRole)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1) in LOCKABLE_TYPES
+        ]
+        if items and self._ops.lock_objects(items):
+            self.tree_changed.emit('', '')
+
+    def _ctx_unlock(self):
+        """Unlock all selected objects that support locking."""
+        selection = self._get_simplified_selection()
+        items = [
+            (
+                it.data(0, Qt.ItemDataRole.UserRole),
+                it.data(0, Qt.ItemDataRole.UserRole + 1),
+            )
+            for it in selection
+            if it.data(0, Qt.ItemDataRole.UserRole)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1) in LOCKABLE_TYPES
+        ]
+        if items and self._ops.unlock_objects(items):
+            self.tree_changed.emit('', '')
+
+    # -- Keywords --
+
+    def _ctx_new_keyword(self):
+        """Prompt for a new keyword and add it to all selected objects."""
+        keyword, ok = QInputDialog.getText(
+            self._tree,
+            'New Keyword',
+            'Enter keyword:',
+        )
+        keyword = keyword.strip() if ok else ''
+        if not keyword:
+            return
+        self._ctx_add_keyword(keyword)
+
+    def _ctx_add_keyword(self, keyword):
+        """Add *keyword* to all selected objects."""
+        selection = self._get_simplified_selection()
+        items = [
+            (
+                it.data(0, Qt.ItemDataRole.UserRole),
+                it.data(0, Qt.ItemDataRole.UserRole + 1),
+            )
+            for it in selection
+            if it.data(0, Qt.ItemDataRole.UserRole)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1)
+        ]
+        if items and self._ops.add_keyword(items, keyword):
+            self.tree_changed.emit('', '')
+
+    def _ctx_remove_keyword(self, keyword):
+        """Remove *keyword* from all selected objects."""
+        selection = self._get_simplified_selection()
+        items = [
+            (
+                it.data(0, Qt.ItemDataRole.UserRole),
+                it.data(0, Qt.ItemDataRole.UserRole + 1),
+            )
+            for it in selection
+            if it.data(0, Qt.ItemDataRole.UserRole)
+            and it.data(0, Qt.ItemDataRole.UserRole + 1)
+        ]
+        if items and self._ops.remove_keyword(items, keyword):
+            self.tree_changed.emit('', '')
+
+    # -- Make subinterface --
+
+    def _ctx_make_subinterface(self, item, target_iface_id):
+        """Move *item*'s interface under *target_iface_id* as a subinterface."""
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        if not obj_id:
+            return
+        if self._ops.make_subinterface(uuid.UUID(obj_id), uuid.UUID(target_iface_id)):
+            self.tree_changed.emit('', '')
+
+    # -- Duplicate --
 
     def _get_writable_libraries(self):
         """Return [(lib_id, lib_name), ...] for non-read-only libraries."""
-        if self._db_manager is None:
-            return []
-        result = []
-        with self._db_manager.session() as session:
-            for lib in session.scalars(sqlalchemy.select(Library)).all():
-                if not lib.ro:
-                    result.append((lib.id, lib.name))
-        result.sort(key=lambda t: t[1].lower())
-        return result
+        return TreeOperations.get_writable_libraries(self._db_manager)
 
     def _ctx_duplicate(self, item, target_lib_id):
         """Duplicate the object referenced by *item* into *target_lib_id*."""
@@ -1754,7 +1145,7 @@ class ObjectTree(QWidget):
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not obj_type:
             return
-        model_cls = _MODEL_MAP.get(obj_type)
+        model_cls = MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
 
@@ -1774,7 +1165,7 @@ class ObjectTree(QWidget):
                         kwargs['target_group_id'] = source.parent_group_id
 
         prefix = self._get_device_prefix(item)
-        new_id = self._duplicate_object(
+        new_id = self._ops.duplicate_object(
             uuid.UUID(obj_id),
             model_cls,
             target_lib_id,
@@ -1782,171 +1173,10 @@ class ObjectTree(QWidget):
             **kwargs,
         )
         if new_id is not None:
-            self.tree_changed.emit()
-            # Select the newly created object.
+            self.tree_changed.emit(str(new_id), obj_type)
             QTimer.singleShot(0, lambda: self.select_object(new_id))
-            self.object_activated.emit(str(new_id), obj_type)
 
-    def _duplicate_object(
-        self,
-        source_id,
-        model_cls,
-        target_lib_id,
-        *,
-        prefix='',
-        target_interface_id=None,
-        target_group_id=None,
-    ):
-        """Deep-copy *source_id* into *target_lib_id*. Returns new UUID or None.
-
-        Optional *target_interface_id* / *target_group_id* place the clone
-        under a specific interface or group instead of the library root.
-        """
-        if self._db_manager is None:
-            return None
-
-        session = self._db_manager.create_session()
-        try:
-            source = session.get(model_cls, source_id)
-            if source is None:
-                session.close()
-                return None
-
-            id_map = {}
-            new_obj = self._clone_object(source, id_map)
-
-            # Clear all parent references first, then set the target.
-            if hasattr(new_obj, 'interface_id'):
-                new_obj.interface_id = None
-            if hasattr(new_obj, 'group_id'):
-                new_obj.group_id = None
-            if hasattr(new_obj, 'parent_group_id'):
-                new_obj.parent_group_id = None
-
-            if target_interface_id is not None and hasattr(new_obj, 'interface_id'):
-                new_obj.interface_id = target_interface_id
-                # Addresses under interfaces don't carry library_id.
-                if hasattr(new_obj, 'library_id'):
-                    new_obj.library_id = None
-            elif target_group_id is not None:
-                if hasattr(new_obj, 'group_id'):
-                    new_obj.group_id = target_group_id
-                elif hasattr(new_obj, 'parent_group_id'):
-                    new_obj.parent_group_id = target_group_id
-                if hasattr(new_obj, 'library_id'):
-                    new_obj.library_id = target_lib_id
-            else:
-                if hasattr(new_obj, 'library_id'):
-                    new_obj.library_id = target_lib_id
-
-            # Make name unique within the target scope.
-            new_obj.name = self._make_name_unique(session, new_obj)
-
-            session.add(new_obj)
-
-            # Deep-copy children for devices (interfaces, rule sets, rules, rule elements).
-            if isinstance(source, Host):
-                self._duplicate_device_children(session, source, new_obj, id_map)
-
-            # Copy group_membership entries for groups.
-            if isinstance(source, Group):
-                self._duplicate_group_members(session, source, new_obj)
-
-            session.commit()
-            self._db_manager.save_state(
-                f'{prefix}Duplicate {source.type} {source.name}',
-            )
-            new_id = new_obj.id
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        return new_id
-
-    @staticmethod
-    def _clone_object(source, id_map):
-        """Create a detached copy of *source* with a new UUID.
-
-        All scalar/JSON column attributes are deep-copied.
-        *id_map* is updated with ``{old_id: new_id}``.
-        """
-        mapper = sqlalchemy.inspect(type(source))
-        new_id = uuid.uuid4()
-        id_map[source.id] = new_id
-        kwargs = {}
-        for attr in mapper.column_attrs:
-            key = attr.key
-            if key == 'id':
-                continue
-            val = getattr(source, key)
-            if isinstance(val, (dict, list, set)):
-                val = copy.deepcopy(val)
-            kwargs[key] = val
-        return type(source)(id=new_id, **kwargs)
-
-    def _duplicate_device_children(self, session, source_device, new_device, id_map):
-        """Recursively duplicate interfaces, addresses, rule sets, rules, and rule elements."""
-        # Interfaces + their child addresses.
-        for iface in source_device.interfaces:
-            new_iface = self._clone_object(iface, id_map)
-            new_iface.device_id = new_device.id
-            new_iface.library_id = new_device.library_id
-            session.add(new_iface)
-            for addr in iface.addresses:
-                new_addr = self._clone_object(addr, id_map)
-                new_addr.interface_id = new_iface.id
-                new_addr.library_id = None
-                new_addr.group_id = None
-                session.add(new_addr)
-
-        # Rule sets + their rules + rule_elements.
-        for rs in source_device.rule_sets:
-            new_rs = self._clone_object(rs, id_map)
-            new_rs.device_id = new_device.id
-            session.add(new_rs)
-            for rule in rs.rules:
-                new_rule = self._clone_object(rule, id_map)
-                new_rule.rule_set_id = new_rs.id
-                session.add(new_rule)
-                # Copy rule_elements, remapping target_id for internal refs.
-                rows = session.execute(
-                    sqlalchemy.select(rule_elements).where(
-                        rule_elements.c.rule_id == rule.id
-                    )
-                ).all()
-                for row in rows:
-                    target_id = id_map.get(row.target_id, row.target_id)
-                    session.execute(
-                        rule_elements.insert().values(
-                            rule_id=new_rule.id,
-                            slot=row.slot,
-                            target_id=target_id,
-                            position=row.position,
-                        )
-                    )
-
-    @staticmethod
-    def _duplicate_group_members(session, source_group, new_group):
-        """Copy group_membership entries from *source_group* to *new_group*."""
-        rows = session.execute(
-            sqlalchemy.select(group_membership).where(
-                group_membership.c.group_id == source_group.id
-            )
-        ).all()
-        for row in rows:
-            session.execute(
-                group_membership.insert().values(
-                    group_id=new_group.id,
-                    member_id=row.member_id,
-                    position=row.position,
-                )
-            )
-
-    # ------------------------------------------------------------------
-    # Move
-    # ------------------------------------------------------------------
+    # -- Move --
 
     @staticmethod
     def _get_item_library_id(item):
@@ -1980,9 +1210,7 @@ class ObjectTree(QWidget):
         """Determine the paste target from *item*'s position in the tree.
 
         Returns ``(interface_id, group_id)`` — at most one is non-None.
-        If both are None the paste lands at the library root.
         """
-        # Walk from the clicked item upwards to find the nearest container.
         current = item
         while current is not None:
             obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -1993,8 +1221,6 @@ class ObjectTree(QWidget):
                 return None, uuid.UUID(obj_id)
             if obj_type == 'Library':
                 break
-            # Skip devices and rule sets — paste on a firewall means
-            # library root, not inside the device.
             if obj_type in (
                 'Cluster',
                 'Firewall',
@@ -2013,67 +1239,24 @@ class ObjectTree(QWidget):
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not obj_type:
             return
-        model_cls = _MODEL_MAP.get(obj_type)
+        model_cls = MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
-        if self._move_object(uuid.UUID(obj_id), model_cls, target_lib_id):
-            self.tree_changed.emit()
+        if self._ops.move_object(uuid.UUID(obj_id), model_cls, target_lib_id):
+            self.tree_changed.emit(obj_id, obj_type)
             QTimer.singleShot(0, lambda: self.select_object(uuid.UUID(obj_id)))
 
-    def _move_object(self, obj_id, model_cls, target_lib_id):
-        """Move *obj_id* to *target_lib_id*. Returns True on success."""
-        if self._db_manager is None:
-            return False
-
-        session = self._db_manager.create_session()
-        try:
-            obj = session.get(model_cls, obj_id)
-            if obj is None:
-                session.close()
-                return False
-
-            obj_name = obj.name
-            obj_type = getattr(obj, 'type', type(obj).__name__)
-            obj.library_id = target_lib_id
-
-            # Clear group/parent ownership — object lands at the library root.
-            if hasattr(obj, 'group_id'):
-                obj.group_id = None
-            if hasattr(obj, 'parent_group_id'):
-                obj.parent_group_id = None
-
-            # For devices, also move child interfaces.
-            if isinstance(obj, Host):
-                for iface in obj.interfaces:
-                    iface.library_id = target_lib_id
-
-            session.commit()
-            self._db_manager.save_state(f'Move {obj_type} {obj_name}')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        return True
-
-    # ------------------------------------------------------------------
-    # Copy / Cut / Paste
-    # ------------------------------------------------------------------
+    # -- Copy / Cut / Paste --
 
     def _ctx_copy(self):
-        """Copy all selected object references to the tree clipboard.
-
-        Also populates the policy-view object clipboard with the *first*
-        item so paste into rule element cells works across components.
-        """
+        """Copy all selected object references to the tree clipboard."""
         global _tree_clipboard
         selection = self._get_simplified_selection()
         entries = []
         for it in selection:
             oid = it.data(0, Qt.ItemDataRole.UserRole)
             otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
-            if oid and otype and otype not in _NO_COPY_TYPES:
+            if oid and otype and otype not in NO_COPY_TYPES:
                 entries.append({'id': oid, 'type': otype, 'cut': False})
         if not entries:
             return
@@ -2089,11 +1272,7 @@ class ObjectTree(QWidget):
         }
 
     def _ctx_cut(self):
-        """Cut all selected object references to the tree clipboard.
-
-        Also populates the policy-view clipboard (like Copy) so that
-        paste into rule element cells works across components.
-        """
+        """Cut all selected object references to the tree clipboard."""
         global _tree_clipboard
         selection = self._get_simplified_selection()
         entries = []
@@ -2101,7 +1280,7 @@ class ObjectTree(QWidget):
             oid = it.data(0, Qt.ItemDataRole.UserRole)
             otype = it.data(0, Qt.ItemDataRole.UserRole + 1)
             ro = it.data(0, Qt.ItemDataRole.UserRole + 5) or False
-            if oid and otype and otype not in _NO_COPY_TYPES and not ro:
+            if oid and otype and otype not in NO_COPY_TYPES and not ro:
                 entries.append({'id': oid, 'type': otype, 'cut': True})
         if not entries:
             return
@@ -2116,13 +1295,7 @@ class ObjectTree(QWidget):
         }
 
     def _ctx_paste(self, item):
-        """Paste all clipboard objects relative to *item*.
-
-        Copy-paste duplicates; cut-paste moves.
-        The paste target is determined by *item*'s position in the tree:
-        paste on/near an Interface → under that interface; on/near a
-        Group → under that group; otherwise → library root.
-        """
+        """Paste all clipboard objects relative to *item*."""
         global _tree_clipboard
         if _tree_clipboard is None or self._db_manager is None:
             return
@@ -2139,16 +1312,16 @@ class ObjectTree(QWidget):
         for cb in _tree_clipboard:
             cb_id = uuid.UUID(cb['id'])
             cb_type = cb['type']
-            model_cls = _MODEL_MAP.get(cb_type)
+            model_cls = MODEL_MAP.get(cb_type)
             if model_cls is None:
                 continue
 
             if cb['cut']:
                 any_cut = True
-                if self._move_object(cb_id, model_cls, target_lib_id):
+                if self._ops.move_object(cb_id, model_cls, target_lib_id):
                     last_id = cb_id
             else:
-                new_id = self._duplicate_object(
+                new_id = self._ops.duplicate_object(
                     cb_id,
                     model_cls,
                     target_lib_id,
@@ -2163,7 +1336,7 @@ class ObjectTree(QWidget):
             _tree_clipboard = None
 
         if last_id is not None:
-            self.tree_changed.emit()
+            self.tree_changed.emit('', '')
             QTimer.singleShot(0, lambda lid=last_id: self.select_object(lid))
 
     def _shortcut_copy(self):
@@ -2171,9 +1344,8 @@ class ObjectTree(QWidget):
         selection = self._get_simplified_selection()
         if not selection:
             return
-        # Check that at least one item is copyable.
         if any(
-            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
+            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in NO_COPY_TYPES
             for it in selection
         ):
             self._ctx_copy()
@@ -2184,7 +1356,7 @@ class ObjectTree(QWidget):
         if not selection:
             return
         if any(
-            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in _NO_COPY_TYPES
+            (it.data(0, Qt.ItemDataRole.UserRole + 1) or '') not in NO_COPY_TYPES
             and not (it.data(0, Qt.ItemDataRole.UserRole + 5) or False)
             for it in selection
         ):
@@ -2199,200 +1371,32 @@ class ObjectTree(QWidget):
         if not effective_ro:
             self._ctx_paste(item)
 
-    # ------------------------------------------------------------------
-    # Delete
-    # ------------------------------------------------------------------
+    # -- Delete --
 
     def _ctx_delete(self, item):
-        """Delete the object referenced by *item*.
-
-        Mimics fwbuilder's ``ObjectManipulator::delObj()``:
-        removes all group and rule references, then deletes the object.
-        No confirmation dialog — changes are undoable via Ctrl+Z.
-        """
+        """Delete the object referenced by *item*."""
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not obj_type:
             return
         if obj_type == 'Library':
             if self._delete_library(item):
-                self.tree_changed.emit()
+                self.tree_changed.emit('', '')
             return
-        model_cls = _MODEL_MAP.get(obj_type)
+        model_cls = MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
         obj_name = item.text(0)
         prefix = self._get_device_prefix(item)
 
-        if self._delete_object(
+        if self._ops.delete_object(
             uuid.UUID(obj_id),
             model_cls,
             obj_name,
             obj_type,
             prefix=prefix,
         ):
-            self.tree_changed.emit()
-
-    @staticmethod
-    def _collect_child_ids(session, obj_id):
-        """Collect IDs of all children (interfaces, addresses) of a device."""
-        child_ids = set()
-        # Check if it's a device with interfaces.
-        obj = session.get(Host, obj_id)
-        if obj is not None:
-            for iface in obj.interfaces:
-                child_ids.add(iface.id)
-                for addr in iface.addresses:
-                    child_ids.add(addr.id)
-        # Check if it's an interface with addresses.
-        iface = session.get(Interface, obj_id)
-        if iface is not None:
-            for addr in iface.addresses:
-                child_ids.add(addr.id)
-        return child_ids
-
-    def _delete_object(self, obj_id, model_cls, obj_name, obj_type, *, prefix=''):
-        """Delete *obj_id* and clean up all references.  Returns True on success."""
-        if self._db_manager is None:
-            return False
-
-        session = self._db_manager.create_session()
-        try:
-            obj = session.get(model_cls, obj_id)
-            if obj is None:
-                session.close()
-                return False
-
-            child_ids = self._collect_child_ids(session, obj_id)
-            all_ids = child_ids | {obj_id}
-
-            # Remove from group_membership (as member).
-            for del_id in all_ids:
-                session.execute(
-                    group_membership.delete().where(
-                        group_membership.c.member_id == del_id
-                    )
-                )
-
-            # Remove from rule_elements.
-            for del_id in all_ids:
-                session.execute(
-                    rule_elements.delete().where(rule_elements.c.target_id == del_id)
-                )
-
-            # Delete child addresses of interfaces.
-            if isinstance(obj, Host):
-                for iface in obj.interfaces:
-                    for addr in iface.addresses:
-                        session.delete(addr)
-                    session.delete(iface)
-                # Delete rule sets, rules, and rule elements.
-                for rs in obj.rule_sets:
-                    for rule in rs.rules:
-                        session.execute(
-                            rule_elements.delete().where(
-                                rule_elements.c.rule_id == rule.id
-                            )
-                        )
-                        session.delete(rule)
-                    session.delete(rs)
-            elif isinstance(obj, Interface):
-                for addr in obj.addresses:
-                    session.delete(addr)
-            elif isinstance(obj, Group):
-                # Remove group_membership rows where this group is the group.
-                session.execute(
-                    group_membership.delete().where(
-                        group_membership.c.group_id == obj_id
-                    )
-                )
-                # Delete child objects and sub-groups (cascade).
-                for addr in list(obj.addresses):
-                    session.execute(
-                        rule_elements.delete().where(
-                            rule_elements.c.target_id == addr.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == addr.id
-                        )
-                    )
-                    session.delete(addr)
-                for svc in list(obj.services):
-                    session.execute(
-                        rule_elements.delete().where(
-                            rule_elements.c.target_id == svc.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == svc.id
-                        )
-                    )
-                    session.delete(svc)
-                for itv in list(obj.intervals):
-                    session.execute(
-                        rule_elements.delete().where(
-                            rule_elements.c.target_id == itv.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == itv.id
-                        )
-                    )
-                    session.delete(itv)
-                for dev in list(obj.devices):
-                    for iface in dev.interfaces:
-                        for addr in iface.addresses:
-                            session.delete(addr)
-                        session.delete(iface)
-                    for rs in dev.rule_sets:
-                        for rule in rs.rules:
-                            session.execute(
-                                rule_elements.delete().where(
-                                    rule_elements.c.rule_id == rule.id
-                                )
-                            )
-                            session.delete(rule)
-                        session.delete(rs)
-                    session.execute(
-                        rule_elements.delete().where(
-                            rule_elements.c.target_id == dev.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == dev.id
-                        )
-                    )
-                    session.delete(dev)
-                for child_grp in list(obj.child_groups):
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.group_id == child_grp.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == child_grp.id
-                        )
-                    )
-                    session.delete(child_grp)
-
-            session.delete(obj)
-            session.commit()
-            self._db_manager.save_state(
-                f'{prefix}Delete {obj_type} {obj_name}',
-            )
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        return True
+            self.tree_changed.emit('', '')
 
     def _delete_selected(self):
         """Delete all selected objects, filtering out non-deletable and read-only items."""
@@ -2409,11 +1413,11 @@ class ObjectTree(QWidget):
                 if self._delete_library(it):
                     any_deleted = True
                 continue
-            model_cls = _MODEL_MAP.get(obj_type)
+            model_cls = MODEL_MAP.get(obj_type)
             if model_cls is None:
                 continue
             prefix = self._get_device_prefix(it)
-            if self._delete_object(
+            if self._ops.delete_object(
                 uuid.UUID(obj_id),
                 model_cls,
                 it.text(0),
@@ -2422,15 +1426,10 @@ class ObjectTree(QWidget):
             ):
                 any_deleted = True
         if any_deleted:
-            self.tree_changed.emit()
+            self.tree_changed.emit('', '')
 
     def _delete_library(self, item):
-        """Delete a library after confirmation.
-
-        Mirrors fwbuilder's library deletion: shows a warning dialog
-        explaining that all objects in the library will be removed.
-        Returns True on success.
-        """
+        """Delete a library after confirmation.  Returns True on success."""
         if self._db_manager is None:
             return False
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
@@ -2450,133 +1449,16 @@ class ObjectTree(QWidget):
         if result != QMessageBox.StandardButton.Yes:
             return False
 
-        lib_uuid = uuid.UUID(obj_id)
-        session = self._db_manager.create_session()
-        try:
-            lib = session.get(Library, lib_uuid)
-            if lib is None:
-                return False
-
-            # Remove all rule_elements referencing objects in this library.
-            for cls in (Address, Group, Host, Interface, Interval, Service):
-                if not hasattr(cls, 'library_id'):
-                    continue
-                for obj in session.scalars(
-                    sqlalchemy.select(cls).where(cls.library_id == lib_uuid)
-                ).all():
-                    session.execute(
-                        rule_elements.delete().where(
-                            rule_elements.c.target_id == obj.id
-                        )
-                    )
-                    session.execute(
-                        group_membership.delete().where(
-                            group_membership.c.member_id == obj.id
-                        )
-                    )
-                    if isinstance(obj, Group):
-                        session.execute(
-                            group_membership.delete().where(
-                                group_membership.c.group_id == obj.id
-                            )
-                        )
-
-            # Delete rules and rule elements for devices in this library.
-            for dev in session.scalars(
-                sqlalchemy.select(Host).where(Host.library_id == lib_uuid)
-            ).all():
-                for rs in dev.rule_sets:
-                    for rule in rs.rules:
-                        session.execute(
-                            rule_elements.delete().where(
-                                rule_elements.c.rule_id == rule.id
-                            )
-                        )
-                        session.delete(rule)
-                    session.delete(rs)
-                for iface in dev.interfaces:
-                    for addr in iface.addresses:
-                        session.delete(addr)
-                    session.delete(iface)
-
-            # Delete all objects in this library (order matters for FKs).
-            for cls in (Address, Interval, Service, Host, Group):
-                for obj in session.scalars(
-                    sqlalchemy.select(cls).where(cls.library_id == lib_uuid)
-                ).all():
-                    session.delete(obj)
-            for iface in session.scalars(
-                sqlalchemy.select(Interface).where(Interface.library_id == lib_uuid)
-            ).all():
-                for addr in iface.addresses:
-                    session.delete(addr)
-                session.delete(iface)
-
-            session.delete(lib)
-            session.commit()
-            self._db_manager.save_state(f'Delete Library {lib_name}')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-        return True
+        return self._ops.delete_library(uuid.UUID(obj_id), lib_name)
 
     def _ctx_delete_folder(self, item):
-        """Delete a user-created subfolder.
-
-        Moves all child objects to the parent level (removes their
-        ``data.folder`` field) and removes the subfolder from
-        ``Library.data['subfolders']``.  Mirrors fwbuilder's
-        ``deleteUserFolder()`` behaviour.
-        """
-        if self._db_manager is None:
-            return
-        folder_name = item.text(0)
+        """Delete a user-created subfolder."""
         lib_id = self._get_item_library_id(item)
         if lib_id is None:
             return
-
-        session = self._db_manager.create_session()
-        try:
-            # Remove data.folder from all objects in this folder.
-            for cls in (Address, Group, Host, Interface, Interval, Service):
-                if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
-                    continue
-                for obj in (
-                    session.scalars(
-                        sqlalchemy.select(cls).where(cls.library_id == lib_id)
-                    )
-                    .unique()
-                    .all()
-                ):
-                    obj_data = obj.data or {}
-                    if obj_data.get('folder') == folder_name:
-                        new_data = {k: v for k, v in obj_data.items() if k != 'folder'}
-                        obj.data = new_data or None
-
-            # Remove from Library.data['subfolders'].
-            lib = session.get(Library, lib_id)
-            if lib is not None:
-                lib_data = dict(lib.data or {})
-                subfolders = list(lib_data.get('subfolders', []))
-                if folder_name in subfolders:
-                    subfolders.remove(folder_name)
-                    if subfolders:
-                        lib_data['subfolders'] = subfolders
-                    else:
-                        lib_data.pop('subfolders', None)
-                    lib.data = lib_data
-
-            session.commit()
-            self._db_manager.save_state(f'Delete folder "{folder_name}"')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        self.tree_changed.emit()
+        parent_group_id = self._get_folder_parent_group_id(item)
+        self._ops.delete_folder(lib_id, item.text(0), parent_group_id=parent_group_id)
+        self.tree_changed.emit('', '')
 
     def _shortcut_delete(self):
         """Handle Delete key — delete all selected objects."""
@@ -2584,12 +1466,7 @@ class ObjectTree(QWidget):
 
     @staticmethod
     def _is_system_group(item):
-        """Return True if *item* represents a system-structure group.
-
-        System groups (Clusters, Firewalls, Objects, Objects/Addresses,
-        Services/TCP, Time, etc.) mirror fwbuilder's ``deleteMenuState``
-        map and must not be deleted.
-        """
+        """Return True if *item* represents a system-structure group."""
         obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
         if obj_type not in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
             return False
@@ -2598,13 +1475,11 @@ class ObjectTree(QWidget):
         if parent is None:
             return False
         parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-        # Root-level system folder directly under Library.
-        if parent_type == 'Library' and name in _SYSTEM_ROOT_FOLDERS:
+        if parent_type == 'Library' and name in SYSTEM_ROOT_FOLDERS:
             return True
-        # Sub-folder under a root-level system folder.
         parent_name = parent.text(0)
         if parent_type in ('ObjectGroup', 'ServiceGroup'):
-            allowed = _SYSTEM_SUB_FOLDERS.get(parent_name)
+            allowed = SYSTEM_SUB_FOLDERS.get(parent_name)
             if allowed and name in allowed:
                 return True
         return False
@@ -2615,143 +1490,11 @@ class ObjectTree(QWidget):
         effective_ro = item.data(0, Qt.ItemDataRole.UserRole + 5) or False
         if effective_ro:
             return False
-        if obj_type in _NO_DELETE_TYPES:
+        if obj_type in NO_DELETE_TYPES:
             return False
         return not self._is_system_group(item)
 
-    # ------------------------------------------------------------------
-    # New [Type]
-    # ------------------------------------------------------------------
-
-    def _get_new_object_types(self, item, obj_type):
-        """Return a list of ``(type_name, display_name)`` for the New menu.
-
-        Matches fwbuilder's context menu logic strictly:
-
-        - Devices (Cluster/Firewall/Host) → fixed child types only.
-        - Interface → dynamic list (addresses, subinterface, etc.).
-        - Rule sets (Policy/NAT/Routing) → no "New" items.
-        - Library → no "New" items (only subfolder, handled elsewhere).
-        - Group types → folder-based items matching the group name.
-        - Objects in category folders → folder-based items.
-        - Objects under devices/interfaces → no "New" items.
-        """
-        # Devices: fixed child types only.
-        if obj_type in ('Cluster', 'Firewall', 'Host'):
-            return list(_NEW_TYPES_FOR_PARENT.get(obj_type, []))
-
-        # Interface: dynamic list based on parent and existing children.
-        if obj_type == 'Interface':
-            return self._get_interface_new_types(item)
-
-        # Rule sets and Library: no "New" items.
-        # fwbuilder's Library context menu has no "New <type>" entries —
-        # new objects are created via the toolbar / Object menu instead.
-        if obj_type in ('Library', *_RULE_SET_TYPES):
-            return []
-
-        # Group types: offer new items based on (group_type, group_name).
-        # Uses _NEW_TYPES_FOR_GROUP_NODE which disambiguates folders
-        # with the same name under different parents (e.g. "Groups"
-        # under Objects vs. under Services).
-        if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-            name = item.text(0)
-            types = _NEW_TYPES_FOR_GROUP_NODE.get((obj_type, name))
-            if types is not None:
-                return list(types)
-            # Fall back to folder-name-only lookup.
-            types = _NEW_TYPES_FOR_FOLDER.get(name, [])
-            if types:
-                return list(types)
-
-        # All other objects: only get folder-based items if they live
-        # directly under a category folder or group.  Objects under
-        # devices or interfaces get nothing (matches fwbuilder's strict
-        # path check).
-        folder_info = self._find_folder_context(item)
-        if folder_info is not None:
-            folder_name, folder_type = folder_info
-            if folder_type is not None:
-                types = _NEW_TYPES_FOR_GROUP_NODE.get((folder_type, folder_name))
-                if types is not None:
-                    return list(types)
-            return list(_NEW_TYPES_FOR_FOLDER.get(folder_name, []))
-
-        return []
-
-    @staticmethod
-    def _find_folder_context(item):
-        """Walk up the tree to find the enclosing category folder or group.
-
-        Returns ``(folder_name, group_type)`` where *group_type* is the
-        STI discriminator (e.g. ``'ObjectGroup'``, ``'ServiceGroup'``)
-        for real group folders, or ``None`` for virtual category folders.
-        Returns ``None`` if the item lives under a device or interface
-        (where no folder-based "New" items are offered).
-        """
-        current = item.parent()
-        while current is not None:
-            current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
-            if current_type is None:
-                # Virtual category folder (no obj_id/obj_type).
-                return (current.text(0), None)
-            if current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
-                # Real group acting as a folder container.
-                return (current.text(0), current_type)
-            if current_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
-                # Under a device or interface — no folder-based items.
-                return None
-            if current_type == 'Library':
-                # Directly under library without a category folder.
-                return None
-            current = current.parent()
-
-        return None
-
-    @staticmethod
-    def _get_interface_new_types(item):
-        """Build the dynamic "New" list for an Interface item.
-
-        Matches fwbuilder's logic:
-        - New Interface (subinterface): only for Firewall interfaces
-        - New Address (IPv4), New Address IPv6 (IPv6): always
-        - New MAC Address (PhysAddress): always
-        - New Attached Networks: only if not already present
-        - New Failover Group: only for Cluster interfaces, if not
-          already present
-        """
-        result = []
-
-        # Determine parent device type.
-        parent = item.parent()
-        parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1) if parent else None
-
-        # Subinterface: only for Firewall interfaces.
-        if parent_type == 'Firewall':
-            result.append(('Interface', 'Interface'))
-
-        # Standard address types — always offered.
-        result.append(('IPv4', 'Address'))
-        result.append(('IPv6', 'Address IPv6'))
-        result.append(('PhysAddress', 'MAC Address'))
-
-        # Check existing children in the tree to suppress singleton items.
-        has_attached = False
-        has_failover = False
-        for i in range(item.childCount()):
-            child_type = item.child(i).data(0, Qt.ItemDataRole.UserRole + 1)
-            if child_type == 'AttachedNetworks':
-                has_attached = True
-            elif child_type == 'FailoverClusterGroup':
-                has_failover = True
-
-        if not has_attached:
-            result.append(('AttachedNetworks', 'Attached Networks'))
-
-        if parent_type == 'Cluster' and not has_failover:
-            result.append(('FailoverClusterGroup', 'Failover Group'))
-
-        return result
+    # -- New [Type] --
 
     def _count_selected_firewalls(self):
         """Return the number of currently selected Firewall items in the tree."""
@@ -2772,13 +1515,7 @@ class ObjectTree(QWidget):
         return ids
 
     def _ctx_group_objects(self):
-        """Create a new group containing all selected objects.
-
-        The group type is auto-detected from the first selected item:
-        Service types → ServiceGroup, Interval → IntervalGroup,
-        everything else → ObjectGroup.  Matches fwbuilder's
-        ``ObjectManipulator::groupObjects()``.
-        """
+        """Create a new group containing all selected objects."""
         if self._db_manager is None:
             return
         selection = self._get_simplified_selection()
@@ -2787,9 +1524,9 @@ class ObjectTree(QWidget):
 
         # Determine group type from the first selected item.
         first_type = selection[0].data(0, Qt.ItemDataRole.UserRole + 1) or ''
-        if first_type in _SERVICE_OBJ_TYPES:
+        if first_type in SERVICE_OBJ_TYPES:
             group_type = 'ServiceGroup'
-        elif first_type == 'Interval' or first_type == 'IntervalGroup':
+        elif first_type in ('Interval', 'IntervalGroup'):
             group_type = 'IntervalGroup'
         else:
             group_type = 'ObjectGroup'
@@ -2833,48 +1570,16 @@ class ObjectTree(QWidget):
         if lib_id is None:
             return
 
-        # Determine the folder for this group type.
-        folder = None
-        for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
-            if any(tn == group_type for tn, _dn in type_list):
-                folder = f
-                break
+        member_ids = []
+        for it in selection:
+            mid = it.data(0, Qt.ItemDataRole.UserRole)
+            if mid:
+                member_ids.append(mid)
 
-        # Create the group.
-        new_id = self._create_new_object(
-            _MODEL_MAP[group_type],
-            group_type,
-            lib_id,
-            folder=folder,
-            name=group_name,
-        )
-        if new_id is None:
-            return
-
-        # Add group_membership entries for each selected item.
-        session = self._db_manager.create_session()
-        try:
-            for pos, it in enumerate(selection):
-                member_id = it.data(0, Qt.ItemDataRole.UserRole)
-                if member_id:
-                    session.execute(
-                        group_membership.insert().values(
-                            group_id=new_id,
-                            member_id=uuid.UUID(member_id),
-                            position=pos,
-                        )
-                    )
-            session.commit()
-            self._db_manager.save_state(f'Group {len(selection)} objects')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        self.tree_changed.emit()
-        QTimer.singleShot(0, lambda: self.select_object(new_id))
-        self.object_activated.emit(str(new_id), group_type)
+        new_id = self._ops.group_objects(group_type, group_name, lib_id, member_ids)
+        if new_id is not None:
+            self.tree_changed.emit(str(new_id), group_type)
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
 
     def _ctx_new_cluster_from_selected(self):
         """Open the New Cluster wizard with the currently selected firewalls."""
@@ -2901,27 +1606,23 @@ class ObjectTree(QWidget):
             return
         lib_id = libs[0][0]
 
-        # Find the "Clusters" folder.
-        folder = 'Clusters'
-
-        new_id = self._create_new_object(
-            _MODEL_MAP['Cluster'],
+        new_id = self._ops.create_new_object(
+            MODEL_MAP['Cluster'],
             'Cluster',
             lib_id,
             extra_data=extra_data,
-            folder=folder,
+            folder='Clusters',
             name=name,
         )
         if new_id is not None:
-            self.tree_changed.emit()
+            self.tree_changed.emit(str(new_id), 'Cluster')
             QTimer.singleShot(0, lambda: self.select_object(new_id))
-            self.object_activated.emit(str(new_id), 'Cluster')
 
     def _ctx_new_object(self, item, type_name):
         """Create a new object of *type_name* in the context of *item*."""
         if self._db_manager is None:
             return
-        model_cls = _MODEL_MAP.get(type_name)
+        model_cls = MODEL_MAP.get(type_name)
         if model_cls is None:
             return
 
@@ -2946,7 +1647,6 @@ class ObjectTree(QWidget):
                 return
             name, interfaces = dlg.get_result()
 
-            # Determine where to place the new host.
             lib_id = self._get_item_library_id(item)
             if lib_id is None:
                 return
@@ -2959,7 +1659,7 @@ class ObjectTree(QWidget):
                 folder = 'Hosts'
 
             prefix = self._get_device_prefix(item)
-            new_id = self._create_host_with_interfaces(
+            new_id = self._ops.create_host_with_interfaces(
                 lib_id,
                 name=name,
                 interfaces=interfaces,
@@ -2967,9 +1667,8 @@ class ObjectTree(QWidget):
                 prefix=prefix,
             )
             if new_id is not None:
-                self.tree_changed.emit()
+                self.tree_changed.emit(str(new_id), type_name)
                 QTimer.singleShot(0, lambda: self.select_object(new_id))
-                self.object_activated.emit(str(new_id), type_name)
             return
         elif type_name == 'Firewall':
             from firewallfabrik.gui.new_device_dialog import NewDeviceDialog
@@ -2997,25 +1696,20 @@ class ObjectTree(QWidget):
             if issubclass(model_cls, Address):
                 interface_id = uuid.UUID(obj_id)
             elif issubclass(model_cls, Interface):
-                # Sub-interface: set parent_interface_id and find device.
                 parent_interface_id = uuid.UUID(obj_id)
                 parent = item.parent()
                 if parent:
                     pid = parent.data(0, Qt.ItemDataRole.UserRole)
                     if pid:
                         device_id = uuid.UUID(pid)
-            # Groups (AttachedNetworks, FailoverClusterGroup) created
-            # at library level — no special parent ref needed.
         elif obj_type in ('Cluster', 'Firewall', 'Host') and obj_id:
             if issubclass(model_cls, Interface) or issubclass(model_cls, RuleSet):
                 device_id = uuid.UUID(obj_id)
         elif obj_type == 'Library':
-            pass  # Library root — folder will be set from type.
+            pass
         elif obj_type is None:
-            # Category folder — the item text IS the folder name.
             folder = item.text(0)
         else:
-            # Walk up to find device or interface context.
             parent = item.parent()
             while parent is not None:
                 pt = parent.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -3029,20 +1723,19 @@ class ObjectTree(QWidget):
                     break
                 if pt == 'Library':
                     break
-                # Category folder — remember its name for data.folder.
                 if pt is None:
                     folder = parent.text(0)
                 parent = parent.parent()
 
         # If no explicit folder, derive from type.
         if folder is None and interface_id is None and device_id is None:
-            for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
+            for f, type_list in NEW_TYPES_FOR_FOLDER.items():
                 if any(tn == type_name for tn, _dn in type_list):
                     folder = f
                     break
 
         prefix = self._get_device_prefix(item)
-        new_id = self._create_new_object(
+        new_id = self._ops.create_new_object(
             model_cls,
             type_name,
             lib_id,
@@ -3055,277 +1748,17 @@ class ObjectTree(QWidget):
             prefix=prefix,
         )
         if new_id is not None:
-            self.tree_changed.emit()
+            self.tree_changed.emit(str(new_id), type_name)
             QTimer.singleShot(0, lambda: self.select_object(new_id))
-            self.object_activated.emit(str(new_id), type_name)
 
-    def _create_new_object(
-        self,
-        model_cls,
-        type_name,
-        lib_id,
-        *,
-        device_id=None,
-        extra_data=None,
-        folder=None,
-        interface_id=None,
-        name=None,
-        parent_interface_id=None,
-        prefix='',
-    ):
-        """Create a new object and return its UUID, or None on failure."""
-        if self._db_manager is None:
-            return None
-
-        session = self._db_manager.create_session()
-        try:
-            new_id = uuid.uuid4()
-            kwargs = {'id': new_id}
-
-            # Only set 'type' for STI models that have a type column.
-            if hasattr(model_cls, 'type'):
-                kwargs['type'] = type_name
-
-            # Library objects use database_id instead of library_id.
-            if model_cls is Library:
-                existing_lib = session.scalars(
-                    sqlalchemy.select(Library).limit(1),
-                ).first()
-                if existing_lib is not None:
-                    kwargs['database_id'] = existing_lib.database_id
-                else:
-                    session.close()
-                    return None
-            elif interface_id is not None and hasattr(model_cls, 'interface_id'):
-                kwargs['interface_id'] = interface_id
-            elif parent_interface_id is not None and hasattr(
-                model_cls, 'parent_interface_id'
-            ):
-                kwargs['parent_interface_id'] = parent_interface_id
-                if device_id is not None and hasattr(model_cls, 'device_id'):
-                    kwargs['device_id'] = device_id
-                kwargs['library_id'] = lib_id
-            elif device_id is not None and hasattr(model_cls, 'device_id'):
-                kwargs['device_id'] = device_id
-                kwargs['library_id'] = lib_id
-            else:
-                if hasattr(model_cls, 'library_id'):
-                    kwargs['library_id'] = lib_id
-
-            # Use _SYSTEM_GROUP_PATHS to resolve the correct (possibly
-            # nested) group for this object type.  Falls back to the
-            # virtual data.folder mechanism when the group doesn't exist.
-            if folder and hasattr(model_cls, 'group_id') and 'group_id' not in kwargs:
-                path = _SYSTEM_GROUP_PATHS.get(type_name, '')
-                target_group = _find_group_by_path(session, lib_id, path)
-                if target_group is not None:
-                    kwargs['group_id'] = target_group.id
-                    folder = None  # Don't also set data.folder.
-
-            # Group-type objects use parent_group_id (not group_id) to
-            # nest inside a folder group (e.g. ObjectGroup → Objects/Groups).
-            if (
-                folder
-                and hasattr(model_cls, 'parent_group_id')
-                and 'parent_group_id' not in kwargs
-            ):
-                path = _SYSTEM_GROUP_PATHS.get(type_name, '')
-                target_group = _find_group_by_path(session, lib_id, path)
-                if target_group is not None:
-                    kwargs['parent_group_id'] = target_group.id
-                    folder = None  # Don't also set data.folder.
-
-            # Build data dict: merge folder and extra_data.
-            data = {}
-            if folder:
-                data['folder'] = folder
-            if extra_data:
-                data.update(extra_data)
-            if data and hasattr(model_cls, 'data'):
-                kwargs['data'] = data
-
-            new_obj = model_cls(**kwargs)
-            new_obj.name = name or f'New {type_name}'
-
-            # Make name unique.
-            new_obj.name = self._make_name_unique(session, new_obj)
-
-            session.add(new_obj)
-            session.commit()
-            self._db_manager.save_state(f'{prefix}New {type_name}')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        return new_id
-
-    def create_new_object_in_library(
-        self, type_name, lib_id, *, extra_data=None, name=None
-    ):
-        """Create a new object of *type_name* in library *lib_id*.
-
-        This is the toolbar/menu variant of ``_ctx_new_object()`` — it
-        does not require a tree selection.  The object is placed in its
-        standard folder as defined by :data:`_NEW_TYPES_FOR_FOLDER`.
-
-        Optional *name* overrides the default ``"New {type}"``.
-        Optional *extra_data* is merged into the object's ``data`` dict
-        (e.g. platform / host_OS for Firewall/Cluster).
-
-        Returns the new object's UUID, or ``None`` on failure.
-        """
-        model_cls = _MODEL_MAP.get(type_name)
-        if model_cls is None:
-            return None
-
-        # Library creation has no folder.
-        folder = None
-        if model_cls is not Library:
-            for f, type_list in _NEW_TYPES_FOR_FOLDER.items():
-                if any(tn == type_name for tn, _dn in type_list):
-                    folder = f
-                    break
-
-        new_id = self._create_new_object(
-            model_cls,
-            type_name,
-            lib_id,
-            extra_data=extra_data,
-            folder=folder,
-            name=name,
-        )
-        if new_id is not None:
-            self.tree_changed.emit()
-            QTimer.singleShot(0, lambda: self.select_object(new_id))
-            self.object_activated.emit(str(new_id), type_name)
-        return new_id
-
-    def create_host_in_library(self, lib_id, *, name=None, interfaces=None):
-        """Create a new Host (with interfaces) in library *lib_id*.
-
-        This is the toolbar/menu variant — it places the Host in the
-        standard ``Hosts`` folder.
-
-        Returns the new Host's UUID, or ``None`` on failure.
-        """
-        new_id = self._create_host_with_interfaces(
-            lib_id,
-            name=name,
-            interfaces=interfaces or [],
-            folder='Hosts',
-        )
-        if new_id is not None:
-            self.tree_changed.emit()
-            QTimer.singleShot(0, lambda: self.select_object(new_id))
-            self.object_activated.emit(str(new_id), 'Host')
-        return new_id
-
-    def _create_host_with_interfaces(
-        self,
-        lib_id,
-        *,
-        name=None,
-        interfaces=None,
-        folder=None,
-        prefix='',
-    ):
-        """Create a Host with interfaces and addresses in one operation.
-
-        Mirrors fwbuilder's ``newHostDialog::finishClicked()`` which
-        creates the Host, its Interface children, and their IPv4/IPv6
-        address children as a single undo-able action.
-
-        Returns the new Host UUID, or None on failure.
-        """
-        if self._db_manager is None:
-            return None
-
-        session = self._db_manager.create_session()
-        try:
-            host_id = uuid.uuid4()
-            host_kwargs = {
-                'id': host_id,
-                'type': 'Host',
-                'library_id': lib_id,
-            }
-            # Place in the nested group (Objects/Hosts) if it exists.
-            path = _SYSTEM_GROUP_PATHS.get('Host', '')
-            target_group = _find_group_by_path(session, lib_id, path)
-            if target_group is not None:
-                host_kwargs['group_id'] = target_group.id
-            elif folder:
-                host_kwargs['data'] = {'folder': folder}
-            host = Host(**host_kwargs)
-            host.name = name or 'New Host'
-            host.name = self._make_name_unique(session, host)
-            session.add(host)
-
-            for iface_data in interfaces or []:
-                iface_id = uuid.uuid4()
-                iface_name = iface_data.get('name', '')
-                if not iface_name:
-                    continue
-                itype = iface_data.get('type', 0)
-                iface = Interface(
-                    id=iface_id,
-                    type='Interface',
-                    device_id=host_id,
-                    library_id=lib_id,
-                    name=iface_name,
-                    comment=iface_data.get('comment', ''),
-                    data={
-                        'dyn': str(itype == 1),
-                        'label': iface_data.get('label', ''),
-                        'security_level': '0',
-                        'unnum': str(itype == 2),
-                    },
-                )
-                session.add(iface)
-
-                # Create IPv4/IPv6 address children (static interfaces only).
-                if itype == 0:
-                    for addr_info in iface_data.get('addresses', []):
-                        addr_str = addr_info.get('address', '')
-                        mask_str = addr_info.get('netmask', '')
-                        is_v4 = addr_info.get('ipv4', True)
-                        if not addr_str:
-                            continue
-                        addr_type = 'IPv4' if is_v4 else 'IPv6'
-                        suffix = 'ip' if is_v4 else 'ip6'
-                        addr_name = f'{host.name}:{iface_name}:{suffix}'
-                        addr = Address(
-                            id=uuid.uuid4(),
-                            type=addr_type,
-                            interface_id=iface_id,
-                            name=addr_name,
-                            inet_addr_mask={
-                                'address': addr_str,
-                                'netmask': mask_str,
-                            },
-                        )
-                        session.add(addr)
-
-            session.commit()
-            self._db_manager.save_state(f'{prefix}New Host {host.name}')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        return host_id
-
-    # ------------------------------------------------------------------
-    # New Subfolder
-    # ------------------------------------------------------------------
+    # -- New Subfolder --
 
     def _ctx_new_subfolder(self, item):
         """Prompt for a subfolder name and create it under *item*.
 
-        User subfolders are stored in the Library's ``data.subfolders``
-        list, matching fwbuilder's ``addSubfolderSlot()`` approach.
+        Matches fwbuilder's ``addSubfolderSlot()``: subfolders are stored
+        in the ``data.subfolders`` list of whichever object is selected
+        (a group or a library).
         """
         if self._db_manager is None:
             return
@@ -3346,40 +1779,22 @@ class ObjectTree(QWidget):
             )
             return
 
-        # Find the library for this item.
         lib_id = self._get_item_library_id(item)
         if lib_id is None:
             return
 
-        session = self._db_manager.create_session()
-        try:
-            lib = session.get(Library, lib_id)
-            if lib is None:
-                return
-            data = dict(lib.data or {})
-            subfolders = list(data.get('subfolders', []))
-            if name in subfolders:
-                return  # Already exists.
-            subfolders.append(name)
-            subfolders.sort(key=str.casefold)
-            data['subfolders'] = subfolders
-            lib.data = data
-            session.commit()
-            self._db_manager.save_state(f'New subfolder "{name}"')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        # Determine whether the subfolder goes on a group or the library.
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        parent_group_id = None
+        if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup') and obj_id:
+            parent_group_id = uuid.UUID(obj_id)
 
-        self.tree_changed.emit()
+        self._ops.create_subfolder(lib_id, name, parent_group_id=parent_group_id)
+        self.tree_changed.emit('', '')
 
     def _ctx_rename_folder(self, item):
-        """Rename a category folder.
-
-        Updates ``data.folder`` on every child object and the
-        ``Library.data['subfolders']`` list when applicable.
-        """
+        """Rename a category folder."""
         if self._db_manager is None:
             return
 
@@ -3406,73 +1821,63 @@ class ObjectTree(QWidget):
         if lib_id is None:
             return
 
-        session = self._db_manager.create_session()
-        try:
-            # Rename data.folder on all objects that belong to this folder.
-            for cls in (Address, Group, Host, Interface, Interval, Service):
-                if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
-                    continue
-                for obj in (
-                    session.scalars(
-                        sqlalchemy.select(cls).where(cls.library_id == lib_id)
-                    )
-                    .unique()
-                    .all()
-                ):
-                    obj_data = obj.data or {}
-                    if obj_data.get('folder') == old_name:
-                        obj.data = {**obj_data, 'folder': new_name}
-
-            # Update Library.data['subfolders'] list.
-            lib = session.get(Library, lib_id)
-            if lib is not None:
-                lib_data = dict(lib.data or {})
-                subfolders = list(lib_data.get('subfolders', []))
-                if old_name in subfolders:
-                    subfolders[subfolders.index(old_name)] = new_name
-                    subfolders.sort(key=str.casefold)
-                    lib_data['subfolders'] = subfolders
-                    lib.data = lib_data
-
-            session.commit()
-            self._db_manager.save_state(f'Rename folder "{old_name}" → "{new_name}"')
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-        self.tree_changed.emit()
-
-    # ------------------------------------------------------------------
-    # Shared helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _make_name_unique(session, obj):
-        """Return a unique name, appending '-1', '-2', ... only if needed.
-
-        Queries the appropriate table for existing names.  If the base
-        name is already free it is returned as-is (matching fwbuilder's
-        ``makeNameUnique()``).
-        """
-        base_name = obj.name
-        model_cls = type(obj)
-
-        # Collect existing names in the same scope.
-        stmt = sqlalchemy.select(model_cls.name).where(
-            model_cls.name.like(f'{base_name}%')
+        parent_group_id = self._get_folder_parent_group_id(item)
+        self._ops.rename_folder(
+            lib_id, old_name, new_name, parent_group_id=parent_group_id
         )
-        if hasattr(obj, 'library_id') and obj.library_id is not None:
-            stmt = stmt.where(model_cls.library_id == obj.library_id)
-        existing = set(session.scalars(stmt).all())
+        self.tree_changed.emit('', '')
 
-        if base_name not in existing:
-            return base_name
+    # ------------------------------------------------------------------
+    # Public API (toolbar / menu)
+    # ------------------------------------------------------------------
 
-        suffix = 1
-        while True:
-            candidate = f'{base_name}-{suffix}'
-            if candidate not in existing:
-                return candidate
-            suffix += 1
+    def create_new_object_in_library(
+        self, type_name, lib_id, *, extra_data=None, name=None
+    ):
+        """Create a new object of *type_name* in library *lib_id*.
+
+        This is the toolbar/menu variant of ``_ctx_new_object()`` — it
+        does not require a tree selection.
+
+        Returns the new object's UUID, or ``None`` on failure.
+        """
+        model_cls = MODEL_MAP.get(type_name)
+        if model_cls is None:
+            return None
+
+        # Library creation has no folder.
+        folder = None
+        if model_cls is not Library:
+            for f, type_list in NEW_TYPES_FOR_FOLDER.items():
+                if any(tn == type_name for tn, _dn in type_list):
+                    folder = f
+                    break
+
+        new_id = self._ops.create_new_object(
+            model_cls,
+            type_name,
+            lib_id,
+            extra_data=extra_data,
+            folder=folder,
+            name=name,
+        )
+        if new_id is not None:
+            self.tree_changed.emit(str(new_id), type_name)
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+        return new_id
+
+    def create_host_in_library(self, lib_id, *, name=None, interfaces=None):
+        """Create a new Host (with interfaces) in library *lib_id*.
+
+        Returns the new Host's UUID, or ``None`` on failure.
+        """
+        new_id = self._ops.create_host_with_interfaces(
+            lib_id,
+            name=name,
+            interfaces=interfaces or [],
+            folder='Hosts',
+        )
+        if new_id is not None:
+            self.tree_changed.emit(str(new_id), 'Host')
+            QTimer.singleShot(0, lambda: self.select_object(new_id))
+        return new_id
