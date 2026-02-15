@@ -852,7 +852,7 @@ class ObjectTree(QWidget):
         selection = self._get_simplified_selection()
         writable_libraries = self._get_writable_libraries()
 
-        # Gather tags for the Keywords submenu.
+        # Gather tags for the Tags submenu.
         all_tags = TreeOperations.get_all_tags(self._db_manager)
         selected_tags = self._get_selected_tags(selection)
 
@@ -1080,14 +1080,14 @@ class ObjectTree(QWidget):
         if items and self._ops.unlock_objects(items):
             self.tree_changed.emit('', '')
 
-    # -- Keywords --
+    # -- Tags --
 
     def _ctx_new_keyword(self):
-        """Prompt for a new keyword and add it to all selected objects."""
+        """Prompt for a new tag and add it to all selected objects."""
         keyword, ok = QInputDialog.getText(
             self._tree,
-            'New Keyword',
-            'Enter keyword:',
+            'New Tag',
+            'Enter tag:',
         )
         keyword = keyword.strip() if ok else ''
         if not keyword:

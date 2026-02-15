@@ -349,12 +349,12 @@ def build_object_context_menu(
     group_act.setEnabled(num_selected >= 2)
     handlers[group_act] = ('_ctx_group_objects',)
 
-    # ── 11. Keywords (Add / Remove submenus) ──────────────────────────
-    kw_menu = menu.addMenu('Keywords')
+    # ── 11. Tags (Add / Remove submenus) ────────────────────────────
+    kw_menu = menu.addMenu('Tags')
     kw_menu.setEnabled(not effective_ro)
 
     add_kw_menu = kw_menu.addMenu('Add')
-    act = add_kw_menu.addAction('New Keyword...')
+    act = add_kw_menu.addAction('New Tag...')
     handlers[act] = ('_ctx_new_keyword',)
     if all_tags:
         add_kw_menu.addSeparator()
