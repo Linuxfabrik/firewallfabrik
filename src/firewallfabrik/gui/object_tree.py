@@ -505,11 +505,12 @@ class ObjectTree(QWidget):
             effective_readonly=effective_ro,
             inactive=is_inactive(obj),
             obj=obj,
+            readonly=obj_ro,
             tags=obj_tags(obj),
         )
         if isinstance(obj, Group):
             self._add_group_children(obj, item)
-            if obj.id in self._system_folder_groups:
+            if obj.id in self._system_folder_groups and not obj_ro:
                 item.setIcon(0, QIcon(CATEGORY_ICON))
         elif isinstance(obj, Host):
             saved_device_ro = self._building_device_ro
@@ -566,6 +567,7 @@ class ObjectTree(QWidget):
                 effective_readonly=effective_ro,
                 inactive=is_inactive(rs),
                 obj=rs,
+                readonly=getattr(rs, 'ro', False),
             )
         # Only add top-level interfaces; sub-interfaces are added
         # recursively inside _add_interface().
@@ -585,6 +587,7 @@ class ObjectTree(QWidget):
             effective_readonly=effective_ro,
             inactive=is_inactive(iface),
             obj=iface,
+            readonly=getattr(iface, 'ro', False),
             tags=obj_tags(iface),
         )
         # Sub-interfaces (recursive).
@@ -600,6 +603,7 @@ class ObjectTree(QWidget):
                 effective_readonly=effective_ro,
                 inactive=is_inactive(addr),
                 obj=addr,
+                readonly=getattr(addr, 'ro', False),
                 tags=obj_tags(addr),
             )
 
@@ -671,6 +675,19 @@ class ObjectTree(QWidget):
                 continue
 
             item.setText(0, obj_display_name(obj))
+
+            # Update icon (lock icon for locked objects).
+            obj_ro = getattr(obj, 'ro', False)
+            item.setData(0, Qt.ItemDataRole.UserRole + 7, obj_ro)
+            type_str = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_ro:
+                item.setIcon(0, QIcon(LOCK_ICON))
+            elif obj.id in self._system_folder_groups:
+                item.setIcon(0, QIcon(CATEGORY_ICON))
+            else:
+                icon_path = ICON_MAP.get(type_str)
+                if icon_path:
+                    item.setIcon(0, QIcon(icon_path))
 
             inactive = is_inactive(obj)
             font = item.font(0)
@@ -802,6 +819,9 @@ class ObjectTree(QWidget):
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         type_str = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not type_str:
+            return
+        # System folders (Firewalls, Clusters, Objects, ...) are not editable.
+        if self._is_system_group(item):
             return
         if type_str in RULE_SET_TYPES:
             fw_item = item.parent()
