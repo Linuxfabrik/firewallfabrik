@@ -802,6 +802,14 @@ class FWWindow(QMainWindow):
                         rs_id = rs_item.data(0, Qt.ItemDataRole.UserRole)
                         rs_name = rs_item.text(0)
                         self._open_rule_set(rs_id, fw_name, rs_name, rs_type)
+                        # Select the Policy item in the tree so the user
+                        # sees which firewall's rules are displayed.
+                        parent = rs_item.parent()
+                        while parent:
+                            parent.setExpanded(True)
+                            parent = parent.parent()
+                        self._object_tree._tree.scrollToItem(rs_item)
+                        self._object_tree._tree.setCurrentItem(rs_item)
                         return
             else:
                 # Recurse into group folders (e.g. user-created subfolders).
