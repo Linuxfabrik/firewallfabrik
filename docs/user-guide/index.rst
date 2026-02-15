@@ -1,9 +1,8 @@
-FirewallFabrik User Guide
-=========================
+User Guide
+==========
 
 .. toctree::
    :maxdepth: 2
-   :numbered:
 
    01 - Introduction
    02 - Installing FirewallFabrik
