@@ -42,16 +42,23 @@ class TimeDialog(BaseObjectDialog):
         end_time = data.get('to_time', '')
 
         self.useStartDate.setChecked(bool(start_date))
-        if start_date:
-            self.startDate.setDate(QDate.fromString(start_date, 'yyyy-MM-dd'))
+        self.startDate.setDate(
+            QDate.fromString(start_date, 'yyyy-MM-dd')
+            if start_date
+            else QDate.currentDate()
+        )
         if start_time:
             self.startTime.setTime(QTime.fromString(start_time, 'HH:mm'))
 
         self.useEndDate.setChecked(bool(end_date))
-        if end_date:
-            self.endDate.setDate(QDate.fromString(end_date, 'yyyy-MM-dd'))
-        if end_time:
-            self.endTime.setTime(QTime.fromString(end_time, 'HH:mm'))
+        self.endDate.setDate(
+            QDate.fromString(end_date, 'yyyy-MM-dd')
+            if end_date
+            else QDate.currentDate()
+        )
+        self.endTime.setTime(
+            QTime.fromString(end_time, 'HH:mm') if end_time else QTime(23, 59)
+        )
         self.useStartOrEndDate()
 
         days_str = data.get('days_of_week', '')
