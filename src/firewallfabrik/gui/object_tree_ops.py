@@ -228,21 +228,25 @@ class TreeOperations:
         return True
 
     def delete_folder(self, lib_id, folder_name, *, parent_group_id=None):
-        """Delete a user-created subfolder.
+        """Delete a user-created subfolder and all nested children.
 
         Moves all child objects to the parent level (removes their
-        ``data.folder`` field) and removes the subfolder from the
-        parent's ``data['subfolders']``.  The parent is determined by
-        *parent_group_id* (a Group) or falls back to the Library.
+        ``data.folder`` field) and removes the subfolder **and every
+        nested child path** from the parent's ``data['subfolders']``.
+        The parent is determined by *parent_group_id* (a Group) or
+        falls back to the Library.
         """
         if self._db_manager is None:
             return
 
+        child_prefix = folder_name + '/'
+
+        def _folder_matches(folder):
+            return folder == folder_name or folder.startswith(child_prefix)
+
         session = self._db_manager.create_session()
         try:
             if parent_group_id is not None:
-                # Group-level subfolder: clear data.folder on children
-                # of this group that are in the deleted folder.
                 parent = session.get(Group, parent_group_id)
                 if parent is not None:
                     for attr in (
@@ -254,14 +258,12 @@ class TreeOperations:
                     ):
                         for child in getattr(parent, attr, []):
                             obj_data = child.data or {}
-                            if obj_data.get('folder') == folder_name:
+                            if _folder_matches(obj_data.get('folder', '')):
                                 new_data = {
                                     k: v for k, v in obj_data.items() if k != 'folder'
                                 }
                                 child.data = new_data or None
             else:
-                # Library-level subfolder: clear data.folder on all
-                # library-owned objects in this folder.
                 for cls in _LIB_OWNED_CLASSES:
                     if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
                         continue
@@ -273,24 +275,23 @@ class TreeOperations:
                         .all()
                     ):
                         obj_data = obj.data or {}
-                        if obj_data.get('folder') == folder_name:
+                        if _folder_matches(obj_data.get('folder', '')):
                             new_data = {
                                 k: v for k, v in obj_data.items() if k != 'folder'
                             }
                             obj.data = new_data or None
                 parent = session.get(Library, lib_id)
 
-            # Remove from parent's data['subfolders'].
+            # Remove folder and all nested child paths from subfolders list.
             if parent is not None:
-                parent_data = dict(parent.data or {})
+                parent_data = copy.deepcopy(parent.data or {})
                 subfolders = normalize_subfolders(parent_data.get('subfolders', []))
-                if folder_name in subfolders:
-                    subfolders.remove(folder_name)
-                    if subfolders:
-                        parent_data['subfolders'] = subfolders
-                    else:
-                        parent_data.pop('subfolders', None)
-                    parent.data = parent_data
+                subfolders = [s for s in subfolders if not _folder_matches(s)]
+                if subfolders:
+                    parent_data['subfolders'] = subfolders
+                else:
+                    parent_data.pop('subfolders', None)
+                parent.data = parent_data
 
             session.commit()
             self._db_manager.save_state(f'Delete folder "{folder_name}"')
@@ -310,6 +311,7 @@ class TreeOperations:
         model_cls,
         target_lib_id,
         *,
+        folder=None,
         prefix='',
         target_group_id=None,
         target_interface_id=None,
@@ -318,6 +320,8 @@ class TreeOperations:
 
         Optional *target_interface_id* / *target_group_id* place the clone
         under a specific interface or group instead of the library root.
+        When *folder* is given, the clone's ``data.folder`` is set to that
+        value (used when pasting into a user subfolder).
         """
         if self._db_manager is None:
             return None
@@ -355,6 +359,16 @@ class TreeOperations:
             else:
                 if hasattr(new_obj, 'library_id'):
                     new_obj.library_id = target_lib_id
+
+            # Place clone in the target user subfolder, or clear folder
+            # when pasting to the group root (empty string).
+            if folder is not None and hasattr(new_obj, 'data'):
+                data = copy.deepcopy(new_obj.data or {})
+                if folder:
+                    data['folder'] = folder
+                else:
+                    data.pop('folder', None)
+                new_obj.data = data
 
             # Make name unique within the target scope.
             new_obj.name = self.make_name_unique(session, new_obj)
@@ -465,8 +479,21 @@ class TreeOperations:
     # Move
     # ------------------------------------------------------------------
 
-    def move_object(self, obj_id, model_cls, target_lib_id):
-        """Move *obj_id* to *target_lib_id*. Returns True on success."""
+    def move_object(
+        self,
+        obj_id,
+        model_cls,
+        target_lib_id,
+        *,
+        folder=None,
+        target_group_id=None,
+    ):
+        """Move *obj_id* to *target_lib_id*. Returns True on success.
+
+        When *target_group_id* and/or *folder* are given, the object is
+        placed into that group / user subfolder (used for cut-paste into
+        a subfolder).
+        """
         if self._db_manager is None:
             return False
 
@@ -486,6 +513,22 @@ class TreeOperations:
                 obj.group_id = None
             if hasattr(obj, 'parent_group_id'):
                 obj.parent_group_id = None
+
+            # Place into the target group when given.
+            if target_group_id is not None:
+                if hasattr(obj, 'group_id'):
+                    obj.group_id = target_group_id
+                elif hasattr(obj, 'parent_group_id'):
+                    obj.parent_group_id = target_group_id
+
+            # Set/clear user subfolder path.
+            if folder is not None and hasattr(obj, 'data'):
+                data = copy.deepcopy(obj.data or {})
+                if folder:
+                    data['folder'] = folder
+                else:
+                    data.pop('folder', None)
+                obj.data = data
 
             # For devices, also move child interfaces.
             if isinstance(obj, Host):
@@ -569,7 +612,12 @@ class TreeOperations:
                 target_group = find_group_by_path(session, lib_id, path)
                 if target_group is not None:
                     kwargs['group_id'] = target_group.id
-                    folder = None  # Don't also set data.folder.
+                    # System-level folder names (e.g. "Time") are only
+                    # used for group resolution; user subfolder paths
+                    # (e.g. "test1/test2") must be preserved in
+                    # data.folder.
+                    if folder in NEW_TYPES_FOR_FOLDER:
+                        folder = None
 
             # Group-type objects use parent_group_id (not group_id) to
             # nest inside a folder group (e.g. ObjectGroup -> Objects/Groups).
@@ -582,7 +630,8 @@ class TreeOperations:
                 target_group = find_group_by_path(session, lib_id, path)
                 if target_group is not None:
                     kwargs['parent_group_id'] = target_group.id
-                    folder = None  # Don't also set data.folder.
+                    if folder in NEW_TYPES_FOR_FOLDER:
+                        folder = None
 
             # Build data dict: merge folder and extra_data.
             data = {}
@@ -705,6 +754,46 @@ class TreeOperations:
         return host_id
 
     # ------------------------------------------------------------------
+    # Folder move (drag & drop / cut-paste)
+    # ------------------------------------------------------------------
+
+    def set_object_folder(self, obj_id, model_cls, folder):
+        """Set or clear ``data.folder`` on an existing object.
+
+        *folder* is the target subfolder path (e.g. ``'A/B'``) or an
+        empty string to move the object back to the group root.
+        """
+        if self._db_manager is None:
+            return False
+
+        session = self._db_manager.create_session()
+        try:
+            obj = session.get(model_cls, obj_id)
+            if obj is None or not hasattr(obj, 'data'):
+                session.close()
+                return False
+            data = copy.deepcopy(obj.data or {})
+            old_folder = data.get('folder', '')
+            if old_folder == folder:
+                session.close()
+                return False  # No-op.
+            if folder:
+                data['folder'] = folder
+            else:
+                data.pop('folder', None)
+            obj.data = data
+            session.commit()
+            self._db_manager.save_state(
+                f'Move {getattr(obj, "type", type(obj).__name__)} {obj.name} to folder'
+            )
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+        return True
+
+    # ------------------------------------------------------------------
     # Subfolder & Rename
     # ------------------------------------------------------------------
 
@@ -725,7 +814,7 @@ class TreeOperations:
                 parent = session.get(Library, lib_id)
             if parent is None:
                 return
-            data = dict(parent.data or {})
+            data = copy.deepcopy(parent.data or {})
             subfolders = normalize_subfolders(data.get('subfolders', []))
             if name in subfolders:
                 return  # Already exists.
@@ -742,19 +831,27 @@ class TreeOperations:
             session.close()
 
     def rename_folder(self, lib_id, old_name, new_name, *, parent_group_id=None):
-        """Rename a category folder.
+        """Rename a category folder and update all nested child paths.
 
-        Updates ``data.folder`` on every child object and the parent's
-        ``data['subfolders']`` list.  The parent is determined by
-        *parent_group_id* (a Group) or falls back to the Library.
+        Updates ``data.folder`` on every child object whose folder
+        matches (or is nested under) *old_name*, and updates the
+        parent's ``data['subfolders']`` list accordingly.
         """
         if self._db_manager is None:
             return
 
+        old_prefix = old_name + '/'
+
+        def _rename_folder_value(folder):
+            if folder == old_name:
+                return new_name
+            if folder.startswith(old_prefix):
+                return new_name + folder[len(old_name) :]
+            return None
+
         session = self._db_manager.create_session()
         try:
             if parent_group_id is not None:
-                # Group-level subfolder: rename data.folder on children.
                 parent_grp = session.get(Group, parent_group_id)
                 if parent_grp is not None:
                     for attr in (
@@ -766,12 +863,11 @@ class TreeOperations:
                     ):
                         for child in getattr(parent_grp, attr, []):
                             obj_data = child.data or {}
-                            if obj_data.get('folder') == old_name:
-                                child.data = {**obj_data, 'folder': new_name}
+                            renamed = _rename_folder_value(obj_data.get('folder', ''))
+                            if renamed is not None:
+                                child.data = {**obj_data, 'folder': renamed}
                 parent = parent_grp
             else:
-                # Library-level subfolder: rename data.folder on all
-                # library-owned objects.
                 for cls in _LIB_OWNED_CLASSES:
                     if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
                         continue
@@ -783,19 +879,23 @@ class TreeOperations:
                         .all()
                     ):
                         obj_data = obj.data or {}
-                        if obj_data.get('folder') == old_name:
-                            obj.data = {**obj_data, 'folder': new_name}
+                        renamed = _rename_folder_value(obj_data.get('folder', ''))
+                        if renamed is not None:
+                            obj.data = {**obj_data, 'folder': renamed}
                 parent = session.get(Library, lib_id)
 
-            # Update parent's data['subfolders'] list.
+            # Update parent's data['subfolders'] list — rename exact
+            # match and all nested child paths.
             if parent is not None:
-                parent_data = dict(parent.data or {})
+                parent_data = copy.deepcopy(parent.data or {})
                 subfolders = normalize_subfolders(parent_data.get('subfolders', []))
-                if old_name in subfolders:
-                    subfolders[subfolders.index(old_name)] = new_name
-                    subfolders.sort(key=str.casefold)
-                    parent_data['subfolders'] = subfolders
-                    parent.data = parent_data
+                new_subfolders = []
+                for s in subfolders:
+                    renamed = _rename_folder_value(s)
+                    new_subfolders.append(renamed if renamed is not None else s)
+                new_subfolders.sort(key=str.casefold)
+                parent_data['subfolders'] = new_subfolders
+                parent.data = parent_data
 
             session.commit()
             self._db_manager.save_state(

@@ -450,10 +450,10 @@ def _resolve_category_folder(item):
     return None
 
 
-def build_category_context_menu(parent_widget, item, *, has_mixed_selection):
+def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_selection):
     """Build context menu for a user subfolder item.
 
-    Matches fwbuilder's subfolder menu: Delete, Rename, New [types].
+    Matches fwbuilder's subfolder menu: Delete, Rename, Paste, New [types].
 
     Returns ``(menu, handlers)`` where *handlers* maps
     ``QAction -> ('method_name', *args)`` tuples.
@@ -490,13 +490,24 @@ def build_category_context_menu(parent_widget, item, *, has_mixed_selection):
     act.setEnabled(not disabled)
     handlers[act] = ('_ctx_rename_folder', item)
 
-    # New [types].
-    if new_types:
-        menu.addSeparator()
+    # Paste.
+    menu.addSeparator()
+    can_paste = clipboard is not None and not effective_ro
+    act = menu.addAction('Paste')
+    act.setShortcut(QKeySequence.StandardKey.Paste)
+    act.setEnabled(can_paste)
+    handlers[act] = ('_ctx_paste', item)
+
+    # New [types] + New Subfolder.
+    menu.addSeparator()
     for type_name, display_name in new_types:
         icon_path = ICON_MAP.get(type_name, '')
         act = menu.addAction(QIcon(icon_path), f'New {display_name}')
         act.setEnabled(not effective_ro)
         handlers[act] = ('_ctx_new_object', item, type_name)
+
+    act = menu.addAction(QIcon(CATEGORY_ICON), 'New Subfolder')
+    act.setEnabled(not effective_ro)
+    handlers[act] = ('_ctx_new_subfolder', item)
 
     return menu, handlers

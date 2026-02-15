@@ -87,7 +87,16 @@ _tree_clipboard: list[dict] | None = (
 
 
 class _DraggableTree(QTreeWidget):
-    """QTreeWidget subclass that provides drag MIME data for object items."""
+    """QTreeWidget subclass with drag & drop support for object items.
+
+    Drag produces a JSON payload under :data:`FWF_MIME_TYPE`.
+    Drop is accepted when items are moved within the same tree
+    (internal move between folders / groups).
+    """
+
+    # Signal emitted on a valid internal drop.
+    # Args: (target_item, list_of_payload_dicts)
+    items_dropped = Signal(QTreeWidgetItem, list)
 
     def mimeTypes(self):
         return [FWF_MIME_TYPE]
@@ -167,6 +176,41 @@ class _DraggableTree(QTreeWidget):
 
         drag.exec(supported_actions)
 
+    # -- Drop handling --------------------------------------------------
+
+    def dragEnterEvent(self, event):
+        if event.source() is self and event.mimeData().hasFormat(FWF_MIME_TYPE):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.source() is not self:
+            event.ignore()
+            return
+        dest = self.itemAt(event.position().toPoint())
+        if dest is None:
+            event.ignore()
+            return
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        if event.source() is not self:
+            event.ignore()
+            return
+        dest = self.itemAt(event.position().toPoint())
+        if dest is None:
+            event.ignore()
+            return
+        data = event.mimeData().data(FWF_MIME_TYPE).data()
+        try:
+            entries = json.loads(data)
+        except (ValueError, TypeError):
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        self.items_dropped.emit(dest, entries)
+
 
 class ObjectTree(QWidget):
     """Left-hand object tree panel with filter field and library selector."""
@@ -213,7 +257,9 @@ class ObjectTree(QWidget):
             QAbstractItemView.SelectionMode.ExtendedSelection,
         )
         self._tree.setDragEnabled(True)
-        self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self._tree.setAcceptDrops(True)
+        self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self._tree.setDefaultDropAction(Qt.DropAction.MoveAction)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._on_context_menu)
 
@@ -240,6 +286,7 @@ class ObjectTree(QWidget):
 
         self._tree.header().sectionResized.connect(self._on_section_resized)
         self._tree.itemDoubleClicked.connect(self._on_double_click)
+        self._tree.items_dropped.connect(self._on_items_dropped)
         self._filter.textChanged.connect(self._apply_filter)
 
     def populate(self, session, file_key=''):
@@ -535,19 +582,40 @@ class ObjectTree(QWidget):
         )
 
     def _add_objects_with_folders(self, objects, parent_item, *, extra_folders=None):
-        """Add *objects* under *parent_item*, grouping by ``data.folder``."""
+        """Add *objects* under *parent_item*, grouping by ``data.folder``.
+
+        Folder paths may use ``/`` as a separator (e.g. ``'A/B/C'``)
+        to represent nested subfolders.
+        """
         sorted_objects = sorted(objects, key=obj_sort_key)
-        folder_names = {self._get_folder_name(obj) for obj in sorted_objects} - {''}
+        folder_paths = {self._get_folder_name(obj) for obj in sorted_objects} - {''}
         if extra_folders:
-            folder_names |= set(extra_folders)
-        folder_names = sorted(folder_names, key=str.casefold)
-        folder_items = {
-            name: self._make_category(name, parent_item) for name in folder_names
-        }
+            folder_paths |= set(extra_folders)
+        folder_items = self._build_folder_hierarchy(folder_paths, parent_item)
         for obj in sorted_objects:
             folder_name = self._get_folder_name(obj)
-            target = folder_items[folder_name] if folder_name else parent_item
+            target = folder_items.get(folder_name, parent_item)
             self._add_object(obj, target)
+
+    def _build_folder_hierarchy(self, folder_paths, parent_item):
+        """Create nested category items from folder paths.
+
+        Paths using ``/`` as separator (e.g. ``'A/B/C'``) produce a
+        nested ``A -> B -> C`` hierarchy.  Intermediate nodes are
+        created automatically.
+
+        Returns a dict mapping full path strings to tree items.
+        """
+        result = {}
+        for path in sorted(folder_paths, key=str.casefold):
+            parts = path.split('/')
+            current_parent = parent_item
+            for i, part in enumerate(parts):
+                prefix = '/'.join(parts[: i + 1])
+                if prefix not in result:
+                    result[prefix] = self._make_category(part, current_parent)
+                current_parent = result[prefix]
+        return result
 
     @staticmethod
     def _get_folder_name(obj):
@@ -738,6 +806,20 @@ class ObjectTree(QWidget):
                 return True
         return False
 
+    def _expand_by_path(self, path_key):
+        """Find the item matching *path_key* and expand it (and its ancestors)."""
+        it = QTreeWidgetItemIterator(self._tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            if self._item_path(item) == path_key:
+                item.setExpanded(True)
+                parent = item.parent()
+                while parent:
+                    parent.setExpanded(True)
+                    parent = parent.parent()
+                return
+
     # ------------------------------------------------------------------
     # Filter
     # ------------------------------------------------------------------
@@ -927,6 +1009,7 @@ class ObjectTree(QWidget):
         menu, handlers = build_category_context_menu(
             self,
             item,
+            clipboard=_tree_clipboard,
             has_mixed_selection=has_mixed,
         )
 
@@ -938,6 +1021,58 @@ class ObjectTree(QWidget):
             # Same deferred dispatch as _on_context_menu — see comment
             # there for the rationale (Shiboken segfault prevention).
             QTimer.singleShot(0, lambda m=method_name, a=args: getattr(self, m)(*a))
+
+    # ------------------------------------------------------------------
+    # Drag & drop
+    # ------------------------------------------------------------------
+
+    def _on_items_dropped(self, dest_item, entries):
+        """Handle an internal drop: move objects into the target folder.
+
+        *dest_item* is the QTreeWidgetItem the objects were dropped on.
+        *entries* is a list of ``{'id': ..., 'type': ...}`` dicts from
+        the MIME payload.
+        """
+        if self._db_manager is None or not entries:
+            return
+
+        # Determine target folder path.
+        dest_type = dest_item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if dest_type is None:
+            # Dropped on a category folder → set data.folder.
+            target_folder = self._get_category_folder_path(dest_item)
+        elif dest_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+            # Dropped on the parent group → clear data.folder.
+            target_folder = ''
+        else:
+            # Dropped on a regular object → use its folder (i.e. same
+            # folder as the sibling).
+            target_folder = ''
+            parent = dest_item.parent()
+            while parent is not None:
+                pt = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+                if pt is None:
+                    target_folder = self._get_category_folder_path(parent)
+                    break
+                if pt in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup', 'Library'):
+                    break
+                parent = parent.parent()
+
+        any_changed = False
+        last_id = None
+        for entry in entries:
+            model_cls = MODEL_MAP.get(entry.get('type'))
+            if model_cls is None:
+                continue
+            obj_id = uuid.UUID(entry['id'])
+            if self._ops.set_object_folder(obj_id, model_cls, target_folder):
+                any_changed = True
+                last_id = obj_id
+
+        if any_changed:
+            self.tree_changed.emit('', '')
+            if last_id is not None:
+                QTimer.singleShot(0, lambda lid=last_id: self.select_object(lid))
 
     # ------------------------------------------------------------------
     # Context menu helpers
@@ -974,23 +1109,45 @@ class ObjectTree(QWidget):
 
     @staticmethod
     def _get_folder_parent_group_id(folder_item):
-        """Return the parent group UUID for a virtual folder item, or None.
+        """Return the owning group UUID for a virtual folder item, or None.
 
-        Virtual folder items (no obj_id) sit under either a real Group
-        or a Library.  If the parent is a Group, returns its UUID so
-        subfolder operations target the group's ``data.subfolders``
-        instead of the library's.
+        Walks up through nested category items (those without an
+        ``obj_type``) until a real Group is found.  Returns the
+        group's UUID so subfolder operations target the group's
+        ``data['subfolders']`` list.  Returns ``None`` if the owner
+        is a Library (or not found).
         """
-        parent = folder_item.parent()
-        if parent is not None:
-            parent_type = parent.data(0, Qt.ItemDataRole.UserRole + 1)
-            parent_id = parent.data(0, Qt.ItemDataRole.UserRole)
+        current = folder_item.parent()
+        while current is not None:
+            current_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            current_id = current.data(0, Qt.ItemDataRole.UserRole)
             if (
-                parent_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup')
-                and parent_id
+                current_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup')
+                and current_id
             ):
-                return uuid.UUID(parent_id)
+                return uuid.UUID(current_id)
+            if current_type == 'Library':
+                return None
+            current = current.parent()
         return None
+
+    @staticmethod
+    def _get_category_folder_path(item):
+        """Return the full folder path for a category item.
+
+        Walks up through parent category items (those without an
+        ``obj_type``) until a real object is reached.  Returns
+        components joined with ``/``, e.g. ``'SubA/SubB'``.
+        """
+        parts = []
+        current = item
+        while current is not None:
+            if current.data(0, Qt.ItemDataRole.UserRole + 1):
+                break  # Real object — stop.
+            parts.append(current.text(0))
+            current = current.parent()
+        parts.reverse()
+        return '/'.join(parts)
 
     @staticmethod
     def _get_sibling_interfaces(item, obj_type):
@@ -1327,6 +1484,19 @@ class ObjectTree(QWidget):
 
         target_iface_id, target_group_id = self._get_paste_context(item)
         prefix = self._get_device_prefix(item)
+
+        # When pasting into a category folder, store the folder path
+        # on the pasted object so it appears in the correct subfolder.
+        # When pasting into a real group/object, clear any existing
+        # folder (empty string) so the object moves to the group root.
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_type is None:
+            target_folder = self._get_category_folder_path(item)
+        elif target_group_id is not None:
+            target_folder = ''
+        else:
+            target_folder = None
+
         any_cut = False
         last_id = None
 
@@ -1339,13 +1509,20 @@ class ObjectTree(QWidget):
 
             if cb['cut']:
                 any_cut = True
-                if self._ops.move_object(cb_id, model_cls, target_lib_id):
+                if self._ops.move_object(
+                    cb_id,
+                    model_cls,
+                    target_lib_id,
+                    folder=target_folder,
+                    target_group_id=target_group_id,
+                ):
                     last_id = cb_id
             else:
                 new_id = self._ops.duplicate_object(
                     cb_id,
                     model_cls,
                     target_lib_id,
+                    folder=target_folder,
                     prefix=prefix,
                     target_interface_id=target_iface_id,
                     target_group_id=target_group_id,
@@ -1473,12 +1650,13 @@ class ObjectTree(QWidget):
         return self._ops.delete_library(uuid.UUID(obj_id), lib_name)
 
     def _ctx_delete_folder(self, item):
-        """Delete a user-created subfolder."""
+        """Delete a user-created subfolder (and all nested children)."""
         lib_id = self._get_item_library_id(item)
         if lib_id is None:
             return
+        folder_path = self._get_category_folder_path(item)
         parent_group_id = self._get_folder_parent_group_id(item)
-        self._ops.delete_folder(lib_id, item.text(0), parent_group_id=parent_group_id)
+        self._ops.delete_folder(lib_id, folder_path, parent_group_id=parent_group_id)
         self.tree_changed.emit('', '')
 
     def _shortcut_delete(self):
@@ -1675,7 +1853,7 @@ class ObjectTree(QWidget):
             obj_type_item = item.data(0, Qt.ItemDataRole.UserRole + 1)
             folder = None
             if obj_type_item is None:
-                folder = item.text(0)
+                folder = self._get_category_folder_path(item)
             if folder is None:
                 folder = 'Hosts'
 
@@ -1729,7 +1907,7 @@ class ObjectTree(QWidget):
         elif obj_type == 'Library':
             pass
         elif obj_type is None:
-            folder = item.text(0)
+            folder = self._get_category_folder_path(item)
         else:
             parent = item.parent()
             while parent is not None:
@@ -1745,7 +1923,7 @@ class ObjectTree(QWidget):
                 if pt == 'Library':
                     break
                 if pt is None:
-                    folder = parent.text(0)
+                    folder = self._get_category_folder_path(parent)
                 parent = parent.parent()
 
         # If no explicit folder, derive from type.
@@ -1777,9 +1955,10 @@ class ObjectTree(QWidget):
     def _ctx_new_subfolder(self, item):
         """Prompt for a subfolder name and create it under *item*.
 
-        Matches fwbuilder's ``addSubfolderSlot()``: subfolders are stored
-        in the ``data.subfolders`` list of whichever object is selected
-        (a group or a library).
+        Works for both real objects (groups / libraries) and virtual
+        category folders (user subfolders).  Nested subfolders are
+        stored as path strings (``'A/B'``) in the owning group's
+        ``data['subfolders']`` list.
         """
         if self._db_manager is None:
             return
@@ -1800,41 +1979,17 @@ class ObjectTree(QWidget):
             )
             return
 
-        lib_id = self._get_item_library_id(item)
-        if lib_id is None:
+        # Split on '/' to allow creating nested subfolders in one go
+        # (e.g. "a/b/c" creates three levels).  Strip and filter empty
+        # segments so that leading/trailing/double slashes are ignored.
+        segments = [s.strip() for s in name.split('/') if s.strip()]
+        if not segments:
             return
-
-        # Determine whether the subfolder goes on a group or the library.
-        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
-        parent_group_id = None
-        if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup') and obj_id:
-            parent_group_id = uuid.UUID(obj_id)
-
-        self._ops.create_subfolder(lib_id, name, parent_group_id=parent_group_id)
-        self.tree_changed.emit('', '')
-
-    def _ctx_rename_folder(self, item):
-        """Rename a category folder."""
-        if self._db_manager is None:
-            return
-
-        old_name = item.text(0)
-        new_name, ok = QInputDialog.getText(
-            self._tree,
-            'Rename Folder',
-            'Enter new folder name:',
-            QLineEdit.EchoMode.Normal,
-            old_name,
-        )
-        new_name = new_name.strip() if ok else ''
-        if not new_name or new_name == old_name:
-            return
-        if ',' in new_name:
+        if any(',' in s for s in segments):
             QMessageBox.warning(
                 self._tree,
-                'Rename Folder',
-                'Folder name cannot contain a comma.',
+                'New Subfolder',
+                'Subfolder name cannot contain a comma.',
             )
             return
 
@@ -1842,9 +1997,73 @@ class ObjectTree(QWidget):
         if lib_id is None:
             return
 
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+
+        if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup') and obj_id:
+            parent_group_id = uuid.UUID(obj_id)
+            base_path = ''
+        elif obj_type == 'Library':
+            parent_group_id = None
+            base_path = ''
+        else:
+            # Category folder — compute full path and find owner group.
+            base_path = self._get_category_folder_path(item) or ''
+            parent_group_id = self._get_folder_parent_group_id(item)
+
+        # Create each intermediate path segment.
+        for seg in segments:
+            folder_path = f'{base_path}/{seg}' if base_path else seg
+            self._ops.create_subfolder(
+                lib_id,
+                folder_path,
+                parent_group_id=parent_group_id,
+            )
+            base_path = folder_path
+
+        # Remember the parent's path key so we can expand it after the
+        # tree rebuild to make the new subfolder immediately visible.
+        parent_path_key = self._item_path(item)
+
+        self.tree_changed.emit('', '')
+        QTimer.singleShot(0, lambda: self._expand_by_path(parent_path_key))
+
+    def _ctx_rename_folder(self, item):
+        """Rename a category folder (updates nested child paths too)."""
+        if self._db_manager is None:
+            return
+
+        old_leaf = item.text(0)
+        new_leaf, ok = QInputDialog.getText(
+            self._tree,
+            'Rename Folder',
+            'Enter new folder name:',
+            QLineEdit.EchoMode.Normal,
+            old_leaf,
+        )
+        new_leaf = new_leaf.strip() if ok else ''
+        if not new_leaf or new_leaf == old_leaf:
+            return
+        if ',' in new_leaf or '/' in new_leaf:
+            QMessageBox.warning(
+                self._tree,
+                'Rename Folder',
+                'Folder name cannot contain a comma or slash.',
+            )
+            return
+
+        lib_id = self._get_item_library_id(item)
+        if lib_id is None:
+            return
+
+        old_path = self._get_category_folder_path(item)
+        # Replace only the last component of the path.
+        parts = old_path.rsplit('/', 1)
+        new_path = f'{parts[0]}/{new_leaf}' if len(parts) == 2 else new_leaf
+
         parent_group_id = self._get_folder_parent_group_id(item)
         self._ops.rename_folder(
-            lib_id, old_name, new_name, parent_group_id=parent_group_id
+            lib_id, old_path, new_path, parent_group_id=parent_group_id
         )
         self.tree_changed.emit('', '')
 
