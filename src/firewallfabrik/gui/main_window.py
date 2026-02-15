@@ -32,6 +32,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QAction,
+    QActionGroup,
     QCursor,
     QDesktopServices,
     QGuiApplication,
@@ -542,6 +543,7 @@ class FWWindow(QMainWindow):
         self._db_manager.on_history_changed = self._on_history_changed
 
         self._prepare_recent_menu()
+        self.menuWindow.aboutToShow.connect(self._prepare_windows_menu)
         self._restore_view_state()
         self._start_maximized = False
         self._restore_geometry()
@@ -756,7 +758,7 @@ class FWWindow(QMainWindow):
                             rs_type,
                         )
             except (ValueError, Exception):
-                pass
+                logger.debug('Could not restore last ruleset %s', rs_id_str)
 
         # Restore tree selection.
         obj_id = settings.value(f'LastObject/{file_key}/tree_id', '', type=str)
@@ -767,6 +769,45 @@ class FWWindow(QMainWindow):
         )
         if obj_id and self._object_tree.select_object(obj_id) and obj_type:
             self._open_object_editor(obj_id, obj_type)
+
+    def _open_first_firewall_policy(self):
+        """Open the Policy rule set of the first writable Firewall.
+
+        Walks the already-populated object tree to find the first
+        non-read-only Firewall item and opens its Policy child as an
+        MDI sub-window.
+        """
+        tree = self._object_tree._tree
+        root = tree.invisibleRootItem()
+        for lib_idx in range(root.childCount()):
+            lib_item = root.child(lib_idx)
+            # Skip read-only libraries (Standard, etc.).
+            if lib_item.data(0, Qt.ItemDataRole.UserRole + 5):
+                continue
+            self._find_and_open_policy(lib_item)
+            if self.m_space.subWindowList():
+                return
+
+    def _find_and_open_policy(self, parent_item):
+        """Recursively search *parent_item* for the first Firewall with a Policy child."""
+        for i in range(parent_item.childCount()):
+            child = parent_item.child(i)
+            child_type = child.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+            if child_type in ('Firewall', 'Cluster'):
+                fw_name = child.text(0)
+                for j in range(child.childCount()):
+                    rs_item = child.child(j)
+                    rs_type = rs_item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+                    if rs_type == 'Policy':
+                        rs_id = rs_item.data(0, Qt.ItemDataRole.UserRole)
+                        rs_name = rs_item.text(0)
+                        self._open_rule_set(rs_id, fw_name, rs_name, rs_type)
+                        return
+            else:
+                # Recurse into group folders (e.g. user-created subfolders).
+                self._find_and_open_policy(child)
+                if self.m_space.subWindowList():
+                    return
 
     def _save_if_modified(self):
         """Prompt the user to save unsaved changes.
@@ -1678,6 +1719,11 @@ class FWWindow(QMainWindow):
         )
         self._apply_file_loaded_state()
         self._restore_last_object_state(str(original_path))
+
+        # If no MDI sub-window was restored, open the first firewall's Policy.
+        if not self.m_space.subWindowList():
+            self._open_first_firewall_policy()
+
         self._object_tree.focus_filter()
 
     def _prepare_recent_menu(self):
@@ -1695,6 +1741,80 @@ class FWWindow(QMainWindow):
         self.menuOpen_Recent.addAction(self.actionClearRecentFiles)
 
         self._update_recent_actions()
+
+    def _prepare_windows_menu(self):
+        """Dynamically rebuild the Window menu before it opens.
+
+        Mirrors fwbuilder's ``FWWindow::prepareWindowsMenu()``
+        (FWWindow.cpp:974).
+        """
+        menu = self.menuWindow
+        menu.clear()
+
+        sub_windows = self.m_space.subWindowList()
+        has_subs = len(sub_windows) > 0
+        active_sub = self.m_space.activeSubWindow()
+
+        act_close = menu.addAction('Close')
+        act_close.setShortcut(QKeySequence('Ctrl+F4'))
+        act_close.setEnabled(has_subs)
+        act_close.triggered.connect(self.m_space.closeActiveSubWindow)
+
+        act_close_all = menu.addAction('Close All')
+        act_close_all.setEnabled(has_subs)
+        act_close_all.triggered.connect(self.m_space.closeAllSubWindows)
+
+        act_tile = menu.addAction('Tile')
+        act_tile.setEnabled(has_subs)
+        act_tile.triggered.connect(self.m_space.tileSubWindows)
+
+        act_cascade = menu.addAction('Cascade')
+        act_cascade.setEnabled(has_subs)
+        act_cascade.triggered.connect(self.m_space.cascadeSubWindows)
+
+        act_next = menu.addAction('Next')
+        act_next.setEnabled(has_subs)
+        act_next.triggered.connect(self.m_space.activateNextSubWindow)
+
+        act_prev = menu.addAction('Previous')
+        act_prev.setEnabled(has_subs)
+        act_prev.triggered.connect(self.m_space.activatePreviousSubWindow)
+
+        menu.addSeparator()
+
+        act_minimize = menu.addAction('Minimize')
+        act_minimize.setEnabled(active_sub is not None)
+        act_minimize.triggered.connect(self._minimize_active_sub_window)
+
+        act_maximize = menu.addAction('Maximize')
+        act_maximize.setEnabled(active_sub is not None)
+        act_maximize.triggered.connect(self._maximize_active_sub_window)
+
+        menu.addSeparator()
+
+        if has_subs:
+            group = QActionGroup(menu)
+            group.setExclusive(True)
+            for sub in sub_windows:
+                action = menu.addAction(sub.windowTitle())
+                action.setCheckable(True)
+                action.setChecked(sub is active_sub)
+                group.addAction(action)
+                action.triggered.connect(
+                    lambda _checked, s=sub: self.m_space.setActiveSubWindow(s),
+                )
+
+    def _minimize_active_sub_window(self):
+        """Minimize the active MDI sub-window."""
+        sub = self.m_space.activeSubWindow()
+        if sub is not None:
+            sub.showMinimized()
+
+    def _maximize_active_sub_window(self):
+        """Maximize the active MDI sub-window."""
+        sub = self.m_space.activeSubWindow()
+        if sub is not None:
+            sub.showMaximized()
 
     def _update_recent_actions(self):
         """Refresh the visible recent-file actions from QSettings."""
