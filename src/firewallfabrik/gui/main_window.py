@@ -11,6 +11,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import importlib.resources
+import json
 import logging
 import subprocess
 import traceback
@@ -707,68 +708,93 @@ class FWWindow(QMainWindow):
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
 
+    _STATE_FILE_NAME = 'last_object_state.json'
+
+    def _state_file_path(self):
+        """Return the path to the JSON state file in the config directory."""
+        ini_path = QSettings().fileName()
+        return Path(ini_path).parent / self._STATE_FILE_NAME
+
     def _save_last_object_state(self):
-        """Save the last selected tree object and active MDI ruleset to QSettings."""
+        """Save the last active MDI ruleset (by name, not UUID).
+
+        UUIDs are regenerated on every .fwb import, so we save the
+        sub-window title (``fw_name / rs_name``) which is stable.
+        """
         display = getattr(self, '_display_file', None)
         if not display:
             return
         file_key = str(display)
-        settings = QSettings()
 
-        # Active MDI ruleset.
+        state = {}
+
+        # Active MDI ruleset — save by window title (stable across imports).
         active_sub = self.m_space.activeSubWindow()
-        rs_id = ''
         if active_sub is not None:
-            rs_uuid = getattr(active_sub, '_fwf_rule_set_id', None)
-            if rs_uuid is not None:
-                rs_id = str(rs_uuid)
-        settings.setValue(f'LastObject/{file_key}/ruleset', rs_id)
+            state['window_title'] = active_sub.windowTitle()
 
-        # Selected tree object.
-        current = self._object_tree._tree.currentItem()
-        obj_id = ''
-        obj_type = ''
-        if current is not None:
-            obj_id = current.data(0, Qt.ItemDataRole.UserRole) or ''
-            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-        settings.setValue(f'LastObject/{file_key}/tree_id', obj_id)
-        settings.setValue(f'LastObject/{file_key}/tree_type', obj_type)
+        state_path = self._state_file_path()
+        all_states = self._read_state_file(state_path)
+        all_states[file_key] = state
+        try:
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            state_path.write_text(json.dumps(all_states, indent=2))
+        except OSError:
+            logger.debug('Could not write %s', state_path)
 
     def _restore_last_object_state(self, file_key):
-        """Restore the last selected tree object and active MDI ruleset from QSettings."""
-        settings = QSettings()
+        """Restore the last active MDI ruleset by matching the window title."""
+        all_states = self._read_state_file(self._state_file_path())
+        state = all_states.get(file_key, {})
 
-        # Restore MDI ruleset first (so the tab is visible when tree
-        # selection triggers the editor).
-        rs_id_str = settings.value(f'LastObject/{file_key}/ruleset', '', type=str)
-        if rs_id_str:
-            try:
-                rs_uuid = uuid.UUID(rs_id_str)
-                with self._db_manager.session() as session:
-                    rs = session.get(RuleSet, rs_uuid)
-                    if rs is not None:
-                        device = rs.device
-                        fw_name = device.name if device else ''
-                        rs_name = rs.name
-                        rs_type = rs.type
-                        self._open_rule_set(
-                            str(rs_uuid),
-                            fw_name,
-                            rs_name,
-                            rs_type,
-                        )
-            except (ValueError, Exception):
-                logger.debug('Could not restore last ruleset %s', rs_id_str)
+        saved_title = state.get('window_title', '')
+        if saved_title:
+            self._open_rule_set_by_title(saved_title)
 
-        # Restore tree selection.
-        obj_id = settings.value(f'LastObject/{file_key}/tree_id', '', type=str)
-        obj_type = settings.value(
-            f'LastObject/{file_key}/tree_type',
-            '',
-            type=str,
-        )
-        if obj_id and self._object_tree.select_object(obj_id) and obj_type:
-            self._open_object_editor(obj_id, obj_type)
+    def _open_rule_set_by_title(self, title):
+        """Find the rule set matching *title* (``fw_name / rs_name``) in the tree and open it.
+
+        The title format matches ``_open_rule_set``'s
+        ``f'{fw_name} / {rs_name}'``.
+        """
+        parts = title.split(' / ', 1)
+        if len(parts) != 2:
+            return
+        fw_name, rs_name = parts
+
+        from PySide6.QtWidgets import QTreeWidgetItemIterator
+
+        tree = self._object_tree._tree
+        it = QTreeWidgetItemIterator(tree)
+        while it.value():
+            item = it.value()
+            it += 1
+            item_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+            if item_type not in ('NAT', 'Policy', 'Routing'):
+                continue
+            if item.text(0) != rs_name:
+                continue
+            fw_item = item.parent()
+            if fw_item is None or fw_item.text(0) != fw_name:
+                continue
+            rs_id = item.data(0, Qt.ItemDataRole.UserRole)
+            self._open_rule_set(rs_id, fw_name, rs_name, item_type)
+            # Select the rule set in the tree.
+            parent = item.parent()
+            while parent:
+                parent.setExpanded(True)
+                parent = parent.parent()
+            tree.scrollToItem(item)
+            tree.setCurrentItem(item)
+            return
+
+    @staticmethod
+    def _read_state_file(path):
+        """Read ``{file_key: {state}}`` from *path*, returning {} on error."""
+        try:
+            return json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError, ValueError):
+            return {}
 
     def _open_first_firewall_policy(self):
         """Open the Policy rule set of the first writable Firewall.
