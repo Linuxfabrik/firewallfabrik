@@ -40,7 +40,6 @@ from PySide6.QtGui import (
     QKeySequence,
 )
 from PySide6.QtWidgets import (
-    QApplication,
     QDialog,
     QFileDialog,
     QLabel,
@@ -70,6 +69,7 @@ from firewallfabrik.core.objects import (
     rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
+from firewallfabrik.gui.clipboard_router import ClipboardRouter
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
 from firewallfabrik.gui.find_panel import FindPanel
@@ -267,6 +267,12 @@ class FWWindow(QMainWindow):
         self._object_tree.compile_requested.connect(self.compile)
         self._object_tree.install_requested.connect(self.install)
         self._object_tree.set_db_manager(self._db_manager)
+
+        # Clipboard routing (copy/cut/paste/delete based on focus).
+        self._clipboard = ClipboardRouter(
+            self._object_tree,
+            self._active_policy_view,
+        )
 
         editor_map = {
             'AddressRange': self.w_AddressRangeDialog,
@@ -2033,75 +2039,25 @@ class FWWindow(QMainWindow):
             return self._policy_view_from_widget(sub.widget())
         return None
 
-    def _tree_has_focus(self):
-        """Return True if the object tree widget has keyboard focus.
-
-        Specifically checks for the tree widget itself (not the filter
-        QLineEdit) so that Ctrl+C in the filter field still copies text.
-        """
-        focus = QApplication.focusWidget()
-        if focus is None:
-            return False
-        tree_widget = self._object_tree._tree
-        return focus is tree_widget or tree_widget.isAncestorOf(focus)
-
     @Slot()
     def editCopy(self):
-        """Handle Ctrl+C — route to tree or policy view based on focus.
-
-        In the policy view this mimics fwbuilder: if a single element
-        is selected in an element column, copy that element; otherwise
-        copy whole rules.
-        """
-        if self._tree_has_focus():
-            self._object_tree._shortcut_copy()
-            return
-        view = self._active_policy_view()
-        if view is not None:
-            view.copy_object()
+        """Handle Ctrl+C — route to tree or policy view based on focus."""
+        self._clipboard.copy()
 
     @Slot()
     def editCut(self):
-        """Handle Ctrl+X — route to tree or policy view based on focus.
-
-        In the policy view this mimics fwbuilder: if a single element
-        is selected in an element column, cut that element; otherwise
-        cut whole rules.
-        """
-        if self._tree_has_focus():
-            self._object_tree._shortcut_cut()
-            return
-        view = self._active_policy_view()
-        if view is not None:
-            view.cut_object()
-
-    @Slot()
-    def editPaste(self):
-        """Handle Ctrl+V — route to tree or policy view based on focus.
-
-        Connected via the .ui file: ``editPasteAction.triggered() → editPaste()``.
-
-        In the policy view, this mimics fwbuilder's
-        ``RuleSetView::pasteObject()`` — if the clipboard holds a
-        regular object (not a rule), paste it into the current cell;
-        otherwise paste rules below.
-        """
-        if self._tree_has_focus():
-            self._object_tree._shortcut_paste()
-            return
-        view = self._active_policy_view()
-        if view is not None:
-            view.paste_object()
+        """Handle Ctrl+X — route to tree or policy view based on focus."""
+        self._clipboard.cut()
 
     @Slot()
     def editDelete(self):
         """Handle Delete key — route to tree or policy view based on focus."""
-        if self._tree_has_focus():
-            self._object_tree._shortcut_delete()
-            return
-        view = self._active_policy_view()
-        if view is not None:
-            view.delete_selection()
+        self._clipboard.delete()
+
+    @Slot()
+    def editPaste(self):
+        """Handle Ctrl+V — route to tree or policy view based on focus."""
+        self._clipboard.paste()
 
     def _reload_rule_set_views(self):
         """Reload all open PolicyTreeModel views (after replace)."""
