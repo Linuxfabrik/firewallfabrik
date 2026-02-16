@@ -49,6 +49,7 @@ from firewallfabrik.gui.object_tree_data import (
     LOCKABLE_TYPES,
     MODEL_MAP,
     NEW_TYPES_FOR_FOLDER,
+    NEW_TYPES_FOR_GROUP_NODE,
     NO_COPY_TYPES,
     NO_DELETE_TYPES,
     NON_DRAGGABLE_TYPES,
@@ -79,11 +80,6 @@ __all__ = ['ICON_MAP', 'ObjectTree', 'create_library_folder_structure']
 
 _obj_tooltip = obj_tooltip
 _get_library_name = get_library_name
-
-# Module-level clipboard shared across all ObjectTree instances.
-_tree_clipboard: list[dict] | None = (
-    None  # [{'id': str, 'type': str, 'cut': bool}, ...]
-)
 
 
 class _DraggableTree(QTreeWidget):
@@ -265,6 +261,7 @@ class ObjectTree(QWidget):
 
         self._db_manager = None
         self._ops = TreeOperations()
+        self._tree_clipboard: list[dict] | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -965,12 +962,24 @@ class ObjectTree(QWidget):
         # Gather sibling interfaces for "Make subinterface of ...".
         sibling_interfaces = self._get_sibling_interfaces(item, obj_type)
 
+        resolved = self._resolve_paste_item(item)
+        allowed = self._get_allowed_paste_types(resolved)
+        compat_clip = (
+            [
+                cb
+                for cb in self._tree_clipboard
+                if allowed is None or cb['type'] in allowed
+            ]
+            if self._tree_clipboard is not None
+            else None
+        ) or None
+
         menu, handlers = build_object_context_menu(
             self,
             item,
             selection,
             all_tags=all_tags,
-            clipboard=_tree_clipboard,
+            clipboard=compat_clip,
             count_selected_firewalls_fn=self._count_selected_firewalls,
             get_item_library_id_fn=self._get_item_library_id,
             is_deletable_fn=self._is_deletable,
@@ -1006,10 +1015,21 @@ class ObjectTree(QWidget):
             if it is not item
         )
 
+        allowed = self._get_allowed_paste_types(item)
+        compat_clip = (
+            [
+                cb
+                for cb in self._tree_clipboard
+                if allowed is None or cb['type'] in allowed
+            ]
+            if self._tree_clipboard is not None
+            else None
+        ) or None
+
         menu, handlers = build_category_context_menu(
             self,
             item,
-            clipboard=_tree_clipboard,
+            clipboard=compat_clip,
             has_mixed_selection=has_mixed,
         )
 
@@ -1443,9 +1463,62 @@ class ObjectTree(QWidget):
 
     # -- Copy / Cut / Paste --
 
+    _PASTE_CONTAINER_TYPES = frozenset(
+        {
+            'IntervalGroup',
+            'Interface',
+            'Library',
+            'ObjectGroup',
+            'ServiceGroup',
+        }
+    )
+
+    @staticmethod
+    def _resolve_paste_item(item):
+        """Walk up from *item* to the nearest valid paste container.
+
+        If *item* is already a category folder (``obj_type is None``) or
+        a container type (group, interface, library), return it as-is.
+        Otherwise walk up to the first such ancestor so that pasting
+        creates a sibling rather than placing the clone at the library
+        root.
+        """
+        current = item
+        while current is not None:
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type is None or obj_type in ObjectTree._PASTE_CONTAINER_TYPES:
+                return current
+            current = current.parent()
+        return item  # fallback — should not happen
+
+    @staticmethod
+    def _get_allowed_paste_types(item):
+        """Return the set of allowed object types for pasting into *item*.
+
+        Walks up from *item* through category folders until a real group
+        or library is found.  Returns ``None`` when any type is accepted
+        (e.g. the library root or an unknown user-created group).
+        """
+        current = item
+        while current is not None:
+            obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type == 'Interface':
+                return frozenset({'IPv4', 'IPv6', 'physAddress'})
+            if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
+                group_name = current.text(0)
+                entries = NEW_TYPES_FOR_GROUP_NODE.get(
+                    (obj_type, group_name),
+                )
+                if entries is not None:
+                    return frozenset(e[0] for e in entries)
+                return None  # user-created group — no restriction
+            if obj_type == 'Library':
+                return None
+            current = current.parent()
+        return None
+
     def _ctx_copy(self):
         """Copy all selected object references to the tree clipboard."""
-        global _tree_clipboard
         selection = self._get_simplified_selection()
         entries = []
         for it in selection:
@@ -1455,7 +1528,7 @@ class ObjectTree(QWidget):
                 entries.append({'id': oid, 'type': otype, 'cut': False})
         if not entries:
             return
-        _tree_clipboard = entries
+        self._tree_clipboard = entries
         # Policy-view clipboard stays single-item for rule cell paste.
         first = selection[0]
         from firewallfabrik.gui.policy_view import PolicyView
@@ -1468,7 +1541,6 @@ class ObjectTree(QWidget):
 
     def _ctx_cut(self):
         """Cut all selected object references to the tree clipboard."""
-        global _tree_clipboard
         selection = self._get_simplified_selection()
         entries = []
         for it in selection:
@@ -1479,7 +1551,7 @@ class ObjectTree(QWidget):
                 entries.append({'id': oid, 'type': otype, 'cut': True})
         if not entries:
             return
-        _tree_clipboard = entries
+        self._tree_clipboard = entries
         first = selection[0]
         from firewallfabrik.gui.policy_view import PolicyView
 
@@ -1491,12 +1563,25 @@ class ObjectTree(QWidget):
 
     def _ctx_paste(self, item):
         """Paste all clipboard objects relative to *item*."""
-        global _tree_clipboard
-        if _tree_clipboard is None or self._db_manager is None:
+        if self._tree_clipboard is None or self._db_manager is None:
             return
+
+        # When pasting onto a leaf object (e.g. a Firewall), resolve
+        # upward to the nearest container so the clone becomes a sibling.
+        item = self._resolve_paste_item(item)
 
         target_lib_id = self._get_item_library_id(item)
         if target_lib_id is None:
+            return
+
+        # Validate type compatibility — skip entries that don't belong.
+        allowed = self._get_allowed_paste_types(item)
+        entries = [
+            cb
+            for cb in self._tree_clipboard
+            if allowed is None or cb['type'] in allowed
+        ]
+        if not entries:
             return
 
         target_iface_id, target_group_id = self._get_paste_context(item)
@@ -1517,7 +1602,7 @@ class ObjectTree(QWidget):
         any_cut = False
         last_id = None
 
-        for cb in _tree_clipboard:
+        for cb in entries:
             cb_id = uuid.UUID(cb['id'])
             cb_type = cb['type']
             model_cls = MODEL_MAP.get(cb_type)
@@ -1549,7 +1634,7 @@ class ObjectTree(QWidget):
                     last_id = new_id
 
         if any_cut:
-            _tree_clipboard = None
+            self._tree_clipboard = None
 
         if last_id is not None:
             self.tree_changed.emit('', '')
