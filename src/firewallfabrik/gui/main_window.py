@@ -1365,7 +1365,7 @@ class FWWindow(QMainWindow):
         """Return the writable library id for new-object creation, or None."""
         if self._db_manager is None:
             return None
-        libs = self._object_tree._get_writable_libraries()
+        libs = self._object_tree._actions._get_writable_libraries()
         if not libs:
             return None
         writable_ids = {lid for lid, _name in libs}
@@ -1411,7 +1411,7 @@ class FWWindow(QMainWindow):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
             name, extra_data = dlg.get_result()
-            self._object_tree.create_new_object_in_library(
+            self._object_tree._actions.create_new_object_in_library(
                 type_name,
                 lib_id,
                 extra_data=extra_data,
@@ -1424,7 +1424,7 @@ class FWWindow(QMainWindow):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
             name, interfaces = dlg.get_result()
-            self._object_tree.create_host_in_library(
+            self._object_tree._actions.create_host_in_library(
                 lib_id,
                 name=name,
                 interfaces=interfaces,
@@ -1436,14 +1436,14 @@ class FWWindow(QMainWindow):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
             name, extra_data = dlg.get_result()
-            self._object_tree.create_new_object_in_library(
+            self._object_tree._actions.create_new_object_in_library(
                 type_name,
                 lib_id,
                 extra_data=extra_data,
                 name=name,
             )
         else:
-            self._object_tree.create_new_object_in_library(type_name, lib_id)
+            self._object_tree._actions.create_new_object_in_library(type_name, lib_id)
 
     def _on_create_group_member(self, type_name, group_id_hex):
         """Handle 'Create new object and add to this group'.
@@ -1475,7 +1475,7 @@ class FWWindow(QMainWindow):
             if dlg.exec() != QDialog.DialogCode.Accepted:
                 return
             name, extra_data = dlg.get_result()
-            new_id = self._object_tree.create_new_object_in_library(
+            new_id = self._object_tree._actions.create_new_object_in_library(
                 type_name, lib_id, extra_data=extra_data, name=name
             )
         elif type_name in ('Firewall', 'Host'):
@@ -1487,15 +1487,17 @@ class FWWindow(QMainWindow):
             name, extra_data = dlg.get_result()
             if type_name == 'Host' and extra_data.get('interfaces'):
                 interfaces = extra_data.pop('interfaces')
-                new_id = self._object_tree.create_host_in_library(
+                new_id = self._object_tree._actions.create_host_in_library(
                     lib_id, name=name, interfaces=interfaces
                 )
             else:
-                new_id = self._object_tree.create_new_object_in_library(
+                new_id = self._object_tree._actions.create_new_object_in_library(
                     type_name, lib_id, extra_data=extra_data, name=name
                 )
         else:
-            new_id = self._object_tree.create_new_object_in_library(type_name, lib_id)
+            new_id = self._object_tree._actions.create_new_object_in_library(
+                type_name, lib_id
+            )
 
         if new_id is None:
             return
@@ -1612,7 +1614,7 @@ class FWWindow(QMainWindow):
         self._where_used_panel.reset()
 
         self.newObjectAction.setEnabled(
-            bool(self._object_tree._get_writable_libraries())
+            bool(self._object_tree._actions._get_writable_libraries())
         )
         self._apply_file_loaded_state()
         self._restore_last_object_state(str(original_path))

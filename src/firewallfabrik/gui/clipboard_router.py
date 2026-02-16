@@ -47,7 +47,7 @@ class ClipboardRouter:
     def copy(self):
         """Route a *copy* operation."""
         if self._tree_has_focus():
-            self._object_tree._shortcut_copy()
+            self._object_tree._actions._shortcut_copy()
             return
         view = self._get_active_policy_view()
         if view is not None:
@@ -56,7 +56,7 @@ class ClipboardRouter:
     def cut(self):
         """Route a *cut* operation."""
         if self._tree_has_focus():
-            self._object_tree._shortcut_cut()
+            self._object_tree._actions._shortcut_cut()
             return
         view = self._get_active_policy_view()
         if view is not None:
@@ -65,7 +65,7 @@ class ClipboardRouter:
     def delete(self):
         """Route a *delete* operation."""
         if self._tree_has_focus():
-            self._object_tree._shortcut_delete()
+            self._object_tree._actions._shortcut_delete()
             return
         view = self._get_active_policy_view()
         if view is not None:
@@ -74,7 +74,7 @@ class ClipboardRouter:
     def paste(self):
         """Route a *paste* operation."""
         if self._tree_has_focus():
-            self._object_tree._shortcut_paste()
+            self._object_tree._actions._shortcut_paste()
             return
         view = self._get_active_policy_view()
         if view is not None:
