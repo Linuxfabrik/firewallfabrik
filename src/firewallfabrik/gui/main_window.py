@@ -11,7 +11,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import importlib.resources
-import json
 import logging
 import subprocess
 import traceback
@@ -22,7 +21,6 @@ import sqlalchemy
 import sqlalchemy.exc
 from PySide6.QtCore import (
     QByteArray,
-    QModelIndex,
     QResource,
     QSettings,
     Qt,
@@ -32,7 +30,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QAction,
-    QActionGroup,
     QCursor,
     QDesktopServices,
     QGuiApplication,
@@ -44,7 +41,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QLabel,
     QMainWindow,
-    QMdiSubWindow,
     QMenu,
     QMessageBox,
     QSplitter,
@@ -80,9 +76,8 @@ from firewallfabrik.gui.object_tree import (
     ObjectTree,
     create_library_folder_structure,
 )
-from firewallfabrik.gui.policy_model import PolicyTreeModel
-from firewallfabrik.gui.policy_view import PolicyView, RuleSetPanel
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
+from firewallfabrik.gui.rule_set_window_manager import RuleSetWindowManager
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 logger = logging.getLogger(__name__)
@@ -253,7 +248,17 @@ class FWWindow(QMainWindow):
         self._splitter.addWidget(self.m_space)
         self._splitter.setSizes([250, 800])
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
-        self._object_tree.rule_set_activated.connect(self._open_rule_set)
+
+        # Create RuleSetWindowManager — handles MDI sub-window lifecycle.
+        self._rs_mgr = RuleSetWindowManager(
+            self._db_manager,
+            self.m_space,
+            self._object_tree,
+            self.menuWindow,
+            parent=self,
+        )
+        self._rs_mgr.firewall_modified.connect(self._on_firewall_modified)
+        self._object_tree.rule_set_activated.connect(self._rs_mgr.open_rule_set)
         self._object_tree.object_activated.connect(self._open_object_editor)
         # Use a queued connection so tree_changed.emit() returns
         # immediately without calling _on_tree_changed synchronously.
@@ -272,7 +277,7 @@ class FWWindow(QMainWindow):
         # Clipboard routing (copy/cut/paste/delete based on focus).
         self._clipboard = ClipboardRouter(
             self._object_tree,
-            self._active_policy_view,
+            self._rs_mgr.active_policy_view,
         )
 
         editor_map = {
@@ -340,11 +345,9 @@ class FWWindow(QMainWindow):
         )
         self._editor_mgr.connect_dialogs()
         self._editor_mgr.object_saved.connect(self._on_editor_object_saved)
-        self._editor_mgr.mdi_titles_changed.connect(
-            self._on_editor_mdi_titles_changed,
-        )
+        self._editor_mgr.mdi_titles_changed.connect(self._rs_mgr.update_titles)
         self._editor_mgr.editor_opened.connect(
-            lambda obj, t: self._ensure_parent_rule_set_open(obj, t),
+            lambda obj, t: self._rs_mgr.ensure_parent_rule_set_open(obj, t),
         )
 
         # Connect "Create new object and add to group" from group dialogs.
@@ -358,11 +361,13 @@ class FWWindow(QMainWindow):
         self._find_panel = FindPanel()
         self._find_panel.set_tree(self._object_tree._tree)
         self._find_panel.set_db_manager(self._db_manager)
-        self._find_panel.set_reload_callback(self._reload_rule_set_views)
-        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
+        self._find_panel.set_open_rule_set_ids_callback(
+            self._rs_mgr.get_open_rule_set_ids
+        )
         self.find_panel.layout().addWidget(self._find_panel)
         self._find_panel.object_found.connect(self._open_object_editor)
-        self._find_panel.navigate_to_rule.connect(self._navigate_to_rule_match)
+        self._find_panel.navigate_to_rule.connect(self._rs_mgr.navigate_to_rule_match)
         self.findAction.triggered.connect(self._show_find_panel)
 
         # Where Used panel — embedded in the "Where Used" tab.
@@ -371,7 +376,9 @@ class FWWindow(QMainWindow):
         self._where_used_panel.set_db_manager(self._db_manager)
         self.where_used_panel.layout().addWidget(self._where_used_panel)
         self._where_used_panel.object_found.connect(self._open_object_editor)
-        self._where_used_panel.navigate_to_rule.connect(self._navigate_to_rule_match)
+        self._where_used_panel.navigate_to_rule.connect(
+            self._rs_mgr.navigate_to_rule_match
+        )
 
         # Undo / redo actions in the Edit menu.
         self._undo_action = QAction('&Undo', self)
@@ -401,7 +408,7 @@ class FWWindow(QMainWindow):
         self._db_manager.on_history_changed = self._on_history_changed
 
         self._prepare_recent_menu()
-        self.menuWindow.aboutToShow.connect(self._prepare_windows_menu)
+        self.menuWindow.aboutToShow.connect(self._rs_mgr.prepare_windows_menu)
         self._restore_view_state()
         self._start_maximized = False
         self._restore_geometry()
@@ -436,7 +443,7 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
-            self._save_last_object_state()
+            self._rs_mgr.save_state()
         self._closing = True
         settings = QSettings()
         # Capture dock visibility *before* saveState() / destruction can
@@ -565,141 +572,6 @@ class FWWindow(QMainWindow):
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
 
-    _STATE_FILE_NAME = 'last_object_state.json'
-
-    def _state_file_path(self):
-        """Return the path to the JSON state file in the config directory."""
-        ini_path = QSettings().fileName()
-        return Path(ini_path).parent / self._STATE_FILE_NAME
-
-    def _save_last_object_state(self):
-        """Save the last active MDI ruleset (by name, not UUID).
-
-        UUIDs are regenerated on every .fwb import, so we save the
-        sub-window title (``fw_name / rs_name``) which is stable.
-        """
-        display = getattr(self, '_display_file', None)
-        if not display:
-            return
-        file_key = str(display)
-
-        state = {}
-
-        # Active MDI ruleset — save by window title (stable across imports).
-        active_sub = self.m_space.activeSubWindow()
-        if active_sub is not None:
-            state['window_title'] = active_sub.windowTitle()
-
-        state_path = self._state_file_path()
-        all_states = self._read_state_file(state_path)
-        all_states[file_key] = state
-        try:
-            state_path.parent.mkdir(parents=True, exist_ok=True)
-            state_path.write_text(json.dumps(all_states, indent=2))
-        except OSError:
-            logger.debug('Could not write %s', state_path)
-
-    def _restore_last_object_state(self, file_key):
-        """Restore the last active MDI ruleset by matching the window title."""
-        all_states = self._read_state_file(self._state_file_path())
-        state = all_states.get(file_key, {})
-
-        saved_title = state.get('window_title', '')
-        if saved_title:
-            self._open_rule_set_by_title(saved_title)
-
-    def _open_rule_set_by_title(self, title):
-        """Find the rule set matching *title* (``fw_name / rs_name``) in the tree and open it.
-
-        The title format matches ``_open_rule_set``'s
-        ``f'{fw_name} / {rs_name}'``.
-        """
-        parts = title.split(' / ', 1)
-        if len(parts) != 2:
-            return
-        fw_name, rs_name = parts
-
-        from PySide6.QtWidgets import QTreeWidgetItemIterator
-
-        tree = self._object_tree._tree
-        it = QTreeWidgetItemIterator(tree)
-        while it.value():
-            item = it.value()
-            it += 1
-            item_type = item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-            if item_type not in ('NAT', 'Policy', 'Routing'):
-                continue
-            if item.text(0) != rs_name:
-                continue
-            fw_item = item.parent()
-            if fw_item is None or fw_item.text(0) != fw_name:
-                continue
-            rs_id = item.data(0, Qt.ItemDataRole.UserRole)
-            self._open_rule_set(rs_id, fw_name, rs_name, item_type)
-            # Select the rule set in the tree.
-            parent = item.parent()
-            while parent:
-                parent.setExpanded(True)
-                parent = parent.parent()
-            tree.scrollToItem(item)
-            tree.setCurrentItem(item)
-            return
-
-    @staticmethod
-    def _read_state_file(path):
-        """Read ``{file_key: {state}}`` from *path*, returning {} on error."""
-        try:
-            return json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError, ValueError):
-            return {}
-
-    def _open_first_firewall_policy(self):
-        """Open the Policy rule set of the first writable Firewall.
-
-        Walks the already-populated object tree to find the first
-        non-read-only Firewall item and opens its Policy child as an
-        MDI sub-window.
-        """
-        tree = self._object_tree._tree
-        root = tree.invisibleRootItem()
-        for lib_idx in range(root.childCount()):
-            lib_item = root.child(lib_idx)
-            # Skip read-only libraries (Standard, etc.).
-            if lib_item.data(0, Qt.ItemDataRole.UserRole + 5):
-                continue
-            self._find_and_open_policy(lib_item)
-            if self.m_space.subWindowList():
-                return
-
-    def _find_and_open_policy(self, parent_item):
-        """Recursively search *parent_item* for the first Firewall with a Policy child."""
-        for i in range(parent_item.childCount()):
-            child = parent_item.child(i)
-            child_type = child.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-            if child_type in ('Firewall', 'Cluster'):
-                fw_name = child.text(0)
-                for j in range(child.childCount()):
-                    rs_item = child.child(j)
-                    rs_type = rs_item.data(0, Qt.ItemDataRole.UserRole + 1) or ''
-                    if rs_type == 'Policy':
-                        rs_id = rs_item.data(0, Qt.ItemDataRole.UserRole)
-                        rs_name = rs_item.text(0)
-                        self._open_rule_set(rs_id, fw_name, rs_name, rs_type)
-                        # Select the Policy item in the tree so the user
-                        # sees which firewall's rules are displayed.
-                        parent = rs_item.parent()
-                        while parent:
-                            parent.setExpanded(True)
-                            parent = parent.parent()
-                        self._object_tree._tree.scrollToItem(rs_item)
-                        self._object_tree._tree.setCurrentItem(rs_item)
-                        return
-            else:
-                # Recurse into group folders (e.g. user-created subfolders).
-                self._find_and_open_policy(child)
-                if self.m_space.subWindowList():
-                    return
-
     def _save_if_modified(self):
         """Prompt the user to save unsaved changes.
 
@@ -761,11 +633,11 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
-            self._save_last_object_state()
+            self._rs_mgr.save_state()
 
         # Close current state (mirrors fileClose but without the save prompt).
         self._close_editor()
-        self.m_space.closeAllSubWindows()
+        self._rs_mgr.close_all()
         self._object_tree._tree.clear()
         self._object_tree._filter.clear()
         self.undoView.clear()
@@ -775,6 +647,7 @@ class FWWindow(QMainWindow):
         self._db_manager = DatabaseManager()
         self._db_manager.on_history_changed = self._on_history_changed
         self._editor_mgr.set_db_manager(self._db_manager)
+        self._rs_mgr.set_db_manager(self._db_manager)
         std_path = (
             Path(str(importlib.resources.files('firewallfabrik') / 'resources'))
             / 'libraries'
@@ -814,6 +687,7 @@ class FWWindow(QMainWindow):
         # Set up UI.
         self._current_file = file_path
         self._display_file = file_path
+        self._rs_mgr.set_display_file(file_path)
         self._update_title()
         self._add_to_recent(str(file_path))
 
@@ -823,8 +697,10 @@ class FWWindow(QMainWindow):
         self._object_tree.set_db_manager(self._db_manager)
         self._find_panel.set_db_manager(self._db_manager)
         self._find_panel.set_tree(self._object_tree._tree)
-        self._find_panel.set_reload_callback(self._reload_rule_set_views)
-        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
+        self._find_panel.set_open_rule_set_ids_callback(
+            self._rs_mgr.get_open_rule_set_ids,
+        )
         self._find_panel.reset()
         self._where_used_panel.set_db_manager(self._db_manager)
         self._where_used_panel.set_tree(self._object_tree._tree)
@@ -864,6 +740,7 @@ class FWWindow(QMainWindow):
             return
         if self._display_file != self._current_file:
             self._display_file = self._current_file
+            self._rs_mgr.set_display_file(self._current_file)
             self._update_title()
             self._add_to_recent(str(self._current_file))
 
@@ -902,6 +779,7 @@ class FWWindow(QMainWindow):
 
         self._current_file = file_path
         self._display_file = file_path
+        self._rs_mgr.set_display_file(file_path)
         self._update_title()
         self._add_to_recent(str(file_path))
 
@@ -912,17 +790,19 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
-            self._save_last_object_state()
+            self._rs_mgr.save_state()
         self._close_editor()
-        self.m_space.closeAllSubWindows()
+        self._rs_mgr.close_all()
         self._object_tree._tree.clear()
         self._object_tree._filter.clear()
         self.undoView.clear()
         self._db_manager = DatabaseManager()
         self._db_manager.on_history_changed = self._on_history_changed
         self._editor_mgr.set_db_manager(self._db_manager)
+        self._rs_mgr.set_db_manager(self._db_manager)
         self._current_file = None
         self._display_file = None
+        self._rs_mgr.set_display_file(None)
         self._update_title()
         self.newObjectAction.setEnabled(False)
         self._update_undo_actions()
@@ -1070,7 +950,7 @@ class FWWindow(QMainWindow):
 
         # Close MDI sub-windows — Standard Library device UUIDs will
         # change, making stale rule-set views unusable.
-        self.m_space.closeAllSubWindows()
+        self._rs_mgr.close_all()
 
         # Parse the bundled Standard Library.
         std_path = (
@@ -1541,16 +1421,17 @@ class FWWindow(QMainWindow):
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
-            self._save_last_object_state()
+            self._rs_mgr.save_state()
 
         self._close_editor()
-        self.m_space.closeAllSubWindows()
+        self._rs_mgr.close_all()
 
         original_path = file_path
         try:
             self._db_manager = DatabaseManager()
             self._db_manager.on_history_changed = self._on_history_changed
             self._editor_mgr.set_db_manager(self._db_manager)
+            self._rs_mgr.set_db_manager(self._db_manager)
             file_path = self._db_manager.load(file_path)
         except sqlalchemy.exc.IntegrityError as e:
             logger.exception('Failed to load %s', file_path)
@@ -1597,6 +1478,7 @@ class FWWindow(QMainWindow):
         else:
             self._current_file = file_path
         self._display_file = original_path
+        self._rs_mgr.set_display_file(original_path)
         self._update_title()
         self._add_to_recent(str(original_path))
 
@@ -1606,8 +1488,10 @@ class FWWindow(QMainWindow):
         self._object_tree.set_db_manager(self._db_manager)
         self._find_panel.set_tree(self._object_tree._tree)
         self._find_panel.set_db_manager(self._db_manager)
-        self._find_panel.set_reload_callback(self._reload_rule_set_views)
-        self._find_panel.set_open_rule_set_ids_callback(self._get_open_rule_set_ids)
+        self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
+        self._find_panel.set_open_rule_set_ids_callback(
+            self._rs_mgr.get_open_rule_set_ids,
+        )
         self._find_panel.reset()
 
         self._where_used_panel.set_tree(self._object_tree._tree)
@@ -1618,11 +1502,11 @@ class FWWindow(QMainWindow):
             bool(self._object_tree._actions._get_writable_libraries())
         )
         self._apply_file_loaded_state()
-        self._restore_last_object_state(str(original_path))
+        self._rs_mgr.restore_state(str(original_path))
 
         # If no MDI sub-window was restored, open the first firewall's Policy.
         if not self.m_space.subWindowList():
-            self._open_first_firewall_policy()
+            self._rs_mgr.open_first_firewall_policy()
 
         self._object_tree.focus_filter()
 
@@ -1641,80 +1525,6 @@ class FWWindow(QMainWindow):
         self.menuOpen_Recent.addAction(self.actionClearRecentFiles)
 
         self._update_recent_actions()
-
-    def _prepare_windows_menu(self):
-        """Dynamically rebuild the Window menu before it opens.
-
-        Mirrors fwbuilder's ``FWWindow::prepareWindowsMenu()``
-        (FWWindow.cpp:974).
-        """
-        menu = self.menuWindow
-        menu.clear()
-
-        sub_windows = self.m_space.subWindowList()
-        has_subs = len(sub_windows) > 0
-        active_sub = self.m_space.activeSubWindow()
-
-        act_close = menu.addAction('Close')
-        act_close.setShortcut(QKeySequence('Ctrl+F4'))
-        act_close.setEnabled(has_subs)
-        act_close.triggered.connect(self.m_space.closeActiveSubWindow)
-
-        act_close_all = menu.addAction('Close All')
-        act_close_all.setEnabled(has_subs)
-        act_close_all.triggered.connect(self.m_space.closeAllSubWindows)
-
-        act_tile = menu.addAction('Tile')
-        act_tile.setEnabled(has_subs)
-        act_tile.triggered.connect(self.m_space.tileSubWindows)
-
-        act_cascade = menu.addAction('Cascade')
-        act_cascade.setEnabled(has_subs)
-        act_cascade.triggered.connect(self.m_space.cascadeSubWindows)
-
-        act_next = menu.addAction('Next')
-        act_next.setEnabled(has_subs)
-        act_next.triggered.connect(self.m_space.activateNextSubWindow)
-
-        act_prev = menu.addAction('Previous')
-        act_prev.setEnabled(has_subs)
-        act_prev.triggered.connect(self.m_space.activatePreviousSubWindow)
-
-        menu.addSeparator()
-
-        act_minimize = menu.addAction('Minimize')
-        act_minimize.setEnabled(active_sub is not None)
-        act_minimize.triggered.connect(self._minimize_active_sub_window)
-
-        act_maximize = menu.addAction('Maximize')
-        act_maximize.setEnabled(active_sub is not None)
-        act_maximize.triggered.connect(self._maximize_active_sub_window)
-
-        menu.addSeparator()
-
-        if has_subs:
-            group = QActionGroup(menu)
-            group.setExclusive(True)
-            for sub in sub_windows:
-                action = menu.addAction(sub.windowTitle())
-                action.setCheckable(True)
-                action.setChecked(sub is active_sub)
-                group.addAction(action)
-                action.triggered.connect(
-                    lambda _checked, s=sub: self.m_space.setActiveSubWindow(s),
-                )
-
-    def _minimize_active_sub_window(self):
-        """Minimize the active MDI sub-window."""
-        sub = self.m_space.activeSubWindow()
-        if sub is not None:
-            sub.showMinimized()
-
-    def _maximize_active_sub_window(self):
-        """Maximize the active MDI sub-window."""
-        sub = self.m_space.activeSubWindow()
-        if sub is not None:
-            sub.showMaximized()
 
     def _update_recent_actions(self):
         """Refresh the visible recent-file actions from QSettings."""
@@ -1765,89 +1575,10 @@ class FWWindow(QMainWindow):
         settings.setValue('recentFiles', [])
         self._update_recent_actions()
 
-    @Slot(str, str, str, str)
-    def _open_rule_set(self, rule_set_id, fw_name, rs_name, rs_type='Policy'):
-        """Open a rule set in a new MDI sub-window (triggered by tree double-click)."""
-        rs_uuid = uuid.UUID(rule_set_id)
-
-        # Reuse an existing sub-window for this rule set if one is open.
-        for sub in self.m_space.subWindowList():
-            if getattr(sub, '_fwf_rule_set_id', None) == rs_uuid:
-                self.m_space.setActiveSubWindow(sub)
-                return
-
-        model = PolicyTreeModel(
-            self._db_manager,
-            rs_uuid,
-            rule_set_type=rs_type,
-            object_name=fw_name,
-        )
-        model.firewall_modified.connect(self._on_firewall_modified)
-        panel = RuleSetPanel()
-        panel.policy_view.setModel(model)
-
-        sub = QMdiSubWindow()
-        sub.setWidget(panel)
-        sub.setWindowTitle(f'{fw_name} / {rs_name}')
-        sub.setWindowIcon(self.windowIcon())
-        sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        sub._fwf_rule_set_id = rs_uuid
-        sub._fwf_device_id = None  # set below if available
-        self.m_space.addSubWindow(sub)
-        sub.showMaximized()
-
-        # Store the owning device ID for _ensure_parent_rule_set_open().
-        try:
-            with self._db_manager.session() as sess:
-                rs = sess.get(RuleSet, rs_uuid)
-                if rs is not None:
-                    sub._fwf_device_id = rs.device_id
-        except Exception:
-            pass
-
     @Slot(str, str)
     def _open_object_editor(self, obj_id, obj_type):
         """Open the editor panel for the given object (triggered by tree double-click)."""
         self._editor_mgr.open_object(obj_id, obj_type)
-
-    def _ensure_parent_rule_set_open(self, obj, obj_type):
-        """Open the parent firewall's policy if no rule set is shown.
-
-        When the user double-clicks an object that belongs to a Firewall
-        or Cluster (e.g. an interface address), fwbuilder automatically
-        opens the device's policy rules in the main area.  This method
-        replicates that by walking up the ORM relationships to find the
-        owning device and opening its first Policy rule set.
-        """
-        device = None
-        if isinstance(obj, Address) and obj.interface_id is not None:
-            iface = obj.interface
-            if iface is not None:
-                device = iface.device
-        elif isinstance(obj, Interface):
-            device = obj.device
-
-        if device is None or device.type not in ('Cluster', 'Firewall'):
-            return
-
-        # Check if any MDI sub-window already shows this device's rules.
-        device_id = device.id
-        for sub in self.m_space.subWindowList():
-            if getattr(sub, '_fwf_device_id', None) == device_id:
-                return
-
-        # Find the first Policy rule set for this device.
-        policy_rs = None
-        for rs in device.rule_sets:
-            if rs.type == 'Policy':
-                policy_rs = rs
-                break
-        if policy_rs is None:
-            return
-
-        self._open_rule_set(
-            str(policy_rs.id), device.name, policy_rs.name, policy_rs.type
-        )
 
     @Slot()
     def _on_editor_changed(self):
@@ -2027,22 +1758,6 @@ class FWWindow(QMainWindow):
         """Handle Where Used request from the object tree context menu."""
         self.show_where_used(obj_id, name, obj_type)
 
-    @staticmethod
-    def _policy_view_from_widget(widget):
-        """Extract a :class:`PolicyView` from a sub-window widget."""
-        if isinstance(widget, RuleSetPanel):
-            return widget.policy_view
-        if isinstance(widget, PolicyView):
-            return widget
-        return None
-
-    def _active_policy_view(self):
-        """Return the active :class:`PolicyView`, or *None*."""
-        sub = self.m_space.activeSubWindow()
-        if sub is not None:
-            return self._policy_view_from_widget(sub.widget())
-        return None
-
     @Slot()
     def editCopy(self):
         """Handle Ctrl+C — route to tree or policy view based on focus."""
@@ -2062,91 +1777,6 @@ class FWWindow(QMainWindow):
     def editPaste(self):
         """Handle Ctrl+V — route to tree or policy view based on focus."""
         self._clipboard.paste()
-
-    def _reload_rule_set_views(self):
-        """Reload all open PolicyTreeModel views (after replace)."""
-        for sub in self.m_space.subWindowList():
-            view = self._policy_view_from_widget(sub.widget())
-            if view is not None and isinstance(view.model(), PolicyTreeModel):
-                view.model().reload()
-
-    def _get_open_rule_set_ids(self) -> set[uuid.UUID]:
-        """Return the set of rule set IDs currently open in MDI sub-windows."""
-        ids = set()
-        for sub in self.m_space.subWindowList():
-            view = self._policy_view_from_widget(sub.widget())
-            if view is not None and isinstance(view.model(), PolicyTreeModel):
-                ids.add(view.model().rule_set_id)
-        return ids
-
-    @Slot(str, str, str)
-    def _navigate_to_rule_match(self, rule_set_id, rule_id, slot):
-        """Navigate to a rule element match in a policy view."""
-        rs_uuid = uuid.UUID(rule_set_id)
-        r_uuid = uuid.UUID(rule_id)
-
-        # Look for an existing sub-window with this rule set.
-        for sub in self.m_space.subWindowList():
-            view = self._policy_view_from_widget(sub.widget())
-            if (
-                view is not None
-                and isinstance(view.model(), PolicyTreeModel)
-                and view.model().rule_set_id == rs_uuid
-            ):
-                self.m_space.setActiveSubWindow(sub)
-                self._scroll_to_rule(view, view.model(), r_uuid, slot)
-                return
-
-        # Open a new sub-window for this rule set.
-        with self._db_manager.session() as session:
-            rs = session.get(RuleSet, rs_uuid)
-            if rs is None:
-                return
-            fw_name = rs.device.name if rs.device else ''
-            rs_name = rs.name
-            rs_type = rs.type
-
-        model = PolicyTreeModel(
-            self._db_manager,
-            rs_uuid,
-            rule_set_type=rs_type,
-        )
-        model.firewall_modified.connect(self._on_firewall_modified)
-        panel = RuleSetPanel()
-        panel.policy_view.setModel(model)
-
-        sub = QMdiSubWindow()
-        sub.setWidget(panel)
-        sub.setWindowTitle(f'{fw_name} / {rs_name}')
-        sub.setWindowIcon(self.windowIcon())
-        sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.m_space.addSubWindow(sub)
-        sub.showMaximized()
-
-        self._scroll_to_rule(panel.policy_view, model, r_uuid, slot)
-
-    @staticmethod
-    def _scroll_to_rule(view, model, rule_id, slot):
-        """Scroll *view* to the rule node matching *rule_id*."""
-        col = model.slot_to_col.get(slot, 0) if slot else 0
-
-        def _walk(parent_index, row_count):
-            for row in range(row_count):
-                idx = model.index(row, col, parent_index)
-                rd = model.get_row_data(idx)
-                if rd is not None and rd.rule_id == rule_id:
-                    if col:
-                        view.set_highlight(rule_id, col)
-                    view.setCurrentIndex(idx)
-                    view.scrollTo(idx)
-                    return True
-                # Check children (group nodes).
-                child_count = model.rowCount(idx)
-                if child_count > 0 and _walk(idx, child_count):
-                    return True
-            return False
-
-        _walk(QModelIndex(), model.rowCount(QModelIndex()))
 
     @Slot(bool)
     def _on_editor_visibility_changed(self, visible):
@@ -2222,11 +1852,7 @@ class FWWindow(QMainWindow):
         self.undoView.blockSignals(False)
 
     def _refresh_after_history_change(self, obj_id=None, obj_type=None):
-        # Reload open rule set models instead of closing all subwindows.
-        for sub in self.m_space.subWindowList():
-            view = self._policy_view_from_widget(sub.widget())
-            if view is not None and isinstance(view.model(), PolicyTreeModel):
-                view.model().reload()
+        self._rs_mgr.reload_views()
 
         file_key = (
             str(self._display_file) if getattr(self, '_display_file', None) else ''
@@ -2256,24 +1882,6 @@ class FWWindow(QMainWindow):
             fw = session.get(Firewall, fw_id)
             if fw is not None:
                 self._object_tree.update_item(fw)
-
-    def _on_editor_mdi_titles_changed(self, fw_obj):
-        """Update MDI sub-window titles after a firewall rename."""
-        fw_id = fw_obj.id
-        fw_name = fw_obj.name
-        for sub in self.m_space.subWindowList():
-            if getattr(sub, '_fwf_device_id', None) != fw_id:
-                continue
-            rs_uuid = getattr(sub, '_fwf_rule_set_id', None)
-            if rs_uuid is None:
-                continue
-            try:
-                with self._db_manager.session() as sess:
-                    rs = sess.get(RuleSet, rs_uuid)
-                    rs_name = rs.name if rs else '?'
-            except Exception:
-                rs_name = '?'
-            sub.setWindowTitle(f'{fw_name} / {rs_name}')
 
     def _show_traceback_error(self, summary):
         """Show a critical error dialog with the current traceback.
