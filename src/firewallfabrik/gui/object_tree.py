@@ -1060,12 +1060,18 @@ class ObjectTree(QWidget):
 
         any_changed = False
         last_id = None
+        dest_prefix = self._get_device_prefix(dest_item)
         for entry in entries:
             model_cls = MODEL_MAP.get(entry.get('type'))
             if model_cls is None:
                 continue
             obj_id = uuid.UUID(entry['id'])
-            if self._ops.set_object_folder(obj_id, model_cls, target_folder):
+            if self._ops.set_object_folder(
+                obj_id,
+                model_cls,
+                target_folder,
+                prefix=dest_prefix,
+            ):
                 any_changed = True
                 last_id = obj_id
 
@@ -1308,7 +1314,12 @@ class ObjectTree(QWidget):
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         if not obj_id:
             return
-        if self._ops.make_subinterface(uuid.UUID(obj_id), uuid.UUID(target_iface_id)):
+        prefix = self._get_device_prefix(item)
+        if self._ops.make_subinterface(
+            uuid.UUID(obj_id),
+            uuid.UUID(target_iface_id),
+            prefix=prefix,
+        ):
             self.tree_changed.emit('', '')
 
     # -- Duplicate --
@@ -1420,7 +1431,13 @@ class ObjectTree(QWidget):
         model_cls = MODEL_MAP.get(obj_type)
         if model_cls is None:
             return
-        if self._ops.move_object(uuid.UUID(obj_id), model_cls, target_lib_id):
+        prefix = self._get_device_prefix(item)
+        if self._ops.move_object(
+            uuid.UUID(obj_id),
+            model_cls,
+            target_lib_id,
+            prefix=prefix,
+        ):
             self.tree_changed.emit(obj_id, obj_type)
             QTimer.singleShot(0, lambda: self.select_object(uuid.UUID(obj_id)))
 
@@ -1514,6 +1531,7 @@ class ObjectTree(QWidget):
                     model_cls,
                     target_lib_id,
                     folder=target_folder,
+                    prefix=prefix,
                     target_group_id=target_group_id,
                 ):
                     last_id = cb_id

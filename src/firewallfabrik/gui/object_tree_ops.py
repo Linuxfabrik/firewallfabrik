@@ -498,6 +498,7 @@ class TreeOperations:
         target_lib_id,
         *,
         folder=None,
+        prefix='',
         target_group_id=None,
     ):
         """Move *obj_id* to *target_lib_id*. Returns True on success.
@@ -548,7 +549,7 @@ class TreeOperations:
                     iface.library_id = target_lib_id
 
             session.commit()
-            self._db_manager.save_state(f'Move {obj_type} {obj_name}')
+            self._db_manager.save_state(f'{prefix}Move {obj_type} {obj_name}')
         except Exception:
             session.rollback()
             raise
@@ -769,7 +770,7 @@ class TreeOperations:
     # Folder move (drag & drop / cut-paste)
     # ------------------------------------------------------------------
 
-    def set_object_folder(self, obj_id, model_cls, folder):
+    def set_object_folder(self, obj_id, model_cls, folder, *, prefix=''):
         """Set or clear ``data.folder`` on an existing object.
 
         *folder* is the target subfolder path (e.g. ``'A/B'``) or an
@@ -796,7 +797,8 @@ class TreeOperations:
             obj.data = data
             session.commit()
             self._db_manager.save_state(
-                f'Move {getattr(obj, "type", type(obj).__name__)} {obj.name} to folder'
+                f'{prefix}Move {getattr(obj, "type", type(obj).__name__)}'
+                f' {obj.name} to folder'
             )
         except Exception:
             session.rollback()
@@ -1113,7 +1115,7 @@ class TreeOperations:
     # Make subinterface
     # ------------------------------------------------------------------
 
-    def make_subinterface(self, iface_id, target_parent_iface_id):
+    def make_subinterface(self, iface_id, target_parent_iface_id, *, prefix=''):
         """Reparent an interface under another interface.  Returns True on success."""
         if self._db_manager is None:
             return False
@@ -1125,7 +1127,7 @@ class TreeOperations:
             iface.parent_interface_id = target_parent_iface_id
             iface_name = iface.name
             session.commit()
-            self._db_manager.save_state(f'Make subinterface {iface_name}')
+            self._db_manager.save_state(f'{prefix}Make subinterface {iface_name}')
         except Exception:
             session.rollback()
             raise
