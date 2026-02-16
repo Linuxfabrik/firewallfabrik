@@ -90,36 +90,54 @@ class CompilerDriver(BaseCompiler):
     # generated script may not match the user's intent.  We emit a warning
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
-        ('use_ULOG', 'ULOG/NFLOG logging is not yet supported; falling back to LOG'),
         (
-            'log_tcp_seq',
+            FirewallOption.USE_ULOG,
+            'ULOG/NFLOG logging is not yet supported; falling back to LOG',
+        ),
+        (
+            FirewallOption.LOG_TCP_SEQ,
             'logging TCP sequence numbers (--log-tcp-sequence) is not yet supported',
         ),
-        ('log_tcp_opt', 'logging TCP options (--log-tcp-options) is not yet supported'),
-        ('log_ip_opt', 'logging IP options (--log-ip-options) is not yet supported'),
-        ('use_numeric_log_levels', 'numeric syslog log levels are not yet supported'),
-        ('log_all', 'unconditional logging of all rules is not yet supported'),
-        ('use_kerneltz', 'kernel timezone for log timestamps is not yet supported'),
         (
-            'configure_bridge_interfaces',
+            FirewallOption.LOG_TCP_OPT,
+            'logging TCP options (--log-tcp-options) is not yet supported',
+        ),
+        (
+            FirewallOption.LOG_IP_OPT,
+            'logging IP options (--log-ip-options) is not yet supported',
+        ),
+        (
+            FirewallOption.USE_NUMERIC_LOG_LEVELS,
+            'numeric syslog log levels are not yet supported',
+        ),
+        (
+            FirewallOption.LOG_ALL,
+            'unconditional logging of all rules is not yet supported',
+        ),
+        (
+            FirewallOption.USE_KERNELTZ,
+            'kernel timezone for log timestamps is not yet supported',
+        ),
+        (
+            FirewallOption.CONFIGURE_BRIDGE_INTERFACES,
             'bridge interface configuration is not yet supported',
         ),
     ]
 
-    def _warn_unsupported_options(self, options: dict) -> None:
+    def _warn_unsupported_options(self, fw: Firewall) -> None:
         """Emit warnings for recognised but unimplemented firewall options."""
         for opt, msg in self._UNSUPPORTED_BOOL_OPTIONS:
-            if options.get(opt, False):
+            if fw.get_option(opt, False):
                 self.warning(msg)
 
         # Non-boolean ULOG parameters — only relevant when use_ULOG is set,
         # but warn individually so the user sees exactly what is ignored.
         for opt, flag in [
-            ('ulog_nlgroup', '--ulog-nlgroup / --nflog-group'),
-            ('ulog_cprange', '--ulog-cprange / --nflog-range'),
-            ('ulog_qthreshold', '--ulog-qthreshold / --nflog-threshold'),
+            (FirewallOption.ULOG_NLGROUP, '--ulog-nlgroup / --nflog-group'),
+            (FirewallOption.ULOG_CPRANGE, '--ulog-cprange / --nflog-range'),
+            (FirewallOption.ULOG_QTHRESHOLD, '--ulog-qthreshold / --nflog-threshold'),
         ]:
-            val = options.get(opt)
+            val = fw.get_option(opt, 0)
             if val is not None and val != '' and val != 0 and val != -1:
                 self.warning(f'{flag} is not yet supported (option {opt!r} ignored)')
 

@@ -117,9 +117,7 @@ class CompilerDriver_nft(CompilerDriver):
             self.fw = fw
 
             try:
-                options = fw.options or {}
-
-                self._warn_unsupported_options(options)
+                self._warn_unsupported_options(fw)
 
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)
@@ -159,7 +157,7 @@ class CompilerDriver_nft(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get(FirewallOption.IPV4_6_ORDER, '')
+                ipv4_6_order = fw.get_option(FirewallOption.IPV4_6_ORDER, '')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -569,20 +567,18 @@ class CompilerDriver_nft(CompilerDriver):
         oscnf=None,
     ) -> str:
         """Assemble the complete shell script using the Jinja2 template."""
-        options = fw.options or {}
-
         timestr = time.strftime('%c')
         tz = time.strftime('%Z')
         user_name = os.environ.get('USER', 'unknown')
 
-        debug = options.get(FirewallOption.DEBUG, False)
+        debug = fw.get_option(FirewallOption.DEBUG, False)
         shell_debug = 'set -x' if debug else ''
 
-        prolog_script = options.get(FirewallOption.PROLOG_SCRIPT, '')
-        epilog_script = options.get(FirewallOption.EPILOG_SCRIPT, '')
-        prolog_place = options.get(FirewallOption.PROLOG_PLACE, '') or 'top'
+        prolog_script = fw.get_option(FirewallOption.PROLOG_SCRIPT, '')
+        epilog_script = fw.get_option(FirewallOption.EPILOG_SCRIPT, '')
+        prolog_place = fw.get_option(FirewallOption.PROLOG_PLACE, '') or 'top'
 
-        nft_path = options.get(LinuxOption.NFT_PATH, '') or '/usr/sbin/nft'
+        nft_path = fw.get_option(LinuxOption.NFT_PATH, '') or '/usr/sbin/nft'
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
@@ -594,16 +590,16 @@ class CompilerDriver_nft(CompilerDriver):
             errors_and_warnings = '\n'.join(f'# {err}' for err in self.all_errors)
 
         # Management access for block action
-        mgmt_access = bool(options.get(FirewallOption.MGMT_ACCESS, False))
-        ssh_management_address = options.get(FirewallOption.MGMT_ADDR, '')
+        mgmt_access = bool(fw.get_option(FirewallOption.MGMT_ACCESS, False))
+        ssh_management_address = fw.get_option(FirewallOption.MGMT_ADDR, '')
 
         # IP forwarding commands
         ip_forward_commands = self._get_ip_forward_commands(fw)
 
         # Interface configuration
-        configure_interfaces = options.get(FirewallOption.CONFIGURE_INTERFACES, False)
-        verify_interfaces_opt = options.get(FirewallOption.VERIFY_INTERFACES, False)
-        ip_path = options.get(LinuxOption.IP_PATH, '') or 'ip'
+        configure_interfaces = fw.get_option(FirewallOption.CONFIGURE_INTERFACES, False)
+        verify_interfaces_opt = fw.get_option(FirewallOption.VERIFY_INTERFACES, False)
+        ip_path = fw.get_option(LinuxOption.IP_PATH, '') or 'ip'
 
         shell_functions = ''
         configure_interfaces_code = ''

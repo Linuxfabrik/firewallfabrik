@@ -21,9 +21,9 @@ libraries:
         options:
           accept_established: true
           configure_interfaces: false
-          verify_interfaces: false
           load_modules: false
           manage_virtual_addr: false
+          verify_interfaces: false
         interfaces:
           - name: 'eth0'
             data:

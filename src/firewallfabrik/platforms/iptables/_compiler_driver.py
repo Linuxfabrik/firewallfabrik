@@ -152,12 +152,11 @@ class CompilerDriver_ipt(CompilerDriver):
 
             try:
                 fw_version = fw.version or '(any version)'
-                options = fw.options or {}
 
                 # Validate prolog placement with iptables-restore
-                prolog_place = options.get(FirewallOption.PROLOG_PLACE, '')
-                if prolog_place == 'after_flush' and options.get(
-                    'use_iptables_restore', False
+                prolog_place = fw.get_option(FirewallOption.PROLOG_PLACE, '')
+                if prolog_place == 'after_flush' and fw.get_option(
+                    FirewallOption.USE_IPTABLES_RESTORE, False
                 ):
                     self.error(
                         'Prolog place "after policy reset" can not be used'
@@ -165,9 +164,9 @@ class CompilerDriver_ipt(CompilerDriver):
                     )
                     return ''
 
-                self._warn_unsupported_options(options)
+                self._warn_unsupported_options(fw)
 
-                debug = options.get(FirewallOption.DEBUG, False)
+                debug = fw.get_option(FirewallOption.DEBUG, False)
                 shell_dbg = 'set -x' if debug else ''
 
                 # Create OS configurator
@@ -219,7 +218,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get(FirewallOption.IPV4_6_ORDER, '')
+                ipv4_6_order = fw.get_option(FirewallOption.IPV4_6_ORDER, '')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -434,8 +433,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Prolog/epilog scripts
-                prolog_script = options.get(FirewallOption.PROLOG_SCRIPT, '')
-                epilog_script = options.get(FirewallOption.EPILOG_SCRIPT, '')
+                prolog_script = fw.get_option(FirewallOption.PROLOG_SCRIPT, '')
+                epilog_script = fw.get_option(FirewallOption.EPILOG_SCRIPT, '')
                 script_skeleton.set_variable('prolog_script', prolog_script)
                 script_skeleton.set_variable('epilog_script', epilog_script)
 
@@ -443,7 +442,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 iface_buf = io.StringIO()
                 iface_buf.write('# Configure interfaces\n')
 
-                if options.get(FirewallOption.CONFIGURE_INTERFACES, False):
+                if fw.get_option(FirewallOption.CONFIGURE_INTERFACES, False):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
 
                 iface_buf.write(oscnf.print_commands_to_clear_known_interfaces())
@@ -454,7 +453,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Verify interfaces
-                if options.get(FirewallOption.VERIFY_INTERFACES, False):
+                if fw.get_option(FirewallOption.VERIFY_INTERFACES, False):
                     script_skeleton.set_variable(
                         'verify_interfaces', oscnf.print_verify_interfaces_commands()
                     )
@@ -511,7 +510,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 script_skeleton.set_variable('database', '')
 
                 # Reset commands
-                use_ipt_restore = options.get(
+                use_ipt_restore = fw.get_option(
                     FirewallOption.USE_IPTABLES_RESTORE, False
                 )
                 script_skeleton.set_variable(
