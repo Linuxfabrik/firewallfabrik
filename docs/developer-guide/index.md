@@ -5,6 +5,7 @@
 
 DatabaseManager
 Debugging
+DesignDecisions
 RuleProcessors
 Testing
 ```

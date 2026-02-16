@@ -336,8 +336,6 @@ The program has two default libraries: User and Standard.
 * The User library holds objects that you define, including objects for your firewall, hosts, and networks.
 * The Standard library holds a collection of predefined standard objects that come with FirewallFabrik. Note that you need not (and cannot) insert objects into the Standard library.
 
-Optionally, a Deleted Objects library can be enabled using Edit > Preferences > Objects > "Show deleted objects". When enabled, it acts like a trash can for user objects you delete.
-
 .. figure:: img/gui-standard-objects.png
    :alt: Standard Objects
 
@@ -386,7 +384,7 @@ FirewallFabrik understands and uses the object and service types described in th
    * - IP Service
      - An IP service such as GRE, ESP, or VRRP. This category includes IP services that do not fall into ICMP, ICMPv6, TCP, or UDP service categories.
    * - Library
-     - A library of objects. FirewallFabrik comes with the User and Standard libraries. In addition, you can create your own and optionally enable the Deleted Objects library.
+     - A library of objects. FirewallFabrik comes with the User and Standard libraries. In addition, you can create your own.
    * - Network
      - An IPv4 subnet.
    * - Network IPv6
@@ -583,8 +581,6 @@ To open the Preferences dialog, select Edit > Preferences (Ctrl+,). The dialog h
      - FirewallFabrik can show a summary of an object's properties in a quick pop-up window (a "tooltip") when you hover the mouse cursor over an object icon. If this feature is not enabled, then you must click on an object to get the same information.
    * - Advanced User Mode
      - When enabled, tooltips are shown in a shorter, more compact format intended for experienced users.
-   * - Show deleted objects
-     - Selecting this checkbox enables the Deleted Objects library. Once enabled, the Deleted Objects library acts like trash can (or recycle bin) for deleted objects. If you delete something by mistake, you can retrieve it.
    * - Show attributes in tree
      - Creates a second column in the object tree. The second column contains information about the object, such as how many objects a folder contains, whether a rule set is the top rule set, IP addresses, and so on. See the `Object Attributes in the Tree`_ section for a description.
    * - Enable custom templates

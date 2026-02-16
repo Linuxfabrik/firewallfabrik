@@ -770,7 +770,7 @@ This menu provides items for the following functions:
 
 * **Delete**
 
-  The object is deleted (actually moved to the "Deleted Objects" library).
+  The object is permanently deleted.
 
 * **Where used**
 
