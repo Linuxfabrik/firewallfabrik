@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall36.fw /etc/firewall36.fw
+#
 #  testing routing rules
 #  routing ruleset installs ECMP default
 

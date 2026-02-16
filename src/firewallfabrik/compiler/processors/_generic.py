@@ -39,6 +39,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     TCPUDPService,
 )
+from firewallfabrik.core.options import FirewallOption, RuleOption
 
 
 def _is_runtime(obj: MultiAddress) -> bool:
@@ -236,7 +237,7 @@ class EmptyGroupsInRE(BasicRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if self.compiler.fw.get_option('ignore_empty_groups', False):
+        if self.compiler.fw.get_option(FirewallOption.IGNORE_EMPTY_GROUPS, False):
             # Remove empty groups and warn
             for obj in empty_groups:
                 name = getattr(obj, 'name', str(obj))
@@ -617,7 +618,9 @@ class DetectShadowing(BasicRuleProcessor):
         ):
             return False
         # Routing rules may or may not be terminal — skip
-        if r1.get_option('routing', False) or r2.get_option('routing', False):
+        if r1.get_option(RuleOption.ROUTING, False) or r2.get_option(
+            RuleOption.ROUTING, False
+        ):
             return False
         # r2 with Continue action is non-terminating, can't be shadowed
         if r2.action == PolicyAction.Continue:

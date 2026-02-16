@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall8.fw /etc/fw/firewall8.fw
+#
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #
 

@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * linux-2.fw /etc/linux-2.fw
+#
 
 FWBDEBUG=""
 

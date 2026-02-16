@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING, Any
 import sqlalchemy
 import sqlalchemy.orm
 
+from firewallfabrik.core.options import InterfaceOption
+
 from ._base import Base
 from ._types import JSONEncodedSet
 
@@ -320,7 +322,7 @@ class Interface(Base):
         )
 
     def is_bridge_port(self) -> bool:
-        return bool(self.get_option('bridge_port', False))
+        return bool(self.get_option(InterfaceOption.BRIDGE_PORT, False))
 
     def is_slave(self) -> bool:
-        return bool(self.get_option('slave', False))
+        return bool(self.get_option(InterfaceOption.SLAVE, False))

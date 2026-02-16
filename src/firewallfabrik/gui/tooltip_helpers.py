@@ -18,6 +18,7 @@ Used by both the object tree and the policy/NAT/routing rule editor.
 
 from datetime import UTC, datetime
 
+from firewallfabrik.core.options import InterfaceOption
 from firewallfabrik.gui.platform_settings import HOST_OS
 
 
@@ -163,11 +164,11 @@ def obj_tooltip(obj):
                 lines.append(f'{a}/{m}' if m else a)
         # Interface type.
         options = getattr(obj, 'options', None) or {}
-        intf_type = options.get('type', '')
+        intf_type = options.get(InterfaceOption.TYPE, '')
         if intf_type:
             type_text = intf_type
             if intf_type == '8021q':
-                vlan_id = options.get('vlan_id', '')
+                vlan_id = options.get(InterfaceOption.VLAN_ID, '')
                 if vlan_id:
                     type_text += f' VLAN ID={vlan_id}'
             lines.append(f'<b>Interface Type: </b>{type_text}')

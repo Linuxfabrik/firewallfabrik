@@ -28,6 +28,7 @@ from firewallfabrik.core.objects import (
     Cluster,
     Firewall,
 )
+from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.driver._configlet import Configlet
 
 if TYPE_CHECKING:
@@ -195,8 +196,8 @@ class CompilerDriver(BaseCompiler):
         self.file_names[str(fw.id)] = str(Path(output_dir) / file_name)
 
         # Compute remote file name from firewall options
-        firewall_dir = fw.get_option('firewall_dir', '/etc/fw')
-        script_name = fw.get_option('script_name_on_firewall', '')
+        firewall_dir = fw.get_option(FirewallOption.FIREWALL_DIR, '/etc/fw')
+        script_name = fw.get_option(FirewallOption.SCRIPT_NAME_ON_FIREWALL, '')
         if script_name:
             remote_file_name = str(script_name)
         else:

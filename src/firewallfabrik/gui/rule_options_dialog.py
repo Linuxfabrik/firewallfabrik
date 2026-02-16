@@ -17,53 +17,54 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QWidget
 
+from firewallfabrik.core.options import RuleOption
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Widget name → options key mapping.
 # Combo boxes store the selected *text*; spin boxes store the *value*;
 # check boxes store a boolean; line edits store a string.
 _CHECKBOX_WIDGETS = {
-    'cb_dstip': 'hashlimit_dstip',
-    'cb_dstport': 'hashlimit_dstport',
-    'cb_srcip': 'hashlimit_srcip',
-    'cb_srcport': 'hashlimit_srcport',
-    'ipt_connlimit_above_not': 'connlimit_above_not',
-    'ipt_continue': 'ipt_continue',
-    'ipt_hashlimit_dstlimit': 'hashlimit_dstlimit',
-    'ipt_limit_not': 'limit_value_not',
-    'ipt_mark_connections': 'ipt_mark_connections',
-    'ipt_stateless': 'stateless',
-    'ipt_tee': 'ipt_tee',
+    'cb_dstip': RuleOption.HASHLIMIT_DSTIP,
+    'cb_dstport': RuleOption.HASHLIMIT_DSTPORT,
+    'cb_srcip': RuleOption.HASHLIMIT_SRCIP,
+    'cb_srcport': RuleOption.HASHLIMIT_SRCPORT,
+    'ipt_connlimit_above_not': RuleOption.CONNLIMIT_ABOVE_NOT,
+    'ipt_continue': RuleOption.IPT_CONTINUE,
+    'ipt_hashlimit_dstlimit': RuleOption.HASHLIMIT_DSTLIMIT,
+    'ipt_limit_not': RuleOption.LIMIT_VALUE_NOT,
+    'ipt_mark_connections': RuleOption.IPT_MARK_CONNECTIONS,
+    'ipt_stateless': RuleOption.STATELESS,
+    'ipt_tee': RuleOption.IPT_TEE,
 }
 
 _COMBO_WIDGETS = {
-    'ipt_assume_fw_is_part_of_any': 'firewall_is_part_of_any_and_networks',
-    'ipt_hashlimit_suffix': 'hashlimit_suffix',
-    'ipt_iif': 'ipt_iif',
-    'ipt_limitSuffix': 'limit_suffix',
-    'ipt_logLevel': 'log_level',
-    'ipt_oif': 'ipt_oif',
+    'ipt_assume_fw_is_part_of_any': RuleOption.FIREWALL_IS_PART_OF_ANY,
+    'ipt_hashlimit_suffix': RuleOption.HASHLIMIT_SUFFIX,
+    'ipt_iif': RuleOption.IPT_IIF,
+    'ipt_limitSuffix': RuleOption.LIMIT_SUFFIX,
+    'ipt_logLevel': RuleOption.LOG_LEVEL,
+    'ipt_oif': RuleOption.IPT_OIF,
 }
 
 _LINEEDIT_WIDGETS = {
-    'classify_str': 'classify_str',
-    'ipt_gw': 'ipt_gw',
-    'ipt_hashlimit_name': 'hashlimit_name',
-    'ipt_logPrefix': 'log_prefix',
+    'classify_str': RuleOption.CLASSIFY_STR,
+    'ipt_gw': RuleOption.IPT_GW,
+    'ipt_hashlimit_name': RuleOption.HASHLIMIT_NAME,
+    'ipt_logPrefix': RuleOption.LOG_PREFIX,
 }
 
 _SPINBOX_WIDGETS = {
-    'ipt_burst': 'limit_burst',
-    'ipt_connlimit': 'connlimit_value',
-    'ipt_connlimit_masklen': 'connlimit_masklen',
-    'ipt_hashlimit': 'hashlimit_value',
-    'ipt_hashlimit_burst': 'hashlimit_burst',
-    'ipt_hashlimit_expire': 'hashlimit_expire',
-    'ipt_hashlimit_gcinterval': 'hashlimit_gcinterval',
-    'ipt_hashlimit_max': 'hashlimit_max',
-    'ipt_hashlimit_size': 'hashlimit_size',
-    'ipt_limit': 'limit_value',
-    'ipt_nlgroup': 'ulog_nlgroup',
+    'ipt_burst': RuleOption.LIMIT_BURST,
+    'ipt_connlimit': RuleOption.CONNLIMIT_VALUE,
+    'ipt_connlimit_masklen': RuleOption.CONNLIMIT_MASKLEN,
+    'ipt_hashlimit': RuleOption.HASHLIMIT_VALUE,
+    'ipt_hashlimit_burst': RuleOption.HASHLIMIT_BURST,
+    'ipt_hashlimit_expire': RuleOption.HASHLIMIT_EXPIRE,
+    'ipt_hashlimit_gcinterval': RuleOption.HASHLIMIT_GCINTERVAL,
+    'ipt_hashlimit_max': RuleOption.HASHLIMIT_MAX,
+    'ipt_hashlimit_size': RuleOption.HASHLIMIT_SIZE,
+    'ipt_limit': RuleOption.LIMIT_VALUE,
+    'ipt_nlgroup': RuleOption.ULOG_NLGROUP,
 }
 
 # The combo box for "assume fw is part of any" uses index → stored value.
@@ -115,7 +116,7 @@ class RuleOptionsPanel(QWidget):
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                if key == 'firewall_is_part_of_any_and_networks':
+                if key == RuleOption.FIREWALL_IS_PART_OF_ANY:
                     idx = _FW_PART_OF_ANY_REVERSE.get(str(opts.get(key, '')), 0)
                     widget.setCurrentIndex(idx)
                 else:
@@ -151,7 +152,7 @@ class RuleOptionsPanel(QWidget):
             drop = getattr(self, 'iptTagDropArea', None)
             if drop is not None:
                 drop.delete_object()
-                tag_id = opts.get('tagobject_id', '')
+                tag_id = opts.get(RuleOption.TAGOBJECT_ID, '')
                 if tag_id:
                     self._load_tag_object(drop, tag_id)
 
@@ -171,7 +172,7 @@ class RuleOptionsPanel(QWidget):
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key == 'firewall_is_part_of_any_and_networks':
+            if key == RuleOption.FIREWALL_IS_PART_OF_ANY:
                 opts[key] = _FW_PART_OF_ANY_VALUES.get(widget.currentIndex(), '')
             else:
                 opts[key] = widget.currentText()
@@ -202,11 +203,11 @@ class RuleOptionsPanel(QWidget):
         if drop is not None:
             tag_obj_id = drop.get_object_id()
             if tag_obj_id is not None:
-                opts['tagobject_id'] = str(tag_obj_id)
-                opts['tagging'] = True
+                opts[RuleOption.TAGOBJECT_ID] = str(tag_obj_id)
+                opts[RuleOption.TAGGING] = True
             else:
-                opts.pop('tagobject_id', None)
-                opts.pop('tagging', None)
+                opts.pop(RuleOption.TAGOBJECT_ID, None)
+                opts.pop(RuleOption.TAGGING, None)
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}

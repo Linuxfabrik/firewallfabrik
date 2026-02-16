@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * fw-dns-names.fw /etc/fw/fw-dns-names.fw
+#
 
 FWBDEBUG=""
 

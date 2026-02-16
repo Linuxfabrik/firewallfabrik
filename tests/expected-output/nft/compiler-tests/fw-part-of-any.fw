@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * fw-part-of-any.fw /etc/fw/fw-part-of-any.fw
+#
 
 FWBDEBUG=""
 

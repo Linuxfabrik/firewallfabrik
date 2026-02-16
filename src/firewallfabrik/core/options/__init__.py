@@ -39,6 +39,7 @@ enum values, guaranteeing key consistency.
 
 from firewallfabrik.core.options._keys import (
     FirewallOption,
+    InterfaceOption,
     LinuxOption,
     RuleOption,
 )
@@ -70,6 +71,7 @@ __all__ = [
     'RULE_LOGGING_DEFAULTS',
     'FirewallDefaults',
     'FirewallOption',
+    'InterfaceOption',
     'LinuxKernelDefaults',
     'LinuxOption',
     'LinuxPathDefaults',

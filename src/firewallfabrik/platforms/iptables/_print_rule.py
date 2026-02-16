@@ -37,6 +37,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
 )
+from firewallfabrik.core.options import FirewallOption, RuleOption
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
@@ -498,7 +499,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""
-        stateless = rule.get_option('stateless', False)
+        stateless = rule.get_option(RuleOption.STATELESS, False)
         force_state = rule.force_state_check
         if not stateless or force_state:
             if _version_compare(self.version, '1.4.4') >= 0:
@@ -517,7 +518,7 @@ class PrintRule(PolicyRuleProcessor):
         return ''
 
     def _print_limit(self, rule: CompRule) -> str:
-        limit_val = rule.get_option('limit_value', -1)
+        limit_val = rule.get_option(RuleOption.LIMIT_VALUE, -1)
         try:
             limit_val = int(limit_val)
         except (ValueError, TypeError):
@@ -525,8 +526,8 @@ class PrintRule(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
-        burst = rule.get_option('limit_burst', 0)
+        limit_suffix = rule.get_option(RuleOption.LIMIT_SUFFIX, '') or '/second'
+        burst = rule.get_option(RuleOption.LIMIT_BURST, 0)
         try:
             burst = int(burst)
         except (ValueError, TypeError):
@@ -571,7 +572,7 @@ class PrintRule(PolicyRuleProcessor):
         return f' -j {target_name}'
 
     def _print_action_on_reject(self, rule: CompRule) -> str:
-        reject_with = rule.get_option('action_on_reject', '')
+        reject_with = rule.get_option(RuleOption.ACTION_ON_REJECT, '')
         if not reject_with:
             return ''
 
@@ -603,15 +604,15 @@ class PrintRule(PolicyRuleProcessor):
         """Print logging parameters."""
         parts = []
 
-        log_level = rule.get_option('log_level', '')
+        log_level = rule.get_option(RuleOption.LOG_LEVEL, '')
         if not log_level:
-            log_level = self.compiler.fw.get_option('log_level', '')
+            log_level = self.compiler.fw.get_option(FirewallOption.LOG_LEVEL, '')
         if log_level:
             parts.append(f'--log-level {log_level}')
 
-        log_prefix = rule.get_option('log_prefix', '')
+        log_prefix = rule.get_option(RuleOption.LOG_PREFIX, '')
         if not log_prefix:
-            log_prefix = self.compiler.fw.get_option('log_prefix', '')
+            log_prefix = self.compiler.fw.get_option(FirewallOption.LOG_PREFIX, '')
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]

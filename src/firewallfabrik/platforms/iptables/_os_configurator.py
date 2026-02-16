@@ -57,36 +57,36 @@ class OSConfigurator_linux24(OSConfigurator):
     """OS configurator for Linux 2.4+ with iptables."""
 
     # Default tool paths
-    TOOLS: ClassVar[list[tuple[str, str]]] = [
-        ('LSMOD', 'lsmod'),
-        ('MODPROBE', 'modprobe'),
-        ('IPTABLES', 'iptables'),
-        ('IP6TABLES', 'ip6tables'),
-        ('IPTABLES_RESTORE', 'iptables_restore'),
-        ('IP6TABLES_RESTORE', 'ip6tables_restore'),
-        ('IP', 'ip'),
-        ('IFCONFIG', 'ifconfig'),
-        ('VCONFIG', 'vconfig'),
-        ('BRCTL', 'brctl'),
-        ('IFENSLAVE', 'ifenslave'),
-        ('IPSET', 'ipset'),
-        ('LOGGER', 'logger'),
+    TOOLS: ClassVar[list[tuple[str, LinuxOption]]] = [
+        ('LSMOD', LinuxOption.PATH_LSMOD),
+        ('MODPROBE', LinuxOption.PATH_MODPROBE),
+        ('IPTABLES', LinuxOption.PATH_IPTABLES),
+        ('IP6TABLES', LinuxOption.PATH_IP6TABLES),
+        ('IPTABLES_RESTORE', LinuxOption.PATH_IPTABLES_RESTORE),
+        ('IP6TABLES_RESTORE', LinuxOption.PATH_IP6TABLES_RESTORE),
+        ('IP', LinuxOption.PATH_IP),
+        ('IFCONFIG', LinuxOption.PATH_IFCONFIG),
+        ('VCONFIG', LinuxOption.PATH_VCONFIG),
+        ('BRCTL', LinuxOption.PATH_BRCTL),
+        ('IFENSLAVE', LinuxOption.PATH_IFENSLAVE),
+        ('IPSET', LinuxOption.PATH_IPSET),
+        ('LOGGER', LinuxOption.PATH_LOGGER),
     ]
 
-    DEFAULT_TOOL_PATHS: ClassVar[dict[str, str]] = {
-        'lsmod': 'lsmod',
-        'modprobe': 'modprobe',
-        'iptables': 'iptables',
-        'ip6tables': 'ip6tables',
-        'iptables_restore': 'iptables-restore',
-        'ip6tables_restore': 'ip6tables-restore',
-        'ip': 'ip',
-        'ifconfig': 'ifconfig',
-        'vconfig': 'vconfig',
-        'brctl': 'brctl',
-        'ifenslave': 'ifenslave',
-        'ipset': 'ipset',
-        'logger': 'logger',
+    DEFAULT_TOOL_PATHS: ClassVar[dict[LinuxOption, str]] = {
+        LinuxOption.PATH_LSMOD: 'lsmod',
+        LinuxOption.PATH_MODPROBE: 'modprobe',
+        LinuxOption.PATH_IPTABLES: 'iptables',
+        LinuxOption.PATH_IP6TABLES: 'ip6tables',
+        LinuxOption.PATH_IPTABLES_RESTORE: 'iptables-restore',
+        LinuxOption.PATH_IP6TABLES_RESTORE: 'ip6tables-restore',
+        LinuxOption.PATH_IP: 'ip',
+        LinuxOption.PATH_IFCONFIG: 'ifconfig',
+        LinuxOption.PATH_VCONFIG: 'vconfig',
+        LinuxOption.PATH_BRCTL: 'brctl',
+        LinuxOption.PATH_IFENSLAVE: 'ifenslave',
+        LinuxOption.PATH_IPSET: 'ipset',
+        LinuxOption.PATH_LOGGER: 'logger',
     }
 
     def __init__(
@@ -263,15 +263,15 @@ class OSConfigurator_linux24(OSConfigurator):
         """Generate shell variable assignments for tool paths."""
         result = ''
 
-        for var_name, tool_key in self.TOOLS:
+        for var_name, opt_key in self.TOOLS:
             path = ''
             # 1. Check firewall options for user override
-            opt_val = self.fw.get_option(f'linux24_path_{tool_key}', '')
+            opt_val = self.fw.get_option(opt_key, '')
             if opt_val:
                 path = str(opt_val)
             # 2. Fall back to default paths
             if not path:
-                path = self.DEFAULT_TOOL_PATHS.get(tool_key, '')
+                path = self.DEFAULT_TOOL_PATHS.get(opt_key, '')
             if path:
                 result += f'{var_name}="{path}"\n'
 

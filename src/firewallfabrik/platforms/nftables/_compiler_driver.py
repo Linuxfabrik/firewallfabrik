@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
+from firewallfabrik.core.options import FirewallOption, LinuxOption
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 
@@ -158,7 +159,7 @@ class CompilerDriver_nft(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get('ipv4_6_order', '')
+                ipv4_6_order = options.get(FirewallOption.IPV4_6_ORDER, '')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -574,14 +575,14 @@ class CompilerDriver_nft(CompilerDriver):
         tz = time.strftime('%Z')
         user_name = os.environ.get('USER', 'unknown')
 
-        debug = options.get('debug', False)
+        debug = options.get(FirewallOption.DEBUG, False)
         shell_debug = 'set -x' if debug else ''
 
-        prolog_script = options.get('prolog_script', '')
-        epilog_script = options.get('epilog_script', '')
-        prolog_place = options.get('prolog_place', '') or 'top'
+        prolog_script = options.get(FirewallOption.PROLOG_SCRIPT, '')
+        epilog_script = options.get(FirewallOption.EPILOG_SCRIPT, '')
+        prolog_place = options.get(FirewallOption.PROLOG_PLACE, '') or 'top'
 
-        nft_path = options.get('nft_path', '') or '/usr/sbin/nft'
+        nft_path = options.get(LinuxOption.NFT_PATH, '') or '/usr/sbin/nft'
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
@@ -593,16 +594,16 @@ class CompilerDriver_nft(CompilerDriver):
             errors_and_warnings = '\n'.join(f'# {err}' for err in self.all_errors)
 
         # Management access for block action
-        mgmt_access = bool(options.get('mgmt_access', False))
-        ssh_management_address = options.get('mgmt_addr', '')
+        mgmt_access = bool(options.get(FirewallOption.MGMT_ACCESS, False))
+        ssh_management_address = options.get(FirewallOption.MGMT_ADDR, '')
 
         # IP forwarding commands
         ip_forward_commands = self._get_ip_forward_commands(fw)
 
         # Interface configuration
-        configure_interfaces = options.get('configure_interfaces', False)
-        verify_interfaces_opt = options.get('verify_interfaces', False)
-        ip_path = options.get('ip_path', '') or 'ip'
+        configure_interfaces = options.get(FirewallOption.CONFIGURE_INTERFACES, False)
+        verify_interfaces_opt = options.get(FirewallOption.VERIFY_INTERFACES, False)
+        ip_path = options.get(LinuxOption.IP_PATH, '') or 'ip'
 
         shell_functions = ''
         configure_interfaces_code = ''
@@ -669,12 +670,12 @@ class CompilerDriver_nft(CompilerDriver):
         """Generate IP forwarding sysctl commands."""
         lines = []
 
-        ipv4_fwd = str(fw.get_option('linux24_ip_forward', '') or '')
+        ipv4_fwd = str(fw.get_option(LinuxOption.IP_FORWARD, '') or '')
         if ipv4_fwd:
             val = 1 if ipv4_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv4/ip_forward')
 
-        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward', '') or '')
+        ipv6_fwd = str(fw.get_option(LinuxOption.IPV6_FORWARD, '') or '')
         if ipv6_fwd:
             val = 1 if ipv6_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv6/conf/all/forwarding')

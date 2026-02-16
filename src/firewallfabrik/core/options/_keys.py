@@ -81,12 +81,17 @@ class LinuxOption(StrEnum):
     PATH_IFENSLAVE = 'linux24_path_ifenslave'
     PATH_MODPROBE = 'linux24_path_modprobe'
     PATH_LSMOD = 'linux24_path_lsmod'
+    PATH_IFCONFIG = 'linux24_path_ifconfig'
     PATH_IPSET = 'linux24_path_ipset'
     PATH_IPTABLES_RESTORE = 'linux24_path_iptables_restore'
     PATH_IP6TABLES_RESTORE = 'linux24_path_ip6tables_restore'
 
     # Data directory
     DATA_DIR = 'linux24_data_dir'
+
+    # nftables-specific tool paths
+    NFT_PATH = 'nft_path'
+    IP_PATH = 'ip_path'
 
 
 class FirewallOption(StrEnum):
@@ -111,6 +116,7 @@ class FirewallOption(StrEnum):
 
     # Management access
     MGMT_SSH = 'mgmt_ssh'
+    MGMT_ACCESS = 'mgmt_access'
     MGMT_ADDR = 'mgmt_addr'
     ADD_MGMT_SSH_RULE_WHEN_STOPPED = (
         'add_mgmt_ssh_rule_when_stoped'  # Note: legacy typo
@@ -173,6 +179,9 @@ class FirewallOption(StrEnum):
     # IPv4/IPv6 order
     IPV4_6_ORDER = 'ipv4_6_order'
 
+    # TCP SYN checking
+    DROP_NEW_TCP_WITH_NO_SYN = 'drop_new_tcp_with_no_syn'
+
 
 class RuleOption(StrEnum):
     """Per-rule option keys.
@@ -213,6 +222,7 @@ class RuleOption(StrEnum):
     ULOG_NLGROUP = 'ulog_nlgroup'
 
     # Rule behavior
+    DISABLED = 'disabled'
     STATELESS = 'stateless'
     IPT_CONTINUE = 'ipt_continue'
     IPT_MARK_CONNECTIONS = 'ipt_mark_connections'
@@ -228,3 +238,49 @@ class RuleOption(StrEnum):
 
     # Per-rule firewall scope override
     FIREWALL_IS_PART_OF_ANY = 'firewall_is_part_of_any_and_networks'
+
+    # Rule behavior flags
+    LOG = 'log'
+    LOGGING = 'logging'  # Legacy alias for LOG
+    COUNTER_NAME = 'counter_name'
+    ROUTING = 'routing'
+    CLASSIFICATION = 'classification'
+    NO_OUTPUT_CHAIN = 'no_output_chain'
+    NO_INPUT_CHAIN = 'no_input_chain'
+    DO_NOT_OPTIMIZE_BY_SRV = 'do_not_optimize_by_srv'
+    PUT_IN_MANGLE_TABLE = 'put_in_mangle_table'
+    IPT_BRANCH_IN_MANGLE = 'ipt_branch_in_mangle'
+
+    # NAT options
+    IPT_NAT_RANDOM = 'ipt_nat_random'
+    IPT_NAT_PERSISTENT = 'ipt_nat_persistent'
+
+    # Internal compiler bookkeeping (set by compiler, not GUI)
+    RULE_ADDED_FOR_OSRC_NEG = 'rule_added_for_osrc_neg'
+    RULE_ADDED_FOR_ODST_NEG = 'rule_added_for_odst_neg'
+    RULE_ADDED_FOR_OSRV_NEG = 'rule_added_for_osrv_neg'
+
+    # Per-rule reject action override
+    ACTION_ON_REJECT = 'action_on_reject'
+
+    # Routing rule metric
+    METRIC = 'metric'
+
+    # Accounting and custom actions
+    RULE_NAME_ACCOUNTING = 'rule_name_accounting'
+    CUSTOM_STR = 'custom_str'
+
+    # Ruleset option (mangle table only)
+    MANGLE_ONLY_RULE_SET = 'mangle_only_rule_set'
+
+
+class InterfaceOption(StrEnum):
+    """Interface-level option keys.
+
+    These options are set on individual network interfaces.
+    """
+
+    BRIDGE_PORT = 'bridge_port'
+    SLAVE = 'slave'
+    TYPE = 'type'
+    VLAN_ID = 'vlan_id'

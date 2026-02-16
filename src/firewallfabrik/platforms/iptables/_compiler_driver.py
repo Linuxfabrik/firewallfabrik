@@ -39,6 +39,7 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
+from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
 
@@ -154,7 +155,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 options = fw.options or {}
 
                 # Validate prolog placement with iptables-restore
-                prolog_place = options.get('prolog_place', '')
+                prolog_place = options.get(FirewallOption.PROLOG_PLACE, '')
                 if prolog_place == 'after_flush' and options.get(
                     'use_iptables_restore', False
                 ):
@@ -166,7 +167,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 self._warn_unsupported_options(options)
 
-                debug = options.get('debug', False)
+                debug = options.get(FirewallOption.DEBUG, False)
                 shell_dbg = 'set -x' if debug else ''
 
                 # Create OS configurator
@@ -218,7 +219,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get('ipv4_6_order', '')
+                ipv4_6_order = options.get(FirewallOption.IPV4_6_ORDER, '')
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -433,8 +434,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Prolog/epilog scripts
-                prolog_script = options.get('prolog_script', '')
-                epilog_script = options.get('epilog_script', '')
+                prolog_script = options.get(FirewallOption.PROLOG_SCRIPT, '')
+                epilog_script = options.get(FirewallOption.EPILOG_SCRIPT, '')
                 script_skeleton.set_variable('prolog_script', prolog_script)
                 script_skeleton.set_variable('epilog_script', epilog_script)
 
@@ -442,7 +443,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 iface_buf = io.StringIO()
                 iface_buf.write('# Configure interfaces\n')
 
-                if options.get('configure_interfaces', False):
+                if options.get(FirewallOption.CONFIGURE_INTERFACES, False):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
 
                 iface_buf.write(oscnf.print_commands_to_clear_known_interfaces())
@@ -453,7 +454,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Verify interfaces
-                if options.get('verify_interfaces', False):
+                if options.get(FirewallOption.VERIFY_INTERFACES, False):
                     script_skeleton.set_variable(
                         'verify_interfaces', oscnf.print_verify_interfaces_commands()
                     )
@@ -510,7 +511,9 @@ class CompilerDriver_ipt(CompilerDriver):
                 script_skeleton.set_variable('database', '')
 
                 # Reset commands
-                use_ipt_restore = options.get('use_iptables_restore', False)
+                use_ipt_restore = options.get(
+                    FirewallOption.USE_IPTABLES_RESTORE, False
+                )
                 script_skeleton.set_variable(
                     'not_using_iptables_restore', 0 if use_ipt_restore else 1
                 )
@@ -841,7 +844,7 @@ class CompilerDriver_ipt(CompilerDriver):
     ) -> str:
         """Assemble one AF's compilation output using configlets."""
         have_auto = bool(automatic_rules_script or automatic_mangle_script)
-        use_iptables_restore = fw.get_option('use_iptables_restore', False)
+        use_iptables_restore = fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False)
 
         if self.single_rule_compile_on:
             have_auto = False

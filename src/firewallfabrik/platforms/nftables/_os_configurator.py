@@ -138,7 +138,7 @@ class OSConfigurator_nft(OSConfigurator):
                 rules.append('        ct state invalid drop')
 
         # Drop new TCP without SYN
-        if self.fw.get_option('drop_new_tcp_with_no_syn', False):
+        if self.fw.get_option(FirewallOption.DROP_NEW_TCP_WITH_NO_SYN, False):
             rules.append('        tcp flags != syn ct state new drop')
 
         return '\n'.join(rules) + '\n' if rules else ''

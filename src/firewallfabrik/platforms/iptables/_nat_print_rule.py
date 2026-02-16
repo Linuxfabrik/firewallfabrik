@@ -39,6 +39,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
 )
+from firewallfabrik.core.options import RuleOption
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
@@ -188,7 +189,7 @@ class NATPrintRule(NATRuleProcessor):
         tsrv = ipt_comp.get_first_tsrv(rule)
 
         if rt == NATRuleType.Masq:
-            if rule.get_option('ipt_nat_random', False):
+            if rule.get_option(RuleOption.IPT_NAT_RANDOM, False):
                 return '--random'
             return ''
 
@@ -204,10 +205,10 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{addr_part}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
-            if rule.get_option('ipt_nat_random', False):
+            if rule.get_option(RuleOption.IPT_NAT_RANDOM, False):
                 parts.append('--random')
             if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
+                RuleOption.IPT_NAT_PERSISTENT, False
             ):
                 parts.append('--persistent')
             return ' '.join(parts)
@@ -224,10 +225,10 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{addr_part}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
-            if rule.get_option('ipt_nat_random', False):
+            if rule.get_option(RuleOption.IPT_NAT_RANDOM, False):
                 parts.append('--random')
             if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
+                RuleOption.IPT_NAT_PERSISTENT, False
             ):
                 parts.append('--persistent')
             return ' '.join(parts)

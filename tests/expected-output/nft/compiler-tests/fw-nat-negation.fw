@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * fw-nat-negation.fw /etc/fw/fw-nat-negation.fw
+#
 
 FWBDEBUG=""
 

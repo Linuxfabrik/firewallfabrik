@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall60.fw /etc/firewall60.fw
+#
 #  testing time litmiting for iptables < 1.4.0
 #
 

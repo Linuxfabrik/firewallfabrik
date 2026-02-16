@@ -43,6 +43,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
 )
+from firewallfabrik.core.options import FirewallOption, RuleOption
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -519,7 +520,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""
-        stateless = rule.get_option('stateless', False)
+        stateless = rule.get_option(RuleOption.STATELESS, False)
         force_state = rule.force_state_check
 
         if not stateless or force_state:
@@ -543,18 +544,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         log_prefix = self._get_log_prefix(rule)
         if log_prefix:
             parts.append(f'prefix "{log_prefix}"')
-        log_level = rule.get_option('log_level', '')
+        log_level = rule.get_option(RuleOption.LOG_LEVEL, '')
         if not log_level:
-            log_level = self.compiler.fw.get_option('log_level', '')
+            log_level = self.compiler.fw.get_option(FirewallOption.LOG_LEVEL, '')
         if log_level:
             parts.append(f'level {log_level}')
         return ' '.join(parts)
 
     def _get_log_prefix(self, rule: CompRule) -> str:
         """Get log prefix, expanding macros."""
-        log_prefix = rule.get_option('log_prefix', '')
+        log_prefix = rule.get_option(RuleOption.LOG_PREFIX, '')
         if not log_prefix:
-            log_prefix = self.compiler.fw.get_option('log_prefix', '')
+            log_prefix = self.compiler.fw.get_option(FirewallOption.LOG_PREFIX, '')
         if not log_prefix:
             return ''
 
@@ -631,7 +632,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_reject(self, rule: CompRule) -> str:
         """Print reject with specific type."""
-        action_on_reject = rule.get_option('action_on_reject', '')
+        action_on_reject = rule.get_option(RuleOption.ACTION_ON_REJECT, '')
 
         if not action_on_reject:
             return 'reject'

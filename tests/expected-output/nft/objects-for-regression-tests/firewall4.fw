@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall4.fw /firewall4.fw
+#
 #  this object is used to test a configuration where firewall has dynamic address
 #
 

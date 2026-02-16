@@ -44,6 +44,7 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
 )
+from firewallfabrik.core.options import FirewallOption, RuleOption
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -136,8 +137,8 @@ class NATCompiler_nft(NATCompiler):
         self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
         self.add(SingleObjectNegationODst('negation in ODst if it holds single object'))
 
-        if self.fw.get_option('local_nat', False):
-            if self.fw.get_option('firewall_is_part_of_any_and_networks', False):
+        if self.fw.get_option(FirewallOption.LOCAL_NAT, False):
+            if self.fw.get_option(FirewallOption.FIREWALL_IS_PART_OF_ANY, False):
                 self.add(SplitIfOSrcAny('split rule if OSrc is any'))
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 
@@ -446,11 +447,11 @@ class SplitIfOSrcAny(NATRuleProcessor):
             return True
 
         # Skip rules added to handle negation
-        if rule.get_option('rule_added_for_osrc_neg', False):
+        if rule.get_option(RuleOption.RULE_ADDED_FOR_OSRC_NEG, False):
             return True
-        if rule.get_option('rule_added_for_odst_neg', False):
+        if rule.get_option(RuleOption.RULE_ADDED_FOR_ODST_NEG, False):
             return True
-        if rule.get_option('rule_added_for_osrv_neg', False):
+        if rule.get_option(RuleOption.RULE_ADDED_FOR_OSRV_NEG, False):
             return True
 
         if rule.nat_rule_type == NATRuleType.DNAT and (

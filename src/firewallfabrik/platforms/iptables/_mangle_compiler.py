@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import PolicyAction
+from firewallfabrik.core.options import FirewallOption, RuleOption
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 
 if TYPE_CHECKING:
@@ -106,7 +107,7 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
 
         # TCPMSS clamping for iptables >= 1.3.0
         if _version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
-            'clamp_mss_to_mtu', False
+            FirewallOption.CLAMP_MSS_TO_MTU, False
         ):
             result += (
                 f'{iptables_cmd} {opt_wait}-t mangle '
@@ -137,21 +138,21 @@ class KeepMangleTableRules(PolicyRuleProcessor):
 
         # Keep rules with tagging, routing, or classification options
         if (
-            rule.get_option('tagging', False)
-            or rule.get_option('routing', False)
-            or rule.get_option('classification', False)
+            rule.get_option(RuleOption.TAGGING, False)
+            or rule.get_option(RuleOption.ROUTING, False)
+            or rule.get_option(RuleOption.CLASSIFICATION, False)
         ):
             self.tmp_queue.append(rule)
             return True
 
         # Keep rules with put_in_mangle_table option
-        if rule.get_option('put_in_mangle_table', False):
+        if rule.get_option(RuleOption.PUT_IN_MANGLE_TABLE, False):
             self.tmp_queue.append(rule)
             return True
 
         # Handle branch rules that need mangle table
         if rule.action == PolicyAction.Branch and rule.get_option(
-            'ipt_branch_in_mangle', False
+            RuleOption.IPT_BRANCH_IN_MANGLE, False
         ):
             self.tmp_queue.append(rule)
             return True
@@ -163,7 +164,7 @@ class KeepMangleTableRules(PolicyRuleProcessor):
             and hasattr(self.compiler.source_ruleset, 'options')
         ):
             rs_opts = self.compiler.source_ruleset.options or {}
-            mangle_only = rs_opts.get('mangle_only_rule_set', False)
+            mangle_only = rs_opts.get(RuleOption.MANGLE_ONLY_RULE_SET, False)
             if isinstance(mangle_only, str):
                 mangle_only = mangle_only.lower() == 'true'
             if mangle_only:
