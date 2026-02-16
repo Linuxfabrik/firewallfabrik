@@ -432,7 +432,11 @@ class TreeOperations:
                 new_addr.group_id = None
                 session.add(new_addr)
 
-        # Rule sets + their rules + rule_elements.
+        # Collect source rule_element rows and clone rule sets + rules.
+        # We must read source rows before flushing the clones (the flush
+        # would otherwise trigger lazy loads that might expire the source
+        # relationships).
+        rule_element_tasks = []
         for rs in source_device.rule_sets:
             new_rs = self._clone_object(rs, id_map)
             new_rs.device_id = new_device.id
@@ -441,22 +445,30 @@ class TreeOperations:
                 new_rule = self._clone_object(rule, id_map)
                 new_rule.rule_set_id = new_rs.id
                 session.add(new_rule)
-                # Copy rule_elements, remapping target_id for internal refs.
                 rows = session.execute(
                     sqlalchemy.select(rule_elements).where(
                         rule_elements.c.rule_id == rule.id
                     )
                 ).all()
-                for row in rows:
-                    target_id = id_map.get(row.target_id, row.target_id)
-                    session.execute(
-                        rule_elements.insert().values(
-                            rule_id=new_rule.id,
-                            slot=row.slot,
-                            target_id=target_id,
-                            position=row.position,
-                        )
+                if rows:
+                    rule_element_tasks.append((new_rule, rows))
+
+        # Flush all ORM objects so that rule and rule_set rows exist in
+        # the DB before we insert the raw rule_elements rows (which
+        # reference them via FK).
+        session.flush()
+
+        for new_rule, rows in rule_element_tasks:
+            for row in rows:
+                target_id = id_map.get(row.target_id, row.target_id)
+                session.execute(
+                    rule_elements.insert().values(
+                        rule_id=new_rule.id,
+                        slot=row.slot,
+                        target_id=target_id,
+                        position=row.position,
                     )
+                )
 
     @staticmethod
     def _duplicate_group_members(session, source_group, new_group):
