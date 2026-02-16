@@ -56,6 +56,7 @@ from firewallfabrik.core import DatabaseManager, duplicate_object_name
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import (
     Address,
+    Firewall,
     FWObjectDatabase,
     Group,
     Host,
@@ -1781,6 +1782,7 @@ class FWWindow(QMainWindow):
             rule_set_type=rs_type,
             object_name=fw_name,
         )
+        model.firewall_modified.connect(self._on_firewall_modified)
         panel = RuleSetPanel()
         panel.policy_view.setModel(model)
 
@@ -2109,6 +2111,7 @@ class FWWindow(QMainWindow):
             rs_uuid,
             rule_set_type=rs_type,
         )
+        model.firewall_modified.connect(self._on_firewall_modified)
         panel = RuleSetPanel()
         panel.policy_view.setModel(model)
 
@@ -2167,28 +2170,36 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def _do_undo(self):
+        # Capture the active editor *before* closing, so that
+        # _refresh_after_history_change can reopen it afterwards.
+        obj_id = self._editor_mgr.current_obj_id
+        obj_type = self._editor_mgr.current_obj_type
         # Close the editor session *before* the restore so that no stale
         # ORM connection interferes with ``_restore_db`` (which drops and
         # recreates all tables via raw SQL on the shared StaticPool
         # connection).
         self._close_editor()
         if self._db_manager.undo():
-            self._refresh_after_history_change()
+            self._refresh_after_history_change(obj_id, obj_type)
 
     @Slot()
     def _do_redo(self):
+        obj_id = self._editor_mgr.current_obj_id
+        obj_type = self._editor_mgr.current_obj_type
         self._close_editor()
         if self._db_manager.redo():
-            self._refresh_after_history_change()
+            self._refresh_after_history_change(obj_id, obj_type)
 
     @Slot(int)
     def _on_undo_list_clicked(self, row):
         if row < 0:
             return
+        obj_id = self._editor_mgr.current_obj_id
+        obj_type = self._editor_mgr.current_obj_type
         self._close_editor()
         # List rows are offset by 1 because State 0 is hidden.
         if self._db_manager.jump_to(row + 1):
-            self._refresh_after_history_change()
+            self._refresh_after_history_change(obj_id, obj_type)
 
     def _on_history_changed(self):
         self._update_undo_actions()
@@ -2210,11 +2221,7 @@ class FWWindow(QMainWindow):
                 self.undoView.setCurrentRow(snap.index - 1)
         self.undoView.blockSignals(False)
 
-    def _refresh_after_history_change(self):
-        obj_id = self._editor_mgr.current_obj_id
-        obj_type = self._editor_mgr.current_obj_type
-        self._close_editor()
-
+    def _refresh_after_history_change(self, obj_id=None, obj_type=None):
         # Reload open rule set models instead of closing all subwindows.
         for sub in self.m_space.subWindowList():
             view = self._policy_view_from_widget(sub.widget())
@@ -2242,6 +2249,13 @@ class FWWindow(QMainWindow):
     def _on_editor_object_saved(self, obj):
         """Update tree item after editor saves an object."""
         self._object_tree.update_item(obj)
+
+    def _on_firewall_modified(self, fw_id):
+        """Update the Firewall tree item after a rule mutation stamped it."""
+        with self._db_manager.session() as session:
+            fw = session.get(Firewall, fw_id)
+            if fw is not None:
+                self._object_tree.update_item(fw)
 
     def _on_editor_mdi_titles_changed(self, fw_obj):
         """Update MDI sub-window titles after a firewall rename."""

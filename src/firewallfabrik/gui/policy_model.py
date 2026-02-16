@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import enum
 import uuid
@@ -21,12 +22,13 @@ from collections import namedtuple
 from typing import ClassVar
 
 import sqlalchemy
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
 from firewallfabrik.core.objects import (
     Address,
     Direction,
+    Firewall,
     Group,
     Host,
     Interface,
@@ -37,6 +39,7 @@ from firewallfabrik.core.objects import (
     PolicyRule,
     RoutingRule,
     Rule,
+    RuleSet,
     Service,
     rule_elements,
 )
@@ -291,6 +294,8 @@ class _TreeNode:
 class PolicyTreeModel(QAbstractItemModel):
     """Database-backed tree model for policy/NAT/routing rules with group support."""
 
+    firewall_modified = Signal(object)
+
     _clipboard: ClassVar[list[uuid.UUID]] = []
 
     def __init__(
@@ -528,6 +533,49 @@ class PolicyTreeModel(QAbstractItemModel):
             return f'{self._object_name}: {text}'
         return text
 
+    def _stamp_firewall(self, session):
+        """Update ``lastModified`` on the Firewall owning this rule set.
+
+        Called inside every mutation session so the compile dialog and
+        bold-tree display know recompilation is needed.
+
+        Returns the :class:`Firewall` instance if stamped, or *None*.
+        """
+        from datetime import UTC, datetime
+
+        rs = session.get(RuleSet, self._rule_set_id)
+        if rs is None:
+            return None
+        fw = rs.device
+        if not isinstance(fw, Firewall):
+            return None
+        data = dict(fw.data or {})
+        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
+        fw.data = data
+        return fw
+
+    @contextlib.contextmanager
+    def _mutation_session(self, description):
+        """Open a DB session that auto-stamps the owning Firewall.
+
+        Wraps :meth:`DatabaseManager.session` and calls
+        :meth:`_stamp_firewall` before the session commits, so every
+        rule mutation automatically updates the Firewall's
+        ``lastModified`` timestamp.  After commit, emits
+        :pyattr:`firewall_modified` so the object tree can refresh
+        the Firewall's bold state.
+        """
+        fw_id = None
+        with self._db_manager.session(description) as session:
+            yield session
+            fw = self._stamp_firewall(session)
+            if fw is not None:
+                fw_id = fw.id  # Capture before session closes.
+        # Emit after the session has committed so listeners read
+        # up-to-date data from the database.
+        if fw_id is not None:
+            self.firewall_modified.emit(fw_id)
+
     @staticmethod
     def _build_name_map(session):
         """Build a {uuid: (name, type, tooltip)} lookup from all name-bearing tables."""
@@ -603,7 +651,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if new_comment == row_data.comment:
             return False
 
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -960,7 +1008,7 @@ class PolicyTreeModel(QAbstractItemModel):
             else:
                 position = self.flat_rule_count()
 
-        with self._db_manager.session(self._desc(f'New rule {position}')) as session:
+        with self._mutation_session(self._desc(f'New rule {position}')) as session:
             # Shift existing rules at or after the insertion point.
             session.execute(
                 sqlalchemy.update(self._rule_cls)
@@ -1009,7 +1057,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._db_manager.session(self._desc('Delete rule(s)')) as session:
+        with self._mutation_session(self._desc('Delete rule(s)')) as session:
             # Remove rule_elements first (FK constraint).
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -1144,6 +1192,8 @@ class PolicyTreeModel(QAbstractItemModel):
 
                 new_ids.append(new_id)
 
+            fw = self._stamp_firewall(session)
+            fw_id = fw.id if fw is not None else None
             session.commit()
         except Exception:
             session.rollback()
@@ -1153,6 +1203,9 @@ class PolicyTreeModel(QAbstractItemModel):
 
         if new_ids:
             self._db_manager.save_state(self._desc(f'Paste rule at {position}'))
+
+        if fw_id is not None:
+            self.firewall_modified.emit(fw_id)
 
         self.reload()
         return new_ids
@@ -1286,7 +1339,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} action'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1311,7 +1364,7 @@ class PolicyTreeModel(QAbstractItemModel):
         new_comment = str(comment).strip()
         if new_comment == (row_data.comment or ''):
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1329,7 +1382,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if disabled
             else f'Enable rule {row_data.position}'
         )
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 opts = dict(rule.options or {})
@@ -1350,7 +1403,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} direction'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1373,7 +1426,7 @@ class PolicyTreeModel(QAbstractItemModel):
             )
         else:
             desc = f'Remove rule {row_data.position} color'
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.label = label_key
@@ -1390,7 +1443,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} {slot}'),
         ) as session:
             # Check for duplicate.
@@ -1431,7 +1484,7 @@ class PolicyTreeModel(QAbstractItemModel):
         target_row_data = self.get_row_data(target_index)
         if target_row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(
                 f'Move element to rule {target_row_data.position} {target_slot}'
             ),
@@ -1486,7 +1539,7 @@ class PolicyTreeModel(QAbstractItemModel):
                 elem_name = ename
                 break
         desc = f'Delete rule {row_data.position} {slot} {elem_name}'.rstrip()
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
                     rule_elements.c.rule_id == row_data.rule_id,
@@ -1506,7 +1559,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if enabled
             else f'Disable logging rule {row_data.position}'
         )
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 opts = dict(rule.options or {})
@@ -1527,7 +1580,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} options'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1548,7 +1601,7 @@ class PolicyTreeModel(QAbstractItemModel):
             return
         current = bool(row_data.negations.get(slot))
         new_val = not current
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Negate rule {row_data.position} {slot}'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1582,7 +1635,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
         pos_str = ', '.join(positions)
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Add rule {pos_str} to group {group_name}'),
         ) as session:
             for rid in rule_ids:
@@ -1604,7 +1657,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
         pos_str = ', '.join(positions)
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'New group {unique_name} with rule {pos_str}'),
         ) as session:
             for rid in rule_ids:
@@ -1622,7 +1675,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if new_name == old_name:
             return
 
-        with self._db_manager.session(self._desc('Rename group')) as session:
+        with self._mutation_session(self._desc('Rename group')) as session:
             for child in node.children:
                 self._set_rule_group(session, child.row_data.rule_id, new_name)
         self.reload()
@@ -1649,7 +1702,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if rd is not None:
                 positions.append(str(rd.position))
         pos_str = ', '.join(positions) if positions else '?'
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Remove rule {pos_str} from group'),
         ) as session:
             for rid in rule_ids:
@@ -1701,7 +1754,7 @@ class PolicyTreeModel(QAbstractItemModel):
         operation, all positions in the rule set are renumbered
         sequentially.
         """
-        with self._db_manager.session(self._desc(description)) as session:
+        with self._mutation_session(self._desc(description)) as session:
             rule = session.get(self._rule_cls, rule_id)
             if rule is None:
                 return

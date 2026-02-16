@@ -26,6 +26,7 @@ import sqlalchemy.exc
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMessageBox
+from sqlalchemy import inspect as sa_inspect
 
 from firewallfabrik.core.objects import (
     Address,
@@ -38,10 +39,98 @@ from firewallfabrik.core.objects import (
     Rule,
     RuleSet,
     Service,
+    group_membership,
+    rule_elements,
 )
 from firewallfabrik.gui.policy_model import _action_label
 
 logger = logging.getLogger(__name__)
+
+
+def _find_parent_firewall(obj):
+    """Walk up the object hierarchy to find the owning Firewall/Cluster.
+
+    Returns the Firewall/Cluster instance, or *None* if *obj* is not
+    under a device (e.g. a standalone library object).  Mirrors
+    fwbuilder's ``UsageResolver::findFirewallsForObject`` direct-parent
+    walk (``while (f && !Firewall::cast(f)) f=f->getParent()``).
+    """
+    if isinstance(obj, Firewall):
+        return obj
+    if isinstance(obj, Interface):
+        # Sub-interface → walk up to top-level interface first.
+        iface = obj
+        while iface.parent_interface is not None:
+            iface = iface.parent_interface
+        device = iface.device
+        return device if isinstance(device, Firewall) else None
+    if isinstance(obj, Address) and obj.interface is not None:
+        return _find_parent_firewall(obj.interface)
+    return None
+
+
+def _session_has_real_changes(session):
+    """Return *True* only if the session contains actual value changes.
+
+    ``apply_all()`` unconditionally re-assigns widget values to ORM
+    attributes, which makes SQLAlchemy mark JSON/dict columns as dirty
+    even when the content is identical.  This helper compares current
+    attribute values against their committed (pre-edit) state so we
+    can skip the commit when nothing really changed.
+    """
+    if session.new or session.deleted:
+        return True
+    for obj in session.dirty:
+        committed = sa_inspect(obj).committed_state
+        for key, old_val in committed.items():
+            if getattr(obj, key, old_val) != old_val:
+                return True
+    return False
+
+
+def _find_referencing_firewalls(session, obj_id):
+    """Find all Firewalls whose rules reference *obj_id*.
+
+    Walks up the group hierarchy (transitively) so that editing a
+    member of a ServiceGroup also stamps Firewalls using that group.
+    Mirrors fwbuilder's ``UsageResolver::findFirewallsForObject``
+    rule-element search.
+    """
+    # Collect the object itself plus all groups (transitively) containing it.
+    search_ids = {obj_id}
+    queue = [obj_id]
+    while queue:
+        member_id = queue.pop()
+        parent_group_ids = set(
+            session.scalars(
+                sqlalchemy.select(group_membership.c.group_id).where(
+                    group_membership.c.member_id == member_id,
+                ),
+            ).all()
+        )
+        for gid in parent_group_ids:
+            if gid not in search_ids:
+                search_ids.add(gid)
+                queue.append(gid)
+
+    # Find every Firewall that references any of these IDs in its rules.
+    device_ids = set(
+        session.scalars(
+            sqlalchemy.select(RuleSet.device_id)
+            .distinct()
+            .join(Rule, Rule.rule_set_id == RuleSet.id)
+            .join(rule_elements, rule_elements.c.rule_id == Rule.id)
+            .where(rule_elements.c.target_id.in_(search_ids)),
+        ).all()
+    )
+
+    firewalls = []
+    for did in device_ids:
+        fw = session.get(Host, did)
+        if isinstance(fw, Firewall):
+            firewalls.append(fw)
+    return firewalls
+
 
 # Messages shown when double-clicking an "Any" element in a rule cell.
 # Keyed by slot name so they work for Policy, NAT and Routing rule sets.
@@ -365,20 +454,39 @@ class EditorManager(QObject):
         obj = getattr(editor, '_obj', None)
         obj_path = _build_editor_path(obj) if obj else None
 
-        # Nothing to persist (e.g. checkbox toggled back to the same
-        # value) — skip the commit and undo-stack entry but still
-        # refresh the tree/MDI below.
-        has_changes = bool(session.new or session.dirty or session.deleted)
+        # Only persist when attribute values actually differ from their
+        # committed state.  apply_all() unconditionally re-assigns
+        # widget values, which marks JSON columns as dirty even when
+        # the content is identical (see _session_has_real_changes).
+        has_changes = _session_has_real_changes(session)
+        fw = _find_parent_firewall(obj) if obj is not None else None
+        ref_firewalls = []
 
         if has_changes:
-            # Stamp the lastModified timestamp on Firewall/Cluster objects
-            # so the compile dialog knows recompilation is needed.
+            # Stamp the lastModified timestamp on the owning
+            # Firewall/Cluster so the compile dialog and bold-tree
+            # display know recompilation is needed.  Walk up the
+            # hierarchy (Address → Interface → Firewall) just like
+            # fwbuilder's UsageResolver::findFirewallsForObject.
             now_epoch = None
-            if isinstance(obj, Firewall):
+            if fw is not None:
                 now_epoch = int(datetime.now(tz=UTC).timestamp())
-                data = dict(obj.data or {})
+                data = dict(fw.data or {})
                 data['lastModified'] = now_epoch
-                obj.data = data
+                fw.data = data
+            elif obj is not None:
+                # Shared library object: stamp every Firewall that
+                # references it (directly or through group membership).
+                ref_firewalls = _find_referencing_firewalls(
+                    session,
+                    obj.id,
+                )
+                if ref_firewalls:
+                    now_epoch = int(datetime.now(tz=UTC).timestamp())
+                    for rfw in ref_firewalls:
+                        data = dict(rfw.data or {})
+                        data['lastModified'] = now_epoch
+                        rfw.data = data
 
             try:
                 session.commit()
@@ -433,10 +541,17 @@ class EditorManager(QObject):
         if obj is not None:
             self.object_saved.emit(obj)
 
-        # Keep MDI sub-window titles in sync (e.g. after rename or
-        # toggling inactive).
-        if isinstance(obj, Firewall):
-            self.mdi_titles_changed.emit(obj)
+        # Also refresh the parent Firewall tree item so its bold state
+        # (needs-compile) is updated when a child object was edited.
+        if fw is not None:
+            if fw is not obj:
+                self.object_saved.emit(fw)
+            self.mdi_titles_changed.emit(fw)
+
+        # Refresh all referencing Firewalls for shared library objects.
+        for rfw in ref_firewalls:
+            self.object_saved.emit(rfw)
+            self.mdi_titles_changed.emit(rfw)
 
     def close(self):
         """Close the current editor session."""

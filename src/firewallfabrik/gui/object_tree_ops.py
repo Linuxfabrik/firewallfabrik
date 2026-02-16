@@ -14,11 +14,13 @@
 
 import copy
 import uuid
+from datetime import UTC, datetime
 
 import sqlalchemy
 
 from firewallfabrik.core.objects import (
     Address,
+    Firewall,
     Group,
     Host,
     Interface,
@@ -37,6 +39,32 @@ from firewallfabrik.gui.object_tree_data import (
     find_group_by_path,
     normalize_subfolders,
 )
+
+
+def _stamp_parent_firewall(obj):
+    """Update ``lastModified`` on the Firewall owning *obj* (if any).
+
+    Returns the Firewall instance so the caller can emit tree updates,
+    or *None* if *obj* is not under a Firewall.
+    """
+    fw = None
+    if isinstance(obj, Firewall):
+        fw = obj
+    elif isinstance(obj, Interface):
+        iface = obj
+        while iface.parent_interface is not None:
+            iface = iface.parent_interface
+        device = iface.device
+        if isinstance(device, Firewall):
+            fw = device
+    elif isinstance(obj, Address) and obj.interface is not None:
+        return _stamp_parent_firewall(obj.interface)
+    if fw is not None:
+        data = dict(fw.data or {})
+        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
+        fw.data = data
+    return fw
+
 
 # All ORM classes that can own a ``library_id`` column.
 _LIB_OWNED_CLASSES = (Address, Group, Host, Interface, Interval, Service)
@@ -176,6 +204,10 @@ class TreeOperations:
             if obj is None:
                 session.close()
                 return False
+
+            # Stamp the parent Firewall's lastModified *before* deleting
+            # the child so the relationship is still traversable.
+            _stamp_parent_firewall(obj)
 
             obj_ids, rule_ids = self._collect_all_ids(session, obj_id)
             self._cleanup_references_and_delete(session, obj_ids, rule_ids)
