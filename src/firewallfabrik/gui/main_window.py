@@ -16,7 +16,6 @@ import logging
 import subprocess
 import traceback
 import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 
 import sqlalchemy
@@ -58,7 +57,6 @@ from firewallfabrik.core import DatabaseManager, duplicate_object_name
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import (
     Address,
-    Firewall,
     FWObjectDatabase,
     Group,
     Host,
@@ -72,8 +70,8 @@ from firewallfabrik.core.objects import (
     rule_elements,
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
-from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.debug_dialog import DebugDialog
+from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
 from firewallfabrik.gui.object_tree import (
@@ -81,10 +79,7 @@ from firewallfabrik.gui.object_tree import (
     ObjectTree,
     create_library_folder_structure,
 )
-from firewallfabrik.gui.policy_model import (
-    PolicyTreeModel,
-    _action_label,
-)
+from firewallfabrik.gui.policy_model import PolicyTreeModel
 from firewallfabrik.gui.policy_view import PolicyView, RuleSetPanel
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -93,76 +88,6 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_WIDTH = 1024
 _DEFAULT_HEIGHT = 768
-
-# Messages shown when double-clicking an "Any" element in a rule cell.
-# Keyed by slot name so they work for Policy, NAT and Routing rule sets.
-_ANY_MSG_ADDRESS = (
-    'When used in the Source or Destination field of a rule, '
-    'the Any object will match all IP addresses. '
-    'To update your rule to match only specific IP addresses, '
-    'drag-and-drop an object from the Object tree into the field '
-    'in the rule.'
-)
-_ANY_MSG_INTERFACE = (
-    'When used in an Interface field of a rule, '
-    'the Any object will match all interfaces. '
-    'To update your rule to match only a specific interface, '
-    'drag-and-drop an object from the Object tree into the field '
-    'in the rule.'
-)
-_ANY_MSG_SERVICE = (
-    'When used in the Service field of a rule, '
-    'the Any object will match all IP, ICMP, TCP or UDP services. '
-    'To update your rule to match only specific service, '
-    'drag-and-drop an object from the Object tree into the field '
-    'in the rule.'
-)
-_ANY_MSG_TIME = (
-    'When used in the Time Interval field of a rule, '
-    'the Any object will match any time of the day or day '
-    'of the week. To update your rule to match only specific '
-    'service, drag-and-drop an object from the Object tree into '
-    'the field in the rule.'
-)
-_ANY_MESSAGES = {
-    # Policy
-    'dst': _ANY_MSG_ADDRESS,
-    'itf': _ANY_MSG_INTERFACE,
-    'src': _ANY_MSG_ADDRESS,
-    'srv': _ANY_MSG_SERVICE,
-    'when': _ANY_MSG_TIME,
-    # NAT
-    'itf_inb': _ANY_MSG_INTERFACE,
-    'itf_outb': _ANY_MSG_INTERFACE,
-    'odst': _ANY_MSG_ADDRESS,
-    'osrc': _ANY_MSG_ADDRESS,
-    'osrv': _ANY_MSG_SERVICE,
-    'tdst': _ANY_MSG_ADDRESS,
-    'tsrc': _ANY_MSG_ADDRESS,
-    'tsrv': _ANY_MSG_SERVICE,
-    # Routing
-    'rdst': _ANY_MSG_ADDRESS,
-    'rgtw': _ANY_MSG_ADDRESS,
-    'ritf': _ANY_MSG_INTERFACE,
-}
-_ANY_ICON_TYPE = {
-    'dst': 'Network',
-    'itf': 'Interface',
-    'itf_inb': 'Interface',
-    'itf_outb': 'Interface',
-    'odst': 'Network',
-    'osrc': 'Network',
-    'osrv': 'IPService',
-    'rdst': 'Network',
-    'rgtw': 'Network',
-    'ritf': 'Interface',
-    'src': 'Network',
-    'srv': 'IPService',
-    'tdst': 'Network',
-    'tsrc': 'Network',
-    'tsrv': 'IPService',
-    'when': 'Interval',
-}
 
 # Menu entries for the "New Object" popup (toolbar / Object menu / Ctrl+N).
 # Order matches fwbuilder's buildNewObjectMenu() exactly:
@@ -202,106 +127,8 @@ _NEW_OBJECT_MENU_ENTRIES = (
 )
 
 
-def _device_prefix(obj):
-    """Return ``'device_name: '`` if *obj* is a child of a device, else ``''``.
-
-    Walks up the ORM parent chain looking for a :class:`Host` (the base
-    class for Firewall / Cluster / Host).
-    """
-    current = obj
-    while current is not None:
-        if isinstance(current, Host):
-            return f'{current.name}: '
-        if isinstance(current, Address):
-            current = current.interface or current.group or current.library
-        elif isinstance(current, Interface):
-            current = current.device or current.library
-        elif isinstance(current, RuleSet):
-            current = current.device
-        elif isinstance(current, Rule):
-            rs = current.rule_set
-            current = rs.device if rs else None
-        else:
-            break
-    return ''
-
-
-def _undo_desc(action, obj_type, name, old_name=None, prefix=''):
-    """Build a short undo description.
-
-    Supported *action* values: ``Delete``, ``Edit``, ``New``, ``Rename``.
-    For ``Rename``, *old_name* must be provided.
-    *prefix* is prepended as-is (e.g. ``"fw-test: "``).
-    """
-    if action == 'Rename':
-        return f'{prefix}Rename {obj_type} {old_name} > {name}'
-    return f'{prefix}{action} {obj_type} {name}'
-
-
-def _build_editor_path(obj):
-    """Build a ``" / "``-separated path from *obj* up to its Library.
-
-    Mirrors fwbuilder's ``buildEditorTitleAndIcon()`` — walk up the ORM
-    parent chain, collect names, and join them root-first.
-    """
-    parts = []
-    current = obj
-    while current is not None:
-        parts.append(current.name)
-        if isinstance(current, Library):
-            break
-        # Determine the parent depending on object type.
-        if isinstance(current, Address):
-            current = current.interface or current.group or current.library
-        elif isinstance(current, Interface):
-            current = current.device or current.library
-        elif isinstance(current, RuleSet):
-            current = current.device
-        elif isinstance(current, (Host, Service, Interval)):
-            current = current.group or current.library
-        elif isinstance(current, Group):
-            current = current.parent_group or current.library
-        else:
-            break
-    parts.reverse()
-    return ' / '.join(parts)
-
-
 FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
 _MAX_RECENT_FILES = 20
-
-# Map object type discriminator strings to their SQLAlchemy model class.
-_MODEL_MAP = {
-    'AddressRange': Address,
-    'AddressTable': Group,
-    'Cluster': Host,
-    'CustomService': Service,
-    'DNSName': Group,
-    'DynamicGroup': Group,
-    'Firewall': Host,
-    'Host': Host,
-    'ICMP6Service': Service,
-    'ICMPService': Service,
-    'IPService': Service,
-    'IPv4': Address,
-    'IPv6': Address,
-    'Interface': Interface,
-    'Interval': Interval,
-    'IntervalGroup': Group,
-    'Library': Library,
-    'NAT': RuleSet,
-    'Network': Address,
-    'NetworkIPv6': Address,
-    'ObjectGroup': Group,
-    'PhysAddress': Address,
-    'Policy': RuleSet,
-    'Routing': RuleSet,
-    'ServiceGroup': Group,
-    'TCPService': Service,
-    'TagService': Service,
-    'UDPService': Service,
-    'UserService': Service,
-}
 
 
 def _build_library_path_map(session, library):
@@ -441,7 +268,7 @@ class FWWindow(QMainWindow):
         self._object_tree.install_requested.connect(self.install)
         self._object_tree.set_db_manager(self._db_manager)
 
-        self._editor_map = {
+        editor_map = {
             'AddressRange': self.w_AddressRangeDialog,
             'AddressTable': self.w_AddressTableDialog,
             'Cluster': self.w_FirewallDialog,
@@ -473,29 +300,52 @@ class FWWindow(QMainWindow):
             'UserService': self.w_UserDialog,
         }
 
-        # Connect changed signal on all editor dialogs for auto-save.
-        for widget in set(self._editor_map.values()):
-            if isinstance(widget, BaseObjectDialog):
-                widget.changed.connect(self._on_editor_changed)
+        # Blank-dialog label for "Any" object messages.
+        blank_label = QLabel(self.w_BlankDialog)
+        blank_label.setWordWrap(True)
+        blank_label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft,
+        )
+        blank_label.setContentsMargins(10, 10, 10, 10)
+        QVBoxLayout(self.w_BlankDialog).addWidget(blank_label)
+
+        # Create EditorManager — handles editor open/save/close lifecycle.
+        ui_refs = EditorManagerUI(
+            actions_dialog=self.w_ActionsDialog,
+            blank_dialog=self.w_BlankDialog,
+            comment_panel=self.w_CommentEditorPanel,
+            dock=self.editorDockWidget,
+            editor_action=self.actionEditor_panel,
+            get_display_file=lambda: (
+                getattr(self, '_display_file', None) or self._current_file
+            ),
+            icon=self.objectTypeIcon,
+            rule_options=self.w_RuleOptionsDialog,
+            stack=self.objectEditorStack,
+            tab_widget=self.editorPanelTabWidget,
+        )
+        self._editor_mgr = EditorManager(
+            self._db_manager,
+            editor_map,
+            ui_refs,
+            blank_label,
+            parent=self,
+        )
+        self._editor_mgr.connect_dialogs()
+        self._editor_mgr.object_saved.connect(self._on_editor_object_saved)
+        self._editor_mgr.mdi_titles_changed.connect(
+            self._on_editor_mdi_titles_changed,
+        )
+        self._editor_mgr.editor_opened.connect(
+            lambda obj, t: self._ensure_parent_rule_set_open(obj, t),
+        )
 
         # Connect "Create new object and add to group" from group dialogs.
         from firewallfabrik.gui.group_dialog import GroupObjectDialog
 
-        for widget in set(self._editor_map.values()):
+        for widget in set(editor_map.values()):
             if isinstance(widget, GroupObjectDialog):
                 widget.member_create_requested.connect(self._on_create_group_member)
-
-        self._current_editor = None
-        self._editor_session = None
-
-        # Blank-dialog label for "Any" object messages.
-        self._blank_label = QLabel(self.w_BlankDialog)
-        self._blank_label.setWordWrap(True)
-        self._blank_label.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft,
-        )
-        self._blank_label.setContentsMargins(10, 10, 10, 10)
-        QVBoxLayout(self.w_BlankDialog).addWidget(self._blank_label)
 
         # Find panel — embedded in the "Find" tab of the editor dock.
         self._find_panel = FindPanel()
@@ -917,6 +767,7 @@ class FWWindow(QMainWindow):
         # empty "User" library (mirrors fwbuilder's loadStandardObjects).
         self._db_manager = DatabaseManager()
         self._db_manager.on_history_changed = self._on_history_changed
+        self._editor_mgr.set_db_manager(self._db_manager)
         std_path = (
             Path(str(importlib.resources.files('firewallfabrik') / 'resources'))
             / 'libraries'
@@ -1062,6 +913,7 @@ class FWWindow(QMainWindow):
         self.undoView.clear()
         self._db_manager = DatabaseManager()
         self._db_manager.on_history_changed = self._on_history_changed
+        self._editor_mgr.set_db_manager(self._db_manager)
         self._current_file = None
         self._display_file = None
         self._update_title()
@@ -1594,8 +1446,8 @@ class FWWindow(QMainWindow):
         """
         # Save group info before the editor switches away.
         group_id = uuid.UUID(group_id_hex)
-        editor = self._current_editor
-        if editor is None or self._editor_session is None:
+        editor = self._editor_mgr.current_editor
+        if editor is None or self._editor_mgr.current_session is None:
             return
         lib_id = editor._obj.library_id
 
@@ -1685,6 +1537,7 @@ class FWWindow(QMainWindow):
         try:
             self._db_manager = DatabaseManager()
             self._db_manager.on_history_changed = self._on_history_changed
+            self._editor_mgr.set_db_manager(self._db_manager)
             file_path = self._db_manager.load(file_path)
         except sqlalchemy.exc.IntegrityError as e:
             logger.exception('Failed to load %s', file_path)
@@ -1941,64 +1794,7 @@ class FWWindow(QMainWindow):
     @Slot(str, str)
     def _open_object_editor(self, obj_id, obj_type):
         """Open the editor panel for the given object (triggered by tree double-click)."""
-        dialog_widget = self._editor_map.get(obj_type)
-        if dialog_widget is None:
-            return
-
-        model_cls = _MODEL_MAP.get(obj_type)
-        if model_cls is None:
-            return
-
-        # Flush pending changes from the current editor before switching.
-        self._flush_editor_changes()
-
-        # Close any previous editor session to avoid leaks.
-        if self._editor_session is not None:
-            self._editor_session.close()
-
-        self._editor_session = self._db_manager.create_session()
-        obj = self._editor_session.get(model_cls, uuid.UUID(obj_id))
-        if obj is None:
-            self._editor_session.close()
-            self._editor_session = None
-            return
-
-        all_tags = self._gather_all_tags(self._editor_session)
-        dialog_widget.load_object(obj, all_tags=all_tags)
-        self._current_editor = dialog_widget
-        self._editor_obj_id = obj_id
-        self._editor_obj_name = obj.name
-        self._editor_obj_type = obj_type
-
-        # The dialog widget sits inside a page's layout, not as a direct
-        # page of the stacked widget — switch to its parent page instead.
-        self.objectEditorStack.setCurrentWidget(dialog_widget.parentWidget())
-        self._show_editor_panel()
-
-        path = _build_editor_path(obj)
-        display = getattr(self, '_display_file', None) or self._current_file
-        if display:
-            path = f'[{display}] / {path}'
-        self.editorDockWidget.setWindowTitle(path)
-
-        icon_path = f':/Icons/{obj_type}/icon-big'
-        pixmap = QIcon(icon_path).pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
-
-        if not self.editorDockWidget.isVisible():
-            self.editorDockWidget.setVisible(True)
-            self.actionEditor_panel.setChecked(True)
-
-        # Focus the first editable widget in the editor panel.
-        dialog_widget.setFocus()
-        dialog_widget.focusNextChild()
-
-        # If the object lives under a Firewall/Cluster, ensure the
-        # parent device's policy rule set is open in the MDI area.
-        # Mirrors fwbuilder's FWWindow::openEditor() which calls
-        # Host::getParentHost() and opens the policy automatically.
-        self._ensure_parent_rule_set_open(obj, obj_type)
+        self._editor_mgr.open_object(obj_id, obj_type)
 
     def _ensure_parent_rule_set_open(self, obj, obj_type):
         """Open the parent firewall's policy if no rule set is shown.
@@ -2042,102 +1838,7 @@ class FWWindow(QMainWindow):
     @Slot()
     def _on_editor_changed(self):
         """Handle a change in the active editor: apply and commit."""
-        editor = self._current_editor
-        session = self._editor_session
-        if editor is None or session is None:
-            return
-        editor.apply_all()
-        # Capture path while the session is still usable (before a
-        # potential rollback which would expire all ORM state).
-        obj = getattr(editor, '_obj', None)
-        obj_path = _build_editor_path(obj) if obj else None
-
-        # Nothing to persist (e.g. checkbox toggled back to the same
-        # value) — skip the commit and undo-stack entry but still
-        # refresh the tree/MDI below.
-        has_changes = bool(session.new or session.dirty or session.deleted)
-
-        if has_changes:
-            # Stamp the lastModified timestamp on Firewall/Cluster objects
-            # so the compile dialog knows recompilation is needed.
-            now_epoch = None
-            if isinstance(obj, Firewall):
-                now_epoch = int(datetime.now(tz=UTC).timestamp())
-                data = dict(obj.data or {})
-                data['lastModified'] = now_epoch
-                obj.data = data
-
-            try:
-                session.commit()
-            except sqlalchemy.exc.IntegrityError as e:
-                session.rollback()
-                if 'UNIQUE constraint failed' in str(e):
-                    if obj_path:
-                        detail = obj_path.replace(' / ', ' > ')
-                        msg = self.tr(f'Duplicate names are not allowed: {detail}')
-                    else:
-                        msg = self.tr('Duplicate names are not allowed.')
-                    QMessageBox.critical(self, 'FirewallFabrik', msg)
-                else:
-                    logger.exception('Commit failed')
-                return
-
-            # Build a human-readable undo description.
-            obj = getattr(editor, '_obj', None)
-            if obj is not None:
-                prefix = _device_prefix(obj)
-                obj_type = getattr(obj, 'type', type(obj).__name__)
-                old_name = getattr(self, '_editor_obj_name', '')
-                new_name = obj.name
-                if old_name and new_name != old_name:
-                    desc = _undo_desc(
-                        'Rename',
-                        obj_type,
-                        new_name,
-                        old_name=old_name,
-                        prefix=prefix,
-                    )
-                else:
-                    desc = _undo_desc('Edit', obj_type, new_name, prefix=prefix)
-                self._editor_obj_name = new_name
-            else:
-                desc = 'Editor change'
-            self._db_manager.save_state(desc)
-
-            # Update the editor panel's "Modified" label for firewalls.
-            if now_epoch is not None:
-                label = getattr(editor, 'last_modified', None)
-                if label is not None:
-                    label.setText(
-                        datetime.fromtimestamp(now_epoch, tz=UTC).strftime(
-                            '%Y-%m-%d %H:%M:%S'
-                        )
-                    )
-
-        # Always keep the tree in sync with the editor — even when
-        # SQLAlchemy does not flag the session as dirty (JSON column
-        # change detection can miss dict value changes).
-        if obj is not None:
-            self._object_tree.update_item(obj)
-
-        # Keep MDI sub-window titles in sync (e.g. after rename or
-        # toggling inactive).
-        if isinstance(obj, Firewall):
-            fw_id = obj.id
-            fw_name = obj.name
-            for sub in self.m_space.subWindowList():
-                if getattr(sub, '_fwf_device_id', None) != fw_id:
-                    continue
-                rs_uuid = getattr(sub, '_fwf_rule_set_id', None)
-                if rs_uuid is None:
-                    continue
-                try:
-                    with self._db_manager.session() as sess:
-                        rs = sess.get(RuleSet, rs_uuid)
-                        rs_name = rs.name if rs else '?'
-                except Exception:
-                    rs_name = '?'
-                sub.setWindowTitle(f'{fw_name} / {rs_name}')
+        self._editor_mgr.on_editor_changed()
 
     def _on_tree_changed(self, activate_obj_id='', activate_obj_type=''):
         """Refresh the tree and editor after a CRUD operation.
@@ -2182,10 +1883,7 @@ class FWWindow(QMainWindow):
     @Slot()
     def _show_editor_panel(self):
         """Show the editor dock and switch to the Editor tab."""
-        if not self.editorDockWidget.isVisible():
-            self.editorDockWidget.setVisible(True)
-            self.actionEditor_panel.setChecked(True)
-        self.editorPanelTabWidget.setCurrentIndex(0)
+        self._editor_mgr.show_editor_panel()
 
     @Slot()
     def _show_find_panel(self):
@@ -2283,102 +1981,23 @@ class FWWindow(QMainWindow):
 
     def open_comment_editor(self, model, index):
         """Open the comment editor panel in the editor pane."""
-        self._close_editor()
-
-        self.w_CommentEditorPanel.load_rule(model, index)
-        self.objectEditorStack.setCurrentWidget(
-            self.w_CommentEditorPanel.parentWidget(),
-        )
-        self._show_editor_panel()
-        self.editorDockWidget.setWindowTitle('Comment')
-
-        pixmap = QIcon(':/Icons/Comment/icon-big').pixmap(64, 64)
-        if pixmap.isNull():
-            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
+        self._editor_mgr.open_comment_editor(model, index)
 
     def open_rule_options(self, model, index):
         """Open the rule options panel in the editor pane."""
-        # Close any current object editor session.
-        self._close_editor()
-
-        self.w_RuleOptionsDialog.load_rule(model, index)
-        self.objectEditorStack.setCurrentWidget(
-            self.w_RuleOptionsDialog.parentWidget(),
-        )
-        self._show_editor_panel()
-        self.editorDockWidget.setWindowTitle('Rule Options')
-
-        pixmap = QIcon(':/Icons/Options/icon-big').pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
+        self._editor_mgr.open_rule_options(model, index)
 
     def open_action_editor(self, model, index):
         """Open the action parameters panel in the editor pane."""
-        self._close_editor()
-
-        self.w_ActionsDialog.load_rule(model, index)
-        self.objectEditorStack.setCurrentWidget(
-            self.w_ActionsDialog.parentWidget(),
-        )
-        self._show_editor_panel()
-
-        # Determine the action name for title and icon.
-        row_data = model.get_row_data(index)
-        action_enum = 'Policy'
-        if row_data is not None:
-            action_enum = row_data.action or 'Policy'
-        self.editorDockWidget.setWindowTitle(
-            f'Action: {_action_label(action_enum)}',
-        )
-
-        icon_path = f':/Icons/{action_enum}/icon-big'
-        pixmap = QIcon(icon_path).pixmap(64, 64)
-        if pixmap.isNull():
-            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
+        self._editor_mgr.open_action_editor(model, index)
 
     def open_direction_editor(self, model, index):
         """Open the (blank) direction pane in the editor pane."""
-        self._close_editor()
-
-        self._blank_label.clear()
-        self.objectEditorStack.setCurrentWidget(
-            self.w_BlankDialog.parentWidget(),
-        )
-        self._show_editor_panel()
-
-        row_data = model.get_row_data(index)
-        direction_name = 'Both'
-        if row_data is not None:
-            direction_name = row_data.direction or 'Both'
-        self.editorDockWidget.setWindowTitle(f'Direction: {direction_name}')
-
-        icon_path = f':/Icons/{direction_name}/icon-big'
-        pixmap = QIcon(icon_path).pixmap(64, 64)
-        if pixmap.isNull():
-            pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
+        self._editor_mgr.open_direction_editor(model, index)
 
     def show_any_editor(self, slot):
         """Show the 'Any' object description in the editor pane."""
-        self._close_editor()
-
-        msg = _ANY_MESSAGES.get(slot, '')
-        self._blank_label.setText(msg)
-        self.objectEditorStack.setCurrentWidget(
-            self.w_BlankDialog.parentWidget(),
-        )
-        self._show_editor_panel()
-        self.editorDockWidget.setWindowTitle('Any')
-
-        icon_type = _ANY_ICON_TYPE.get(slot, 'Policy')
-        pixmap = QIcon(f':/Icons/{icon_type}/icon-big').pixmap(64, 64)
-        if not pixmap.isNull():
-            self.objectTypeIcon.setPixmap(pixmap)
+        self._editor_mgr.show_any_editor(slot)
 
     def show_where_used(self, obj_id, name, obj_type):
         """Show where-used results for the given object."""
@@ -2630,8 +2249,8 @@ class FWWindow(QMainWindow):
         self.undoView.blockSignals(False)
 
     def _refresh_after_history_change(self):
-        obj_id = getattr(self, '_editor_obj_id', None)
-        obj_type = getattr(self, '_editor_obj_type', None)
+        obj_id = self._editor_mgr.current_obj_id
+        obj_type = self._editor_mgr.current_obj_type
         self._close_editor()
 
         # Reload open rule set models instead of closing all subwindows.
@@ -2651,27 +2270,34 @@ class FWWindow(QMainWindow):
             self._open_object_editor(obj_id, obj_type)
 
     def _flush_editor_changes(self):
-        """Apply any pending editor widget changes to the database.
-
-        QLineEdit only fires ``editingFinished`` on focus loss or Enter.
-        When the user presses Ctrl+S (or switches objects, closes files,
-        etc.) while a QLineEdit still has focus, the signal hasn't fired
-        yet.  Calling this method ensures the current widget values are
-        written to the ORM object and committed before any save/close
-        operation.
-        """
-        if self._current_editor is not None and self._editor_session is not None:
-            self._on_editor_changed()
+        """Apply any pending editor widget changes to the database."""
+        self._editor_mgr.flush()
 
     def _close_editor(self):
-        self._flush_editor_changes()
-        if self._editor_session is not None:
-            self._editor_session.close()
-        self._editor_session = None
-        self._current_editor = None
-        self._editor_obj_id = None
-        self._editor_obj_type = None
-        self.editorDockWidget.setWindowTitle('Editor')
+        """Close the current editor session."""
+        self._editor_mgr.close()
+
+    def _on_editor_object_saved(self, obj):
+        """Update tree item after editor saves an object."""
+        self._object_tree.update_item(obj)
+
+    def _on_editor_mdi_titles_changed(self, fw_obj):
+        """Update MDI sub-window titles after a firewall rename."""
+        fw_id = fw_obj.id
+        fw_name = fw_obj.name
+        for sub in self.m_space.subWindowList():
+            if getattr(sub, '_fwf_device_id', None) != fw_id:
+                continue
+            rs_uuid = getattr(sub, '_fwf_rule_set_id', None)
+            if rs_uuid is None:
+                continue
+            try:
+                with self._db_manager.session() as sess:
+                    rs = sess.get(RuleSet, rs_uuid)
+                    rs_name = rs.name if rs else '?'
+            except Exception:
+                rs_name = '?'
+            sub.setWindowTitle(f'{fw_name} / {rs_name}')
 
     def _show_traceback_error(self, summary):
         """Show a critical error dialog with the current traceback.
@@ -2761,9 +2387,4 @@ class FWWindow(QMainWindow):
     @staticmethod
     def _gather_all_tags(session):
         """Collect every tag used across all object tables."""
-        all_tags = set()
-        for cls in (Address, Group, Host, Interface, Interval, Service):
-            for (tag_set,) in session.execute(sqlalchemy.select(cls.keywords)):
-                if tag_set:
-                    all_tags.update(tag_set)
-        return all_tags
+        return EditorManager.gather_all_tags(session)
