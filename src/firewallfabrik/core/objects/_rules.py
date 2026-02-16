@@ -420,10 +420,13 @@ class Rule(Base):
     def options(self, opts: dict | None) -> None:
         """Set typed columns from an options dict.
 
-        Used by XML reader and for backward compatibility.
+        Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        Use get_option() for strict validation when accessing options.
         """
         if not opts:
             return
+        # Set values for known options only, skip unknown
         for _, meta in RULE_OPTIONS.items():
             if meta.yaml_key in opts:
                 value = opts[meta.yaml_key]

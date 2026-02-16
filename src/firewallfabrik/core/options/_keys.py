@@ -179,8 +179,60 @@ class FirewallOption(StrEnum):
     # IPv4/IPv6 order
     IPV4_6_ORDER = 'ipv4_6_order'
 
+    # SNMP (legacy, for XML import)
+    SNMP_CONTACT = 'snmp_contact'
+    SNMP_DESCRIPTION = 'snmp_description'
+    SNMP_LOCATION = 'snmp_location'
+
     # TCP SYN checking
     DROP_NEW_TCP_WITH_NO_SYN = 'drop_new_tcp_with_no_syn'
+
+    # MAC address filtering
+    USE_MAC_ADDR = 'use_mac_addr'
+    USE_MAC_ADDR_FILTER = 'use_mac_addr_filter'
+
+    # Use ip tool for interface config
+    USE_IP_TOOL = 'use_ip_tool'
+
+    # SNAT options (iptables)
+    IPT_USE_SNAT_INSTEAD_OF_MASQ = 'ipt_use_snat_instead_of_masq'
+    IPT_SNAT_RANDOM = 'ipt_snat_random'
+
+    # Mangle table
+    IPT_MANGLE_ONLY_RULESETS = 'ipt_mangle_only_rulesets'
+    IPT_MARK_PREROUTING = 'ipt_mark_prerouting'
+
+    # Log rate limiting
+    LOG_LIMIT_VALUE = 'log_limit_value'
+    LOG_LIMIT_SUFFIX = 'log_limit_suffix'
+    LOG_ALL_DROPPED = 'log_all_dropped'
+    FALLBACK_LOG = 'fallback_log'
+
+    # Script paths
+    SCRIPT_ENV_PATH = 'script_env_path'
+    ACTIVATION = 'activation'  # Legacy variant of ACTIVATION_CMD
+
+    # High availability interfaces (legacy, for XML import)
+    CONFIGURE_CARP_INTERFACES = 'configure_carp_interfaces'
+    CONFIGURE_PFSYNC_INTERFACES = 'configure_pfsync_interfaces'
+
+    # Loopback interface
+    LOOPBACK_INTERFACE = 'loopback_interface'
+
+    # Modules directory
+    MODULES_DIR = 'modules_dir'
+
+    # Dyn addr / proxy ARP
+    DYN_ADDR = 'dyn_addr'
+    PROXY_ARP = 'proxy_arp'
+
+    # IPv6 options
+    ENABLE_IPV6 = 'enable_ipv6'
+    NO_IPV6_DEFAULT_POLICY = 'no_ipv6_default_policy'
+    ADD_RULES_FOR_IPV6_NEIGHBOR_DISCOVERY = 'add_rules_for_ipv6_neighbor_discovery'
+
+    # Legacy alias for FIREWALL_IS_PART_OF_ANY (without "_and_networks")
+    FIREWALL_IS_PART_OF_ANY_OLD = 'firewall_is_part_of_any'
 
 
 class RuleOption(StrEnum):

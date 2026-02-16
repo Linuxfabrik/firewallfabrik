@@ -379,6 +379,88 @@ class Host(Base):
     opt_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer, default=0
     )
+    # SNMP options (legacy, for XML import)
+    opt_snmp_contact: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_snmp_description: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_snmp_location: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Additional bool options
+    opt_use_mac_addr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_mac_addr_filter: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_use_ip_tool: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_ipt_use_snat_instead_of_masq: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_snat_random: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_mangle_only_rulesets: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_mark_prerouting: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_log_all_dropped: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_fallback_log: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_configure_carp_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_pfsync_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_dyn_addr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_proxy_arp: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_enable_ipv6: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_no_ipv6_default_policy: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_add_rules_for_ipv6_neighbor_discovery: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_firewall_is_part_of_any: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    # Additional str options
+    opt_log_limit_suffix: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_script_env_path: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_activation: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_loopback_interface: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_modules_dir: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Additional int options
+    opt_log_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
         'Library',
@@ -464,9 +546,12 @@ class Host(Base):
         """Set typed columns from an options dict.
 
         Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        Use get_option() for strict validation when accessing options.
         """
         if not opts:
             return
+        # Set values for known options only, skip unknown
         for _, meta in HOST_OPTIONS.items():
             if meta.yaml_key in opts:
                 value = opts[meta.yaml_key]
@@ -656,9 +741,12 @@ class Interface(Base):
         """Set typed columns from an options dict.
 
         Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        Use get_option() for strict validation when accessing options.
         """
         if not opts:
             return
+        # Set values for known options only, skip unknown
         for _, meta in INTERFACE_OPTIONS.items():
             if meta.yaml_key in opts:
                 value = opts[meta.yaml_key]

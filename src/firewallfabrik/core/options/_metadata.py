@@ -175,6 +175,24 @@ for opt in [
     FirewallOption.MANAGE_VIRTUAL_ADDR,
     FirewallOption.USE_IPTABLES_RESTORE,
     FirewallOption.DROP_NEW_TCP_WITH_NO_SYN,
+    # Additional bool options
+    FirewallOption.USE_MAC_ADDR,
+    FirewallOption.USE_MAC_ADDR_FILTER,
+    FirewallOption.USE_IP_TOOL,
+    FirewallOption.IPT_USE_SNAT_INSTEAD_OF_MASQ,
+    FirewallOption.IPT_SNAT_RANDOM,
+    FirewallOption.IPT_MANGLE_ONLY_RULESETS,
+    FirewallOption.IPT_MARK_PREROUTING,
+    FirewallOption.LOG_ALL_DROPPED,
+    FirewallOption.FALLBACK_LOG,
+    FirewallOption.CONFIGURE_CARP_INTERFACES,
+    FirewallOption.CONFIGURE_PFSYNC_INTERFACES,
+    FirewallOption.DYN_ADDR,
+    FirewallOption.PROXY_ARP,
+    FirewallOption.ENABLE_IPV6,
+    FirewallOption.NO_IPV6_DEFAULT_POLICY,
+    FirewallOption.ADD_RULES_FOR_IPV6_NEIGHBOR_DISCOVERY,
+    FirewallOption.FIREWALL_IS_PART_OF_ANY_OLD,
 ]:
     HOST_OPTIONS[opt] = OptionMeta(
         yaml_key=opt.value,
@@ -207,6 +225,12 @@ for opt in [
     FirewallOption.EPILOG_SCRIPT,
     FirewallOption.PROLOG_PLACE,
     FirewallOption.IPV4_6_ORDER,
+    # Additional str options
+    FirewallOption.LOG_LIMIT_SUFFIX,
+    FirewallOption.SCRIPT_ENV_PATH,
+    FirewallOption.ACTIVATION,
+    FirewallOption.LOOPBACK_INTERFACE,
+    FirewallOption.MODULES_DIR,
 ]:
     HOST_OPTIONS[opt] = OptionMeta(
         yaml_key=opt.value,
@@ -221,12 +245,26 @@ for opt in [
     FirewallOption.ULOG_QTHRESHOLD,
     FirewallOption.ULOG_NLGROUP,
     FirewallOption.LIMIT_VALUE,
+    FirewallOption.LOG_LIMIT_VALUE,
 ]:
     HOST_OPTIONS[opt] = OptionMeta(
         yaml_key=opt.value,
         column_name=_make_column_name(opt.value),
         default=0,
         col_type=int,
+    )
+
+# SNMP options (legacy, for XML import compatibility)
+for opt in [
+    FirewallOption.SNMP_CONTACT,
+    FirewallOption.SNMP_DESCRIPTION,
+    FirewallOption.SNMP_LOCATION,
+]:
+    HOST_OPTIONS[opt] = OptionMeta(
+        yaml_key=opt.value,
+        column_name=_make_column_name(opt.value),
+        default=None,
+        col_type=str,
     )
 
 # Interface options
