@@ -962,14 +962,14 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def compile(self):
-        if not self._current_file:
+        if not getattr(self, '_display_file', None):
             QMessageBox.warning(
                 self,
                 'FirewallFabrik',
                 self.tr('No file is loaded. Open or create a file first.'),
             )
             return
-        if self._db_manager.is_dirty:
+        if self._db_manager.is_dirty or not self._current_file:
             result = QMessageBox.question(
                 self,
                 'FirewallFabrik',
@@ -981,6 +981,8 @@ class FWWindow(QMainWindow):
             if result != QMessageBox.StandardButton.Save:
                 return
         self.fileSave()
+        if not self._current_file:
+            return
 
         from firewallfabrik.gui.compile_dialog import CompileDialog
 
@@ -996,14 +998,14 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def install(self):
-        if not self._current_file:
+        if not getattr(self, '_display_file', None):
             QMessageBox.warning(
                 self,
                 'FirewallFabrik',
                 self.tr('No file is loaded. Open or create a file first.'),
             )
             return
-        if self._db_manager.is_dirty:
+        if self._db_manager.is_dirty or not self._current_file:
             result = QMessageBox.question(
                 self,
                 'FirewallFabrik',
@@ -1015,6 +1017,8 @@ class FWWindow(QMainWindow):
             if result != QMessageBox.StandardButton.Save:
                 return
         self.fileSave()
+        if not self._current_file:
+            return
 
         from firewallfabrik.gui.compile_dialog import CompileDialog
 
