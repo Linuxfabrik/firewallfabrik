@@ -552,6 +552,7 @@ class FWWindow(QMainWindow):
         self.editorDockWidget.setVisible(False)
         self.undoDockWidget.setVisible(False)
         self.compileAction.setEnabled(False)
+        self.fileReloadAction.setEnabled(False)
         self.fileSaveAction.setEnabled(False)
         self.fileSaveAsAction.setEnabled(False)
         self.installAction.setEnabled(False)
@@ -567,6 +568,7 @@ class FWWindow(QMainWindow):
         self.editorDockWidget.setVisible(editor_visible)
         self.actionEditor_panel.setChecked(editor_visible)
         self.compileAction.setEnabled(True)
+        self.fileReloadAction.setEnabled(self._current_file is not None)
         self.fileSaveAction.setEnabled(True)
         self.fileSaveAsAction.setEnabled(True)
         self.installAction.setEnabled(True)
@@ -585,22 +587,26 @@ class FWWindow(QMainWindow):
         if not self._db_manager.is_dirty:
             return True
         display = getattr(self, '_display_file', None) or self._current_file
-        name = display.name if display else 'Untitled'
-        result = QMessageBox.information(
-            self,
-            'FirewallFabrik',
+        name = str(display) if display else 'Untitled'
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle('FirewallFabrik')
+        box.setText(
             self.tr(
                 f'Some objects have been modified but not saved.\n'
-                f'Do you want to save {name} now?'
-            ),
-            QMessageBox.StandardButton.Save
-            | QMessageBox.StandardButton.Discard
-            | QMessageBox.StandardButton.Cancel,
+                f'Do you want to save {name} changes now?'
+            )
         )
-        if result == QMessageBox.StandardButton.Save:
+        save_btn = box.addButton(self.tr('&Save'), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(self.tr('&Discard'), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(self.tr('&Cancel'), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(save_btn)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is save_btn:
             self.fileSave()
             return True
-        return result == QMessageBox.StandardButton.Discard
+        return box.buttonRole(clicked) == QMessageBox.ButtonRole.DestructiveRole
 
     def _update_title(self):
         display = getattr(self, '_display_file', None) or self._current_file
@@ -785,6 +791,7 @@ class FWWindow(QMainWindow):
         self._rs_mgr.set_display_file(file_path)
         self._update_title()
         self._add_to_recent(str(file_path))
+        self.fileReloadAction.setEnabled(True)
 
     @Slot()
     def fileClose(self):
@@ -819,6 +826,69 @@ class FWWindow(QMainWindow):
         self._apply_no_file_state()
         self.editorDockWidget.blockSignals(False)
         self.undoDockWidget.blockSignals(False)
+
+    @Slot()
+    def fileReload(self):
+        """Re-read the current file from disk, discarding unsaved changes."""
+        if self._current_file is None or not self._current_file.is_file():
+            return
+        if self._db_manager.is_dirty:
+            result = QMessageBox.question(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'The file has been modified.\n'
+                    'Do you want to discard your changes and reload from disk?'
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if result != QMessageBox.StandardButton.Yes:
+                return
+        file_path = self._current_file
+        # Save tree state, close editors and MDI windows.
+        display = getattr(self, '_display_file', None)
+        if display:
+            self._object_tree.save_tree_state(str(display))
+            self._rs_mgr.save_state()
+        self._close_editor()
+        self._rs_mgr.close_all()
+        # Reload.
+        try:
+            self._db_manager = DatabaseManager()
+            self._db_manager.on_history_changed = self._on_history_changed
+            self._editor_mgr.set_db_manager(self._db_manager)
+            self._rs_mgr.set_db_manager(self._db_manager)
+            self._db_manager.load(file_path)
+        except Exception:
+            logger.exception('Failed to reload %s', file_path)
+            QMessageBox.critical(
+                self,
+                'FirewallFabrik',
+                self.tr(f"Failed to reload '{file_path}'"),
+            )
+            return
+        self._update_title()
+        with self._db_manager.session() as session:
+            self._object_tree.populate(session, file_key=str(display or file_path))
+        self._object_tree.set_db_manager(self._db_manager)
+        self._find_panel.set_tree(self._object_tree._tree)
+        self._find_panel.set_db_manager(self._db_manager)
+        self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
+        self._find_panel.set_open_rule_set_ids_callback(
+            self._rs_mgr.get_open_rule_set_ids,
+        )
+        self._find_panel.reset()
+        self._where_used_panel.set_tree(self._object_tree._tree)
+        self._where_used_panel.set_db_manager(self._db_manager)
+        self._where_used_panel.reset()
+        self.newObjectAction.setEnabled(
+            bool(self._object_tree._actions._get_writable_libraries())
+        )
+        self._update_undo_actions()
+        self._rs_mgr.restore_state(str(display or file_path))
+        if not self.m_space.subWindowList():
+            self._rs_mgr.open_first_firewall_policy()
+        self._object_tree.focus_filter()
 
     @Slot()
     def fileExit(self):
