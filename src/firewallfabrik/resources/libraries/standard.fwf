@@ -651,6 +651,15 @@ libraries:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:DNS 53'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:DNS 53'
       - type: 'ServiceGroup'
+        name: 'FreeIPA'
+        comment: 'FreeIPA is an integrated identity and authentication solution for Linux/UNIX environments, providing centralized user management, Kerberos authentication, DNS, and certificate authority services. If FreeIPA manages DNS, also add DNS 53 (TCP+UDP). NTP (UDP 123) is critical for Kerberos and should be allowed separately.'
+        members:
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:HTTPS 443'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Kerberos 88'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP 389'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAPS 636'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:kpasswd 464'
+      - type: 'ServiceGroup'
         name: 'IPSEC'
         members:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:AH'
