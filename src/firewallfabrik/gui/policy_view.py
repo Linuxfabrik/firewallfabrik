@@ -25,13 +25,14 @@ from PySide6.QtCore import (
     QSize,
     Qt,
 )
-from PySide6.QtGui import QColor, QDrag, QIcon, QPalette
+from PySide6.QtGui import QColor, QDrag, QFont, QIcon, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QHBoxLayout,
     QHeaderView,
     QInputDialog,
+    QLabel,
     QMenu,
     QStyle,
     QStyledItemDelegate,
@@ -1283,6 +1284,9 @@ class PolicyView(QTreeView):
                 return
 
         if modifiers == Qt.KeyboardModifier.NoModifier:
+            if key == Qt.Key.Key_Delete:
+                self.delete_selection()
+                return
             if key == Qt.Key.Key_Insert:
                 idx = self.currentIndex()
                 if idx.isValid() and not model.is_group(idx):
@@ -1413,7 +1417,11 @@ class PolicyView(QTreeView):
 
 
 class RuleSetPanel(QWidget):
-    """Container with an 'Insert Rule' button and a :class:`PolicyView`."""
+    """Container with title label, 'Insert Rule' button, and a :class:`PolicyView`.
+
+    Matches fwbuilder's ``projectpanel_q.ui`` toolbar layout: [+] button,
+    spacer, centred title label (14pt), spacer.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1429,11 +1437,22 @@ class RuleSetPanel(QWidget):
         add_btn.setToolTip('Insert rule')
         add_btn.clicked.connect(self._insert_rule)
         toolbar.addWidget(add_btn)
-        toolbar.addStretch()
+
+        self._title_label = QLabel()
+        font = QFont()
+        font.setPointSize(14)
+        self._title_label.setFont(font)
+        self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        toolbar.addWidget(self._title_label, 1)
+
         layout.addLayout(toolbar)
 
         self.policy_view = PolicyView()
         layout.addWidget(self.policy_view)
+
+    def set_title(self, title):
+        """Set the title label text (e.g. 'fw-name / Policy')."""
+        self._title_label.setText(title)
 
     def _insert_rule(self):
         model = self.policy_view.model()

@@ -23,7 +23,7 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QModelIndex, QObject, QSettings, Qt, Signal, Slot
-from PySide6.QtGui import QActionGroup, QKeySequence
+from PySide6.QtGui import QActionGroup, QIcon, QKeySequence
 from PySide6.QtWidgets import QMdiSubWindow
 
 from firewallfabrik.core.objects import Address, Interface, RuleSet
@@ -87,13 +87,15 @@ class RuleSetWindowManager(QObject):
             object_name=fw_name,
         )
         model.firewall_modified.connect(self.firewall_modified)
+        title = f'{fw_name} / {rs_name}'
         panel = RuleSetPanel()
+        panel.set_title(title)
         panel.policy_view.setModel(model)
 
         sub = QMdiSubWindow()
         sub.setWidget(panel)
-        sub.setWindowTitle(f'{fw_name} / {rs_name}')
-        sub.setWindowIcon(self.parent().windowIcon())
+        sub.setWindowTitle(title)
+        sub.setWindowIcon(QIcon())
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         sub._fwf_rule_set_id = rs_uuid
         sub._fwf_device_id = None  # set below if available
@@ -142,13 +144,15 @@ class RuleSetWindowManager(QObject):
             rule_set_type=rs_type,
         )
         model.firewall_modified.connect(self.firewall_modified)
+        title = f'{fw_name} / {rs_name}'
         panel = RuleSetPanel()
+        panel.set_title(title)
         panel.policy_view.setModel(model)
 
         sub = QMdiSubWindow()
         sub.setWidget(panel)
-        sub.setWindowTitle(f'{fw_name} / {rs_name}')
-        sub.setWindowIcon(self.parent().windowIcon())
+        sub.setWindowTitle(title)
+        sub.setWindowIcon(QIcon())
         sub.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self._mdi_area.addSubWindow(sub)
         sub.showMaximized()
@@ -408,7 +412,11 @@ class RuleSetWindowManager(QObject):
                     rs_name = rs.name if rs else '?'
             except Exception:
                 rs_name = '?'
-            sub.setWindowTitle(f'{fw_name} / {rs_name}')
+            title = f'{fw_name} / {rs_name}'
+            sub.setWindowTitle(title)
+            panel = sub.widget()
+            if isinstance(panel, RuleSetPanel):
+                panel.set_title(title)
 
     # --- Window menu ---
 
