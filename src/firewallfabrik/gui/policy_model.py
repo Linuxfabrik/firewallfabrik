@@ -48,6 +48,14 @@ from firewallfabrik.gui.label_settings import (
     get_label_color,
     get_label_text,
 )
+from firewallfabrik.gui.policy_rule_options import (
+    build_options_display,
+    nat_options_tooltip,
+    opt_bool,
+    opt_int,
+    options_tooltip,
+    routing_options_tooltip,
+)
 from firewallfabrik.gui.tooltip_helpers import obj_tooltip
 
 ELEMENTS_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -83,8 +91,8 @@ _NAT_COLS = (
     _ColDesc('Translated Src', 'tsrc', 'element'),
     _ColDesc('Translated Dst', 'tdst', 'element'),
     _ColDesc('Translated Srv', 'tsrv', 'element'),
-    _ColDesc('Itf Inbound', 'itf_inb', 'element'),
-    _ColDesc('Itf Outbound', 'itf_outb', 'element'),
+    _ColDesc('Interface In', 'itf_inb', 'element'),
+    _ColDesc('Interface Out', 'itf_outb', 'element'),
     _ColDesc('Action', 'action', 'action'),
     _ColDesc('Options', 'options', 'options'),
     _ColDesc('Comment', None, 'comment'),
@@ -171,44 +179,6 @@ def _build_col_config(cols):
     }
 
 
-# ---------------------------------------------------------------------------
-# Backward-compatible module-level constants (correct for Policy only).
-# View code will progressively switch to model-level config.
-# ---------------------------------------------------------------------------
-
-HEADERS = [c.header for c in _POLICY_COLS]
-
-_COL_ACTION = 6
-_COL_COMMENT = 9
-_COL_DIRECTION = 5
-_COL_DST = 2
-_COL_ITF = 4
-_COL_OPTIONS = 8
-_COL_POSITION = 0
-_COL_SRC = 1
-_COL_SRV = 3
-_COL_TIME = 7
-
-_COL_TO_SLOT = {
-    _COL_ACTION: 'action',
-    _COL_DIRECTION: 'direction',
-    _COL_DST: 'dst',
-    _COL_ITF: 'itf',
-    _COL_OPTIONS: 'options',
-    _COL_SRC: 'src',
-    _COL_SRV: 'srv',
-    _COL_TIME: 'when',
-}
-
-_SLOT_TO_COL = {v: k for k, v in _COL_TO_SLOT.items()}
-
-_ELEMENT_COLS = frozenset({_COL_DST, _COL_ITF, _COL_SRC, _COL_SRV, _COL_TIME})
-
-# All columns that support single-click element selection / highlighting.
-_SELECTABLE_COLS = _ELEMENT_COLS | {_COL_ACTION, _COL_DIRECTION, _COL_OPTIONS}
-
-# ---------------------------------------------------------------------------
-
 _DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})
 
 _GROUP_BG = QColor('lightgray')
@@ -224,6 +194,31 @@ def _action_label(enum_name):
 
 # Classes used to resolve target names from the database.
 _NAME_CLASSES = (Address, Group, Host, Interface, Interval, Service)
+
+_BLACK = QColor('black')
+_WHITE = QColor('white')
+
+
+def _contrast_color(bg):
+    """Return black or white, whichever has more contrast against *bg*.
+
+    Uses the WCAG perceived-luminance formula.
+    """
+    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
+    return _BLACK if luminance > 128 else _WHITE
+
+
+def _format_elements(triples):
+    """Format a list of (uuid, name, type, ...) tuples for display."""
+    if not triples:
+        return 'Any'
+    return '\n'.join(name for _, name, *_ in triples)
+
+
+def _icon_suffix():
+    """Return the QRC icon alias suffix for the configured rule icon size."""
+    size = QSettings().value('UI/IconSizeInRules', 25, type=int)
+    return 'icon-tree' if size == 16 else 'icon'
 
 
 class _NodeType(enum.IntEnum):
@@ -498,20 +493,20 @@ class PolicyTreeModel(QAbstractItemModel):
             comment=rule.comment or '',
             direction=dir_name,
             direction_int=direction_int,
-            disabled=_opt_bool(opts, 'disabled'),
+            disabled=opt_bool(opts, 'disabled'),
             dst=slots.get('dst', []),
             group=group_name,
             itf=slots.get('itf', []),
             itf_inb=slots.get('itf_inb', []),
             itf_outb=slots.get('itf_outb', []),
             label=rule.label or '',
-            metric=_opt_int(opts, 'metric'),
+            metric=opt_int(opts, 'metric'),
             nat_action=nat_action_name,
             nat_action_int=nat_action_int,
             negations=rule.negations or {},
             odst=slots.get('odst', []),
             options=opts,
-            options_display=_build_options_display(opts),
+            options_display=build_options_display(opts, self._rule_set_type),
             osrc=slots.get('osrc', []),
             osrv=slots.get('osrv', []),
             position=rule.position,
@@ -816,7 +811,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if desc.col_type == 'direction':
             return row_data.direction
         if desc.col_type == 'metric':
-            return str(row_data.metric) if row_data.metric else ''
+            return str(row_data.metric)
         if desc.col_type == 'options':
             return (
                 _format_elements(row_data.options_display)
@@ -877,13 +872,17 @@ class PolicyTreeModel(QAbstractItemModel):
             )
 
         if desc.col_type == 'options':
-            return _options_tooltip(row_data)
+            if self._rule_set_type == 'NAT':
+                return nat_options_tooltip(row_data)
+            if self._rule_set_type == 'Routing':
+                return routing_options_tooltip(row_data)
+            return options_tooltip(row_data)
 
         if desc.col_type == 'comment':
             return row_data.comment or None
 
         if desc.col_type == 'metric':
-            return str(row_data.metric) if row_data.metric else None
+            return f'<b>Metric:</b> {row_data.metric}'
 
         return None
 
@@ -1570,6 +1569,24 @@ class PolicyTreeModel(QAbstractItemModel):
                 rule.options = opts
         self.reload()
 
+    def set_metric(self, index, metric):
+        """Set the routing metric for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        with self._mutation_session(
+            self._desc(f'Edit rule {row_data.position} metric'),
+        ) as session:
+            rule = session.get(self._rule_cls, row_data.rule_id)
+            if rule is not None:
+                opts = dict(rule.options or {})
+                if metric:
+                    opts['metric'] = metric
+                else:
+                    opts.pop('metric', None)
+                rule.options = opts
+        self.reload()
+
     def set_options(self, index, options):
         """Replace rule options for the rule at *index*.
 
@@ -1775,204 +1792,3 @@ class PolicyTreeModel(QAbstractItemModel):
             ).all()
             for i, r in enumerate(remaining):
                 r.position = i
-
-
-_BLACK = QColor('black')
-_WHITE = QColor('white')
-
-
-def _build_options_display(opts):
-    """Build a list of (id, label, icon_type) triples from rule options.
-
-    Matches fwbuilder's ``PolicyModel::getRuleOptions()`` display logic.
-    The *id* is a unique string sentinel used for per-element selection.
-    """
-    if not opts:
-        return []
-    result = []
-    if _opt_str(opts, 'counter_name') or _opt_str(opts, 'rule_name_accounting'):
-        result.append(('__opt_accounting__', 'accounting', 'Accounting'))
-    if _opt_bool(opts, 'classification'):
-        label = _opt_str(opts, 'classify_str') or 'classify'
-        result.append(('__opt_classify__', label, 'Classify'))
-    if _opt_bool(opts, 'log'):
-        result.append(('__opt_log__', 'log', 'Log'))
-    if _has_nondefault_options(opts):
-        result.append(('__opt_options__', 'options', 'Options'))
-    if _opt_bool(opts, 'routing'):
-        result.append(('__opt_route__', 'route', 'Route'))
-    if _opt_bool(opts, 'tagging'):
-        result.append(('__opt_tag__', 'tag', 'TagService'))
-    return result
-
-
-def _opt_bool(opts, key):
-    """Return a boolean for *key*, coercing ``'True'``/``'False'`` strings."""
-    val = opts.get(key)
-    if isinstance(val, str):
-        return val.lower() == 'true'
-    return bool(val)
-
-
-def _opt_str(opts, key):
-    """Return a non-empty string for *key*, or ``''``."""
-    val = opts.get(key, '')
-    return str(val) if val else ''
-
-
-def _opt_int(opts, key):
-    """Return an int for *key*, or 0."""
-    val = opts.get(key, 0)
-    try:
-        return int(val)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _options_tooltip(row_data):
-    """Build an HTML tooltip for the Options column.
-
-    Mirrors fwbuilder's ``FWObjectPropertiesFactory::getPolicyRuleOptions()``.
-    The stateful/stateless default depends on the action: Accept defaults to
-    stateful, all other actions default to stateless.
-    """
-    opts = row_data.options or {}
-    rows = []
-
-    # Stateful / Stateless.
-    if _opt_bool(opts, 'stateless'):
-        rows.append(('Stateless', ''))
-    else:
-        rows.append(('Stateful', ''))
-
-    # iptables-specific options (the only platform we support).
-    if _opt_bool(opts, 'tagging'):
-        tag_id = _opt_str(opts, 'tagobject_id')
-        rows.append(('Tag:', tag_id or 'yes'))
-
-    classify = _opt_str(opts, 'classify_str')
-    if classify:
-        rows.append(('Class:', classify))
-
-    log_prefix = _opt_str(opts, 'log_prefix')
-    if log_prefix:
-        rows.append(('Log prefix:', log_prefix))
-
-    log_level = _opt_str(opts, 'log_level')
-    if log_level:
-        rows.append(('Log level:', log_level))
-
-    nlgroup = _opt_int(opts, 'ulog_nlgroup')
-    if nlgroup > 1:
-        rows.append(('Netlink group:', str(nlgroup)))
-
-    limit_val = _opt_int(opts, 'limit_value')
-    if limit_val > 0:
-        arg = '! ' if _opt_bool(opts, 'limit_value_not') else ''
-        arg += str(limit_val)
-        suffix = _opt_str(opts, 'limit_suffix')
-        if suffix:
-            arg += suffix
-        rows.append(('Limit value:', arg))
-
-    limit_burst = _opt_int(opts, 'limit_burst')
-    if limit_burst > 0:
-        rows.append(('Limit burst:', str(limit_burst)))
-
-    connlimit = _opt_int(opts, 'connlimit_value')
-    if connlimit > 0:
-        arg = '! ' if _opt_bool(opts, 'connlimit_above_not') else ''
-        arg += str(connlimit)
-        rows.append(('Connlimit value:', arg))
-
-    hashlimit_val = _opt_int(opts, 'hashlimit_value')
-    if hashlimit_val > 0:
-        hl_name = _opt_str(opts, 'hashlimit_name')
-        if hl_name:
-            rows.append(('Hashlimit name:', hl_name))
-        arg = str(hashlimit_val)
-        hl_suffix = _opt_str(opts, 'hashlimit_suffix')
-        if hl_suffix:
-            arg += hl_suffix
-        rows.append(('Hashlimit value:', arg))
-        hl_burst = _opt_int(opts, 'hashlimit_burst')
-        if hl_burst > 0:
-            rows.append(('Hashlimit burst:', str(hl_burst)))
-
-    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
-        rows.append(('Part of Any', ''))
-
-    # Logging (always shown, last row).
-    logging_on = _opt_bool(opts, 'log')
-    rows.append(('Logging:', 'on' if logging_on else 'off'))
-
-    # Format as HTML table.
-    html = '<table>'
-    for label, value in rows:
-        html += f"<tr><th align='left'>{label}</th><td>{value}</td></tr>"
-    html += '</table>'
-    return html
-
-
-def _has_nondefault_options(opts):
-    """Check whether any non-default iptables rule options are set.
-
-    Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
-    """
-    if _opt_int(opts, 'connlimit_value') > 0:
-        return True
-    if _opt_bool(opts, 'connlimit_above_not'):
-        return True
-    if _opt_int(opts, 'connlimit_masklen') > 0:
-        return True
-    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
-        return True
-    if _opt_int(opts, 'hashlimit_burst') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_expire') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_gcinterval') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_max') > 0:
-        return True
-    if _opt_str(opts, 'hashlimit_name'):
-        return True
-    if _opt_int(opts, 'hashlimit_size') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_value') > 0:
-        return True
-    if _opt_int(opts, 'limit_burst') > 0:
-        return True
-    if _opt_str(opts, 'limit_suffix'):
-        return True
-    if _opt_int(opts, 'limit_value') > 0:
-        return True
-    if _opt_bool(opts, 'limit_value_not'):
-        return True
-    if _opt_str(opts, 'log_level'):
-        return True
-    if _opt_str(opts, 'log_prefix'):
-        return True
-    return _opt_int(opts, 'ulog_nlgroup') > 1
-
-
-def _icon_suffix():
-    """Return the QRC icon alias suffix for the configured rule icon size."""
-    size = QSettings().value('UI/IconSizeInRules', 25, type=int)
-    return 'icon-tree' if size == 16 else 'icon'
-
-
-def _contrast_color(bg):
-    """Return black or white, whichever has more contrast against *bg*.
-
-    Uses the WCAG perceived-luminance formula.
-    """
-    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
-    return _BLACK if luminance > 128 else _WHITE
-
-
-def _format_elements(triples):
-    """Format a list of (uuid, name, type, ...) tuples for display."""
-    if not triples:
-        return 'Any'
-    return '\n'.join(name for _, name, *_ in triples)

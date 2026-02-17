@@ -52,18 +52,11 @@ from firewallfabrik.gui.policy_context_menu import (
     build_direction_menu,
     build_element_menu,
     build_group_header_menu,
+    build_metric_menu,
     build_options_menu,
     build_row_menu,
 )
 from firewallfabrik.gui.policy_model import (
-    _COL_ACTION,
-    _COL_COMMENT,
-    _COL_DIRECTION,
-    _COL_OPTIONS,
-    _COL_TO_SLOT,
-    _ELEMENT_COLS,
-    _SELECTABLE_COLS,
-    _SLOT_TO_COL,
     ELEMENTS_ROLE,
     FWF_MIME_TYPE,
     NEGATED_ROLE,
@@ -125,7 +118,6 @@ class _CellBorderDelegate(QStyledItemDelegate):
         if (
             isinstance(view, PolicyView)
             and model is not None
-            and hasattr(model, 'position_col')
             and index.column() == model.position_col
             and not (option.state & QStyle.StateFlag.State_Selected)
         ):
@@ -289,24 +281,18 @@ class _CellBorderDelegate(QStyledItemDelegate):
 
 
 def _model_col_to_slot(model, col):
-    """Return the slot name for *col* using model config, falling back to Policy constants."""
-    if model is not None and hasattr(model, 'col_to_slot'):
-        return model.col_to_slot.get(col)
-    return _COL_TO_SLOT.get(col)
+    """Return the slot name for *col* using model config."""
+    return model.col_to_slot.get(col)
 
 
 def _model_element_cols(model):
-    """Return the element column frozenset from the model or Policy default."""
-    if model is not None and hasattr(model, 'element_cols'):
-        return model.element_cols
-    return _ELEMENT_COLS
+    """Return the element column frozenset from the model."""
+    return model.element_cols
 
 
 def _model_selectable_cols(model):
-    """Return the selectable column frozenset from the model or Policy default."""
-    if model is not None and hasattr(model, 'selectable_cols'):
-        return model.selectable_cols
-    return _SELECTABLE_COLS
+    """Return the selectable column frozenset from the model."""
+    return model.selectable_cols
 
 
 class PolicyView(QTreeView):
@@ -449,9 +435,7 @@ class PolicyView(QTreeView):
             return
 
         sel_model = self.selectionModel()
-        slot_to_col = (
-            model.slot_to_col if hasattr(model, 'slot_to_col') else _SLOT_TO_COL
-        )
+        slot_to_col = model.slot_to_col
 
         # Restore current index (needed for keyboard shortcuts like X to compile).
         saved_current = getattr(self, '_saved_current_rule_id', None)
@@ -515,9 +499,7 @@ class PolicyView(QTreeView):
     def _select_element_at(self, index, vp_pos, model):
         """Select the element at *vp_pos* for any selectable column."""
         col = index.column()
-        col_to_slot = (
-            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
-        )
+        col_to_slot = model.col_to_slot
         element_cols = _model_element_cols(model)
         slot = col_to_slot.get(col)
         if not slot:
@@ -560,7 +542,7 @@ class PolicyView(QTreeView):
     def currentChanged(self, current, previous):
         super().currentChanged(current, previous)
         model = self.model()
-        if model is None or not hasattr(model, 'position_col'):
+        if model is None:
             return
         pos_col = model.position_col
         # Repaint the position column cell for the old and new row so the
@@ -582,11 +564,7 @@ class PolicyView(QTreeView):
             model = self.model()
             selectable = _model_selectable_cols(model)
             element_cols = _model_element_cols(model)
-            col_to_slot = (
-                model.col_to_slot
-                if model is not None and hasattr(model, 'col_to_slot')
-                else _COL_TO_SLOT
-            )
+            col_to_slot = model.col_to_slot if model is not None else {}
             if (
                 index.isValid()
                 and model is not None
@@ -713,19 +691,12 @@ class PolicyView(QTreeView):
             return
 
         element_cols = _model_element_cols(model)
-        col_to_slot = (
-            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
-        )
-        action_col = model.action_col if hasattr(model, 'action_col') else _COL_ACTION
-        comment_col = (
-            model.comment_col if hasattr(model, 'comment_col') else _COL_COMMENT
-        )
-        direction_col = (
-            model.direction_col if hasattr(model, 'direction_col') else _COL_DIRECTION
-        )
-        options_col = (
-            model.options_col if hasattr(model, 'options_col') else _COL_OPTIONS
-        )
+        col_to_slot = model.col_to_slot
+        action_col = model.action_col
+        comment_col = model.comment_col
+        direction_col = model.direction_col
+        metric_col = model.metric_col
+        options_col = model.options_col
 
         if col in element_cols:
             slot = col_to_slot.get(col)
@@ -754,6 +725,8 @@ class PolicyView(QTreeView):
             self._open_comment_editor(model, index)
         elif col == direction_col:
             self._open_direction_editor(model, index)
+        elif col == metric_col:
+            self._open_metric_editor(model, index)
         elif col == options_col:
             self._open_rule_options_dialog(model, index)
 
@@ -799,20 +772,12 @@ class PolicyView(QTreeView):
 
         col = index.column()
         element_cols = _model_element_cols(model)
-        col_to_slot = (
-            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
-        )
+        col_to_slot = model.col_to_slot
         selectable = _model_selectable_cols(model)
-        action_col = model.action_col if hasattr(model, 'action_col') else _COL_ACTION
-        comment_col = (
-            model.comment_col if hasattr(model, 'comment_col') else _COL_COMMENT
-        )
-        direction_col = (
-            model.direction_col if hasattr(model, 'direction_col') else _COL_DIRECTION
-        )
-        options_col = (
-            model.options_col if hasattr(model, 'options_col') else _COL_OPTIONS
-        )
+        action_col = model.action_col
+        comment_col = model.comment_col
+        direction_col = model.direction_col
+        options_col = model.options_col
 
         # Element and comment columns get their own self-contained menus
         # without group/color actions.
@@ -846,6 +811,12 @@ class PolicyView(QTreeView):
 
         if col == direction_col:
             build_direction_menu(menu, self, model, index)
+            menu.exec(global_pos)
+            return
+
+        metric_col = model.metric_col
+        if col == metric_col:
+            build_metric_menu(menu, self, model, index)
             menu.exec(global_pos)
             return
 
@@ -1019,6 +990,12 @@ class PolicyView(QTreeView):
         if hasattr(main_win, 'open_direction_editor'):
             main_win.open_direction_editor(model, index)
 
+    def _open_metric_editor(self, model, index):
+        """Open the Metric editor panel in the editor pane."""
+        main_win = self.window()
+        if hasattr(main_win, 'open_metric_editor'):
+            main_win.open_metric_editor(model, index)
+
     def _open_rule_options_dialog(self, model, index):
         """Open the Rule Options panel in the editor pane."""
         row_data = model.get_row_data(index)
@@ -1159,9 +1136,7 @@ class PolicyView(QTreeView):
         # current cell's slot, paste the object into that cell.
         col = idx.column()
         element_cols = _model_element_cols(model)
-        col_to_slot = (
-            model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
-        )
+        col_to_slot = model.col_to_slot
         if col in element_cols:
             slot = col_to_slot.get(col)
             if slot:
@@ -1315,11 +1290,7 @@ class PolicyView(QTreeView):
         index = self.indexAt(event.position().toPoint())
         model = self.model()
         element_cols = _model_element_cols(model)
-        col_to_slot = (
-            model.col_to_slot
-            if model is not None and hasattr(model, 'col_to_slot')
-            else _COL_TO_SLOT
-        )
+        col_to_slot = model.col_to_slot if model is not None else {}
         if (
             not index.isValid()
             or index.column() not in element_cols

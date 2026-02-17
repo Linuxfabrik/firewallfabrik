@@ -332,6 +332,9 @@ class FWWindow(QMainWindow):
                 getattr(self, '_display_file', None) or self._current_file
             ),
             icon=self.objectTypeIcon,
+            metric_editor=self.w_MetricEditorPanel,
+            nat_rule_options=self.w_NATRuleOptionsDialog,
+            routing_rule_options=self.w_RoutingRuleOptionsDialog,
             rule_options=self.w_RuleOptionsDialog,
             stack=self.objectEditorStack,
             tab_widget=self.editorPanelTabWidget,
@@ -741,8 +744,8 @@ class FWWindow(QMainWindow):
         if self._display_file != self._current_file:
             self._display_file = self._current_file
             self._rs_mgr.set_display_file(self._current_file)
-            self._update_title()
             self._add_to_recent(str(self._current_file))
+        self._update_title()
 
     @Slot()
     def fileSaveAs(self):
@@ -1703,8 +1706,9 @@ class FWWindow(QMainWindow):
             single_rule_id=str(rule_id),
         )
 
-        # Collapse runs of whitespace (except newlines) in the output.
-        if result:
+        # Collapse runs of whitespace (except newlines) for iptables output.
+        # nftables uses meaningful indentation that must be preserved.
+        if result and platform == 'iptables':
             result = re.sub(r'[^\S\n]+', ' ', result)
 
         # Build HTML output.
@@ -1739,6 +1743,10 @@ class FWWindow(QMainWindow):
     def open_direction_editor(self, model, index):
         """Open the (blank) direction pane in the editor pane."""
         self._editor_mgr.open_direction_editor(model, index)
+
+    def open_metric_editor(self, model, index):
+        """Open the metric editor panel in the editor pane."""
+        self._editor_mgr.open_metric_editor(model, index)
 
     def show_any_editor(self, slot):
         """Show the 'Any' object description in the editor pane."""

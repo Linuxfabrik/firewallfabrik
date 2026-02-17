@@ -312,6 +312,9 @@ EditorManagerUI = namedtuple(
         'editor_action',
         'get_display_file',
         'icon',
+        'metric_editor',
+        'nat_rule_options',
+        'routing_rule_options',
         'rule_options',
         'stack',
         'tab_widget',
@@ -598,14 +601,33 @@ class EditorManager(QObject):
         """Open the rule options panel in the editor pane."""
         self.close()
 
-        self._ui.rule_options.load_rule(model, index)
-        self._ui.stack.setCurrentWidget(
-            self._ui.rule_options.parentWidget(),
-        )
+        if model.rule_set_type == 'NAT':
+            panel = self._ui.nat_rule_options
+        elif model.rule_set_type == 'Routing':
+            panel = self._ui.routing_rule_options
+        else:
+            panel = self._ui.rule_options
+        panel.load_rule(model, index)
+        self._ui.stack.setCurrentWidget(panel.parentWidget())
         self.show_editor_panel()
         self._ui.dock.setWindowTitle('Rule Options')
 
         pixmap = QIcon(':/Icons/Options/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self._ui.icon.setPixmap(pixmap)
+
+    def open_metric_editor(self, model, index):
+        """Open the metric editor panel in the editor pane."""
+        self.close()
+
+        self._ui.metric_editor.load_rule(model, index)
+        self._ui.stack.setCurrentWidget(
+            self._ui.metric_editor.parentWidget(),
+        )
+        self.show_editor_panel()
+        self._ui.dock.setWindowTitle('Metric')
+
+        pixmap = QIcon(':/Icons/Routing/icon-big').pixmap(64, 64)
         if not pixmap.isNull():
             self._ui.icon.setPixmap(pixmap)
 

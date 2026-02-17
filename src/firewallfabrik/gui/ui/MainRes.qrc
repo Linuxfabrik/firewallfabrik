@@ -62,6 +62,7 @@
     <file alias="Icons/SystemGroup/icon-tree">Icons/folder_16.png</file>
     <file alias="Icons/TCPService/icon-tree">Icons/service-tcp_16.png</file>
     <file alias="Icons/TagService/icon-tree">Icons/service-tag_16.png</file>
+    <file alias="Icons/Translate/icon-tree">Icons/translate_16.png</file>
     <file alias="Icons/UDPService/icon-tree">Icons/service-udp_16.png</file>
     <file alias="Icons/UserService/icon-tree">Icons/user_16.png</file>
 
@@ -138,6 +139,7 @@
     <file alias="Icons/StateSyncClusterGroup/icon">Icons/state-sync-cluster-group_25.png</file>
     <file alias="Icons/TCPService/icon">Icons/service-tcp_25.png</file>
     <file alias="Icons/TagService/icon">Icons/service-tag_25.png</file>
+    <file alias="Icons/Translate/icon">Icons/translate_25.png</file>
     <file alias="Icons/UDPService/icon">Icons/service-udp_25.png</file>
     <file alias="Icons/UserService/icon">Icons/user_25.png</file>
 

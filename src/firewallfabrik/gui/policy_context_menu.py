@@ -29,10 +29,7 @@ from firewallfabrik.gui.label_settings import (
     get_label_color,
     get_label_text,
 )
-from firewallfabrik.gui.policy_model import (
-    _COL_TO_SLOT,
-    PolicyTreeModel,
-)
+from firewallfabrik.gui.policy_model import PolicyTreeModel
 
 # ------------------------------------------------------------------
 # Type-set constants (shared with policy_view drag-drop code)
@@ -191,7 +188,7 @@ def build_row_menu(menu, view, model, index):
 
 def build_action_menu(menu, view, model, index):
     """Build action-selection context menu matching fwbuilder."""
-    rs_type = model.rule_set_type if hasattr(model, 'rule_set_type') else 'Policy'
+    rs_type = model.rule_set_type
 
     if rs_type == 'NAT':
         for action, label, icon_name in NAT_ACTION_MENU_ENTRIES:
@@ -232,7 +229,7 @@ def build_action_menu(menu, view, model, index):
 
 def build_direction_menu(menu, view, model, index):
     """Build direction-selection context menu."""
-    rs_type = model.rule_set_type if hasattr(model, 'rule_set_type') else 'Policy'
+    rs_type = model.rule_set_type
     if rs_type != 'Policy':
         return  # Direction is Policy-only.
 
@@ -250,9 +247,19 @@ def build_direction_menu(menu, view, model, index):
         )
 
 
+def build_metric_menu(menu, view, model, index):
+    """Build Metric column context menu for routing rules."""
+    menu.addAction(
+        'Edit',
+        lambda: view._open_metric_editor(model, index),
+    )
+    menu.addSeparator()
+    add_compile_action(menu, view, model, index)
+
+
 def build_element_menu(menu, view, model, index, col):
     """Build element column context menu matching fwbuilder's layout."""
-    col_to_slot = model.col_to_slot if hasattr(model, 'col_to_slot') else _COL_TO_SLOT
+    col_to_slot = model.col_to_slot
     slot = col_to_slot.get(col)
     if not slot:
         return
@@ -369,22 +376,23 @@ def build_options_menu(menu, view, model, index):
         'Rule Options',
         lambda: view._open_rule_options_dialog(model, index),
     )
-    row_data = model.get_row_data(index)
-    log_on = row_data is not None and bool(
-        (row_data.options_display or [])
-        and any(label == 'log' for _, label, _ in row_data.options_display)
-    )
-    on_action = menu.addAction(
-        QIcon(':/Icons/Log/icon-tree'),
-        'Logging On',
-        lambda: model.set_logging(index, True),
-    )
-    off_action = menu.addAction(
-        'Logging Off',
-        lambda: model.set_logging(index, False),
-    )
-    on_action.setEnabled(not log_on)
-    off_action.setEnabled(log_on)
+    if model.rule_set_type == 'Policy':
+        row_data = model.get_row_data(index)
+        log_on = row_data is not None and bool(
+            (row_data.options_display or [])
+            and any(label == 'log' for _, label, _ in row_data.options_display)
+        )
+        on_action = menu.addAction(
+            QIcon(':/Icons/Log/icon-tree'),
+            'Logging On',
+            lambda: model.set_logging(index, True),
+        )
+        off_action = menu.addAction(
+            'Logging Off',
+            lambda: model.set_logging(index, False),
+        )
+        on_action.setEnabled(not log_on)
+        off_action.setEnabled(log_on)
     menu.addSeparator()
     add_compile_action(menu, view, model, index)
 

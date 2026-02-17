@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NATRuleOptionsDialog</class>
+ <widget class="QWidget" name="NATRuleOptionsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_explanation">
+     <property name="text">
+      <string>Normally, if an object used to define the translated source address is an interface marked as &quot;dynamic&quot;, the compiler generates a NAT rule with target MASQUERADE. However, masquerading has problems with policy routing. The option below makes the compiler use SNAT target instead.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ipt_use_snat_instead_of_masq">
+     <property name="text">
+      <string>Use SNAT target instead of MASQUERADING for NAT rules with dynamic interfaces</string>
+     </property>
+     <property name="toolTip">
+      <string>When checked, the compiler will use the SNAT target instead of MASQUERADE for NAT rules where the translated source is a dynamic interface. This avoids problems with policy routing that MASQUERADE can cause.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ipt_use_masq">
+     <property name="text">
+      <string>Always use MASQUERADE target instead of SNAT</string>
+     </property>
+     <property name="toolTip">
+      <string>When checked, the compiler will always use MASQUERADE instead of SNAT, even when the source address is static. MASQUERADE automatically uses the current IP of the outgoing interface.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ipt_nat_random">
+     <property name="text">
+      <string>Randomize port mapping (translates to --random)</string>
+     </property>
+     <property name="toolTip">
+      <string>When checked, the compiler adds the --random flag to the iptables NAT rule. This randomizes source port mapping, which can help avoid collisions when multiple connections originate from the same source.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ipt_nat_persistent">
+     <property name="text">
+      <string>Give a client the same source-/destination-address for each connection (translates to --persistent)</string>
+     </property>
+     <property name="toolTip">
+      <string>When checked, the compiler adds the --persistent flag to the iptables NAT rule. This ensures that a client always receives the same source or destination address for each connection.</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

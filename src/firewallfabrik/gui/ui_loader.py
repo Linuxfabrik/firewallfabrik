@@ -180,6 +180,24 @@ def _register_drop_area():
     CUSTOM_WIDGET_MAP['FWObjectDropArea'] = FWObjectDropArea
 
 
+def _register_metric_editor_panel():
+    from firewallfabrik.gui.metric_editor_panel import MetricEditorPanel
+
+    CUSTOM_WIDGET_MAP['MetricEditorPanel'] = MetricEditorPanel
+
+
+def _register_nat_rule_options_panel():
+    from firewallfabrik.gui.nat_rule_options_dialog import NATRuleOptionsPanel
+
+    CUSTOM_WIDGET_MAP['NATRuleOptionsDialog'] = NATRuleOptionsPanel
+
+
+def _register_routing_rule_options_panel():
+    from firewallfabrik.gui.routing_rule_options_dialog import RoutingRuleOptionsPanel
+
+    CUSTOM_WIDGET_MAP['RoutingRuleOptionsDialog'] = RoutingRuleOptionsPanel
+
+
 def _register_rule_options_panel():
     from firewallfabrik.gui.rule_options_dialog import RuleOptionsPanel
 
@@ -211,6 +229,9 @@ _register_drop_area()
 _register_group_dialog()
 _register_group_type_dialogs()
 _register_library_dialog()
+_register_metric_editor_panel()
+_register_nat_rule_options_panel()
+_register_routing_rule_options_panel()
 _register_rule_options_panel()
 _register_ruleset_dialog()
 _register_service_dialogs()
