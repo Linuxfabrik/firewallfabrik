@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMessageBox
 
 from firewallfabrik.core.objects import Address, Host, Interface, Library, RuleSet
+from firewallfabrik.gui.confirm_delete_dialog import ConfirmDeleteDialog
 from firewallfabrik.gui.object_tree_data import (
     LOCKABLE_TYPES,
     MODEL_MAP,
@@ -468,6 +469,31 @@ class TreeActionHandler:
 
     # -- Delete --
 
+    def _confirm_delete(self, objects):
+        """Show the confirm-delete dialog for *objects*.
+
+        Parameters
+        ----------
+        objects : list[tuple[str, str, str]]
+            Each entry is ``(obj_id, obj_name, obj_type)``.
+
+        Returns ``True`` if the user clicks Delete, ``False`` on Cancel.
+        """
+        if not objects or self._db_manager is None:
+            return False
+
+        dlg = ConfirmDeleteDialog(self._ot._tree.window())
+        dlg.load(objects, self._db_manager)
+
+        # Center on parent window.
+        parent_geom = self._ot._tree.window().geometry()
+        dlg.move(
+            parent_geom.center().x() - dlg.width() // 2,
+            parent_geom.center().y() - dlg.height() // 2,
+        )
+
+        return dlg.exec() == QDialog.DialogCode.Accepted
+
     def _ctx_delete(self, item):
         """Delete the object referenced by *item*."""
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
@@ -482,8 +508,11 @@ class TreeActionHandler:
         if model_cls is None:
             return
         obj_name = item.text(0)
-        prefix = self._ot._get_device_prefix(item)
 
+        if not self._confirm_delete([(obj_id, obj_name, obj_type)]):
+            return
+
+        prefix = self._ot._get_device_prefix(item)
         if self._ops.delete_object(
             uuid.UUID(obj_id),
             model_cls,
@@ -496,7 +525,11 @@ class TreeActionHandler:
     def _delete_selected(self):
         """Delete all selected objects, filtering out non-deletable and read-only items."""
         selection = self._ot._get_simplified_selection()
-        any_deleted = False
+
+        # Separate libraries (which have their own confirmation dialog)
+        # from regular objects (which go through the confirm-delete dialog).
+        library_items = []
+        regular_items = []
         for it in selection:
             obj_id = it.data(0, Qt.ItemDataRole.UserRole)
             obj_type = it.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -505,12 +538,31 @@ class TreeActionHandler:
             if not self._is_deletable(it):
                 continue
             if obj_type == 'Library':
-                if self._delete_library(it):
-                    any_deleted = True
-                continue
+                library_items.append(it)
+            elif MODEL_MAP.get(obj_type) is not None:
+                regular_items.append(it)
+
+        any_deleted = False
+
+        # Show the confirm-delete dialog for regular objects.
+        if regular_items:
+            objects = [
+                (
+                    it.data(0, Qt.ItemDataRole.UserRole),
+                    it.text(0),
+                    it.data(0, Qt.ItemDataRole.UserRole + 1),
+                )
+                for it in regular_items
+            ]
+            if not self._confirm_delete(objects):
+                # User cancelled — still process library deletes below
+                # (they have their own confirmation).
+                regular_items = []
+
+        for it in regular_items:
+            obj_id = it.data(0, Qt.ItemDataRole.UserRole)
+            obj_type = it.data(0, Qt.ItemDataRole.UserRole + 1)
             model_cls = MODEL_MAP.get(obj_type)
-            if model_cls is None:
-                continue
             prefix = self._ot._get_device_prefix(it)
             if self._ops.delete_object(
                 uuid.UUID(obj_id),
@@ -520,6 +572,11 @@ class TreeActionHandler:
                 prefix=prefix,
             ):
                 any_deleted = True
+
+        for it in library_items:
+            if self._delete_library(it):
+                any_deleted = True
+
         if any_deleted:
             self._ot.tree_changed.emit('', '')
 
