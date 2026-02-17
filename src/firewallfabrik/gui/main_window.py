@@ -354,9 +354,12 @@ class FWWindow(QMainWindow):
         )
 
         # Connect "Create new object and add to group" from group dialogs.
+        from firewallfabrik.gui.dynamic_group_dialog import DynamicGroupDialog
         from firewallfabrik.gui.group_dialog import GroupObjectDialog
 
         for widget in set(editor_map.values()):
+            if isinstance(widget, DynamicGroupDialog):
+                widget.navigate_to_object.connect(self._open_object_editor)
             if isinstance(widget, GroupObjectDialog):
                 widget.member_create_requested.connect(self._on_create_group_member)
 
@@ -487,6 +490,7 @@ class FWWindow(QMainWindow):
             frame = self.frameGeometry()
             frame.moveCenter(center)
             self.move(frame.topLeft())
+        self._start_maximized = settings.value('Window/maximized', False, type=bool)
 
     @staticmethod
     def _register_resources(ui_path):

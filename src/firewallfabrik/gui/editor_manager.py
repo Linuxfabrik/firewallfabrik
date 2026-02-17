@@ -375,6 +375,15 @@ class EditorManager(QObject):
     def set_db_manager(self, db_manager):
         """Replace the database manager (called on file new/open/close)."""
         self._db_manager = db_manager
+        self._propagate_db_manager()
+
+    def _propagate_db_manager(self):
+        """Forward the current db_manager to dialogs that need it."""
+        from firewallfabrik.gui.dynamic_group_dialog import DynamicGroupDialog
+
+        for widget in set(self._editor_map.values()):
+            if isinstance(widget, DynamicGroupDialog):
+                widget.set_db_manager(self._db_manager)
 
     def connect_dialogs(self):
         """Wire changed signals on all editor dialog widgets."""
@@ -383,6 +392,8 @@ class EditorManager(QObject):
         for widget in set(self._editor_map.values()):
             if isinstance(widget, BaseObjectDialog):
                 widget.changed.connect(self.on_editor_changed)
+
+        self._propagate_db_manager()
 
     # --- Public methods ---
 
