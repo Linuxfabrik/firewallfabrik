@@ -18,7 +18,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMessageBox
 
-from firewallfabrik.core.objects import Address, Interface, Library, RuleSet
+from firewallfabrik.core.objects import Address, Host, Interface, Library, RuleSet
 from firewallfabrik.gui.object_tree_data import (
     LOCKABLE_TYPES,
     MODEL_MAP,
@@ -73,8 +73,7 @@ class TreeActionHandler:
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
             self._ot.rule_set_activated.emit(obj_id, fw_name, item.text(0), obj_type)
-        else:
-            self._ot.object_activated.emit(obj_id, obj_type)
+        self._ot.object_activated.emit(obj_id, obj_type)
 
     def _ctx_open_ruleset(self, item):
         """Open a rule set (distinct from Edit — shows the rule editor)."""
@@ -811,6 +810,11 @@ class TreeActionHandler:
                     folder = f
                     break
 
+        # Build fwbuilder-style default name for address children of
+        # interfaces: "hostname:ifacename:ip" / "hostname:ifacename:ip6".
+        if name is None and interface_id is not None and type_name in ('IPv4', 'IPv6'):
+            name = self._standard_address_name(item, type_name)
+
         prefix = self._ot._get_device_prefix(item)
         new_id = self._ops.create_new_object(
             model_cls,
@@ -827,6 +831,41 @@ class TreeActionHandler:
         if new_id is not None:
             self._ot.tree_changed.emit(str(new_id), type_name)
             QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
+
+    def _standard_address_name(self, item, type_name):
+        """Build a fwbuilder-style default name for a new address.
+
+        Walks up the tree from *item* collecting object **names** (not
+        labels) until a Host/Firewall/Cluster node is reached, producing
+        ``hostname:ifacename:ip`` (IPv4) or ``hostname:ifacename:ip6`` (IPv6).
+        """
+        suffix = 'ip' if type_name == 'IPv4' else 'ip6'
+        parts = []
+        node = item
+        session = self._db_manager.create_session() if self._db_manager else None
+        try:
+            while node is not None:
+                node_type = node.data(0, Qt.ItemDataRole.UserRole + 1)
+                if node_type in ('Cluster', 'Firewall', 'Host', 'Interface'):
+                    node_id = node.data(0, Qt.ItemDataRole.UserRole)
+                    obj_name = None
+                    if session and node_id:
+                        uid = uuid.UUID(node_id)
+                        if node_type == 'Interface':
+                            obj = session.get(Interface, uid)
+                        else:
+                            obj = session.get(Host, uid)
+                        if obj:
+                            obj_name = obj.name
+                    parts.insert(0, obj_name or node.text(0))
+                if node_type in ('Cluster', 'Firewall', 'Host'):
+                    break
+                node = node.parent()
+        finally:
+            if session:
+                session.close()
+        parts.append(suffix)
+        return ':'.join(parts)
 
     # -- New Subfolder --
 

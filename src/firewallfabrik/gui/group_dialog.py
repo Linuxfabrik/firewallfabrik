@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
     group_membership,
 )
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
+from firewallfabrik.gui.platform_settings import HOST_OS
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 
 # Allowed child types per group class, matching fwbuilder's
@@ -221,6 +222,7 @@ def _get_object_properties(obj):
         data = getattr(obj, 'data', None) or {}
         platform = data.get('platform', '')
         host_os = data.get('host_OS', '')
+        host_os = HOST_OS.get(host_os, host_os)
         return f'{platform} / {host_os}' if platform else ''
 
     if type_str == 'Host':

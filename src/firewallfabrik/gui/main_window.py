@@ -366,7 +366,7 @@ class FWWindow(QMainWindow):
         self._find_panel.set_db_manager(self._db_manager)
         self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
         self._find_panel.set_open_rule_set_ids_callback(
-            self._rs_mgr.get_open_rule_set_ids
+            self._rs_mgr.get_active_firewall_rule_set_ids
         )
         self.find_panel.layout().addWidget(self._find_panel)
         self._find_panel.object_found.connect(self._open_object_editor)
@@ -708,7 +708,7 @@ class FWWindow(QMainWindow):
         self._find_panel.set_tree(self._object_tree._tree)
         self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
         self._find_panel.set_open_rule_set_ids_callback(
-            self._rs_mgr.get_open_rule_set_ids,
+            self._rs_mgr.get_active_firewall_rule_set_ids,
         )
         self._find_panel.reset()
         self._where_used_panel.set_db_manager(self._db_manager)
@@ -875,7 +875,7 @@ class FWWindow(QMainWindow):
         self._find_panel.set_db_manager(self._db_manager)
         self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
         self._find_panel.set_open_rule_set_ids_callback(
-            self._rs_mgr.get_open_rule_set_ids,
+            self._rs_mgr.get_active_firewall_rule_set_ids,
         )
         self._find_panel.reset()
         self._where_used_panel.set_tree(self._object_tree._tree)
@@ -1563,7 +1563,7 @@ class FWWindow(QMainWindow):
         self._find_panel.set_db_manager(self._db_manager)
         self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
         self._find_panel.set_open_rule_set_ids_callback(
-            self._rs_mgr.get_open_rule_set_ids,
+            self._rs_mgr.get_active_firewall_rule_set_ids,
         )
         self._find_panel.reset()
 
@@ -1659,13 +1659,14 @@ class FWWindow(QMainWindow):
         self._editor_mgr.on_editor_changed()
 
     def _on_tree_changed(self, activate_obj_id='', activate_obj_type=''):
-        """Refresh the tree and editor after a CRUD operation.
+        """Refresh the tree, MDI views, and editor after a CRUD operation.
 
         When *activate_obj_id* is non-empty, the editor for that object is
         opened after the rebuild.  When empty, no editor is opened (the
         previous one was already closed).
         """
         self._close_editor()
+        self._rs_mgr.reload_views()
 
         file_key = (
             str(self._display_file) if getattr(self, '_display_file', None) else ''

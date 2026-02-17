@@ -208,11 +208,23 @@ def _contrast_color(bg):
     return _BLACK if luminance > 128 else _WHITE
 
 
-def _format_elements(triples):
+_EMPTY_ELEMENT_TEXT = {
+    'itf_inb': 'Auto',
+    'itf_outb': 'Auto',
+    'rdst': 'Default',
+    'rgtw': '',
+    'ritf': '',
+    'tdst': 'Original',
+    'tsrc': 'Original',
+    'tsrv': 'Original',
+}
+
+
+def _format_elements(triples, empty_text='Any'):
     """Format a list of (uuid, name, type, ...) tuples for display."""
     if not triples:
-        return 'Any'
-    return '\n'.join(name for _, name, *_ in triples)
+        return empty_text
+    return '\n'.join(sorted((name for _, name, *_ in triples), key=str.casefold))
 
 
 def _icon_suffix():
@@ -573,12 +585,18 @@ class PolicyTreeModel(QAbstractItemModel):
 
     @staticmethod
     def _build_name_map(session):
-        """Build a {uuid: (name, type, tooltip)} lookup from all name-bearing tables."""
+        """Build a {uuid: (display_name, type, tooltip)} lookup from all name-bearing tables.
+
+        For objects that carry a ``data['label']`` (e.g. Interface), the
+        label is preferred as display name when it is non-empty.
+        """
         name_map = {}
         for cls in _NAME_CLASSES:
             for obj in session.scalars(sqlalchemy.select(cls)):
                 obj_type = getattr(obj, 'type', None) or cls.__name__
-                name_map[obj.id] = (obj.name, obj_type, obj_tooltip(obj))
+                data = getattr(obj, 'data', None) or {}
+                display = data.get('label') or obj.name
+                name_map[obj.id] = (display, obj_type, obj_tooltip(obj))
         return name_map
 
     # ------------------------------------------------------------------
@@ -803,7 +821,8 @@ class PolicyTreeModel(QAbstractItemModel):
         if desc.col_type == 'position':
             return row_data.position
         if desc.col_type == 'element':
-            return _format_elements(getattr(row_data, desc.slot, []))
+            empty_text = _EMPTY_ELEMENT_TEXT.get(desc.slot, 'Any')
+            return _format_elements(getattr(row_data, desc.slot, []), empty_text)
         if desc.col_type == 'action':
             if self._rule_set_type == 'NAT':
                 return row_data.nat_action or ''
@@ -847,13 +866,13 @@ class PolicyTreeModel(QAbstractItemModel):
                 return (
                     'To modify this field, drag and drop\nan object from the tree here.'
                 )
-            # Show the detailed tooltip for each element (matching fwbuilder's
-            # getObjectPropertiesDetailed).  For multi-element cells, separate
-            # with a horizontal rule.
-            tips = [tip for *_, tip in elements if tip]
-            if tips:
-                return '<hr>'.join(tips)
-            return '\n'.join(name for _, name, *_ in elements)
+            # Single element: return its tooltip directly.
+            # Multi-element cells are handled per-element in the view's
+            # viewportEvent so each element gets its own tooltip on hover.
+            if len(elements) == 1:
+                *_, tip = elements[0]
+                return tip or elements[0][1]
+            return None
 
         if desc.col_type == 'direction':
             direction = row_data.direction or 'Both'
@@ -909,7 +928,10 @@ class PolicyTreeModel(QAbstractItemModel):
         if col in self._element_cols:
             slot = self._col_to_slot.get(col)
             if slot:
-                return getattr(row_data, slot)
+                elems = getattr(row_data, slot)
+                if elems:
+                    return sorted(elems, key=lambda t: t[1].casefold())
+                return elems
         if col == self._action_col:
             if self._rule_set_type == 'NAT' and row_data.nat_action:
                 return [

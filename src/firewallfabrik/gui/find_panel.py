@@ -219,7 +219,12 @@ class FindPanel(QWidget):
 
     @Slot()
     def replaceAll(self):
-        """Replace all rule element matches in one undo step."""
+        """Replace all rule element matches in one undo step.
+
+        Follows fwbuilder's pattern: calls ``_find_all()`` to collect
+        scope-filtered results, then iterates only the rule element
+        matches and replaces each reference.
+        """
         if not self._validate_replace_object():
             return
 
@@ -231,35 +236,49 @@ class FindPanel(QWidget):
         if new_id is None:
             return
 
-        # Collect all matching rule_elements.
         if self._db_manager is None:
+            return
+
+        scope = self.srScope.currentIndex()
+        if scope == 0:
+            QMessageBox.information(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'Replace All only operates on rules.\n'
+                    'Change the scope to include rules.'
+                ),
+            )
+            return
+
+        # Build scope-filtered results using the same logic as find().
+        self._last_find_obj_id = find_obj_id
+        results = self._find_all()
+        rule_results = [r for r in results if r.rule_id is not None]
+
+        if not rule_results:
+            QMessageBox.information(
+                self,
+                'FirewallFabrik',
+                self.tr('No matching rule references found.'),
+            )
             return
 
         count = 0
         with self._db_manager.session('Replace all') as session:
-            rows = session.execute(
-                sqlalchemy.select(
-                    rule_elements.c.rule_id,
-                    rule_elements.c.slot,
-                    rule_elements.c.target_id,
-                ).where(rule_elements.c.target_id == find_obj_id),
-            ).all()
-
-            for rule_id, slot, _target_id in rows:
-                # Check for duplicate (new_id already in same rule+slot).
+            for result in rule_results:
                 dup = session.execute(
                     sqlalchemy.select(rule_elements.c.target_id).where(
-                        rule_elements.c.rule_id == rule_id,
-                        rule_elements.c.slot == slot,
+                        rule_elements.c.rule_id == result.rule_id,
+                        rule_elements.c.slot == result.slot,
                         rule_elements.c.target_id == new_id,
                     ),
                 ).first()
                 if dup is not None:
-                    # Duplicate: just delete the old reference.
                     session.execute(
                         sqlalchemy.delete(rule_elements).where(
-                            rule_elements.c.rule_id == rule_id,
-                            rule_elements.c.slot == slot,
+                            rule_elements.c.rule_id == result.rule_id,
+                            rule_elements.c.slot == result.slot,
                             rule_elements.c.target_id == find_obj_id,
                         ),
                     )
@@ -267,8 +286,8 @@ class FindPanel(QWidget):
                     session.execute(
                         sqlalchemy.update(rule_elements)
                         .where(
-                            rule_elements.c.rule_id == rule_id,
-                            rule_elements.c.slot == slot,
+                            rule_elements.c.rule_id == result.rule_id,
+                            rule_elements.c.slot == result.slot,
                             rule_elements.c.target_id == find_obj_id,
                         )
                         .values(target_id=new_id),

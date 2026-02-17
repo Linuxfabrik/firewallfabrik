@@ -21,6 +21,7 @@ import logging
 import uuid
 from pathlib import Path
 
+import sqlalchemy
 from PySide6.QtCore import QModelIndex, QObject, QSettings, Qt, Signal, Slot
 from PySide6.QtGui import QActionGroup, QKeySequence
 from PySide6.QtWidgets import QMdiSubWindow
@@ -359,6 +360,34 @@ class RuleSetWindowManager(QObject):
             view = self.policy_view_from_widget(sub.widget())
             if view is not None and isinstance(view.model(), PolicyTreeModel):
                 ids.add(view.model().rule_set_id)
+        return ids
+
+    def get_active_firewall_rule_set_ids(self) -> set[uuid.UUID]:
+        """Return all rule set IDs belonging to the active firewall.
+
+        Unlike :meth:`get_open_rule_set_ids`, this returns **all** rule
+        sets (Policy, NAT, Routing) of the firewall whose rule set is
+        currently active — matching fwbuilder's scope 3 behaviour which
+        uses ``getCurrentRuleSet()->getParent()``.
+        """
+        sub = self._mdi_area.activeSubWindow()
+        if sub is None:
+            return set()
+        device_id = getattr(sub, '_fwf_device_id', None)
+        if device_id is None:
+            return set()
+        ids = set()
+        try:
+            with self._db_manager.session() as session:
+                rows = session.execute(
+                    sqlalchemy.select(RuleSet.id).where(
+                        RuleSet.device_id == device_id,
+                    ),
+                ).all()
+                for (rs_id,) in rows:
+                    ids.add(rs_id)
+        except Exception:
+            logger.exception('Failed to query rule sets for active firewall')
         return ids
 
     # --- Title updates ---

@@ -346,7 +346,7 @@ class PolicyView(QTreeView):
             self.viewport().update()
 
     def viewportEvent(self, event):
-        """Show an instructional tooltip when hovering over empty space."""
+        """Show per-element tooltips and an instructional tooltip for empty space."""
         if event.type() == QEvent.Type.ToolTip:
             if not QSettings().value('UI/ObjTooltips', True, type=bool):
                 return super().viewportEvent(event)
@@ -370,7 +370,30 @@ class PolicyView(QTreeView):
                     self,
                 )
                 return True
+            # Per-element tooltip: show only the hovered element's tooltip.
+            elements = index.data(ELEMENTS_ROLE)
+            if elements and len(elements) > 1:
+                tip = self._element_tooltip_at(index, event.pos(), elements)
+                if tip:
+                    QToolTip.showText(event.globalPos(), tip, self)
+                    return True
         return super().viewportEvent(event)
+
+    def _element_tooltip_at(self, index, pos, elements):
+        """Return the tooltip for the element at *pos*, or None."""
+        rect = self.visualRect(index)
+        icon_sz = QSettings().value('UI/IconSizeInRules', 25, type=int)
+        fm = self.fontMetrics()
+        line_h = max(icon_sz, fm.height())
+        v_pad = _CellBorderDelegate._V_PAD
+        y_offset = pos.y() - rect.top() - v_pad
+        if y_offset < 0:
+            return None
+        elem_idx = y_offset // line_h
+        if 0 <= elem_idx < len(elements):
+            *_, tip = elements[elem_idx]
+            return tip or None
+        return None
 
     # ------------------------------------------------------------------
     # Model setup

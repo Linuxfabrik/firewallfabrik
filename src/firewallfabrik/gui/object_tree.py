@@ -811,11 +811,17 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _apply_filter(self, text):
-        """Hide items whose name does not match *text* (case-insensitive)."""
+        """Hide items whose name does not match *text* (case-insensitive).
+
+        Multiple space-separated tokens are matched with AND logic so
+        that e.g. ``"4 http"`` finds ``"HTTPS 443"``.
+        """
         text = text.strip().lower()
         if not text:
             self._reset_visibility()
             return
+
+        tokens = text.split()
 
         # First pass: determine direct match per item.
         matched = set()
@@ -827,13 +833,11 @@ class ObjectTree(QWidget):
                 continue
             tags_str = item.data(0, Qt.ItemDataRole.UserRole + 2) or ''
             comment_str = item.data(0, Qt.ItemDataRole.UserRole + 6) or ''
-            match = (
-                text in item.text(0).lower() or text in tags_str or text in comment_str
+            attrs_str = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
+            haystack = (
+                f'{item.text(0).lower()} {tags_str} {comment_str} {attrs_str.lower()}'
             )
-            if self._show_attrs:
-                attrs_str = item.data(0, Qt.ItemDataRole.UserRole + 3) or ''
-                match = match or text in attrs_str.lower()
-            if match:
+            if all(tok in haystack for tok in tokens):
                 matched.add(id(item))
 
         # Second pass: hide non-matching items, show children of matches.
@@ -895,8 +899,7 @@ class ObjectTree(QWidget):
             fw_item = item.parent()
             fw_name = fw_item.text(0) if fw_item else ''
             self.rule_set_activated.emit(obj_id, fw_name, item.text(0), type_str)
-        else:
-            self.object_activated.emit(obj_id, type_str)
+        self.object_activated.emit(obj_id, type_str)
 
     # ------------------------------------------------------------------
     # Selection helpers

@@ -693,6 +693,23 @@ class TreeOperations:
             # Make name unique.
             new_obj.name = self.make_name_unique(session, new_obj)
 
+            # First RuleSet of a given type on a device is the top ruleset.
+            if (
+                model_cls is RuleSet
+                and hasattr(new_obj, 'device_id')
+                and new_obj.device_id is not None
+            ):
+                existing = session.scalar(
+                    sqlalchemy.select(sqlalchemy.func.count())
+                    .select_from(RuleSet)
+                    .where(
+                        RuleSet.device_id == new_obj.device_id,
+                        RuleSet.type == type_name,
+                    )
+                )
+                if not existing:
+                    new_obj.top = True
+
             session.add(new_obj)
             session.commit()
             self._db_manager.save_state(f'{prefix}New {type_name}')
