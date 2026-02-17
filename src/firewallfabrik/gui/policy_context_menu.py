@@ -38,7 +38,11 @@ from firewallfabrik.gui.policy_model import PolicyTreeModel
 ADDRESS_TYPES = frozenset(
     {
         'AddressRange',
+        'AddressTable',
+        'AttachedNetworks',
         'Cluster',
+        'DNSName',
+        'DynamicGroup',
         'Firewall',
         'Host',
         'IPv4',
@@ -173,11 +177,11 @@ def build_row_menu(menu, view, model, index):
         f'Paste {paste_label} Above',
         lambda: view._paste_and_scroll(model, index, before=True),
     )
-    paste_above.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_V))
     paste_below = menu.addAction(
         f'Paste {paste_label} Below',
         lambda: view._paste_and_scroll(model, index),
     )
+    paste_below.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_V))
     paste_above.setEnabled(clipboard_count > 0)
     paste_below.setEnabled(clipboard_count > 0)
     menu.addSeparator()
