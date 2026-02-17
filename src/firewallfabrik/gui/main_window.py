@@ -1956,8 +1956,9 @@ class FWWindow(QMainWindow):
         self._editor_mgr.close()
 
     def _on_editor_object_saved(self, obj):
-        """Update tree item after editor saves an object."""
+        """Update tree item and MDI views after editor saves an object."""
         self._object_tree.update_item(obj)
+        self._rs_mgr.reload_views()
 
     def _on_firewall_modified(self, fw_id):
         """Update the Firewall tree item after a rule mutation stamped it."""

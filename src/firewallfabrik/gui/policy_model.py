@@ -535,10 +535,19 @@ class PolicyTreeModel(QAbstractItemModel):
         )
 
     def _desc(self, text):
-        """Prefix *text* with the object name for undo descriptions."""
+        """Prefix *text* with the object name and rule set type for undo descriptions."""
+        parts = []
         if self._object_name:
-            return f'{self._object_name}: {text}'
-        return text
+            parts.append(self._object_name)
+        parts.append(f'[{self._rule_set_type}] {text}')
+        return ': '.join(parts)
+
+    def _slot_label(self, slot):
+        """Return the human-readable column header for a slot name."""
+        col = self._slot_to_col.get(slot)
+        if col is not None and col < len(self._headers):
+            return self._headers[col]
+        return slot
 
     def _stamp_firewall(self, session):
         """Update ``lastModified`` on the Firewall owning this rule set.
@@ -1078,7 +1087,23 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._mutation_session(self._desc('Delete rule(s)')) as session:
+        # Collect positions for a human-readable undo description.
+        positions = []
+        for idx in indices:
+            node = self._node_from_index(idx)
+            if node.node_type == _NodeType.Rule:
+                positions.append(str(node.row_data.position))
+            elif node.node_type == _NodeType.Group:
+                for child in node.children:
+                    positions.append(str(child.row_data.position))
+        pos_str = ', '.join(positions) if positions else '?'
+        desc = (
+            f'Delete rule {pos_str}'
+            if len(positions) == 1
+            else f'Delete rules {pos_str}'
+        )
+
+        with self._mutation_session(self._desc(desc)) as session:
             # Remove rule_elements first (FK constraint).
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -1465,7 +1490,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if row_data is None:
             return
         with self._mutation_session(
-            self._desc(f'Edit rule {row_data.position} {slot}'),
+            self._desc(f'Edit rule {row_data.position} {self._slot_label(slot)}'),
         ) as session:
             # Check for duplicate.
             existing = session.execute(
@@ -1507,7 +1532,7 @@ class PolicyTreeModel(QAbstractItemModel):
             return
         with self._mutation_session(
             self._desc(
-                f'Move element to rule {target_row_data.position} {target_slot}'
+                f'Move element to rule {target_row_data.position} {self._slot_label(target_slot)}'
             ),
         ) as session:
             # Check for duplicate in target.
@@ -1559,7 +1584,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if eid == target_id:
                 elem_name = ename
                 break
-        desc = f'Delete rule {row_data.position} {slot} {elem_name}'.rstrip()
+        desc = f'Del rule {row_data.position} {self._slot_label(slot)} {elem_name}'.rstrip()
         with self._mutation_session(self._desc(desc)) as session:
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -1641,7 +1666,7 @@ class PolicyTreeModel(QAbstractItemModel):
         current = bool(row_data.negations.get(slot))
         new_val = not current
         with self._mutation_session(
-            self._desc(f'Negate rule {row_data.position} {slot}'),
+            self._desc(f'Negate rule {row_data.position} {self._slot_label(slot)}'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
