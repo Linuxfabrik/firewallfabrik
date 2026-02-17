@@ -25,6 +25,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import sqlalchemy
+
 from firewallfabrik.compiler._base import BaseCompiler, CompilerStatus
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
@@ -32,6 +34,7 @@ from firewallfabrik.core.objects import (
     Address,
     AddressTable,
     DNSName,
+    DynamicGroup,
     Firewall,
     Group,
     Host,
@@ -46,6 +49,67 @@ from firewallfabrik.core.objects import (
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
+
+# Types eligible for DynamicGroup membership (mirrors fwbuilder's
+# Address::cast / ObjectGroup::cast / Host checks).
+_DG_ADDRESS_TYPES = frozenset(
+    {
+        'AddressRange',
+        'AddressTable',
+        'AttachedNetworks',
+        'DNSName',
+        'DynamicGroup',
+        'IPv4',
+        'IPv6',
+        'MultiAddress',
+        'MultiAddressRunTime',
+        'Network',
+        'NetworkIPv6',
+        'PhysAddress',
+    }
+)
+_DG_GROUP_TYPES = frozenset({'ObjectGroup'})
+_DG_DEVICE_TYPES = frozenset({'Cluster', 'Firewall', 'Host'})
+_DG_ELIGIBLE = _DG_ADDRESS_TYPES | _DG_GROUP_TYPES | _DG_DEVICE_TYPES
+
+
+def _matches_dynamic_criteria(obj, criteria: list[dict]) -> bool:
+    """Return True if *obj* matches any criterion in *criteria*.
+
+    Ports fwbuilder's ``DynamicGroup::isMemberOfGroup()``.
+    """
+    obj_type = getattr(obj, 'type', '')
+    if obj_type not in _DG_ELIGIBLE:
+        return False
+
+    # Exclude deleted-objects library.
+    lib = getattr(obj, 'library', None)
+    if lib is None:
+        return False
+    if getattr(lib, 'name', '') == 'Deleted Objects':
+        return False
+
+    # Exclude standard ObjectGroups near the tree root (depth <= 3).
+    if obj_type in _DG_GROUP_TYPES:
+        depth = 2
+        parent = getattr(obj, 'parent_group', None)
+        while parent is not None:
+            depth += 1
+            parent = getattr(parent, 'parent_group', None)
+        if depth <= 3:
+            return False
+
+    keywords = getattr(obj, 'keywords', None) or set()
+    for entry in criteria:
+        type_val = entry.get('type', 'none')
+        keyword_val = entry.get('keyword', ',')
+        if type_val == 'none' or keyword_val == ',':
+            continue
+        type_match = type_val == 'any' or obj_type == type_val
+        keyword_match = keyword_val == '' or keyword_val in keywords
+        if type_match and keyword_match:
+            return True
+    return False
 
 
 class Compiler(BaseCompiler):
@@ -219,21 +283,46 @@ class Compiler(BaseCompiler):
 
         For DNSName: resolves hostname via DNS.
         For AddressTable: loads addresses from the referenced file.
+        For DynamicGroup: evaluates selection_criteria against the database.
         Falls back to obj.addresses if already populated.
 
-        Matches C++ Preprocessor::convertObject() + DNSName::loadFromSource().
+        Matches C++ Preprocessor::convertObject() + MultiAddress::loadFromSource().
         """
         # If the object already has child addresses (e.g. previously resolved),
         # return them directly.
         if obj.addresses:
             return list(obj.addresses)
 
+        if isinstance(obj, DynamicGroup):
+            return self._resolve_dynamic_group(obj)
         if isinstance(obj, DNSName):
             return self._resolve_dns_name(obj)
         if isinstance(obj, AddressTable):
             return self._load_address_table(obj)
 
         return []
+
+    def _resolve_dynamic_group(self, obj: DynamicGroup) -> list:
+        """Resolve a DynamicGroup by evaluating its criteria against the DB.
+
+        Ports fwbuilder's ``DynamicGroup::loadFromSource()`` +
+        ``DynamicGroup::isMemberOfGroup()``.  Returns matching objects.
+        """
+        criteria = (obj.data or {}).get('selection_criteria', [])
+        if not criteria:
+            return []
+
+        self_id = obj.id
+        result = []
+        for cls in (Address, Group, Host):
+            objs = self.session.scalars(sqlalchemy.select(cls)).unique().all()
+            for candidate in objs:
+                if candidate.id == self_id:
+                    continue
+                if _matches_dynamic_criteria(candidate, criteria):
+                    result.append(candidate)
+        result.sort(key=lambda o: getattr(o, 'name', ''))
+        return result
 
     def _resolve_dns_name(self, obj: DNSName) -> list:
         """Resolve a compile-time DNSName via DNS lookup."""
