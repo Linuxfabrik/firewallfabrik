@@ -446,6 +446,16 @@ class PolicyView(QTreeView):
                 if rd is not None:
                     self._saved_current_rule_id = rd.rule_id
         self._saved_element = self._selected_element  # (rule_id, slot, target_id)
+        # Save the element's position within its cell so we can fall
+        # back to the next element if the saved one was deleted.
+        self._saved_element_pos = None
+        if self._selected_element is not None and self._selected_index.isValid():
+            elements = self._selected_index.data(ELEMENTS_ROLE) or []
+            target_id = self._selected_element[2]
+            for i, (eid, *_rest) in enumerate(elements):
+                if eid == target_id:
+                    self._saved_element_pos = i
+                    break
         # Clear stale index references (they become invalid after reset).
         self._selected_element = None
         self._selected_index = QModelIndex()
@@ -486,15 +496,31 @@ class PolicyView(QTreeView):
         # Restore per-element selection.
         saved_elem = getattr(self, '_saved_element', None)
         if saved_elem is not None:
-            rule_id, slot, _target_id = saved_elem
+            rule_id, slot, target_id = saved_elem
             idx = model.index_for_rule(rule_id)
             if idx.isValid():
                 col = slot_to_col.get(slot)
                 if col is not None:
                     cell_idx = model.index(idx.row(), col, idx.parent())
-                    self._selected_element = saved_elem
-                    self._selected_index = cell_idx
+                    elements = cell_idx.data(ELEMENTS_ROLE) or []
+                    # Check if the saved element still exists.
+                    if any(eid == target_id for eid, *_ in elements):
+                        self._selected_element = saved_elem
+                        self._selected_index = cell_idx
+                    elif elements:
+                        # Element was removed — select the element at
+                        # the same position (or last if at the end).
+                        pos = getattr(self, '_saved_element_pos', 0) or 0
+                        pos = min(pos, len(elements) - 1)
+                        fallback_id = elements[pos][0]
+                        self._select_element(
+                            cell_idx,
+                            fallback_id,
+                            slot,
+                            rule_id,
+                        )
             self._saved_element = None
+            self._saved_element_pos = None
 
     # ------------------------------------------------------------------
     # Per-element selection
@@ -1117,7 +1143,6 @@ class PolicyView(QTreeView):
             idx = self._selected_index
             if idx.isValid() and idx.column() in element_cols and model is not None:
                 model.remove_element(idx, slot, target_id)
-                self._clear_element_selection()
                 return
         # Guard: if the current cell is in an element column, don't
         # fall through to deleting the whole rule -- the user intended
