@@ -316,11 +316,14 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
+ update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
  update_addresses_of_interface "eth1 22.22.22.22/24" ""
 }
 
 script_body() {
+ echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
+ echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+
  # ================ IPv4
 
  (
@@ -331,22 +334,18 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- echo ":drop_invalid - [0:0]"
- echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
- echo "-A INPUT -m state --state INVALID -j drop_invalid "
- echo "-A FORWARD -m state --state INVALID -j drop_invalid "
- echo "-A drop_invalid -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 1 --ulog-prefix \"INVALID state -- DENY \""
- echo "-A drop_invalid -j DROP "
+ {{create_drop_invalid_chain}}
+ OUTPUT -m state --state INVALID -j drop_invalid
+ INPUT -m state --state INVALID -j drop_invalid
+ FORWARD -m state --state INVALID -j drop_invalid
+ drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
+ drop_invalid -j DROP
  # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- echo "-A INPUT -m state --state NEW -j ACCEPT "
- echo "-A FORWARD -i + -m state --state NEW -j ACCEPT "
- #
+ echo "# Rule 0 (global)"echo "INPUT -m state --state NEW -j ACCEPT"echo "FORWARD -i + -m state --state NEW -j ACCEPT"#
  echo COMMIT
 
  echo '*nat'
@@ -354,9 +353,8 @@ script_body() {
  echo :PREROUTING ACCEPT [0:0]
  echo :POSTROUTING ACCEPT [0:0]
  echo :OUTPUT ACCEPT [0:0]
- #
  # Rule 0 (NAT)
- echo "-A POSTROUTING -o eth1 -s 1.1.1.0/24 -j SNAT --to-source 22.22.22.22 "
+ echo "-A POSTROUTING -o eth1 -s 1.1.1.0/24 -j SNAT --to-source 22.22.22.22"
  #
  echo COMMIT
 
@@ -373,22 +371,18 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- echo ":drop_invalid - [0:0]"
- echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
- echo "-A INPUT -m state --state INVALID -j drop_invalid "
- echo "-A FORWARD -m state --state INVALID -j drop_invalid "
- echo "-A drop_invalid -j LOG --log-level debug --log-prefix \"INVALID state -- DENY \""
- echo "-A drop_invalid -j DROP "
+ {{create_drop_invalid_chain}}
+ OUTPUT -m state --state INVALID -j drop_invalid
+ INPUT -m state --state INVALID -j drop_invalid
+ FORWARD -m state --state INVALID -j drop_invalid
+ drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
+ drop_invalid -j DROP
  # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- echo "-A INPUT -m state --state NEW -j ACCEPT "
- echo "-A FORWARD -i + -m state --state NEW -j ACCEPT "
- #
+ echo "# Rule 0 (global)"echo "INPUT -m state --state NEW -j ACCEPT"echo "FORWARD -i + -m state --state NEW -j ACCEPT"#
  echo COMMIT
 
  ) | $IP6TABLES_RESTORE; IPTABLES_RESTORE_RES=$?
@@ -461,6 +455,8 @@ case "$cmd" in
  load_modules "nat ipv6"
  configure_interfaces
  verify_interfaces
+
+
 
  script_body
  ip_forward

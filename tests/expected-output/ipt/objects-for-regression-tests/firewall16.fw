@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall16.fw /etc/fw/firewall16.fw
+# files: * firewall16.fw /firewall16.fw
 #
 # Compiled for iptables (any version)
 #
@@ -422,14 +422,14 @@ script_body() {
  echo "Rule 12 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -s 192.168.2.1 -j ACCEPT
- $IPTABLES -t nat -A OUTPUT -s 192.168.2.1 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -s 192.168.2.1 -j ACCEPT
  #
  # Rule 13 (NAT)
  #
  echo "Rule 13 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -s 192.168.2.1 -j ACCEPT
- $IPTABLES -t nat -A OUTPUT -s 192.168.2.1 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -s 192.168.2.1 -j ACCEPT
 
  # ================ Table 'filter', rule set Policy
  #

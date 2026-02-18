@@ -6,11 +6,11 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall61-1.2.5.fw /etc/firewall61-1.2.5.fw
+# files: * firewall12.fw /etc/fw/firewall12.fw
 #
-# Compiled for iptables lt_1.2.6
+# Compiled for iptables (any version)
 #
-# testing time litmiting for iptables 1.2.5
+# This firewall does not do NAT for addresses, but translates port for a server
 
 FWBDEBUG=""
 
@@ -122,36 +122,36 @@ check_tools() {
 reset_iptables_v4() {
  local list
 
- $IPTABLES -w -P OUTPUT DROP
- $IPTABLES -w -P INPUT DROP
- $IPTABLES -w -P FORWARD DROP
+ $IPTABLES -P OUTPUT DROP
+ $IPTABLES -P INPUT DROP
+ $IPTABLES -P FORWARD DROP
 
  while read table; do
- list=$($IPTABLES -w -t $table -L -n)
+ list=$($IPTABLES -t $table -L -n)
  printf "%s" "$list" | while read c chain rest; do
  if test "X$c" = "XChain" ; then
- $IPTABLES -w -t $table -F $chain
+ $IPTABLES -t $table -F $chain
  fi
  done
- $IPTABLES -w -t $table -X
+ $IPTABLES -t $table -X
  done < /proc/net/ip_tables_names
 }
 
 reset_iptables_v6() {
  local list
 
- $IP6TABLES -w -P OUTPUT DROP
- $IP6TABLES -w -P INPUT DROP
- $IP6TABLES -w -P FORWARD DROP
+ $IP6TABLES -P OUTPUT DROP
+ $IP6TABLES -P INPUT DROP
+ $IP6TABLES -P FORWARD DROP
 
  while read table; do
- list=$($IP6TABLES -w -t $table -L -n)
+ list=$($IP6TABLES -t $table -L -n)
  printf "%s" "$list" | while read c chain rest; do
  if test "X$c" = "XChain" ; then
- $IP6TABLES -w -t $table -F $chain
+ $IP6TABLES -t $table -F $chain
  fi
  done
- $IP6TABLES -w -t $table -X
+ $IP6TABLES -t $table -X
  done < /proc/net/ip6_tables_names
 }
 
@@ -280,13 +280,7 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 eth1"
- for i in eth0 eth1 ; do
- $IP link show "$i" > /dev/null 2>&1 || {
- log "Interface $i does not exist"
- exit 1
- }
- done
+
 }
 
 prolog_commands() {
@@ -307,126 +301,133 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth0 192.168.1.1/24" ""
- update_addresses_of_interface "eth1 222.222.222.222/24" ""
+ update_addresses_of_interface "eth0 22.22.22.22/24" ""
+ update_addresses_of_interface "eth1 22.22.23.22/24" ""
 }
 
 script_body() {
+ echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout
+ echo 1800 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
  # accept established sessions
- $IPTABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- # ================ Table 'mangle', automatic rules
- $IPTABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
- # ================ Table 'filter', rule set fw61-Policy
+ # ================ Table 'nat', rule set NAT
  #
- # Rule fw61-Policy 0 (global)
+ # Rule 0 (NAT)
  #
- echo "Rule fw61-Policy 0 (global)"
+ echo "Rule 0 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_0
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A fw61-Policy_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
- $IPTABLES -w -A fw61-Policy_0 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.23 --dport 80 -j DNAT --to-destination :8080
  #
- # Rule fw61-Policy 1 (global)
+ # Rule 1 (NAT)
  #
- echo "Rule fw61-Policy 1 (global)"
+ echo "Rule 1 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_1
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A fw61-Policy_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
- $IPTABLES -w -A fw61-Policy_1 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.22 --dport 80 -j DNAT --to-destination :8080
  #
- # Rule fw61-Policy 2 (global)
+ # Rule 2 (NAT)
  #
- echo "Rule fw61-Policy 2 (global)"
+ echo "Rule 2 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_2
- $IPTABLES -w -A OUTPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A INPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A FORWARD -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A fw61-Policy_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
- $IPTABLES -w -A fw61-Policy_2 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.22 --dport 80 -j DNAT --to-destination :8080
  #
- # Rule fw61-Policy 3 (global)
+ # Rule 3 (NAT)
  #
- echo "Rule fw61-Policy 3 (global)"
+ echo "Rule 3 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_3
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A fw61-Policy_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
- $IPTABLES -w -A fw61-Policy_3 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j REDIRECT --to-ports 8080
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.22 --dport 80 -j REDIRECT --to-ports 8080
  #
- # Rule fw61-Policy 4 (global)
+ # Rule 4 (NAT)
  #
- echo "Rule fw61-Policy 4 (global)"
+ echo "Rule 4 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_4
- $IPTABLES -w -A OUTPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A INPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A FORWARD -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A fw61-Policy_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
- $IPTABLES -w -A fw61-Policy_4 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j REDIRECT --to-ports 8080
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.22 --dport 80 -j REDIRECT --to-ports 8080
  #
- # Rule fw61-Policy 5 (global)
+ # Rule 5 (NAT)
  #
- echo "Rule fw61-Policy 5 (global)"
+ echo "Rule 5 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_5
- $IPTABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A fw61-Policy_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
- $IPTABLES -w -A fw61-Policy_5 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 22.22.22.22:8080
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.22 --dport 80 -j DNAT --to-destination 22.22.22.22:8080
  #
- # Rule fw61-Policy 6 (global)
+ # Rule 6 (NAT)
  #
- echo "Rule fw61-Policy 6 (global)"
+ echo "Rule 6 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_6
- $IPTABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A fw61-Policy_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
- $IPTABLES -w -A fw61-Policy_6 -j DROP
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination :8080
  #
- # Rule fw61-Policy 7 (global)
+ # Rule 7 (NAT)
  #
- echo "Rule fw61-Policy 7 (global)"
+ echo "Rule 7 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_7
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A fw61-Policy_7 -j LOG --log-level info --log-prefix "RULE 7 -- DENY "
- $IPTABLES -w -A fw61-Policy_7 -j DROP
+ # port-only translation
+ $IPTABLES -t nat -A POSTROUTING -p udp -m udp --sport 6767 -j SNAT --to-source :67
  #
- # Rule fw61-Policy 8 (global)
+ # Rule 8 (NAT)
  #
- echo "Rule fw61-Policy 8 (global)"
+ echo "Rule 8 (NAT)"
  #
- $IPTABLES -w -N fw61-Policy_8
- $IPTABLES -w -A OUTPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A INPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A FORWARD -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A fw61-Policy_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
- $IPTABLES -w -A fw61-Policy_8 -j DROP
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -p udp -m udp --sport 6767 -j SNAT --to-source 22.22.22.22:67
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -p udp -m udp --sport 6767 -j SNAT --to-source 22.22.23.22:67
+ #
+ # Rule 9 (NAT)
+ #
+ echo "Rule 9 (NAT)"
+ #
+ # port-only translation
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination :8080
+ #
+ # Rule 10 (NAT)
+ #
+ echo "Rule 10 (NAT)"
+ #
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080
+ #
+ # Rule 15 (NAT)
+ #
+ echo "Rule 15 (NAT)"
+ #
+ $IPTABLES -t nat -A POSTROUTING -p udp -m udp -s 192.168.1.0/24 --dport 53 -j SNAT --to-source :5050
+ #
+ # Rule 16 (NAT)
+ #
+ echo "Rule 16 (NAT)"
+ #
+ # invalid rule
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -j SNAT --to-source :5050
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 22.22.22.23 --dport 8080 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 22.22.22.23 --dport 8080 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ $IPTABLES -N RULE_1
+ $IPTABLES -A OUTPUT -j RULE_1
+ $IPTABLES -A INPUT -j RULE_1
+ $IPTABLES -A FORWARD -j RULE_1
+ $IPTABLES -A RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
+ $IPTABLES -A RULE_1 -j DROP
 }
 
 ip_forward() {
  :
- echo 1 > /proc/sys/net/ipv4/ip_forward
+
 }
 
 reset_all() {
@@ -440,9 +441,9 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -w -P OUTPUT ACCEPT
- $IPTABLES -w -P INPUT ACCEPT
- $IPTABLES -w -P FORWARD ACCEPT
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
 }
 
 check_iptables() {
@@ -482,7 +483,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules "nat "
  configure_interfaces
  verify_interfaces
 

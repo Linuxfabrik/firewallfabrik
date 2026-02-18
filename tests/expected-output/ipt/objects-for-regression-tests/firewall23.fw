@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall23.fw /etc/fw/firewall23.fw
+# files: * firewall23.fw /firewall23.fw
 #
 # Compiled for iptables (any version)
 #
@@ -299,8 +299,6 @@ script_body() {
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
- $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-
  # accept established sessions
  $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -318,7 +316,6 @@ script_body() {
  #
  echo "Rule 1 (eth*)"
  #
- $IPTABLES -A INPUT -i eth+ -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -i eth+ -m state --state NEW -j ACCEPT
  #
  # Rule 2 (eth*)
@@ -343,12 +340,14 @@ script_body() {
  #
  echo "Rule 5 (eth*)"
  #
+ $IPTABLES -A INPUT -i eth+ -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -i eth+ -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (eth*)
  #
  echo "Rule 6 (eth*)"
  #
+ $IPTABLES -A INPUT -i eth+ -d ! 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -i eth+ -d ! 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 7 (global)
@@ -357,27 +356,28 @@ script_body() {
  #
  $IPTABLES -A OUTPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -A OUTPUT -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -p udp -m udp -d 192.168.1.10 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p udp -m udp -d 192.168.1.10 --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p udp -m udp --dport 68 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.10 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.255 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p udp -m udp --dport 68 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.10 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.255 -j ACCEPT
  #
  # Rule 9 (global)
  #
  echo "Rule 9 (global)"
  #
- $IPTABLES -A OUTPUT -d 224.0.1.141 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -d 192.168.1.20 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 224.0.1.141 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.1.141 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -d 224.0.1.141 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -d 192.168.1.20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 224.0.1.141 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (global)
  #
@@ -385,7 +385,6 @@ script_body() {
  #
  $IPTABLES -A OUTPUT -d 224.0.0.5 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -d 224.0.0.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.0.5 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
  #
@@ -412,7 +411,6 @@ script_body() {
  # in both INPUT and FORWARD chains
  # because this is a bridging firewall
  # see bug #811860
- $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 14 (global)
@@ -420,7 +418,6 @@ script_body() {
  echo "Rule 14 (global)"
  #
  $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 192.168.1.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
  #
  # Rule 15 (global)

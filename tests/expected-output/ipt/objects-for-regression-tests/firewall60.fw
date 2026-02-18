@@ -327,9 +327,9 @@ script_body() {
  echo "Rule 0 (global)"
  #
  $IPTABLES -N RULE_0
- $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --days Sat -j RULE_0
- $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --days Sat -j RULE_0
- $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --days Sat -j RULE_0
+ $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_0
+ $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_0
+ $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
  $IPTABLES -A RULE_0 -j DROP
  #
@@ -338,9 +338,9 @@ script_body() {
  echo "Rule 1 (global)"
  #
  $IPTABLES -N RULE_1
- $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --days Sun -j RULE_1
- $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --days Sun -j RULE_1
- $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --days Sun -j RULE_1
+ $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j RULE_1
+ $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j RULE_1
+ $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j RULE_1
  $IPTABLES -A RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
  $IPTABLES -A RULE_1 -j DROP
  #
@@ -360,9 +360,9 @@ script_body() {
  echo "Rule 3 (global)"
  #
  $IPTABLES -N RULE_3
- $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --days Sat,Sun -j RULE_3
- $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --days Sat,Sun -j RULE_3
- $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --days Sat,Sun -j RULE_3
+ $IPTABLES -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j RULE_3
+ $IPTABLES -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j RULE_3
+ $IPTABLES -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j RULE_3
  $IPTABLES -A RULE_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
  $IPTABLES -A RULE_3 -j DROP
  #
@@ -371,9 +371,9 @@ script_body() {
  echo "Rule 4 (global)"
  #
  $IPTABLES -N RULE_4
- $IPTABLES -A OUTPUT -m time --timestart 09:00 --timestop 17:00 --days Mon,Tue,Wed,Thu,Fri -j RULE_4
- $IPTABLES -A INPUT -m time --timestart 09:00 --timestop 17:00 --days Mon,Tue,Wed,Thu,Fri -j RULE_4
- $IPTABLES -A FORWARD -m time --timestart 09:00 --timestop 17:00 --days Mon,Tue,Wed,Thu,Fri -j RULE_4
+ $IPTABLES -A OUTPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j RULE_4
+ $IPTABLES -A INPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j RULE_4
+ $IPTABLES -A FORWARD -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j RULE_4
  $IPTABLES -A RULE_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
  $IPTABLES -A RULE_4 -j DROP
 }

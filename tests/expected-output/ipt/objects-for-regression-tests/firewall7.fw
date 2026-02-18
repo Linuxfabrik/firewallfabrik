@@ -315,25 +315,25 @@ script_body() {
  #
  echo "Rule 0 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 192.168.1.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 192.168.1.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (eth0)
  #
  echo "Rule 1 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 2 (eth0)
  #
  echo "Rule 2 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 224.0.1.141 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 224.0.1.141 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (eth0)
  #
  echo "Rule 3 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -s 0.0.0.0 -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -s 0.0.0.0 -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (eth0)
  #
@@ -358,10 +358,10 @@ script_body() {
  echo "Rule 7 (global)"
  #
  $IPTABLES -N RULE_7
- $IPTABLES -A OUTPUT -d 255.255.255.255 -j RULE_7
  $IPTABLES -A OUTPUT -d 192.168.1.255 -j RULE_7
- $IPTABLES -A INPUT -d 255.255.255.255 -j RULE_7
- $IPTABLES -A INPUT -d 192.168.1.255 -j RULE_7
+ $IPTABLES -A OUTPUT -d 255.255.255.255 -j RULE_7
+ $IPTABLES -A FORWARD -d 192.168.1.255 -j RULE_7
+ $IPTABLES -A FORWARD -d 255.255.255.255 -j RULE_7
  $IPTABLES -A RULE_7 -j LOG --log-level debug
  $IPTABLES -A RULE_7 -j DROP
  #
@@ -371,7 +371,7 @@ script_body() {
  #
  # compiler should place rule in INPUT chain because this is broadcast destination
  $IPTABLES -A OUTPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
  #
@@ -379,15 +379,15 @@ script_body() {
  #
  # compiler should place rule in INPUT chain because this is broadcast destination
  $IPTABLES -A OUTPUT -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp -d 192.168.1.255 --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
  # compiler should place rule in INPUT chain because this is broadcast destination
- $IPTABLES -A OUTPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p udp -m udp --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
  #
@@ -395,7 +395,7 @@ script_body() {
  #
  $IPTABLES -N RULE_11
  $IPTABLES -A OUTPUT -d 224.0.1.141 -m state --state NEW -j RULE_11
- $IPTABLES -A INPUT -d 224.0.1.141 -m state --state NEW -j RULE_11
+ $IPTABLES -A FORWARD -d 224.0.1.141 -m state --state NEW -j RULE_11
  $IPTABLES -A RULE_11 -j LOG --log-level debug
  $IPTABLES -A RULE_11 -j ACCEPT
  #
@@ -405,7 +405,7 @@ script_body() {
  #
  $IPTABLES -N RULE_12
  $IPTABLES -A OUTPUT -d 224.0.0.5 -m state --state NEW -j RULE_12
- $IPTABLES -A INPUT -d 224.0.0.5 -m state --state NEW -j RULE_12
+ $IPTABLES -A FORWARD -d 224.0.0.5 -m state --state NEW -j RULE_12
  $IPTABLES -A RULE_12 -j LOG --log-level debug
  $IPTABLES -A RULE_12 -j ACCEPT
  #
@@ -414,21 +414,21 @@ script_body() {
  echo "Rule 13 (global)"
  #
  $IPTABLES -A OUTPUT -d 224.0.0.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.0.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 224.0.0.5 -m state --state NEW -j ACCEPT
  #
  # Rule 14 (global)
  #
  echo "Rule 14 (global)"
  #
  $IPTABLES -A OUTPUT -d 224.0.0.18 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.0.18 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 224.0.0.18 -m state --state NEW -j ACCEPT
  #
  # Rule 15 (global)
  #
  echo "Rule 15 (global)"
  #
  $IPTABLES -A OUTPUT -d 224.0.0.0/4 -j DROP
- $IPTABLES -A INPUT -d 224.0.0.0/4 -j DROP
+ $IPTABLES -A FORWARD -d 224.0.0.0/4 -j DROP
 }
 
 ip_forward() {

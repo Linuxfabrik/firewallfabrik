@@ -304,8 +304,8 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 fe80::1/64 192.168.1.1/24" ""
- update_addresses_of_interface "eth2 2001:470:1f05:590::1/64 192.168.2.1/24" ""
+ update_addresses_of_interface "eth0 192.168.1.1/24 fe80::1/64" ""
+ update_addresses_of_interface "eth2 192.168.2.1/24 2001:470:1f05:590::1/64" ""
 }
 
 script_body() {
@@ -316,22 +316,27 @@ script_body() {
 
  # ================ Table 'filter', rule set Policy
  #
+ # Rule 0 (ppp*)
+ #
+ echo "Rule 0 (ppp*)"
+ #
+ # ppp clients get addresses on 10.1.1.0
+ $IP6TABLES -N In_RULE_0
+ $IP6TABLES -N CHAIN
+ $IP6TABLES -A In_RULE_0 -j CHAIN
+ $IP6TABLES -A CHAIN -j LOG
+ $IP6TABLES -N CHAIN
+ $IP6TABLES -A In_RULE_0 -j CHAIN
+ $IP6TABLES -A CHAIN -j RETURN
+ $IP6TABLES -A CHAIN -j DROP
+ #
  # Rule 1 (ppp*)
  #
  echo "Rule 1 (ppp*)"
  #
  # ppp clients can not connect to the firewall
  $IP6TABLES -N In_RULE_1
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr6 $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IP6TABLES -A INPUT -i ppp+ -d $addr -j In_RULE_1
- done
- done
+ $IP6TABLES -A INPUT -i ppp+ -d $i_ppp__v6 -j In_RULE_1
  $IP6TABLES -A In_RULE_1 -j LOG
  $IP6TABLES -A In_RULE_1 -j DROP
  #
@@ -344,22 +349,53 @@ script_body() {
  $IP6TABLES -A In_RULE_2 -j LOG
  $IP6TABLES -A In_RULE_2 -j DROP
  #
+ # Rule 3 (ppp*)
+ #
+ echo "Rule 3 (ppp*)"
+ #
+ # ppp clients can only connect to the mail
+ # server and web proxy on DMZ
+ $IP6TABLES -A FORWARD -i ppp+ -p tcp -m tcp -m multiport --dports 25,3128 -m state --state NEW -j ACCEPT
+ #
+ # Rule 4 (ppp*)
+ #
+ echo "Rule 4 (ppp*)"
+ #
+ # ppp clients can not connect to
+ # anything else on DMZ and
+ # internal net
+ $IP6TABLES -N In_RULE_4
+ $IP6TABLES -A In_RULE_4 -j LOG
+ $IP6TABLES -A In_RULE_4 -j DROP
+ #
+ # Rule 6 (eth2)
+ #
+ echo "Rule 6 (eth2)"
+ #
+ $IP6TABLES -N In_RULE_6
+ $IP6TABLES -N CHAIN
+ $IP6TABLES -A In_RULE_6 -j CHAIN
+ $IP6TABLES -A CHAIN -j LOG
+ $IP6TABLES -N CHAIN
+ $IP6TABLES -A In_RULE_6 -j CHAIN
+ $IP6TABLES -A CHAIN -j RETURN
+ $IP6TABLES -A CHAIN -j DROP
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ # hostF has the same IP address as firewal.
+ $IP6TABLES -N RULE_7
+ $IP6TABLES -A RULE_7 -j LOG
+ $IP6TABLES -A RULE_7 -j ACCEPT
+ #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
  $IP6TABLES -N CHAIN
  $IP6TABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr6 $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IP6TABLES -A CHAIN -d $addr -j ACCEPT
- done
- done
  $IP6TABLES -A CHAIN -d 2001:470:1f05:590::1 -j ACCEPT
  $IP6TABLES -A CHAIN -d fe80::1 -j ACCEPT
  $IP6TABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
@@ -368,35 +404,60 @@ script_body() {
  #
  echo "Rule 9 (global)"
  #
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr6 $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IP6TABLES -A OUTPUT -p tcp -m tcp -d $addr --dport 22 -m state --state NEW -j ACCEPT
- done
- done
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr6 $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IP6TABLES -A INPUT -p tcp -m tcp -d $addr --dport 22 -m state --state NEW -j ACCEPT
- done
- done
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d $i_ppp__v6 --dport 22 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -p tcp -m tcp -d $i_ppp__v6 --dport 22 -m state --state NEW -j ACCEPT
+ #
+ # Rule 10 (global)
+ #
+ echo "Rule 10 (global)"
+ #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
+ #
+ # Rule 11 (global)
+ #
+ echo "Rule 11 (global)"
+ #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j ACCEPT
+ #
+ # Rule 13 (global)
+ #
+ echo "Rule 13 (global)"
+ #
+ $IP6TABLES -N RULE_13
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j RULE_13
+ $IP6TABLES -A FORWARD -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j RULE_13
+ $IP6TABLES -A RULE_13 -j LOG
+ $IP6TABLES -A RULE_13 -j ACCEPT
+ #
+ # Rule 14 (global)
+ #
+ echo "Rule 14 (global)"
+ #
+ # firewall is part of Any, so compiler should
+ # generate code in both FORWARD and
+ # OUTPUT chains
+ $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state NEW -j ACCEPT
+ #
+ # Rule 15 (global)
+ #
+ echo "Rule 15 (global)"
+ #
+ # firewall is part of Any, compiler should
+ # generate code for both FORWARD and
+ # INPUT chains
+ $IP6TABLES -A INPUT -m state --state NEW -j ACCEPT
  #
  # Rule 18 (global)
  #
  echo "Rule 18 (global)"
  #
  $IP6TABLES -N RULE_18
- $IP6TABLES -A OUTPUT -m rt --rt-type 0 -j RULE_18
- $IP6TABLES -A INPUT -m rt --rt-type 0 -j RULE_18
- $IP6TABLES -A FORWARD -m rt --rt-type 0 -j RULE_18
+ $IP6TABLES -A OUTPUT -j RULE_18
+ $IP6TABLES -A INPUT -j RULE_18
+ $IP6TABLES -A FORWARD -j RULE_18
  $IP6TABLES -A RULE_18 -j LOG
  $IP6TABLES -A RULE_18 -j DROP
  #

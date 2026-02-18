@@ -6,11 +6,12 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall61-1.2.5.fw /etc/firewall61-1.2.5.fw
+# files: * server-1.fw /server-1.fw
 #
-# Compiled for iptables lt_1.2.6
+# Compiled for iptables (any version)
 #
-# testing time litmiting for iptables 1.2.5
+# fw is part of any is OFF
+# ip forwarding is OFF
 
 FWBDEBUG=""
 
@@ -122,36 +123,36 @@ check_tools() {
 reset_iptables_v4() {
  local list
 
- $IPTABLES -w -P OUTPUT DROP
- $IPTABLES -w -P INPUT DROP
- $IPTABLES -w -P FORWARD DROP
+ $IPTABLES -P OUTPUT DROP
+ $IPTABLES -P INPUT DROP
+ $IPTABLES -P FORWARD DROP
 
  while read table; do
- list=$($IPTABLES -w -t $table -L -n)
+ list=$($IPTABLES -t $table -L -n)
  printf "%s" "$list" | while read c chain rest; do
  if test "X$c" = "XChain" ; then
- $IPTABLES -w -t $table -F $chain
+ $IPTABLES -t $table -F $chain
  fi
  done
- $IPTABLES -w -t $table -X
+ $IPTABLES -t $table -X
  done < /proc/net/ip_tables_names
 }
 
 reset_iptables_v6() {
  local list
 
- $IP6TABLES -w -P OUTPUT DROP
- $IP6TABLES -w -P INPUT DROP
- $IP6TABLES -w -P FORWARD DROP
+ $IP6TABLES -P OUTPUT DROP
+ $IP6TABLES -P INPUT DROP
+ $IP6TABLES -P FORWARD DROP
 
  while read table; do
- list=$($IP6TABLES -w -t $table -L -n)
+ list=$($IP6TABLES -t $table -L -n)
  printf "%s" "$list" | while read c chain rest; do
  if test "X$c" = "XChain" ; then
- $IP6TABLES -w -t $table -F $chain
+ $IP6TABLES -t $table -F $chain
  fi
  done
- $IP6TABLES -w -t $table -X
+ $IP6TABLES -t $table -X
  done < /proc/net/ip6_tables_names
 }
 
@@ -280,8 +281,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 eth1"
- for i in eth0 eth1 ; do
+ echo "Verifying interfaces: eth0 lo"
+ for i in eth0 lo ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -308,125 +309,25 @@ configure_interfaces() {
  :
  # Configure interfaces
  update_addresses_of_interface "eth0 192.168.1.1/24" ""
- update_addresses_of_interface "eth1 222.222.222.222/24" ""
+ update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {
+ echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
+ echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
  # accept established sessions
- $IPTABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
- # ================ Table 'mangle', automatic rules
- $IPTABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-
- # ================ Table 'filter', rule set fw61-Policy
- #
- # Rule fw61-Policy 0 (global)
- #
- echo "Rule fw61-Policy 0 (global)"
- #
- $IPTABLES -w -N fw61-Policy_0
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
- $IPTABLES -w -A fw61-Policy_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
- $IPTABLES -w -A fw61-Policy_0 -j DROP
- #
- # Rule fw61-Policy 1 (global)
- #
- echo "Rule fw61-Policy 1 (global)"
- #
- $IPTABLES -w -N fw61-Policy_1
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
- $IPTABLES -w -A fw61-Policy_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
- $IPTABLES -w -A fw61-Policy_1 -j DROP
- #
- # Rule fw61-Policy 2 (global)
- #
- echo "Rule fw61-Policy 2 (global)"
- #
- $IPTABLES -w -N fw61-Policy_2
- $IPTABLES -w -A OUTPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A INPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A FORWARD -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
- $IPTABLES -w -A fw61-Policy_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
- $IPTABLES -w -A fw61-Policy_2 -j DROP
- #
- # Rule fw61-Policy 3 (global)
- #
- echo "Rule fw61-Policy 3 (global)"
- #
- $IPTABLES -w -N fw61-Policy_3
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
- $IPTABLES -w -A fw61-Policy_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
- $IPTABLES -w -A fw61-Policy_3 -j DROP
- #
- # Rule fw61-Policy 4 (global)
- #
- echo "Rule fw61-Policy 4 (global)"
- #
- $IPTABLES -w -N fw61-Policy_4
- $IPTABLES -w -A OUTPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A INPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A FORWARD -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
- $IPTABLES -w -A fw61-Policy_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
- $IPTABLES -w -A fw61-Policy_4 -j DROP
- #
- # Rule fw61-Policy 5 (global)
- #
- echo "Rule fw61-Policy 5 (global)"
- #
- $IPTABLES -w -N fw61-Policy_5
- $IPTABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
- $IPTABLES -w -A fw61-Policy_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
- $IPTABLES -w -A fw61-Policy_5 -j DROP
- #
- # Rule fw61-Policy 6 (global)
- #
- echo "Rule fw61-Policy 6 (global)"
- #
- $IPTABLES -w -N fw61-Policy_6
- $IPTABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
- $IPTABLES -w -A fw61-Policy_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
- $IPTABLES -w -A fw61-Policy_6 -j DROP
- #
- # Rule fw61-Policy 7 (global)
- #
- echo "Rule fw61-Policy 7 (global)"
- #
- $IPTABLES -w -N fw61-Policy_7
- $IPTABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A INPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
- $IPTABLES -w -A fw61-Policy_7 -j LOG --log-level info --log-prefix "RULE 7 -- DENY "
- $IPTABLES -w -A fw61-Policy_7 -j DROP
- #
- # Rule fw61-Policy 8 (global)
- #
- echo "Rule fw61-Policy 8 (global)"
- #
- $IPTABLES -w -N fw61-Policy_8
- $IPTABLES -w -A OUTPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A INPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A FORWARD -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
- $IPTABLES -w -A fw61-Policy_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
- $IPTABLES -w -A fw61-Policy_8 -j DROP
+ $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 }
 
 ip_forward() {
  :
- echo 1 > /proc/sys/net/ipv4/ip_forward
+ echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 reset_all() {
@@ -440,9 +341,9 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -w -P OUTPUT ACCEPT
- $IPTABLES -w -P INPUT ACCEPT
- $IPTABLES -w -P FORWARD ACCEPT
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
 }
 
 check_iptables() {

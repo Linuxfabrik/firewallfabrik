@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall10.fw /etc/fw/firewall10.fw
+# files: * firewall10.fw /firewall10.fw
 #
 # Compiled for iptables 1.2.9
 #
@@ -302,8 +302,6 @@ script_body() {
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
- $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-
  # accept established sessions
  $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -315,11 +313,11 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N Cid3D4F0A58.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 6667 -j Cid3D4F0A58.0
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 6667 -j CHAIN
  $IPTABLES -N RULE_0
- $IPTABLES -A Cid3D4F0A58.0 -d 22.22.22.22 -j RULE_0
- $IPTABLES -A Cid3D4F0A58.0 -d 192.168.1.1 -j RULE_0
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_0
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_0
  $IPTABLES -A INPUT -p tcp -m tcp --dport 6667 -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level debug
  $IPTABLES -A RULE_0 -j REJECT --reject-with icmp-admin-prohibited
@@ -328,11 +326,11 @@ script_body() {
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -N Cid3D4F0A62.0
- $IPTABLES -A OUTPUT -p udp -m udp --dport 53 -j Cid3D4F0A62.0
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p udp -m udp --dport 53 -j CHAIN
  $IPTABLES -N RULE_1
- $IPTABLES -A Cid3D4F0A62.0 -d 22.22.22.22 -j RULE_1
- $IPTABLES -A Cid3D4F0A62.0 -d 192.168.1.1 -j RULE_1
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_1
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_1
  $IPTABLES -A INPUT -p udp -m udp --dport 53 -j RULE_1
  $IPTABLES -A RULE_1 -j LOG --log-level debug
  $IPTABLES -A RULE_1 -j REJECT --reject-with icmp-host-unreachable
@@ -341,14 +339,12 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -N Cid3D4F0A6C.0
- $IPTABLES -A OUTPUT -p icmp -j Cid3D4F0A6C.0
- $IPTABLES -A OUTPUT -p 50 -j Cid3D4F0A6C.0
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -j CHAIN
  $IPTABLES -N RULE_2
- $IPTABLES -A Cid3D4F0A6C.0 -d 22.22.22.22 -j RULE_2
- $IPTABLES -A Cid3D4F0A6C.0 -d 192.168.1.1 -j RULE_2
- $IPTABLES -A INPUT -p icmp -j RULE_2
- $IPTABLES -A INPUT -p 50 -j RULE_2
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_2
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_2
+ $IPTABLES -A INPUT -j RULE_2
  $IPTABLES -A RULE_2 -j LOG --log-level debug
  $IPTABLES -A RULE_2 -j REJECT --reject-with icmp-host-unreachable
  #
@@ -356,13 +352,13 @@ script_body() {
  #
  echo "Rule 3 (global)"
  #
- $IPTABLES -N Cid3D4F0A76.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4F0A76.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j Cid3D4F0A76.0
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4F0A76.0
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j CHAIN
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
  $IPTABLES -N RULE_3
- $IPTABLES -A Cid3D4F0A76.0 -d 22.22.22.22 -j RULE_3
- $IPTABLES -A Cid3D4F0A76.0 -d 192.168.1.1 -j RULE_3
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_3
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_3
  $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j RULE_3
  $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j RULE_3
  $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j RULE_3
@@ -373,12 +369,12 @@ script_body() {
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -N Cid3D4F0A80.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4F0A80.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j Cid3D4F0A80.0
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4F0A80.0
- $IPTABLES -A Cid3D4F0A80.0 -d 22.22.22.22 -j REJECT --reject-with icmp-host-unreachable
- $IPTABLES -A Cid3D4F0A80.0 -d 192.168.1.1 -j REJECT --reject-with icmp-host-unreachable
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j CHAIN
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j REJECT --reject-with icmp-host-unreachable
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with icmp-host-unreachable
@@ -387,13 +383,13 @@ script_body() {
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -N Cid3D4F0A8A.0
- $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4F0A8A.0
- $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j Cid3D4F0A8A.0
- $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4F0A8A.0
- $IPTABLES -A Cid3D4F0A8A.0 -d 22.22.22.22 -j RETURN
- $IPTABLES -A Cid3D4F0A8A.0 -d 192.168.1.1 -j RETURN
- $IPTABLES -A Cid3D4F0A8A.0 -j REJECT --reject-with icmp-host-unreachable
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j CHAIN
+ $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j REJECT --reject-with icmp-host-unreachable
  $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with icmp-host-unreachable
@@ -405,30 +401,35 @@ script_body() {
  #
  echo "Rule 6 (global)"
  #
- $IPTABLES -N Cid3D4F0A94.0
- $IPTABLES -A OUTPUT -d 22.22.22.22 -j Cid3D4F0A94.0
- $IPTABLES -A OUTPUT -d 192.168.1.1 -j Cid3D4F0A94.0
- $IPTABLES -A INPUT -j Cid3D4F0A94.0
- $IPTABLES -A Cid3D4F0A94.0 -p tcp -m tcp --dport 10000:11000 -j RETURN
- $IPTABLES -A Cid3D4F0A94.0 -p tcp -m tcp --dport 113 -j RETURN
- $IPTABLES -A Cid3D4F0A94.0 -p udp -m udp -m multiport --dports 53,161 -j RETURN
- $IPTABLES -A Cid3D4F0A94.0 -j REJECT --reject-with icmp-host-unreachable
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 22.22.22.22 -j CHAIN
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j CHAIN
+ $IPTABLES -A INPUT -j CHAIN
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 10000:11000 -j RETURN
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 113 -j RETURN
+ $IPTABLES -A CHAIN -p udp -m udp -m multiport --dports 53,161 -j RETURN
+ $IPTABLES -A CHAIN -j REJECT --reject-with icmp-host-unreachable
  #
  # Rule 7 (global)
  #
  echo "Rule 7 (global)"
  #
- $IPTABLES -N Cid3D4F0A9E.0
- $IPTABLES -A OUTPUT -d 22.22.22.22 -j Cid3D4F0A9E.0
- $IPTABLES -A OUTPUT -d 192.168.1.1 -j Cid3D4F0A9E.0
- $IPTABLES -A INPUT -j Cid3D4F0A9E.0
- $IPTABLES -A Cid3D4F0A9E.0 -p tcp -m tcp --dport 10000:11000 -j RETURN
- $IPTABLES -A Cid3D4F0A9E.0 -p tcp -m tcp --dport 113 -j RETURN
- $IPTABLES -A Cid3D4F0A9E.0 -p udp -m udp -m multiport --dports 53,161 -j RETURN
- $IPTABLES -N RULE_7_3
- $IPTABLES -A Cid3D4F0A9E.0 -j RULE_7_3
- $IPTABLES -A RULE_7_3 -j LOG --log-level debug
- $IPTABLES -A RULE_7_3 -j REJECT --reject-with icmp-host-unreachable
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 22.22.22.22 -j CHAIN
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j CHAIN
+ $IPTABLES -A INPUT -j CHAIN
+ $IPTABLES -N RULE_7
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 10000:11000 -j RULE_7
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 113 -j RULE_7
+ $IPTABLES -A CHAIN -p udp -m udp -m multiport --dports 53,161 -j RULE_7
+ $IPTABLES -A CHAIN -j RULE_7
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_7 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_7 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j REJECT --reject-with icmp-host-unreachable
 }
 
 ip_forward() {

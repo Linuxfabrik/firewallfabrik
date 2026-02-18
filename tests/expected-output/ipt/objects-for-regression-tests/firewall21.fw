@@ -12,9 +12,6 @@
 #
 # two dynamic interfaces in the same policy or NAT rule
 
-# firewall21:Policy:: warning: Log prefix has been truncated to 29 characters
-# firewall21:Policy:: warning: Log prefix has been truncated to 29 characters
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -321,57 +318,39 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -t nat -A PREROUTING -d $i_eth0 -j DNAT --to-destination 192.168.1.10
- done
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -t nat -A PREROUTING -d $i_eth1 -j DNAT --to-destination 192.168.1.10
- done
+ $IPTABLES -t nat -A PREROUTING -d $i_eth0 -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A PREROUTING -d $i_eth1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -t nat -A PREROUTING -d $i_eth0 -j DNAT --to-destination 192.168.1.10 --random
- done
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -t nat -A PREROUTING -d $i_eth1 -j DNAT --to-destination 192.168.1.10 --random
- done
+ $IPTABLES -t nat -A PREROUTING -d $i_eth0 -j DNAT --to-destination 192.168.1.10 --random
+ $IPTABLES -t nat -A PREROUTING -d $i_eth1 -j DNAT --to-destination 192.168.1.10 --random
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0
  #
  # Rule 3 (NAT)
  #
  echo "Rule 3 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE --random
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0 --random
  #
  # Rule 4 (NAT)
  #
  echo "Rule 4 (NAT)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0
- done
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0
  #
  # Rule 5 (NAT)
  #
  echo "Rule 5 (NAT)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0 --random
- done
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0 --random
 
  # ================ Table 'filter', rule set Policy
  #
@@ -379,32 +358,17 @@ script_body() {
  #
  echo "Rule 0 (eth0)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A OUTPUT -o eth0 -s $i_eth0 -m state --state NEW -j ACCEPT
- done
+ $IPTABLES -A OUTPUT -o eth0 -s $i_eth0 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A INPUT -s $i_eth0 -m state --state NEW -j ACCEPT
- done
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A INPUT -s $i_eth1 -m state --state NEW -j ACCEPT
- done
+ $IPTABLES -A INPUT -s $i_eth0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -s $i_eth1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A OUTPUT -s $i_eth0 -m state --state NEW -j ACCEPT
- done
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A OUTPUT -s $i_eth1 -m state --state NEW -j ACCEPT
- done
+ $IPTABLES -A OUTPUT -s $i_eth0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s $i_eth1 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
@@ -412,16 +376,10 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A OUTPUT -p udp -m udp -m multiport -d $i_eth0 --dports 68,67 -m state --state NEW -j ACCEPT
- done
- $IPTABLES -A INPUT -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A INPUT -p udp -m udp -m multiport -d $i_eth0 --dports 68,67 -m state --state NEW -j ACCEPT
- done
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport -d $i_eth0 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p udp -m udp -m multiport -d $i_eth0 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (global)
  #

@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall18.fw /etc/fw/firewall18.fw
+# files: * firewall18.fw /firewall18.fw
 #
 # Compiled for iptables (any version)
 #
@@ -335,25 +335,19 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
- done
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
- done
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
  #
  # Rule 2 (NAT)
  #
@@ -371,34 +365,40 @@ script_body() {
  #
  echo "Rule 4 (NAT)"
  #
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -t nat -A POSTROUTING -o eth+ -s $i_ppp0 -j SNAT --to-source 66.66.66.130
- done
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -t nat -A POSTROUTING -o ppp+ -s $i_ppp0 -j SNAT --to-source 66.66.66.130
- done
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s 66.66.66.130 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s 192.168.1.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s $i_ppp0 -j SNAT --to-source 66.66.66.130
  #
  # Rule 5 (NAT)
  #
  echo "Rule 5 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s 192.168.1.0/24 -j SNAT --to-source 66.66.66.130
  #
  # Rule 6 (NAT)
  #
  echo "Rule 6 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
- $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
+ $IPTABLES -t nat -A POSTROUTING -o ppp0 -s 66.66.66.1 -j SNAT --to-source 66.66.66.130
 
  # ================ Table 'filter', rule set Policy
  #
@@ -409,11 +409,12 @@ script_body() {
  # using address range object
  # 255.255.255.255-255.255.255.255
  $IPTABLES -N In_RULE_0
- $IPTABLES -A INPUT -i eth0 -d 255.255.255.255 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth0 -j In_RULE_0
  $IPTABLES -A In_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
  $IPTABLES -A In_RULE_0 -j DROP
  $IPTABLES -N Out_RULE_0
- $IPTABLES -A OUTPUT -o eth0 -d 255.255.255.255 -j Out_RULE_0
+ $IPTABLES -A OUTPUT -o eth0 -j Out_RULE_0
+ $IPTABLES -A FORWARD -o eth0 -j Out_RULE_0
  $IPTABLES -A Out_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
  $IPTABLES -A Out_RULE_0 -j DROP
  #
@@ -430,17 +431,9 @@ script_body() {
  #
  # anti-spoofing rule
  $IPTABLES -N In_RULE_2
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A INPUT -i ppp0 -s $i_ppp0 -j In_RULE_2
- done
  $IPTABLES -A INPUT -i ppp0 -s 66.66.66.1 -j In_RULE_2
  $IPTABLES -A INPUT -i ppp0 -s 66.66.66.130 -j In_RULE_2
  $IPTABLES -A INPUT -i ppp0 -s 192.168.1.1 -j In_RULE_2
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A FORWARD -i ppp0 -s $i_ppp0 -j In_RULE_2
- done
  $IPTABLES -A FORWARD -i ppp0 -s 66.66.66.1 -j In_RULE_2
  $IPTABLES -A FORWARD -i ppp0 -s 66.66.66.130 -j In_RULE_2
  $IPTABLES -A FORWARD -i ppp0 -s 192.168.1.1 -j In_RULE_2
@@ -452,7 +445,7 @@ script_body() {
  echo "Rule 3 (ppp0)"
  #
  # but old broadcast is permitted
- $IPTABLES -A INPUT -i ppp0 -s 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i ppp0 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (global)
  #
