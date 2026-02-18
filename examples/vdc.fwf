@@ -8632,8 +8632,66 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771436169
+              lastModified: 1771445063
               lastCompiled: 1771356799
+            options:
+              firewall_is_part_of_any_and_networks: false
+              accept_new_tcp_with_no_syn: false
+              accept_established: false
+              drop_invalid: false
+              log_invalid: false
+              local_nat: false
+              check_shading: true
+              ignore_empty_groups: false
+              clamp_mss_to_mtu: false
+              bridging_fw: false
+              ipv6_neighbor_discovery: false
+              mgmt_ssh: false
+              add_mgmt_ssh_rule_when_stoped: false
+              use_m_set: false
+              use_kerneltz: false
+              log_tcp_seq: false
+              log_tcp_opt: false
+              log_ip_opt: false
+              use_numeric_log_levels: false
+              log_all: false
+              load_modules: false
+              debug: false
+              verify_interfaces: false
+              configure_interfaces: false
+              clear_unknown_interfaces: false
+              configure_vlan_interfaces: false
+              configure_bridge_interfaces: false
+              configure_bonding_interfaces: false
+              manage_virtual_addr: false
+              use_iptables_restore: false
+              compiler: ''
+              cmdline: ''
+              output_file: ''
+              script_name_on_firewall: ''
+              mgmt_addr: ''
+              log_prefix: ''
+              firewall_dir: ''
+              admUser: ''
+              altAddress: ''
+              activationCmd: ''
+              sshArgs: ''
+              scpArgs: ''
+              installScript: ''
+              installScriptArgs: ''
+              prolog_script: ''
+              epilog_script: ''
+              prolog_place: 'top'
+              use_ULOG: false
+              use_NFLOG: false
+              log_level: ''
+              limit_value: '0'
+              limit_suffix: '/second'
+              action_on_reject: 'ICMP unreachable'
+              ulog_cprange: '0'
+              ulog_qthreshold: '1'
+              ulog_nlgroup: '1'
+              ipv4_6_order: 'ipv4_first'
             interfaces:
               - name: 'eth0'
                 data:
@@ -9496,8 +9554,66 @@ libraries:
               platform: 'iptables'
               version: ''
               inactive: false
-              lastModified: 1771436099
+              lastModified: 1771445079
               lastCompiled: 1771356799
+            options:
+              firewall_is_part_of_any_and_networks: false
+              accept_new_tcp_with_no_syn: false
+              accept_established: false
+              drop_invalid: false
+              log_invalid: false
+              local_nat: false
+              check_shading: true
+              ignore_empty_groups: false
+              clamp_mss_to_mtu: false
+              bridging_fw: false
+              ipv6_neighbor_discovery: false
+              mgmt_ssh: false
+              add_mgmt_ssh_rule_when_stoped: false
+              use_m_set: false
+              use_kerneltz: false
+              log_tcp_seq: false
+              log_tcp_opt: false
+              log_ip_opt: false
+              use_numeric_log_levels: false
+              log_all: false
+              load_modules: false
+              debug: false
+              verify_interfaces: false
+              configure_interfaces: false
+              clear_unknown_interfaces: false
+              configure_vlan_interfaces: false
+              configure_bridge_interfaces: false
+              configure_bonding_interfaces: false
+              manage_virtual_addr: false
+              use_iptables_restore: false
+              compiler: ''
+              cmdline: ''
+              output_file: ''
+              script_name_on_firewall: ''
+              mgmt_addr: ''
+              log_prefix: ''
+              firewall_dir: ''
+              admUser: ''
+              altAddress: ''
+              activationCmd: ''
+              sshArgs: ''
+              scpArgs: ''
+              installScript: ''
+              installScriptArgs: ''
+              prolog_script: ''
+              epilog_script: ''
+              prolog_place: 'top'
+              use_ULOG: false
+              use_NFLOG: false
+              log_level: ''
+              limit_value: '0'
+              limit_suffix: '/second'
+              action_on_reject: 'ICMP unreachable'
+              ulog_cprange: '0'
+              ulog_qthreshold: '1'
+              ulog_nlgroup: '1'
+              ipv4_6_order: 'ipv4_first'
             interfaces:
               - name: 'eth0'
                 data:
@@ -9791,8 +9907,66 @@ libraries:
               platform: 'iptables'
               version: ''
               inactive: false
-              lastModified: 1771436082
+              lastModified: 1771445086
               lastCompiled: 1771356799
+            options:
+              firewall_is_part_of_any_and_networks: false
+              accept_new_tcp_with_no_syn: false
+              accept_established: false
+              drop_invalid: false
+              log_invalid: false
+              local_nat: false
+              check_shading: true
+              ignore_empty_groups: false
+              clamp_mss_to_mtu: false
+              bridging_fw: false
+              ipv6_neighbor_discovery: false
+              mgmt_ssh: false
+              add_mgmt_ssh_rule_when_stoped: false
+              use_m_set: false
+              use_kerneltz: false
+              log_tcp_seq: false
+              log_tcp_opt: false
+              log_ip_opt: false
+              use_numeric_log_levels: false
+              log_all: false
+              load_modules: false
+              debug: false
+              verify_interfaces: false
+              configure_interfaces: false
+              clear_unknown_interfaces: false
+              configure_vlan_interfaces: false
+              configure_bridge_interfaces: false
+              configure_bonding_interfaces: false
+              manage_virtual_addr: false
+              use_iptables_restore: false
+              compiler: ''
+              cmdline: ''
+              output_file: ''
+              script_name_on_firewall: ''
+              mgmt_addr: ''
+              log_prefix: ''
+              firewall_dir: ''
+              admUser: ''
+              altAddress: ''
+              activationCmd: ''
+              sshArgs: ''
+              scpArgs: ''
+              installScript: ''
+              installScriptArgs: ''
+              prolog_script: ''
+              epilog_script: ''
+              prolog_place: 'top'
+              use_ULOG: false
+              use_NFLOG: false
+              log_level: ''
+              limit_value: '0'
+              limit_suffix: '/second'
+              action_on_reject: 'ICMP unreachable'
+              ulog_cprange: '0'
+              ulog_qthreshold: '1'
+              ulog_nlgroup: '1'
+              ipv4_6_order: 'ipv4_first'
             interfaces:
               - name: 'eth0'
                 data:
@@ -10072,8 +10246,66 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771436090
+              lastModified: 1771445094
               lastCompiled: 1771356799
+            options:
+              firewall_is_part_of_any_and_networks: false
+              accept_new_tcp_with_no_syn: false
+              accept_established: false
+              drop_invalid: false
+              log_invalid: false
+              local_nat: false
+              check_shading: true
+              ignore_empty_groups: false
+              clamp_mss_to_mtu: false
+              bridging_fw: false
+              ipv6_neighbor_discovery: false
+              mgmt_ssh: false
+              add_mgmt_ssh_rule_when_stoped: false
+              use_m_set: false
+              use_kerneltz: false
+              log_tcp_seq: false
+              log_tcp_opt: false
+              log_ip_opt: false
+              use_numeric_log_levels: false
+              log_all: false
+              load_modules: false
+              debug: false
+              verify_interfaces: false
+              configure_interfaces: false
+              clear_unknown_interfaces: false
+              configure_vlan_interfaces: false
+              configure_bridge_interfaces: false
+              configure_bonding_interfaces: false
+              manage_virtual_addr: false
+              use_iptables_restore: false
+              compiler: ''
+              cmdline: ''
+              output_file: ''
+              script_name_on_firewall: ''
+              mgmt_addr: ''
+              log_prefix: ''
+              firewall_dir: ''
+              admUser: ''
+              altAddress: ''
+              activationCmd: ''
+              sshArgs: ''
+              scpArgs: ''
+              installScript: ''
+              installScriptArgs: ''
+              prolog_script: ''
+              epilog_script: ''
+              prolog_place: 'top'
+              use_ULOG: false
+              use_NFLOG: false
+              log_level: ''
+              limit_value: '0'
+              limit_suffix: '/second'
+              action_on_reject: 'ICMP unreachable'
+              ulog_cprange: '0'
+              ulog_qthreshold: '1'
+              ulog_nlgroup: '1'
+              ipv4_6_order: 'ipv4_first'
             interfaces:
               - name: 'eth0'
                 data:
