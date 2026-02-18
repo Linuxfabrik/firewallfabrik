@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
 
 
 class ClipboardRouter:
@@ -18,7 +18,8 @@ class ClipboardRouter:
 
     The routing rule mirrors fwbuilder: if the object tree has keyboard
     focus the operation targets tree objects; otherwise it targets the
-    active policy (rule-set) view.
+    active policy (rule-set) view.  Text-input widgets (QTextEdit,
+    QLineEdit, etc.) always get native clipboard handling.
     """
 
     def __init__(self, object_tree, get_active_policy_view):
@@ -31,6 +32,16 @@ class ClipboardRouter:
         """
         self._object_tree = object_tree
         self._get_active_policy_view = get_active_policy_view
+
+    @staticmethod
+    def _focus_is_text_widget():
+        """Return True if a text-input widget has keyboard focus.
+
+        Covers QTextEdit (and subclasses like QTextBrowser) as well as
+        QLineEdit — these all handle Ctrl+C/X/V natively.
+        """
+        focus = QApplication.focusWidget()
+        return isinstance(focus, (QLineEdit, QTextEdit))
 
     def _tree_has_focus(self):
         """Return True if the object tree widget has keyboard focus.
@@ -46,6 +57,9 @@ class ClipboardRouter:
 
     def copy(self):
         """Route a *copy* operation."""
+        if self._focus_is_text_widget():
+            QApplication.focusWidget().copy()
+            return
         if self._tree_has_focus():
             self._object_tree._actions._shortcut_copy()
             return
@@ -55,6 +69,9 @@ class ClipboardRouter:
 
     def cut(self):
         """Route a *cut* operation."""
+        if self._focus_is_text_widget():
+            QApplication.focusWidget().cut()
+            return
         if self._tree_has_focus():
             self._object_tree._actions._shortcut_cut()
             return
@@ -73,6 +90,9 @@ class ClipboardRouter:
 
     def paste(self):
         """Route a *paste* operation."""
+        if self._focus_is_text_widget():
+            QApplication.focusWidget().paste()
+            return
         if self._tree_has_focus():
             self._object_tree._actions._shortcut_paste()
             return
