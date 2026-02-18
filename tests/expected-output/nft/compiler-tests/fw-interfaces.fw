@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * fw-interfaces.fw /etc/fw/fw-interfaces.fw
+#
 
 FWBDEBUG=""
 

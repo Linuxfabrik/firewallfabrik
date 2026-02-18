@@ -26,6 +26,11 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, ClassVar, cast
 
+from firewallfabrik.compiler._interval_helpers import (
+    DOW_NAMES_FULL,
+    is_any_interval,
+    parse_interval_data,
+)
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
@@ -135,6 +140,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         state_match = self._print_state(rule)
         if state_match:
             parts.append(state_match)
+
+        # Time matching
+        time_match = self._print_time_interval(rule)
+        if time_match:
+            parts.append(time_match)
 
         # Logging
         log_match = self._print_log(rule)
@@ -525,6 +535,34 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not stateless or force_state:
             return 'ct state new'
         return ''
+
+    def _print_time_interval(self, rule: CompRule) -> str:
+        """Print nftables time/weekday matching.
+
+        Uses ``meta hour`` for time-of-day and ``meta day`` for weekday
+        constraints.
+        """
+        if not rule.when:
+            return ''
+
+        interval = rule.when[0]
+        data = interval.data or {}
+
+        if is_any_interval(data):
+            return ''
+
+        start_h, start_m, end_h, end_m, days = parse_interval_data(data)
+
+        parts = []
+        parts.append(
+            f'meta hour "{start_h:02d}:{start_m:02d}"-"{end_h:02d}:{end_m:02d}"'
+        )
+
+        if sorted(days) != list(range(7)):
+            day_names = ', '.join(f'"{DOW_NAMES_FULL[d]}"' for d in days)
+            parts.append(f'meta day {{ {day_names} }}')
+
+        return ' '.join(parts)
 
     def _print_log(self, rule: CompRule) -> str:
         """Print log expression.

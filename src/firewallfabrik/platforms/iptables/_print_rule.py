@@ -21,6 +21,11 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._interval_helpers import (
+    DOW_NAMES_SHORT,
+    is_any_interval,
+    parse_interval_data,
+)
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
@@ -512,9 +517,33 @@ class PrintRule(PolicyRuleProcessor):
         return ''
 
     def _print_time_interval(self, rule: CompRule) -> str:
+        """Print ``-m time`` matching for time/weekday constraints.
+
+        Ports fwbuilder's ``PolicyCompiler_ipt::PrintRule::_printTimeInterval``
+        (PolicyCompiler_PrintRule.cpp:1387).  Always uses the modern iptables
+        ``--timestart``/``--timestop``/``--weekdays`` syntax (no ``--datestart``
+        or ``--days``).
+        """
         if not rule.when:
             return ''
-        return ''
+
+        interval = rule.when[0]
+        data = interval.data or {}
+
+        if is_any_interval(data):
+            return ''
+
+        start_h, start_m, end_h, end_m, days = parse_interval_data(data)
+
+        parts = ['-m time']
+        parts.append(f'--timestart {start_h:02d}:{start_m:02d}')
+        parts.append(f'--timestop {end_h:02d}:{end_m:02d}')
+
+        if sorted(days) != list(range(7)):
+            day_names = ','.join(DOW_NAMES_SHORT[d] for d in days)
+            parts.append(f'--weekdays {day_names}')
+
+        return ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
         limit_val = rule.get_option('limit_value', -1)
