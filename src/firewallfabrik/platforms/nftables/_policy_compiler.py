@@ -187,7 +187,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(Optimize3('optimization 3'))
 
         if (
-            self.fw.get_option('check_shading', False)
+            self.fw.get_option('check_shading', True)
             and not self.single_rule_compile_mode
         ):
             self.add(DetectShadowing('detect rule shadowing'))

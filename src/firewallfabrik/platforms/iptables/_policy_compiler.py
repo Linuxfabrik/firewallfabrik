@@ -283,7 +283,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
         if (
-            self.fw.get_option('check_shading', False)
+            self.fw.get_option('check_shading', True)
             and not self.single_rule_compile_mode
         ):
             self.add(DetectShadowing('detect rule shadowing'))
