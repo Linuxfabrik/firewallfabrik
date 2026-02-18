@@ -545,7 +545,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             parts.append(f'prefix "{log_prefix}"')
         log_level = rule.get_option('log_level', '')
         if not log_level:
-            log_level = self.compiler.fw.get_option('log_level', '')
+            log_level = self.compiler.fw.get_option('log_level', 'info')
         if log_level:
             parts.append(f'level {log_level}')
         return ' '.join(parts)
@@ -554,7 +554,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         """Get log prefix, expanding macros."""
         log_prefix = rule.get_option('log_prefix', '')
         if not log_prefix:
-            log_prefix = self.compiler.fw.get_option('log_prefix', '')
+            log_prefix = self.compiler.fw.get_option(
+                'log_prefix',
+                'RULE %N -- %A ',
+            )
         if not log_prefix:
             return ''
 

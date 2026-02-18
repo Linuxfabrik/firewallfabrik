@@ -678,6 +678,9 @@ class TreeOperations:
                     if folder in NEW_TYPES_FOR_FOLDER:
                         folder = None
 
+            # Extract options from extra_data (platform defaults for devices).
+            options = extra_data.pop('options', None) if extra_data else None
+
             # Build data dict: merge folder and extra_data.
             data = {}
             if folder:
@@ -686,6 +689,9 @@ class TreeOperations:
                 data.update(extra_data)
             if data and hasattr(model_cls, 'data'):
                 kwargs['data'] = data
+
+            if options and hasattr(model_cls, 'options'):
+                kwargs['options'] = options
 
             new_obj = model_cls(**kwargs)
             new_obj.name = name or f'New {type_name}'
