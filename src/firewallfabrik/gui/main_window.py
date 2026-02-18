@@ -409,6 +409,14 @@ class FWWindow(QMainWindow):
         # here — that would fire each slot twice per keypress.
         self.editDeleteAction.setShortcut(QKeySequence.StandardKey.Delete)
 
+        # Output pane: custom context menu with visible Ctrl+C shortcut.
+        self.output_box.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu,
+        )
+        self.output_box.customContextMenuRequested.connect(
+            self._show_output_context_menu,
+        )
+
         # History list and callback.
         self.undoView.currentRowChanged.connect(self._on_undo_list_clicked)
         self._db_manager.on_history_changed = self._on_history_changed
@@ -1723,6 +1731,20 @@ class FWWindow(QMainWindow):
             self.editorDockWidget.setVisible(True)
             self.actionEditor_panel.setChecked(True)
         self.editorPanelTabWidget.setCurrentIndex(2)
+
+    def _show_output_context_menu(self, pos):
+        """Show context menu for the output pane with Copy and Select All."""
+        menu = self.output_box.createStandardContextMenu(pos)
+        # The standard menu already contains Copy / Select All but without
+        # visible shortcuts.  Replace them with versions that show the
+        # key binding.
+        for action in menu.actions():
+            text = action.text().replace('&', '')
+            if text == 'Copy':
+                action.setShortcut(QKeySequence.StandardKey.Copy)
+            elif text == 'Select All':
+                action.setShortcut(QKeySequence.StandardKey.SelectAll)
+        menu.exec(self.output_box.mapToGlobal(pos))
 
     def _show_output_panel(self):
         """Show the editor dock and switch to the Output tab."""
