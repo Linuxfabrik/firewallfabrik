@@ -124,7 +124,7 @@ class NATCompiler_ipt(NATCompiler):
         # ipset usage flag
         self.using_ipset: bool = False
         if _version_compare(self.version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option('use_m_set', False))
+            self.using_ipset = bool(fw.opt_use_m_set)
 
     @staticmethod
     def get_standard_chains() -> list[str]:
@@ -220,8 +220,8 @@ class NATCompiler_ipt(NATCompiler):
             )
         )
 
-        if self.fw.get_option('local_nat', False):
-            if self.fw.get_option('firewall_is_part_of_any_and_networks', False):
+        if self.fw.opt_local_nat:
+            if self.fw.opt_firewall_is_part_of_any_and_networks:
                 self.add(SplitIfOSrcAny('split rule if OSrc is any'))
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 
@@ -256,7 +256,7 @@ class NATCompiler_ipt(NATCompiler):
             NATPrintRuleIptRstEcho,
         )
 
-        if self.fw.get_option('use_iptables_restore', False):
+        if self.fw.opt_use_iptables_restore:
             self.print_rule_processor = NATPrintRuleIptRstEcho(
                 'generate code for iptables-restore using echo'
             )
@@ -273,14 +273,14 @@ class NATCompiler_ipt(NATCompiler):
 
     def epilog(self) -> None:
         if (
-            self.fw.get_option('use_iptables_restore', False)
+            self.fw.opt_use_iptables_restore
             and self.get_compiled_script_length() > 0
             and not self.single_rule_compile_mode
         ):
             self.output.write('#\n')
 
     def flush_and_set_default_policy(self) -> str:
-        if not self.fw.get_option('use_iptables_restore', False):
+        if not self.fw.opt_use_iptables_restore:
             return ''
         if self.single_rule_compile_mode:
             return ''

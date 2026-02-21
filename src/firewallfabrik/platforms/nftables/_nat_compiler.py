@@ -136,8 +136,8 @@ class NATCompiler_nft(NATCompiler):
         self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
         self.add(SingleObjectNegationODst('negation in ODst if it holds single object'))
 
-        if self.fw.get_option('local_nat', False):
-            if self.fw.get_option('firewall_is_part_of_any_and_networks', False):
+        if self.fw.opt_local_nat:
+            if self.fw.opt_firewall_is_part_of_any_and_networks:
                 self.add(SplitIfOSrcAny('split rule if OSrc is any'))
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 

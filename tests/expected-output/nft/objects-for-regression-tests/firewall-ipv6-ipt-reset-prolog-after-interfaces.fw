@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall-ipv6-ipt-reset-prolog-after-interfaces.fw /etc/firewall-ipv6-ipt-reset-prolog-after-interfaces.fw
+#
 #  Policy is configured as dual address family. Usigng iptables-restore. Prolog is after configuration of interfaces
 #
 

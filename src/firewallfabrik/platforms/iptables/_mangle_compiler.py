@@ -105,9 +105,7 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
             )
 
         # TCPMSS clamping for iptables >= 1.3.0
-        if _version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
-            'clamp_mss_to_mtu', False
-        ):
+        if _version_compare(version, '1.3.0') >= 0 and self.fw.opt_clamp_mss_to_mtu:
             result += (
                 f'{iptables_cmd} {opt_wait}-t mangle '
                 f'-A POSTROUTING -p tcp --tcp-flags SYN,RST SYN '

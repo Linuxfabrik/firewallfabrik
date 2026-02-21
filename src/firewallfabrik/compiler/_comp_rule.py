@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     group_membership,
     rule_elements,
 )
+from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
 
 @dataclasses.dataclass
@@ -310,14 +311,15 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
         if rule.routing_rule_type is not None:
             routing_rule_type = RoutingRuleType(rule.routing_rule_type)
 
-        # Check disabled via options
-        disabled = False
-        if rule.options:
-            val = rule.options.get('disabled', False)
-            if isinstance(val, str):
-                disabled = val.lower() in ('true', '1', 'yes')
-            else:
-                disabled = bool(val)
+        # Build options dict from typed columns
+        options = {}
+        for enum_key, meta in RULE_OPTIONS.items():
+            value = getattr(rule, meta.column_name)
+            if value != meta.default:
+                options[enum_key] = value
+
+        # Check disabled from typed column
+        disabled = rule.opt_disabled
 
         comp_rule = CompRule(
             id=rule.id,
@@ -325,7 +327,7 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             position=rule.position,
             label=rule.label or '',
             comment=rule.comment or '',
-            options=dict(rule.options) if rule.options else {},
+            options=options,
             negations=dict(rule.negations) if rule.negations else {},
             # Element lists — get from resolved elements, empty = "any"
             src=elems.get('src', []),

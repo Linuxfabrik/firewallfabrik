@@ -17,10 +17,12 @@ from __future__ import (
 )
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
+
+from firewallfabrik.core.options._metadata import HOST_OPTIONS, INTERFACE_OPTIONS
 
 from ._base import Base
 from ._types import JSONEncodedSet
@@ -74,16 +76,390 @@ class Host(Base):
         sqlalchemy.JSON,
         default=dict,
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
-    )
     management: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
     )
     id_mapping_for_duplicate: sqlalchemy.orm.Mapped[dict | None] = (
         sqlalchemy.orm.mapped_column(sqlalchemy.JSON, nullable=True, default=None)
+    )
+
+    # -- Typed option columns --
+    # Linux kernel options (sysctl)
+    opt_ip_forward: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ipv6_forward: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_rp_filter: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_accept_source_route: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_accept_redirects: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_log_martians: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ip_dynaddr: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_icmp_echo_ignore_broadcasts: sqlalchemy.orm.Mapped[str] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default='')
+    )
+    opt_icmp_echo_ignore_all: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_icmp_ignore_bogus_error_responses: sqlalchemy.orm.Mapped[str] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default='')
+    )
+    opt_tcp_window_scaling: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_tcp_sack: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_tcp_fack: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_tcp_ecn: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_tcp_syncookies: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_tcp_timestamps: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Linux int options
+    opt_tcp_fin_timeout: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=-1
+    )
+    opt_tcp_keepalive_interval: sqlalchemy.orm.Mapped[int] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, default=-1)
+    )
+    opt_conntrack_max: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=-1
+    )
+    opt_conntrack_hashsize: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=-1
+    )
+    opt_conntrack_tcp_be_liberal: sqlalchemy.orm.Mapped[int] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Integer, default=-1)
+    )
+    # Linux path options (nullable - None means "not set")
+    opt_path_iptables: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_ip6tables: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_path_ip: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_logger: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_vconfig: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_brctl: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_ifenslave: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_path_modprobe: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_lsmod: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_ifconfig: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_ipset: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_path_iptables_restore: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_path_ip6tables_restore: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_data_dir: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_nft_path: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_ip_path: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Firewall bool options (nullable - None means "not set")
+    opt_firewall_is_part_of_any_and_networks: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_accept_new_tcp_with_no_syn: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_accept_established: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_drop_invalid: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_log_invalid: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_local_nat: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_check_shading: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ignore_empty_groups: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_clamp_mss_to_mtu: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_bridging_fw: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_ipv6_neighbor_discovery: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_mgmt_ssh: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_add_mgmt_ssh_rule_when_stoped: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_use_m_set: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_kerneltz: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_log_tcp_seq: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_log_tcp_opt: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_log_ip_opt: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_numeric_log_levels: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_log_all: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_ulog: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_nflog: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_load_modules: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_debug: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_verify_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_clear_unknown_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_vlan_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_bridge_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_bonding_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_manage_virtual_addr: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_use_iptables_restore: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_drop_new_tcp_with_no_syn: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    # Firewall str options (nullable - None means "not set")
+    opt_mgmt_access: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_mgmt_addr: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_log_level: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_log_prefix: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_limit_suffix: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_action_on_reject: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_compiler: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_cmdline: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_output_file: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_script_name_on_firewall: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_firewall_dir: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_admuser: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_altaddress: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_activationcmd: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_sshargs: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_scpargs: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_installscript: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_installscriptargs: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_prolog_script: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_epilog_script: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_prolog_place: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_ipv4_6_order: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Firewall int options
+    opt_ulog_cprange: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_ulog_qthreshold: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_ulog_nlgroup: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # SNMP options (legacy, for XML import)
+    opt_snmp_contact: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_snmp_description: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_snmp_location: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Additional bool options
+    opt_use_mac_addr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_use_mac_addr_filter: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_use_ip_tool: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_ipt_use_snat_instead_of_masq: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_snat_random: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_mangle_only_rulesets: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_ipt_mark_prerouting: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_log_all_dropped: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_fallback_log: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_configure_carp_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_configure_pfsync_interfaces: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_dyn_addr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_proxy_arp: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_enable_ipv6: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=None
+    )
+    opt_no_ipv6_default_policy: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_add_rules_for_ipv6_neighbor_discovery: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    opt_firewall_is_part_of_any: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=None)
+    )
+    # Additional str options
+    opt_log_limit_suffix: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_script_env_path: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_activation: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    opt_loopback_interface: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, default=None)
+    )
+    opt_modules_dir: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=None
+    )
+    # Additional int options
+    opt_log_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
     )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
@@ -129,21 +505,46 @@ class Host(Base):
 
     # -- Compiler helper methods --
 
-    def get_option(self, key: str, default: Any = None) -> Any:
-        """Look up a value in the device options dict.
+    @property
+    def options(self) -> dict:
+        """Build options dict from typed columns.
 
-        Coerces string ``"True"``/``"False"`` to Python bools so that
-        values loaded from XML work correctly with ``bool()`` / ``if``.
+        Provides backward compatibility for GUI code that reads fw.options.
+        Only includes non-default values.
         """
-        if self.options:
-            val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
-        return default
+        opts = {}
+        for _, meta in HOST_OPTIONS.items():
+            value = getattr(self, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        return opts
+
+    @options.setter
+    def options(self, opts: dict | None) -> None:
+        """Set typed columns from an options dict.
+
+        Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        Use get_option() for strict validation when accessing options.
+        """
+        if not opts:
+            return
+        # Set values for known options only, skip unknown
+        for _, meta in HOST_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool:
+                    if isinstance(value, str):
+                        value = value.lower() in ('true', '1', 'yes')
+                    else:
+                        value = bool(value)
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(self, meta.column_name, value)
 
     @property
     def platform(self) -> str:
@@ -212,10 +613,6 @@ class Interface(Base):
         sqlalchemy.JSON,
         default=dict,
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
-    )
     bcast_bits: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer,
         default=0,
@@ -227,6 +624,20 @@ class Interface(Base):
     snmp_type: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer,
         default=0,
+    )
+
+    # -- Typed option columns --
+    opt_bridge_port: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_slave: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_type: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_vlan_id: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     parent_interface_id: sqlalchemy.orm.Mapped[uuid.UUID | None] = (
@@ -291,17 +702,42 @@ class Interface(Base):
 
     # -- Compiler helper methods --
 
-    def get_option(self, key: str, default: Any = None) -> Any:
-        """Look up a value in the interface options dict."""
-        if self.options:
-            val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
-        return default
+    @property
+    def options(self) -> dict:
+        """Not supported — use typed opt_* attributes directly.
+
+        Writing iface.options = dict is still supported for GUI/XML compatibility.
+        """
+        raise AttributeError(
+            'Reading Interface.options is not supported. '
+            'Use typed opt_* attributes directly (e.g., iface.opt_bridge_port).'
+        )
+
+    @options.setter
+    def options(self, opts: dict | None) -> None:
+        """Set typed columns from an options dict.
+
+        Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        """
+        if not opts:
+            return
+        # Set values for known options only, skip unknown
+        for _, meta in INTERFACE_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool:
+                    if isinstance(value, str):
+                        value = value.lower() in ('true', '1', 'yes')
+                    else:
+                        value = bool(value)
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(self, meta.column_name, value)
 
     def is_loopback(self) -> bool:
         return self.name == 'lo'
@@ -320,7 +756,7 @@ class Interface(Base):
         )
 
     def is_bridge_port(self) -> bool:
-        return bool(self.get_option('bridge_port', False))
+        return self.opt_bridge_port
 
     def is_slave(self) -> bool:
-        return bool(self.get_option('slave', False))
+        return self.opt_slave

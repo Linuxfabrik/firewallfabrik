@@ -236,7 +236,7 @@ class EmptyGroupsInRE(BasicRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if self.compiler.fw.get_option('ignore_empty_groups', False):
+        if self.compiler.fw.opt_ignore_empty_groups:
             # Remove empty groups and warn
             for obj in empty_groups:
                 name = getattr(obj, 'name', str(obj))

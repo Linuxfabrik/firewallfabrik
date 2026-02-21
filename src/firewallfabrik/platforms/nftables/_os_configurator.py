@@ -124,12 +124,12 @@ class OSConfigurator_nft(OSConfigurator):
         rules = []
 
         # Accept established/related connections
-        if self.fw.get_option('accept_established', False):
+        if self.fw.opt_accept_established:
             rules.append('        ct state established,related accept')
 
         # Drop invalid packets
-        drop_invalid = self.fw.get_option('drop_invalid', False)
-        log_invalid = self.fw.get_option('log_invalid', False)
+        drop_invalid = self.fw.opt_drop_invalid
+        log_invalid = self.fw.opt_log_invalid
         if drop_invalid:
             if log_invalid:
                 rules.append('        ct state invalid log prefix "INVALID " drop')
@@ -137,7 +137,7 @@ class OSConfigurator_nft(OSConfigurator):
                 rules.append('        ct state invalid drop')
 
         # Drop new TCP without SYN
-        if self.fw.get_option('drop_new_tcp_with_no_syn', False):
+        if self.fw.opt_drop_new_tcp_with_no_syn:
             rules.append('        tcp flags != syn ct state new drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
@@ -243,7 +243,7 @@ class OSConfigurator_nft(OSConfigurator):
 
     def print_commands_to_clear_known_interfaces(self) -> str:
         """Generate commands to clear addresses on unknown interfaces."""
-        if not self.fw.get_option('clear_unknown_interfaces', False):
+        if not self.fw.opt_clear_unknown_interfaces:
             return ''
         if not self.known_interfaces:
             return ''

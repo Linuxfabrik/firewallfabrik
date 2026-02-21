@@ -30,6 +30,7 @@ from ._util import (
     ParseResult,
     escape_obj_name,
 )
+from .options._metadata import HOST_OPTIONS, INTERFACE_OPTIONS, RULE_OPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -326,9 +327,23 @@ class YamlReader:
         dev.ro = data.get('ro', False)
         dev.keywords = set(data.get('keywords', []))
         dev.data = data.get('data', {})
-        dev.options = data.get('options', {})
         dev.management = data.get('management', {})
         dev.library = library
+
+        # Map options dict to typed columns
+        opts = data.get('options', {})
+        for _, meta in HOST_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool and isinstance(value, str):
+                    value = value.lower() in ('true', '1', 'yes')
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(dev, meta.column_name, value)
 
         if 'id_mapping_for_duplicate' in data:
             dev.id_mapping_for_duplicate = data['id_mapping_for_duplicate']
@@ -355,12 +370,26 @@ class YamlReader:
         iface.comment = data.get('comment', '')
         iface.keywords = set(data.get('keywords', []))
         iface.data = data.get('data', {})
-        iface.options = data.get('options', {})
         iface.bcast_bits = data.get('bcast_bits', 0)
         iface.ostatus = data.get('ostatus', False)
         iface.snmp_type = data.get('snmp_type', 0)
         iface.library = library
         iface.device = device
+
+        # Map options dict to typed columns
+        opts = data.get('options', {})
+        for _, meta in INTERFACE_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool and isinstance(value, str):
+                    value = value.lower() in ('true', '1', 'yes')
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(iface, meta.column_name, value)
 
         if parent_interface is not None:
             iface.parent_interface = parent_interface
@@ -412,9 +441,23 @@ class YamlReader:
         rule.position = data.get('position', 0)
         rule.fallback = data.get('fallback', False)
         rule.hidden = data.get('hidden', False)
-        rule.options = data.get('options', {})
         rule.negations = data.get('negations', {})
         rule.rule_set = rule_set
+
+        # Map options dict to typed columns
+        opts = data.get('options', {})
+        for _, meta in RULE_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool and isinstance(value, str):
+                    value = value.lower() in ('true', '1', 'yes')
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(rule, meta.column_name, value)
 
         # Enum fields
         enum_map = _ENUM_REVERSE.get(type_name, {})

@@ -21,6 +21,7 @@ import yaml
 
 from . import objects
 from ._util import ENUM_FIELDS, escape_obj_name
+from .options._metadata import HOST_OPTIONS, INTERFACE_OPTIONS, RULE_OPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +81,12 @@ def _is_default(value):
     return bool(isinstance(value, set | list) and not value)
 
 
-def _serialize_obj(obj, extra_skip=frozenset()):
+def _serialize_obj(obj, extra_skip=frozenset(), skip_opt_columns=False):
     """Serialize an ORM object to a dict, omitting defaults and skipped fields.
 
     Handles enum remapping and set→sorted list conversion.
+    If skip_opt_columns is True, skips all opt_* columns (they are serialized
+    separately as an options dict).
     """
     skip = _SKIP_ALWAYS | extra_skip
     result = {}
@@ -92,6 +95,10 @@ def _serialize_obj(obj, extra_skip=frozenset()):
     for col in mapper.columns:
         key = col.key
         if key in skip:
+            continue
+
+        # Skip opt_* columns when requested
+        if skip_opt_columns and key.startswith('opt_'):
             continue
 
         value = getattr(obj, key)
@@ -486,11 +493,22 @@ class YamlWriter:
         d = _serialize_obj(
             dev,
             extra_skip=frozenset({'id_mapping_for_duplicate'}),
+            skip_opt_columns=True,
         )
         if dev.ro:
             d['ro'] = True
         if dev.id_mapping_for_duplicate:
             d['id_mapping_for_duplicate'] = dev.id_mapping_for_duplicate
+
+        # Build options dict from typed columns (sorted for stable output)
+        # Include value if it differs from the column default (None or otherwise)
+        opts = {}
+        for _, meta in HOST_OPTIONS.items():
+            value = getattr(dev, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Interfaces (top-level only; sub-interfaces are nested within)
         top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
@@ -510,7 +528,16 @@ class YamlWriter:
         return d
 
     def _serialize_interface(self, iface):
-        d = _serialize_obj(iface)
+        d = _serialize_obj(iface, skip_opt_columns=True)
+
+        # Build options dict from typed columns (sorted for stable output)
+        opts = {}
+        for _, meta in INTERFACE_OPTIONS.items():
+            value = getattr(iface, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Interface addresses
         if iface.addresses:
@@ -545,7 +572,20 @@ class YamlWriter:
         return d
 
     def _serialize_rule(self, session, rule):
-        d = _serialize_obj(rule, extra_skip=frozenset({'sorted_dst_ids', 'negations'}))
+        d = _serialize_obj(
+            rule,
+            extra_skip=frozenset({'sorted_dst_ids', 'negations'}),
+            skip_opt_columns=True,
+        )
+
+        # Build options dict from typed columns (sorted for stable output)
+        opts = {}
+        for _, meta in RULE_OPTIONS.items():
+            value = getattr(rule, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Negations — only include slots that are True
         if rule.negations:

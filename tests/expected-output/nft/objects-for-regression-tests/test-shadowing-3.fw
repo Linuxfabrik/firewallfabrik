@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * test-shadowing-3.fw /etc/test-shadowing-3.fw
+#
 #  testing shadowing detection
 #  compiler runs with -xt flag
 #  testing shadowing when rules have non-default options

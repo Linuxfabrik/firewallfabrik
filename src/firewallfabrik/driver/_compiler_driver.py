@@ -89,38 +89,56 @@ class CompilerDriver(BaseCompiler):
     # generated script may not match the user's intent.  We emit a warning
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
-        ('use_ULOG', 'ULOG/NFLOG logging is not yet supported; falling back to LOG'),
         (
-            'log_tcp_seq',
+            'opt_use_ulog',
+            'ULOG/NFLOG logging is not yet supported; falling back to LOG',
+        ),
+        (
+            'opt_log_tcp_seq',
             'logging TCP sequence numbers (--log-tcp-sequence) is not yet supported',
         ),
-        ('log_tcp_opt', 'logging TCP options (--log-tcp-options) is not yet supported'),
-        ('log_ip_opt', 'logging IP options (--log-ip-options) is not yet supported'),
-        ('use_numeric_log_levels', 'numeric syslog log levels are not yet supported'),
-        ('log_all', 'unconditional logging of all rules is not yet supported'),
-        ('use_kerneltz', 'kernel timezone for log timestamps is not yet supported'),
         (
-            'configure_bridge_interfaces',
+            'opt_log_tcp_opt',
+            'logging TCP options (--log-tcp-options) is not yet supported',
+        ),
+        (
+            'opt_log_ip_opt',
+            'logging IP options (--log-ip-options) is not yet supported',
+        ),
+        (
+            'opt_use_numeric_log_levels',
+            'numeric syslog log levels are not yet supported',
+        ),
+        (
+            'opt_log_all',
+            'unconditional logging of all rules is not yet supported',
+        ),
+        (
+            'opt_use_kerneltz',
+            'kernel timezone for log timestamps is not yet supported',
+        ),
+        (
+            'opt_configure_bridge_interfaces',
             'bridge interface configuration is not yet supported',
         ),
     ]
 
-    def _warn_unsupported_options(self, options: dict) -> None:
+    def _warn_unsupported_options(self, fw: Firewall) -> None:
         """Emit warnings for recognised but unimplemented firewall options."""
-        for opt, msg in self._UNSUPPORTED_BOOL_OPTIONS:
-            if options.get(opt, False):
+        for attr, msg in self._UNSUPPORTED_BOOL_OPTIONS:
+            if getattr(fw, attr):
                 self.warning(msg)
 
         # Non-boolean ULOG parameters — only relevant when use_ULOG is set,
         # but warn individually so the user sees exactly what is ignored.
-        for opt, flag in [
-            ('ulog_nlgroup', '--ulog-nlgroup / --nflog-group'),
-            ('ulog_cprange', '--ulog-cprange / --nflog-range'),
-            ('ulog_qthreshold', '--ulog-qthreshold / --nflog-threshold'),
+        for attr, flag in [
+            ('opt_ulog_nlgroup', '--ulog-nlgroup / --nflog-group'),
+            ('opt_ulog_cprange', '--ulog-cprange / --nflog-range'),
+            ('opt_ulog_qthreshold', '--ulog-qthreshold / --nflog-threshold'),
         ]:
-            val = options.get(opt)
+            val = getattr(fw, attr)
             if val is not None and val != '' and val != 0 and val != -1:
-                self.warning(f'{flag} is not yet supported (option {opt!r} ignored)')
+                self.warning(f'{flag} is not yet supported (option {attr!r} ignored)')
 
     # -- Script assembly --
 
@@ -195,8 +213,10 @@ class CompilerDriver(BaseCompiler):
         self.file_names[str(fw.id)] = str(Path(output_dir) / file_name)
 
         # Compute remote file name from firewall options
-        firewall_dir = fw.get_option('firewall_dir', '/etc/fw')
-        script_name = fw.get_option('script_name_on_firewall', '')
+        firewall_dir = (
+            fw.opt_firewall_dir if fw.opt_firewall_dir is not None else '/etc/fw'
+        )
+        script_name = fw.opt_script_name_on_firewall or ''
         if script_name:
             remote_file_name = str(script_name)
         else:

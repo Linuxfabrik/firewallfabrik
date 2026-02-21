@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * rh90.fw /etc/rh90.fw
+#
 #  This is an example of a firewall protecting a host ( a server or a workstation). Only SSH access to the host is permitted. Host has dynamic address.
 #
 

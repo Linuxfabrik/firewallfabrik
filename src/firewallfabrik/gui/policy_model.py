@@ -480,11 +480,12 @@ class PolicyTreeModel(QAbstractItemModel):
             except (TypeError, ValueError):
                 pass
 
-        opts = rule.options or {}
-        group_name = opts.get('group', '')
-        color_hex = opts.get('color', '')
-        if not color_hex and rule.label and rule.label in LABEL_KEYS:
+        color_hex = ''
+        if rule.label and rule.label in LABEL_KEYS:
             color_hex = get_label_color(rule.label)
+
+        # Build the options dict from typed columns for tooltip display.
+        opts = rule.options or {}
 
         return _RowData(
             action=act_name,
@@ -493,14 +494,14 @@ class PolicyTreeModel(QAbstractItemModel):
             comment=rule.comment or '',
             direction=dir_name,
             direction_int=direction_int,
-            disabled=_opt_bool(opts, 'disabled'),
+            disabled=bool(rule.opt_disabled),
             dst=slots.get('dst', []),
-            group=group_name,
+            group='',
             itf=slots.get('itf', []),
             itf_inb=slots.get('itf_inb', []),
             itf_outb=slots.get('itf_outb', []),
             label=rule.label or '',
-            metric=_opt_int(opts, 'metric'),
+            metric=rule.opt_metric or 0,
             nat_action=nat_action_name,
             nat_action_int=nat_action_int,
             negations=rule.negations or {},
@@ -936,8 +937,7 @@ class PolicyTreeModel(QAbstractItemModel):
 
         If *index* points inside a group, the new rule inherits that group.
         """
-        # Determine insertion position and group.
-        group_name = ''
+        # Determine insertion position.
         if at_top:
             position = 0
         elif at_bottom or index is None:
@@ -950,13 +950,11 @@ class PolicyTreeModel(QAbstractItemModel):
                     position = node.children[-1].row_data.position + 1
                 else:
                     position = 0
-                group_name = node.name
             elif node.node_type == _NodeType.Rule:
                 if before:
                     position = node.row_data.position
                 else:
                     position = node.row_data.position + 1
-                group_name = node.row_data.group
             else:
                 position = self.flat_rule_count()
 
@@ -971,24 +969,21 @@ class PolicyTreeModel(QAbstractItemModel):
                 .values(position=self._rule_cls.position + 1),
             )
             # Defaults per type.
-            opts = {}
             kwargs = {}
             if self._rule_set_type == 'Policy':
-                opts['stateless'] = True
                 kwargs['policy_action'] = PolicyAction.Deny.value
                 kwargs['policy_direction'] = Direction.Both.value
             elif self._rule_set_type == 'NAT':
                 kwargs['nat_action'] = NATAction.Translate.value
-            if group_name:
-                opts['group'] = group_name
             new_id = uuid.uuid4()
             new_rule = self._rule_cls(
                 id=new_id,
                 rule_set_id=self._rule_set_id,
                 position=position,
-                options=opts,
                 **kwargs,
             )
+            if self._rule_set_type == 'Policy':
+                new_rule.opt_stateless = True
             session.add(new_rule)
 
         self.reload()
@@ -1067,13 +1062,10 @@ class PolicyTreeModel(QAbstractItemModel):
         node = self._node_from_index(index)
         if node.node_type == _NodeType.Group:
             position = node.children[-1].row_data.position + 1 if node.children else 0
-            group_name = node.name
         elif node.node_type == _NodeType.Rule:
             position = node.row_data.position if before else node.row_data.position + 1
-            group_name = node.row_data.group
         else:
             position = self.flat_rule_count()
-            group_name = ''
 
         new_ids = []
         session = self._db_manager.create_session()
@@ -1095,18 +1087,12 @@ class PolicyTreeModel(QAbstractItemModel):
                 )
 
                 new_id = uuid.uuid4()
-                opts = dict(src_rule.options or {})
-                if group_name:
-                    opts['group'] = group_name
-                else:
-                    opts.pop('group', None)
 
                 kwargs = {
                     'comment': src_rule.comment or '',
                     'id': new_id,
                     'label': src_rule.label or '',
                     'negations': dict(src_rule.negations or {}),
-                    'options': opts,
                     'position': position + i,
                     'rule_set_id': self._rule_set_id,
                 }
@@ -1121,6 +1107,15 @@ class PolicyTreeModel(QAbstractItemModel):
                     kwargs['routing_rule_type'] = src_rule.routing_rule_type
 
                 new_rule = self._rule_cls(**kwargs)
+                # Copy typed option columns from source rule.
+                from firewallfabrik.core.options._metadata import RULE_OPTIONS
+
+                for meta in RULE_OPTIONS.values():
+                    setattr(
+                        new_rule,
+                        meta.column_name,
+                        getattr(src_rule, meta.column_name),
+                    )
                 session.add(new_rule)
                 session.flush()
 
@@ -1295,12 +1290,10 @@ class PolicyTreeModel(QAbstractItemModel):
                     rule.nat_action = action.value
                 else:
                     rule.policy_action = action.value
-                    opts = dict(rule.options or {})
                     if action == PolicyAction.Accept:
-                        opts.pop('stateless', None)
+                        rule.opt_stateless = False
                     else:
-                        opts['stateless'] = True
-                    rule.options = opts
+                        rule.opt_stateless = True
         self.reload()
 
     def set_comment(self, index, comment):
@@ -1332,12 +1325,7 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                opts = dict(rule.options or {})
-                if disabled:
-                    opts['disabled'] = True
-                else:
-                    opts.pop('disabled', None)
-                rule.options = opts
+                rule.opt_disabled = disabled
         self.reload()
 
     def set_direction(self, index, direction):
@@ -1377,12 +1365,6 @@ class PolicyTreeModel(QAbstractItemModel):
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.label = label_key
-                opts = dict(rule.options or {})
-                if label_key:
-                    opts['color'] = get_label_color(label_key)
-                else:
-                    opts.pop('color', None)
-                rule.options = opts
         self.reload()
 
     def add_element(self, index, slot, target_id):
@@ -1509,20 +1491,15 @@ class PolicyTreeModel(QAbstractItemModel):
         with self._db_manager.session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                opts = dict(rule.options or {})
-                if enabled:
-                    opts['log'] = True
-                else:
-                    opts.pop('log', None)
-                rule.options = opts
+                rule.opt_log = enabled
         self.reload()
 
     def set_options(self, index, options):
         """Replace rule options for the rule at *index*.
 
-        *options* is a dict that replaces the non-structural keys in the
-        rule's ``options`` JSON (``group``, ``disabled``, and ``color``
-        are preserved from the existing options).
+        *options* is a dict of ``{column_name: value}`` pairs that are
+        set directly on the rule via ``setattr``.  The ``opt_disabled``
+        column is preserved from the existing rule.
         """
         row_data = self.get_row_data(index)
         if row_data is None:
@@ -1532,13 +1509,11 @@ class PolicyTreeModel(QAbstractItemModel):
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                old = dict(rule.options or {})
-                merged = dict(options)
-                # Preserve structural keys managed elsewhere.
-                for key in ('color', 'disabled', 'group'):
-                    if key in old:
-                        merged[key] = old[key]
-                rule.options = merged
+                # Preserve disabled — managed by set_disabled().
+                saved_disabled = rule.opt_disabled
+                for col_name, value in options.items():
+                    setattr(rule, col_name, value)
+                rule.opt_disabled = saved_disabled
         self.reload()
 
     def toggle_negation(self, index, slot):

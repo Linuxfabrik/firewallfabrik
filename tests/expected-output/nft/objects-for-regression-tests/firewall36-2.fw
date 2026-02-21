@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall36-2.fw /etc/firewall36-2.fw
+#
 #  Testing routing configuration where routing rules install simple (not ECMP) default route
 #
 

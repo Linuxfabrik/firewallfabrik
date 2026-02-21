@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 import sqlalchemy.orm
 
+from firewallfabrik.core.options._metadata import RULE_OPTIONS
+
 from ._base import Base
 
 if TYPE_CHECKING:
@@ -178,10 +180,6 @@ class Rule(Base):
         sqlalchemy.Boolean,
         default=False,
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
-    )
     negations: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
@@ -205,6 +203,187 @@ class Rule(Base):
         sqlalchemy.String, nullable=True, default=None
     )
 
+    # -- Typed option columns --
+    # Rate limiting
+    opt_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_limit_value_not: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_limit_suffix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_limit_burst: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Hashlimit
+    opt_hashlimit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_suffix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_hashlimit_burst: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_hashlimit_size: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_max: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_expire: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_gcinterval: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_dstlimit: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_dstip: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_dstport: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_srcip: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_srcport: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    # Connlimit
+    opt_connlimit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_connlimit_above_not: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_connlimit_masklen: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Logging
+    opt_log_level: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_log_prefix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ulog_nlgroup: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Rule behavior
+    opt_disabled: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_stateless: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_continue: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_mark_connections: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_ipt_tee: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_iif: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ipt_oif: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ipt_gw: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Tagging
+    opt_tagging: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_tagobject_id: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_classify_str: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Per-rule firewall scope
+    opt_firewall_is_part_of_any_and_networks: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # Rule flags
+    opt_log: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_logging: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_counter_name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_routing: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_classification: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_no_output_chain: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_no_input_chain: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_do_not_optimize_by_srv: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_put_in_mangle_table: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_branch_in_mangle: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # NAT options
+    opt_ipt_nat_random: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_nat_persistent: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    # Internal compiler bookkeeping
+    opt_rule_added_for_osrc_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_rule_added_for_odst_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_rule_added_for_osrv_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # Per-rule reject action override
+    opt_action_on_reject: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Routing rule metric
+    opt_metric: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Accounting and custom actions
+    opt_rule_name_accounting: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_custom_str: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Ruleset option (mangle table only)
+    opt_mangle_only_rule_set: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+
     rule_set: sqlalchemy.orm.Mapped[RuleSet] = sqlalchemy.orm.relationship(
         'RuleSet',
         back_populates='rules',
@@ -220,6 +399,48 @@ class Rule(Base):
         sqlalchemy.Index('ix_rules_rule_set_id', 'rule_set_id'),
         sqlalchemy.Index('ix_rules_position', 'rule_set_id', 'position'),
     )
+
+    # -- Compiler helper methods --
+
+    @property
+    def options(self) -> dict:
+        """Build options dict from typed columns.
+
+        Provides backward compatibility for code that accesses rule.options.
+        Only includes non-default values.
+        """
+        opts = {}
+        for _, meta in RULE_OPTIONS.items():
+            value = getattr(self, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        return opts
+
+    @options.setter
+    def options(self, opts: dict | None) -> None:
+        """Set typed columns from an options dict.
+
+        Used by XML reader and GUI dialogs.
+        Unknown options are silently ignored for legacy XML compatibility.
+        """
+        if not opts:
+            return
+        # Set values for known options only, skip unknown
+        for _, meta in RULE_OPTIONS.items():
+            if meta.yaml_key in opts:
+                value = opts[meta.yaml_key]
+                # Coerce types if needed
+                if meta.col_type is bool:
+                    if isinstance(value, str):
+                        value = value.lower() in ('true', '1', 'yes')
+                    else:
+                        value = bool(value)
+                elif meta.col_type is int and not isinstance(value, int):
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        value = meta.default
+                setattr(self, meta.column_name, value)
 
 
 class PolicyRule(Rule):

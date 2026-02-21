@@ -149,7 +149,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # ipset usage flag
         self.using_ipset: bool = False
         if _version_compare(self.version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option('use_m_set', False))
+            self.using_ipset = bool(fw.opt_use_m_set)
 
     @staticmethod
     def get_standard_chains() -> list[str]:
@@ -282,10 +282,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
-        if (
-            self.fw.get_option('check_shading', False)
-            and not self.single_rule_compile_mode
-        ):
+        if self.fw.opt_check_shading and not self.single_rule_compile_mode:
             self.add(DetectShadowing('detect rule shadowing'))
 
         self.add(CountChainUsage('count chain usage'))
@@ -378,7 +375,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
     def epilog(self) -> None:
         """Finalize compilation."""
         if (
-            self.fw.get_option('use_iptables_restore', False)
+            self.fw.opt_use_iptables_restore
             and self.get_compiled_script_length() > 0
             and not self.single_rule_compile_mode
         ):
@@ -395,7 +392,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             PrintRuleIptRstEcho,
         )
 
-        use_restore = bool(self.fw.get_option('use_iptables_restore', False))
+        use_restore = bool(self.fw.opt_use_iptables_restore)
 
         if use_restore:
             pr = PrintRuleIptRstEcho('generate code for iptables-restore')
@@ -510,7 +507,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         """Generate flush and default policy commands for iptables-restore."""
         if self.single_rule_compile_mode:
             return ''
-        if not self.fw.get_option('use_iptables_restore', False):
+        if not self.fw.opt_use_iptables_restore:
             return ''
 
         result = ''
@@ -530,7 +527,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         ipv6 = self.ipv6_policy
         iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
 
-        use_restore = bool(self.fw.get_option('use_iptables_restore', False))
+        use_restore = bool(self.fw.opt_use_iptables_restore)
 
         begin_rule = '' if use_restore else f'{iptables_cmd} -A'
 
@@ -548,28 +545,29 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         conf.set_variable(
             'accept_established',
-            1 if self.fw.get_option('accept_established', False) else 0,
+            1 if self.fw.opt_accept_established else 0,
         )
 
-        ipv4_fwd = self.fw.get_option('linux24_ip_forward', '')
+        ipv4_fwd = self.fw.opt_ip_forward or ''
         ipforw = str(ipv4_fwd) in ('1', 'On', 'on', '')
         conf.set_variable('ipforw', 1 if ipforw else 0)
 
         conf.set_variable('mgmt_access', 0)
         conf.set_variable(
-            'bridging_firewall', 1 if self.fw.get_option('bridging_fw', False) else 0
+            'bridging_firewall',
+            1 if self.fw.opt_bridging_fw else 0,
         )
         conf.set_variable(
             'drop_new_tcp_with_no_syn',
-            1 if self.fw.get_option('drop_new_tcp_with_no_syn', False) else 0,
+            1 if self.fw.opt_drop_new_tcp_with_no_syn else 0,
         )
         conf.set_variable(
             'add_rules_for_ipv6_neighbor_discovery',
-            1 if (ipv6 and self.fw.get_option('ipv6_neighbor_discovery', False)) else 0,
+            1 if (ipv6 and self.fw.opt_ipv6_neighbor_discovery) else 0,
         )
 
-        drop_invalid = self.fw.get_option('drop_invalid', False)
-        log_invalid = self.fw.get_option('log_invalid', False)
+        drop_invalid = self.fw.opt_drop_invalid
+        log_invalid = self.fw.opt_log_invalid
         conf.set_variable(
             'drop_invalid', 1 if (drop_invalid and not log_invalid) else 0
         )
@@ -588,7 +586,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def commit(self) -> str:
         """Generate COMMIT for iptables-restore format."""
-        if self.fw.get_option('use_iptables_restore', False):
+        if self.fw.opt_use_iptables_restore:
             return "echo 'COMMIT'\n"
         return ''
 
@@ -1167,7 +1165,7 @@ class FillActionOnReject(PolicyRuleProcessor):
         if rule.action == PolicyAction.Reject and not rule.get_option(
             'action_on_reject', ''
         ):
-            global_reject = self.compiler.fw.get_option('action_on_reject', '')
+            global_reject = self.compiler.fw.opt_action_on_reject or ''
             if global_reject:
                 rule.set_option('action_on_reject', global_reject)
 
@@ -1186,9 +1184,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
         # Check per-rule option first, then fall back to global firewall option
         afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
@@ -1231,9 +1227,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
         # Check per-rule option first, then fall back to global firewall option
         afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True

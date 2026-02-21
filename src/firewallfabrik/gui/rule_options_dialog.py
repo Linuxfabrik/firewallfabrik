@@ -19,51 +19,51 @@ from PySide6.QtWidgets import QWidget
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
-# Widget name → options key mapping.
+# Widget name → typed column name on the Rule ORM object.
 # Combo boxes store the selected *text*; spin boxes store the *value*;
 # check boxes store a boolean; line edits store a string.
 _CHECKBOX_WIDGETS = {
-    'cb_dstip': 'hashlimit_dstip',
-    'cb_dstport': 'hashlimit_dstport',
-    'cb_srcip': 'hashlimit_srcip',
-    'cb_srcport': 'hashlimit_srcport',
-    'ipt_connlimit_above_not': 'connlimit_above_not',
-    'ipt_continue': 'ipt_continue',
-    'ipt_hashlimit_dstlimit': 'hashlimit_dstlimit',
-    'ipt_limit_not': 'limit_value_not',
-    'ipt_mark_connections': 'ipt_mark_connections',
-    'ipt_stateless': 'stateless',
-    'ipt_tee': 'ipt_tee',
+    'cb_dstip': 'opt_hashlimit_dstip',
+    'cb_dstport': 'opt_hashlimit_dstport',
+    'cb_srcip': 'opt_hashlimit_srcip',
+    'cb_srcport': 'opt_hashlimit_srcport',
+    'ipt_connlimit_above_not': 'opt_connlimit_above_not',
+    'ipt_continue': 'opt_ipt_continue',
+    'ipt_hashlimit_dstlimit': 'opt_hashlimit_dstlimit',
+    'ipt_limit_not': 'opt_limit_value_not',
+    'ipt_mark_connections': 'opt_ipt_mark_connections',
+    'ipt_stateless': 'opt_stateless',
+    'ipt_tee': 'opt_ipt_tee',
 }
 
 _COMBO_WIDGETS = {
-    'ipt_assume_fw_is_part_of_any': 'firewall_is_part_of_any_and_networks',
-    'ipt_hashlimit_suffix': 'hashlimit_suffix',
-    'ipt_iif': 'ipt_iif',
-    'ipt_limitSuffix': 'limit_suffix',
-    'ipt_logLevel': 'log_level',
-    'ipt_oif': 'ipt_oif',
+    'ipt_assume_fw_is_part_of_any': 'opt_firewall_is_part_of_any_and_networks',
+    'ipt_hashlimit_suffix': 'opt_hashlimit_suffix',
+    'ipt_iif': 'opt_ipt_iif',
+    'ipt_limitSuffix': 'opt_limit_suffix',
+    'ipt_logLevel': 'opt_log_level',
+    'ipt_oif': 'opt_ipt_oif',
 }
 
 _LINEEDIT_WIDGETS = {
-    'classify_str': 'classify_str',
-    'ipt_gw': 'ipt_gw',
-    'ipt_hashlimit_name': 'hashlimit_name',
-    'ipt_logPrefix': 'log_prefix',
+    'classify_str': 'opt_classify_str',
+    'ipt_gw': 'opt_ipt_gw',
+    'ipt_hashlimit_name': 'opt_hashlimit_name',
+    'ipt_logPrefix': 'opt_log_prefix',
 }
 
 _SPINBOX_WIDGETS = {
-    'ipt_burst': 'limit_burst',
-    'ipt_connlimit': 'connlimit_value',
-    'ipt_connlimit_masklen': 'connlimit_masklen',
-    'ipt_hashlimit': 'hashlimit_value',
-    'ipt_hashlimit_burst': 'hashlimit_burst',
-    'ipt_hashlimit_expire': 'hashlimit_expire',
-    'ipt_hashlimit_gcinterval': 'hashlimit_gcinterval',
-    'ipt_hashlimit_max': 'hashlimit_max',
-    'ipt_hashlimit_size': 'hashlimit_size',
-    'ipt_limit': 'limit_value',
-    'ipt_nlgroup': 'ulog_nlgroup',
+    'ipt_burst': 'opt_limit_burst',
+    'ipt_connlimit': 'opt_connlimit_value',
+    'ipt_connlimit_masklen': 'opt_connlimit_masklen',
+    'ipt_hashlimit': 'opt_hashlimit_value',
+    'ipt_hashlimit_burst': 'opt_hashlimit_burst',
+    'ipt_hashlimit_expire': 'opt_hashlimit_expire',
+    'ipt_hashlimit_gcinterval': 'opt_hashlimit_gcinterval',
+    'ipt_hashlimit_max': 'opt_hashlimit_max',
+    'ipt_hashlimit_size': 'opt_hashlimit_size',
+    'ipt_limit': 'opt_limit_value',
+    'ipt_nlgroup': 'opt_ulog_nlgroup',
 }
 
 # The combo box for "assume fw is part of any" uses index → stored value.
@@ -111,15 +111,15 @@ class RuleOptionsPanel(QWidget):
             opts = self._read_rule_options()
 
             # Combo boxes.
-            for widget_name, key in _COMBO_WIDGETS.items():
+            for widget_name, col in _COMBO_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                if key == 'firewall_is_part_of_any_and_networks':
-                    idx = _FW_PART_OF_ANY_REVERSE.get(str(opts.get(key, '')), 0)
+                if col == 'opt_firewall_is_part_of_any_and_networks':
+                    idx = _FW_PART_OF_ANY_REVERSE.get(str(opts.get(col, '')), 0)
                     widget.setCurrentIndex(idx)
                 else:
-                    val = str(opts.get(key, ''))
+                    val = str(opts.get(col, ''))
                     idx = widget.findText(val)
                     if idx >= 0:
                         widget.setCurrentIndex(idx)
@@ -127,31 +127,31 @@ class RuleOptionsPanel(QWidget):
                         widget.setCurrentIndex(0)
 
             # Check boxes.
-            for widget_name, key in _CHECKBOX_WIDGETS.items():
+            for widget_name, col in _CHECKBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setChecked(_to_bool(opts.get(key)))
+                widget.setChecked(bool(opts.get(col)))
 
             # Line edits.
-            for widget_name, key in _LINEEDIT_WIDGETS.items():
+            for widget_name, col in _LINEEDIT_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setText(str(opts.get(key, '')))
+                widget.setText(str(opts.get(col, '')))
 
             # Spin boxes.
-            for widget_name, key in _SPINBOX_WIDGETS.items():
+            for widget_name, col in _SPINBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setValue(_to_int(opts.get(key, 0)))
+                widget.setValue(_to_int(opts.get(col, 0)))
 
             # Tag drop area.
             drop = getattr(self, 'iptTagDropArea', None)
             if drop is not None:
                 drop.delete_object()
-                tag_id = opts.get('tagobject_id', '')
+                tag_id = opts.get('opt_tagobject_id', '')
                 if tag_id:
                     self._load_tag_object(drop, tag_id)
 
@@ -167,46 +167,46 @@ class RuleOptionsPanel(QWidget):
         opts = self._read_rule_options()
 
         # Combo boxes.
-        for widget_name, key in _COMBO_WIDGETS.items():
+        for widget_name, col in _COMBO_WIDGETS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key == 'firewall_is_part_of_any_and_networks':
-                opts[key] = _FW_PART_OF_ANY_VALUES.get(widget.currentIndex(), '')
+            if col == 'opt_firewall_is_part_of_any_and_networks':
+                opts[col] = _FW_PART_OF_ANY_VALUES.get(widget.currentIndex(), '')
             else:
-                opts[key] = widget.currentText()
+                opts[col] = widget.currentText()
 
         # Check boxes.
-        for widget_name, key in _CHECKBOX_WIDGETS.items():
+        for widget_name, col in _CHECKBOX_WIDGETS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.isChecked()
+            opts[col] = widget.isChecked()
 
         # Line edits.
-        for widget_name, key in _LINEEDIT_WIDGETS.items():
+        for widget_name, col in _LINEEDIT_WIDGETS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.text()
+            opts[col] = widget.text()
 
         # Spin boxes.
-        for widget_name, key in _SPINBOX_WIDGETS.items():
+        for widget_name, col in _SPINBOX_WIDGETS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.value()
+            opts[col] = widget.value()
 
         # Tag drop area.
         drop = getattr(self, 'iptTagDropArea', None)
         if drop is not None:
             tag_obj_id = drop.get_object_id()
             if tag_obj_id is not None:
-                opts['tagobject_id'] = str(tag_obj_id)
-                opts['tagging'] = True
+                opts['opt_tagobject_id'] = str(tag_obj_id)
+                opts['opt_tagging'] = True
             else:
-                opts.pop('tagobject_id', None)
-                opts.pop('tagging', None)
+                opts.pop('opt_tagobject_id', None)
+                opts.pop('opt_tagging', None)
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}
@@ -266,18 +266,22 @@ class RuleOptionsPanel(QWidget):
             tee.setEnabled(not disabled)
 
     def _read_rule_options(self):
-        """Read the full options dict from the database rule."""
+        """Read options from the database rule, keyed by column name."""
         if self._model is None or self._index is None:
             return {}
         row_data = self._model.get_row_data(self._index)
         if row_data is None:
             return {}
         from firewallfabrik.core.objects import PolicyRule
+        from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
         with self._model._db_manager.session() as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
-                return dict(rule.options or {})
+                return {
+                    meta.column_name: getattr(rule, meta.column_name)
+                    for meta in RULE_OPTIONS.values()
+                }
         return {}
 
     # ------------------------------------------------------------------
@@ -349,13 +353,6 @@ class RuleOptionsPanel(QWidget):
             drop.objectDeleted.disconnect(self._on_widget_changed)
 
         self._signals_connected = False
-
-
-def _to_bool(val):
-    """Convert a value to bool, handling string representations."""
-    if isinstance(val, str):
-        return val.lower() in ('true', '1')
-    return bool(val)
 
 
 def _to_int(val):

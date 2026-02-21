@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall-ipv6-prolog-after-flush.fw /etc/firewall-ipv6-prolog-after-flush.fw
+#
 #  Policy is configured as dual address family. Prolog is after iptables reset and flush
 #
 

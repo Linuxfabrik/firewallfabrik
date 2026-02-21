@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall23-2.fw /firewall23-2.fw
+#
 
 #  This is BRIDGING FIREWALL
 #  with two bridges and wildcard bridge port interfaces

@@ -186,10 +186,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(Optimize3('optimization 3'))
 
-        if (
-            self.fw.get_option('check_shading', False)
-            and not self.single_rule_compile_mode
-        ):
+        if self.fw.opt_check_shading and not self.single_rule_compile_mode:
             self.add(DetectShadowing('detect rule shadowing'))
 
         # Print rule
@@ -311,7 +308,7 @@ class FillActionOnReject(PolicyRuleProcessor):
         if rule.action == PolicyAction.Reject and not rule.get_option(
             'action_on_reject', ''
         ):
-            global_reject = self.compiler.fw.get_option('action_on_reject', '')
+            global_reject = self.compiler.fw.opt_action_on_reject
             if global_reject:
                 rule.set_option('action_on_reject', global_reject)
 
@@ -487,9 +484,7 @@ class SplitIfSrcAny(PolicyRuleProcessor):
         # Check per-rule option first, then fall back to global firewall option
         afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
@@ -531,9 +526,7 @@ class SplitIfDstAny(PolicyRuleProcessor):
         # Check per-rule option first, then fall back to global firewall option
         afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True

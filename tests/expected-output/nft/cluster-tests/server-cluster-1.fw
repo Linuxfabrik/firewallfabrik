@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * server-cluster-1.fw /etc/fw/server-cluster-1.fw
+#
 
 FWBDEBUG=""
 
