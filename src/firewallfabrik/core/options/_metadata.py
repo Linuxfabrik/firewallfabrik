@@ -384,6 +384,34 @@ _add(
 )
 
 
+def apply_options(obj, opts: dict, options_meta: dict[str, OptionMeta]) -> None:
+    """Apply a yaml-keyed options dict to an ORM object's typed columns."""
+    for meta in options_meta.values():
+        if meta.yaml_key in opts:
+            value = opts[meta.yaml_key]
+            if meta.col_type is bool:
+                if isinstance(value, str):
+                    value = value.lower() in ('true', '1', 'yes')
+                else:
+                    value = bool(value)
+            elif meta.col_type is int and not isinstance(value, int):
+                try:
+                    value = int(value)
+                except (ValueError, TypeError):
+                    value = meta.default
+            setattr(obj, meta.column_name, value)
+
+
+def build_options_dict(obj, options_meta: dict[str, OptionMeta]) -> dict:
+    """Build a yaml-keyed options dict from an ORM object's typed columns."""
+    opts = {}
+    for meta in options_meta.values():
+        value = getattr(obj, meta.column_name)
+        if value != meta.default:
+            opts[meta.yaml_key] = value
+    return opts
+
+
 def get_host_option_columns() -> list[tuple[str, type, Any]]:
     """Return list of (column_name, col_type, default) for Host options."""
     return [(m.column_name, m.col_type, m.default) for m in HOST_OPTIONS.values()]

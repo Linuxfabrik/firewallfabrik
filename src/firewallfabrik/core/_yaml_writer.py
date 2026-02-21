@@ -21,7 +21,12 @@ import yaml
 
 from . import objects
 from ._util import ENUM_FIELDS, escape_obj_name
-from .options._metadata import HOST_OPTIONS, INTERFACE_OPTIONS, RULE_OPTIONS
+from .options._metadata import (
+    HOST_OPTIONS,
+    INTERFACE_OPTIONS,
+    RULE_OPTIONS,
+    build_options_dict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -500,13 +505,7 @@ class YamlWriter:
         if dev.id_mapping_for_duplicate:
             d['id_mapping_for_duplicate'] = dev.id_mapping_for_duplicate
 
-        # Build options dict from typed columns (sorted for stable output)
-        # Include value if it differs from the column default (None or otherwise)
-        opts = {}
-        for _, meta in HOST_OPTIONS.items():
-            value = getattr(dev, meta.column_name)
-            if value != meta.default:
-                opts[meta.yaml_key] = value
+        opts = build_options_dict(dev, HOST_OPTIONS)
         if opts:
             d['options'] = dict(sorted(opts.items()))
 
@@ -530,12 +529,7 @@ class YamlWriter:
     def _serialize_interface(self, iface):
         d = _serialize_obj(iface, skip_opt_columns=True)
 
-        # Build options dict from typed columns (sorted for stable output)
-        opts = {}
-        for _, meta in INTERFACE_OPTIONS.items():
-            value = getattr(iface, meta.column_name)
-            if value != meta.default:
-                opts[meta.yaml_key] = value
+        opts = build_options_dict(iface, INTERFACE_OPTIONS)
         if opts:
             d['options'] = dict(sorted(opts.items()))
 
@@ -578,12 +572,7 @@ class YamlWriter:
             skip_opt_columns=True,
         )
 
-        # Build options dict from typed columns (sorted for stable output)
-        opts = {}
-        for _, meta in RULE_OPTIONS.items():
-            value = getattr(rule, meta.column_name)
-            if value != meta.default:
-                opts[meta.yaml_key] = value
+        opts = build_options_dict(rule, RULE_OPTIONS)
         if opts:
             d['options'] = dict(sorted(opts.items()))
 

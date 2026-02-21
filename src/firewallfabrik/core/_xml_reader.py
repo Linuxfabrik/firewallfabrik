@@ -33,6 +33,12 @@ from ._util import (
     SLOT_NAMES,
     ParseResult,
 )
+from .options._metadata import (
+    HOST_OPTIONS,
+    INTERFACE_OPTIONS,
+    RULE_OPTIONS,
+    apply_options,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -292,7 +298,8 @@ def _parse_rule_children(rule, elem):
         elif tag in _OPTIONS_TAGS:
             options.update(_parse_options_children(child))
 
-    rule.options = options
+    rule.group = options.pop('group', '')
+    apply_options(rule, options, RULE_OPTIONS)
     rule.negations = negations
 
 
@@ -471,7 +478,7 @@ class XmlReader:
             elif tag == 'Management':
                 device.management = _parse_management_elem(child)
             elif tag in _OPTIONS_TAGS:
-                device.options = _parse_options_children(child)
+                apply_options(device, _parse_options_children(child), HOST_OPTIONS)
             elif tag in _GROUP_TAGS:
                 # ClusterGroup etc. inside a Cluster device
                 self._parse_group(child, _GROUP_TAGS[tag], library, None)
@@ -496,7 +503,7 @@ class XmlReader:
             if tag in _ADDRESS_TAGS:
                 self._parse_address(child, interface=iface)
             elif tag in _OPTIONS_TAGS:
-                iface.options = _parse_options_children(child)
+                apply_options(iface, _parse_options_children(child), INTERFACE_OPTIONS)
             elif tag in ('Interface', 'DummyInterface'):
                 self._parse_interface(child, library, device, parent_interface=iface)
             elif tag in _GROUP_TAGS:
