@@ -22,8 +22,6 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 import sqlalchemy.orm
 
-from firewallfabrik.core.options._metadata import HOST_OPTIONS, INTERFACE_OPTIONS
-
 from ._base import Base
 from ._types import JSONEncodedSet
 
@@ -503,49 +501,6 @@ class Host(Base):
         ),
     )
 
-    # -- Compiler helper methods --
-
-    @property
-    def options(self) -> dict:
-        """Build options dict from typed columns.
-
-        Provides backward compatibility for GUI code that reads fw.options.
-        Only includes non-default values.
-        """
-        opts = {}
-        for _, meta in HOST_OPTIONS.items():
-            value = getattr(self, meta.column_name)
-            if value != meta.default:
-                opts[meta.yaml_key] = value
-        return opts
-
-    @options.setter
-    def options(self, opts: dict | None) -> None:
-        """Set typed columns from an options dict.
-
-        Used by XML reader and GUI dialogs.
-        Unknown options are silently ignored for legacy XML compatibility.
-        Use get_option() for strict validation when accessing options.
-        """
-        if not opts:
-            return
-        # Set values for known options only, skip unknown
-        for _, meta in HOST_OPTIONS.items():
-            if meta.yaml_key in opts:
-                value = opts[meta.yaml_key]
-                # Coerce types if needed
-                if meta.col_type is bool:
-                    if isinstance(value, str):
-                        value = value.lower() in ('true', '1', 'yes')
-                    else:
-                        value = bool(value)
-                elif meta.col_type is int and not isinstance(value, int):
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        value = meta.default
-                setattr(self, meta.column_name, value)
-
     @property
     def platform(self) -> str:
         if self.data:
@@ -699,45 +654,6 @@ class Interface(Base):
             sqlite_where=sqlalchemy.text('device_id IS NULL'),
         ),
     )
-
-    # -- Compiler helper methods --
-
-    @property
-    def options(self) -> dict:
-        """Not supported — use typed opt_* attributes directly.
-
-        Writing iface.options = dict is still supported for GUI/XML compatibility.
-        """
-        raise AttributeError(
-            'Reading Interface.options is not supported. '
-            'Use typed opt_* attributes directly (e.g., iface.opt_bridge_port).'
-        )
-
-    @options.setter
-    def options(self, opts: dict | None) -> None:
-        """Set typed columns from an options dict.
-
-        Used by XML reader and GUI dialogs.
-        Unknown options are silently ignored for legacy XML compatibility.
-        """
-        if not opts:
-            return
-        # Set values for known options only, skip unknown
-        for _, meta in INTERFACE_OPTIONS.items():
-            if meta.yaml_key in opts:
-                value = opts[meta.yaml_key]
-                # Coerce types if needed
-                if meta.col_type is bool:
-                    if isinstance(value, str):
-                        value = value.lower() in ('true', '1', 'yes')
-                    else:
-                        value = bool(value)
-                elif meta.col_type is int and not isinstance(value, int):
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        value = meta.default
-                setattr(self, meta.column_name, value)
 
     def is_loopback(self) -> bool:
         return self.name == 'lo'

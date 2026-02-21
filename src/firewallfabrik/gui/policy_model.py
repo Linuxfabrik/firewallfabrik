@@ -40,6 +40,7 @@ from firewallfabrik.core.objects import (
     Service,
     rule_elements,
 )
+from firewallfabrik.core.options._metadata import RULE_OPTIONS, build_options_dict
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
     get_label_color,
@@ -484,8 +485,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if rule.label and rule.label in LABEL_KEYS:
             color_hex = get_label_color(rule.label)
 
-        # Build the options dict from typed columns for tooltip display.
-        opts = rule.options or {}
+        opts = build_options_dict(rule, RULE_OPTIONS)
 
         return _RowData(
             action=act_name,
@@ -496,7 +496,7 @@ class PolicyTreeModel(QAbstractItemModel):
             direction_int=direction_int,
             disabled=bool(rule.opt_disabled),
             dst=slots.get('dst', []),
-            group='',
+            group=rule.group or '',
             itf=slots.get('itf', []),
             itf_inb=slots.get('itf_inb', []),
             itf_outb=slots.get('itf_outb', []),
@@ -937,7 +937,8 @@ class PolicyTreeModel(QAbstractItemModel):
 
         If *index* points inside a group, the new rule inherits that group.
         """
-        # Determine insertion position.
+        # Determine insertion position and group.
+        group_name = ''
         if at_top:
             position = 0
         elif at_bottom or index is None:
@@ -946,6 +947,7 @@ class PolicyTreeModel(QAbstractItemModel):
             node = self._node_from_index(index)
             if node.node_type == _NodeType.Group:
                 # Insert at end of group.
+                group_name = node.name
                 if node.children:
                     position = node.children[-1].row_data.position + 1
                 else:
@@ -955,6 +957,9 @@ class PolicyTreeModel(QAbstractItemModel):
                     position = node.row_data.position
                 else:
                     position = node.row_data.position + 1
+                # Inherit group if inserting inside one.
+                if node.parent is not None and node.parent.node_type == _NodeType.Group:
+                    group_name = node.parent.name
             else:
                 position = self.flat_rule_count()
 
@@ -984,6 +989,7 @@ class PolicyTreeModel(QAbstractItemModel):
             )
             if self._rule_set_type == 'Policy':
                 new_rule.opt_stateless = True
+            new_rule.group = group_name
             session.add(new_rule)
 
         self.reload()
@@ -1060,10 +1066,14 @@ class PolicyTreeModel(QAbstractItemModel):
             return []
 
         node = self._node_from_index(index)
+        group_name = ''
         if node.node_type == _NodeType.Group:
+            group_name = node.name
             position = node.children[-1].row_data.position + 1 if node.children else 0
         elif node.node_type == _NodeType.Rule:
             position = node.row_data.position if before else node.row_data.position + 1
+            if node.parent is not None and node.parent.node_type == _NodeType.Group:
+                group_name = node.parent.name
         else:
             position = self.flat_rule_count()
 
@@ -1107,6 +1117,7 @@ class PolicyTreeModel(QAbstractItemModel):
                     kwargs['routing_rule_type'] = src_rule.routing_rule_type
 
                 new_rule = self._rule_cls(**kwargs)
+                new_rule.group = group_name
                 # Copy typed option columns from source rule.
                 from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
@@ -1649,16 +1660,11 @@ class PolicyTreeModel(QAbstractItemModel):
     # ------------------------------------------------------------------
 
     def _set_rule_group(self, session, rule_id, group_name):
-        """Persist the group name into a rule's options JSON."""
+        """Set the group name directly on a rule."""
         rule = session.get(self._rule_cls, rule_id)
         if rule is None:
             return
-        opts = dict(rule.options or {})
-        if group_name:
-            opts['group'] = group_name
-        else:
-            opts.pop('group', None)
-        rule.options = opts
+        rule.group = group_name
 
     def _do_move(
         self,

@@ -22,8 +22,6 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 import sqlalchemy.orm
 
-from firewallfabrik.core.options._metadata import RULE_OPTIONS
-
 from ._base import Base
 
 if TYPE_CHECKING:
@@ -161,6 +159,10 @@ class Rule(Base):
         default='',
     )
     label: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String,
+        default='',
+    )
+    group: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
     )
@@ -399,48 +401,6 @@ class Rule(Base):
         sqlalchemy.Index('ix_rules_rule_set_id', 'rule_set_id'),
         sqlalchemy.Index('ix_rules_position', 'rule_set_id', 'position'),
     )
-
-    # -- Compiler helper methods --
-
-    @property
-    def options(self) -> dict:
-        """Build options dict from typed columns.
-
-        Provides backward compatibility for code that accesses rule.options.
-        Only includes non-default values.
-        """
-        opts = {}
-        for _, meta in RULE_OPTIONS.items():
-            value = getattr(self, meta.column_name)
-            if value != meta.default:
-                opts[meta.yaml_key] = value
-        return opts
-
-    @options.setter
-    def options(self, opts: dict | None) -> None:
-        """Set typed columns from an options dict.
-
-        Used by XML reader and GUI dialogs.
-        Unknown options are silently ignored for legacy XML compatibility.
-        """
-        if not opts:
-            return
-        # Set values for known options only, skip unknown
-        for _, meta in RULE_OPTIONS.items():
-            if meta.yaml_key in opts:
-                value = opts[meta.yaml_key]
-                # Coerce types if needed
-                if meta.col_type is bool:
-                    if isinstance(value, str):
-                        value = value.lower() in ('true', '1', 'yes')
-                    else:
-                        value = bool(value)
-                elif meta.col_type is int and not isinstance(value, int):
-                    try:
-                        value = int(value)
-                    except (ValueError, TypeError):
-                        value = meta.default
-                setattr(self, meta.column_name, value)
 
 
 class PolicyRule(Rule):

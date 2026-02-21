@@ -17,6 +17,7 @@ import sqlalchemy
 
 import firewallfabrik.core
 from firewallfabrik.core.objects import Host, Library, Rule, RuleSet, Service
+from firewallfabrik.core.options._metadata import RULE_OPTIONS, build_options_dict
 
 from .conftest import FIXTURES_DIR, _get_db
 
@@ -72,7 +73,7 @@ def test_fwb_rule_options_are_booleans(fixture_path):
     with db.session() as session:
         for rule in session.execute(sqlalchemy.select(Rule)).scalars():
             _assert_no_string_bools(
-                rule.options,
+                build_options_dict(rule, RULE_OPTIONS),
                 f'Rule({rule.id}).options',
             )
 
