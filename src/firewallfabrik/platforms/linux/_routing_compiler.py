@@ -31,7 +31,6 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
 )
-from firewallfabrik.core.options import RuleOption
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -96,7 +95,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         dst = self._print_rdst(rule)
         gtw = self._print_rgtw(rule)
         itf = self._print_ritf(rule)
-        metric = rule.get_option(RuleOption.METRIC, 0)
+        metric = rule.get_option('metric', 0)
 
         if dst:
             parts.append(dst)

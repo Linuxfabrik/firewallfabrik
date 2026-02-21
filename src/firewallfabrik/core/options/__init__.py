@@ -10,39 +10,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""Typed option keys and schemas for firewall configuration.
+"""Option schemas and migration helpers for firewall configuration.
 
 This module provides:
 
-- **StrEnum keys**: Type-safe option key names that work as dict keys
 - **Dataclass schemas**: Typed defaults shared between GUI and compiler
 - **Migration helpers**: Legacy key compatibility
-
-Usage in GUI dialogs::
-
-    from firewallfabrik.core.options import LinuxOption
-
-    # Save with type-safe key
-    opts[LinuxOption.CONNTRACK_MAX] = str(widget.value())
-
-Usage in compiler::
-
-    from firewallfabrik.core.options import LinuxOption
-
-    # Read with type-safe key
-    val = fw.get_option(LinuxOption.CONNTRACK_MAX, -1)
-
-The StrEnum keys ensure that typos are caught at import time rather than
-failing silently at runtime. Both the GUI and compiler use the same
-enum values, guaranteeing key consistency.
 """
 
-from firewallfabrik.core.options._keys import (
-    FirewallOption,
-    InterfaceOption,
-    LinuxOption,
-    RuleOption,
-)
 from firewallfabrik.core.options._migration import (
     get_canonical_key,
     migrate_options,
@@ -70,15 +45,11 @@ __all__ = [
     'RULE_LIMIT_DEFAULTS',
     'RULE_LOGGING_DEFAULTS',
     'FirewallDefaults',
-    'FirewallOption',
-    'InterfaceOption',
     'LinuxKernelDefaults',
-    'LinuxOption',
     'LinuxPathDefaults',
     'RuleBehaviorDefaults',
     'RuleLimitDefaults',
     'RuleLoggingDefaults',
-    'RuleOption',
     'get_canonical_key',
     'migrate_options',
 ]

@@ -17,7 +17,7 @@ from __future__ import (
 )
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
@@ -203,7 +203,7 @@ class Rule(Base):
         sqlalchemy.String, nullable=True, default=None
     )
 
-    # -- Typed option columns (RuleOption) --
+    # -- Typed option columns --
     # Rate limiting
     opt_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer, default=0
@@ -422,7 +422,6 @@ class Rule(Base):
 
         Used by XML reader and GUI dialogs.
         Unknown options are silently ignored for legacy XML compatibility.
-        Use get_option() for strict validation when accessing options.
         """
         if not opts:
             return
@@ -442,24 +441,6 @@ class Rule(Base):
                     except (ValueError, TypeError):
                         value = meta.default
                 setattr(self, meta.column_name, value)
-
-    def get_option(self, key: str, default: Any = None) -> Any:
-        """Look up an option value by enum key.
-
-        Uses typed columns for known option keys, with automatic
-        type coercion for legacy XML string values.
-        """
-        meta = RULE_OPTIONS.get(key)
-        if meta is not None:
-            value = getattr(self, meta.column_name)
-            # Coerce string 'True'/'False' to bool for XML compatibility
-            if isinstance(value, str):
-                if value.lower() == 'true':
-                    return True
-                if value.lower() == 'false':
-                    return False
-            return value
-        raise AttributeError(f'Unknown option key: {key}')
 
 
 class PolicyRule(Rule):

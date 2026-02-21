@@ -13,26 +13,17 @@
 """Option metadata for typed column definitions.
 
 This module provides column metadata for option keys, mapping between:
-- Enum keys (e.g., LinuxOption.IP_FORWARD)
-- Column names (e.g., opt_ip_forward)
 - YAML keys (e.g., linux24_ip_forward)
+- Column names (e.g., opt_ip_forward)
 - Default values and Python types
 
 The metadata enables:
 1. YAML serialization/deserialization
 2. Typed SQLAlchemy column generation
-3. Compile-time validation of option access
 """
 
 from dataclasses import dataclass
 from typing import Any
-
-from firewallfabrik.core.options._keys import (
-    FirewallOption,
-    InterfaceOption,
-    LinuxOption,
-    RuleOption,
-)
 
 
 @dataclass(frozen=True)
@@ -40,7 +31,7 @@ class OptionMeta:
     """Metadata for a single option column.
 
     Attributes:
-        yaml_key: Key used in YAML options dict (same as enum value)
+        yaml_key: Key used in YAML options dict
         column_name: SQLAlchemy column name (opt_xxx)
         default: Default value for the column
         col_type: Python type (bool, str, int)
@@ -52,336 +43,345 @@ class OptionMeta:
     col_type: type
 
 
-def _make_column_name(enum_value: str) -> str:
-    """Generate column name from enum value (yaml_key).
+def _make_column_name(yaml_key: str) -> str:
+    """Generate column name from yaml_key.
 
     Examples:
         'linux24_ip_forward' -> 'opt_ip_forward'
         'accept_established' -> 'opt_accept_established'
         'use_ULOG' -> 'opt_use_ulog'
     """
-    # Remove linux24_ prefix if present
-    name = enum_value
+    name = yaml_key
     if name.startswith('linux24_'):
         name = name[8:]
-    # Lowercase and add opt_ prefix
     return f'opt_{name.lower()}'
 
 
-# Host options (LinuxOption + FirewallOption)
-# These apply to Host/Firewall/Cluster devices
+def _add(
+    registry: dict[str, OptionMeta],
+    yaml_keys: list[str],
+    default: Any,
+    col_type: type,
+) -> None:
+    """Add multiple option entries to a registry."""
+    for key in yaml_keys:
+        registry[key] = OptionMeta(
+            yaml_key=key,
+            column_name=_make_column_name(key),
+            default=default,
+            col_type=col_type,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Host options (Linux kernel + Firewall options)
+# ---------------------------------------------------------------------------
 
 HOST_OPTIONS: dict[str, OptionMeta] = {}
 
 # Linux kernel options (str values: '', '0', '1')
-for opt in [
-    LinuxOption.IP_FORWARD,
-    LinuxOption.IPV6_FORWARD,
-    LinuxOption.RP_FILTER,
-    LinuxOption.ACCEPT_SOURCE_ROUTE,
-    LinuxOption.ACCEPT_REDIRECTS,
-    LinuxOption.LOG_MARTIANS,
-    LinuxOption.IP_DYNADDR,
-    LinuxOption.ICMP_ECHO_IGNORE_BROADCASTS,
-    LinuxOption.ICMP_ECHO_IGNORE_ALL,
-    LinuxOption.ICMP_IGNORE_BOGUS_ERROR_RESPONSES,
-    LinuxOption.TCP_WINDOW_SCALING,
-    LinuxOption.TCP_SACK,
-    LinuxOption.TCP_FACK,
-    LinuxOption.TCP_ECN,
-    LinuxOption.TCP_SYNCOOKIES,
-    LinuxOption.TCP_TIMESTAMPS,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default='',
-        col_type=str,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'linux24_ip_forward',
+        'linux24_ipv6_forward',
+        'linux24_rp_filter',
+        'linux24_accept_source_route',
+        'linux24_accept_redirects',
+        'linux24_log_martians',
+        'linux24_ip_dynaddr',
+        'linux24_icmp_echo_ignore_broadcasts',
+        'linux24_icmp_echo_ignore_all',
+        'linux24_icmp_ignore_bogus_error_responses',
+        'linux24_tcp_window_scaling',
+        'linux24_tcp_sack',
+        'linux24_tcp_fack',
+        'linux24_tcp_ecn',
+        'linux24_tcp_syncookies',
+        'linux24_tcp_timestamps',
+    ],
+    default='',
+    col_type=str,
+)
 
 # Linux int options (-1 = no change)
-for opt in [
-    LinuxOption.TCP_FIN_TIMEOUT,
-    LinuxOption.TCP_KEEPALIVE_INTERVAL,
-    LinuxOption.CONNTRACK_MAX,
-    LinuxOption.CONNTRACK_HASHSIZE,
-    LinuxOption.CONNTRACK_TCP_BE_LIBERAL,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=-1,
-        col_type=int,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'linux24_tcp_fin_timeout',
+        'linux24_tcp_keepalive_interval',
+        'linux24_conntrack_max',
+        'linux24_conntrack_hashsize',
+        'linux24_conntrack_tcp_be_liberal',
+    ],
+    default=-1,
+    col_type=int,
+)
 
 # Linux path options (str) - use None to distinguish "not set" from "set to empty"
-for opt in [
-    LinuxOption.PATH_IPTABLES,
-    LinuxOption.PATH_IP6TABLES,
-    LinuxOption.PATH_IP,
-    LinuxOption.PATH_LOGGER,
-    LinuxOption.PATH_VCONFIG,
-    LinuxOption.PATH_BRCTL,
-    LinuxOption.PATH_IFENSLAVE,
-    LinuxOption.PATH_MODPROBE,
-    LinuxOption.PATH_LSMOD,
-    LinuxOption.PATH_IFCONFIG,
-    LinuxOption.PATH_IPSET,
-    LinuxOption.PATH_IPTABLES_RESTORE,
-    LinuxOption.PATH_IP6TABLES_RESTORE,
-    LinuxOption.DATA_DIR,
-    LinuxOption.NFT_PATH,
-    LinuxOption.IP_PATH,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=None,
-        col_type=str,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'linux24_path_iptables',
+        'linux24_path_ip6tables',
+        'linux24_path_ip',
+        'linux24_path_logger',
+        'linux24_path_vconfig',
+        'linux24_path_brctl',
+        'linux24_path_ifenslave',
+        'linux24_path_modprobe',
+        'linux24_path_lsmod',
+        'linux24_path_ifconfig',
+        'linux24_path_ipset',
+        'linux24_path_iptables_restore',
+        'linux24_path_ip6tables_restore',
+        'linux24_data_dir',
+        'nft_path',
+        'ip_path',
+    ],
+    default=None,
+    col_type=str,
+)
 
 # Firewall bool options - use None to distinguish "not set" from "explicitly false"
-for opt in [
-    FirewallOption.FIREWALL_IS_PART_OF_ANY,
-    FirewallOption.ACCEPT_NEW_TCP_WITH_NO_SYN,
-    FirewallOption.ACCEPT_ESTABLISHED,
-    FirewallOption.DROP_INVALID,
-    FirewallOption.LOG_INVALID,
-    FirewallOption.LOCAL_NAT,
-    FirewallOption.CHECK_SHADING,
-    FirewallOption.IGNORE_EMPTY_GROUPS,
-    FirewallOption.CLAMP_MSS_TO_MTU,
-    FirewallOption.BRIDGING_FW,
-    FirewallOption.IPV6_NEIGHBOR_DISCOVERY,
-    FirewallOption.MGMT_SSH,
-    FirewallOption.ADD_MGMT_SSH_RULE_WHEN_STOPPED,
-    FirewallOption.USE_M_SET,
-    FirewallOption.USE_KERNELTZ,
-    FirewallOption.LOG_TCP_SEQ,
-    FirewallOption.LOG_TCP_OPT,
-    FirewallOption.LOG_IP_OPT,
-    FirewallOption.USE_NUMERIC_LOG_LEVELS,
-    FirewallOption.LOG_ALL,
-    FirewallOption.USE_ULOG,
-    FirewallOption.USE_NFLOG,
-    FirewallOption.LOAD_MODULES,
-    FirewallOption.DEBUG,
-    FirewallOption.VERIFY_INTERFACES,
-    FirewallOption.CONFIGURE_INTERFACES,
-    FirewallOption.CLEAR_UNKNOWN_INTERFACES,
-    FirewallOption.CONFIGURE_VLAN_INTERFACES,
-    FirewallOption.CONFIGURE_BRIDGE_INTERFACES,
-    FirewallOption.CONFIGURE_BONDING_INTERFACES,
-    FirewallOption.MANAGE_VIRTUAL_ADDR,
-    FirewallOption.USE_IPTABLES_RESTORE,
-    FirewallOption.DROP_NEW_TCP_WITH_NO_SYN,
-    # Additional bool options
-    FirewallOption.USE_MAC_ADDR,
-    FirewallOption.USE_MAC_ADDR_FILTER,
-    FirewallOption.USE_IP_TOOL,
-    FirewallOption.IPT_USE_SNAT_INSTEAD_OF_MASQ,
-    FirewallOption.IPT_SNAT_RANDOM,
-    FirewallOption.IPT_MANGLE_ONLY_RULESETS,
-    FirewallOption.IPT_MARK_PREROUTING,
-    FirewallOption.LOG_ALL_DROPPED,
-    FirewallOption.FALLBACK_LOG,
-    FirewallOption.CONFIGURE_CARP_INTERFACES,
-    FirewallOption.CONFIGURE_PFSYNC_INTERFACES,
-    FirewallOption.DYN_ADDR,
-    FirewallOption.PROXY_ARP,
-    FirewallOption.ENABLE_IPV6,
-    FirewallOption.NO_IPV6_DEFAULT_POLICY,
-    FirewallOption.ADD_RULES_FOR_IPV6_NEIGHBOR_DISCOVERY,
-    FirewallOption.FIREWALL_IS_PART_OF_ANY_OLD,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=None,
-        col_type=bool,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'firewall_is_part_of_any_and_networks',
+        'accept_new_tcp_with_no_syn',
+        'accept_established',
+        'drop_invalid',
+        'log_invalid',
+        'local_nat',
+        'check_shading',
+        'ignore_empty_groups',
+        'clamp_mss_to_mtu',
+        'bridging_fw',
+        'ipv6_neighbor_discovery',
+        'mgmt_ssh',
+        'add_mgmt_ssh_rule_when_stoped',
+        'use_m_set',
+        'use_kerneltz',
+        'log_tcp_seq',
+        'log_tcp_opt',
+        'log_ip_opt',
+        'use_numeric_log_levels',
+        'log_all',
+        'use_ULOG',
+        'use_NFLOG',
+        'load_modules',
+        'debug',
+        'verify_interfaces',
+        'configure_interfaces',
+        'clear_unknown_interfaces',
+        'configure_vlan_interfaces',
+        'configure_bridge_interfaces',
+        'configure_bonding_interfaces',
+        'manage_virtual_addr',
+        'use_iptables_restore',
+        'drop_new_tcp_with_no_syn',
+        'use_mac_addr',
+        'use_mac_addr_filter',
+        'use_ip_tool',
+        'ipt_use_snat_instead_of_masq',
+        'ipt_snat_random',
+        'ipt_mangle_only_rulesets',
+        'ipt_mark_prerouting',
+        'log_all_dropped',
+        'fallback_log',
+        'configure_carp_interfaces',
+        'configure_pfsync_interfaces',
+        'dyn_addr',
+        'proxy_arp',
+        'enable_ipv6',
+        'no_ipv6_default_policy',
+        'add_rules_for_ipv6_neighbor_discovery',
+        'firewall_is_part_of_any',
+    ],
+    default=None,
+    col_type=bool,
+)
 
 # Firewall str options - use None to distinguish "not set" from "set to empty"
-for opt in [
-    FirewallOption.MGMT_ACCESS,
-    FirewallOption.MGMT_ADDR,
-    FirewallOption.LOG_LEVEL,
-    FirewallOption.LOG_PREFIX,
-    FirewallOption.LIMIT_SUFFIX,
-    FirewallOption.ACTION_ON_REJECT,
-    FirewallOption.COMPILER,
-    FirewallOption.CMDLINE,
-    FirewallOption.OUTPUT_FILE,
-    FirewallOption.SCRIPT_NAME_ON_FIREWALL,
-    FirewallOption.FIREWALL_DIR,
-    FirewallOption.ADM_USER,
-    FirewallOption.ALT_ADDRESS,
-    FirewallOption.ACTIVATION_CMD,
-    FirewallOption.SSH_ARGS,
-    FirewallOption.SCP_ARGS,
-    FirewallOption.INSTALL_SCRIPT,
-    FirewallOption.INSTALL_SCRIPT_ARGS,
-    FirewallOption.PROLOG_SCRIPT,
-    FirewallOption.EPILOG_SCRIPT,
-    FirewallOption.PROLOG_PLACE,
-    FirewallOption.IPV4_6_ORDER,
-    # Additional str options
-    FirewallOption.LOG_LIMIT_SUFFIX,
-    FirewallOption.SCRIPT_ENV_PATH,
-    FirewallOption.ACTIVATION,
-    FirewallOption.LOOPBACK_INTERFACE,
-    FirewallOption.MODULES_DIR,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=None,
-        col_type=str,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'mgmt_access',
+        'mgmt_addr',
+        'log_level',
+        'log_prefix',
+        'limit_suffix',
+        'action_on_reject',
+        'compiler',
+        'cmdline',
+        'output_file',
+        'script_name_on_firewall',
+        'firewall_dir',
+        'admUser',
+        'altAddress',
+        'activationCmd',
+        'sshArgs',
+        'scpArgs',
+        'installScript',
+        'installScriptArgs',
+        'prolog_script',
+        'epilog_script',
+        'prolog_place',
+        'ipv4_6_order',
+        'log_limit_suffix',
+        'script_env_path',
+        'activation',
+        'loopback_interface',
+        'modules_dir',
+    ],
+    default=None,
+    col_type=str,
+)
 
 # Firewall int options
-for opt in [
-    FirewallOption.ULOG_CPRANGE,
-    FirewallOption.ULOG_QTHRESHOLD,
-    FirewallOption.ULOG_NLGROUP,
-    FirewallOption.LIMIT_VALUE,
-    FirewallOption.LOG_LIMIT_VALUE,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=0,
-        col_type=int,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'ulog_cprange',
+        'ulog_qthreshold',
+        'ulog_nlgroup',
+        'limit_value',
+        'log_limit_value',
+    ],
+    default=0,
+    col_type=int,
+)
 
 # SNMP options (legacy, for XML import compatibility)
-for opt in [
-    FirewallOption.SNMP_CONTACT,
-    FirewallOption.SNMP_DESCRIPTION,
-    FirewallOption.SNMP_LOCATION,
-]:
-    HOST_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=None,
-        col_type=str,
-    )
+_add(
+    HOST_OPTIONS,
+    [
+        'snmp_contact',
+        'snmp_description',
+        'snmp_location',
+    ],
+    default=None,
+    col_type=str,
+)
 
+# ---------------------------------------------------------------------------
 # Interface options
+# ---------------------------------------------------------------------------
+
 INTERFACE_OPTIONS: dict[str, OptionMeta] = {
-    InterfaceOption.BRIDGE_PORT: OptionMeta(
-        yaml_key=InterfaceOption.BRIDGE_PORT.value,
+    'bridge_port': OptionMeta(
+        yaml_key='bridge_port',
         column_name='opt_bridge_port',
         default=False,
         col_type=bool,
     ),
-    InterfaceOption.SLAVE: OptionMeta(
-        yaml_key=InterfaceOption.SLAVE.value,
+    'slave': OptionMeta(
+        yaml_key='slave',
         column_name='opt_slave',
         default=False,
         col_type=bool,
     ),
-    InterfaceOption.TYPE: OptionMeta(
-        yaml_key=InterfaceOption.TYPE.value,
+    'type': OptionMeta(
+        yaml_key='type',
         column_name='opt_type',
         default='',
         col_type=str,
     ),
-    InterfaceOption.VLAN_ID: OptionMeta(
-        yaml_key=InterfaceOption.VLAN_ID.value,
+    'vlan_id': OptionMeta(
+        yaml_key='vlan_id',
         column_name='opt_vlan_id',
         default='',
         col_type=str,
     ),
 }
 
+# ---------------------------------------------------------------------------
 # Rule options
+# ---------------------------------------------------------------------------
+
 RULE_OPTIONS: dict[str, OptionMeta] = {}
 
 # Rule int options
-for opt in [
-    RuleOption.LIMIT_VALUE,
-    RuleOption.LIMIT_BURST,
-    RuleOption.HASHLIMIT_VALUE,
-    RuleOption.HASHLIMIT_BURST,
-    RuleOption.HASHLIMIT_SIZE,
-    RuleOption.HASHLIMIT_MAX,
-    RuleOption.HASHLIMIT_EXPIRE,
-    RuleOption.HASHLIMIT_GCINTERVAL,
-    RuleOption.CONNLIMIT_VALUE,
-    RuleOption.CONNLIMIT_MASKLEN,
-    RuleOption.ULOG_NLGROUP,
-    RuleOption.METRIC,
-]:
-    RULE_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=0,
-        col_type=int,
-    )
+_add(
+    RULE_OPTIONS,
+    [
+        'limit_value',
+        'limit_burst',
+        'hashlimit_value',
+        'hashlimit_burst',
+        'hashlimit_size',
+        'hashlimit_max',
+        'hashlimit_expire',
+        'hashlimit_gcinterval',
+        'connlimit_value',
+        'connlimit_masklen',
+        'ulog_nlgroup',
+        'metric',
+    ],
+    default=0,
+    col_type=int,
+)
 
 # Rule bool options
-for opt in [
-    RuleOption.LIMIT_VALUE_NOT,
-    RuleOption.HASHLIMIT_DSTLIMIT,
-    RuleOption.HASHLIMIT_DSTIP,
-    RuleOption.HASHLIMIT_DSTPORT,
-    RuleOption.HASHLIMIT_SRCIP,
-    RuleOption.HASHLIMIT_SRCPORT,
-    RuleOption.CONNLIMIT_ABOVE_NOT,
-    RuleOption.DISABLED,
-    RuleOption.STATELESS,
-    RuleOption.IPT_CONTINUE,
-    RuleOption.IPT_MARK_CONNECTIONS,
-    RuleOption.IPT_TEE,
-    RuleOption.TAGGING,
-    RuleOption.FIREWALL_IS_PART_OF_ANY,
-    RuleOption.LOG,
-    RuleOption.LOGGING,
-    RuleOption.ROUTING,
-    RuleOption.CLASSIFICATION,
-    RuleOption.NO_OUTPUT_CHAIN,
-    RuleOption.NO_INPUT_CHAIN,
-    RuleOption.DO_NOT_OPTIMIZE_BY_SRV,
-    RuleOption.PUT_IN_MANGLE_TABLE,
-    RuleOption.IPT_BRANCH_IN_MANGLE,
-    RuleOption.IPT_NAT_RANDOM,
-    RuleOption.IPT_NAT_PERSISTENT,
-    RuleOption.RULE_ADDED_FOR_OSRC_NEG,
-    RuleOption.RULE_ADDED_FOR_ODST_NEG,
-    RuleOption.RULE_ADDED_FOR_OSRV_NEG,
-    RuleOption.MANGLE_ONLY_RULE_SET,
-]:
-    RULE_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default=False,
-        col_type=bool,
-    )
+_add(
+    RULE_OPTIONS,
+    [
+        'limit_value_not',
+        'hashlimit_dstlimit',
+        'hashlimit_dstip',
+        'hashlimit_dstport',
+        'hashlimit_srcip',
+        'hashlimit_srcport',
+        'connlimit_above_not',
+        'disabled',
+        'stateless',
+        'ipt_continue',
+        'ipt_mark_connections',
+        'ipt_tee',
+        'tagging',
+        'firewall_is_part_of_any_and_networks',
+        'log',
+        'logging',
+        'routing',
+        'classification',
+        'no_output_chain',
+        'no_input_chain',
+        'do_not_optimize_by_srv',
+        'put_in_mangle_table',
+        'ipt_branch_in_mangle',
+        'ipt_nat_random',
+        'ipt_nat_persistent',
+        'rule_added_for_osrc_neg',
+        'rule_added_for_odst_neg',
+        'rule_added_for_osrv_neg',
+        'mangle_only_rule_set',
+    ],
+    default=False,
+    col_type=bool,
+)
 
 # Rule str options
-for opt in [
-    RuleOption.LIMIT_SUFFIX,
-    RuleOption.HASHLIMIT_SUFFIX,
-    RuleOption.HASHLIMIT_NAME,
-    RuleOption.LOG_LEVEL,
-    RuleOption.LOG_PREFIX,
-    RuleOption.IPT_IIF,
-    RuleOption.IPT_OIF,
-    RuleOption.IPT_GW,
-    RuleOption.TAGOBJECT_ID,
-    RuleOption.CLASSIFY_STR,
-    RuleOption.COUNTER_NAME,
-    RuleOption.ACTION_ON_REJECT,
-    RuleOption.RULE_NAME_ACCOUNTING,
-    RuleOption.CUSTOM_STR,
-]:
-    RULE_OPTIONS[opt] = OptionMeta(
-        yaml_key=opt.value,
-        column_name=_make_column_name(opt.value),
-        default='',
-        col_type=str,
-    )
+_add(
+    RULE_OPTIONS,
+    [
+        'limit_suffix',
+        'hashlimit_suffix',
+        'hashlimit_name',
+        'log_level',
+        'log_prefix',
+        'ipt_iif',
+        'ipt_oif',
+        'ipt_gw',
+        'tagobject_id',
+        'classify_str',
+        'counter_name',
+        'action_on_reject',
+        'rule_name_accounting',
+        'custom_str',
+    ],
+    default='',
+    col_type=str,
+)
 
 
 def get_host_option_columns() -> list[tuple[str, type, Any]]:

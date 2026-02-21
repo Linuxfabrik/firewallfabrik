@@ -50,7 +50,6 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PolicyAction,
 )
-from firewallfabrik.core.options import FirewallOption, RuleOption
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -187,10 +186,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(Optimize3('optimization 3'))
 
-        if (
-            self.fw.get_option(FirewallOption.CHECK_SHADING, False)
-            and not self.single_rule_compile_mode
-        ):
+        if self.fw.opt_check_shading and not self.single_rule_compile_mode:
             self.add(DetectShadowing('detect rule shadowing'))
 
         # Print rule
@@ -241,13 +237,13 @@ class StoreAction(PolicyRuleProcessor):
         action_str = rule.action.name if rule.action else ''
         rule.stored_action = action_str
         rule.originated_from_a_rule_with_tagging = bool(
-            rule.get_option(RuleOption.TAGGING, False)
+            rule.get_option('tagging', False)
         )
         rule.originated_from_a_rule_with_classification = bool(
-            rule.get_option(RuleOption.CLASSIFICATION, False)
+            rule.get_option('classification', False)
         )
         rule.originated_from_a_rule_with_routing = bool(
-            rule.get_option(RuleOption.ROUTING, False)
+            rule.get_option('routing', False)
         )
         self.tmp_queue.append(rule)
         return True
@@ -310,13 +306,11 @@ class FillActionOnReject(PolicyRuleProcessor):
             return False
 
         if rule.action == PolicyAction.Reject and not rule.get_option(
-            RuleOption.ACTION_ON_REJECT, ''
+            'action_on_reject', ''
         ):
-            global_reject = self.compiler.fw.get_option(
-                FirewallOption.ACTION_ON_REJECT, ''
-            )
+            global_reject = self.compiler.fw.opt_action_on_reject
             if global_reject:
-                rule.set_option(RuleOption.ACTION_ON_REJECT, global_reject)
+                rule.set_option('action_on_reject', global_reject)
 
         self.tmp_queue.append(rule)
         return True
@@ -335,21 +329,21 @@ class Logging_nft(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if not rule.get_option(RuleOption.LOG, False):
+        if not rule.get_option('log', False):
             self.tmp_queue.append(rule)
             return True
 
         # For Continue+log, set target to LOG
         if rule.action == PolicyAction.Continue:
-            if rule.get_option(RuleOption.TAGGING, False):
+            if rule.get_option('tagging', False):
                 self.compiler.error(
                     rule, 'Tagging not yet supported by nftables compiler'
                 )
-            if rule.get_option(RuleOption.CLASSIFICATION, False):
+            if rule.get_option('classification', False):
                 self.compiler.error(
                     rule, 'Classification not yet supported by nftables compiler'
                 )
-            if rule.get_option(RuleOption.ROUTING, False):
+            if rule.get_option('routing', False):
                 self.compiler.error(
                     rule, 'Policy routing not yet supported by nftables compiler'
                 )
@@ -429,7 +423,7 @@ class SplitIfSrcNegAndFw(PolicyRuleProcessor):
         rule.src = not_fw_likes
         if not not_fw_likes:
             rule.set_neg('src', False)
-        rule.set_option(RuleOption.NO_OUTPUT_CHAIN, True)
+        rule.set_option('no_output_chain', True)
         self.tmp_queue.append(rule)
         return True
 
@@ -474,7 +468,7 @@ class SplitIfDstNegAndFw(PolicyRuleProcessor):
         rule.dst = not_fw_likes
         if not not_fw_likes:
             rule.set_neg('dst', False)
-        rule.set_option(RuleOption.NO_INPUT_CHAIN, True)
+        rule.set_option('no_input_chain', True)
         self.tmp_queue.append(rule)
         return True
 
@@ -488,16 +482,14 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option(RuleOption.FIREWALL_IS_PART_OF_ANY, False)
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                FirewallOption.FIREWALL_IS_PART_OF_ANY, False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
 
-        if rule.get_option(RuleOption.NO_OUTPUT_CHAIN, False):
+        if rule.get_option('no_output_chain', False):
             self.tmp_queue.append(rule)
             return True
 
@@ -532,16 +524,14 @@ class SplitIfDstAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option(RuleOption.FIREWALL_IS_PART_OF_ANY, False)
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                FirewallOption.FIREWALL_IS_PART_OF_ANY, False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
 
-        if rule.get_option(RuleOption.NO_INPUT_CHAIN, False):
+        if rule.get_option('no_input_chain', False):
             self.tmp_queue.append(rule)
             return True
 

@@ -17,7 +17,7 @@ from __future__ import (
 )
 
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.orm
@@ -84,7 +84,7 @@ class Host(Base):
         sqlalchemy.orm.mapped_column(sqlalchemy.JSON, nullable=True, default=None)
     )
 
-    # -- Typed option columns (LinuxOption + FirewallOption) --
+    # -- Typed option columns --
     # Linux kernel options (sysctl)
     opt_ip_forward: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, default=''
@@ -505,41 +505,19 @@ class Host(Base):
 
     # -- Compiler helper methods --
 
-    def get_option(self, key: str, default: Any = None) -> Any:
-        """Look up an option value by enum key.
-
-        Uses typed columns for known option keys, with automatic
-        type coercion for legacy XML string values.
-
-        Returns the caller's default if the option was never set (column is None).
-        Returns the actual value (even empty string) if explicitly set.
-        """
-        meta = HOST_OPTIONS.get(key)
-        if meta is not None:
-            value = getattr(self, meta.column_name)
-            # Return caller's default if option was never set
-            if value is None:
-                return default
-            # Coerce string 'True'/'False' to bool for XML compatibility
-            if isinstance(value, str):
-                if value.lower() == 'true':
-                    return True
-                if value.lower() == 'false':
-                    return False
-            return value
-        raise AttributeError(f'Unknown option key: {key}')
-
     @property
     def options(self) -> dict:
-        """Deprecated: use get_option() instead.
+        """Build options dict from typed columns.
 
-        Reading fw.options is not allowed - use fw.get_option(key, default).
-        Writing fw.options = dict is still supported for GUI/XML compatibility.
+        Provides backward compatibility for GUI code that reads fw.options.
+        Only includes non-default values.
         """
-        raise AttributeError(
-            'Reading Host.options is deprecated. '
-            'Use get_option(FirewallOption.KEY, default) instead.'
-        )
+        opts = {}
+        for _, meta in HOST_OPTIONS.items():
+            value = getattr(self, meta.column_name)
+            if value != meta.default:
+                opts[meta.yaml_key] = value
+        return opts
 
     @options.setter
     def options(self, opts: dict | None) -> None:
@@ -648,7 +626,7 @@ class Interface(Base):
         default=0,
     )
 
-    # -- Typed option columns (InterfaceOption) --
+    # -- Typed option columns --
     opt_bridge_port: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean, default=False
     )
@@ -726,14 +704,13 @@ class Interface(Base):
 
     @property
     def options(self) -> dict:
-        """Deprecated: use get_option() instead.
+        """Not supported — use typed opt_* attributes directly.
 
-        Reading iface.options is not allowed - use iface.get_option(key, default).
         Writing iface.options = dict is still supported for GUI/XML compatibility.
         """
         raise AttributeError(
-            'Reading Interface.options is deprecated. '
-            'Use get_option(InterfaceOption.KEY, default) instead.'
+            'Reading Interface.options is not supported. '
+            'Use typed opt_* attributes directly (e.g., iface.opt_bridge_port).'
         )
 
     @options.setter
@@ -742,7 +719,6 @@ class Interface(Base):
 
         Used by XML reader and GUI dialogs.
         Unknown options are silently ignored for legacy XML compatibility.
-        Use get_option() for strict validation when accessing options.
         """
         if not opts:
             return
@@ -762,24 +738,6 @@ class Interface(Base):
                     except (ValueError, TypeError):
                         value = meta.default
                 setattr(self, meta.column_name, value)
-
-    def get_option(self, key: str, default: Any = None) -> Any:
-        """Look up an option value by enum key.
-
-        Uses typed columns for known option keys, with automatic
-        type coercion for legacy XML string values.
-        """
-        meta = INTERFACE_OPTIONS.get(key)
-        if meta is not None:
-            value = getattr(self, meta.column_name)
-            # Coerce string 'True'/'False' to bool for XML compatibility
-            if isinstance(value, str):
-                if value.lower() == 'true':
-                    return True
-                if value.lower() == 'false':
-                    return False
-            return value
-        raise AttributeError(f'Unknown option key: {key}')
 
     def is_loopback(self) -> bool:
         return self.name == 'lo'

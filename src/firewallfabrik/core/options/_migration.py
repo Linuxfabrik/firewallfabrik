@@ -20,18 +20,16 @@ The mapping is applied during file load and GUI population, ensuring
 the compiler always sees canonical keys.
 """
 
-from firewallfabrik.core.options._keys import LinuxOption
-
 # Map legacy keys to canonical keys.
-# Format: {'legacy_key': CanonicalKey}
+# Format: {'legacy_key': 'canonical_key'}
 #
 # This handles the conntrack key mismatch where the GUI previously
 # saved without the 'linux24_' prefix but the compiler expected it.
 LEGACY_KEY_MAP: dict[str, str] = {
     # Conntrack settings - GUI previously saved without linux24_ prefix
-    'conntrack_max': LinuxOption.CONNTRACK_MAX,
-    'conntrack_hashsize': LinuxOption.CONNTRACK_HASHSIZE,
-    'conntrack_tcp_be_liberal': LinuxOption.CONNTRACK_TCP_BE_LIBERAL,
+    'conntrack_max': 'linux24_conntrack_max',
+    'conntrack_hashsize': 'linux24_conntrack_hashsize',
+    'conntrack_tcp_be_liberal': 'linux24_conntrack_tcp_be_liberal',
 }
 
 

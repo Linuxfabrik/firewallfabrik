@@ -17,7 +17,6 @@ from pathlib import Path
 from PySide6.QtWidgets import QWidget
 
 from firewallfabrik.core.objects import PolicyAction
-from firewallfabrik.core.options import RuleOption
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Reject type combo box items: (display_text, stored_value).
@@ -102,24 +101,24 @@ class ActionsPanel(QWidget):
 
             # Reject page.
             if hasattr(self, 'rejectvalue'):
-                val = str(opts.get(RuleOption.ACTION_ON_REJECT, ''))
+                val = str(opts.get('action_on_reject', ''))
                 idx = self.rejectvalue.findText(val)
                 self.rejectvalue.setCurrentIndex(idx if idx >= 0 else 0)
 
             # Accounting page.
             if hasattr(self, 'accountingvalue_str'):
                 self.accountingvalue_str.setText(
-                    str(opts.get(RuleOption.RULE_NAME_ACCOUNTING, '')),
+                    str(opts.get('rule_name_accounting', '')),
                 )
 
             # Custom page.
             if hasattr(self, 'custom_str'):
-                self.custom_str.setText(str(opts.get(RuleOption.CUSTOM_STR, '')))
+                self.custom_str.setText(str(opts.get('custom_str', '')))
 
             # Branch page.
             if hasattr(self, 'ipt_branch_in_mangle'):
                 self.ipt_branch_in_mangle.setChecked(
-                    _to_bool(opts.get(RuleOption.IPT_BRANCH_IN_MANGLE)),
+                    _to_bool(opts.get('ipt_branch_in_mangle')),
                 )
         finally:
             self._loading = False
@@ -132,21 +131,19 @@ class ActionsPanel(QWidget):
 
         # Reject.
         if hasattr(self, 'rejectvalue'):
-            opts[RuleOption.ACTION_ON_REJECT] = self.rejectvalue.currentText()
+            opts['action_on_reject'] = self.rejectvalue.currentText()
 
         # Accounting.
         if hasattr(self, 'accountingvalue_str'):
-            opts[RuleOption.RULE_NAME_ACCOUNTING] = self.accountingvalue_str.text()
+            opts['rule_name_accounting'] = self.accountingvalue_str.text()
 
         # Custom.
         if hasattr(self, 'custom_str'):
-            opts[RuleOption.CUSTOM_STR] = self.custom_str.text()
+            opts['custom_str'] = self.custom_str.text()
 
         # Branch.
         if hasattr(self, 'ipt_branch_in_mangle'):
-            opts[RuleOption.IPT_BRANCH_IN_MANGLE] = (
-                self.ipt_branch_in_mangle.isChecked()
-            )
+            opts['ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}

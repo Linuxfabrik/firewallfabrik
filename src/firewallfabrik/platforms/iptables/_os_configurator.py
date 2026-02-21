@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, ClassVar
 
 from firewallfabrik.compiler._os_configurator import OSConfigurator
 from firewallfabrik.core.objects import Firewall, Interface
-from firewallfabrik.core.options import FirewallOption, LinuxOption
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
@@ -56,37 +55,37 @@ def _version_compare(v1: str, v2: str) -> int:
 class OSConfigurator_linux24(OSConfigurator):
     """OS configurator for Linux 2.4+ with iptables."""
 
-    # Default tool paths
-    TOOLS: ClassVar[list[tuple[str, LinuxOption]]] = [
-        ('LSMOD', LinuxOption.PATH_LSMOD),
-        ('MODPROBE', LinuxOption.PATH_MODPROBE),
-        ('IPTABLES', LinuxOption.PATH_IPTABLES),
-        ('IP6TABLES', LinuxOption.PATH_IP6TABLES),
-        ('IPTABLES_RESTORE', LinuxOption.PATH_IPTABLES_RESTORE),
-        ('IP6TABLES_RESTORE', LinuxOption.PATH_IP6TABLES_RESTORE),
-        ('IP', LinuxOption.PATH_IP),
-        ('IFCONFIG', LinuxOption.PATH_IFCONFIG),
-        ('VCONFIG', LinuxOption.PATH_VCONFIG),
-        ('BRCTL', LinuxOption.PATH_BRCTL),
-        ('IFENSLAVE', LinuxOption.PATH_IFENSLAVE),
-        ('IPSET', LinuxOption.PATH_IPSET),
-        ('LOGGER', LinuxOption.PATH_LOGGER),
+    # Default tool paths: (shell_var_name, opt_column_name)
+    TOOLS: ClassVar[list[tuple[str, str]]] = [
+        ('LSMOD', 'opt_path_lsmod'),
+        ('MODPROBE', 'opt_path_modprobe'),
+        ('IPTABLES', 'opt_path_iptables'),
+        ('IP6TABLES', 'opt_path_ip6tables'),
+        ('IPTABLES_RESTORE', 'opt_path_iptables_restore'),
+        ('IP6TABLES_RESTORE', 'opt_path_ip6tables_restore'),
+        ('IP', 'opt_path_ip'),
+        ('IFCONFIG', 'opt_path_ifconfig'),
+        ('VCONFIG', 'opt_path_vconfig'),
+        ('BRCTL', 'opt_path_brctl'),
+        ('IFENSLAVE', 'opt_path_ifenslave'),
+        ('IPSET', 'opt_path_ipset'),
+        ('LOGGER', 'opt_path_logger'),
     ]
 
-    DEFAULT_TOOL_PATHS: ClassVar[dict[LinuxOption, str]] = {
-        LinuxOption.PATH_LSMOD: 'lsmod',
-        LinuxOption.PATH_MODPROBE: 'modprobe',
-        LinuxOption.PATH_IPTABLES: 'iptables',
-        LinuxOption.PATH_IP6TABLES: 'ip6tables',
-        LinuxOption.PATH_IPTABLES_RESTORE: 'iptables-restore',
-        LinuxOption.PATH_IP6TABLES_RESTORE: 'ip6tables-restore',
-        LinuxOption.PATH_IP: 'ip',
-        LinuxOption.PATH_IFCONFIG: 'ifconfig',
-        LinuxOption.PATH_VCONFIG: 'vconfig',
-        LinuxOption.PATH_BRCTL: 'brctl',
-        LinuxOption.PATH_IFENSLAVE: 'ifenslave',
-        LinuxOption.PATH_IPSET: 'ipset',
-        LinuxOption.PATH_LOGGER: 'logger',
+    DEFAULT_TOOL_PATHS: ClassVar[dict[str, str]] = {
+        'opt_path_lsmod': 'lsmod',
+        'opt_path_modprobe': 'modprobe',
+        'opt_path_iptables': 'iptables',
+        'opt_path_ip6tables': 'ip6tables',
+        'opt_path_iptables_restore': 'iptables-restore',
+        'opt_path_ip6tables_restore': 'ip6tables-restore',
+        'opt_path_ip': 'ip',
+        'opt_path_ifconfig': 'ifconfig',
+        'opt_path_vconfig': 'vconfig',
+        'opt_path_brctl': 'brctl',
+        'opt_path_ifenslave': 'ifenslave',
+        'opt_path_ipset': 'ipset',
+        'opt_path_logger': 'logger',
     }
 
     def __init__(
@@ -104,7 +103,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
         version = fw.version or ''
         if _version_compare(version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option(FirewallOption.USE_M_SET, False))
+            self.using_ipset = bool(fw.opt_use_m_set)
 
     def my_platform_name(self) -> str:
         return 'Linux24'
@@ -120,38 +119,43 @@ class OSConfigurator_linux24(OSConfigurator):
         result = ''
 
         # Kernel variables
+        # Each tuple is (opt_column_name, configlet_var_name)
+        # The configlet var name matches the legacy linux24_* YAML key.
         kernel_vars = Configlet('linux24', 'kernel_vars')
         kernel_vars.collapse_empty_strings(True)
 
-        for opt_key in [
-            LinuxOption.IP_DYNADDR,
-            LinuxOption.RP_FILTER,
-            LinuxOption.ACCEPT_SOURCE_ROUTE,
-            LinuxOption.ACCEPT_REDIRECTS,
-            LinuxOption.LOG_MARTIANS,
-            LinuxOption.ICMP_ECHO_IGNORE_BROADCASTS,
-            LinuxOption.ICMP_ECHO_IGNORE_ALL,
-            LinuxOption.ICMP_IGNORE_BOGUS_ERROR_RESPONSES,
-            LinuxOption.TCP_WINDOW_SCALING,
-            LinuxOption.TCP_SACK,
-            LinuxOption.TCP_FACK,
-            LinuxOption.TCP_SYNCOOKIES,
-            LinuxOption.TCP_ECN,
-            LinuxOption.TCP_TIMESTAMPS,
+        for col_name, configlet_name in [
+            ('opt_ip_dynaddr', 'linux24_ip_dynaddr'),
+            ('opt_rp_filter', 'linux24_rp_filter'),
+            ('opt_accept_source_route', 'linux24_accept_source_route'),
+            ('opt_accept_redirects', 'linux24_accept_redirects'),
+            ('opt_log_martians', 'linux24_log_martians'),
+            ('opt_icmp_echo_ignore_broadcasts', 'linux24_icmp_echo_ignore_broadcasts'),
+            ('opt_icmp_echo_ignore_all', 'linux24_icmp_echo_ignore_all'),
+            (
+                'opt_icmp_ignore_bogus_error_responses',
+                'linux24_icmp_ignore_bogus_error_responses',
+            ),
+            ('opt_tcp_window_scaling', 'linux24_tcp_window_scaling'),
+            ('opt_tcp_sack', 'linux24_tcp_sack'),
+            ('opt_tcp_fack', 'linux24_tcp_fack'),
+            ('opt_tcp_syncookies', 'linux24_tcp_syncookies'),
+            ('opt_tcp_ecn', 'linux24_tcp_ecn'),
+            ('opt_tcp_timestamps', 'linux24_tcp_timestamps'),
         ]:
-            val = str(self.fw.get_option(opt_key, '') or '')
-            self._set_configlet_macro_str(val, kernel_vars, opt_key)
+            val = str(getattr(self.fw, col_name, '') or '')
+            self._set_configlet_macro_str(val, kernel_vars, configlet_name)
 
-        for opt_key in [
-            LinuxOption.TCP_FIN_TIMEOUT,
-            LinuxOption.TCP_KEEPALIVE_INTERVAL,
+        for col_name, configlet_name in [
+            ('opt_tcp_fin_timeout', 'linux24_tcp_fin_timeout'),
+            ('opt_tcp_keepalive_interval', 'linux24_tcp_keepalive_interval'),
         ]:
-            val = self.fw.get_option(opt_key, -1)
+            val = getattr(self.fw, col_name, -1)
             try:
                 val = int(val)
             except (ValueError, TypeError):
                 val = -1
-            self._set_configlet_macro_int(val, kernel_vars, opt_key)
+            self._set_configlet_macro_int(val, kernel_vars, configlet_name)
 
         result += kernel_vars.expand()
 
@@ -166,17 +170,17 @@ class OSConfigurator_linux24(OSConfigurator):
             conntrack.set_variable('iptables_version_ge_1_4', '0')
             conntrack.set_variable('iptables_version_lt_1_4', '1')
 
-        for opt_key in [
-            LinuxOption.CONNTRACK_MAX,
-            LinuxOption.CONNTRACK_HASHSIZE,
-            LinuxOption.CONNTRACK_TCP_BE_LIBERAL,
+        for col_name, configlet_name in [
+            ('opt_conntrack_max', 'linux24_conntrack_max'),
+            ('opt_conntrack_hashsize', 'linux24_conntrack_hashsize'),
+            ('opt_conntrack_tcp_be_liberal', 'linux24_conntrack_tcp_be_liberal'),
         ]:
-            val = self.fw.get_option(opt_key, -1)
+            val = getattr(self.fw, col_name, -1)
             try:
                 val = int(val)
             except (ValueError, TypeError):
                 val = -1
-            self._set_configlet_macro_int(val, conntrack, opt_key)
+            self._set_configlet_macro_int(val, conntrack, configlet_name)
 
         result += conntrack.expand()
         return result
@@ -219,21 +223,17 @@ class OSConfigurator_linux24(OSConfigurator):
         check_utils.remove_comments()
         check_utils.collapse_empty_strings(True)
 
-        load_modules = bool(self.fw.get_option(FirewallOption.LOAD_MODULES, False))
+        load_modules = bool(self.fw.opt_load_modules)
         check_utils.set_variable('load_modules', load_modules)
 
         need_modprobe = (
             load_modules
-            or bool(self.fw.get_option(FirewallOption.CONFIGURE_VLAN_INTERFACES, False))
-            or bool(
-                self.fw.get_option(FirewallOption.CONFIGURE_BONDING_INTERFACES, False)
-            )
+            or bool(self.fw.opt_configure_vlan_interfaces)
+            or bool(self.fw.opt_configure_bonding_interfaces)
         )
         check_utils.set_variable('need_modprobe', need_modprobe)
 
-        use_iptables_restore = bool(
-            self.fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False)
-        )
+        use_iptables_restore = bool(self.fw.opt_use_iptables_restore)
         check_utils.set_variable('need_iptables_restore', use_iptables_restore)
         check_utils.set_variable(
             'need_ip6tables_restore', use_iptables_restore and have_ipv6
@@ -263,15 +263,15 @@ class OSConfigurator_linux24(OSConfigurator):
         """Generate shell variable assignments for tool paths."""
         result = ''
 
-        for var_name, opt_key in self.TOOLS:
+        for var_name, col_name in self.TOOLS:
             path = ''
             # 1. Check firewall options for user override
-            opt_val = self.fw.get_option(opt_key, '')
+            opt_val = getattr(self.fw, col_name, None)
             if opt_val:
                 path = str(opt_val)
             # 2. Fall back to default paths
             if not path:
-                path = self.DEFAULT_TOOL_PATHS.get(opt_key, '')
+                path = self.DEFAULT_TOOL_PATHS.get(col_name, '')
             if path:
                 result += f'{var_name}="{path}"\n'
 
@@ -285,11 +285,11 @@ class OSConfigurator_linux24(OSConfigurator):
         ip_fwd.remove_comments()
         ip_fwd.collapse_empty_strings(True)
 
-        s = str(self.fw.get_option(LinuxOption.IP_FORWARD, '') or '')
+        s = str(self.fw.opt_ip_forward or '')
         ip_fwd.set_variable('ipv4', bool(s))
         ip_fwd.set_variable('ipv4_forw', 1 if s in ('1', 'On', 'on') else 0)
 
-        s = str(self.fw.get_option(LinuxOption.IPV6_FORWARD, '') or '')
+        s = str(self.fw.opt_ipv6_forward or '')
         ip_fwd.set_variable('ipv6', bool(s))
         ip_fwd.set_variable('ipv6_forw', 1 if s in ('1', 'On', 'on') else 0)
 
@@ -302,9 +302,7 @@ class OSConfigurator_linux24(OSConfigurator):
         load_modules = Configlet('linux24', 'load_modules')
         load_modules.remove_comments()
 
-        load_modules.set_variable(
-            'load_modules', bool(self.fw.get_option(FirewallOption.LOAD_MODULES, False))
-        )
+        load_modules.set_variable('load_modules', bool(self.fw.opt_load_modules))
         load_modules.set_variable('modules_dir', '/lib/modules/`uname -r`/kernel/net/')
 
         return load_modules.expand()
@@ -390,7 +388,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def print_commands_to_clear_known_interfaces(self) -> str:
         """Generate commands to clear addresses on unknown interfaces."""
-        if not self.fw.get_option(FirewallOption.CLEAR_UNKNOWN_INTERFACES, False):
+        if not self.fw.opt_clear_unknown_interfaces:
             return ''
         if not self.known_interfaces:
             return ''
@@ -417,7 +415,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def add_virtual_address_for_nat(self, addr) -> None:
         """Register a virtual address needed for NAT."""
-        if not self.fw.get_option(FirewallOption.MANAGE_VIRTUAL_ADDR, False):
+        if not self.fw.opt_manage_virtual_addr:
             return
         self.virtual_addresses.append(addr)
 

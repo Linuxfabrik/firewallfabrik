@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 
 from firewallfabrik.compiler._os_configurator import OSConfigurator
 from firewallfabrik.core.objects import Firewall, Interface
-from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.driver._interface_properties import (
     LinuxInterfaceProperties,
@@ -125,12 +124,12 @@ class OSConfigurator_nft(OSConfigurator):
         rules = []
 
         # Accept established/related connections
-        if self.fw.get_option(FirewallOption.ACCEPT_ESTABLISHED, False):
+        if self.fw.opt_accept_established:
             rules.append('        ct state established,related accept')
 
         # Drop invalid packets
-        drop_invalid = self.fw.get_option(FirewallOption.DROP_INVALID, False)
-        log_invalid = self.fw.get_option(FirewallOption.LOG_INVALID, False)
+        drop_invalid = self.fw.opt_drop_invalid
+        log_invalid = self.fw.opt_log_invalid
         if drop_invalid:
             if log_invalid:
                 rules.append('        ct state invalid log prefix "INVALID " drop')
@@ -138,7 +137,7 @@ class OSConfigurator_nft(OSConfigurator):
                 rules.append('        ct state invalid drop')
 
         # Drop new TCP without SYN
-        if self.fw.get_option(FirewallOption.DROP_NEW_TCP_WITH_NO_SYN, False):
+        if self.fw.opt_drop_new_tcp_with_no_syn:
             rules.append('        tcp flags != syn ct state new drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
@@ -244,7 +243,7 @@ class OSConfigurator_nft(OSConfigurator):
 
     def print_commands_to_clear_known_interfaces(self) -> str:
         """Generate commands to clear addresses on unknown interfaces."""
-        if not self.fw.get_option(FirewallOption.CLEAR_UNKNOWN_INTERFACES, False):
+        if not self.fw.opt_clear_unknown_interfaces:
             return ''
         if not self.known_interfaces:
             return ''

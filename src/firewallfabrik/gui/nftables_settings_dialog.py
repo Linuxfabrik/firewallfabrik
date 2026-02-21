@@ -18,7 +18,6 @@ from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
-from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'nftablessettingsdialog_q.ui'
@@ -26,54 +25,54 @@ _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'nftablessettingsdialog_q.ui
 # Checkbox widget → canonical compiler option key.
 # The compiler reads options by the canonical key (right-hand side).
 _CHECKBOX_MAP: dict[str, str] = {
-    'assumeFwIsPartOfAny': FirewallOption.FIREWALL_IS_PART_OF_ANY,
-    'acceptSessions': FirewallOption.ACCEPT_NEW_TCP_WITH_NO_SYN,
-    'acceptESTBeforeFirst': FirewallOption.ACCEPT_ESTABLISHED,
-    'dropInvalid': FirewallOption.DROP_INVALID,
-    'logInvalid': FirewallOption.LOG_INVALID,
-    'localNAT': FirewallOption.LOCAL_NAT,
-    'shadowing': FirewallOption.CHECK_SHADING,
-    'emptyGroups': FirewallOption.IGNORE_EMPTY_GROUPS,
-    'clampMSStoMTU': FirewallOption.CLAMP_MSS_TO_MTU,
-    'bridge': FirewallOption.BRIDGING_FW,
-    'ipv6NeighborDiscovery': FirewallOption.IPV6_NEIGHBOR_DISCOVERY,
-    'mgmt_ssh': FirewallOption.MGMT_SSH,
-    'add_mgmt_ssh_rule_when_stoped': FirewallOption.ADD_MGMT_SSH_RULE_WHEN_STOPPED,
-    'useModuleSet': FirewallOption.USE_M_SET,
-    'useKernelTz': FirewallOption.USE_KERNELTZ,
-    'logTCPseq': FirewallOption.LOG_TCP_SEQ,
-    'logTCPopt': FirewallOption.LOG_TCP_OPT,
-    'logIPopt': FirewallOption.LOG_IP_OPT,
-    'logNumsyslog': FirewallOption.USE_NUMERIC_LOG_LEVELS,
-    'logAll': FirewallOption.LOG_ALL,
-    'loadModules': FirewallOption.LOAD_MODULES,
-    'iptDebug': FirewallOption.DEBUG,
-    'verifyInterfaces': FirewallOption.VERIFY_INTERFACES,
-    'configureInterfaces': FirewallOption.CONFIGURE_INTERFACES,
-    'clearUnknownInterfaces': FirewallOption.CLEAR_UNKNOWN_INTERFACES,
-    'configure_vlan_interfaces': FirewallOption.CONFIGURE_VLAN_INTERFACES,
-    'configure_bridge_interfaces': FirewallOption.CONFIGURE_BRIDGE_INTERFACES,
-    'configure_bonding_interfaces': FirewallOption.CONFIGURE_BONDING_INTERFACES,
-    'addVirtualsforNAT': FirewallOption.MANAGE_VIRTUAL_ADDR,
-    'iptablesRestoreActivation': FirewallOption.USE_IPTABLES_RESTORE,
+    'assumeFwIsPartOfAny': 'firewall_is_part_of_any_and_networks',
+    'acceptSessions': 'accept_new_tcp_with_no_syn',
+    'acceptESTBeforeFirst': 'accept_established',
+    'dropInvalid': 'drop_invalid',
+    'logInvalid': 'log_invalid',
+    'localNAT': 'local_nat',
+    'shadowing': 'check_shading',
+    'emptyGroups': 'ignore_empty_groups',
+    'clampMSStoMTU': 'clamp_mss_to_mtu',
+    'bridge': 'bridging_fw',
+    'ipv6NeighborDiscovery': 'ipv6_neighbor_discovery',
+    'mgmt_ssh': 'mgmt_ssh',
+    'add_mgmt_ssh_rule_when_stoped': 'add_mgmt_ssh_rule_when_stoped',
+    'useModuleSet': 'use_m_set',
+    'useKernelTz': 'use_kerneltz',
+    'logTCPseq': 'log_tcp_seq',
+    'logTCPopt': 'log_tcp_opt',
+    'logIPopt': 'log_ip_opt',
+    'logNumsyslog': 'use_numeric_log_levels',
+    'logAll': 'log_all',
+    'loadModules': 'load_modules',
+    'iptDebug': 'debug',
+    'verifyInterfaces': 'verify_interfaces',
+    'configureInterfaces': 'configure_interfaces',
+    'clearUnknownInterfaces': 'clear_unknown_interfaces',
+    'configure_vlan_interfaces': 'configure_vlan_interfaces',
+    'configure_bridge_interfaces': 'configure_bridge_interfaces',
+    'configure_bonding_interfaces': 'configure_bonding_interfaces',
+    'addVirtualsforNAT': 'manage_virtual_addr',
+    'iptablesRestoreActivation': 'use_iptables_restore',
 }
 
 # Line-edit widget → canonical compiler option key.
 _LINE_EDIT_MAP: dict[str, str] = {
-    'compiler': FirewallOption.COMPILER,
-    'compilerArgs': FirewallOption.CMDLINE,
-    'outputFileName': FirewallOption.OUTPUT_FILE,
-    'fileNameOnFw': FirewallOption.SCRIPT_NAME_ON_FIREWALL,
-    'mgmt_addr': FirewallOption.MGMT_ADDR,
-    'logprefix': FirewallOption.LOG_PREFIX,
-    'ipt_fw_dir': FirewallOption.FIREWALL_DIR,
-    'ipt_user': FirewallOption.ADM_USER,
-    'altAddress': FirewallOption.ALT_ADDRESS,
-    'activationCmd': FirewallOption.ACTIVATION_CMD,
-    'sshArgs': FirewallOption.SSH_ARGS,
-    'scpArgs': FirewallOption.SCP_ARGS,
-    'installScript': FirewallOption.INSTALL_SCRIPT,
-    'installScriptArgs': FirewallOption.INSTALL_SCRIPT_ARGS,
+    'compiler': 'compiler',
+    'compilerArgs': 'cmdline',
+    'outputFileName': 'output_file',
+    'fileNameOnFw': 'script_name_on_firewall',
+    'mgmt_addr': 'mgmt_addr',
+    'logprefix': 'log_prefix',
+    'ipt_fw_dir': 'firewall_dir',
+    'ipt_user': 'admUser',
+    'altAddress': 'altAddress',
+    'activationCmd': 'activationCmd',
+    'sshArgs': 'sshArgs',
+    'scpArgs': 'scpArgs',
+    'installScript': 'installScript',
+    'installScriptArgs': 'installScriptArgs',
 }
 
 # LOG level syslog names matching the C++ dialog.
@@ -190,7 +189,7 @@ class NftablesSettingsDialog(QDialog):
             else:
                 val = False
             # acceptSessions checkbox has inverted semantics:
-            if key == FirewallOption.ACCEPT_NEW_TCP_WITH_NO_SYN:
+            if key == 'accept_new_tcp_with_no_syn':
                 widget.setChecked(not val)
             else:
                 widget.setChecked(val)
@@ -208,11 +207,11 @@ class NftablesSettingsDialog(QDialog):
                 widget.setText('')
 
         # Text edits (prolog / epilog)
-        self.prolog_script.setPlainText(opts.get(FirewallOption.PROLOG_SCRIPT, ''))
-        self.epilog_script.setPlainText(opts.get(FirewallOption.EPILOG_SCRIPT, ''))
+        self.prolog_script.setPlainText(opts.get('prolog_script', ''))
+        self.epilog_script.setPlainText(opts.get('epilog_script', ''))
 
         # Prolog placement combo
-        place = opts.get(FirewallOption.PROLOG_PLACE, 'top')
+        place = opts.get('prolog_place', 'top')
         try:
             idx = _PROLOG_PLACES.index(place)
         except ValueError:
@@ -220,42 +219,42 @@ class NftablesSettingsDialog(QDialog):
         self.prologPlace.setCurrentIndex(idx)
 
         # LOG, ULOG, and NFLOG radio buttons
-        if str(opts.get(FirewallOption.USE_ULOG, '')).lower() == 'true':
+        if str(opts.get('use_ULOG', '')).lower() == 'true':
             self.useULOG.setChecked(True)
-        elif str(opts.get(FirewallOption.USE_NFLOG, '')).lower() == 'true':
+        elif str(opts.get('use_NFLOG', '')).lower() == 'true':
             self.useNFLOG.setChecked(True)
         else:
             self.useLOG.setChecked(True)
         self._update_log_stack()
 
         # Log level combo
-        level = opts.get(FirewallOption.LOG_LEVEL, '')
+        level = opts.get('log_level', '')
         idx = self.logLevel.findText(level)
         self.logLevel.setCurrentIndex(max(idx, 0))
 
         # Logging limit
-        limit_val = opts.get(FirewallOption.LIMIT_VALUE, '0')
+        limit_val = opts.get('limit_value', '0')
         try:
             self.logLimitVal.setValue(int(limit_val))
         except (ValueError, TypeError):
             self.logLimitVal.setValue(0)
 
-        limit_suffix = opts.get(FirewallOption.LIMIT_SUFFIX, '/second')
+        limit_suffix = opts.get('limit_suffix', '/second')
         idx = self.logLimitSuffix.findText(limit_suffix)
         self.logLimitSuffix.setCurrentIndex(max(idx, 0))
 
         # Action on reject combo
-        action = opts.get(FirewallOption.ACTION_ON_REJECT, '')
+        action = opts.get('action_on_reject', '')
         idx = self.actionOnReject.findText(action)
         self.actionOnReject.setCurrentIndex(max(idx, 0))
 
         # ULOG spin boxes
-        self.cprange.setValue(int(opts.get(FirewallOption.ULOG_CPRANGE, 0)))
-        self.qthreshold.setValue(int(opts.get(FirewallOption.ULOG_QTHRESHOLD, 1)))
-        self.nlgroup.setValue(int(opts.get(FirewallOption.ULOG_NLGROUP, 1)))
+        self.cprange.setValue(int(opts.get('ulog_cprange', 0)))
+        self.qthreshold.setValue(int(opts.get('ulog_qthreshold', 1)))
+        self.nlgroup.setValue(int(opts.get('ulog_nlgroup', 1)))
 
         # IPv4 before IPv6 combo
-        if str(opts.get(FirewallOption.IPV4_6_ORDER, '')).lower() == 'ipv6_first':
+        if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_first':
             self.ipv4before.setCurrentIndex(1)
         else:
             self.ipv4before.setCurrentIndex(0)
@@ -272,7 +271,7 @@ class NftablesSettingsDialog(QDialog):
             # Store as Python bool (not string) so that raw
             # ``options.get(key, False)`` in the compiler works correctly.
             # acceptSessions has inverted semantics.
-            if key == FirewallOption.ACCEPT_NEW_TCP_WITH_NO_SYN:
+            if key == 'accept_new_tcp_with_no_syn':
                 opts[key] = not widget.isChecked()
             else:
                 opts[key] = widget.isChecked()
@@ -290,32 +289,32 @@ class NftablesSettingsDialog(QDialog):
                 opts.pop(widget_name, None)
 
         # Text edits
-        opts[FirewallOption.PROLOG_SCRIPT] = self.prolog_script.toPlainText()
-        opts[FirewallOption.EPILOG_SCRIPT] = self.epilog_script.toPlainText()
+        opts['prolog_script'] = self.prolog_script.toPlainText()
+        opts['epilog_script'] = self.epilog_script.toPlainText()
 
         # Prolog placement
         idx = self.prologPlace.currentIndex()
-        opts[FirewallOption.PROLOG_PLACE] = (
+        opts['prolog_place'] = (
             _PROLOG_PLACES[idx] if idx < len(_PROLOG_PLACES) else 'top'
         )
 
         # LOG / ULOG / NFLOG
-        opts[FirewallOption.USE_ULOG] = self.useULOG.isChecked()
-        opts[FirewallOption.USE_NFLOG] = self.useNFLOG.isChecked()
+        opts['use_ULOG'] = self.useULOG.isChecked()
+        opts['use_NFLOG'] = self.useNFLOG.isChecked()
 
         # Log options
-        opts[FirewallOption.LOG_LEVEL] = self.logLevel.currentText()
-        opts[FirewallOption.LIMIT_VALUE] = str(self.logLimitVal.value())
-        opts[FirewallOption.LIMIT_SUFFIX] = self.logLimitSuffix.currentText()
-        opts[FirewallOption.ACTION_ON_REJECT] = self.actionOnReject.currentText()
+        opts['log_level'] = self.logLevel.currentText()
+        opts['limit_value'] = str(self.logLimitVal.value())
+        opts['limit_suffix'] = self.logLimitSuffix.currentText()
+        opts['action_on_reject'] = self.actionOnReject.currentText()
 
         # ULOG options
-        opts[FirewallOption.ULOG_CPRANGE] = str(self.cprange.value())
-        opts[FirewallOption.ULOG_QTHRESHOLD] = str(self.qthreshold.value())
-        opts[FirewallOption.ULOG_NLGROUP] = str(self.nlgroup.value())
+        opts['ulog_cprange'] = str(self.cprange.value())
+        opts['ulog_qthreshold'] = str(self.qthreshold.value())
+        opts['ulog_nlgroup'] = str(self.nlgroup.value())
 
         # IPv4/IPv6 order
-        opts[FirewallOption.IPV4_6_ORDER] = (
+        opts['ipv4_6_order'] = (
             'ipv6_first' if self.ipv4before.currentIndex() == 1 else 'ipv4_first'
         )
 

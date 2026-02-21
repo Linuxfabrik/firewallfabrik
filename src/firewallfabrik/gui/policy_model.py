@@ -40,7 +40,6 @@ from firewallfabrik.core.objects import (
     Service,
     rule_elements,
 )
-from firewallfabrik.core.options import RuleOption
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
     get_label_color,
@@ -494,14 +493,14 @@ class PolicyTreeModel(QAbstractItemModel):
             comment=rule.comment or '',
             direction=dir_name,
             direction_int=direction_int,
-            disabled=_opt_bool(opts, RuleOption.DISABLED),
+            disabled=_opt_bool(opts, 'disabled'),
             dst=slots.get('dst', []),
             group=group_name,
             itf=slots.get('itf', []),
             itf_inb=slots.get('itf_inb', []),
             itf_outb=slots.get('itf_outb', []),
             label=rule.label or '',
-            metric=_opt_int(opts, RuleOption.METRIC),
+            metric=_opt_int(opts, 'metric'),
             nat_action=nat_action_name,
             nat_action_int=nat_action_int,
             negations=rule.negations or {},
@@ -975,7 +974,7 @@ class PolicyTreeModel(QAbstractItemModel):
             opts = {}
             kwargs = {}
             if self._rule_set_type == 'Policy':
-                opts[RuleOption.STATELESS] = True
+                opts['stateless'] = True
                 kwargs['policy_action'] = PolicyAction.Deny.value
                 kwargs['policy_direction'] = Direction.Both.value
             elif self._rule_set_type == 'NAT':
@@ -1300,7 +1299,7 @@ class PolicyTreeModel(QAbstractItemModel):
                     if action == PolicyAction.Accept:
                         opts.pop('stateless', None)
                     else:
-                        opts[RuleOption.STATELESS] = True
+                        opts['stateless'] = True
                     rule.options = opts
         self.reload()
 
@@ -1335,7 +1334,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if rule is not None:
                 opts = dict(rule.options or {})
                 if disabled:
-                    opts[RuleOption.DISABLED] = True
+                    opts['disabled'] = True
                 else:
                     opts.pop('disabled', None)
                 rule.options = opts
@@ -1512,7 +1511,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if rule is not None:
                 opts = dict(rule.options or {})
                 if enabled:
-                    opts[RuleOption.LOG] = True
+                    opts['log'] = True
                 else:
                     opts.pop('log', None)
                 rule.options = opts
@@ -1738,20 +1737,18 @@ def _build_options_display(opts):
     if not opts:
         return []
     result = []
-    if _opt_str(opts, RuleOption.COUNTER_NAME) or _opt_str(
-        opts, RuleOption.RULE_NAME_ACCOUNTING
-    ):
+    if _opt_str(opts, 'counter_name') or _opt_str(opts, 'rule_name_accounting'):
         result.append(('__opt_accounting__', 'accounting', 'Accounting'))
-    if _opt_bool(opts, RuleOption.CLASSIFICATION):
-        label = _opt_str(opts, RuleOption.CLASSIFY_STR) or 'classify'
+    if _opt_bool(opts, 'classification'):
+        label = _opt_str(opts, 'classify_str') or 'classify'
         result.append(('__opt_classify__', label, 'Classify'))
-    if _opt_bool(opts, RuleOption.LOG):
+    if _opt_bool(opts, 'log'):
         result.append(('__opt_log__', 'log', 'Log'))
     if _has_nondefault_options(opts):
         result.append(('__opt_options__', 'options', 'Options'))
-    if _opt_bool(opts, RuleOption.ROUTING):
+    if _opt_bool(opts, 'routing'):
         result.append(('__opt_route__', 'route', 'Route'))
-    if _opt_bool(opts, RuleOption.TAGGING):
+    if _opt_bool(opts, 'tagging'):
         result.append(('__opt_tag__', 'tag', 'TagService'))
     return result
 
@@ -1790,70 +1787,70 @@ def _options_tooltip(row_data):
     rows = []
 
     # Stateful / Stateless.
-    if _opt_bool(opts, RuleOption.STATELESS):
+    if _opt_bool(opts, 'stateless'):
         rows.append(('Stateless', ''))
     else:
         rows.append(('Stateful', ''))
 
     # iptables-specific options (the only platform we support).
-    if _opt_bool(opts, RuleOption.TAGGING):
-        tag_id = _opt_str(opts, RuleOption.TAGOBJECT_ID)
+    if _opt_bool(opts, 'tagging'):
+        tag_id = _opt_str(opts, 'tagobject_id')
         rows.append(('Tag:', tag_id or 'yes'))
 
-    classify = _opt_str(opts, RuleOption.CLASSIFY_STR)
+    classify = _opt_str(opts, 'classify_str')
     if classify:
         rows.append(('Class:', classify))
 
-    log_prefix = _opt_str(opts, RuleOption.LOG_PREFIX)
+    log_prefix = _opt_str(opts, 'log_prefix')
     if log_prefix:
         rows.append(('Log prefix:', log_prefix))
 
-    log_level = _opt_str(opts, RuleOption.LOG_LEVEL)
+    log_level = _opt_str(opts, 'log_level')
     if log_level:
         rows.append(('Log level:', log_level))
 
-    nlgroup = _opt_int(opts, RuleOption.ULOG_NLGROUP)
+    nlgroup = _opt_int(opts, 'ulog_nlgroup')
     if nlgroup > 1:
         rows.append(('Netlink group:', str(nlgroup)))
 
-    limit_val = _opt_int(opts, RuleOption.LIMIT_VALUE)
+    limit_val = _opt_int(opts, 'limit_value')
     if limit_val > 0:
-        arg = '! ' if _opt_bool(opts, RuleOption.LIMIT_VALUE_NOT) else ''
+        arg = '! ' if _opt_bool(opts, 'limit_value_not') else ''
         arg += str(limit_val)
-        suffix = _opt_str(opts, RuleOption.LIMIT_SUFFIX)
+        suffix = _opt_str(opts, 'limit_suffix')
         if suffix:
             arg += suffix
         rows.append(('Limit value:', arg))
 
-    limit_burst = _opt_int(opts, RuleOption.LIMIT_BURST)
+    limit_burst = _opt_int(opts, 'limit_burst')
     if limit_burst > 0:
         rows.append(('Limit burst:', str(limit_burst)))
 
-    connlimit = _opt_int(opts, RuleOption.CONNLIMIT_VALUE)
+    connlimit = _opt_int(opts, 'connlimit_value')
     if connlimit > 0:
-        arg = '! ' if _opt_bool(opts, RuleOption.CONNLIMIT_ABOVE_NOT) else ''
+        arg = '! ' if _opt_bool(opts, 'connlimit_above_not') else ''
         arg += str(connlimit)
         rows.append(('Connlimit value:', arg))
 
-    hashlimit_val = _opt_int(opts, RuleOption.HASHLIMIT_VALUE)
+    hashlimit_val = _opt_int(opts, 'hashlimit_value')
     if hashlimit_val > 0:
-        hl_name = _opt_str(opts, RuleOption.HASHLIMIT_NAME)
+        hl_name = _opt_str(opts, 'hashlimit_name')
         if hl_name:
             rows.append(('Hashlimit name:', hl_name))
         arg = str(hashlimit_val)
-        hl_suffix = _opt_str(opts, RuleOption.HASHLIMIT_SUFFIX)
+        hl_suffix = _opt_str(opts, 'hashlimit_suffix')
         if hl_suffix:
             arg += hl_suffix
         rows.append(('Hashlimit value:', arg))
-        hl_burst = _opt_int(opts, RuleOption.HASHLIMIT_BURST)
+        hl_burst = _opt_int(opts, 'hashlimit_burst')
         if hl_burst > 0:
             rows.append(('Hashlimit burst:', str(hl_burst)))
 
-    if _opt_str(opts, RuleOption.FIREWALL_IS_PART_OF_ANY):
+    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
         rows.append(('Part of Any', ''))
 
     # Logging (always shown, last row).
-    logging_on = _opt_bool(opts, RuleOption.LOG)
+    logging_on = _opt_bool(opts, 'log')
     rows.append(('Logging:', 'on' if logging_on else 'off'))
 
     # Format as HTML table.
@@ -1869,41 +1866,41 @@ def _has_nondefault_options(opts):
 
     Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
     """
-    if _opt_int(opts, RuleOption.CONNLIMIT_VALUE) > 0:
+    if _opt_int(opts, 'connlimit_value') > 0:
         return True
-    if _opt_bool(opts, RuleOption.CONNLIMIT_ABOVE_NOT):
+    if _opt_bool(opts, 'connlimit_above_not'):
         return True
-    if _opt_int(opts, RuleOption.CONNLIMIT_MASKLEN) > 0:
+    if _opt_int(opts, 'connlimit_masklen') > 0:
         return True
-    if _opt_str(opts, RuleOption.FIREWALL_IS_PART_OF_ANY):
+    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_BURST) > 0:
+    if _opt_int(opts, 'hashlimit_burst') > 0:
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_EXPIRE) > 0:
+    if _opt_int(opts, 'hashlimit_expire') > 0:
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_GCINTERVAL) > 0:
+    if _opt_int(opts, 'hashlimit_gcinterval') > 0:
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_MAX) > 0:
+    if _opt_int(opts, 'hashlimit_max') > 0:
         return True
-    if _opt_str(opts, RuleOption.HASHLIMIT_NAME):
+    if _opt_str(opts, 'hashlimit_name'):
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_SIZE) > 0:
+    if _opt_int(opts, 'hashlimit_size') > 0:
         return True
-    if _opt_int(opts, RuleOption.HASHLIMIT_VALUE) > 0:
+    if _opt_int(opts, 'hashlimit_value') > 0:
         return True
-    if _opt_int(opts, RuleOption.LIMIT_BURST) > 0:
+    if _opt_int(opts, 'limit_burst') > 0:
         return True
-    if _opt_str(opts, RuleOption.LIMIT_SUFFIX):
+    if _opt_str(opts, 'limit_suffix'):
         return True
-    if _opt_int(opts, RuleOption.LIMIT_VALUE) > 0:
+    if _opt_int(opts, 'limit_value') > 0:
         return True
-    if _opt_bool(opts, RuleOption.LIMIT_VALUE_NOT):
+    if _opt_bool(opts, 'limit_value_not'):
         return True
-    if _opt_str(opts, RuleOption.LOG_LEVEL):
+    if _opt_str(opts, 'log_level'):
         return True
-    if _opt_str(opts, RuleOption.LOG_PREFIX):
+    if _opt_str(opts, 'log_prefix'):
         return True
-    return _opt_int(opts, RuleOption.ULOG_NLGROUP) > 1
+    return _opt_int(opts, 'ulog_nlgroup') > 1
 
 
 def _icon_suffix():

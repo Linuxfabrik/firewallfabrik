@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
 
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import Firewall
-from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Platform -> CLI tool mapping
@@ -83,7 +82,7 @@ def _resolve_mgmt_address(fw):
     for one flagged as management and returns its first address.
     """
     options = fw.options or {}
-    alt = options.get(FirewallOption.ALT_ADDRESS, '')
+    alt = options.get('altAddress', '')
     if alt:
         return alt
     for iface in fw.interfaces:
@@ -232,17 +231,15 @@ class CompileDialog(QDialog):
                 item.setData(
                     0,
                     _R_OUTPUT_FILE,
-                    options.get(FirewallOption.OUTPUT_FILE, '')
-                    or options.get('outputFileName', ''),
+                    options.get('output_file', '') or options.get('outputFileName', ''),
                 )
                 item.setData(0, _R_FW_UUID, str(fw.id))
                 item.setData(
                     0,
                     _R_CMDLINE,
-                    options.get(FirewallOption.CMDLINE, '')
-                    or options.get('compilerArgs', ''),
+                    options.get('cmdline', '') or options.get('compilerArgs', ''),
                 )
-                item.setData(0, _R_COMPILER, options.get(FirewallOption.COMPILER, ''))
+                item.setData(0, _R_COMPILER, options.get('compiler', ''))
                 item.setData(0, _R_NEEDS_COMPILE, needs_compile)
                 item.setData(0, _R_NEEDS_INSTALL, needs_install)
                 item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
@@ -682,22 +679,22 @@ class CompileDialog(QDialog):
             options = (fw.options or {}) if fw else {}
 
         config = InstallConfig(
-            user=options.get(FirewallOption.ADM_USER, '') or 'root',
+            user=options.get('admUser', '') or 'root',
             mgmt_address=mgmt_addr,
-            firewall_dir=options.get(FirewallOption.FIREWALL_DIR, '/etc/fw'),
-            ssh_args=options.get(FirewallOption.SSH_ARGS, ''),
-            scp_args=options.get(FirewallOption.SCP_ARGS, ''),
-            activation_cmd=options.get(FirewallOption.ACTIVATION_CMD, ''),
-            install_script=options.get(FirewallOption.INSTALL_SCRIPT, ''),
-            install_script_args=options.get(FirewallOption.INSTALL_SCRIPT_ARGS, ''),
+            firewall_dir=options.get('firewall_dir', '/etc/fw'),
+            ssh_args=options.get('sshArgs', ''),
+            scp_args=options.get('scpArgs', ''),
+            activation_cmd=options.get('activationCmd', ''),
+            install_script=options.get('installScript', ''),
+            install_script_args=options.get('installScriptArgs', ''),
             firewall_name=fw_name,
             fwb_file=str(self._current_file),
             working_dir=str(self._dest_dir),
-            alt_address=options.get(FirewallOption.ALT_ADDRESS, ''),
+            alt_address=options.get('altAddress', ''),
         )
 
         # Determine the compiled script path.
-        output_file = options.get(FirewallOption.OUTPUT_FILE, '') or options.get(
+        output_file = options.get('output_file', '') or options.get(
             'outputFileName', ''
         )
         if output_file:
@@ -707,7 +704,7 @@ class CompileDialog(QDialog):
             config.script_path = str(self._dest_dir / f'{base_name}.fw')
 
         # Determine remote script name from options.
-        script_on_fw = options.get(FirewallOption.SCRIPT_NAME_ON_FIREWALL, '')
+        script_on_fw = options.get('script_name_on_firewall', '')
         if script_on_fw:
             config.remote_script = script_on_fw
         else:

@@ -39,7 +39,6 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
-from firewallfabrik.core.options import FirewallOption
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
 
@@ -154,10 +153,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 fw_version = fw.version or '(any version)'
 
                 # Validate prolog placement with iptables-restore
-                prolog_place = fw.get_option(FirewallOption.PROLOG_PLACE, '')
-                if prolog_place == 'after_flush' and fw.get_option(
-                    FirewallOption.USE_IPTABLES_RESTORE, False
-                ):
+                prolog_place = fw.opt_prolog_place or ''
+                if prolog_place == 'after_flush' and fw.opt_use_iptables_restore:
                     self.error(
                         'Prolog place "after policy reset" can not be used'
                         ' when policy is activated with iptables-restore'
@@ -166,7 +163,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 self._warn_unsupported_options(fw)
 
-                debug = fw.get_option(FirewallOption.DEBUG, False)
+                debug = fw.opt_debug
                 shell_dbg = 'set -x' if debug else ''
 
                 # Create OS configurator
@@ -218,7 +215,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Determine IPv4/IPv6 run order
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = fw.get_option(FirewallOption.IPV4_6_ORDER, '')
+                ipv4_6_order = fw.opt_ipv4_6_order or ''
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -433,8 +430,8 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Prolog/epilog scripts
-                prolog_script = fw.get_option(FirewallOption.PROLOG_SCRIPT, '')
-                epilog_script = fw.get_option(FirewallOption.EPILOG_SCRIPT, '')
+                prolog_script = fw.opt_prolog_script or ''
+                epilog_script = fw.opt_epilog_script or ''
                 script_skeleton.set_variable('prolog_script', prolog_script)
                 script_skeleton.set_variable('epilog_script', epilog_script)
 
@@ -442,7 +439,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 iface_buf = io.StringIO()
                 iface_buf.write('# Configure interfaces\n')
 
-                if fw.get_option(FirewallOption.CONFIGURE_INTERFACES, False):
+                if fw.opt_configure_interfaces:
                     iface_buf.write(oscnf.print_interface_configuration_commands())
 
                 iface_buf.write(oscnf.print_commands_to_clear_known_interfaces())
@@ -453,7 +450,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Verify interfaces
-                if fw.get_option(FirewallOption.VERIFY_INTERFACES, False):
+                if fw.opt_verify_interfaces:
                     script_skeleton.set_variable(
                         'verify_interfaces', oscnf.print_verify_interfaces_commands()
                     )
@@ -510,9 +507,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 script_skeleton.set_variable('database', '')
 
                 # Reset commands
-                use_ipt_restore = fw.get_option(
-                    FirewallOption.USE_IPTABLES_RESTORE, False
-                )
+                use_ipt_restore = fw.opt_use_iptables_restore
                 script_skeleton.set_variable(
                     'not_using_iptables_restore', 0 if use_ipt_restore else 1
                 )
@@ -843,7 +838,7 @@ class CompilerDriver_ipt(CompilerDriver):
     ) -> str:
         """Assemble one AF's compilation output using configlets."""
         have_auto = bool(automatic_rules_script or automatic_mangle_script)
-        use_iptables_restore = fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False)
+        use_iptables_restore = fw.opt_use_iptables_restore
 
         if self.single_rule_compile_on:
             have_auto = False

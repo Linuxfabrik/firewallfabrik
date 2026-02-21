@@ -19,7 +19,6 @@ from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
-from firewallfabrik.core.options import LinuxOption
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'linuxsettingsdialog_q.ui'
@@ -27,50 +26,50 @@ _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'linuxsettingsdialog_q.ui'
 # Combo box widgets: maps widget name to canonical option key.
 # All use "No change" / "On" / "Off" text values.
 _COMBOS: dict[str, str] = {
-    'linux24_ip_forward': LinuxOption.IP_FORWARD,
-    'linux24_ipv6_forward': LinuxOption.IPV6_FORWARD,
-    'linux24_rp_filter': LinuxOption.RP_FILTER,
-    'linux24_icmp_echo_ignore_broadcasts': LinuxOption.ICMP_ECHO_IGNORE_BROADCASTS,
-    'linux24_icmp_echo_ignore_all': LinuxOption.ICMP_ECHO_IGNORE_ALL,
-    'linux24_accept_source_route': LinuxOption.ACCEPT_SOURCE_ROUTE,
-    'linux24_accept_redirects': LinuxOption.ACCEPT_REDIRECTS,
-    'linux24_icmp_ignore_bogus_error_responses': LinuxOption.ICMP_IGNORE_BOGUS_ERROR_RESPONSES,
-    'linux24_ip_dynaddr': LinuxOption.IP_DYNADDR,
-    'linux24_log_martians': LinuxOption.LOG_MARTIANS,
-    'linux24_tcp_window_scaling': LinuxOption.TCP_WINDOW_SCALING,
-    'linux24_tcp_sack': LinuxOption.TCP_SACK,
-    'linux24_tcp_fack': LinuxOption.TCP_FACK,
-    'linux24_tcp_ecn': LinuxOption.TCP_ECN,
-    'linux24_tcp_syncookies': LinuxOption.TCP_SYNCOOKIES,
-    'linux24_tcp_timestamps': LinuxOption.TCP_TIMESTAMPS,
+    'linux24_ip_forward': 'linux24_ip_forward',
+    'linux24_ipv6_forward': 'linux24_ipv6_forward',
+    'linux24_rp_filter': 'linux24_rp_filter',
+    'linux24_icmp_echo_ignore_broadcasts': 'linux24_icmp_echo_ignore_broadcasts',
+    'linux24_icmp_echo_ignore_all': 'linux24_icmp_echo_ignore_all',
+    'linux24_accept_source_route': 'linux24_accept_source_route',
+    'linux24_accept_redirects': 'linux24_accept_redirects',
+    'linux24_icmp_ignore_bogus_error_responses': 'linux24_icmp_ignore_bogus_error_responses',
+    'linux24_ip_dynaddr': 'linux24_ip_dynaddr',
+    'linux24_log_martians': 'linux24_log_martians',
+    'linux24_tcp_window_scaling': 'linux24_tcp_window_scaling',
+    'linux24_tcp_sack': 'linux24_tcp_sack',
+    'linux24_tcp_fack': 'linux24_tcp_fack',
+    'linux24_tcp_ecn': 'linux24_tcp_ecn',
+    'linux24_tcp_syncookies': 'linux24_tcp_syncookies',
+    'linux24_tcp_timestamps': 'linux24_tcp_timestamps',
     # Widget named 'conntrack_tcp_be_liberal' but key includes linux24_ prefix
-    'conntrack_tcp_be_liberal': LinuxOption.CONNTRACK_TCP_BE_LIBERAL,
+    'conntrack_tcp_be_liberal': 'linux24_conntrack_tcp_be_liberal',
 }
 
 # SpinBox widgets: maps widget name to canonical option key.
 _SPINBOXES: dict[str, str] = {
-    'linux24_tcp_fin_timeout': LinuxOption.TCP_FIN_TIMEOUT,
-    'linux24_tcp_keepalive_interval': LinuxOption.TCP_KEEPALIVE_INTERVAL,
+    'linux24_tcp_fin_timeout': 'linux24_tcp_fin_timeout',
+    'linux24_tcp_keepalive_interval': 'linux24_tcp_keepalive_interval',
     # Widgets named without linux24_ prefix but keys include it
-    'conntrack_max': LinuxOption.CONNTRACK_MAX,
-    'conntrack_hashsize': LinuxOption.CONNTRACK_HASHSIZE,
+    'conntrack_max': 'linux24_conntrack_max',
+    'conntrack_hashsize': 'linux24_conntrack_hashsize',
 }
 
 # Line-edit widgets: maps widget name to canonical option key.
 _LINE_EDITS: dict[str, str] = {
-    'linux24_path_iptables': LinuxOption.PATH_IPTABLES,
-    'linux24_path_ip6tables': LinuxOption.PATH_IP6TABLES,
-    'linux24_path_ip': LinuxOption.PATH_IP,
-    'linux24_path_logger': LinuxOption.PATH_LOGGER,
-    'linux24_path_vconfig': LinuxOption.PATH_VCONFIG,
-    'linux24_path_brctl': LinuxOption.PATH_BRCTL,
-    'linux24_path_ifenslave': LinuxOption.PATH_IFENSLAVE,
-    'linux24_path_modprobe': LinuxOption.PATH_MODPROBE,
-    'linux24_path_lsmod': LinuxOption.PATH_LSMOD,
-    'linux24_path_ipset': LinuxOption.PATH_IPSET,
-    'linux24_path_iptables_restore': LinuxOption.PATH_IPTABLES_RESTORE,
-    'linux24_path_ip6tables_restore': LinuxOption.PATH_IP6TABLES_RESTORE,
-    'linux24_data_dir': LinuxOption.DATA_DIR,
+    'linux24_path_iptables': 'linux24_path_iptables',
+    'linux24_path_ip6tables': 'linux24_path_ip6tables',
+    'linux24_path_ip': 'linux24_path_ip',
+    'linux24_path_logger': 'linux24_path_logger',
+    'linux24_path_vconfig': 'linux24_path_vconfig',
+    'linux24_path_brctl': 'linux24_path_brctl',
+    'linux24_path_ifenslave': 'linux24_path_ifenslave',
+    'linux24_path_modprobe': 'linux24_path_modprobe',
+    'linux24_path_lsmod': 'linux24_path_lsmod',
+    'linux24_path_ipset': 'linux24_path_ipset',
+    'linux24_path_iptables_restore': 'linux24_path_iptables_restore',
+    'linux24_path_ip6tables_restore': 'linux24_path_ip6tables_restore',
+    'linux24_data_dir': 'linux24_data_dir',
 }
 
 # Mapping from combo text to stored option value.

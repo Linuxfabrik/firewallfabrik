@@ -47,7 +47,6 @@ from firewallfabrik.core.objects import (
     TCPUDPService,
     UDPService,
 )
-from firewallfabrik.core.options import FirewallOption, RuleOption
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -125,7 +124,7 @@ class NATCompiler_ipt(NATCompiler):
         # ipset usage flag
         self.using_ipset: bool = False
         if _version_compare(self.version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option(FirewallOption.USE_M_SET, False))
+            self.using_ipset = bool(fw.opt_use_m_set)
 
     @staticmethod
     def get_standard_chains() -> list[str]:
@@ -221,8 +220,8 @@ class NATCompiler_ipt(NATCompiler):
             )
         )
 
-        if self.fw.get_option(FirewallOption.LOCAL_NAT, False):
-            if self.fw.get_option(FirewallOption.FIREWALL_IS_PART_OF_ANY, False):
+        if self.fw.opt_local_nat:
+            if self.fw.opt_firewall_is_part_of_any_and_networks:
                 self.add(SplitIfOSrcAny('split rule if OSrc is any'))
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 
@@ -257,7 +256,7 @@ class NATCompiler_ipt(NATCompiler):
             NATPrintRuleIptRstEcho,
         )
 
-        if self.fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False):
+        if self.fw.opt_use_iptables_restore:
             self.print_rule_processor = NATPrintRuleIptRstEcho(
                 'generate code for iptables-restore using echo'
             )
@@ -274,14 +273,14 @@ class NATCompiler_ipt(NATCompiler):
 
     def epilog(self) -> None:
         if (
-            self.fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False)
+            self.fw.opt_use_iptables_restore
             and self.get_compiled_script_length() > 0
             and not self.single_rule_compile_mode
         ):
             self.output.write('#\n')
 
     def flush_and_set_default_policy(self) -> str:
-        if not self.fw.get_option(FirewallOption.USE_IPTABLES_RESTORE, False):
+        if not self.fw.opt_use_iptables_restore:
             return ''
         if self.single_rule_compile_mode:
             return ''
@@ -1218,11 +1217,11 @@ class SplitIfOSrcAny(NATRuleProcessor):
             return True
 
         # Skip rules added to handle negation
-        if rule.get_option(RuleOption.RULE_ADDED_FOR_OSRC_NEG, False):
+        if rule.get_option('rule_added_for_osrc_neg', False):
             return True
-        if rule.get_option(RuleOption.RULE_ADDED_FOR_ODST_NEG, False):
+        if rule.get_option('rule_added_for_odst_neg', False):
             return True
-        if rule.get_option(RuleOption.RULE_ADDED_FOR_OSRV_NEG, False):
+        if rule.get_option('rule_added_for_osrv_neg', False):
             return True
 
         if rule.nat_rule_type == NATRuleType.DNAT and (
