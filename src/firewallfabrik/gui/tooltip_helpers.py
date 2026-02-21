@@ -162,12 +162,11 @@ def obj_tooltip(obj):
                 m = iam.get('netmask', '')
                 lines.append(f'{a}/{m}' if m else a)
         # Interface type.
-        options = getattr(obj, 'options', None) or {}
-        intf_type = options.get('type', '')
+        intf_type = getattr(obj, 'opt_type', '') or ''
         if intf_type:
             type_text = intf_type
             if intf_type == '8021q':
-                vlan_id = options.get('vlan_id', '')
+                vlan_id = getattr(obj, 'opt_vlan_id', '') or ''
                 if vlan_id:
                     type_text += f' VLAN ID={vlan_id}'
             lines.append(f'<b>Interface Type: </b>{type_text}')

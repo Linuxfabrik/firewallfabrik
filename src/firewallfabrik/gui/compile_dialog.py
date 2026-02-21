@@ -78,11 +78,10 @@ def _fw_tree_path(fw):
 def _resolve_mgmt_address(fw):
     """Return the management address for a firewall.
 
-    Checks ``fw.options['altAddress']`` first, then scans interfaces
+    Checks ``fw.opt_altaddress`` first, then scans interfaces
     for one flagged as management and returns its first address.
     """
-    options = fw.options or {}
-    alt = options.get('altAddress', '')
+    alt = fw.opt_altaddress or ''
     if alt:
         return alt
     for iface in fw.interfaces:
@@ -211,7 +210,6 @@ class CompileDialog(QDialog):
             )
             for fw in firewalls:
                 data = fw.data or {}
-                options = fw.options or {}
                 platform = data.get('platform', '')
                 inactive = data.get('inactive') in (True, 'True')
                 supported = platform in _PLATFORM_CLI
@@ -228,18 +226,10 @@ class CompileDialog(QDialog):
                 item.setData(0, _R_TREE_PATH, tree_path)
                 item.setData(0, _R_FW_NAME, fw.name)
                 item.setData(0, _R_PLATFORM, platform)
-                item.setData(
-                    0,
-                    _R_OUTPUT_FILE,
-                    options.get('output_file', '') or options.get('outputFileName', ''),
-                )
+                item.setData(0, _R_OUTPUT_FILE, fw.opt_output_file or '')
                 item.setData(0, _R_FW_UUID, str(fw.id))
-                item.setData(
-                    0,
-                    _R_CMDLINE,
-                    options.get('cmdline', '') or options.get('compilerArgs', ''),
-                )
-                item.setData(0, _R_COMPILER, options.get('compiler', ''))
+                item.setData(0, _R_CMDLINE, fw.opt_cmdline or '')
+                item.setData(0, _R_COMPILER, fw.opt_compiler or '')
                 item.setData(0, _R_NEEDS_COMPILE, needs_compile)
                 item.setData(0, _R_NEEDS_INSTALL, needs_install)
                 item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
@@ -676,27 +666,24 @@ class CompileDialog(QDialog):
         # Load options from the firewall object.
         with self._db_manager.session() as session:
             fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
-            options = (fw.options or {}) if fw else {}
 
         config = InstallConfig(
-            user=options.get('admUser', '') or 'root',
+            user=(fw.opt_admuser if fw else '') or 'root',
             mgmt_address=mgmt_addr,
-            firewall_dir=options.get('firewall_dir', '/etc/fw'),
-            ssh_args=options.get('sshArgs', ''),
-            scp_args=options.get('scpArgs', ''),
-            activation_cmd=options.get('activationCmd', ''),
-            install_script=options.get('installScript', ''),
-            install_script_args=options.get('installScriptArgs', ''),
+            firewall_dir=(fw.opt_firewall_dir if fw else '') or '/etc/fw',
+            ssh_args=(fw.opt_sshargs if fw else '') or '',
+            scp_args=(fw.opt_scpargs if fw else '') or '',
+            activation_cmd=(fw.opt_activationcmd if fw else '') or '',
+            install_script=(fw.opt_installscript if fw else '') or '',
+            install_script_args=(fw.opt_installscriptargs if fw else '') or '',
             firewall_name=fw_name,
             fwb_file=str(self._current_file),
             working_dir=str(self._dest_dir),
-            alt_address=options.get('altAddress', ''),
+            alt_address=(fw.opt_altaddress if fw else '') or '',
         )
 
         # Determine the compiled script path.
-        output_file = options.get('output_file', '') or options.get(
-            'outputFileName', ''
-        )
+        output_file = (fw.opt_output_file if fw else '') or ''
         if output_file:
             config.script_path = str(self._dest_dir / output_file)
         else:
@@ -704,7 +691,7 @@ class CompileDialog(QDialog):
             config.script_path = str(self._dest_dir / f'{base_name}.fw')
 
         # Determine remote script name from options.
-        script_on_fw = options.get('script_name_on_firewall', '')
+        script_on_fw = (fw.opt_script_name_on_firewall if fw else '') or ''
         if script_on_fw:
             config.remote_script = script_on_fw
         else:

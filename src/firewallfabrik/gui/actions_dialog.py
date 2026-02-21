@@ -101,24 +101,24 @@ class ActionsPanel(QWidget):
 
             # Reject page.
             if hasattr(self, 'rejectvalue'):
-                val = str(opts.get('action_on_reject', ''))
+                val = str(opts.get('opt_action_on_reject', ''))
                 idx = self.rejectvalue.findText(val)
                 self.rejectvalue.setCurrentIndex(idx if idx >= 0 else 0)
 
             # Accounting page.
             if hasattr(self, 'accountingvalue_str'):
                 self.accountingvalue_str.setText(
-                    str(opts.get('rule_name_accounting', '')),
+                    str(opts.get('opt_rule_name_accounting', '')),
                 )
 
             # Custom page.
             if hasattr(self, 'custom_str'):
-                self.custom_str.setText(str(opts.get('custom_str', '')))
+                self.custom_str.setText(str(opts.get('opt_custom_str', '')))
 
             # Branch page.
             if hasattr(self, 'ipt_branch_in_mangle'):
                 self.ipt_branch_in_mangle.setChecked(
-                    _to_bool(opts.get('ipt_branch_in_mangle')),
+                    bool(opts.get('opt_ipt_branch_in_mangle')),
                 )
         finally:
             self._loading = False
@@ -131,19 +131,19 @@ class ActionsPanel(QWidget):
 
         # Reject.
         if hasattr(self, 'rejectvalue'):
-            opts['action_on_reject'] = self.rejectvalue.currentText()
+            opts['opt_action_on_reject'] = self.rejectvalue.currentText()
 
         # Accounting.
         if hasattr(self, 'accountingvalue_str'):
-            opts['rule_name_accounting'] = self.accountingvalue_str.text()
+            opts['opt_rule_name_accounting'] = self.accountingvalue_str.text()
 
         # Custom.
         if hasattr(self, 'custom_str'):
-            opts['custom_str'] = self.custom_str.text()
+            opts['opt_custom_str'] = self.custom_str.text()
 
         # Branch.
         if hasattr(self, 'ipt_branch_in_mangle'):
-            opts['ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
+            opts['opt_ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
 
         # Clean out empty/zero/false values to keep storage lean.
         cleaned = {}
@@ -171,18 +171,22 @@ class ActionsPanel(QWidget):
         return self._model.get_row_data(self._index)
 
     def _read_rule_options(self):
-        """Read the full options dict from the database rule."""
+        """Read options from the database rule, keyed by column name."""
         if self._model is None or self._index is None:
             return {}
         row_data = self._get_row_data()
         if row_data is None:
             return {}
         from firewallfabrik.core.objects import PolicyRule
+        from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
         with self._model._db_manager.session() as session:
             rule = session.get(PolicyRule, row_data.rule_id)
             if rule is not None:
-                return dict(rule.options or {})
+                return {
+                    meta.column_name: getattr(rule, meta.column_name)
+                    for meta in RULE_OPTIONS.values()
+                }
         return {}
 
     # ------------------------------------------------------------------
@@ -218,10 +222,3 @@ class ActionsPanel(QWidget):
         if hasattr(self, 'ipt_branch_in_mangle'):
             self.ipt_branch_in_mangle.toggled.disconnect(self._on_widget_changed)
         self._signals_connected = False
-
-
-def _to_bool(val):
-    """Convert a value to bool, handling string representations."""
-    if isinstance(val, str):
-        return val.lower() in ('true', '1')
-    return bool(val)

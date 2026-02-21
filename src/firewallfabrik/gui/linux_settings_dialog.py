@@ -23,53 +23,52 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'linuxsettingsdialog_q.ui'
 
-# Combo box widgets: maps widget name to canonical option key.
+# Combo box widgets: maps widget name to typed column name.
 # All use "No change" / "On" / "Off" text values.
 _COMBOS: dict[str, str] = {
-    'linux24_ip_forward': 'linux24_ip_forward',
-    'linux24_ipv6_forward': 'linux24_ipv6_forward',
-    'linux24_rp_filter': 'linux24_rp_filter',
-    'linux24_icmp_echo_ignore_broadcasts': 'linux24_icmp_echo_ignore_broadcasts',
-    'linux24_icmp_echo_ignore_all': 'linux24_icmp_echo_ignore_all',
-    'linux24_accept_source_route': 'linux24_accept_source_route',
-    'linux24_accept_redirects': 'linux24_accept_redirects',
-    'linux24_icmp_ignore_bogus_error_responses': 'linux24_icmp_ignore_bogus_error_responses',
-    'linux24_ip_dynaddr': 'linux24_ip_dynaddr',
-    'linux24_log_martians': 'linux24_log_martians',
-    'linux24_tcp_window_scaling': 'linux24_tcp_window_scaling',
-    'linux24_tcp_sack': 'linux24_tcp_sack',
-    'linux24_tcp_fack': 'linux24_tcp_fack',
-    'linux24_tcp_ecn': 'linux24_tcp_ecn',
-    'linux24_tcp_syncookies': 'linux24_tcp_syncookies',
-    'linux24_tcp_timestamps': 'linux24_tcp_timestamps',
-    # Widget named 'conntrack_tcp_be_liberal' but key includes linux24_ prefix
-    'conntrack_tcp_be_liberal': 'linux24_conntrack_tcp_be_liberal',
+    'linux24_ip_forward': 'opt_ip_forward',
+    'linux24_ipv6_forward': 'opt_ipv6_forward',
+    'linux24_rp_filter': 'opt_rp_filter',
+    'linux24_icmp_echo_ignore_broadcasts': 'opt_icmp_echo_ignore_broadcasts',
+    'linux24_icmp_echo_ignore_all': 'opt_icmp_echo_ignore_all',
+    'linux24_accept_source_route': 'opt_accept_source_route',
+    'linux24_accept_redirects': 'opt_accept_redirects',
+    'linux24_icmp_ignore_bogus_error_responses': 'opt_icmp_ignore_bogus_error_responses',
+    'linux24_ip_dynaddr': 'opt_ip_dynaddr',
+    'linux24_log_martians': 'opt_log_martians',
+    'linux24_tcp_window_scaling': 'opt_tcp_window_scaling',
+    'linux24_tcp_sack': 'opt_tcp_sack',
+    'linux24_tcp_fack': 'opt_tcp_fack',
+    'linux24_tcp_ecn': 'opt_tcp_ecn',
+    'linux24_tcp_syncookies': 'opt_tcp_syncookies',
+    'linux24_tcp_timestamps': 'opt_tcp_timestamps',
+    # Widget named 'conntrack_tcp_be_liberal' but column strips linux24_ prefix
+    'conntrack_tcp_be_liberal': 'opt_conntrack_tcp_be_liberal',
 }
 
-# SpinBox widgets: maps widget name to canonical option key.
+# SpinBox widgets: maps widget name to typed column name.
 _SPINBOXES: dict[str, str] = {
-    'linux24_tcp_fin_timeout': 'linux24_tcp_fin_timeout',
-    'linux24_tcp_keepalive_interval': 'linux24_tcp_keepalive_interval',
-    # Widgets named without linux24_ prefix but keys include it
-    'conntrack_max': 'linux24_conntrack_max',
-    'conntrack_hashsize': 'linux24_conntrack_hashsize',
+    'linux24_tcp_fin_timeout': 'opt_tcp_fin_timeout',
+    'linux24_tcp_keepalive_interval': 'opt_tcp_keepalive_interval',
+    'conntrack_max': 'opt_conntrack_max',
+    'conntrack_hashsize': 'opt_conntrack_hashsize',
 }
 
-# Line-edit widgets: maps widget name to canonical option key.
+# Line-edit widgets: maps widget name to typed column name.
 _LINE_EDITS: dict[str, str] = {
-    'linux24_path_iptables': 'linux24_path_iptables',
-    'linux24_path_ip6tables': 'linux24_path_ip6tables',
-    'linux24_path_ip': 'linux24_path_ip',
-    'linux24_path_logger': 'linux24_path_logger',
-    'linux24_path_vconfig': 'linux24_path_vconfig',
-    'linux24_path_brctl': 'linux24_path_brctl',
-    'linux24_path_ifenslave': 'linux24_path_ifenslave',
-    'linux24_path_modprobe': 'linux24_path_modprobe',
-    'linux24_path_lsmod': 'linux24_path_lsmod',
-    'linux24_path_ipset': 'linux24_path_ipset',
-    'linux24_path_iptables_restore': 'linux24_path_iptables_restore',
-    'linux24_path_ip6tables_restore': 'linux24_path_ip6tables_restore',
-    'linux24_data_dir': 'linux24_data_dir',
+    'linux24_path_iptables': 'opt_path_iptables',
+    'linux24_path_ip6tables': 'opt_path_ip6tables',
+    'linux24_path_ip': 'opt_path_ip',
+    'linux24_path_logger': 'opt_path_logger',
+    'linux24_path_vconfig': 'opt_path_vconfig',
+    'linux24_path_brctl': 'opt_path_brctl',
+    'linux24_path_ifenslave': 'opt_path_ifenslave',
+    'linux24_path_modprobe': 'opt_path_modprobe',
+    'linux24_path_lsmod': 'opt_path_lsmod',
+    'linux24_path_ipset': 'opt_path_ipset',
+    'linux24_path_iptables_restore': 'opt_path_iptables_restore',
+    'linux24_path_ip6tables_restore': 'opt_path_ip6tables_restore',
+    'linux24_data_dir': 'opt_data_dir',
 }
 
 # Mapping from combo text to stored option value.
@@ -146,86 +145,55 @@ class LinuxSettingsDialog(QDialog):
             self.tabWidget.setTabEnabled(idx, False)
 
     def _populate(self):
-        opts = self._fw.options or {}
-
-        # Combo boxes — read canonical key, fall back to widget name for
-        # backward compat with old .fwf files that stored widget names.
-        for widget_name, key in _COMBOS.items():
+        # Combo boxes — read directly from typed columns.
+        for widget_name, col in _COMBOS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key in opts:
-                val = opts[key]
-            elif widget_name in opts:
-                val = opts[widget_name]
-            else:
-                val = ''
+            val = getattr(self._fw, col) or ''
             text = _VALUE_TO_COMBO_TEXT.get(str(val), 'No change')
             idx = widget.findText(text)
             widget.setCurrentIndex(max(idx, 0))
 
-        # Spin boxes — read canonical key, fall back to widget name.
-        for widget_name, key in _SPINBOXES.items():
+        # Spin boxes — read directly from typed columns.
+        for widget_name, col in _SPINBOXES.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key in opts:
-                val = opts[key]
-            elif widget_name in opts:
-                val = opts[widget_name]
-            else:
-                val = 0
+            val = getattr(self._fw, col)
             try:
                 widget.setValue(int(val))
             except (ValueError, TypeError):
                 widget.setValue(0)
 
-        # Line edits — read canonical key, fall back to widget name.
-        for widget_name, key in _LINE_EDITS.items():
+        # Line edits — read directly from typed columns.
+        for widget_name, col in _LINE_EDITS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key in opts:
-                widget.setText(str(opts[key]))
-            elif widget_name in opts:
-                widget.setText(str(opts[widget_name]))
-            else:
-                widget.setText('')
+            widget.setText(str(getattr(self._fw, col) or ''))
 
     def _save_settings(self):
-        opts = dict(self._fw.options or {})
-
-        # Combo boxes — always write under canonical key; remove stale
-        # widget-name key if it differs from the canonical key.
-        for widget_name, key in _COMBOS.items():
+        # Combo boxes — write directly to typed columns.
+        for widget_name, col in _COMBOS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = _COMBO_TEXT_TO_VALUE.get(widget.currentText(), '')
-            # Clean up stale widget-name key.
-            if widget_name != key:
-                opts.pop(widget_name, None)
+            setattr(self._fw, col, _COMBO_TEXT_TO_VALUE.get(widget.currentText(), ''))
 
-        # Spin boxes — always write under canonical key.
-        for widget_name, key in _SPINBOXES.items():
+        # Spin boxes — write directly to typed columns.
+        for widget_name, col in _SPINBOXES.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = str(widget.value())
-            if widget_name != key:
-                opts.pop(widget_name, None)
+            setattr(self._fw, col, widget.value())
 
-        # Line edits — always write under canonical key.
-        for widget_name, key in _LINE_EDITS.items():
+        # Line edits — write directly to typed columns.
+        for widget_name, col in _LINE_EDITS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.text()
-            if widget_name != key:
-                opts.pop(widget_name, None)
-
-        # Reassign to trigger SQLAlchemy JSON mutation detection.
-        self._fw.options = opts
+            setattr(self._fw, col, widget.text())
 
     @Slot()
     def help(self):
