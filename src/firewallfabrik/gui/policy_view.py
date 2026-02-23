@@ -299,10 +299,10 @@ def _model_selectable_cols(model):
 class PolicyView(QTreeView):
     """Tree view with context menus, keyboard shortcuts, and drop support."""
 
-    _object_clipboard = None  # {'id': str, 'name': str, 'type': str} or None
-
-    def __init__(self, parent=None):
+    def __init__(self, clipboard_store, bridge=None, parent=None):
         super().__init__(parent)
+        self._clipboard_store = clipboard_store
+        self._bridge = bridge
         self._highlight_rule_id = None
         self._highlight_col = None
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
@@ -960,43 +960,34 @@ class PolicyView(QTreeView):
         row_data = model.get_row_data(index)
         if row_data is None:
             return
-        main_win = self.window()
-        if hasattr(main_win, 'compile_single_rule'):
-            main_win.compile_single_rule(row_data.rule_id, model.rule_set_id)
+        if self._bridge is not None:
+            self._bridge.compile_single_rule(row_data.rule_id, model.rule_set_id)
 
     def _open_element_editor(self, obj_id, obj_type):
         """Open the object editor for the given element."""
-        main_win = self.window()
-        if hasattr(main_win, '_open_object_editor'):
-            main_win._open_object_editor(obj_id, obj_type)
+        if self._bridge is not None:
+            self._bridge.open_object_editor(obj_id, obj_type)
 
     def _show_any_message(self, col):
         """Show the 'Any' object description in the editor pane."""
-        main_win = self.window()
-        if hasattr(main_win, 'show_any_editor'):
+        if self._bridge is not None:
             model = self.model()
             slot = model.col_to_slot.get(col, '') if model else ''
-            main_win.show_any_editor(slot)
+            self._bridge.show_any_editor(slot)
 
     def _reveal_in_tree(self, obj_id):
         """Select and reveal the object in the object tree."""
-        main_win = self.window()
-        if hasattr(main_win, '_object_tree'):
-            main_win._object_tree.select_object(obj_id)
+        if self._bridge is not None:
+            self._bridge.reveal_in_tree(obj_id)
 
     def _show_where_used(self, obj_id, name, obj_type):
         """Show where-used results for the given object."""
-        main_win = self.window()
-        if hasattr(main_win, 'show_where_used'):
-            main_win.show_where_used(obj_id, name, obj_type)
+        if self._bridge is not None:
+            self._bridge.show_where_used(obj_id, name, obj_type)
 
     def _copy_element(self, target_id, name, obj_type):
         """Copy the element to the object clipboard."""
-        PolicyView._object_clipboard = {
-            'id': str(target_id),
-            'name': name,
-            'type': obj_type,
-        }
+        self._clipboard_store.set_object(str(target_id), name, obj_type)
 
     def _cut_element(self, model, index, slot, target_id, name, obj_type):
         """Copy the element to clipboard and remove it from the cell."""
@@ -1005,10 +996,10 @@ class PolicyView(QTreeView):
 
     def _paste_element(self, model, index, slot):
         """Paste the object clipboard into the cell."""
-        if PolicyView._object_clipboard is None:
+        entry = self._clipboard_store.object_entry
+        if entry is None:
             return
-        obj_id = PolicyView._object_clipboard['id']
-        model.add_element(index, slot, uuid.UUID(obj_id))
+        model.add_element(index, slot, uuid.UUID(entry['id']))
 
     def _change_action_and_edit(self, model, index, action):
         """Change the rule action and open the action editor with a fresh index."""
@@ -1024,36 +1015,31 @@ class PolicyView(QTreeView):
 
     def _open_action_editor(self, model, index):
         """Open the Action parameters panel in the editor pane."""
-        main_win = self.window()
-        if hasattr(main_win, 'open_action_editor'):
-            main_win.open_action_editor(model, index)
+        if self._bridge is not None:
+            self._bridge.open_action_editor(model, index)
 
     def _open_comment_editor(self, model, index):
         """Open the Comment editor panel in the editor pane."""
-        main_win = self.window()
-        if hasattr(main_win, 'open_comment_editor'):
-            main_win.open_comment_editor(model, index)
+        if self._bridge is not None:
+            self._bridge.open_comment_editor(model, index)
 
     def _open_direction_editor(self, model, index):
         """Open the (blank) Direction pane in the editor pane."""
-        main_win = self.window()
-        if hasattr(main_win, 'open_direction_editor'):
-            main_win.open_direction_editor(model, index)
+        if self._bridge is not None:
+            self._bridge.open_direction_editor(model, index)
 
     def _open_metric_editor(self, model, index):
         """Open the Metric editor panel in the editor pane."""
-        main_win = self.window()
-        if hasattr(main_win, 'open_metric_editor'):
-            main_win.open_metric_editor(model, index)
+        if self._bridge is not None:
+            self._bridge.open_metric_editor(model, index)
 
     def _open_rule_options_dialog(self, model, index):
         """Open the Rule Options panel in the editor pane."""
         row_data = model.get_row_data(index)
         if row_data is None:
             return
-        main_win = self.window()
-        if hasattr(main_win, 'open_rule_options'):
-            main_win.open_rule_options(model, index)
+        if self._bridge is not None:
+            self._bridge.open_rule_options(model, index)
 
     @staticmethod
     def _set_disabled_on_selection(model, indices, *, disabled):
@@ -1190,10 +1176,8 @@ class PolicyView(QTreeView):
             slot = col_to_slot.get(col)
             if slot:
                 valid_types = VALID_TYPES_BY_SLOT.get(slot, frozenset())
-                if (
-                    PolicyView._object_clipboard is not None
-                    and PolicyView._object_clipboard.get('type', '') in valid_types
-                ):
+                entry = self._clipboard_store.object_entry
+                if entry is not None and entry.get('type', '') in valid_types:
                     self._paste_element(model, index=idx, slot=slot)
                     return
 
@@ -1423,7 +1407,7 @@ class RuleSetPanel(QWidget):
     spacer, centred title label (14pt), spacer.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, *, clipboard_store=None, bridge=None, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1447,7 +1431,7 @@ class RuleSetPanel(QWidget):
 
         layout.addLayout(toolbar)
 
-        self.policy_view = PolicyView()
+        self.policy_view = PolicyView(clipboard_store=clipboard_store, bridge=bridge)
         layout.addWidget(self.policy_view)
 
     def set_title(self, title):

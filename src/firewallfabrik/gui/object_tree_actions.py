@@ -51,11 +51,11 @@ class TreeActionHandler:
         }
     )
 
-    def __init__(self, object_tree):
+    def __init__(self, object_tree, clipboard_store):
         self._ot = object_tree
+        self._clipboard_store = clipboard_store
         self._ops = TreeOperations()
         self._db_manager = None
-        self._tree_clipboard: list[dict] | None = None
 
     def set_db_manager(self, db_manager):
         """Set the database manager and re-create the ops helper."""
@@ -104,12 +104,22 @@ class TreeActionHandler:
     # -- Compile / Install --
 
     def _ctx_compile(self):
-        """Emit compile_requested."""
-        self._ot.compile_requested.emit()
+        """Emit compile_requested with selected firewall names."""
+        self._ot.compile_requested.emit(self._selected_firewall_names())
 
     def _ctx_install(self):
-        """Emit install_requested."""
-        self._ot.install_requested.emit()
+        """Emit install_requested with selected firewall names."""
+        self._ot.install_requested.emit(self._selected_firewall_names())
+
+    def _selected_firewall_names(self):
+        """Return names of Firewall objects in the current selection."""
+        selection = self._ot._get_simplified_selection()
+        return [
+            it.text(0)
+            for it in selection
+            if (it.data(0, Qt.ItemDataRole.UserRole + 1) or '')
+            in ('Firewall', 'Cluster')
+        ]
 
     # -- Lock / Unlock --
 
@@ -323,16 +333,14 @@ class TreeActionHandler:
                 entries.append({'id': oid, 'type': otype, 'cut': False})
         if not entries:
             return
-        self._tree_clipboard = entries
+        self._clipboard_store.set_tree(entries)
         # Policy-view clipboard stays single-item for rule cell paste.
         first = selection[0]
-        from firewallfabrik.gui.policy_view import PolicyView
-
-        PolicyView._object_clipboard = {
-            'id': first.data(0, Qt.ItemDataRole.UserRole),
-            'name': first.text(0),
-            'type': first.data(0, Qt.ItemDataRole.UserRole + 1),
-        }
+        self._clipboard_store.set_object(
+            first.data(0, Qt.ItemDataRole.UserRole),
+            first.text(0),
+            first.data(0, Qt.ItemDataRole.UserRole + 1),
+        )
 
     def _ctx_cut(self):
         """Cut all selected object references to the tree clipboard."""
@@ -346,19 +354,17 @@ class TreeActionHandler:
                 entries.append({'id': oid, 'type': otype, 'cut': True})
         if not entries:
             return
-        self._tree_clipboard = entries
+        self._clipboard_store.set_tree(entries)
         first = selection[0]
-        from firewallfabrik.gui.policy_view import PolicyView
-
-        PolicyView._object_clipboard = {
-            'id': first.data(0, Qt.ItemDataRole.UserRole),
-            'name': first.text(0),
-            'type': first.data(0, Qt.ItemDataRole.UserRole + 1),
-        }
+        self._clipboard_store.set_object(
+            first.data(0, Qt.ItemDataRole.UserRole),
+            first.text(0),
+            first.data(0, Qt.ItemDataRole.UserRole + 1),
+        )
 
     def _ctx_paste(self, item):
         """Paste all clipboard objects relative to *item*."""
-        if self._tree_clipboard is None or self._db_manager is None:
+        if self._clipboard_store.tree_entries is None or self._db_manager is None:
             return
 
         # When pasting onto a leaf object (e.g. a Firewall), resolve
@@ -373,7 +379,7 @@ class TreeActionHandler:
         allowed = self._get_allowed_paste_types(item)
         entries = [
             cb
-            for cb in self._tree_clipboard
+            for cb in self._clipboard_store.tree_entries
             if allowed is None or cb['type'] in allowed
         ]
         if not entries:
@@ -429,7 +435,7 @@ class TreeActionHandler:
                     last_id = new_id
 
         if any_cut:
-            self._tree_clipboard = None
+            self._clipboard_store.clear_tree()
 
         if last_id is not None:
             self._ot.tree_changed.emit('', '')

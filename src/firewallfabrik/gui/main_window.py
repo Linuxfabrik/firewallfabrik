@@ -37,6 +37,7 @@ from PySide6.QtGui import (
     QKeySequence,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QFileDialog,
     QLabel,
@@ -67,6 +68,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.clipboard_router import ClipboardRouter
+from firewallfabrik.gui.clipboard_store import ClipboardStore
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
 from firewallfabrik.gui.find_panel import FindPanel
@@ -77,6 +79,7 @@ from firewallfabrik.gui.object_tree import (
     create_library_folder_structure,
 )
 from firewallfabrik.gui.object_tree_data import LOCKABLE_TYPES
+from firewallfabrik.gui.policy_view_bridge import PolicyViewBridge
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.rule_set_window_manager import RuleSetWindowManager
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -241,8 +244,11 @@ class FWWindow(QMainWindow):
         self._new_object_menu.aboutToShow.connect(self._populate_new_object_menu)
         self.newObjectAction.setMenu(self._new_object_menu)
 
+        # Shared clipboard for tree and policy views.
+        self._clipboard_store = ClipboardStore()
+
         # Object tree + splitter layout
-        self._object_tree = ObjectTree()
+        self._object_tree = ObjectTree(clipboard_store=self._clipboard_store)
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self.gridLayout_4.removeWidget(self.m_space)
         self._splitter.addWidget(self._object_tree)
@@ -250,12 +256,28 @@ class FWWindow(QMainWindow):
         self._splitter.setSizes([250, 800])
         self.gridLayout_4.addWidget(self._splitter, 0, 0)
 
+        # Bridge for PolicyView → main window calls.
+        self._policy_view_bridge = PolicyViewBridge(
+            compile_single_rule=self.compile_single_rule,
+            open_action_editor=self.open_action_editor,
+            open_comment_editor=self.open_comment_editor,
+            open_direction_editor=self.open_direction_editor,
+            open_metric_editor=self.open_metric_editor,
+            open_object_editor=self._open_object_editor,
+            open_rule_options=self.open_rule_options,
+            reveal_in_tree=self._object_tree.select_object,
+            show_any_editor=self.show_any_editor,
+            show_where_used=self.show_where_used,
+        )
+
         # Create RuleSetWindowManager — handles MDI sub-window lifecycle.
         self._rs_mgr = RuleSetWindowManager(
             self._db_manager,
             self.m_space,
             self._object_tree,
             self.menuWindow,
+            clipboard_store=self._clipboard_store,
+            policy_view_bridge=self._policy_view_bridge,
             parent=self,
         )
         self._rs_mgr.firewall_modified.connect(self._on_firewall_modified)
@@ -283,6 +305,7 @@ class FWWindow(QMainWindow):
             self._object_tree,
             self._rs_mgr.active_policy_view,
         )
+        QApplication.instance().focusChanged.connect(self._clipboard.on_focus_changed)
 
         editor_map = {
             'AddressRange': self.w_AddressRangeDialog,
@@ -937,7 +960,8 @@ class FWWindow(QMainWindow):
         )
 
     @Slot()
-    def compile(self):
+    @Slot(list)
+    def compile(self, firewall_names=None):
         if not getattr(self, '_display_file', None):
             QMessageBox.warning(
                 self,
@@ -962,7 +986,12 @@ class FWWindow(QMainWindow):
 
         from firewallfabrik.gui.compile_dialog import CompileDialog
 
-        dlg = CompileDialog(self._db_manager, self._current_file, parent=self)
+        dlg = CompileDialog(
+            self._db_manager,
+            self._current_file,
+            parent=self,
+            preselect_names=firewall_names or None,
+        )
         dlg.exec()
 
         # Refresh the tree to show updated lastCompiled timestamps.
@@ -973,7 +1002,8 @@ class FWWindow(QMainWindow):
             self._object_tree.populate(session, file_key=file_key)
 
     @Slot()
-    def install(self):
+    @Slot(list)
+    def install(self, firewall_names=None):
         if not getattr(self, '_display_file', None):
             QMessageBox.warning(
                 self,
@@ -1003,6 +1033,7 @@ class FWWindow(QMainWindow):
             self._current_file,
             parent=self,
             install_mode=True,
+            preselect_names=firewall_names or None,
         )
         dlg.exec()
 

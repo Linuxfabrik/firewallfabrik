@@ -40,7 +40,17 @@ class RuleSetWindowManager(QObject):
 
     _STATE_FILE_NAME = 'last_object_state.json'
 
-    def __init__(self, db_manager, mdi_area, object_tree, window_menu, parent=None):
+    def __init__(
+        self,
+        db_manager,
+        mdi_area,
+        object_tree,
+        window_menu,
+        *,
+        clipboard_store=None,
+        policy_view_bridge=None,
+        parent=None,
+    ):
         """Initialise the rule set window manager.
 
         Args:
@@ -48,6 +58,8 @@ class RuleSetWindowManager(QObject):
             mdi_area: QMdiArea widget (``self.m_space`` on FWWindow).
             object_tree: ObjectTree instance.
             window_menu: QMenu for the Window menu.
+            clipboard_store: Shared :class:`ClipboardStore` instance.
+            policy_view_bridge: :class:`PolicyViewBridge` for main-window calls.
             parent: QObject parent (typically FWWindow).
         """
         super().__init__(parent)
@@ -55,6 +67,8 @@ class RuleSetWindowManager(QObject):
         self._mdi_area = mdi_area
         self._object_tree = object_tree
         self._window_menu = window_menu
+        self._clipboard_store = clipboard_store
+        self._policy_view_bridge = policy_view_bridge
         self._display_file = None
 
     # --- Lifecycle ---
@@ -88,7 +102,10 @@ class RuleSetWindowManager(QObject):
         )
         model.firewall_modified.connect(self.firewall_modified)
         title = f'{fw_name} / {rs_name}'
-        panel = RuleSetPanel()
+        panel = RuleSetPanel(
+            clipboard_store=self._clipboard_store,
+            bridge=self._policy_view_bridge,
+        )
         panel.set_title(title)
         panel.policy_view.setModel(model)
 
@@ -145,7 +162,10 @@ class RuleSetWindowManager(QObject):
         )
         model.firewall_modified.connect(self.firewall_modified)
         title = f'{fw_name} / {rs_name}'
-        panel = RuleSetPanel()
+        panel = RuleSetPanel(
+            clipboard_store=self._clipboard_store,
+            bridge=self._policy_view_bridge,
+        )
         panel.set_title(title)
         panel.policy_view.setModel(model)
 
