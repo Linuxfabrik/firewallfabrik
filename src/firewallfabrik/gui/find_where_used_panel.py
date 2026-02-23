@@ -62,6 +62,58 @@ _ROLE_RULE_ID = Qt.ItemDataRole.UserRole + 3
 _ROLE_SLOT = Qt.ItemDataRole.UserRole + 4
 
 
+def find_group_references(session, obj_id):
+    """Return group references for *obj_id*.
+
+    Returns a list of ``(group_id, group_name, group_type)`` tuples for
+    every group that contains *obj_id* as a member.
+    """
+    rows = session.execute(
+        sqlalchemy.select(
+            group_membership.c.group_id,
+        ).where(group_membership.c.member_id == obj_id)
+    ).all()
+
+    results = []
+    for (grp_id,) in rows:
+        grp = session.get(Group, grp_id)
+        if grp is None:
+            continue
+        results.append((grp_id, grp.name, grp.type))
+    return results
+
+
+def find_rule_references(session, obj_id):
+    """Return rule references for *obj_id*.
+
+    Returns a list of
+    ``(rule_id, slot, rule_set_id, rs_type, rs_name, fw_name, fw_type, position)``
+    tuples for every rule element that references *obj_id*.
+    """
+    rows = session.execute(
+        sqlalchemy.select(
+            rule_elements.c.rule_id,
+            rule_elements.c.slot,
+            Rule.rule_set_id,
+            Rule.position,
+        )
+        .join(Rule, Rule.id == rule_elements.c.rule_id)
+        .where(rule_elements.c.target_id == obj_id)
+    ).all()
+
+    results = []
+    for rule_id, slot, rule_set_id, position in rows:
+        rs = session.get(RuleSet, rule_set_id)
+        if rs is None:
+            continue
+        fw_name = rs.device.name if rs.device else ''
+        fw_type = rs.device.type if rs.device else ''
+        results.append(
+            (rule_id, slot, rule_set_id, rs.type, rs.name, fw_name, fw_type, position)
+        )
+    return results
+
+
 class FindWhereUsedPanel(QWidget):
     """Panel for finding all locations where an object is referenced."""
 
@@ -175,46 +227,30 @@ class FindWhereUsedPanel(QWidget):
 
     def _find_in_groups(self, session, obj_id, obj_name, obj_icon):
         """Find groups containing obj_id via group_membership."""
-        rows = session.execute(
-            sqlalchemy.select(
-                group_membership.c.group_id,
-            ).where(group_membership.c.member_id == obj_id)
-        ).all()
-
-        for (grp_id,) in rows:
-            grp = session.get(Group, grp_id)
-            if grp is None:
-                continue
+        for grp_id, grp_name, grp_type in find_group_references(session, obj_id):
             item = QTreeWidgetItem()
             item.setIcon(0, obj_icon)
             item.setText(0, obj_name)
-            item.setIcon(1, _icon_for_type(grp.type))
-            item.setText(1, grp.name)
-            item.setText(2, grp.type)
+            item.setIcon(1, _icon_for_type(grp_type))
+            item.setText(1, grp_name)
+            item.setText(2, grp_type)
             item.setData(0, _ROLE_OBJ_ID, str(grp_id))
-            item.setData(0, _ROLE_OBJ_TYPE, grp.type)
+            item.setData(0, _ROLE_OBJ_TYPE, grp_type)
             self.resListView.addTopLevelItem(item)
 
     def _find_in_rules(self, session, obj_id, obj_name, obj_icon):
         """Find rules referencing obj_id via rule_elements."""
-        rows = session.execute(
-            sqlalchemy.select(
-                rule_elements.c.rule_id,
-                rule_elements.c.slot,
-                Rule.rule_set_id,
-                Rule.position,
-            )
-            .join(Rule, Rule.id == rule_elements.c.rule_id)
-            .where(rule_elements.c.target_id == obj_id)
-        ).all()
-
-        for rule_id, slot, rule_set_id, position in rows:
-            rs = session.get(RuleSet, rule_set_id)
-            if rs is None:
-                continue
-            fw_name = rs.device.name if rs.device else ''
-            fw_type = rs.device.type if rs.device else ''
-            detail = f"{rs.type} '{rs.name}' / Rule #{position} / {slot}"
+        for (
+            rule_id,
+            slot,
+            rule_set_id,
+            rs_type,
+            rs_name,
+            fw_name,
+            fw_type,
+            position,
+        ) in find_rule_references(session, obj_id):
+            detail = f"{rs_type} '{rs_name}' / Rule #{position} / {slot}"
 
             item = QTreeWidgetItem()
             item.setIcon(0, obj_icon)

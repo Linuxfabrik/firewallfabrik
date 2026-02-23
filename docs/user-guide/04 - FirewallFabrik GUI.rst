@@ -398,7 +398,7 @@ FirewallFabrik understands and uses the object and service types described in th
    * - TCP Service
      - A TCP service such as HTTP, SMTP, or FTP.
    * - Time Interval
-     - A time period such as "weekends" or a range of dates, or a range of times on certain days of the week. Can be used as part of rule matching in Policy rule sets to provide or deny access based on time. Note that these time intervals are relative to the time on the firewall device itself.
+     - A recurring time-of-day and day-of-week schedule such as "weekends" or "work hours". Can be used as part of rule matching in Policy rule sets to provide or deny access based on time. Note that these time intervals are relative to the time on the firewall device itself.
    * - UDP Service
      - A UDP service such as DNS or NTP.
 

@@ -220,7 +220,7 @@ NO_COPY_TYPES = frozenset(
 )
 
 # Types that cannot be deleted.
-NO_DELETE_TYPES = frozenset({'AttachedNetworks', 'NAT', 'Policy', 'Routing'})
+NO_DELETE_TYPES = frozenset({'AttachedNetworks'})
 
 # System folder names that match fwbuilder's ``deleteMenuState`` map
 # (FWBTree.cpp:344-364).  These structural groups cannot be deleted.

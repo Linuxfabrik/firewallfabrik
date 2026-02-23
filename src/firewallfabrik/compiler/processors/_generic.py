@@ -584,8 +584,7 @@ class DetectShadowing(BasicRuleProcessor):
                 continue
             if self._rule_shadows(prev, rule):
                 self.compiler.abort(
-                    prev,
-                    f"Rule '{prev.label}' shadows rule '{rule.label}' below it",
+                    f'Rule {prev.position} shadows Rule {rule.position} below it',
                 )
                 break
 

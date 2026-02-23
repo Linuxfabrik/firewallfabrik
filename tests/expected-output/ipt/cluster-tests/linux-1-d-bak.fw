@@ -331,7 +331,7 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source $i_eth0
 
  # ================ Table 'filter', rule set Policy
  #
@@ -341,16 +341,8 @@ script_body() {
  #
  # anti spoofing rule
  $IPTABLES -N In_RULE_0
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A INPUT -i eth0 -s $i_eth0 -m state --state NEW -j In_RULE_0
- done
  $IPTABLES -A INPUT -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_0
  $IPTABLES -A INPUT -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_0
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A FORWARD -i eth0 -s $i_eth0 -m state --state NEW -j In_RULE_0
- done
  $IPTABLES -A FORWARD -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_0
  $IPTABLES -A FORWARD -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_0
  $IPTABLES -A In_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
@@ -390,10 +382,6 @@ script_body() {
  # All other attempts to connect to
  # the firewall are denied and logged
  $IPTABLES -N RULE_4
- for i_eth0 in $i_eth0_list
- do
- test -n "$i_eth0" && $IPTABLES -A OUTPUT -d $i_eth0 -m state --state NEW -j RULE_4
- done
  $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j RULE_4
  $IPTABLES -A INPUT -m state --state NEW -j RULE_4
  $IPTABLES -A RULE_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "

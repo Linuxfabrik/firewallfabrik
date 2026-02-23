@@ -1216,6 +1216,7 @@
     <addaction name="separator"/>
     <addaction name="fileSaveAction"/>
     <addaction name="fileSaveAsAction"/>
+    <addaction name="fileReloadAction"/>
     <addaction name="fileCloseAction"/>
     <addaction name="separator"/>
     <addaction name="policyImportAction"/>
@@ -1337,6 +1338,20 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="fileReloadAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Reload</string>
+   </property>
+   <property name="iconText">
+    <string>Reload</string>
+   </property>
+   <property name="toolTip">
+    <string>Discard all unsaved changes and reload the file from disk</string>
    </property>
   </action>
   <action name="filePrintAction">
@@ -2202,6 +2217,22 @@
    </hints>
   </connection>
   <connection>
+   <sender>fileReloadAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileReload()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>fileCompareAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2698,6 +2729,7 @@
   <slot>toolsSNMPDiscovery()</slot>
   <slot>toolsUpdateStandardLibrary()</slot>
   <slot>back()</slot>
+  <slot>fileReload()</slot>
   <slot>forward()</slot>
  </slots>
 </ui>

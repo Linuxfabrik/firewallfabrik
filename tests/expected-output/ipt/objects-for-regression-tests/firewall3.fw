@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall3.fw /etc/fw/firewall3.fw
+# files: * firewall3.fw /firewall3.fw
 #
 # Compiled for iptables (any version)
 #
@@ -313,7 +313,9 @@ script_body() {
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
 
  # ================ Table 'filter', rule set Policy
  #
@@ -329,7 +331,7 @@ script_body() {
  echo "Rule 1 (eth1)"
  #
  $IPTABLES -N In_RULE_1
- $IPTABLES -A FORWARD -i eth1 -p all -f -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth1 -j In_RULE_1
  $IPTABLES -A In_RULE_1 -j LOG --log-level debug
  $IPTABLES -A In_RULE_1 -j DROP
  #
@@ -358,7 +360,8 @@ script_body() {
  #
  # testing choice of chains in case when several interfaces
  # are used and rule matches on any or broadcast
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (eth0,eth2)
  #
@@ -366,21 +369,34 @@ script_body() {
  #
  # testing choice of chains in case when several interfaces
  # are used and rule matches on any or broadcast
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -i eth2 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth2 -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth2 -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (eth0)
  #
  echo "Rule 6 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth0 -p udp -m udp -m multiport -s 0.0.0.0 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 7 (eth0,eth2)
  #
  echo "Rule 7 (eth0,eth2)"
  #
- $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -i eth2 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth2 -p udp -m udp -m multiport -s 0.0.0.0 --dports 68,67 -m state --state NEW -j ACCEPT
+ #
+ # Rule 8 (eth0)
+ #
+ echo "Rule 8 (eth0)"
+ #
+ $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -m multiport -s 192.168.1.0/24 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -p udp -m udp -m multiport -s 192.168.1.0/24 --dports 68,67 -m state --state NEW -j ACCEPT
+ #
+ # Rule 9 (eth0,eth2)
+ #
+ echo "Rule 9 (eth0,eth2)"
+ #
+ $IPTABLES -A OUTPUT -o eth2 -p udp -m udp -m multiport -s 192.168.1.0/24 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth2 -p udp -m udp -m multiport -s 192.168.1.0/24 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (eth1)
  #
@@ -400,19 +416,24 @@ script_body() {
  echo "Rule 11 (eth1)"
  #
  # Anti-spoofing rule
- $IPTABLES -N Cid3B02271D.0
- $IPTABLES -A OUTPUT -o eth1 -j Cid3B02271D.0
- $IPTABLES -A Cid3B02271D.0 -s 22.22.22.22 -j RETURN
- $IPTABLES -A Cid3B02271D.0 -s 192.168.1.1 -j RETURN
- $IPTABLES -A Cid3B02271D.0 -s 192.168.2.1 -j RETURN
- $IPTABLES -N Out_RULE_11_3
- $IPTABLES -A Cid3B02271D.0 -j Out_RULE_11_3
- $IPTABLES -A Out_RULE_11_3 -j LOG --log-level debug
- $IPTABLES -A Out_RULE_11_3 -j DROP
- $IPTABLES -N Cid3B02271D.1
- $IPTABLES -A FORWARD -o eth1 -j Cid3B02271D.1
- $IPTABLES -A Cid3B02271D.1 -s 192.168.1.0/24 -j RETURN
- $IPTABLES -A Cid3B02271D.1 -j Out_RULE_11_3
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -N Out_RULE_11
+ $IPTABLES -A CHAIN -s 22.22.22.22 -j Out_RULE_11
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j Out_RULE_11
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j Out_RULE_11
+ $IPTABLES -A CHAIN -j Out_RULE_11
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -o eth1 -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.0/24 -j Out_RULE_11
+ $IPTABLES -A CHAIN -j Out_RULE_11
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_11 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_11 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 12 (global)
  #
@@ -420,7 +441,7 @@ script_body() {
  #
  # hostF has the same IP address as firewal.
  $IPTABLES -N RULE_12
- $IPTABLES -A INPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j RULE_12
+ $IPTABLES -A FORWARD -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j RULE_12
  $IPTABLES -A RULE_12 -j LOG --log-level debug
  $IPTABLES -A RULE_12 -j ACCEPT
  #
@@ -435,14 +456,19 @@ script_body() {
  echo "Rule 14 (global)"
  #
  # testing negation in the policy rule
- $IPTABLES -N Cid3B0226DF.0
- $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j Cid3B0226DF.0
- $IPTABLES -A Cid3B0226DF.0 -s 192.168.1.10 -j RETURN
- $IPTABLES -A Cid3B0226DF.0 -s 192.168.1.20 -j RETURN
- $IPTABLES -N RULE_14_3
- $IPTABLES -A Cid3B0226DF.0 -j RULE_14_3
- $IPTABLES -A RULE_14_3 -j LOG --log-level debug
- $IPTABLES -A RULE_14_3 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -N RULE_14
+ $IPTABLES -A CHAIN -s 192.168.1.10 -j RULE_14
+ $IPTABLES -A CHAIN -s 192.168.1.20 -j RULE_14
+ $IPTABLES -A CHAIN -j RULE_14
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_14 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_14 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 15 (global)
  #
@@ -454,21 +480,21 @@ script_body() {
  #
  echo "Rule 16 (global)"
  #
- $IPTABLES -N Cid40F57E72.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid40F57E72.0
- $IPTABLES -A Cid40F57E72.0 -d 33.33.33.0/24 -j RETURN
- $IPTABLES -A Cid40F57E72.0 -d 222.222.222.0/24 -j RETURN
- $IPTABLES -A Cid40F57E72.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 33.33.33.0/24 -j RETURN
+ $IPTABLES -A CHAIN -d 222.222.222.0/24 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 17 (global)
  #
  echo "Rule 17 (global)"
  #
- $IPTABLES -N Cid41A8EF1D.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid41A8EF1D.0
- $IPTABLES -A Cid41A8EF1D.0 -d 192.168.1.1 -j RETURN
- $IPTABLES -A Cid41A8EF1D.0 -d 192.168.2.1 -j RETURN
- $IPTABLES -A Cid41A8EF1D.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  $IPTABLES -A FORWARD -m state --state NEW -j ACCEPT
  #
  # Rule 18 (global)
@@ -476,20 +502,26 @@ script_body() {
  echo "Rule 18 (global)"
  #
  # testing negation in service field
- $IPTABLES -N Cid3B0226EA.0
- $IPTABLES -A FORWARD -d 192.168.1.10 -j Cid3B0226EA.0
- $IPTABLES -A FORWARD -d 192.168.1.20 -j Cid3B0226EA.0
- $IPTABLES -A Cid3B0226EA.0 -p tcp -m tcp -m multiport --dports 25,22 -j RETURN
- $IPTABLES -N RULE_18_3
- $IPTABLES -A Cid3B0226EA.0 -j RULE_18_3
- $IPTABLES -A RULE_18_3 -j LOG --log-level debug
- $IPTABLES -A RULE_18_3 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -d 192.168.1.10 -j CHAIN
+ $IPTABLES -A FORWARD -d 192.168.1.20 -j CHAIN
+ $IPTABLES -N RULE_18
+ $IPTABLES -A CHAIN -p tcp -m tcp -m multiport --dports 25,22 -j RULE_18
+ $IPTABLES -A CHAIN -j RULE_18
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_18 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_18 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 19 (global)
  #
  echo "Rule 19 (global)"
  #
  # 'masquerading' rule
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 20 (global)
@@ -506,24 +538,26 @@ script_body() {
  #
  echo "Rule 21 (global)"
  #
- $IPTABLES -N Cid440D600617760.0
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j Cid440D600617760.0
- $IPTABLES -A Cid440D600617760.0 -s 22.22.22.22 -j RETURN
- $IPTABLES -A Cid440D600617760.0 -s 192.168.1.1 -j RETURN
- $IPTABLES -A Cid440D600617760.0 -s 192.168.2.1 -j RETURN
- $IPTABLES -A Cid440D600617760.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 22.22.22.22 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 22 (global)
  #
  echo "Rule 22 (global)"
  #
- $IPTABLES -N Cid440D880417760.0
- $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j Cid440D880417760.0
- $IPTABLES -A Cid440D880417760.0 -d 22.22.22.22 -j RETURN
- $IPTABLES -A Cid440D880417760.0 -d 192.168.1.1 -j RETURN
- $IPTABLES -A Cid440D880417760.0 -d 192.168.2.1 -j RETURN
- $IPTABLES -A Cid440D880417760.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 23 (eth0,eth1,eth2)

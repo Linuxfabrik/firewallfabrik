@@ -111,7 +111,7 @@ Interval Group
 Time Intervals
 --------------
 
-An **interval** (or time object) defines a time period during which a rule is active, enabling time-based access control. Rules can be scheduled to apply only during certain hours, days of the week, or date ranges.
+An **interval** (or time object) defines a recurring schedule during which a rule is active, enabling time-based access control. Rules can be scheduled to apply only during certain hours and days of the week.
 
 
 Rule Sets and Rules

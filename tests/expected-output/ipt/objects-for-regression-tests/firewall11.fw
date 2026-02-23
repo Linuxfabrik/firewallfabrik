@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall11.fw /etc/fw/firewall11.fw
+# files: * firewall11.fw /firewall11.fw
 #
 # Compiled for iptables (any version)
 #
@@ -323,9 +323,9 @@ script_body() {
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o br0 -s 192.168.1.0/24 -j MASQUERADE
  $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.0/24 -j SNAT --to-source 10.1.1.1
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source $i_eth2
+ $IPTABLES -t nat -A POSTROUTING -o br0 -s 192.168.1.0/24 -j SNAT --to-source $i_br0
  #
  # Rule 2 (NAT)
  #
@@ -334,20 +334,14 @@ script_body() {
  # see bug #1693 , SF bug 3048516
  # combination of using SNAT instead of MASQ,
  # source port translation and dynamic interface
- for i_br0 in $i_br0_list
- do
- test -n "$i_br0" && $IPTABLES -t nat -A POSTROUTING -o br0 -p tcp -m tcp -s 192.168.1.0/24 --sport 1000:1010 -j SNAT --to-source $i_br0:1000-1010
- done
+ $IPTABLES -t nat -A POSTROUTING -o br0 -p tcp -m tcp -s 192.168.1.0/24 --sport 1000:1010 -j SNAT --to-source $i_br0:1000-1010
  #
  # Rule 3 (NAT)
  #
  echo "Rule 3 (NAT)"
  #
  # see SF bug 3057503
- for i_br0 in $i_br0_list
- do
- test -n "$i_br0" && $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination $i_br0:3128
- done
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination $i_br0:3128
 
  # ================ Table 'filter', rule set Policy
  #
@@ -367,13 +361,6 @@ script_body() {
  #
  echo "Rule 2 (eth0)"
  #
- $IPTABLES -A FORWARD -o eth0 -d 255.255.255.255 -m state --state NEW -j ACCEPT
- #
- # Rule 3 (eth0)
- #
- echo "Rule 3 (eth0)"
- #
- $IPTABLES -A FORWARD -i eth0 -d 255.255.255.255 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -d 255.255.255.255 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (eth0)
@@ -399,21 +386,13 @@ script_body() {
  echo "Rule 7 (br0)"
  #
  $IPTABLES -A INPUT -i br0 -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
- #
- # Rule 8 (br0)
- #
- echo "Rule 8 (br0)"
- #
- $IPTABLES -A INPUT -i br0 -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o br0 -p tcp -m tcp -d 10.1.1.1 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (br0)
  #
  echo "Rule 9 (br0)"
  #
- for i_br0 in $i_br0_list
- do
- test -n "$i_br0" && $IPTABLES -A INPUT -i br0 -p tcp -m tcp -d $i_br0 --dport 22 -m state --state NEW -j ACCEPT
- done
+ $IPTABLES -A INPUT -i br0 -p tcp -m tcp -d $i_br0 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (br0)
  #
@@ -435,16 +414,15 @@ script_body() {
  echo "Rule 11 (global)"
  #
  $IPTABLES -A FORWARD -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
- $IPTABLES -N Cid3D94D513.0
- $IPTABLES -A FORWARD -p udp -m udp --dport 68 -m state --state NEW -j Cid3D94D513.0
- $IPTABLES -A Cid3D94D513.0 -d 192.168.1.10 -j ACCEPT
- $IPTABLES -A Cid3D94D513.0 -d 192.168.1.255 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p udp -m udp --dport 68 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.10 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.255 -j ACCEPT
  #
  # Rule 13 (global)
  #
@@ -456,23 +434,20 @@ script_body() {
  #
  echo "Rule 14 (global)"
  #
- $IPTABLES -A FORWARD -d 224.0.1.141 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.1.141 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -d 192.168.1.20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 224.0.1.141 -m state --state NEW -j ACCEPT
  #
  # Rule 15 (global)
  #
  echo "Rule 15 (global)"
  #
  $IPTABLES -A FORWARD -d 224.0.0.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.0.5 -m state --state NEW -j ACCEPT
  #
  # Rule 16 (global)
  #
  echo "Rule 16 (global)"
  #
  $IPTABLES -A FORWARD -d 224.0.0.18 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -d 224.0.0.18 -m state --state NEW -j ACCEPT
  #
  # Rule 17 (global)
  #
@@ -497,39 +472,18 @@ script_body() {
  # in both INPUT and FORWARD chains
  # because this is a bridging firewall
  # see bug #811860
- $IPTABLES -N Cid3DD4BBC7.0
- $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j Cid3DD4BBC7.0
- for i_br0 in $i_br0_list
- do
- test -n "$i_br0" && $IPTABLES -A Cid3DD4BBC7.0 -d $i_br0 -j ACCEPT
- done
- for i_eth2 in $i_eth2_list
- do
- test -n "$i_eth2" && $IPTABLES -A Cid3DD4BBC7.0 -d $i_eth2 -j ACCEPT
- done
- $IPTABLES -A Cid3DD4BBC7.0 -d 10.1.1.1 -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 20 (global)
  #
  echo "Rule 20 (global)"
  #
- for i_br0 in $i_br0_list
- do
- test -n "$i_br0" && $IPTABLES -A FORWARD -d $i_br0 -m state --state NEW -j ACCEPT
- done
- for i_eth2 in $i_eth2_list
- do
- test -n "$i_eth2" && $IPTABLES -A FORWARD -d $i_eth2 -m state --state NEW -j ACCEPT
- done
- $IPTABLES -A FORWARD -d 10.1.1.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
  #
  # Rule 21 (global)
  #
  echo "Rule 21 (global)"
  #
- $IPTABLES -A FORWARD -d 10.1.1.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -d 10.1.1.1 -m state --state NEW -j ACCEPT
  #
  # Rule 23 (global)

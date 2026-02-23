@@ -311,15 +311,15 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A INPUT -m mac --mac-source 00:10:4b:de:e9:6f -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -m mac --mac-source 00:10:4b:de:e9:6f -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -s 00:10:4b:de:e9:6f -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 00:10:4b:de:e9:6f -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -A INPUT -m mac --mac-source 00:10:4b:de:e9:70 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -m mac --mac-source 00:10:4b:de:e9:70 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -s 00:10:4b:de:e9:70 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 00:10:4b:de:e9:70 -m state --state NEW -j ACCEPT
  #
  # Rule 2 (global)
  #

@@ -651,6 +651,15 @@ libraries:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:DNS 53'
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:DNS 53'
       - type: 'ServiceGroup'
+        name: 'FreeIPA'
+        comment: 'FreeIPA is an integrated identity and authentication solution for Linux/UNIX environments, providing centralized user management, Kerberos authentication, DNS, and certificate authority services. If FreeIPA manages DNS, also add DNS 53 (TCP+UDP). NTP (UDP 123) is critical for Kerberos and should be allowed separately.'
+        members:
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:HTTPS 443'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Kerberos 88'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP 389'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAPS 636'
+        - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:kpasswd 464'
+      - type: 'ServiceGroup'
         name: 'IPSEC'
         members:
         - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:AH'
@@ -1616,6 +1625,25 @@ libraries:
         comment: Cockpit web-based Linux server administration interface.
         dst_range_start: 9090
         dst_range_end: 9090
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Collabora Online 9980
+        comment: Collabora Online (coolwsd) for collaborative document editing in Nextcloud, ownCloud, and other platforms
+        dst_range_start: 9980
+        dst_range_end: 9980
         tcp_flags:
           urg: false
           ack: false
@@ -3266,6 +3294,25 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: Icinga 5665
+        comment: Icinga 2 API and agent communication port for distributed monitoring
+        dst_range_start: 5665
+        dst_range_end: 5665
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'icslap 2869'
         comment: 'SSDP/DSPP event notification'
@@ -4544,6 +4591,25 @@ libraries:
         comment: NETCONF network configuration protocol over SSH (RFC 6241). Used for automated network device management.
         dst_range_start: 830
         dst_range_end: 830
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Nextcloud notify_push 7867
+        comment: Nextcloud High Performance Backend for push notifications (notify_push)
+        dst_range_start: 7867
+        dst_range_end: 7867
         tcp_flags:
           urg: false
           ack: false
@@ -7049,6 +7115,44 @@ libraries:
           syn: false
           fin: false
         comment: Microsoft WINS database replication between WINS servers.
+      - type: TCPService
+        name: WinRM 5985
+        comment: Windows Remote Management (WS-Management) over HTTP
+        dst_range_start: 5985
+        dst_range_end: 5985
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: WinRM-HTTPS 5986
+        comment: Windows Remote Management (WS-Management) over HTTPS
+        dst_range_start: 5986
+        dst_range_end: 5986
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'X11 6000-6063'
         comment: 'X Window System'
@@ -8241,4 +8345,3 @@ libraries:
         to_weekday: '5'
         to_year: '-1'
       type: 'Interval'
-

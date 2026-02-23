@@ -16,6 +16,16 @@ from PySide6.QtCore import Slot
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
+
+def _is_true(val):
+    """Return True for bool True or string 'True'/'true'."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() == 'true'
+    return bool(val)
+
+
 _TCP_FLAGS = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
 _TCP_FLAG_LABELS = (
     'flags_lbl_1',
@@ -124,16 +134,16 @@ class ICMPServiceDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        data = self._obj.data or {}
-        self.icmpType.setValue(int(data.get('type', -1)))
-        self.icmpCode.setValue(int(data.get('code', -1)))
+        codes = self._obj.codes or {}
+        self.icmpType.setValue(int(codes.get('type', -1)))
+        self.icmpCode.setValue(int(codes.get('code', -1)))
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        data = dict(self._obj.data or {})
-        data['type'] = str(self.icmpType.value())
-        data['code'] = str(self.icmpCode.value())
-        self._obj.data = data
+        self._obj.codes = {
+            'type': self.icmpType.value(),
+            'code': self.icmpCode.value(),
+        }
 
 
 _IP_OPTION_CHECKBOXES = ('lsrr', 'router_alert', 'rr', 'ssrr', 'timestamp')
@@ -145,8 +155,9 @@ class IPServiceDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
+        protocols = self._obj.named_protocols or {}
+        self.protocolNum.setValue(int(protocols.get('protocol_num', 0)))
         data = self._obj.data or {}
-        self.protocolNum.setValue(int(data.get('protocol_num', 0)))
         dscp = data.get('dscp')
         if dscp:
             self.use_dscp.setChecked(True)
@@ -156,20 +167,22 @@ class IPServiceDialog(BaseObjectDialog):
             if tos:
                 self.use_tos.setChecked(True)
                 self.code.setText(tos)
-        self.any_opt.setChecked(data.get('any_opt') == 'True')
-        self.lsrr.setChecked(data.get('lsrr') == 'True')
-        self.ssrr.setChecked(data.get('ssrr') == 'True')
-        self.rr.setChecked(data.get('rr') == 'True')
-        self.timestamp.setChecked(data.get('timestamp') == 'True')
-        self.router_alert.setChecked(data.get('router_alert') == 'True')
-        self.all_fragments.setChecked(data.get('fragm') == 'True')
-        self.short_fragments.setChecked(data.get('short_fragm') == 'True')
+        self.any_opt.setChecked(_is_true(data.get('any_opt')))
+        self.lsrr.setChecked(_is_true(data.get('lsrr')))
+        self.ssrr.setChecked(_is_true(data.get('ssrr')))
+        self.rr.setChecked(_is_true(data.get('rr')))
+        self.timestamp.setChecked(_is_true(data.get('ts')))
+        self.router_alert.setChecked(_is_true(data.get('rtralt')))
+        self.all_fragments.setChecked(_is_true(data.get('fragm')))
+        self.short_fragments.setChecked(_is_true(data.get('short_fragm')))
         self.anyOptionsStateChanged()
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
+        self._obj.named_protocols = {
+            'protocol_num': str(self.protocolNum.value()),
+        }
         data = dict(self._obj.data or {})
-        data['protocol_num'] = str(self.protocolNum.value())
         if self.use_dscp.isChecked():
             data['dscp'] = self.code.text()
             data.pop('tos', None)
@@ -180,8 +193,8 @@ class IPServiceDialog(BaseObjectDialog):
         data['lsrr'] = str(self.lsrr.isChecked())
         data['ssrr'] = str(self.ssrr.isChecked())
         data['rr'] = str(self.rr.isChecked())
-        data['timestamp'] = str(self.timestamp.isChecked())
-        data['router_alert'] = str(self.router_alert.isChecked())
+        data['ts'] = str(self.timestamp.isChecked())
+        data['rtralt'] = str(self.router_alert.isChecked())
         data['fragm'] = str(self.all_fragments.isChecked())
         data['short_fragm'] = str(self.short_fragments.isChecked())
         self._obj.data = data

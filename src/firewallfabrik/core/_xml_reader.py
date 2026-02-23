@@ -451,6 +451,15 @@ class XmlReader:
             tag = _tag(child)
             if tag in _OPTIONS_TAGS:
                 group.options = _parse_options_children(child)
+            elif tag == 'SelectionCriteria':
+                # DynamicGroup filter criteria — store in data JSON.
+                criteria = group.data.setdefault('selection_criteria', [])
+                criteria.append(
+                    {
+                        'keyword': child.get('keyword', ','),
+                        'type': child.get('type', 'none'),
+                    }
+                )
             else:
                 self._dispatch_child(
                     child, library, parent_group=group, context_name=group.name

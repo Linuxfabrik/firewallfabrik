@@ -14,11 +14,13 @@
 
 import copy
 import uuid
+from datetime import UTC, datetime
 
 import sqlalchemy
 
 from firewallfabrik.core.objects import (
     Address,
+    Firewall,
     Group,
     Host,
     Interface,
@@ -37,6 +39,32 @@ from firewallfabrik.gui.object_tree_data import (
     find_group_by_path,
     normalize_subfolders,
 )
+
+
+def _stamp_parent_firewall(obj):
+    """Update ``lastModified`` on the Firewall owning *obj* (if any).
+
+    Returns the Firewall instance so the caller can emit tree updates,
+    or *None* if *obj* is not under a Firewall.
+    """
+    fw = None
+    if isinstance(obj, Firewall):
+        fw = obj
+    elif isinstance(obj, Interface):
+        iface = obj
+        while iface.parent_interface is not None:
+            iface = iface.parent_interface
+        device = iface.device
+        if isinstance(device, Firewall):
+            fw = device
+    elif isinstance(obj, Address) and obj.interface is not None:
+        return _stamp_parent_firewall(obj.interface)
+    if fw is not None:
+        data = dict(fw.data or {})
+        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
+        fw.data = data
+    return fw
+
 
 # All ORM classes that can own a ``library_id`` column.
 _LIB_OWNED_CLASSES = (Address, Group, Host, Interface, Interval, Service)
@@ -176,6 +204,10 @@ class TreeOperations:
             if obj is None:
                 session.close()
                 return False
+
+            # Stamp the parent Firewall's lastModified *before* deleting
+            # the child so the relationship is still traversable.
+            _stamp_parent_firewall(obj)
 
             obj_ids, rule_ids = self._collect_all_ids(session, obj_id)
             self._cleanup_references_and_delete(session, obj_ids, rule_ids)
@@ -432,7 +464,11 @@ class TreeOperations:
                 new_addr.group_id = None
                 session.add(new_addr)
 
-        # Rule sets + their rules + rule_elements.
+        # Collect source rule_element rows and clone rule sets + rules.
+        # We must read source rows before flushing the clones (the flush
+        # would otherwise trigger lazy loads that might expire the source
+        # relationships).
+        rule_element_tasks = []
         for rs in source_device.rule_sets:
             new_rs = self._clone_object(rs, id_map)
             new_rs.device_id = new_device.id
@@ -441,22 +477,30 @@ class TreeOperations:
                 new_rule = self._clone_object(rule, id_map)
                 new_rule.rule_set_id = new_rs.id
                 session.add(new_rule)
-                # Copy rule_elements, remapping target_id for internal refs.
                 rows = session.execute(
                     sqlalchemy.select(rule_elements).where(
                         rule_elements.c.rule_id == rule.id
                     )
                 ).all()
-                for row in rows:
-                    target_id = id_map.get(row.target_id, row.target_id)
-                    session.execute(
-                        rule_elements.insert().values(
-                            rule_id=new_rule.id,
-                            slot=row.slot,
-                            target_id=target_id,
-                            position=row.position,
-                        )
+                if rows:
+                    rule_element_tasks.append((new_rule, rows))
+
+        # Flush all ORM objects so that rule and rule_set rows exist in
+        # the DB before we insert the raw rule_elements rows (which
+        # reference them via FK).
+        session.flush()
+
+        for new_rule, rows in rule_element_tasks:
+            for row in rows:
+                target_id = id_map.get(row.target_id, row.target_id)
+                session.execute(
+                    rule_elements.insert().values(
+                        rule_id=new_rule.id,
+                        slot=row.slot,
+                        target_id=target_id,
+                        position=row.position,
                     )
+                )
 
     @staticmethod
     def _duplicate_group_members(session, source_group, new_group):
@@ -486,6 +530,7 @@ class TreeOperations:
         target_lib_id,
         *,
         folder=None,
+        prefix='',
         target_group_id=None,
     ):
         """Move *obj_id* to *target_lib_id*. Returns True on success.
@@ -536,7 +581,7 @@ class TreeOperations:
                     iface.library_id = target_lib_id
 
             session.commit()
-            self._db_manager.save_state(f'Move {obj_type} {obj_name}')
+            self._db_manager.save_state(f'{prefix}Move {obj_type} {obj_name}')
         except Exception:
             session.rollback()
             raise
@@ -633,6 +678,9 @@ class TreeOperations:
                     if folder in NEW_TYPES_FOR_FOLDER:
                         folder = None
 
+            # Extract options from extra_data (platform defaults for devices).
+            options = extra_data.pop('options', None) if extra_data else None
+
             # Build data dict: merge folder and extra_data.
             data = {}
             if folder:
@@ -642,11 +690,31 @@ class TreeOperations:
             if data and hasattr(model_cls, 'data'):
                 kwargs['data'] = data
 
+            if options and hasattr(model_cls, 'options'):
+                kwargs['options'] = options
+
             new_obj = model_cls(**kwargs)
             new_obj.name = name or f'New {type_name}'
 
             # Make name unique.
             new_obj.name = self.make_name_unique(session, new_obj)
+
+            # First RuleSet of a given type on a device is the top ruleset.
+            if (
+                model_cls is RuleSet
+                and hasattr(new_obj, 'device_id')
+                and new_obj.device_id is not None
+            ):
+                existing = session.scalar(
+                    sqlalchemy.select(sqlalchemy.func.count())
+                    .select_from(RuleSet)
+                    .where(
+                        RuleSet.device_id == new_obj.device_id,
+                        RuleSet.type == type_name,
+                    )
+                )
+                if not existing:
+                    new_obj.top = True
 
             session.add(new_obj)
             session.commit()
@@ -757,7 +825,7 @@ class TreeOperations:
     # Folder move (drag & drop / cut-paste)
     # ------------------------------------------------------------------
 
-    def set_object_folder(self, obj_id, model_cls, folder):
+    def set_object_folder(self, obj_id, model_cls, folder, *, prefix=''):
         """Set or clear ``data.folder`` on an existing object.
 
         *folder* is the target subfolder path (e.g. ``'A/B'``) or an
@@ -784,7 +852,8 @@ class TreeOperations:
             obj.data = data
             session.commit()
             self._db_manager.save_state(
-                f'Move {getattr(obj, "type", type(obj).__name__)} {obj.name} to folder'
+                f'{prefix}Move {getattr(obj, "type", type(obj).__name__)}'
+                f' {obj.name} to folder'
             )
         except Exception:
             session.rollback()
@@ -1101,7 +1170,7 @@ class TreeOperations:
     # Make subinterface
     # ------------------------------------------------------------------
 
-    def make_subinterface(self, iface_id, target_parent_iface_id):
+    def make_subinterface(self, iface_id, target_parent_iface_id, *, prefix=''):
         """Reparent an interface under another interface.  Returns True on success."""
         if self._db_manager is None:
             return False
@@ -1113,7 +1182,7 @@ class TreeOperations:
             iface.parent_interface_id = target_parent_iface_id
             iface_name = iface.name
             session.commit()
-            self._db_manager.save_state(f'Make subinterface {iface_name}')
+            self._db_manager.save_state(f'{prefix}Make subinterface {iface_name}')
         except Exception:
             session.rollback()
             raise

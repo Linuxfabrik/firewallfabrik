@@ -62,11 +62,11 @@ class BaseObjectDialog(QWidget):
                     tags=getattr(obj, 'keywords', None),
                     all_tags=all_tags,
                 )
+            if not self._signals_connected:
+                self._connect_change_signals()
+                self._signals_connected = True
         finally:
             self._loading = False
-        if not self._signals_connected:
-            self._connect_change_signals()
-            self._signals_connected = True
         self._set_read_only(self._is_read_only())
 
     def _populate(self):

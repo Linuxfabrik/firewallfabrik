@@ -2060,29 +2060,19 @@ Time interval objects allow you to create a rule that only matches during certai
 
    Figure 5.129. Time Interval Dialog
 
-Time intervals can be certain days of the week (only on Mondays, for example), only certain times, and/or only during a certain range of dates. You can combine these options to create an object that represents, for example, Tuesday afternoons from 1 to 3 PM during March of 2011.
+Time intervals define recurring schedules based on time-of-day and days of the week. You can combine these options to create an object that represents, for example, Tuesday afternoons from 1 to 3 PM, or weekday work hours from 9 AM to 5 PM.
 
 * **Name:** This is the name of the object.
 
-* **Start date checkbox:** Indicates that the time interval has a starting date. If this is not checked, the Start date field is inaccessible and is not included in the object.
+* **Start time:** Indicates the beginning of the daily time window when the rule is active (HH:MM, 24-hour format).
 
-* **Start date:** Indicates the day the time interval will start.
-
-* **Start time:** Indicates the beginning of the daily interval. Only applies to days after Start date (if specified) and before End date (if specified) and on indicated days of the week. For example, if Sunday is not checked, then the time interval does not apply on Sundays.
-
-* **End date checkbox:** Indicates that the time interval has an ending date. If this is not checked, the End date field is inaccessible and is not included in the object.
-
-* **End date:** Indicates the day the time interval will end.
-
-* **End time:** Indicates the end of the daily interval. Only applies to days after Start date (if specified) and before End date (if specified) and on indicated days of the week. For example, if Sunday is not checked, then the time interval does not apply on Sundays.
+* **End time:** Indicates the end of the daily time window when the rule is active (HH:MM, 24-hour format). Can be earlier than the start time to define an overnight range (e.g. 22:00 to 06:00).
 
 * **Mon, Tue, Wed, Thu, Fri, Sat, Sun:** Indicates on which days of the week the time interval should be applicable. For example, if Mon is checked and Tue is not, then the time interval object will apply to Mondays, but not Tuesdays.
 
 * **Comments:** This is a free-style text field used for comments.
 
-In Figure 5.129, the object would be valid from the beginning of Dec. 19, 2009 and end the beginning of Jan. 4, 2010. This might correspond, for example, to a "winter break" at some institution when access to some networks could be restricted.
-
-Another possibility is to limit recreational activities to non-work hours.
+A common use case is to limit recreational activities to non-work hours.
 
 .. figure:: img/obj-time-interval-rule.png
    :alt: Time Interval Rule Example

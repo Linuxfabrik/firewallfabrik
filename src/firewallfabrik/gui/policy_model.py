@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import enum
 import uuid
@@ -21,12 +22,13 @@ from collections import namedtuple
 from typing import ClassVar
 
 import sqlalchemy
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
 from firewallfabrik.core.objects import (
     Address,
     Direction,
+    Firewall,
     Group,
     Host,
     Interface,
@@ -37,6 +39,7 @@ from firewallfabrik.core.objects import (
     PolicyRule,
     RoutingRule,
     Rule,
+    RuleSet,
     Service,
     rule_elements,
 )
@@ -45,6 +48,12 @@ from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
     get_label_color,
     get_label_text,
+)
+from firewallfabrik.gui.policy_rule_options import (
+    build_options_display,
+    nat_options_tooltip,
+    options_tooltip,
+    routing_options_tooltip,
 )
 from firewallfabrik.gui.tooltip_helpers import obj_tooltip
 
@@ -81,8 +90,8 @@ _NAT_COLS = (
     _ColDesc('Translated Src', 'tsrc', 'element'),
     _ColDesc('Translated Dst', 'tdst', 'element'),
     _ColDesc('Translated Srv', 'tsrv', 'element'),
-    _ColDesc('Itf Inbound', 'itf_inb', 'element'),
-    _ColDesc('Itf Outbound', 'itf_outb', 'element'),
+    _ColDesc('Interface In', 'itf_inb', 'element'),
+    _ColDesc('Interface Out', 'itf_outb', 'element'),
     _ColDesc('Action', 'action', 'action'),
     _ColDesc('Options', 'options', 'options'),
     _ColDesc('Comment', None, 'comment'),
@@ -169,44 +178,6 @@ def _build_col_config(cols):
     }
 
 
-# ---------------------------------------------------------------------------
-# Backward-compatible module-level constants (correct for Policy only).
-# View code will progressively switch to model-level config.
-# ---------------------------------------------------------------------------
-
-HEADERS = [c.header for c in _POLICY_COLS]
-
-_COL_ACTION = 6
-_COL_COMMENT = 9
-_COL_DIRECTION = 5
-_COL_DST = 2
-_COL_ITF = 4
-_COL_OPTIONS = 8
-_COL_POSITION = 0
-_COL_SRC = 1
-_COL_SRV = 3
-_COL_TIME = 7
-
-_COL_TO_SLOT = {
-    _COL_ACTION: 'action',
-    _COL_DIRECTION: 'direction',
-    _COL_DST: 'dst',
-    _COL_ITF: 'itf',
-    _COL_OPTIONS: 'options',
-    _COL_SRC: 'src',
-    _COL_SRV: 'srv',
-    _COL_TIME: 'when',
-}
-
-_SLOT_TO_COL = {v: k for k, v in _COL_TO_SLOT.items()}
-
-_ELEMENT_COLS = frozenset({_COL_DST, _COL_ITF, _COL_SRC, _COL_SRV, _COL_TIME})
-
-# All columns that support single-click element selection / highlighting.
-_SELECTABLE_COLS = _ELEMENT_COLS | {_COL_ACTION, _COL_DIRECTION, _COL_OPTIONS}
-
-# ---------------------------------------------------------------------------
-
 _DIRECTION_NAMES = frozenset({'Both', 'Inbound', 'Outbound'})
 
 _GROUP_BG = QColor('lightgray')
@@ -222,6 +193,43 @@ def _action_label(enum_name):
 
 # Classes used to resolve target names from the database.
 _NAME_CLASSES = (Address, Group, Host, Interface, Interval, Service)
+
+_BLACK = QColor('black')
+_WHITE = QColor('white')
+
+
+def _contrast_color(bg):
+    """Return black or white, whichever has more contrast against *bg*.
+
+    Uses the WCAG perceived-luminance formula.
+    """
+    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
+    return _BLACK if luminance > 128 else _WHITE
+
+
+_EMPTY_ELEMENT_TEXT = {
+    'itf_inb': 'Auto',
+    'itf_outb': 'Auto',
+    'rdst': 'Default',
+    'rgtw': '',
+    'ritf': '',
+    'tdst': 'Original',
+    'tsrc': 'Original',
+    'tsrv': 'Original',
+}
+
+
+def _format_elements(triples, empty_text='Any'):
+    """Format a list of (uuid, name, type, ...) tuples for display."""
+    if not triples:
+        return empty_text
+    return '\n'.join(sorted((name for _, name, *_ in triples), key=str.casefold))
+
+
+def _icon_suffix():
+    """Return the QRC icon alias suffix for the configured rule icon size."""
+    size = QSettings().value('UI/IconSizeInRules', 25, type=int)
+    return 'icon-tree' if size == 16 else 'icon'
 
 
 class _NodeType(enum.IntEnum):
@@ -291,6 +299,8 @@ class _TreeNode:
 
 class PolicyTreeModel(QAbstractItemModel):
     """Database-backed tree model for policy/NAT/routing rules with group support."""
+
+    firewall_modified = Signal(object)
 
     _clipboard: ClassVar[list[uuid.UUID]] = []
 
@@ -507,7 +517,7 @@ class PolicyTreeModel(QAbstractItemModel):
             negations=rule.negations or {},
             odst=slots.get('odst', []),
             options=opts,
-            options_display=_build_options_display(opts),
+            options_display=build_options_display(opts, self._rule_set_type),
             osrc=slots.get('osrc', []),
             osrv=slots.get('osrv', []),
             position=rule.position,
@@ -524,19 +534,77 @@ class PolicyTreeModel(QAbstractItemModel):
         )
 
     def _desc(self, text):
-        """Prefix *text* with the object name for undo descriptions."""
+        """Prefix *text* with the object name and rule set type for undo descriptions."""
+        parts = []
         if self._object_name:
-            return f'{self._object_name}: {text}'
-        return text
+            parts.append(self._object_name)
+        parts.append(f'[{self._rule_set_type}] {text}')
+        return ': '.join(parts)
+
+    def _slot_label(self, slot):
+        """Return the human-readable column header for a slot name."""
+        col = self._slot_to_col.get(slot)
+        if col is not None and col < len(self._headers):
+            return self._headers[col]
+        return slot
+
+    def _stamp_firewall(self, session):
+        """Update ``lastModified`` on the Firewall owning this rule set.
+
+        Called inside every mutation session so the compile dialog and
+        bold-tree display know recompilation is needed.
+
+        Returns the :class:`Firewall` instance if stamped, or *None*.
+        """
+        from datetime import UTC, datetime
+
+        rs = session.get(RuleSet, self._rule_set_id)
+        if rs is None:
+            return None
+        fw = rs.device
+        if not isinstance(fw, Firewall):
+            return None
+        data = dict(fw.data or {})
+        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
+        fw.data = data
+        return fw
+
+    @contextlib.contextmanager
+    def _mutation_session(self, description):
+        """Open a DB session that auto-stamps the owning Firewall.
+
+        Wraps :meth:`DatabaseManager.session` and calls
+        :meth:`_stamp_firewall` before the session commits, so every
+        rule mutation automatically updates the Firewall's
+        ``lastModified`` timestamp.  After commit, emits
+        :pyattr:`firewall_modified` so the object tree can refresh
+        the Firewall's bold state.
+        """
+        fw_id = None
+        with self._db_manager.session(description) as session:
+            yield session
+            fw = self._stamp_firewall(session)
+            if fw is not None:
+                fw_id = fw.id  # Capture before session closes.
+        # Emit after the session has committed so listeners read
+        # up-to-date data from the database.
+        if fw_id is not None:
+            self.firewall_modified.emit(fw_id)
 
     @staticmethod
     def _build_name_map(session):
-        """Build a {uuid: (name, type, tooltip)} lookup from all name-bearing tables."""
+        """Build a {uuid: (display_name, type, tooltip)} lookup from all name-bearing tables.
+
+        For objects that carry a ``data['label']`` (e.g. Interface), the
+        label is preferred as display name when it is non-empty.
+        """
         name_map = {}
         for cls in _NAME_CLASSES:
             for obj in session.scalars(sqlalchemy.select(cls)):
                 obj_type = getattr(obj, 'type', None) or cls.__name__
-                name_map[obj.id] = (obj.name, obj_type, obj_tooltip(obj))
+                data = getattr(obj, 'data', None) or {}
+                display = data.get('label') or obj.name
+                name_map[obj.id] = (display, obj_type, obj_tooltip(obj))
         return name_map
 
     # ------------------------------------------------------------------
@@ -604,7 +672,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if new_comment == row_data.comment:
             return False
 
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -761,7 +829,8 @@ class PolicyTreeModel(QAbstractItemModel):
         if desc.col_type == 'position':
             return row_data.position
         if desc.col_type == 'element':
-            return _format_elements(getattr(row_data, desc.slot, []))
+            empty_text = _EMPTY_ELEMENT_TEXT.get(desc.slot, 'Any')
+            return _format_elements(getattr(row_data, desc.slot, []), empty_text)
         if desc.col_type == 'action':
             if self._rule_set_type == 'NAT':
                 return row_data.nat_action or ''
@@ -769,7 +838,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if desc.col_type == 'direction':
             return row_data.direction
         if desc.col_type == 'metric':
-            return str(row_data.metric) if row_data.metric else ''
+            return str(row_data.metric)
         if desc.col_type == 'options':
             return (
                 _format_elements(row_data.options_display)
@@ -805,13 +874,13 @@ class PolicyTreeModel(QAbstractItemModel):
                 return (
                     'To modify this field, drag and drop\nan object from the tree here.'
                 )
-            # Show the detailed tooltip for each element (matching fwbuilder's
-            # getObjectPropertiesDetailed).  For multi-element cells, separate
-            # with a horizontal rule.
-            tips = [tip for *_, tip in elements if tip]
-            if tips:
-                return '<hr>'.join(tips)
-            return '\n'.join(name for _, name, *_ in elements)
+            # Single element: return its tooltip directly.
+            # Multi-element cells are handled per-element in the view's
+            # viewportEvent so each element gets its own tooltip on hover.
+            if len(elements) == 1:
+                *_, tip = elements[0]
+                return tip or elements[0][1]
+            return None
 
         if desc.col_type == 'direction':
             direction = row_data.direction or 'Both'
@@ -830,13 +899,17 @@ class PolicyTreeModel(QAbstractItemModel):
             )
 
         if desc.col_type == 'options':
-            return _options_tooltip(row_data)
+            if self._rule_set_type == 'NAT':
+                return nat_options_tooltip(row_data)
+            if self._rule_set_type == 'Routing':
+                return routing_options_tooltip(row_data)
+            return options_tooltip(row_data)
 
         if desc.col_type == 'comment':
             return row_data.comment or None
 
         if desc.col_type == 'metric':
-            return str(row_data.metric) if row_data.metric else None
+            return f'<b>Metric:</b> {row_data.metric}'
 
         return None
 
@@ -863,7 +936,10 @@ class PolicyTreeModel(QAbstractItemModel):
         if col in self._element_cols:
             slot = self._col_to_slot.get(col)
             if slot:
-                return getattr(row_data, slot)
+                elems = getattr(row_data, slot)
+                if elems:
+                    return sorted(elems, key=lambda t: t[1].casefold())
+                return elems
         if col == self._action_col:
             if self._rule_set_type == 'NAT' and row_data.nat_action:
                 return [
@@ -963,7 +1039,7 @@ class PolicyTreeModel(QAbstractItemModel):
             else:
                 position = self.flat_rule_count()
 
-        with self._db_manager.session(self._desc(f'New rule {position}')) as session:
+        with self._mutation_session(self._desc(f'New rule {position}')) as session:
             # Shift existing rules at or after the insertion point.
             session.execute(
                 sqlalchemy.update(self._rule_cls)
@@ -1010,7 +1086,23 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
 
-        with self._db_manager.session(self._desc('Delete rule(s)')) as session:
+        # Collect positions for a human-readable undo description.
+        positions = []
+        for idx in indices:
+            node = self._node_from_index(idx)
+            if node.node_type == _NodeType.Rule:
+                positions.append(str(node.row_data.position))
+            elif node.node_type == _NodeType.Group:
+                for child in node.children:
+                    positions.append(str(child.row_data.position))
+        pos_str = ', '.join(positions) if positions else '?'
+        desc = (
+            f'Delete rule {pos_str}'
+            if len(positions) == 1
+            else f'Delete rules {pos_str}'
+        )
+
+        with self._mutation_session(self._desc(desc)) as session:
             # Remove rule_elements first (FK constraint).
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
@@ -1150,6 +1242,8 @@ class PolicyTreeModel(QAbstractItemModel):
 
                 new_ids.append(new_id)
 
+            fw = self._stamp_firewall(session)
+            fw_id = fw.id if fw is not None else None
             session.commit()
         except Exception:
             session.rollback()
@@ -1159,6 +1253,9 @@ class PolicyTreeModel(QAbstractItemModel):
 
         if new_ids:
             self._db_manager.save_state(self._desc(f'Paste rule at {position}'))
+
+        if fw_id is not None:
+            self.firewall_modified.emit(fw_id)
 
         self.reload()
         return new_ids
@@ -1292,7 +1389,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} action'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1315,7 +1412,7 @@ class PolicyTreeModel(QAbstractItemModel):
         new_comment = str(comment).strip()
         if new_comment == (row_data.comment or ''):
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} comment'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1333,7 +1430,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if disabled
             else f'Enable rule {row_data.position}'
         )
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.opt_disabled = disabled
@@ -1349,7 +1446,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} direction'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1372,7 +1469,7 @@ class PolicyTreeModel(QAbstractItemModel):
             )
         else:
             desc = f'Remove rule {row_data.position} color'
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.label = label_key
@@ -1383,8 +1480,8 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
-            self._desc(f'Edit rule {row_data.position} {slot}'),
+        with self._mutation_session(
+            self._desc(f'Edit rule {row_data.position} {self._slot_label(slot)}'),
         ) as session:
             # Check for duplicate.
             existing = session.execute(
@@ -1424,9 +1521,9 @@ class PolicyTreeModel(QAbstractItemModel):
         target_row_data = self.get_row_data(target_index)
         if target_row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(
-                f'Move element to rule {target_row_data.position} {target_slot}'
+                f'Move element to rule {target_row_data.position} {self._slot_label(target_slot)}'
             ),
         ) as session:
             # Check for duplicate in target.
@@ -1478,8 +1575,8 @@ class PolicyTreeModel(QAbstractItemModel):
             if eid == target_id:
                 elem_name = ename
                 break
-        desc = f'Delete rule {row_data.position} {slot} {elem_name}'.rstrip()
-        with self._db_manager.session(self._desc(desc)) as session:
+        desc = f'Del rule {row_data.position} {self._slot_label(slot)} {elem_name}'.rstrip()
+        with self._mutation_session(self._desc(desc)) as session:
             session.execute(
                 sqlalchemy.delete(rule_elements).where(
                     rule_elements.c.rule_id == row_data.rule_id,
@@ -1499,10 +1596,28 @@ class PolicyTreeModel(QAbstractItemModel):
             if enabled
             else f'Disable logging rule {row_data.position}'
         )
-        with self._db_manager.session(self._desc(desc)) as session:
+        with self._mutation_session(self._desc(desc)) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
                 rule.opt_log = enabled
+        self.reload()
+
+    def set_metric(self, index, metric):
+        """Set the routing metric for the rule at *index*."""
+        row_data = self.get_row_data(index)
+        if row_data is None:
+            return
+        with self._mutation_session(
+            self._desc(f'Edit rule {row_data.position} metric'),
+        ) as session:
+            rule = session.get(self._rule_cls, row_data.rule_id)
+            if rule is not None:
+                opts = dict(rule.options or {})
+                if metric:
+                    opts['metric'] = metric
+                else:
+                    opts.pop('metric', None)
+                rule.options = opts
         self.reload()
 
     def set_options(self, index, options):
@@ -1515,7 +1630,7 @@ class PolicyTreeModel(QAbstractItemModel):
         row_data = self.get_row_data(index)
         if row_data is None:
             return
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Edit rule {row_data.position} options'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
@@ -1534,8 +1649,8 @@ class PolicyTreeModel(QAbstractItemModel):
             return
         current = bool(row_data.negations.get(slot))
         new_val = not current
-        with self._db_manager.session(
-            self._desc(f'Negate rule {row_data.position} {slot}'),
+        with self._mutation_session(
+            self._desc(f'Negate rule {row_data.position} {self._slot_label(slot)}'),
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
@@ -1568,7 +1683,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
         pos_str = ', '.join(positions)
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Add rule {pos_str} to group {group_name}'),
         ) as session:
             for rid in rule_ids:
@@ -1590,7 +1705,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if not rule_ids:
             return
         pos_str = ', '.join(positions)
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'New group {unique_name} with rule {pos_str}'),
         ) as session:
             for rid in rule_ids:
@@ -1608,7 +1723,7 @@ class PolicyTreeModel(QAbstractItemModel):
         if new_name == old_name:
             return
 
-        with self._db_manager.session(self._desc('Rename group')) as session:
+        with self._mutation_session(self._desc('Rename group')) as session:
             for child in node.children:
                 self._set_rule_group(session, child.row_data.rule_id, new_name)
         self.reload()
@@ -1635,7 +1750,7 @@ class PolicyTreeModel(QAbstractItemModel):
             if rd is not None:
                 positions.append(str(rd.position))
         pos_str = ', '.join(positions) if positions else '?'
-        with self._db_manager.session(
+        with self._mutation_session(
             self._desc(f'Remove rule {pos_str} from group'),
         ) as session:
             for rid in rule_ids:
@@ -1682,7 +1797,7 @@ class PolicyTreeModel(QAbstractItemModel):
         operation, all positions in the rule set are renumbered
         sequentially.
         """
-        with self._db_manager.session(self._desc(description)) as session:
+        with self._mutation_session(self._desc(description)) as session:
             rule = session.get(self._rule_cls, rule_id)
             if rule is None:
                 return
@@ -1703,204 +1818,3 @@ class PolicyTreeModel(QAbstractItemModel):
             ).all()
             for i, r in enumerate(remaining):
                 r.position = i
-
-
-_BLACK = QColor('black')
-_WHITE = QColor('white')
-
-
-def _build_options_display(opts):
-    """Build a list of (id, label, icon_type) triples from rule options.
-
-    Matches fwbuilder's ``PolicyModel::getRuleOptions()`` display logic.
-    The *id* is a unique string sentinel used for per-element selection.
-    """
-    if not opts:
-        return []
-    result = []
-    if _opt_str(opts, 'counter_name') or _opt_str(opts, 'rule_name_accounting'):
-        result.append(('__opt_accounting__', 'accounting', 'Accounting'))
-    if _opt_bool(opts, 'classification'):
-        label = _opt_str(opts, 'classify_str') or 'classify'
-        result.append(('__opt_classify__', label, 'Classify'))
-    if _opt_bool(opts, 'log'):
-        result.append(('__opt_log__', 'log', 'Log'))
-    if _has_nondefault_options(opts):
-        result.append(('__opt_options__', 'options', 'Options'))
-    if _opt_bool(opts, 'routing'):
-        result.append(('__opt_route__', 'route', 'Route'))
-    if _opt_bool(opts, 'tagging'):
-        result.append(('__opt_tag__', 'tag', 'TagService'))
-    return result
-
-
-def _opt_bool(opts, key):
-    """Return a boolean for *key*, coercing ``'True'``/``'False'`` strings."""
-    val = opts.get(key)
-    if isinstance(val, str):
-        return val.lower() == 'true'
-    return bool(val)
-
-
-def _opt_str(opts, key):
-    """Return a non-empty string for *key*, or ``''``."""
-    val = opts.get(key, '')
-    return str(val) if val else ''
-
-
-def _opt_int(opts, key):
-    """Return an int for *key*, or 0."""
-    val = opts.get(key, 0)
-    try:
-        return int(val)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _options_tooltip(row_data):
-    """Build an HTML tooltip for the Options column.
-
-    Mirrors fwbuilder's ``FWObjectPropertiesFactory::getPolicyRuleOptions()``.
-    The stateful/stateless default depends on the action: Accept defaults to
-    stateful, all other actions default to stateless.
-    """
-    opts = row_data.options or {}
-    rows = []
-
-    # Stateful / Stateless.
-    if _opt_bool(opts, 'stateless'):
-        rows.append(('Stateless', ''))
-    else:
-        rows.append(('Stateful', ''))
-
-    # iptables-specific options (the only platform we support).
-    if _opt_bool(opts, 'tagging'):
-        tag_id = _opt_str(opts, 'tagobject_id')
-        rows.append(('Tag:', tag_id or 'yes'))
-
-    classify = _opt_str(opts, 'classify_str')
-    if classify:
-        rows.append(('Class:', classify))
-
-    log_prefix = _opt_str(opts, 'log_prefix')
-    if log_prefix:
-        rows.append(('Log prefix:', log_prefix))
-
-    log_level = _opt_str(opts, 'log_level')
-    if log_level:
-        rows.append(('Log level:', log_level))
-
-    nlgroup = _opt_int(opts, 'ulog_nlgroup')
-    if nlgroup > 1:
-        rows.append(('Netlink group:', str(nlgroup)))
-
-    limit_val = _opt_int(opts, 'limit_value')
-    if limit_val > 0:
-        arg = '! ' if _opt_bool(opts, 'limit_value_not') else ''
-        arg += str(limit_val)
-        suffix = _opt_str(opts, 'limit_suffix')
-        if suffix:
-            arg += suffix
-        rows.append(('Limit value:', arg))
-
-    limit_burst = _opt_int(opts, 'limit_burst')
-    if limit_burst > 0:
-        rows.append(('Limit burst:', str(limit_burst)))
-
-    connlimit = _opt_int(opts, 'connlimit_value')
-    if connlimit > 0:
-        arg = '! ' if _opt_bool(opts, 'connlimit_above_not') else ''
-        arg += str(connlimit)
-        rows.append(('Connlimit value:', arg))
-
-    hashlimit_val = _opt_int(opts, 'hashlimit_value')
-    if hashlimit_val > 0:
-        hl_name = _opt_str(opts, 'hashlimit_name')
-        if hl_name:
-            rows.append(('Hashlimit name:', hl_name))
-        arg = str(hashlimit_val)
-        hl_suffix = _opt_str(opts, 'hashlimit_suffix')
-        if hl_suffix:
-            arg += hl_suffix
-        rows.append(('Hashlimit value:', arg))
-        hl_burst = _opt_int(opts, 'hashlimit_burst')
-        if hl_burst > 0:
-            rows.append(('Hashlimit burst:', str(hl_burst)))
-
-    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
-        rows.append(('Part of Any', ''))
-
-    # Logging (always shown, last row).
-    logging_on = _opt_bool(opts, 'log')
-    rows.append(('Logging:', 'on' if logging_on else 'off'))
-
-    # Format as HTML table.
-    html = '<table>'
-    for label, value in rows:
-        html += f"<tr><th align='left'>{label}</th><td>{value}</td></tr>"
-    html += '</table>'
-    return html
-
-
-def _has_nondefault_options(opts):
-    """Check whether any non-default iptables rule options are set.
-
-    Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
-    """
-    if _opt_int(opts, 'connlimit_value') > 0:
-        return True
-    if _opt_bool(opts, 'connlimit_above_not'):
-        return True
-    if _opt_int(opts, 'connlimit_masklen') > 0:
-        return True
-    if _opt_str(opts, 'firewall_is_part_of_any_and_networks'):
-        return True
-    if _opt_int(opts, 'hashlimit_burst') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_expire') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_gcinterval') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_max') > 0:
-        return True
-    if _opt_str(opts, 'hashlimit_name'):
-        return True
-    if _opt_int(opts, 'hashlimit_size') > 0:
-        return True
-    if _opt_int(opts, 'hashlimit_value') > 0:
-        return True
-    if _opt_int(opts, 'limit_burst') > 0:
-        return True
-    if _opt_str(opts, 'limit_suffix'):
-        return True
-    if _opt_int(opts, 'limit_value') > 0:
-        return True
-    if _opt_bool(opts, 'limit_value_not'):
-        return True
-    if _opt_str(opts, 'log_level'):
-        return True
-    if _opt_str(opts, 'log_prefix'):
-        return True
-    return _opt_int(opts, 'ulog_nlgroup') > 1
-
-
-def _icon_suffix():
-    """Return the QRC icon alias suffix for the configured rule icon size."""
-    size = QSettings().value('UI/IconSizeInRules', 25, type=int)
-    return 'icon-tree' if size == 16 else 'icon'
-
-
-def _contrast_color(bg):
-    """Return black or white, whichever has more contrast against *bg*.
-
-    Uses the WCAG perceived-luminance formula.
-    """
-    luminance = 0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()
-    return _BLACK if luminance > 128 else _WHITE
-
-
-def _format_elements(triples):
-    """Format a list of (uuid, name, type, ...) tuples for display."""
-    if not triples:
-        return 'Any'
-    return '\n'.join(name for _, name, *_ in triples)

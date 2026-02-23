@@ -6,13 +6,11 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall4.fw /etc/fw/firewall4.fw
+# files: * firewall4.fw /firewall4.fw
 #
 # Compiled for iptables (any version)
 #
 # this object is used to test a configuration where firewall has dynamic address
-
-# firewall4::: error: Dynamic interface eth1 should not have an IP address object attached to it. This IP address object will be ignored.
 
 FWBDEBUG=""
 
@@ -290,20 +288,13 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
- # this ensures that secondary ip address is "promoted" to primary
- # when primary address is deleted, instead of deleting both
- # primary and secondary addresses. It looks like this is only
- # available starting from Linux 2.6.16
- test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
- echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
  getaddr eth1 i_eth1
  getaddr6 eth1 i_eth1_v6
  getnet eth1 i_eth1_network
  getnet6 eth1 i_eth1_v6_network
  update_addresses_of_interface "eth0 192.168.1.1/24" ""
  update_addresses_of_interface "eth2 192.168.2.1/24" ""
- update_addresses_of_interface "eth3 222.222.222.222/24 222.222.222.40/24 222.222.222.41/24" ""
+ update_addresses_of_interface "eth3 222.222.222.222/24" ""
  update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -319,64 +310,68 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 192.168.1.1
  $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 192.168.2.1
  $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 222.222.222.222
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source $i_eth1
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 222.222.222.40
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 222.222.222.41
  #
  # Rule 3 (NAT)
  #
  echo "Rule 3 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -d ! 192.168.2.0/24 -j MASQUERADE
  $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.0/24 -d ! 192.168.2.0/24 -j SNAT --to-source 222.222.222.222
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -d ! 192.168.2.0/24 -j SNAT --to-source $i_eth1
  #
  # Rule 4 (NAT)
  #
  echo "Rule 4 (NAT)"
  #
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_eth1 -j MASQUERADE
- done
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.1 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.2.1 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 222.222.222.222 -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source $i_eth1
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.1 -j SNAT --to-source $i_eth1
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.2.1 -j SNAT --to-source $i_eth1
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 222.222.222.222 -j SNAT --to-source $i_eth1
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s $i_eth1 -j SNAT --to-source $i_eth1
  #
  # Rule 5 (NAT)
  #
  echo "Rule 5 (NAT)"
  #
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_eth1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
- done
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.2.1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 222.222.222.222 --dport 22 -j DNAT --to-destination 192.168.1.10:22
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_eth1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
  #
  # Rule 6 (NAT)
  #
  echo "Rule 6 (NAT)"
  #
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_eth1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
- done
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_eth1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
 
  # ================ Table 'filter', rule set Policy
  #
@@ -386,23 +381,17 @@ script_body() {
  #
  # Anti-spoofing rule
  $IPTABLES -N In_RULE_0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A INPUT -i eth1 -s $i_eth1 -j In_RULE_0
- done
+ $IPTABLES -A INPUT -i eth1 -s 0.0.0.0 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.1 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.2.1 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 222.222.222.222 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.0/24 -j In_RULE_0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A FORWARD -i eth1 -s $i_eth1 -j In_RULE_0
- done
+ $IPTABLES -A FORWARD -i eth1 -s 0.0.0.0 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.2.1 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 222.222.222.222 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_0
- $IPTABLES -A In_RULE_0 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
+ $IPTABLES -A In_RULE_0 -j LOG --log-level debug
  $IPTABLES -A In_RULE_0 -j DROP
  #
  # Rule 1 (eth1)
@@ -410,23 +399,25 @@ script_body() {
  echo "Rule 1 (eth1)"
  #
  # Anti-spoofing rule
- $IPTABLES -N Cid3B0C63EB.0
- $IPTABLES -A OUTPUT -o eth1 -j Cid3B0C63EB.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3B0C63EB.0 -s $i_eth1 -j RETURN
- done
- $IPTABLES -A Cid3B0C63EB.0 -s 192.168.1.1 -j RETURN
- $IPTABLES -A Cid3B0C63EB.0 -s 192.168.2.1 -j RETURN
- $IPTABLES -A Cid3B0C63EB.0 -s 222.222.222.222 -j RETURN
- $IPTABLES -N Out_RULE_1_3
- $IPTABLES -A Cid3B0C63EB.0 -j Out_RULE_1_3
- $IPTABLES -A Out_RULE_1_3 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A Out_RULE_1_3 -j DROP
- $IPTABLES -N Cid3B0C63EB.1
- $IPTABLES -A FORWARD -o eth1 -j Cid3B0C63EB.1
- $IPTABLES -A Cid3B0C63EB.1 -s 192.168.1.0/24 -j RETURN
- $IPTABLES -A Cid3B0C63EB.1 -j Out_RULE_1_3
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -N Out_RULE_1
+ $IPTABLES -A CHAIN -s 0.0.0.0 -j Out_RULE_1
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j Out_RULE_1
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j Out_RULE_1
+ $IPTABLES -A CHAIN -s 222.222.222.222 -j Out_RULE_1
+ $IPTABLES -A CHAIN -j Out_RULE_1
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -o eth1 -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.0/24 -j Out_RULE_1
+ $IPTABLES -A CHAIN -j Out_RULE_1
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_1 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_1 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 2 (eth1)
  #
@@ -435,27 +426,29 @@ script_body() {
  $IPTABLES -N In_RULE_2
  $IPTABLES -A INPUT -i eth1 -p icmp -m icmp -s ! 192.168.2.0/24 --icmp-type 8/0 -j In_RULE_2
  $IPTABLES -A FORWARD -i eth1 -p icmp -m icmp -s ! 192.168.2.0/24 --icmp-type 8/0 -j In_RULE_2
- $IPTABLES -A In_RULE_2 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A In_RULE_2 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A In_RULE_2 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A In_RULE_2 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  $IPTABLES -N Out_RULE_2
  $IPTABLES -A OUTPUT -o eth1 -p icmp -m icmp -s ! 192.168.2.0/24 --icmp-type 8/0 -j Out_RULE_2
  $IPTABLES -A FORWARD -o eth1 -p icmp -m icmp -s ! 192.168.2.0/24 --icmp-type 8/0 -j Out_RULE_2
- $IPTABLES -A Out_RULE_2 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A Out_RULE_2 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_2 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A Out_RULE_2 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 3 (eth1)
  #
  echo "Rule 3 (eth1)"
  #
- $IPTABLES -N Cid3E49FEF2.0
- $IPTABLES -A INPUT -i eth1 -p tcp -m tcp --dport 22 -m state --state NEW -j Cid3E49FEF2.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3E49FEF2.0 -d $i_eth1 -j ACCEPT
- done
- $IPTABLES -A Cid3E49FEF2.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3E49FEF2.0 -d 192.168.2.1 -j ACCEPT
- $IPTABLES -A Cid3E49FEF2.0 -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A INPUT -i eth1 -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (eth1)
  #
@@ -464,12 +457,12 @@ script_body() {
  $IPTABLES -N In_RULE_4
  $IPTABLES -A INPUT -i eth1 -p icmp -m icmp --icmp-type 8/0 -j In_RULE_4
  $IPTABLES -A FORWARD -i eth1 -p icmp -m icmp --icmp-type 8/0 -j In_RULE_4
- $IPTABLES -A In_RULE_4 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
+ $IPTABLES -A In_RULE_4 -j LOG --log-level debug
  $IPTABLES -A In_RULE_4 -j DROP
  $IPTABLES -N Out_RULE_4
  $IPTABLES -A OUTPUT -o eth1 -p icmp -m icmp --icmp-type 8/0 -j Out_RULE_4
  $IPTABLES -A FORWARD -o eth1 -p icmp -m icmp --icmp-type 8/0 -j Out_RULE_4
- $IPTABLES -A Out_RULE_4 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
+ $IPTABLES -A Out_RULE_4 -j LOG --log-level debug
  $IPTABLES -A Out_RULE_4 -j DROP
  #
  # Rule 5 (global)
@@ -477,15 +470,7 @@ script_body() {
  echo "Rule 5 (global)"
  #
  # OUTPUT
- $IPTABLES -N Cid469EDB0514508.0
- $IPTABLES -A OUTPUT -d 1.1.1.1 -j Cid469EDB0514508.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid469EDB0514508.0 -s $i_eth1 -j ACCEPT
- done
- $IPTABLES -A Cid469EDB0514508.0 -s 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid469EDB0514508.0 -s 192.168.2.1 -j ACCEPT
- $IPTABLES -A Cid469EDB0514508.0 -s 222.222.222.222 -j ACCEPT
+ $IPTABLES -A OUTPUT -d 1.1.1.1 -j ACCEPT
  #
  # Rule 6 (global)
  #
@@ -494,22 +479,13 @@ script_body() {
  # INTPUT with "-i +"
  # the "-i +" option is redundant if chain is INPUT,
  # it should be removed by optimization
- $IPTABLES -N Cid469F02B014773.0
- $IPTABLES -A INPUT -s 1.1.1.1 -j Cid469F02B014773.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid469F02B014773.0 -d $i_eth1 -j ACCEPT
- done
- $IPTABLES -A Cid469F02B014773.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid469F02B014773.0 -d 192.168.2.1 -j ACCEPT
- $IPTABLES -A Cid469F02B014773.0 -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A INPUT -s 1.1.1.1 -j ACCEPT
  #
  # Rule 7 (global)
  #
  echo "Rule 7 (global)"
  #
  # OUTPUT + FORWARD
- $IPTABLES -A OUTPUT -d 1.1.1.1 -j ACCEPT
  $IPTABLES -A FORWARD -o + -d 1.1.1.1 -j ACCEPT
  #
  # Rule 8 (global)
@@ -517,7 +493,6 @@ script_body() {
  echo "Rule 8 (global)"
  #
  # INPUT + FORWARD
- $IPTABLES -A INPUT -s 1.1.1.1 -j ACCEPT
  $IPTABLES -A FORWARD -i + -s 1.1.1.1 -j ACCEPT
  #
  # Rule 9 (global)
@@ -525,7 +500,6 @@ script_body() {
  echo "Rule 9 (global)"
  #
  # OUTPUT + FORWARD
- $IPTABLES -A OUTPUT -d 1.1.1.1 -j ACCEPT
  $IPTABLES -A FORWARD -d 1.1.1.1 -j ACCEPT
  #
  # Rule 10 (global)
@@ -533,83 +507,82 @@ script_body() {
  echo "Rule 10 (global)"
  #
  # INPUT + FORWARD
- $IPTABLES -A INPUT -s 1.1.1.1 -j ACCEPT
  $IPTABLES -A FORWARD -s 1.1.1.1 -j ACCEPT
  #
  # Rule 11 (global)
  #
  echo "Rule 11 (global)"
  #
- $IPTABLES -N Cid3B0C63B4.1
- $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j Cid3B0C63B4.1
- $IPTABLES -N Cid3B0C63B4.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3B0C63B4.1 -d $i_eth1 -j Cid3B0C63B4.0
- done
- $IPTABLES -A Cid3B0C63B4.1 -d 192.168.1.1 -j Cid3B0C63B4.0
- $IPTABLES -A Cid3B0C63B4.1 -d 192.168.2.1 -j Cid3B0C63B4.0
- $IPTABLES -A Cid3B0C63B4.1 -d 222.222.222.222 -j Cid3B0C63B4.0
- $IPTABLES -N Cid3B0C63B4.2
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j Cid3B0C63B4.2
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3B0C63B4.2 -d $i_eth1 -j Cid3B0C63B4.0
- done
- $IPTABLES -A Cid3B0C63B4.2 -d 192.168.1.1 -j Cid3B0C63B4.0
- $IPTABLES -A Cid3B0C63B4.2 -d 192.168.2.1 -j Cid3B0C63B4.0
- $IPTABLES -A Cid3B0C63B4.2 -d 222.222.222.222 -j Cid3B0C63B4.0
- $IPTABLES -A Cid3B0C63B4.0 -s 192.168.1.10 -j RETURN
- $IPTABLES -A Cid3B0C63B4.0 -s 192.168.1.20 -j RETURN
- $IPTABLES -N RULE_11_3
- $IPTABLES -A Cid3B0C63B4.0 -j RULE_11_3
- $IPTABLES -A RULE_11_3 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A RULE_11_3 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -N CHAIN
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j CHAIN
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j CHAIN
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -N RULE_11
+ $IPTABLES -A CHAIN -s 192.168.1.10 -j RULE_11
+ $IPTABLES -A CHAIN -s 192.168.1.20 -j RULE_11
+ $IPTABLES -A CHAIN -j RULE_11
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_11 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_11 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
  # testing negation in the policy rule
- $IPTABLES -N Cid3B0C63A9.0
- $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j Cid3B0C63A9.0
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j Cid3B0C63A9.0
- $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j Cid3B0C63A9.0
- $IPTABLES -A Cid3B0C63A9.0 -s 192.168.1.10 -j RETURN
- $IPTABLES -A Cid3B0C63A9.0 -s 192.168.1.20 -j RETURN
- $IPTABLES -N RULE_12_3
- $IPTABLES -A Cid3B0C63A9.0 -j RULE_12_3
- $IPTABLES -A RULE_12_3 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A RULE_12_3 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -N RULE_12
+ $IPTABLES -A CHAIN -s 192.168.1.10 -j RULE_12
+ $IPTABLES -A CHAIN -s 192.168.1.20 -j RULE_12
+ $IPTABLES -A CHAIN -j RULE_12
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_12 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_12 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 13 (global)
  #
  echo "Rule 13 (global)"
  #
  # testing negation in service field
- $IPTABLES -N Cid3B0C63BF.1
- $IPTABLES -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --days Sun,Mon -j Cid3B0C63BF.1
- $IPTABLES -N Cid3B0C63BF.0
- $IPTABLES -A Cid3B0C63BF.1 -d 192.168.1.10 -j Cid3B0C63BF.0
- $IPTABLES -A Cid3B0C63BF.1 -d 192.168.1.20 -j Cid3B0C63BF.0
- $IPTABLES -N Cid3B0C63BF.2
- $IPTABLES -A FORWARD -m time --timestart 01:01 --timestop 02:02 --days Sun,Mon -j Cid3B0C63BF.2
- $IPTABLES -A Cid3B0C63BF.2 -d 192.168.1.10 -j Cid3B0C63BF.0
- $IPTABLES -A Cid3B0C63BF.2 -d 192.168.1.20 -j Cid3B0C63BF.0
- $IPTABLES -A Cid3B0C63BF.0 -p tcp -m tcp -m multiport --dports 25,22 -j RETURN
- $IPTABLES -N RULE_13_3
- $IPTABLES -A Cid3B0C63BF.0 -j RULE_13_3
- $IPTABLES -A RULE_13_3 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
- $IPTABLES -A RULE_13_3 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 192.168.1.10 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j CHAIN
+ $IPTABLES -A OUTPUT -d 192.168.1.20 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j CHAIN
+ $IPTABLES -A FORWARD -d 192.168.1.10 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j CHAIN
+ $IPTABLES -A FORWARD -d 192.168.1.20 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j CHAIN
+ $IPTABLES -N RULE_13
+ $IPTABLES -A CHAIN -p tcp -m tcp -m multiport --dports 25,22 -j RULE_13
+ $IPTABLES -A CHAIN -j RULE_13
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_13 -j CHAIN
+ $IPTABLES -A CHAIN -j LOG --log-level debug
+ $IPTABLES -N CHAIN
+ $IPTABLES -A RULE_13 -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 14 (global)
  #
  echo "Rule 14 (global)"
  #
  $IPTABLES -N RULE_14
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.10 --dport 25 -m time --timestart 01:01 --timestop 02:02 --days Sun,Mon -j RULE_14
- $IPTABLES -A FORWARD -p tcp -m tcp -d 192.168.1.10 --dport 25 -m time --timestart 01:01 --timestop 02:02 --days Sun,Mon -j RULE_14
- $IPTABLES -A RULE_14 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.10 --dport 25 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j RULE_14
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 192.168.1.10 --dport 25 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j RULE_14
+ $IPTABLES -A RULE_14 -j LOG --log-level debug
  $IPTABLES -A RULE_14 -j DROP
  #
  # Rule 15 (global)
@@ -622,24 +595,13 @@ script_body() {
  # that are used in NAT rules
  # and are added as virtual
  # addresses
- $IPTABLES -N Cid3E4DD6AD.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 25 -m state --state NEW -j Cid3E4DD6AD.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3E4DD6AD.0 -d $i_eth1 -j ACCEPT
- done
- $IPTABLES -A Cid3E4DD6AD.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3E4DD6AD.0 -d 192.168.2.1 -j ACCEPT
- $IPTABLES -A Cid3E4DD6AD.0 -d 222.222.222.222 -j ACCEPT
- $IPTABLES -N Cid3E4DD6AD.1
- $IPTABLES -A INPUT -p tcp -m tcp --dport 25 -m state --state NEW -j Cid3E4DD6AD.1
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3E4DD6AD.1 -d $i_eth1 -j ACCEPT
- done
- $IPTABLES -A Cid3E4DD6AD.1 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3E4DD6AD.1 -d 192.168.2.1 -j ACCEPT
- $IPTABLES -A Cid3E4DD6AD.1 -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 25 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 25 -m state --state NEW -j ACCEPT
  #
  # Rule 17 (global)
  #
@@ -654,18 +616,13 @@ script_body() {
  #
  echo "Rule 18 (global)"
  #
- $IPTABLES -N Cid3E20A8E1.0
- $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j Cid3E20A8E1.0
- for i_eth1 in $i_eth1_list
- do
- test -n "$i_eth1" && $IPTABLES -A Cid3E20A8E1.0 -d $i_eth1 -j RETURN
- done
- $IPTABLES -A Cid3E20A8E1.0 -d 192.168.1.1 -j RETURN
- $IPTABLES -A Cid3E20A8E1.0 -d 192.168.2.1 -j RETURN
- $IPTABLES -A Cid3E20A8E1.0 -d 222.222.222.222 -j RETURN
- $IPTABLES -A Cid3E20A8E1.0 -j ACCEPT
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 19 (global)
  #
@@ -676,7 +633,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_19
  $IPTABLES -A INPUT -j RULE_19
  $IPTABLES -A FORWARD -j RULE_19
- $IPTABLES -A RULE_19 -j ULOG --ulog-nlgroup 7 --ulog-cprange 64 --ulog-qthreshold 1
+ $IPTABLES -A RULE_19 -j LOG --log-level debug
  $IPTABLES -A RULE_19 -j DROP
 }
 

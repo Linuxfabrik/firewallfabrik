@@ -346,19 +346,11 @@ script_body() {
  #
  # SSH Access to the host; useful ICMP
  # types; ping request
- $IPTABLES -N Cid41528C32.0
- $IPTABLES -A OUTPUT -d 10.3.14.58 -m state --state NEW -j Cid41528C32.0
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 3 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 0/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 8/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 11/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 11/1 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p tcp -m tcp --dport 22 -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 0/0 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 11/0 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 11/1 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 10.3.14.58 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -p icmp -m icmp -j ACCEPT
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 22 -j ACCEPT
+ $IPTABLES -A INPUT -p icmp -m icmp -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (global)

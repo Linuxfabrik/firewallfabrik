@@ -142,6 +142,13 @@ class FWObjectDropArea(QFrame):
             event.ignore()
             return
 
+        # The tree encodes a list of entries; take the first one.
+        if isinstance(payload, list):
+            if not payload:
+                event.ignore()
+                return
+            payload = payload[0]
+
         obj_id = payload.get('id')
         obj_type = payload.get('type', '')
         obj_name = payload.get('name', '')
