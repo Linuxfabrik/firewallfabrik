@@ -750,7 +750,12 @@ class ObjectTree(QWidget):
             font.setBold(not inactive and needs_compile(obj))
             item.setFont(0, font)
 
-            attrs = obj_brief_attrs(obj)
+            parent = item.parent()
+            under_iface = (
+                parent is not None
+                and parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Interface'
+            )
+            attrs = obj_brief_attrs(obj, under_interface=under_iface)
             item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs)
             item.setText(1, attrs)
 

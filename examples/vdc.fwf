@@ -8632,7 +8632,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771445063
+              lastModified: 1771880787
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -8707,7 +8707,7 @@ libraries:
                     name: 'cloud:eth0:ip'
                     inet_addr_mask:
                       address: '192.0.2.5'
-                      netmask: ''
+                      netmask: '255.255.255.0'
               - name: 'lo'
                 data:
                   label: 'loopback'
