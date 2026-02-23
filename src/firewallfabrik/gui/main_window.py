@@ -429,6 +429,8 @@ class FWWindow(QMainWindow):
         self.addAction(self._undo_action)
         self.addAction(self._redo_action)
 
+        self._apply_theme_icons()
+
         # Clipboard and delete actions — route based on focus.
         # NOTE: editCopyAction, editCutAction, editPasteAction, and
         # editDeleteAction are already connected to their slots via the
@@ -615,6 +617,44 @@ class FWWindow(QMainWindow):
         undo_visible = settings.value('View/UndoStack', False, type=bool)
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
+
+    def _apply_theme_icons(self):
+        """Override QRC icons with system theme icons where available.
+
+        Only replaces an action's icon when the theme provides a non-null
+        icon, so the .ui file icons serve as automatic fallbacks.
+        """
+        mapping = {
+            '_redo_action': QIcon.ThemeIcon.EditRedo,
+            '_undo_action': QIcon.ThemeIcon.EditUndo,
+            'backAction': QIcon.ThemeIcon.GoPrevious,
+            'editCopyAction': QIcon.ThemeIcon.EditCopy,
+            'editCutAction': QIcon.ThemeIcon.EditCut,
+            'editDeleteAction': QIcon.ThemeIcon.EditDelete,
+            'editPasteAction': QIcon.ThemeIcon.EditPaste,
+            'fileCloseAction': QIcon.ThemeIcon.WindowClose,
+            'fileExitAction': QIcon.ThemeIcon.ApplicationExit,
+            'fileNewAction': QIcon.ThemeIcon.DocumentNew,
+            'fileOpenAction': QIcon.ThemeIcon.DocumentOpen,
+            'filePrintAction': QIcon.ThemeIcon.DocumentPrint,
+            'fileReloadAction': QIcon.ThemeIcon.DocumentRevert,
+            'fileSaveAction': QIcon.ThemeIcon.DocumentSave,
+            'fileSaveAsAction': QIcon.ThemeIcon.DocumentSaveAs,
+            'findAction': QIcon.ThemeIcon.EditFind,
+            'forwardAction': QIcon.ThemeIcon.GoNext,
+            'helpAboutAction': QIcon.ThemeIcon.HelpAbout,
+            'newObjectAction': QIcon.ThemeIcon.ListAdd,
+            'toolbarFileNew': QIcon.ThemeIcon.DocumentNew,
+            'toolbarFileOpen': QIcon.ThemeIcon.DocumentOpen,
+            'toolbarFileSave': QIcon.ThemeIcon.DocumentSave,
+        }
+        for attr, theme_icon in mapping.items():
+            action = getattr(self, attr, None)
+            if action is None:
+                continue
+            icon = QIcon.fromTheme(theme_icon)
+            if not icon.isNull():
+                action.setIcon(icon)
 
     def _save_if_modified(self):
         """Prompt the user to save unsaved changes.
