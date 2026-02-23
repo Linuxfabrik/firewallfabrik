@@ -76,6 +76,7 @@ from firewallfabrik.gui.object_tree import (
     ObjectTree,
     create_library_folder_structure,
 )
+from firewallfabrik.gui.object_tree_data import LOCKABLE_TYPES
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.rule_set_window_manager import RuleSetWindowManager
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -272,6 +273,9 @@ class FWWindow(QMainWindow):
         self._object_tree.where_used_requested.connect(self._on_where_used_from_tree)
         self._object_tree.compile_requested.connect(self.compile)
         self._object_tree.install_requested.connect(self.install)
+        self._object_tree._tree.itemSelectionChanged.connect(
+            self._update_lock_actions,
+        )
         self._object_tree.set_db_manager(self._db_manager)
 
         # Clipboard routing (copy/cut/paste/delete based on focus).
@@ -1690,6 +1694,23 @@ class FWWindow(QMainWindow):
         if activate_obj_id:
             self._open_object_editor(activate_obj_id, activate_obj_type)
 
+    def _update_lock_actions(self):
+        """Enable or disable Object > Lock/Unlock based on the current tree selection."""
+        items = self._object_tree._tree.selectedItems()
+        # Find the first selected item with an object type.
+        obj_type = ''
+        obj_is_locked = False
+        lib_is_ro = False
+        for it in items:
+            obj_type = it.data(0, Qt.ItemDataRole.UserRole + 1) or ''
+            if obj_type:
+                obj_is_locked = it.data(0, Qt.ItemDataRole.UserRole + 7) or False
+                lib_is_ro = self._object_tree._get_library_ro(it)
+                break
+        can_lock = obj_type in LOCKABLE_TYPES and not lib_is_ro
+        self.ObjectLockAction.setEnabled(can_lock and not obj_is_locked)
+        self.ObjectUnlockAction.setEnabled(can_lock and obj_is_locked)
+
     @Slot()
     def toggleViewObjectTree(self):
         """Show or hide the object tree panel."""
@@ -2056,8 +2077,7 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def lockObject(self):
-        # TODO
-        pass
+        self._object_tree._actions._ctx_lock()
 
     @Slot()
     def toolsImportAddressesFromFile(self):
@@ -2071,8 +2091,7 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def unlockObject(self):
-        # TODO
-        pass
+        self._object_tree._actions._ctx_unlock()
 
     @staticmethod
     def _gather_all_tags(session):
