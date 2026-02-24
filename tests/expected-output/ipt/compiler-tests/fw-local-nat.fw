@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-local-nat.fw /fw-local-nat.fw
+# files: * fw-local-nat.fw /etc/fw/fw-local-nat.fw
 #
 # Compiled for iptables (any version)
 #

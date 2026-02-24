@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall95.fw /etc/fw/firewall95.fw
+#
 #  firewall has intrface with netmask /31
 #
 

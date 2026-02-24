@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall7.fw /etc/fw/firewall7.fw
+#
 #  testing rules with broadcasts and multicasts and action-on-reject "TCP reset"
 
 #  testing rules used for DHCP relay running on the firewall between interfaces eth0 and eth2

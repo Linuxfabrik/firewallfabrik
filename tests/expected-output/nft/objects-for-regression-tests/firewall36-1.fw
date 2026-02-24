@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall36-1.fw /etc/firewall36-1.fw
+#
 #  Testing routing configuration where routing rules do not install default route
 #
 

@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall-ipv6-5.fw /etc/firewall-ipv6-5.fw
+#
 #  two interfaces, one has ipv4 address, another ipv6
 #  Combined ipv6+ipv6 ruleset. Only interface with address
 #  that matches address family should be used in generated rule

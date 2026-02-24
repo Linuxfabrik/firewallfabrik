@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall23-3.fw /etc/fw/firewall23-3.fw
+#
 
 #  This is BRIDGING FIREWALL
 #  with one bridge and wildcard bridge port interfaces.

@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall2-5.fw /etc/fw/firewall2-5.fw
+#
 #  various tests for the "-o itf" clause in SNAT rules
 #
 

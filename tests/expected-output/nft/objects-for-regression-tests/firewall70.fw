@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall70.fw iptables.sh
+#
 #  this firewall translates outgoing connections using address of the particular interface (not external one). Also testing different cmbinations of objects in the policy rules on loopback interface. Finally, testing for a situation when dynamic interface "shades" a rule with old broadcast
 
 #  Also the name of the script on the firewall is different

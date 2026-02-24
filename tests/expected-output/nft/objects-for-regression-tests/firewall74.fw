@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall74.fw /etc/fw/firewall74.fw
+#
 #  this firewall uses iptables-restore format and has no rules
 #
 

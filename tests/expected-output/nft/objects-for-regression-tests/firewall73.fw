@@ -6,6 +6,8 @@
 #
 #  Generated TIMESTAMP
 #
+# files: * firewall73.fw /etc/fw/firewall73.fw
+#
 #  testing for "-i +" that is generated
 #  when interface rule element is "any"
 #  but direction is inbound. Trying different
