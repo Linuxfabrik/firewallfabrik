@@ -16,6 +16,7 @@ pre-commit install
 Detailed developer documentation lives in [`docs/developer-guide/`](docs/developer-guide/):
 
 * [DatabaseManager](docs/developer-guide/DatabaseManager.md)
+* [Debugging](docs/developer-guide/Debugging.md)
+* [DesignDecisions](docs/developer-guide/DesignDecisions.md)
 * [RuleProcessors](docs/developer-guide/RuleProcessors.md)
 * [Testing](docs/developer-guide/Testing.md)
-* [Debugging](docs/developer-guide/Debugging.md)
