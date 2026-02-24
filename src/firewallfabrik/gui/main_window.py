@@ -10,6 +10,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import contextlib
 import importlib.resources
 import logging
 import subprocess
@@ -68,7 +69,6 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.clipboard_router import ClipboardRouter
-from firewallfabrik.gui.clipboard_store import ClipboardStore
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
 from firewallfabrik.gui.find_panel import FindPanel
@@ -94,6 +94,7 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 from firewallfabrik.gui.update_library_preview_dialog import (
     UpdateLibraryPreviewDialog,
 )
+from firewallfabrik.gui.window_registry import WindowRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -499,6 +500,7 @@ class FWWindow(QMainWindow):
 
         self._closing = False
         self._current_file = None
+        self._display_file = None
         self._db_manager = DatabaseManager()
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
@@ -512,8 +514,8 @@ class FWWindow(QMainWindow):
         self._new_object_menu.aboutToShow.connect(self._populate_new_object_menu)
         self.newObjectAction.setMenu(self._new_object_menu)
 
-        # Shared clipboard for tree and policy views.
-        self._clipboard_store = ClipboardStore()
+        # Shared clipboard for tree and policy views (shared across windows).
+        self._clipboard_store = WindowRegistry.instance().shared_clipboard
 
         # Object tree + splitter layout
         self._object_tree = ObjectTree(clipboard_store=self._clipboard_store)
@@ -572,6 +574,7 @@ class FWWindow(QMainWindow):
         self._clipboard = ClipboardRouter(
             self._object_tree,
             self._rs_mgr.active_policy_view,
+            parent_window=self,
         )
         QApplication.instance().focusChanged.connect(self._clipboard.on_focus_changed)
 
@@ -739,6 +742,8 @@ class FWWindow(QMainWindow):
         self.editorDockWidget.blockSignals(False)
         self.undoDockWidget.blockSignals(False)
 
+        WindowRegistry.instance().register(self)
+
     def showEvent(self, event):
         super().showEvent(event)
         if self._start_maximized:
@@ -756,6 +761,16 @@ class FWWindow(QMainWindow):
             self._object_tree.save_tree_state(str(display))
             self._rs_mgr.save_state()
         self._closing = True
+
+        # Disconnect this window's clipboard router from the global
+        # focusChanged signal so it doesn't fire after destruction.
+        with contextlib.suppress(RuntimeError):
+            QApplication.instance().focusChanged.disconnect(
+                self._clipboard.on_focus_changed,
+            )
+
+        WindowRegistry.instance().unregister(self)
+
         settings = QSettings()
         # Capture dock visibility *before* saveState() / destruction can
         # change it.  These explicit keys are what _restore_view_state()
@@ -981,7 +996,21 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def fileNew(self):
-        """Create a new object file (mirrors fwbuilder ProjectPanel::fileNew())."""
+        """Create a new object file (mirrors fwbuilder ProjectPanel::fileNew()).
+
+        If the current window already has a file loaded, the new file is
+        created in a brand-new FWWindow.  Otherwise it is loaded in place.
+        """
+        if self._current_file is not None or self._display_file is not None:
+            # Current window has a file — open a new window.
+            win = FWWindow()
+            win.show()
+            win._do_file_new()
+        else:
+            self._do_file_new()
+
+    def _do_file_new(self):
+        """Internal: create a new object file in *this* window."""
         if not self._save_if_modified():
             return
 
@@ -1090,7 +1119,23 @@ class FWWindow(QMainWindow):
         )
         if not file_name:
             return
-        self._load_file(Path(file_name).resolve())
+        file_path = Path(file_name).resolve()
+
+        # If the file is already open in another window, activate it.
+        existing = WindowRegistry.instance().already_opened(file_path)
+        if existing is not None:
+            existing.activateWindow()
+            existing.raise_()
+            return
+
+        # If this window has no file loaded, open here.
+        if self._current_file is None and self._display_file is None:
+            self._load_file(file_path)
+        else:
+            # Open in a new window.
+            win = FWWindow()
+            win.show()
+            win._load_file(file_path)
 
     @Slot()
     def fileSave(self):
@@ -1158,6 +1203,13 @@ class FWWindow(QMainWindow):
     def fileClose(self):
         if not self._save_if_modified():
             return
+
+        # When other windows are open, close this window entirely.
+        if WindowRegistry.instance().window_count() > 1:
+            self.close()
+            return
+
+        # Last window — revert to no-file state.
         display = getattr(self, '_display_file', None)
         if display:
             self._object_tree.save_tree_state(str(display))
@@ -1253,7 +1305,16 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def fileExit(self):
-        self.close()
+        """Prompt to save all windows, then close everything and quit."""
+        registry = WindowRegistry.instance()
+        # Ask each window to save unsaved changes.  If any cancels, abort.
+        for win in registry.all_windows():
+            if not win._save_if_modified():
+                return
+        # Close all windows (closeEvent will unregister each one).
+        for win in list(registry.all_windows()):
+            win._closing = True
+            win.close()
 
     @Slot()
     def editPrefs(self):
@@ -2225,6 +2286,13 @@ class FWWindow(QMainWindow):
             )
             return
 
+        # If the file is already open in another window, just activate it.
+        existing = WindowRegistry.instance().already_opened(file_path)
+        if existing is not None and existing is not self:
+            existing.activateWindow()
+            existing.raise_()
+            return
+
         if not self._save_if_modified():
             return
 
@@ -2377,8 +2445,25 @@ class FWWindow(QMainWindow):
     @Slot()
     def _open_recent_file(self):
         action = self.sender()
-        if action:
-            self._load_file(Path(action.data()))
+        if not action:
+            return
+        file_path = Path(action.data()).resolve()
+
+        # If the file is already open in another window, activate it.
+        existing = WindowRegistry.instance().already_opened(file_path)
+        if existing is not None:
+            existing.activateWindow()
+            existing.raise_()
+            return
+
+        # If this window has no file loaded, open here.
+        if self._current_file is None and self._display_file is None:
+            self._load_file(file_path)
+        else:
+            # Open in a new window.
+            win = FWWindow()
+            win.show()
+            win._load_file(file_path)
 
     @Slot()
     def clearRecentFilesMenu(self):

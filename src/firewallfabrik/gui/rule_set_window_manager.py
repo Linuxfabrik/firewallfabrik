@@ -502,6 +502,32 @@ class RuleSetWindowManager(QObject):
                     lambda _checked, s=sub: self._mdi_area.setActiveSubWindow(s),
                 )
 
+        # --- Open files section (all FWWindow instances) ---
+        from firewallfabrik.gui.window_registry import WindowRegistry
+
+        registry = WindowRegistry.instance()
+        windows = registry.all_windows()
+        if len(windows) > 1:
+            menu.addSeparator()
+            parent_window = self.parent()
+            file_group = QActionGroup(menu)
+            file_group.setExclusive(True)
+            for win in windows:
+                display = getattr(win, '_display_file', None)
+                current = getattr(win, '_current_file', None)
+                label = str(
+                    display.name
+                    if display
+                    else (current.name if current else 'Untitled')
+                )
+                action = menu.addAction(label)
+                action.setCheckable(True)
+                action.setChecked(win is parent_window)
+                file_group.addAction(action)
+                action.triggered.connect(
+                    lambda _checked, w=win: (w.activateWindow(), w.raise_()),
+                )
+
     def minimize_active(self):
         """Minimize the active MDI sub-window."""
         sub = self._mdi_area.activeSubWindow()

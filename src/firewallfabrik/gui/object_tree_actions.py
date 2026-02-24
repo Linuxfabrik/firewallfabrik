@@ -333,13 +333,14 @@ class TreeActionHandler:
                 entries.append({'id': oid, 'type': otype, 'cut': False})
         if not entries:
             return
-        self._clipboard_store.set_tree(entries)
+        self._clipboard_store.set_tree(entries, source_db_manager=self._db_manager)
         # Policy-view clipboard stays single-item for rule cell paste.
         first = selection[0]
         self._clipboard_store.set_object(
             first.data(0, Qt.ItemDataRole.UserRole),
             first.text(0),
             first.data(0, Qt.ItemDataRole.UserRole + 1),
+            source_db_manager=self._db_manager,
         )
 
     def _ctx_cut(self):
@@ -354,18 +355,23 @@ class TreeActionHandler:
                 entries.append({'id': oid, 'type': otype, 'cut': True})
         if not entries:
             return
-        self._clipboard_store.set_tree(entries)
+        self._clipboard_store.set_tree(entries, source_db_manager=self._db_manager)
         first = selection[0]
         self._clipboard_store.set_object(
             first.data(0, Qt.ItemDataRole.UserRole),
             first.text(0),
             first.data(0, Qt.ItemDataRole.UserRole + 1),
+            source_db_manager=self._db_manager,
         )
 
     def _ctx_paste(self, item):
         """Paste all clipboard objects relative to *item*."""
         if self._clipboard_store.tree_entries is None or self._db_manager is None:
             return
+
+        # Detect cross-file paste (objects copied from a different database).
+        source_db = self._clipboard_store.tree_source_db
+        is_cross_file = source_db is not None and source_db is not self._db_manager
 
         # When pasting onto a leaf object (e.g. a Firewall), resolve
         # upward to the nearest container so the clone becomes a sibling.
@@ -410,7 +416,21 @@ class TreeActionHandler:
             if model_cls is None:
                 continue
 
-            if cb['cut']:
+            if is_cross_file:
+                # Cross-file paste: always deep-copy, never move.
+                new_id = self._ops.duplicate_object_cross_db(
+                    source_db,
+                    cb_id,
+                    model_cls,
+                    target_lib_id,
+                    folder=target_folder,
+                    prefix=prefix,
+                    target_interface_id=target_iface_id,
+                    target_group_id=target_group_id,
+                )
+                if new_id is not None:
+                    last_id = new_id
+            elif cb['cut']:
                 any_cut = True
                 if self._ops.move_object(
                     cb_id,

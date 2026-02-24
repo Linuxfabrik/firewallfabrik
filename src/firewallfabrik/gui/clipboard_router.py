@@ -43,16 +43,19 @@ class ClipboardRouter:
     QLineEdit, etc.) always get native clipboard handling.
     """
 
-    def __init__(self, object_tree, get_active_policy_view):
+    def __init__(self, object_tree, get_active_policy_view, *, parent_window=None):
         """Initialise the router.
 
         Args:
             object_tree: :class:`ObjectTree` instance.
             get_active_policy_view: Callable returning the active
                 :class:`PolicyView` or *None*.
+            parent_window: The owning :class:`FWWindow`.  When set,
+                focus changes in other windows are ignored.
         """
         self._object_tree = object_tree
         self._get_active_policy_view = get_active_policy_view
+        self._parent_window = parent_window
         self._focus_owner: FocusOwner = FocusOwner.NONE
 
     def on_focus_changed(self, _old, new):
@@ -67,6 +70,9 @@ class ClipboardRouter:
         """
         if new is None or not shiboken6.isValid(new):
             self._focus_owner = FocusOwner.NONE
+            return
+        # Ignore focus changes that belong to a different FWWindow.
+        if self._parent_window is not None and new.window() is not self._parent_window:
             return
         if isinstance(new, (QLineEdit, QTextEdit)):
             self._focus_owner = FocusOwner.TEXT
