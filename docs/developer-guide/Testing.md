@@ -189,9 +189,21 @@ pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-
 pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-test" 2>&1 | grep XPASS
 ```
 
-### Why Not Regenerate the Expected Output Files?
+### WARNING: Do Not Modify the iptables Expected Output for `.fwb` Fixtures
 
-The expected output files for the C++ reference fixtures (`objects-for-regression-tests`, `cluster-tests`, `optimizer-test`) were produced by the **C++ compiler**, not the Python one. They represent the reference behavior we are porting to Python. Regenerating them with `update_expected_output.py` would overwrite the C++ reference output with Python output, defeating the purpose. Only regenerate expected output files for **`.fwf` fixtures** whose expected output files were produced by the Python compiler.
+> **The iptables expected output files for `objects-for-regression-tests`, `cluster-tests`, and `optimizer-test` were compiled with the old, known-good C++ `fwb_ipt` compiler and must not be modified or regenerated.**
+
+These files are the **ground truth** for the Python iptables compiler. They define the correct behavior we are reimplementing. If you regenerate them with `update_expected_output.py`, you will overwrite the C++ reference with Python compiler output, which defeats the entire purpose of these regression tests.
+
+**Do:**
+- Use these files as-is to validate the Python compiler against the C++ reference.
+- Regenerate expected output only for **`.fwf` fixtures** (e.g., `compiler-tests`, `basic_accept_deny`, `reject_actions`), whose expected output is produced by the Python compiler.
+- Regenerate **nftables** expected output and carefully review the changes — there is no C++ nftables reference compiler.
+
+**Do not:**
+- Run `update_expected_output.py --platform ipt` on `.fwb` fixtures.
+- Manually edit the iptables `.fw` files under `expected-output/ipt/objects-for-regression-tests/`, `expected-output/ipt/cluster-tests/`, or `expected-output/ipt/optimizer-test/`.
+- Re-normalize these files (they are already normalized).
 
 ## Limitation: Compiler Aborts Cannot Be Tested
 
