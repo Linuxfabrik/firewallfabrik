@@ -1,7 +1,7 @@
 <h1 align="center">
   <a href="https://linuxfabrik.ch" target="_blank">
     <picture>
-      <img width="600" src="https://raw.githubusercontent.com/Linuxfabrik/firewallfabrik/refs/heads/main/src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg">
+      <img width="600" src="https://raw.githubusercontent.com/Linuxfabrik/firewallfabrik/refs/heads/main/src/firewallfabrik/resources/images/fwf.png">
     </picture>
   </a>
   <br />
