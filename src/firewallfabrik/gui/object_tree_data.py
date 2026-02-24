@@ -627,7 +627,8 @@ def obj_brief_attrs(obj, under_interface=False):
         host_os = data.get('host_OS', '')
         host_os = HOST_OS.get(host_os, host_os)
         if platform:
-            return f'{platform}({version or "- any -"}) / {host_os}'
+            ver_part = f' {version}' if version else ''
+            return f'{platform}{ver_part} on {host_os}'
         return ''
 
     # -- Services --
