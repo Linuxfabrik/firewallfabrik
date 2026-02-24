@@ -319,6 +319,10 @@ script_body() {
  $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # drop TCP sessions opened prior firewall restart
+ $IPTABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ $IPTABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ $IPTABLES -A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
 
  # ================ Table 'filter', rule set Policy
  #

@@ -118,6 +118,9 @@ check_tools() {
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
+ find_program $VCONFIG
+ find_program $BRCTL
+ find_program $IFENSLAVE
 }
 reset_iptables_v4() {
  local list
@@ -248,6 +251,302 @@ clear_addresses_except_known_interfaces() {
  $FWBDEBUG $IP link set $intf down
  done
 }
+missing_vlan() {
+ vlan=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ set $vlan
+ subint=$1
+ parent=$2
+ IFS=$oldIFS
+
+ vlan_id=$(echo $subint | sed -r 's/(vlan|[^.]*\.)//')
+ test "$cmd" = "add" && {
+ echo $subint | grep -q "vlan" && name_type="VLAN_PLUS_VID" || name_type="DEV_PLUS_VID"
+ test "$vlan_id" \< "1" || name_type="${name_type}_NO_PAD"
+ echo "# Adding VLAN interface $subint (parent: $parent)"
+ $FWBDEBUG $VCONFIG set_name_type $name_type
+ $FWBDEBUG $VCONFIG $cmd $parent $vlan_id
+ $FWBDEBUG $IP link set $subint up
+ }
+ test "$cmd" = "rem" && {
+ echo "# Removing VLAN interface $subint (parent: $parent)"
+ $FWBDEBUG $VCONFIG $cmd $subint
+ }
+}
+
+parse_fwb_vlans() {
+ set $1
+ vlan_parent_interface=$1
+ shift
+
+ FWB_VLANS=$(
+ for subint in $*; do
+ echo "${subint}@$vlan_parent_interface"
+ done | sort
+ )
+ echo $FWB_VLANS
+}
+
+parse_current_vlans() {
+ vlan_parent_interface=$1
+ CURRENT_VLANS=""
+ PROC_DIR="/proc/net/vlan/"
+ test -d $PROC_DIR || $MODPROBE 8021q || {
+ echo "$PROC_DIR does not exist. Vlan interfaces are not available."
+ exit 1
+ }
+
+ test -f "/proc/net/vlan/config" && {
+ CURRENT_VLANS=$(
+ cat /proc/net/vlan/config | grep -v 'Dev name' | grep $vlan_parent_interface | \
+ while read subint a vlan_id b parent; do
+ echo "${subint}@$parent"
+ done | sort
+ )
+ }
+ echo $CURRENT_VLANS
+}
+
+update_vlans_of_interface() {
+ args="$1"
+ set $1
+ vlan_parent_interface=$1
+
+ FWB_VLANS=$(parse_fwb_vlans "$args")
+ CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+
+ $IP link set $vlan_parent_interface up
+ diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
+ diff_intf missing_vlan "$CURRENT_VLANS" "$FWB_VLANS" rem
+}
+
+add_vlans() {
+ args="$1"
+ set $1
+ vlan_parent_interface=$1
+
+ FWB_VLANS=$(parse_fwb_vlans $args)
+ CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+
+ $IP link set $vlan_parent_interface up
+ diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
+}
+
+clear_vlans_except_known() {
+ FWB_VLANS=$*
+ CURRENT_VLANS=$(parse_current_vlans '|')
+
+ diff_intf missing_vlan "$CURRENT_VLANS" "$FWB_VLANS" rem
+}
+
+missing_port() {
+ intf=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ set $intf
+ port=$1
+ bridge_interface=$2
+ IFS=$oldIFS
+
+ echo "# Updating bridge configuration: $cmd $bridge_interface $port"
+ $FWBDEBUG $BRCTL $cmd $bridge_interface $port
+ test "$cmd" = "addif" && $FWBDEBUG $IP link set $port up
+}
+
+# update_bridge br0 "eth2 eth3"
+update_bridge() {
+ bridge_interface=$1
+ shift
+
+ FWB_PORTS=""
+ CURRENT_PORTS=""
+
+ FWB_PORTS=$(
+ for subint in $*; do
+ echo "${subint}@$bridge_interface"
+ done | sort
+ )
+
+ # this is really redundant because we create missing bridge
+ # interfaces in sync_bridge_interfaces. However will leave this
+ # here so that function update_bridge can be used without prior
+ # call to sync_bridge_interfaces The difference is that
+ # sync_bridge_interfaces also deletes bridge interfaces that exist
+ # on the machine but are missing in fwbuilder confgiuration. The
+ # update_bridge function can only add bridge interfaces.
+ $BRCTL showmacs $bridge_interface >/dev/null 2>&1 || {
+ echo "# Creating bridge interface $bridge_interface"
+ $FWBDEBUG $BRCTL addbr $bridge_interface
+ $FWBDEBUG $IP link set $bridge_interface up
+ }
+
+ PORTS=$(
+ $BRCTL show | \
+ awk '($1~/^br/) { printf "\n"; }
+ (!/bridge name/ && NF>3) {printf "%s %s ", $1,$NF;}
+ (NF==1) {printf "%s ",$1;}' | grep $bridge_interface
+ )
+
+ test -n "$PORTS" && {
+ set $PORTS
+ shift
+ CURRENT_PORTS=$(
+ for subint in $*; do
+ echo "${subint}@$bridge_interface"
+ done | sort
+ )
+ }
+
+ # first delete bridge ports, then add. This way, if an interface
+ # moves from one bridge to another, we remove it first and then
+ # add. It would not work if we tried to add it first, brctl issues
+ # an error:
+ # device eth2 is already a member of a bridge; can't enslave it to bridge br1.
+ #
+ diff_intf missing_port "$CURRENT_PORTS" "$FWB_PORTS" delif
+ diff_intf missing_port "$FWB_PORTS" "$CURRENT_PORTS" addif
+}
+
+sync_bridge_interfaces() {
+ $BRCTL show | awk -v IGNORED="$*" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ ($1 ~ /^br[0-9]/ && !($1 in ignored_dict)) {print $1;}' | \
+ while read brintf; do
+ echo "# Deleting bridge interface $brintf"
+ $FWBDEBUG $IP link set $brintf down
+ $FWBDEBUG $BRCTL delbr $brintf
+ done
+
+ for brint in $*; do
+ $BRCTL showmacs $brint >/dev/null 2>&1 || {
+ echo "# Creating bridge interface $brintf"
+ $FWBDEBUG $BRCTL addbr $brint
+ $FWBDEBUG $IP link set $brint up
+ }
+ done
+}
+
+missing_bond() {
+ bond_intf=$1
+ cmd=$2
+
+ test "$cmd" = "down" && {
+ echo "# Bring unconfigured bonding interface $bond_intf down"
+ $FWBDEBUG $IP link set $bond_intf down
+ }
+}
+
+missing_slave() {
+ slave=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ set $slave
+ intf=$1
+ bond_interface=$2
+ IFS=$oldIFS
+
+ test "$cmd" = "-d" && {
+ echo "# Delete bonding interface slave: $bond_interface $intf"
+ $FWBDEBUG $IFENSLAVE -d $bond_interface $intf
+ } || {
+ echo "# Add bonding interface slave: $bond_interface $intf"
+ $FWBDEBUG $IP link set $bond_interface up
+ $FWBDEBUG $IFENSLAVE $bond_interface $intf
+ }
+}
+
+load_bonding_module() {
+ bonding_interfaces=$1
+ shift
+ module_parameters=$*
+
+ PROC_DIR="/proc/net/bonding/"
+ test -d $PROC_DIR || {
+ cmd="$MODPROBE bonding $module_parameters"
+ test -n "$FWBDEBUG" && echo "# $cmd" || $cmd || {
+ # Module load failed.
+ cat <<EOF
+
+Could not load bonding interface module. Try to add
+module parameters to the file /etc/modprobe.conf or
+/etc/modprobe.d/bond.conf and reboot
+EOF
+ # do not abort in test mode
+ test -z "$FWBDEBUG" && exit 1
+ }
+ }
+ ## test that we now have bonding interfaces that we need
+ for bondint in $bonding_interfaces; do
+ PROD_BOND_IFACE="${PROC_DIR}/$bondint"
+ test -f $PROD_BOND_IFACE || {
+ echo "Bonding interface $bondint does not exist"
+ test -z "$FWBDEBUG" && exit 1
+ }
+ done
+}
+
+unload_bonding_module() {
+ $MODPROBE -r bonding
+}
+
+update_bonding() {
+ bond_interface=$1
+ shift
+
+ PROC_DIR="/proc/net/bonding/"
+ PROD_BOND_IFACE="${PROC_DIR}/$bond_interface"
+ test -f $PROD_BOND_IFACE && {
+
+ FWB_SLAVES=""
+ CURRENT_SLAVES=""
+
+ FWB_SLAVES=$(
+ for subint in $*; do
+ echo "${subint}@$bond_interface"
+ done | sort
+ )
+
+ CURRENT_SLAVES=$(
+ cat $PROD_BOND_IFACE | grep 'Slave Interface:' | \
+ while read a b slave; do
+ echo "${slave}@$bond_interface"
+ done | sort
+ )
+
+ diff_intf missing_slave "$FWB_SLAVES" "$CURRENT_SLAVES" " "
+ diff_intf missing_slave "$CURRENT_SLAVES" "$FWB_SLAVES" "-d"
+ }
+}
+
+clear_bonding_except_known() {
+ PROC_DIR="/proc/net/bonding/"
+ ls $PROC_DIR | awk -v IGNORED="$*" \
+ 'BEGIN {
+ split(IGNORED,ignored_arr);
+ for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+ }
+ (!($1 in ignored_dict)) {print $1;}' | \
+ while read bond_intf; do
+ PROD_BOND_IFACE="${PROC_DIR}/$bond_intf"
+ slaves=$(cat $PROD_BOND_IFACE | awk '/[sS]lave [iI]nterface:/ { printf "%s ",$NF;}')
+ test -n "$slaves" && {
+ echo "Removing slaves and bringing unconfigured bonding interface $bond_intf down"
+ $FWBDEBUG $IP link set $bond_intf up
+ $FWBDEBUG $IFENSLAVE -d $bond_intf $slaves
+ $FWBDEBUG $IP link set $bond_intf down
+ }
+ done
+}
 
 check_file() {
  test -r "$2" || {
@@ -307,6 +606,13 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
+ load_bonding_module "bond1" max_bonds=1 mode=balance-xor xmit_hash_policy=layer3+4
+ update_bonding bond1 eth2 eth3
+ clear_bonding_except_known bond1
+ update_vlans_of_interface "eth0 eth0.100"
+ update_vlans_of_interface "bond1 bond1.123"
+ clear_vlans_except_known eth0.100@eth0 bond1.123@bond1
+ sync_bridge_interfaces
  update_addresses_of_interface "bond1 192.168.1.2/24" ""
  update_addresses_of_interface "bond1.123 172.16.2.1/24" ""
  update_addresses_of_interface "eth0 172.24.0.2/16" ""
@@ -329,7 +635,9 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
+ $IPTABLES -A OUTPUT -d 172.16.2.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -d 192.168.1.2 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -d 172.16.2.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -d 192.168.1.2 -m state --state NEW -j ACCEPT
 }
 

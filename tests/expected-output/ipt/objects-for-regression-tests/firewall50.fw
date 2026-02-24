@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall50.fw /firewall50.fw
+# files: * firewall50.fw /etc/fw/firewall50.fw
 #
 # Compiled for iptables (any version)
 #
@@ -308,21 +308,15 @@ script_body() {
  #
  echo "Rule rule2_branch 0 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -j CHAIN
- $IPTABLES -A INPUT -j CHAIN
- $IPTABLES -A FORWARD -j CHAIN
- $IPTABLES -N rule2_branch_0
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j rule2_branch_0
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j rule2_branch_0
- $IPTABLES -A CHAIN -j rule2_branch_0
- $IPTABLES -N CHAIN
- $IPTABLES -A rule2_branch_0 -j CHAIN
- $IPTABLES -A CHAIN -j LOG --log-level debug
- $IPTABLES -N CHAIN
- $IPTABLES -A rule2_branch_0 -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j DROP
+ $IPTABLES -N rule2_branch
+ $IPTABLES -N Cid4734305F19714.0
+ $IPTABLES -A rule2_branch -j Cid4734305F19714.0
+ $IPTABLES -A Cid4734305F19714.0 -s 192.168.1.0/24 -j RETURN
+ $IPTABLES -A Cid4734305F19714.0 -s 192.168.2.0/24 -j RETURN
+ $IPTABLES -N rule2_branch_0_3
+ $IPTABLES -A Cid4734305F19714.0 -j rule2_branch_0_3
+ $IPTABLES -A rule2_branch_0_3 -j LOG --log-level debug
+ $IPTABLES -A rule2_branch_0_3 -j DROP
  # ================ Table 'filter', rule set Policy
  #
  # Rule 0 (global)
@@ -351,29 +345,24 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A INPUT -s 192.168.0.0/16
- $IPTABLES -A OUTPUT -s 192.168.0.0/16
- $IPTABLES -A FORWARD -s 192.168.0.0/16
+ $IPTABLES -A INPUT -s 192.168.0.0/16 -j rule2_branch
+ $IPTABLES -A OUTPUT -s 192.168.0.0/16 -j rule2_branch
+ $IPTABLES -A FORWARD -s 192.168.0.0/16 -j rule2_branch
  #
  # Rule 3 (global)
  #
  echo "Rule 3 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -j CHAIN
- $IPTABLES -A INPUT -j CHAIN
- $IPTABLES -A FORWARD -j CHAIN
- $IPTABLES -N RULE_3
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j RULE_3
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j RULE_3
- $IPTABLES -A CHAIN -j RULE_3
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_3 -j CHAIN
- $IPTABLES -A CHAIN -j LOG --log-level debug
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_3 -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j DROP
+ $IPTABLES -N Cid4733CF6F19714.0
+ $IPTABLES -A OUTPUT -j Cid4733CF6F19714.0
+ $IPTABLES -A INPUT -j Cid4733CF6F19714.0
+ $IPTABLES -A FORWARD -j Cid4733CF6F19714.0
+ $IPTABLES -A Cid4733CF6F19714.0 -s 192.168.1.0/24 -j RETURN
+ $IPTABLES -A Cid4733CF6F19714.0 -s 192.168.2.0/24 -j RETURN
+ $IPTABLES -N RULE_3_3
+ $IPTABLES -A Cid4733CF6F19714.0 -j RULE_3_3
+ $IPTABLES -A RULE_3_3 -j LOG --log-level debug
+ $IPTABLES -A RULE_3_3 -j DROP
  #
  # Rule 4 (global)
  #

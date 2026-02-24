@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall38.fw /firewall38.fw
+# files: * firewall38.fw /etc/fw/firewall38.fw
 #
 # Compiled for iptables 1.3.0
 #
@@ -323,18 +323,138 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # ================ Table 'filter', rule set Policy
- echo "# Rule 1 (global)"echo ":RULE_1 - [0:0]"echo "OUTPUT -m state --state NEW -j RULE_1"echo "INPUT -m state --state NEW -j RULE_1"echo "FORWARD -m state --state NEW -j RULE_1"echo "RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- CONTINUE ""echo "RULE_1 "echo "# Rule 2 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo ":RULE_2 - [0:0]"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "INPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "FORWARD -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "RULE_2 -j CHAIN"echo "CHAIN -j LOG --log-level info --log-prefix "RULE 2 -- CONTINUE ""echo ":CHAIN - [0:0]"echo "RULE_2 -j CHAIN"echo "CHAIN -j RETURN"echo "CHAIN "echo "# Rule 5 (global)"echo ":RULE_5 - [0:0]"echo "INPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j RULE_5"echo "OUTPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j RULE_5"echo "RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- CONTINUE ""echo "RULE_5 "echo "# Rule 9 (global)"echo "OUTPUT -m state --state NEW -j ACCEPT"echo "INPUT -m state --state NEW -j ACCEPT"echo "FORWARD -m state --state NEW -j ACCEPT"echo "# Rule 10 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -m state --state NEW -j CHAIN"echo "INPUT -m state --state NEW -j CHAIN"echo "FORWARD -m state --state NEW -j CHAIN"echo "CHAIN -j RETURN"echo "CHAIN -j ACCEPT"echo "# Rule 11 (global)"echo "OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT"echo "INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT"echo "FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT"echo "# Rule 12 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -m state --state NEW -j CHAIN"echo "INPUT -m state --state NEW -j CHAIN"echo "FORWARD -m state --state NEW -j CHAIN"echo "CHAIN -j RETURN"echo "CHAIN -p tcp -m tcp --dport 80 -j RETURN"echo "CHAIN -j ACCEPT"echo "# Rule 13 (global)"echo "OUTPUT -p tcp -m tcp -d 192.168.2.10 --dport 80 -j QUEUE"echo "FORWARD -p tcp -m tcp -d 192.168.2.10 --dport 80 -j QUEUE"echo "# Rule 14 (global)"echo "INPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT"echo "OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT"echo "FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT"echo "# Rule 15 (global)"echo ":RULE_15 - [0:0]"echo "OUTPUT -j RULE_15"echo "INPUT -j RULE_15"echo "FORWARD -j RULE_15"echo "RULE_15 -j LOG --log-level info --log-prefix "RULE 15 -- DENY ""echo "RULE_15 -j DROP"#
+ #
+ # Rule 1 (global)
+ echo "-A OUTPUT -p 50 -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ echo "-A OUTPUT -p ah -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ echo "-A INPUT -p 50 -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ echo "-A INPUT -p ah -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ echo "-A FORWARD -p 50 -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ echo "-A FORWARD -p ah -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 1 -- CONTINUE \""
+ #
+ # Rule 2 (global)
+ echo ":Cid43BBF1AD9745.0 - [0:0]"
+ echo "-A OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.0 "
+ echo "-A Cid43BBF1AD9745.0 -p 50 -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo "-A Cid43BBF1AD9745.0 -p ah -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo ":Cid43BBF1AD9745.1 - [0:0]"
+ echo "-A INPUT -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.1 "
+ echo "-A Cid43BBF1AD9745.1 -p 50 -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo "-A Cid43BBF1AD9745.1 -p ah -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo ":Cid43BBF1AD9745.2 - [0:0]"
+ echo "-A OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.2 "
+ echo "-A Cid43BBF1AD9745.2 -p 50 -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo "-A Cid43BBF1AD9745.2 -p ah -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo ":Cid43BBF1AD9745.3 - [0:0]"
+ echo "-A FORWARD -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.3 "
+ echo "-A Cid43BBF1AD9745.3 -p 50 -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ echo "-A Cid43BBF1AD9745.3 -p ah -j LOG --log-level info --log-prefix \"RULE 2 -- CONTINUE \""
+ #
+ # Rule 5 (global)
+ echo "-A INPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 5 -- CONTINUE \""
+ echo "-A OUTPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j LOG --log-level info --log-prefix \"RULE 5 -- CONTINUE \""
+ #
+ # Rule 9 (global)
+ echo "-A OUTPUT -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A INPUT -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A FORWARD -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ #
+ # Rule 10 (global)
+ echo "-A OUTPUT -m mark ! --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A INPUT -m mark ! --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A FORWARD -m mark ! --mark 16 -m state --state NEW -j ACCEPT "
+ #
+ # Rule 11 (global)
+ echo "-A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT "
+ echo "-A OUTPUT -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT "
+ echo "-A INPUT -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ echo "-A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT "
+ echo "-A FORWARD -m mark --mark 16 -m state --state NEW -j ACCEPT "
+ #
+ # Rule 12 (global)
+ echo ":Cid43EC87C832486.0 - [0:0]"
+ echo "-A OUTPUT -m state --state NEW -j Cid43EC87C832486.0 "
+ echo "-A INPUT -m state --state NEW -j Cid43EC87C832486.0 "
+ echo "-A FORWARD -m state --state NEW -j Cid43EC87C832486.0 "
+ echo "-A Cid43EC87C832486.0 -p tcp -m tcp --dport 80 -j RETURN "
+ echo "-A Cid43EC87C832486.0 -m mark --mark 16 -j RETURN "
+ echo "-A Cid43EC87C832486.0 -j ACCEPT "
+ #
+ # Rule 13 (global)
+ echo "-A OUTPUT -p tcp -m tcp -d 192.168.2.10 --dport 80 -j QUEUE "
+ echo "-A FORWARD -p tcp -m tcp -d 192.168.2.10 --dport 80 -j QUEUE "
+ #
+ # Rule 14 (global)
+ echo "-A INPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT "
+ echo "-A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT "
+ echo "-A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT "
+ #
+ # Rule 15 (global)
+ echo ":RULE_15 - [0:0]"
+ echo "-A OUTPUT -j RULE_15 "
+ echo "-A INPUT -j RULE_15 "
+ echo "-A FORWARD -j RULE_15 "
+ echo "-A RULE_15 -j LOG --log-level info --log-prefix \"RULE 15 -- DENY \""
+ echo "-A RULE_15 -j DROP "
+ #
  echo COMMIT
 
  echo '*mangle'
  # ================ Table 'mangle', automatic rules
- $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ echo "-A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu"
  # ================ Table 'mangle', rule set Policy
- echo "# Rule 0 (global)"echo "OUTPUT -m state --state NEW "echo "INPUT -m state --state NEW "echo "FORWARD -m state --state NEW "echo "# Rule 1 (global)"echo ":RULE_1 - [0:0]"echo "OUTPUT -m state --state NEW -j RULE_1"echo "INPUT -m state --state NEW -j RULE_1"echo "FORWARD -m state --state NEW -j RULE_1"echo "RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- CONTINUE ""echo "RULE_1 "echo "# Rule 2 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo ":RULE_2 - [0:0]"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "INPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "FORWARD -s ! 192.168.1.0/24 -m state --state NEW -j CHAIN"echo "CHAIN -j RULE_2"echo ":CHAIN - [0:0]"echo "RULE_2 -j CHAIN"echo "CHAIN -j LOG --log-level info --log-prefix "RULE 2 -- CONTINUE ""echo ":CHAIN - [0:0]"echo "RULE_2 -j CHAIN"echo "CHAIN -j RETURN"echo "CHAIN "echo "# Rule 3 (eth1)"echo "INPUT -i eth1 -m state --state NEW "echo "PREROUTING -i eth1 -m state --state NEW "echo "# Rule 4 (global)"echo ":CHAIN - [0:0]"echo "INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN"echo "CHAIN -s 22.22.23.22 "echo "CHAIN -s 192.168.1.22 "echo "CHAIN -s 192.168.2.1 "echo "OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW "echo "# Rule 5 (global)"echo ":RULE_5 - [0:0]"echo "INPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j RULE_5"echo "OUTPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j RULE_5"echo "RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- CONTINUE ""echo "RULE_5 "echo "# Rule 6 (eth1)"echo "OUTPUT -o eth1 -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW "echo "# Rule 7 (eth1)"echo "INPUT -i eth1 -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW "echo "PREROUTING -i eth1 -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW "echo "# Rule 8 (eth1)"echo ":CHAIN - [0:0]"echo "OUTPUT -o eth1 -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN"echo "CHAIN -s 22.22.23.22 -j RETURN"echo "CHAIN "echo "POSTROUTING -o eth1 -p tcp -m tcp --dport 80 -m state --state NEW "#
+ #
+ # Rule 0 (global)
+ echo "-A OUTPUT -p 50 -m state --state NEW -j MARK --set-mark 16"
+ echo "-A OUTPUT -p ah -m state --state NEW -j MARK --set-mark 16"
+ echo "-A PREROUTING -p 50 -m state --state NEW -j MARK --set-mark 16"
+ echo "-A PREROUTING -p ah -m state --state NEW -j MARK --set-mark 16"
+ #
+ # Rule 1 (global)
+ echo "-A OUTPUT -p 50 -m state --state NEW -j MARK --set-mark 16"
+ echo "-A OUTPUT -p ah -m state --state NEW -j MARK --set-mark 16"
+ echo "-A PREROUTING -p 50 -m state --state NEW -j MARK --set-mark 16"
+ echo "-A PREROUTING -p ah -m state --state NEW -j MARK --set-mark 16"
+ #
+ # Rule 2 (global)
+ echo ":Cid43BBF1AD9745.0 - [0:0]"
+ echo "-A OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.0 "
+ echo "-A Cid43BBF1AD9745.0 -p 50 -j MARK --set-mark 16"
+ echo "-A Cid43BBF1AD9745.0 -p ah -j MARK --set-mark 16"
+ echo ":Cid43BBF1AD9745.1 - [0:0]"
+ echo "-A PREROUTING -s ! 192.168.1.0/24 -m state --state NEW -j Cid43BBF1AD9745.1 "
+ echo "-A Cid43BBF1AD9745.1 -p 50 -j MARK --set-mark 16"
+ echo "-A Cid43BBF1AD9745.1 -p ah -j MARK --set-mark 16"
+ #
+ # Rule 3 (eth1)
+ echo "-A PREROUTING -i eth1 -p 50 -m state --state NEW -j MARK --set-mark 16"
+ echo "-A PREROUTING -i eth1 -p ah -m state --state NEW -j MARK --set-mark 16"
+ #
+ # Rule 4 (global)
+ # rule comment: rule 4
+ echo "-A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j MARK --set-mark 2"
+ #
+ # Rule 5 (global)
+ echo "-A OUTPUT -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j MARK --set-mark 2"
+ #
+ # Rule 6 (eth1)
+ echo "-A OUTPUT -o eth1 -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j MARK --set-mark 2"
+ #
+ # Rule 7 (eth1)
+ echo "-A PREROUTING -i eth1 -p tcp -m tcp -s 22.22.23.22 --dport 80 -m state --state NEW -j MARK --set-mark 2"
+ #
+ # Rule 8 (eth1)
+ echo ":Cid462EA8B230547.0 - [0:0]"
+ echo "-A OUTPUT -o eth1 -p tcp -m tcp --dport 80 -m state --state NEW -j Cid462EA8B230547.0 "
+ echo "-A Cid462EA8B230547.0 -s 22.22.23.22 -j RETURN "
+ echo "-A Cid462EA8B230547.0 -j MARK --set-mark 2"
+ echo "-A POSTROUTING -o eth1 -p tcp -m tcp --dport 80 -m state --state NEW -j MARK --set-mark 2"
+ #
  echo COMMIT
 
  echo '*nat'
@@ -342,13 +462,15 @@ script_body() {
  echo :PREROUTING ACCEPT [0:0]
  echo :POSTROUTING ACCEPT [0:0]
  echo :OUTPUT ACCEPT [0:0]
+ #
  # Rule 0 (NAT)
- echo "-A POSTROUTING -o eth1 -s 22.22.23.22 -j SNAT --to-source 22.22.23.22"
- echo "-A POSTROUTING -o eth1 -s 192.168.1.22 -j SNAT --to-source 22.22.23.22"
- echo "-A POSTROUTING -o eth1 -s 192.168.2.1 -j SNAT --to-source 22.22.23.22"
- echo "-A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 22.22.23.22"
+ echo "-A POSTROUTING -o eth1 -s 22.22.23.22 -j SNAT --to-source 22.22.23.22 "
+ echo "-A POSTROUTING -o eth1 -s 192.168.1.22 -j SNAT --to-source 22.22.23.22 "
+ echo "-A POSTROUTING -o eth1 -s 192.168.2.1 -j SNAT --to-source 22.22.23.22 "
+ echo "-A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 22.22.23.22 "
+ #
  # Rule 1 (NAT)
- echo "-A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 22.22.23.22"
+ echo "-A POSTROUTING -o eth1 -s 192.168.1.0/24 -m mark --mark 16 -j SNAT --to-source 22.22.23.22 "
  #
  echo COMMIT
 

@@ -6,7 +6,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall42.fw /firewall42.fw
+# files: * firewall42.fw /etc/fw/firewall42.fw
 #
 # Compiled for iptables (any version)
 #
@@ -312,31 +312,34 @@ script_body() {
  #
  echo "Rule 0 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 192.168.1.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 192.168.1.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (eth0)
  #
  echo "Rule 1 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 2 (eth0)
  #
  echo "Rule 2 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 224.0.1.141 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 224.0.1.141 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (eth0)
  #
  echo "Rule 3 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -s 0.0.0.0 -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -s 0.0.0.0 -d 255.255.255.255 --dport 67 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (eth0)
  #
  echo "Rule 4 (eth0)"
  #
- $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -s $i_eth0 -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
+ for i_eth0 in $i_eth0_list
+ do
+ test -n "$i_eth0" && $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -s $i_eth0 -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
+ done
 }
 
 ip_forward() {

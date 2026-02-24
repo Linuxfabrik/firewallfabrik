@@ -11,6 +11,11 @@
 # Compiled for iptables (any version)
 #
 
+# firewall33-1:Policy:2: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+# firewall33-1:Policy:6: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+# firewall33-1:Policy:2: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+# firewall33-1:Policy:6: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"

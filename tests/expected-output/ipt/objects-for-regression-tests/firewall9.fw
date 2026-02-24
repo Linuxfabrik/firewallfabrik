@@ -12,6 +12,11 @@
 #
 # testing rules with action-on-reject "TCP reset"
 
+# firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall9:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall9:Policy:7: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -311,123 +316,141 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 6667 -j CHAIN
+ $IPTABLES -N Cid3D4DF362.0
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 6667 -j Cid3D4DF362.0
  $IPTABLES -N RULE_0
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_0
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_0
+ $IPTABLES -A Cid3D4DF362.0 -d 22.22.22.22 -j RULE_0
+ $IPTABLES -A Cid3D4DF362.0 -d 192.168.1.1 -j RULE_0
  $IPTABLES -A INPUT -p tcp -m tcp --dport 6667 -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level debug --log-prefix "RULE 0 -- REJECT global"
- $IPTABLES -A RULE_0 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A RULE_0 -p tcp -m tcp -j REJECT --reject-with tcp-reset
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p udp -m udp --dport 53 -j CHAIN
+ # firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
+ $IPTABLES -N Cid3D4DF36C.0
+ $IPTABLES -A OUTPUT -p udp -m udp --dport 53 -j Cid3D4DF36C.0
  $IPTABLES -N RULE_1
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_1
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_1
+ $IPTABLES -A Cid3D4DF36C.0 -d 22.22.22.22 -j RULE_1
+ $IPTABLES -A Cid3D4DF36C.0 -d 192.168.1.1 -j RULE_1
  $IPTABLES -A INPUT -p udp -m udp --dport 53 -j RULE_1
  $IPTABLES -A RULE_1 -j LOG --log-level debug --log-prefix "RULE 1 -- REJECT global"
- $IPTABLES -A RULE_1 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A RULE_1 -j REJECT --reject-with icmp-net-unreachable
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -j CHAIN
+ # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
+ $IPTABLES -N Cid3D4DF376.0
+ $IPTABLES -A OUTPUT -p icmp -j Cid3D4DF376.0
+ $IPTABLES -A OUTPUT -p 50 -j Cid3D4DF376.0
  $IPTABLES -N RULE_2
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_2
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_2
- $IPTABLES -A INPUT -j RULE_2
+ $IPTABLES -A Cid3D4DF376.0 -d 22.22.22.22 -j RULE_2
+ $IPTABLES -A Cid3D4DF376.0 -d 192.168.1.1 -j RULE_2
+ $IPTABLES -A INPUT -p icmp -j RULE_2
+ $IPTABLES -A INPUT -p 50 -j RULE_2
  $IPTABLES -A RULE_2 -j LOG --log-level debug --log-prefix "RULE 2 -- REJECT global"
- $IPTABLES -A RULE_2 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A RULE_2 -j REJECT --reject-with icmp-net-unreachable
  #
  # Rule 3 (global)
  #
  echo "Rule 3 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j CHAIN
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
- $IPTABLES -N RULE_3
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_3
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_3
- $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j RULE_3
- $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j RULE_3
- $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j RULE_3
- $IPTABLES -A RULE_3 -j LOG --log-level debug --log-prefix "RULE 3 -- REJECT global"
- $IPTABLES -A RULE_3 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid3D4DF380.0
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4DF380.0
+ $IPTABLES -N RULE_3_1
+ $IPTABLES -A Cid3D4DF380.0 -d 22.22.22.22 -j RULE_3_1
+ $IPTABLES -A Cid3D4DF380.0 -d 192.168.1.1 -j RULE_3_1
+ $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j RULE_3_1
+ $IPTABLES -A RULE_3_1 -j LOG --log-level debug --log-prefix "RULE 3 -- REJECT global"
+ $IPTABLES -A RULE_3_1 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid3D4DF380.1
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4DF380.1
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j Cid3D4DF380.1
+ $IPTABLES -N RULE_3_2
+ $IPTABLES -A Cid3D4DF380.1 -d 22.22.22.22 -j RULE_3_2
+ $IPTABLES -A Cid3D4DF380.1 -d 192.168.1.1 -j RULE_3_2
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j RULE_3_2
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j RULE_3_2
+ $IPTABLES -A RULE_3_2 -j LOG --log-level debug --log-prefix "RULE 3 -- REJECT global"
+ $IPTABLES -A RULE_3_2 -p tcp -m tcp -j REJECT --reject-with tcp-reset
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j CHAIN
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
- $IPTABLES -A CHAIN -d 22.22.22.22 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -d 192.168.1.1 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid3D4DF38A.0
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4DF38A.0
+ $IPTABLES -A Cid3D4DF38A.0 -d 22.22.22.22 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid3D4DF38A.0 -d 192.168.1.1 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid3D4DF38A.1
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4DF38A.1
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j Cid3D4DF38A.1
+ $IPTABLES -A Cid3D4DF38A.1 -p tcp -m tcp -d 22.22.22.22 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid3D4DF38A.1 -p tcp -m tcp -d 192.168.1.1 -j REJECT --reject-with tcp-reset
  $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j REJECT --reject-with tcp-reset
  $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j REJECT --reject-with tcp-reset
- $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with tcp-reset
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j CHAIN
- $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j CHAIN
- $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j CHAIN
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RETURN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid3D4DF394.0
+ $IPTABLES -A INPUT -p udp -m udp -m multiport --dports 53,161 -j Cid3D4DF394.0
+ $IPTABLES -A Cid3D4DF394.0 -d 22.22.22.22 -j RETURN
+ $IPTABLES -A Cid3D4DF394.0 -d 192.168.1.1 -j RETURN
+ $IPTABLES -A Cid3D4DF394.0 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A FORWARD -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid3D4DF394.1
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 10000:11000 -j Cid3D4DF394.1
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 113 -j Cid3D4DF394.1
+ $IPTABLES -A Cid3D4DF394.1 -d 22.22.22.22 -j RETURN
+ $IPTABLES -A Cid3D4DF394.1 -d 192.168.1.1 -j RETURN
+ $IPTABLES -A Cid3D4DF394.1 -p tcp -m tcp -j REJECT --reject-with tcp-reset
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j REJECT --reject-with tcp-reset
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 113 -j REJECT --reject-with tcp-reset
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with tcp-reset
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 10000:11000 -j REJECT --reject-with tcp-reset
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 113 -j REJECT --reject-with tcp-reset
- $IPTABLES -A FORWARD -p udp -m udp -m multiport --dports 53,161 -j REJECT --reject-with tcp-reset
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -d 22.22.22.22 -j CHAIN
- $IPTABLES -A OUTPUT -d 192.168.1.1 -j CHAIN
- $IPTABLES -A INPUT -j CHAIN
- $IPTABLES -A CHAIN -p tcp -m tcp --dport 10000:11000 -j RETURN
- $IPTABLES -A CHAIN -p tcp -m tcp --dport 113 -j RETURN
- $IPTABLES -A CHAIN -p udp -m udp -m multiport --dports 53,161 -j RETURN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
+ # firewall9:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
+ $IPTABLES -N Cid3D4DF39E.0
+ $IPTABLES -A OUTPUT -d 22.22.22.22 -j Cid3D4DF39E.0
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j Cid3D4DF39E.0
+ $IPTABLES -A INPUT -j Cid3D4DF39E.0
+ $IPTABLES -A Cid3D4DF39E.0 -p tcp -m tcp --dport 10000:11000 -j RETURN
+ $IPTABLES -A Cid3D4DF39E.0 -p tcp -m tcp --dport 113 -j RETURN
+ $IPTABLES -A Cid3D4DF39E.0 -p udp -m udp -m multiport --dports 53,161 -j RETURN
+ $IPTABLES -A Cid3D4DF39E.0 -j REJECT --reject-with icmp-net-unreachable
  #
  # Rule 7 (global)
  #
  echo "Rule 7 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -d 22.22.22.22 -j CHAIN
- $IPTABLES -A OUTPUT -d 192.168.1.1 -j CHAIN
- $IPTABLES -A INPUT -j CHAIN
- $IPTABLES -N RULE_7
- $IPTABLES -A CHAIN -p tcp -m tcp --dport 10000:11000 -j RULE_7
- $IPTABLES -A CHAIN -p tcp -m tcp --dport 113 -j RULE_7
- $IPTABLES -A CHAIN -p udp -m udp -m multiport --dports 53,161 -j RULE_7
- $IPTABLES -A CHAIN -j RULE_7
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_7 -j CHAIN
- $IPTABLES -A CHAIN -j LOG --log-level debug --log-prefix "RULE 7 -- REJECT global"
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_7 -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
+ # firewall9:Policy:7: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
+ $IPTABLES -N Cid3D4DF3A8.0
+ $IPTABLES -A OUTPUT -d 22.22.22.22 -j Cid3D4DF3A8.0
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j Cid3D4DF3A8.0
+ $IPTABLES -A INPUT -j Cid3D4DF3A8.0
+ $IPTABLES -A Cid3D4DF3A8.0 -p tcp -m tcp --dport 10000:11000 -j RETURN
+ $IPTABLES -A Cid3D4DF3A8.0 -p tcp -m tcp --dport 113 -j RETURN
+ $IPTABLES -A Cid3D4DF3A8.0 -p udp -m udp -m multiport --dports 53,161 -j RETURN
+ $IPTABLES -N RULE_7_3
+ $IPTABLES -A Cid3D4DF3A8.0 -j RULE_7_3
+ $IPTABLES -A RULE_7_3 -j LOG --log-level debug --log-prefix "RULE 7 -- REJECT global"
+ $IPTABLES -A RULE_7_3 -j REJECT --reject-with icmp-net-unreachable
  #
  # Rule 8 (global)
  #
@@ -441,66 +464,84 @@ script_body() {
  #
  echo "Rule 9 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid4144FFAE.0
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -j Cid4144FFAE.0
+ $IPTABLES -A Cid4144FFAE.0 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid4144FFAE.0 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid4144FFAE.1
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -j Cid4144FFAE.1
+ $IPTABLES -A Cid4144FFAE.1 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid4144FFAE.1 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid4144FFAE.2
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -j Cid4144FFAE.2
+ $IPTABLES -A Cid4144FFAE.2 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid4144FFAE.2 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B50.0
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j Cid41456B50.0
+ $IPTABLES -A Cid41456B50.0 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B50.0 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B50.1
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j Cid41456B50.1
+ $IPTABLES -A Cid41456B50.1 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B50.1 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B50.2
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j Cid41456B50.2
+ $IPTABLES -A Cid41456B50.2 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B50.2 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B50.3
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -j Cid41456B50.3
+ $IPTABLES -A Cid41456B50.3 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B50.3 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B50.4
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -j Cid41456B50.4
+ $IPTABLES -A Cid41456B50.4 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B50.4 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B50.5
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -j Cid41456B50.5
+ $IPTABLES -A Cid41456B50.5 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B50.5 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
  #
  # Rule 11 (global)
  #
  echo "Rule 11 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A INPUT -p tcp -m tcp --dport 21 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 21 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
- $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j CHAIN
- $IPTABLES -A FORWARD -p tcp -m tcp --dport 21 -j CHAIN
- $IPTABLES -A CHAIN -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B75.0
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j Cid41456B75.0
+ $IPTABLES -A Cid41456B75.0 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B75.0 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B75.1
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j Cid41456B75.1
+ $IPTABLES -A Cid41456B75.1 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B75.1 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B75.2
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type 3 -j Cid41456B75.2
+ $IPTABLES -A Cid41456B75.2 -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A Cid41456B75.2 -s 192.168.2.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -N Cid41456B75.3
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 21 -j Cid41456B75.3
+ $IPTABLES -A Cid41456B75.3 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B75.3 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B75.4
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 21 -j Cid41456B75.4
+ $IPTABLES -A Cid41456B75.4 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B75.4 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -N Cid41456B75.5
+ $IPTABLES -A FORWARD -p tcp -m tcp --dport 21 -j Cid41456B75.5
+ $IPTABLES -A Cid41456B75.5 -p tcp -m tcp -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A Cid41456B75.5 -p tcp -m tcp -s 192.168.2.0/24 -j REJECT --reject-with tcp-reset
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
- $IPTABLES -A INPUT -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
+ $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  #
  # Rule 13 (global)
  #
@@ -508,36 +549,36 @@ script_body() {
  #
  $IPTABLES -N CHAIN
  $IPTABLES -A INPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  $IPTABLES -N CHAIN
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  $IPTABLES -N CHAIN
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  #
  # Rule 14 (global)
  #
  echo "Rule 14 (global)"
  #
+ $IPTABLES -A INPUT -p udp -m udp -s 192.168.1.0/24 --dport 53 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A OUTPUT -p udp -m udp -s 192.168.1.0/24 --dport 53 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A FORWARD -p udp -m udp -s 192.168.1.0/24 --dport 53 -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -N CHAIN
  $IPTABLES -A INPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  $IPTABLES -N CHAIN
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
  $IPTABLES -N CHAIN
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j REJECT --reject-with tcp-reset
- $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with tcp-reset
+ $IPTABLES -A CHAIN -p tcp -m tcp -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with tcp-reset
 }
 
 ip_forward() {
