@@ -9013,7 +9013,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771936114
+              lastModified: 1771949009
               lastCompiled: 1771356919
             interfaces:
               - name: 'eth0'
@@ -9138,7 +9138,7 @@ libraries:
                       - 'Library:Standard/ObjectGroup:Objects/ObjectGroup:Networks/Network:link-local'
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:firewall/Interface:lo'
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:My
-                        Network'
+                        Network 192.0.2.0'
                   - type: 'PolicyRule'
                     position: 1
                     action: 'Accept'
@@ -9183,7 +9183,7 @@ libraries:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:firewall/Interface:eth0'
                     src:
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Addresses/IPv4:My
-                        Office'
+                        Office 203.0.113.74'
                     srv:
                       - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Icinga
                         5665'
@@ -9376,7 +9376,7 @@ libraries:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:firewall/Interface:eth0'
                     src:
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Addresses/IPv4:My
-                        Office'
+                        Office 203.0.113.74'
                     srv:
                       - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh
                         2222'
@@ -9554,7 +9554,7 @@ libraries:
               platform: 'iptables'
               version: ''
               inactive: false
-              lastModified: 1771445079
+              lastModified: 1771949030
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -10607,7 +10607,7 @@ libraries:
             name: 'Addresses'
             children:
               - type: 'IPv4'
-                name: 'My Office'
+                name: 'My Office 203.0.113.74'
                 inet_addr_mask:
                   address: '203.0.113.74'
                   netmask: '255.255.255.255'
@@ -10651,7 +10651,7 @@ libraries:
             name: 'Networks'
             children:
               - type: 'Network'
-                name: 'My Network'
+                name: 'My Network 192.0.2.0'
                 inet_addr_mask:
                   address: '192.0.2.0'
                   netmask: '255.255.255.0'
@@ -10722,4 +10722,6 @@ libraries:
             comment: 'Time where Operator never sleeps.'
             data:
               days_of_week: '1,3'
+              from_time: '23:30'
+              to_time: '03:59'
             type: 'Interval'
