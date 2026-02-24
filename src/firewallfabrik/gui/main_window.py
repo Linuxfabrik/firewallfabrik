@@ -72,17 +72,28 @@ from firewallfabrik.gui.clipboard_store import ClipboardStore
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
 from firewallfabrik.gui.find_panel import FindPanel
-from firewallfabrik.gui.find_where_used_panel import FindWhereUsedPanel
+from firewallfabrik.gui.find_where_used_panel import (
+    FindWhereUsedPanel,
+    find_group_references,
+    find_rule_references,
+)
 from firewallfabrik.gui.object_tree import (
     ICON_MAP,
     ObjectTree,
     create_library_folder_structure,
 )
-from firewallfabrik.gui.object_tree_data import LOCKABLE_TYPES
+from firewallfabrik.gui.object_tree_data import (
+    LOCKABLE_TYPES,
+    SYSTEM_GROUP_PATHS,
+    find_group_by_path,
+)
 from firewallfabrik.gui.policy_view_bridge import PolicyViewBridge
 from firewallfabrik.gui.preferences_dialog import PreferencesDialog
 from firewallfabrik.gui.rule_set_window_manager import RuleSetWindowManager
 from firewallfabrik.gui.ui_loader import FWFUiLoader
+from firewallfabrik.gui.update_library_preview_dialog import (
+    UpdateLibraryPreviewDialog,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +225,263 @@ def _build_library_path_map(session, library):
         _walk_ifaces(dev.interfaces, dev_path)
 
     return path_map
+
+
+def _identity_key(obj):
+    """Return a hashable identity key for *obj* based on its semantic content.
+
+    Two objects with the same identity key represent "the same thing"
+    even if they have different names.  Returns *None* when no
+    meaningful key can be derived (Groups, Interfaces, …).
+    """
+    obj_type = getattr(obj, 'type', None)
+
+    # TCP / UDP: type + destination port range + source port range
+    if obj_type in ('TCPService', 'UDPService'):
+        return (
+            obj_type,
+            getattr(obj, 'dst_range_start', None),
+            getattr(obj, 'dst_range_end', None),
+            getattr(obj, 'src_range_start', None),
+            getattr(obj, 'src_range_end', None),
+        )
+
+    # ICMP / ICMP6: type + codes
+    if obj_type in ('ICMPService', 'ICMP6Service'):
+        codes = getattr(obj, 'codes', None)
+        return (obj_type, repr(codes) if codes else None)
+
+    # IP protocol service: type + protocol number/name
+    if obj_type == 'IPService':
+        return (obj_type, getattr(obj, 'protocol', None))
+
+    # IPv4 / IPv6 / Network / NetworkIPv6: type + address + netmask
+    if obj_type in ('IPv4', 'IPv6', 'Network', 'NetworkIPv6'):
+        mask = getattr(obj, 'inet_addr_mask', None) or {}
+        return (obj_type, mask.get('address'), mask.get('netmask'))
+
+    # AddressRange: type + start + end
+    if obj_type == 'AddressRange':
+        start = getattr(obj, 'start_address', None) or {}
+        end = getattr(obj, 'end_address', None) or {}
+        return (obj_type, start.get('address'), end.get('address'))
+
+    # CustomService: type + code_*  (platform-specific)
+    if obj_type == 'CustomService':
+        data = getattr(obj, 'data', None) or {}
+        return (obj_type, repr(sorted(data.items())))
+
+    # TagService: type + tagvalue
+    if obj_type == 'TagService':
+        data = getattr(obj, 'data', None) or {}
+        return (obj_type, data.get('tagvalue'))
+
+    # No meaningful content key for groups, devices, intervals, etc.
+    return None
+
+
+def _levenshtein(a, b):
+    """Return the Levenshtein edit distance between strings *a* and *b*.
+
+    Uses the standard dynamic-programming algorithm with O(min(m, n))
+    space.  Both strings are compared case-insensitively.
+    """
+    a = a.lower()
+    b = b.lower()
+    if len(a) < len(b):
+        a, b = b, a  # ensure a is the longer one
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a):
+        curr = [i + 1] + [0] * len(b)
+        for j, cb in enumerate(b):
+            cost = 0 if ca == cb else 1
+            curr[j + 1] = min(
+                curr[j] + 1,  # insert
+                prev[j + 1] + 1,  # delete
+                prev[j] + cost,  # substitute
+            )
+        prev = curr
+    return prev[-1]
+
+
+def _best_name_match(ref_name, candidates):
+    """Return the candidate whose name is most similar to *ref_name*.
+
+    *candidates* is a list of objects (each having a ``.name`` attribute).
+    Uses Levenshtein distance; ties are broken alphabetically.
+    """
+    best = None
+    best_dist = None
+    for cand in candidates:
+        dist = _levenshtein(ref_name, cand.name)
+        if (
+            best_dist is None
+            or dist < best_dist
+            or (dist == best_dist and cand.name < best.name)
+        ):
+            best = cand
+            best_dist = dist
+    return best
+
+
+def _build_new_obj_map(new_std):
+    """Build ``{UUID: transient_object}`` for every object in *new_std*.
+
+    Walks the transient Library object graph produced by the YAML reader
+    (groups, services, addresses, intervals, devices + interfaces).
+    """
+    obj_map = {}
+    for grp in new_std.groups:
+        obj_map[grp.id] = grp
+    for svc in new_std.services:
+        obj_map[svc.id] = svc
+    for addr in new_std.addresses:
+        obj_map[addr.id] = addr
+    for itv in new_std.intervals:
+        obj_map[itv.id] = itv
+    for dev in new_std.devices:
+        obj_map[dev.id] = dev
+        for iface in dev.interfaces:
+            obj_map[iface.id] = iface
+            for sub_addr in iface.addresses:
+                obj_map[sub_addr.id] = sub_addr
+    return obj_map
+
+
+# Columns to compare per model class.  Skip structural FKs (library_id,
+# group_id, id) — they always differ between old and new.
+_DIFF_COLUMNS = {
+    Address: [
+        'name',
+        'comment',
+        'inet_addr_mask',
+        'start_address',
+        'end_address',
+    ],
+    Group: ['name', 'comment'],
+    Host: ['name', 'comment', 'options', 'management'],
+    Interface: ['name', 'comment', 'data', 'options'],
+    Interval: ['name', 'comment', 'data'],
+    Service: [
+        'name',
+        'comment',
+        'src_range_start',
+        'src_range_end',
+        'dst_range_start',
+        'dst_range_end',
+        'protocol',
+        'tcp_flags',
+        'tcp_flags_masks',
+        'codes',
+    ],
+}
+
+
+def _diff_objects(old_obj, new_obj):
+    """Return a list of human-readable change descriptions.
+
+    Compares the interesting columns of *old_obj* (a DB-bound instance)
+    with *new_obj* (a transient instance from the YAML reader).
+    Returns an empty list when the objects are identical.
+    """
+    diffs = []
+    # Determine which column set to use based on old_obj's class.
+    cols = None
+    for cls, col_list in _DIFF_COLUMNS.items():
+        if isinstance(old_obj, cls):
+            cols = col_list
+            break
+    if cols is None:
+        return diffs
+    for col in cols:
+        old_val = getattr(old_obj, col, None)
+        new_val = getattr(new_obj, col, None)
+        if old_val != new_val:
+            diffs.append(f'{col}: {old_val!r} \u2192 {new_val!r}')
+    return diffs
+
+
+def _get_object(session, obj_id):
+    """Return the ORM instance for *obj_id*, or *None*."""
+    for cls in (Address, Service, Interval, Host, Interface, Group):
+        obj = session.get(cls, obj_id)
+        if obj is not None:
+            return obj
+    return None
+
+
+def _resolve_object_info(session, obj_id):
+    """Return ``(name, type)`` for *obj_id* by probing all object tables.
+
+    Returns ``(None, None)`` when the UUID is not found.
+    """
+    obj = _get_object(session, obj_id)
+    if obj is None:
+        return None, None
+    obj_type = getattr(obj, 'type', None)
+    if obj_type is None:
+        # Interface and Interval have no polymorphic 'type' column.
+        if isinstance(obj, Interface):
+            obj_type = 'Interface'
+        elif isinstance(obj, Interval):
+            obj_type = 'Interval'
+    return obj.name, obj_type
+
+
+def _collect_references(session, obj_id):
+    """Collect human-readable reference descriptions for *obj_id*.
+
+    Returns a list of ``(fw_or_group_name, detail_string)`` tuples
+    covering both rule-element and group-membership references whose
+    *owning* object lives outside the Standard Library.
+    """
+    refs = []
+
+    for (
+        _rule_id,
+        slot,
+        _rule_set_id,
+        rs_type,
+        rs_name,
+        fw_name,
+        _fw_type,
+        position,
+    ) in find_rule_references(session, obj_id):
+        detail = f"{rs_type} '{rs_name}' / Rule #{position} / {slot}"
+        refs.append((fw_name, detail))
+
+    for _grp_id, grp_name, grp_type in find_group_references(session, obj_id):
+        refs.append((grp_name, grp_type))
+
+    return refs
+
+
+def _has_user_references(session, obj_id, old_std_ids):
+    """Return *True* if *obj_id* is referenced outside the Standard Library.
+
+    A "user reference" is any row in ``rule_elements`` or
+    ``group_membership`` that points to *obj_id* from a rule or group
+    whose own ID is **not** in *old_std_ids*.
+    """
+    # Check rule_elements.
+    rule_ref = session.execute(
+        sqlalchemy.select(rule_elements.c.rule_id)
+        .where(rule_elements.c.target_id == obj_id)
+        .limit(1),
+    ).first()
+    if rule_ref is not None:
+        return True
+
+    # Check group_membership where the *group* is not itself a
+    # Standard Library group.
+    grp_rows = session.execute(
+        sqlalchemy.select(group_membership.c.group_id).where(
+            group_membership.c.member_id == obj_id,
+        ),
+    ).all()
+    return any(grp_id not in old_std_ids for (grp_id,) in grp_rows)
 
 
 class FWWindow(QMainWindow):
@@ -598,6 +866,7 @@ class FWWindow(QMainWindow):
         self.fileSaveAsAction.setEnabled(False)
         self.installAction.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
+        self.UpdateStandardLibraryAction.setEnabled(False)
 
     def _apply_file_loaded_state(self):
         """Restore panel visibility from QSettings after loading a file."""
@@ -614,6 +883,7 @@ class FWWindow(QMainWindow):
         self.fileSaveAsAction.setEnabled(True)
         self.installAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
+        self.UpdateStandardLibraryAction.setEnabled(True)
         undo_visible = settings.value('View/UndoStack', False, type=bool)
         self.undoDockWidget.setVisible(undo_visible)
         self.actionUndo_view.setChecked(undo_visible)
@@ -1086,8 +1356,35 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def toolsUpdateStandardLibrary(self):
-        """Replace the Standard Library with the latest bundled version."""
-        if self._current_file is None:
+        """Replace the Standard Library with the latest bundled version.
+
+        Four-phase algorithm:
+
+        Phase 0 — Parse & Analyse (read-only, no DB changes)
+          Build path maps for old and new Standard Library, compute
+          remapped / removed+referenced / removed+unreferenced sets.
+
+        Phase 1 — Preview dialog
+          Show a tree of upcoming changes so the user can review before
+          committing.  Skip the dialog when there are no noteworthy
+          changes (pure additions).
+
+        Phase 2 — Migrate removed+referenced objects to User Library
+          Objects deleted from the new Standard Library that are still
+          referenced by user rules or groups are moved to the User
+          library so that references stay valid.
+
+        Phase 3 — Delete old + Insert new Standard Library
+          Delete old Standard Library objects (excluding migrated ones),
+          insert the new Standard Library, and remap remaining user
+          references from old UUIDs to new UUIDs.
+
+        Phase 4 — Refresh UI
+          Update ref_index, save undo state, repopulate the object tree
+          and show a summary message.
+        """
+        display = getattr(self, '_display_file', None)
+        if display is None:
             QMessageBox.warning(
                 self,
                 'FirewallFabrik',
@@ -1095,24 +1392,20 @@ class FWWindow(QMainWindow):
             )
             return
 
-        answer = QMessageBox.question(
-            self,
-            'FirewallFabrik',
-            self.tr(
-                'Replace the Standard Library with the latest version?\n'
-                'Your user libraries and rules will be preserved.'
-            ),
-        )
-        if answer != QMessageBox.StandardButton.Yes:
+        if self._current_file is None:
+            # A .fwb file is loaded but has not been saved as .fwf yet.
+            QMessageBox.warning(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'The file must be saved in .fwf format before the '
+                    'Standard Library can be updated.\n'
+                    'Please use File \u2192 Save As to save as .fwf first.'
+                ),
+            )
             return
 
-        self._close_editor()
-
-        # Close MDI sub-windows — Standard Library device UUIDs will
-        # change, making stale rule-set views unusable.
-        self._rs_mgr.close_all()
-
-        # Parse the bundled Standard Library.
+        # ── Parse the bundled Standard Library ────────────────────────
         std_path = (
             Path(str(importlib.resources.files('firewallfabrik') / 'resources'))
             / 'libraries'
@@ -1135,7 +1428,6 @@ class FWWindow(QMainWindow):
             )
             return
 
-        # Find the Standard library in the parse result.
         new_std = None
         for lib in parse_result.database.libraries:
             if lib.name == 'Standard':
@@ -1152,9 +1444,7 @@ class FWWindow(QMainWindow):
             )
             return
 
-        # Phase 1: Build old path map from the DB, then delete.
-        # We build the map by traversing the live objects (not from
-        # ref_index, which may be empty for XML-imported files).
+        # ── Phase 0: Analyse (read-only) ─────────────────────────────
         session = self._db_manager.create_session()
         try:
             old_std = session.scalars(
@@ -1175,11 +1465,345 @@ class FWWindow(QMainWindow):
             old_std_id = old_std.id
             old_ref_map = _build_library_path_map(session, old_std)
 
-            # Subqueries for objects reachable via device/interface FKs
-            # (these may have library_id=NULL but still belong to the
-            # Standard Library through their parent device).
+            # Collect every UUID that belongs to the current Standard
+            # Library so we can distinguish internal vs. user refs.
+            std_device_ids_q = sqlalchemy.select(Host.id).where(
+                Host.library_id == old_std_id,
+            )
+            std_iface_ids_q = sqlalchemy.select(Interface.id).where(
+                sqlalchemy.or_(
+                    Interface.library_id == old_std_id,
+                    Interface.device_id.in_(std_device_ids_q),
+                ),
+            )
+
+            old_ids = {old_std_id}
+            for cls in (Address, Group, Host, Interface, Interval, Service):
+                for (oid,) in session.execute(
+                    sqlalchemy.select(cls.id).where(
+                        cls.library_id == old_std_id,
+                    ),
+                ):
+                    old_ids.add(oid)
+            for (oid,) in session.execute(
+                sqlalchemy.select(Interface.id).where(
+                    Interface.device_id.in_(std_device_ids_q),
+                ),
+            ):
+                old_ids.add(oid)
+            for (oid,) in session.execute(
+                sqlalchemy.select(Address.id).where(
+                    Address.interface_id.in_(std_iface_ids_q),
+                ),
+            ):
+                old_ids.add(oid)
+
+            # Build new Standard Library path map from parse result.
+            new_ref_map = {
+                path: uid
+                for path, uid in parse_result.ref_index.items()
+                if path.startswith('Library:Standard/')
+            }
+
+            # Classify every old object into one of three buckets.
+            # remapped: path in both old and new → {old_uuid: (new_uuid, path)}
+            # removed_referenced: path only in old AND has user refs
+            # removed_unused: path only in old AND no user refs
+            uuid_remap = {}  # {old_uuid: (new_uuid, new_path)}
+            removed_referenced = {}  # {old_uuid: path}
+            removed_unused = {}  # {old_uuid: path}
+
+            for path, old_uuid in old_ref_map.items():
+                new_uuid = new_ref_map.get(path)
+                if new_uuid is not None:
+                    # Object exists in both — record remap if UUID differs.
+                    if new_uuid != old_uuid:
+                        uuid_remap[old_uuid] = (new_uuid, path)
+                else:
+                    # Object removed from new Standard Library.
+                    if _has_user_references(session, old_uuid, old_ids):
+                        removed_referenced[old_uuid] = path
+                    else:
+                        removed_unused[old_uuid] = path
+
+            # Fuzzy matching: for objects not matched by path, try to
+            # find an equivalent in the new library by content identity
+            # (same type + same ports/addresses/protocol).  This catches
+            # renames like "smtp" → "SMTP 25" where port 25/tcp is the
+            # same but the name changed.
+            new_obj_map = _build_new_obj_map(new_std)
+
+            # Build identity-key index for new objects that were NOT
+            # already claimed by path-based matching.  Multiple new
+            # objects can share the same key (e.g. several services on
+            # the same port), so we collect them in a list.
+            path_matched_new_uuids = {
+                new_uuid for new_uuid, _path in uuid_remap.values()
+            }
+            new_key_index = {}  # {identity_key: [(new_uuid, new_obj, path)]}
+            new_uuid_to_path = {uid: p for p, uid in new_ref_map.items()}
+            for new_uuid, new_obj in new_obj_map.items():
+                if new_uuid in path_matched_new_uuids:
+                    continue
+                key = _identity_key(new_obj)
+                if key is not None:
+                    new_key_index.setdefault(key, []).append(
+                        (new_uuid, new_obj, new_uuid_to_path.get(new_uuid, ''))
+                    )
+
+            # Try to match removed objects by content identity.
+            # When multiple new candidates share the same key, pick the
+            # one whose name is most similar (Levenshtein distance).
+            fuzzy_matched = []
+            for old_uuid in list(removed_referenced) + list(removed_unused):
+                old_obj = _get_object(session, old_uuid)
+                if old_obj is None:
+                    continue
+                key = _identity_key(old_obj)
+                if key is None:
+                    continue
+                candidates = new_key_index.get(key)
+                if not candidates:
+                    continue
+                best = _best_name_match(
+                    old_obj.name,
+                    [c[1] for c in candidates],
+                )
+                # Find the full tuple for the winner.
+                for new_uuid, new_obj, new_path in candidates:
+                    if new_obj is best:
+                        uuid_remap[old_uuid] = (new_uuid, new_path)
+                        candidates.remove((new_uuid, new_obj, new_path))
+                        break
+                removed_referenced.pop(old_uuid, None)
+                removed_unused.pop(old_uuid, None)
+                fuzzy_matched.append(old_uuid)
+
+            if fuzzy_matched:
+                logger.info(
+                    'Fuzzy-matched %d object(s) by content identity',
+                    len(fuzzy_matched),
+                )
+
+            # Build preview data: collect references for each affected
+            # object so the user can see which rules/groups are touched.
+
+            preview_updated = []
+            preview_migrated = []
+            preview_removed = []
+
+            # Updated objects — only include those that actually changed
+            # AND are referenced in user rules/groups.
+            for old_uuid, (new_uuid, _path) in uuid_remap.items():
+                old_obj = _get_object(session, old_uuid)
+                new_obj = new_obj_map.get(new_uuid)
+                if old_obj is None or new_obj is None:
+                    continue
+                diffs = _diff_objects(old_obj, new_obj)
+                if not diffs:
+                    continue  # UUID changed but content identical — skip
+                old_name, old_type = _resolve_object_info(session, old_uuid)
+                if old_name is None:
+                    continue
+                refs = _collect_references(session, old_uuid)
+                if refs:
+                    diff_summary = '; '.join(diffs)
+                    preview_updated.append(
+                        (
+                            old_name,
+                            old_type or '',
+                            diff_summary,
+                            refs,
+                        )
+                    )
+
+            # Removed + referenced → will be migrated.
+            for old_uuid in removed_referenced:
+                name, obj_type = _resolve_object_info(session, old_uuid)
+                if name is None:
+                    continue
+                refs = _collect_references(session, old_uuid)
+                preview_migrated.append((name, obj_type or '', refs))
+
+            # Removed + unused → will be deleted.
+            for old_uuid in removed_unused:
+                name, obj_type = _resolve_object_info(session, old_uuid)
+                if name is None:
+                    continue
+                preview_removed.append((name, obj_type or ''))
+
+            # Scan User library for objects that overlap with the new
+            # Standard Library (same content identity).  These are NOT
+            # modified — just shown as informational hints.
+            # When multiple Standard Library objects share the same
+            # identity key, pick the one whose name is most similar
+            # to the user's object name.
+            preview_duplicates = []
+            user_lib = session.scalars(
+                sqlalchemy.select(Library).where(Library.name == 'User'),
+            ).first()
+            if user_lib is not None:
+                # Build a full identity-key index for the entire new
+                # Standard Library (including path-matched objects).
+                # Multiple objects can share the same key.
+                full_new_key_index = {}
+                for _new_uuid, new_obj in new_obj_map.items():
+                    key = _identity_key(new_obj)
+                    if key is not None:
+                        full_new_key_index.setdefault(key, []).append(
+                            new_obj,
+                        )
+                # Check User library services, addresses, intervals.
+                for cls in (Service, Address, Interval):
+                    for obj in session.scalars(
+                        sqlalchemy.select(cls).where(
+                            cls.library_id == user_lib.id,
+                        ),
+                    ).all():
+                        key = _identity_key(obj)
+                        if key is None:
+                            continue
+                        candidates = full_new_key_index.get(key)
+                        if not candidates:
+                            continue
+                        best = _best_name_match(obj.name, candidates)
+                        user_name = obj.name
+                        user_type = getattr(obj, 'type', None) or (
+                            'Interval' if isinstance(obj, Interval) else ''
+                        )
+                        preview_duplicates.append(
+                            (user_name, user_type, best.name),
+                        )
+
+        except Exception:
+            session.rollback()
+            logger.exception('Failed to analyse Standard Library update')
+            self._show_traceback_error(
+                'Failed to analyse the Standard Library update.',
+            )
+            return
+        finally:
+            session.close()
+
+        # ── Phase 1: Preview dialog ──────────────────────────────────
+        has_changes = preview_updated or preview_migrated or preview_removed
+        if has_changes or preview_duplicates:
+            dlg = UpdateLibraryPreviewDialog(
+                preview_updated,
+                preview_migrated,
+                preview_removed,
+                preview_duplicates,
+                parent=self,
+            )
+            if dlg.exec() != QDialog.DialogCode.Accepted:
+                return
+        else:
+            answer = QMessageBox.question(
+                self,
+                'FirewallFabrik',
+                self.tr(
+                    'Replace the Standard Library with the latest version?\n'
+                    'No existing references are affected.'
+                ),
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+
+        self._close_editor()
+        self._rs_mgr.close_all()
+
+        # ── Phase 2: Migrate removed+referenced to User Library ──────
+        migrated_ids = set()
+        session = self._db_manager.create_session()
+        try:
+            user_lib = session.scalars(
+                sqlalchemy.select(Library).where(Library.name == 'User'),
+            ).first()
+            if user_lib is None:
+                logger.warning(
+                    'No User library found; skipping migration of %d objects',
+                    len(removed_referenced),
+                )
+            else:
+                for old_uuid in removed_referenced:
+                    name, obj_type = _resolve_object_info(session, old_uuid)
+                    if name is None or obj_type is None:
+                        continue
+
+                    folder_path = SYSTEM_GROUP_PATHS.get(obj_type)
+                    if folder_path is None:
+                        logger.warning(
+                            'No User library folder mapping for type %r '
+                            '(object %s); skipping migration',
+                            obj_type,
+                            name,
+                        )
+                        continue
+
+                    target_group = find_group_by_path(
+                        session,
+                        user_lib.id,
+                        folder_path,
+                    )
+                    if target_group is None:
+                        logger.warning(
+                            'User library folder %r not found for %s; '
+                            'skipping migration',
+                            folder_path,
+                            name,
+                        )
+                        continue
+
+                    # Move the object to the User library by updating
+                    # library_id and group_id.  The object keeps its
+                    # UUID, so all rule_elements and group_membership
+                    # references remain valid automatically.
+                    for cls in (Address, Service, Interval, Host, Group):
+                        obj = session.get(cls, old_uuid)
+                        if obj is not None:
+                            obj.library_id = user_lib.id
+                            obj.group_id = target_group.id
+                            if cls is Group:
+                                obj.parent_group_id = target_group.id
+                            break
+
+                    # Remove internal Standard Library group_membership
+                    # rows that listed this object as a child of a
+                    # Standard Library group (the object now lives in
+                    # User library).
+                    session.execute(
+                        group_membership.delete().where(
+                            group_membership.c.member_id == old_uuid,
+                            group_membership.c.group_id.in_(
+                                list(old_ids - {old_uuid}),
+                            ),
+                        ),
+                    )
+                    migrated_ids.add(old_uuid)
+
+            session.commit()
+        except Exception:
+            session.rollback()
+            logger.exception(
+                'Failed to migrate removed objects to User library',
+            )
+            self._show_traceback_error(
+                'Failed to migrate removed objects to User library.',
+            )
+            return
+        finally:
+            session.close()
+
+        # ── Phase 3: Delete old + Insert new Standard Library ────────
+        session = self._db_manager.create_session()
+        try:
+            # Re-query IDs excluding migrated objects.
+            delete_ids = old_ids - migrated_ids
+
+            # Subqueries for device-owned children.
             std_device_ids = sqlalchemy.select(Host.id).where(
                 Host.library_id == old_std_id,
+                Host.id.not_in(migrated_ids) if migrated_ids else sqlalchemy.true(),
             )
             std_iface_ids = sqlalchemy.select(Interface.id).where(
                 sqlalchemy.or_(
@@ -1194,39 +1818,16 @@ class FWWindow(QMainWindow):
                 Rule.rule_set_id.in_(std_ruleset_ids),
             )
 
-            # Collect all object IDs for group_membership cleanup.
-            old_ids = {old_std_id}
-            for cls in (Address, Group, Host, Interface, Interval, Service):
-                for (oid,) in session.execute(
-                    sqlalchemy.select(cls.id).where(
-                        cls.library_id == old_std_id,
-                    ),
-                ):
-                    old_ids.add(oid)
-            # Also include device-owned interfaces/addresses with
-            # NULL library_id.
-            for (oid,) in session.execute(
-                sqlalchemy.select(Interface.id).where(
-                    Interface.device_id.in_(std_device_ids),
-                ),
-            ):
-                old_ids.add(oid)
-            for (oid,) in session.execute(
-                sqlalchemy.select(Address.id).where(
-                    Address.interface_id.in_(std_iface_ids),
-                ),
-            ):
-                old_ids.add(oid)
-
-            # Delete group_membership rows referencing old objects.
+            # Delete group_membership rows for old Standard Library
+            # groups (excluding migrated objects).
             session.execute(
                 group_membership.delete().where(
-                    group_membership.c.group_id.in_(old_ids),
+                    group_membership.c.group_id.in_(list(delete_ids)),
                 ),
             )
 
-            # Delete children via Core SQL in FK-safe order.
-            # 1. rule_elements → rules → rule_sets (device children)
+            # Delete children in FK-safe order.
+            # 1. rule_elements → rules → rule_sets
             session.execute(
                 rule_elements.delete().where(
                     rule_elements.c.rule_id.in_(std_rule_ids),
@@ -1242,72 +1843,101 @@ class FWWindow(QMainWindow):
                     RuleSet.device_id.in_(std_device_ids),
                 ),
             )
-            # 2. addresses (by library_id OR interface_id)
+            # 2. addresses
             session.execute(
                 sqlalchemy.delete(Address).where(
-                    sqlalchemy.or_(
-                        Address.library_id == old_std_id,
-                        Address.interface_id.in_(std_iface_ids),
-                    ),
+                    Address.id.in_(list(delete_ids)),
+                    Address.library_id == old_std_id,
                 ),
             )
-            # 3. interfaces (by library_id OR device_id)
+            session.execute(
+                sqlalchemy.delete(Address).where(
+                    Address.interface_id.in_(std_iface_ids),
+                ),
+            )
+            # 3. interfaces
             session.execute(
                 sqlalchemy.delete(Interface).where(
                     sqlalchemy.or_(
-                        Interface.library_id == old_std_id,
+                        sqlalchemy.and_(
+                            Interface.library_id == old_std_id,
+                            Interface.id.not_in(list(migrated_ids))
+                            if migrated_ids
+                            else sqlalchemy.true(),
+                        ),
                         Interface.device_id.in_(std_device_ids),
                     ),
                 ),
             )
             # 4. services, intervals, devices
-            session.execute(
-                sqlalchemy.delete(Service).where(
-                    Service.library_id == old_std_id,
-                ),
-            )
-            session.execute(
-                sqlalchemy.delete(Interval).where(
-                    Interval.library_id == old_std_id,
-                ),
-            )
-            session.execute(
-                sqlalchemy.delete(Host).where(
-                    Host.library_id == old_std_id,
-                ),
-            )
-            # 5. groups: clear self-referencing FK first, then delete
-            session.execute(
-                sqlalchemy.update(Group)
-                .where(Group.library_id == old_std_id)
-                .values(parent_group_id=None),
-            )
-            session.execute(
-                sqlalchemy.delete(Group).where(
-                    Group.library_id == old_std_id,
-                ),
-            )
-            # 6. library itself
+            if migrated_ids:
+                session.execute(
+                    sqlalchemy.delete(Service).where(
+                        Service.library_id == old_std_id,
+                        Service.id.not_in(list(migrated_ids)),
+                    ),
+                )
+                session.execute(
+                    sqlalchemy.delete(Interval).where(
+                        Interval.library_id == old_std_id,
+                        Interval.id.not_in(list(migrated_ids)),
+                    ),
+                )
+                session.execute(
+                    sqlalchemy.delete(Host).where(
+                        Host.library_id == old_std_id,
+                        Host.id.not_in(list(migrated_ids)),
+                    ),
+                )
+            else:
+                session.execute(
+                    sqlalchemy.delete(Service).where(
+                        Service.library_id == old_std_id,
+                    ),
+                )
+                session.execute(
+                    sqlalchemy.delete(Interval).where(
+                        Interval.library_id == old_std_id,
+                    ),
+                )
+                session.execute(
+                    sqlalchemy.delete(Host).where(
+                        Host.library_id == old_std_id,
+                    ),
+                )
+            # 5. groups: clear self-referencing FK, then delete
+            if migrated_ids:
+                session.execute(
+                    sqlalchemy.update(Group)
+                    .where(
+                        Group.library_id == old_std_id,
+                        Group.id.not_in(list(migrated_ids)),
+                    )
+                    .values(parent_group_id=None),
+                )
+                session.execute(
+                    sqlalchemy.delete(Group).where(
+                        Group.library_id == old_std_id,
+                        Group.id.not_in(list(migrated_ids)),
+                    ),
+                )
+            else:
+                session.execute(
+                    sqlalchemy.update(Group)
+                    .where(Group.library_id == old_std_id)
+                    .values(parent_group_id=None),
+                )
+                session.execute(
+                    sqlalchemy.delete(Group).where(
+                        Group.library_id == old_std_id,
+                    ),
+                )
+            # 6. library record
             session.execute(
                 sqlalchemy.delete(Library).where(Library.id == old_std_id),
             )
-            session.commit()
-        except Exception:
-            session.rollback()
-            logger.exception('Failed to delete old Standard Library')
-            self._show_traceback_error(
-                'Failed to delete the old Standard Library.',
-            )
-            return
-        finally:
-            session.close()
 
-        # Phase 2: Insert new Standard Library.
-        # Link the transient Library to the *existing* persistent
-        # FWObjectDatabase — this is safe because the ORM simply
-        # updates the FK and back-ref without touching child groups.
-        session = self._db_manager.create_session()
-        try:
+            # Insert the new Standard Library.
             db_obj = session.scalars(
                 sqlalchemy.select(FWObjectDatabase),
             ).first()
@@ -1315,27 +1945,14 @@ class FWWindow(QMainWindow):
             session.add(new_std)
             session.flush()
 
-            # Insert new group memberships (internal to Standard Library).
             if parse_result.memberships:
                 session.execute(
                     group_membership.insert(),
                     parse_result.memberships,
                 )
 
-            # Remap user references: build old_uuid -> new_uuid mapping
-            # by matching tree-paths between old and new Standard Library.
-            new_ref_map = {
-                path: uid
-                for path, uid in parse_result.ref_index.items()
-                if path.startswith('Library:Standard/')
-            }
-            uuid_remap = {}
-            for path, old_uuid in old_ref_map.items():
-                new_uuid = new_ref_map.get(path)
-                if new_uuid is not None and new_uuid != old_uuid:
-                    uuid_remap[old_uuid] = new_uuid
-
-            for old_uuid, new_uuid in uuid_remap.items():
+            # Remap remaining user references (old_uuid → new_uuid).
+            for old_uuid, (new_uuid, _path) in uuid_remap.items():
                 session.execute(
                     rule_elements.update()
                     .where(rule_elements.c.target_id == old_uuid)
@@ -1350,24 +1967,35 @@ class FWWindow(QMainWindow):
             session.commit()
         except Exception:
             session.rollback()
-            logger.exception('Failed to insert new Standard Library')
+            logger.exception('Failed to update Standard Library')
             self._show_traceback_error(
-                'Failed to insert the new Standard Library.',
+                'Failed to update the Standard Library.',
             )
             return
         finally:
             session.close()
 
-        # Merge ref_index: remove old Standard entries, add new ones.
+        # ── Phase 4: Refresh UI ──────────────────────────────────────
+        # Merge ref_index: drop old Standard entries, add new ones,
+        # and update paths for migrated objects.
         ref_index = {
             path: uid
             for path, uid in self._db_manager.ref_index.items()
             if not path.startswith('Library:Standard')
         }
         ref_index.update(parse_result.ref_index)
-        self._db_manager.ref_index = ref_index
 
-        # Save undo state and refresh UI.
+        # Add ref_index entries for migrated objects under User library.
+        for old_uuid, old_path in removed_referenced.items():
+            if old_uuid in migrated_ids:
+                new_path = old_path.replace(
+                    'Library:Standard/',
+                    'Library:User/',
+                    1,
+                )
+                ref_index[new_path] = old_uuid
+
+        self._db_manager.ref_index = ref_index
         self._db_manager.save_state('Update Standard Library')
 
         file_key = (
@@ -1376,10 +2004,21 @@ class FWWindow(QMainWindow):
         with self._db_manager.session() as sess:
             self._object_tree.populate(sess, file_key=file_key)
 
+        # Summary message.
+        parts = []
+        if uuid_remap:
+            parts.append(f'{len(uuid_remap)} object(s) updated')
+        if migrated_ids:
+            parts.append(
+                f'{len(migrated_ids)} object(s) moved to User library',
+            )
+        if removed_unused:
+            parts.append(f'{len(removed_unused)} unused object(s) removed')
+        summary = ', '.join(parts) if parts else 'No changes were needed'
         QMessageBox.information(
             self,
             'FirewallFabrik',
-            self.tr('Standard Library has been updated successfully.'),
+            self.tr(f'Standard Library updated successfully.\n{summary}.'),
         )
 
     @Slot()
