@@ -320,10 +320,8 @@ def build_element_menu(menu, view, model, index, col):
         lambda: view._paste_element(model, index, slot),
     )
     valid_types = VALID_TYPES_BY_SLOT.get(slot, frozenset())
-    can_paste = (
-        view._object_clipboard is not None
-        and view._object_clipboard.get('type', '') in valid_types
-    )
+    clip = view._clipboard_store.object_entry
+    can_paste = clip is not None and clip.get('type', '') in valid_types
     paste_act.setEnabled(can_paste)
 
     # Delete.

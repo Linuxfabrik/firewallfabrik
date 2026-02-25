@@ -17,7 +17,7 @@ import sys
 
 try:
     from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleFactory
 except ImportError:
     print(
         'Python module "PySide6" is not installed; this module is required to run FirewallFabrik in GUI mode.',
@@ -27,6 +27,19 @@ except ImportError:
 
 from firewallfabrik import __version__
 from firewallfabrik.gui.main_window import FWWindow
+from firewallfabrik.gui.window_registry import WindowRegistry
+
+
+class _FWFStyle(QProxyStyle):
+    """Proxy style wrapping Fusion with tweaked pixel metrics."""
+
+    def __init__(self):
+        super().__init__(QStyleFactory.create('Fusion'))
+
+    def pixelMetric(self, metric, option=None, widget=None):
+        if metric == QStyle.PixelMetric.PM_SmallIconSize:
+            return 14
+        return super().pixelMetric(metric, option, widget)
 
 
 def main():
@@ -63,7 +76,7 @@ def main():
     QApplication.setDesktopFileName('ch.linuxfabrik.firewallfabrik')
 
     app = QApplication(remaining)
-    app.setStyle('Fusion')
+    app.setStyle(_FWFStyle())
     app.setOrganizationName('Linuxfabrik')
     app.setApplicationName('FirewallFabrik')
 
@@ -78,6 +91,9 @@ def main():
     qt_translations_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
     if qt_translator.load(f'qt_{locale}', qt_translations_path):
         app.installTranslator(qt_translator)
+
+    # Initialise the shared window registry before creating the first window.
+    WindowRegistry.instance()
 
     mw = FWWindow()
     mw.show()

@@ -12,8 +12,8 @@
 #
 # this object is used to hold branch rulesets for firewall82
 
-# firewall82_A:Policy_A:1: warning: Rule branches to rule set Policy which branches back to it, creating a loop
 # firewall82_A:Policy_A:1: warning: Rule branches to rule set Policy_A which branches back to it, creating a loop
+# firewall82_A:Policy_A:1: warning: Rule branches to rule set Policy which branches back to it, creating a loop
 # firewall82_A:Policy_A:2: warning: Rule branches to rule set Policy_A which branches back to it, creating a loop
 
 FWBDEBUG=""

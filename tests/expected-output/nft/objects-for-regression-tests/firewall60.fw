@@ -241,23 +241,23 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        meta hour "18:00"-"23:59" log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain forward {
@@ -266,23 +266,23 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        meta hour "18:00"-"23:59" log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain output {
@@ -291,23 +291,23 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        meta hour "18:00"-"23:59" log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 3 (global)
         #
-        log prefix "RULE 3 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } log prefix "RULE 4 -- DENY " level info drop
     }
 }
 

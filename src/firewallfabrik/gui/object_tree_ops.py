@@ -519,6 +519,205 @@ class TreeOperations:
                 )
             )
 
+    def duplicate_object_cross_db(
+        self,
+        source_db_manager,
+        source_id,
+        model_cls,
+        target_lib_id,
+        *,
+        folder=None,
+        prefix='',
+        target_group_id=None,
+        target_interface_id=None,
+    ):
+        """Deep-copy an object from *source_db_manager* into *this* database.
+
+        Used for cross-file paste.  Reads the source object from the
+        foreign database, serializes all scalar columns, and creates a
+        new ORM instance in the local database with a fresh UUID.
+
+        Returns the new object's UUID, or *None* on failure.
+        """
+        if self._db_manager is None or source_db_manager is None:
+            return None
+
+        # Read the source object from the foreign database.
+        source_session = source_db_manager.create_session()
+        target_session = self._db_manager.create_session()
+        try:
+            source = source_session.get(model_cls, source_id)
+            if source is None:
+                return None
+
+            id_map = {}
+            new_obj = self._clone_object(source, id_map)
+
+            # Clear all parent references first, then set the target.
+            if hasattr(new_obj, 'interface_id'):
+                new_obj.interface_id = None
+            if hasattr(new_obj, 'group_id'):
+                new_obj.group_id = None
+            if hasattr(new_obj, 'parent_group_id'):
+                new_obj.parent_group_id = None
+
+            if target_interface_id is not None and hasattr(new_obj, 'interface_id'):
+                new_obj.interface_id = target_interface_id
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = None
+            elif target_group_id is not None:
+                if hasattr(new_obj, 'group_id'):
+                    new_obj.group_id = target_group_id
+                elif hasattr(new_obj, 'parent_group_id'):
+                    new_obj.parent_group_id = target_group_id
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = target_lib_id
+            else:
+                if hasattr(new_obj, 'library_id'):
+                    new_obj.library_id = target_lib_id
+
+            if folder is not None and hasattr(new_obj, 'data'):
+                data = copy.deepcopy(new_obj.data or {})
+                if folder:
+                    data['folder'] = folder
+                else:
+                    data.pop('folder', None)
+                new_obj.data = data
+
+            # Make name unique in the target database.
+            new_obj.name = self.make_name_unique(target_session, new_obj)
+
+            target_session.add(new_obj)
+
+            # Deep-copy children for devices (interfaces, rule sets, etc.).
+            if isinstance(source, Host):
+                self._duplicate_device_children_cross_db(
+                    source_session,
+                    target_session,
+                    source,
+                    new_obj,
+                    id_map,
+                )
+
+            # Copy group membership for groups.
+            if isinstance(source, Group):
+                self._duplicate_group_members_cross_db(
+                    source_session,
+                    target_session,
+                    source,
+                    new_obj,
+                )
+
+            target_session.commit()
+            self._db_manager.save_state(
+                f'{prefix}Paste {model_cls.__name__} {source.name} (cross-file)',
+            )
+            new_id = new_obj.id
+        except Exception:
+            target_session.rollback()
+            raise
+        finally:
+            source_session.close()
+            target_session.close()
+
+        return new_id
+
+    def _duplicate_device_children_cross_db(
+        self,
+        source_session,
+        target_session,
+        source_device,
+        new_device,
+        id_map,
+    ):
+        """Duplicate device children across databases.
+
+        Like ``_duplicate_device_children`` but reads from *source_session*
+        and writes to *target_session*.
+        """
+        for iface in source_device.interfaces:
+            new_iface = self._clone_object(iface, id_map)
+            new_iface.device_id = new_device.id
+            new_iface.library_id = new_device.library_id
+            target_session.add(new_iface)
+            for addr in iface.addresses:
+                new_addr = self._clone_object(addr, id_map)
+                new_addr.interface_id = new_iface.id
+                new_addr.library_id = None
+                new_addr.group_id = None
+                target_session.add(new_addr)
+
+        rule_element_tasks = []
+        for rs in source_device.rule_sets:
+            new_rs = self._clone_object(rs, id_map)
+            new_rs.device_id = new_device.id
+            target_session.add(new_rs)
+            for rule in rs.rules:
+                new_rule = self._clone_object(rule, id_map)
+                new_rule.rule_set_id = new_rs.id
+                target_session.add(new_rule)
+                rows = source_session.execute(
+                    sqlalchemy.select(rule_elements).where(
+                        rule_elements.c.rule_id == rule.id,
+                    ),
+                ).all()
+                if rows:
+                    rule_element_tasks.append((new_rule, rows))
+
+        target_session.flush()
+
+        for new_rule, rows in rule_element_tasks:
+            for row in rows:
+                # Remap target_id if it's a child of the cloned device;
+                # otherwise keep the original (references to shared
+                # Standard Library objects stay as-is — they won't
+                # exist in the target DB but that's acceptable for
+                # cross-file paste of rule elements referencing
+                # non-standard objects; those will need manual fixup).
+                target_id = id_map.get(row.target_id, row.target_id)
+                target_session.execute(
+                    rule_elements.insert().values(
+                        rule_id=new_rule.id,
+                        slot=row.slot,
+                        target_id=target_id,
+                        position=row.position,
+                    ),
+                )
+
+    @staticmethod
+    def _duplicate_group_members_cross_db(
+        source_session,
+        target_session,
+        source_group,
+        new_group,
+    ):
+        """Copy group_membership entries across databases.
+
+        Only copies memberships whose member_id exists in the target DB.
+        """
+        rows = source_session.execute(
+            sqlalchemy.select(group_membership).where(
+                group_membership.c.group_id == source_group.id,
+            ),
+        ).all()
+        for row in rows:
+            # Check if the member exists in the target database before
+            # inserting the membership (cross-file groups may reference
+            # objects that don't exist in the target).
+            exists = False
+            for cls in (Address, Service, Interval, Host, Interface, Group):
+                if target_session.get(cls, row.member_id) is not None:
+                    exists = True
+                    break
+            if exists:
+                target_session.execute(
+                    group_membership.insert().values(
+                        group_id=new_group.id,
+                        member_id=row.member_id,
+                        position=row.position,
+                    ),
+                )
+
     # ------------------------------------------------------------------
     # Move
     # ------------------------------------------------------------------

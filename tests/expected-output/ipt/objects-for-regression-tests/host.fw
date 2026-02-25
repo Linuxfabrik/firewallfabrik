@@ -323,7 +323,6 @@ script_body() {
  #
  $IPTABLES -N In_RULE_0
  $IPTABLES -A INPUT -i eth0 -s 22.22.22.22 -j In_RULE_0
- $IPTABLES -A FORWARD -i eth0 -s 22.22.22.22 -j In_RULE_0
  $IPTABLES -A In_RULE_0 -j LOG --log-level debug
  $IPTABLES -A In_RULE_0 -j DROP
  #
@@ -345,20 +344,20 @@ script_body() {
  #
  echo "Rule 3 (lo)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -i lo -s 22.22.22.22 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -i lo -s 127.0.0.1 -m state --state NEW -j CHAIN
+ $IPTABLES -N Cid3BD8ECC6.0
+ $IPTABLES -A INPUT -i lo -s 22.22.22.22 -m state --state NEW -j Cid3BD8ECC6.0
+ $IPTABLES -A INPUT -i lo -s 127.0.0.1 -m state --state NEW -j Cid3BD8ECC6.0
  $IPTABLES -N In_RULE_3
- $IPTABLES -A CHAIN -d 22.22.22.22 -j In_RULE_3
- $IPTABLES -A CHAIN -d 127.0.0.1 -j In_RULE_3
+ $IPTABLES -A Cid3BD8ECC6.0 -d 22.22.22.22 -j In_RULE_3
+ $IPTABLES -A Cid3BD8ECC6.0 -d 127.0.0.1 -j In_RULE_3
  $IPTABLES -A In_RULE_3 -j LOG --log-level debug
  $IPTABLES -A In_RULE_3 -j ACCEPT
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -o lo -s 22.22.22.22 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -o lo -s 127.0.0.1 -m state --state NEW -j CHAIN
+ $IPTABLES -N Cid3BD8ECC6.1
+ $IPTABLES -A OUTPUT -o lo -s 22.22.22.22 -m state --state NEW -j Cid3BD8ECC6.1
+ $IPTABLES -A OUTPUT -o lo -s 127.0.0.1 -m state --state NEW -j Cid3BD8ECC6.1
  $IPTABLES -N Out_RULE_3
- $IPTABLES -A CHAIN -d 22.22.22.22 -j Out_RULE_3
- $IPTABLES -A CHAIN -d 127.0.0.1 -j Out_RULE_3
+ $IPTABLES -A Cid3BD8ECC6.1 -d 22.22.22.22 -j Out_RULE_3
+ $IPTABLES -A Cid3BD8ECC6.1 -d 127.0.0.1 -j Out_RULE_3
  $IPTABLES -A Out_RULE_3 -j LOG --log-level debug
  $IPTABLES -A Out_RULE_3 -j ACCEPT
  #
@@ -377,7 +376,6 @@ script_body() {
  $IPTABLES -N RULE_8
  $IPTABLES -A OUTPUT -m limit --limit 10/minute --limit-burst 50 -j RULE_8
  $IPTABLES -A INPUT -m limit --limit 10/minute --limit-burst 50 -j RULE_8
- $IPTABLES -A FORWARD -m limit --limit 10/minute --limit-burst 50 -j RULE_8
  $IPTABLES -A RULE_8 -j LOG --log-level debug --log-prefix "CATCH ALL RULE"
  $IPTABLES -A RULE_8 -j DROP
 }

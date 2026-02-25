@@ -463,6 +463,7 @@ case "$cmd" in
  verify_interfaces
  prolog_commands
 
+
  script_body
  ip_forward
 

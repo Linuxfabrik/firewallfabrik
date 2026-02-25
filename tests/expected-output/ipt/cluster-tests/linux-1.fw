@@ -118,6 +118,7 @@ check_tools() {
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
+ find_program $VCONFIG
 }
 reset_iptables_v4() {
  local list
@@ -248,6 +249,96 @@ clear_addresses_except_known_interfaces() {
  $FWBDEBUG $IP link set $intf down
  done
 }
+missing_vlan() {
+ vlan=$1
+ cmd=$2
+
+ oldIFS=$IFS
+ IFS="@"
+ set $vlan
+ subint=$1
+ parent=$2
+ IFS=$oldIFS
+
+ vlan_id=$(echo $subint | sed -r 's/(vlan|[^.]*\.)//')
+ test "$cmd" = "add" && {
+ echo $subint | grep -q "vlan" && name_type="VLAN_PLUS_VID" || name_type="DEV_PLUS_VID"
+ test "$vlan_id" \< "1" || name_type="${name_type}_NO_PAD"
+ echo "# Adding VLAN interface $subint (parent: $parent)"
+ $FWBDEBUG $VCONFIG set_name_type $name_type
+ $FWBDEBUG $VCONFIG $cmd $parent $vlan_id
+ $FWBDEBUG $IP link set $subint up
+ }
+ test "$cmd" = "rem" && {
+ echo "# Removing VLAN interface $subint (parent: $parent)"
+ $FWBDEBUG $VCONFIG $cmd $subint
+ }
+}
+
+parse_fwb_vlans() {
+ set $1
+ vlan_parent_interface=$1
+ shift
+
+ FWB_VLANS=$(
+ for subint in $*; do
+ echo "${subint}@$vlan_parent_interface"
+ done | sort
+ )
+ echo $FWB_VLANS
+}
+
+parse_current_vlans() {
+ vlan_parent_interface=$1
+ CURRENT_VLANS=""
+ PROC_DIR="/proc/net/vlan/"
+ test -d $PROC_DIR || $MODPROBE 8021q || {
+ echo "$PROC_DIR does not exist. Vlan interfaces are not available."
+ exit 1
+ }
+
+ test -f "/proc/net/vlan/config" && {
+ CURRENT_VLANS=$(
+ cat /proc/net/vlan/config | grep -v 'Dev name' | grep $vlan_parent_interface | \
+ while read subint a vlan_id b parent; do
+ echo "${subint}@$parent"
+ done | sort
+ )
+ }
+ echo $CURRENT_VLANS
+}
+
+update_vlans_of_interface() {
+ args="$1"
+ set $1
+ vlan_parent_interface=$1
+
+ FWB_VLANS=$(parse_fwb_vlans "$args")
+ CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+
+ $IP link set $vlan_parent_interface up
+ diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
+ diff_intf missing_vlan "$CURRENT_VLANS" "$FWB_VLANS" rem
+}
+
+add_vlans() {
+ args="$1"
+ set $1
+ vlan_parent_interface=$1
+
+ FWB_VLANS=$(parse_fwb_vlans $args)
+ CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+
+ $IP link set $vlan_parent_interface up
+ diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
+}
+
+clear_vlans_except_known() {
+ FWB_VLANS=$*
+ CURRENT_VLANS=$(parse_current_vlans '|')
+
+ diff_intf missing_vlan "$CURRENT_VLANS" "$FWB_VLANS" rem
+}
 
 check_file() {
  test -r "$2" || {
@@ -307,9 +398,11 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth0 172.24.0.2/16" ""
+ update_vlans_of_interface "eth0 eth0.100"
+ clear_vlans_except_known eth0.100@eth0
+ update_addresses_of_interface "eth0 172.24.0.2/16" "172.24.0.1/24"
  update_addresses_of_interface "eth0.100 192.168.100.1/24" ""
- update_addresses_of_interface "eth1 192.168.1.2/24" ""
+ update_addresses_of_interface "eth1 192.168.1.2/24" "192.168.1.1/24"
  update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -322,6 +415,14 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
+ # ================ Table 'nat', rule set NAT
+ #
+ # Rule 0 (NAT)
+ #
+ echo "Rule 0 (NAT)"
+ #
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 172.24.0.1
+
  # ================ Table 'filter', rule set to_fw
  #
  # Rule to_fw 0 (global)
@@ -329,12 +430,177 @@ script_body() {
  echo "Rule to_fw 0 (global)"
  #
  # hashlimit 10/sec
+ $IPTABLES -N to_fw
  $IPTABLES -N to_fw_0
- $IPTABLES -A OUTPUT -j to_fw_0
- $IPTABLES -A INPUT -j to_fw_0
- $IPTABLES -A FORWARD -j to_fw_0
+ $IPTABLES -A to_fw -m hashlimit --hashlimit 10/second --hashlimit-name htable_rule_0 -j to_fw_0
  $IPTABLES -A to_fw_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
  $IPTABLES -A to_fw_0 -j DROP
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule -8 VRRP (automatic)
+ #
+ echo "Rule -8 VRRP (automatic)"
+ #
+ $IPTABLES -A OUTPUT -o eth1 -p vrrp -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -7 VRRP (automatic)
+ #
+ echo "Rule -7 VRRP (automatic)"
+ #
+ $IPTABLES -A INPUT -i eth1 -p vrrp -s 192.168.1.4 -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -6 VRRP (automatic)
+ #
+ echo "Rule -6 VRRP (automatic)"
+ #
+ $IPTABLES -A INPUT -i eth1 -p vrrp -s 192.168.1.3 -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -5 VRRP (automatic)
+ #
+ echo "Rule -5 VRRP (automatic)"
+ #
+ $IPTABLES -A OUTPUT -o eth0 -p vrrp -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -4 VRRP (automatic)
+ #
+ echo "Rule -4 VRRP (automatic)"
+ #
+ $IPTABLES -A INPUT -i eth0 -p vrrp -s 172.24.0.4 -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -3 VRRP (automatic)
+ #
+ echo "Rule -3 VRRP (automatic)"
+ #
+ $IPTABLES -A INPUT -i eth0 -p vrrp -s 172.24.0.3 -d 224.0.0.18 -j ACCEPT
+ #
+ # Rule -2 CONNTRACK (automatic)
+ #
+ echo "Rule -2 CONNTRACK (automatic)"
+ #
+ $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -d 225.0.0.50 --dport 3780 -j ACCEPT
+ #
+ # Rule -1 CONNTRACK (automatic)
+ #
+ echo "Rule -1 CONNTRACK (automatic)"
+ #
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -d 225.0.0.50 --dport 3780 -j ACCEPT
+ #
+ # Rule 0 (eth0)
+ #
+ echo "Rule 0 (eth0)"
+ #
+ $IPTABLES -A INPUT -i eth0 -p vrrp -d 224.0.0.18 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -p vrrp -d 224.0.0.18 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (eth0)
+ #
+ echo "Rule 1 (eth0)"
+ #
+ # anti spoofing rule
+ $IPTABLES -N In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 172.24.0.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 172.24.0.2 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 192.168.1.2 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 192.168.100.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 172.24.0.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 172.24.0.2 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 192.168.1.2 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 192.168.100.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A In_RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
+ $IPTABLES -A In_RULE_1 -j DROP
+ #
+ # Rule 2 (lo)
+ #
+ echo "Rule 2 (lo)"
+ #
+ $IPTABLES -A INPUT -i lo -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o lo -m state --state NEW -j ACCEPT
+ #
+ # Rule 3 (global)
+ #
+ echo "Rule 3 (global)"
+ #
+ # SSH Access to firewall is permitted
+ # only from internal network
+ $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
+ #
+ # Rule 4 (global)
+ #
+ echo "Rule 4 (global)"
+ #
+ # SSH Access to firewall is permitted
+ # only from internal network
+ $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.2 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.3 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.4 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.3 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.4 -j ACCEPT
+ #
+ # Rule 5 (global)
+ #
+ echo "Rule 5 (global)"
+ #
+ # Firewall uses one of the machines
+ # on internal network for DNS
+ $IPTABLES -N RULE_5
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 53 -m state --state NEW -j RULE_5
+ $IPTABLES -A OUTPUT -p udp -m udp -d 192.168.1.0/24 --dport 53 -m state --state NEW -j RULE_5
+ $IPTABLES -A RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- ACCEPT "
+ $IPTABLES -A RULE_5 -j ACCEPT
+ #
+ # Rule 6 (global)
+ #
+ echo "Rule 6 (global)"
+ #
+ # All other attempts to connect to
+ # the firewall are denied and logged
+ $IPTABLES -N RULE_6
+ $IPTABLES -A OUTPUT -d 172.24.0.1 -j RULE_6
+ $IPTABLES -A OUTPUT -d 172.24.0.2 -j RULE_6
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j RULE_6
+ $IPTABLES -A OUTPUT -d 192.168.1.2 -j RULE_6
+ $IPTABLES -A OUTPUT -d 192.168.100.1 -j RULE_6
+ $IPTABLES -A INPUT -j RULE_6
+ $IPTABLES -A RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
+ $IPTABLES -A RULE_6 -j DROP
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ #
+ # Rule 8 (global)
+ #
+ echo "Rule 8 (global)"
+ #
+ $IPTABLES -N RULE_8
+ $IPTABLES -A OUTPUT -m state --state NEW -j RULE_8
+ $IPTABLES -A INPUT -m state --state NEW -j RULE_8
+ $IPTABLES -A FORWARD -m state --state NEW -j RULE_8
+ $IPTABLES -A RULE_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
+ $IPTABLES -A RULE_8 -j DROP
+ #
+ # Rule 9 (global)
+ #
+ echo "Rule 9 (global)"
+ #
+ $IPTABLES -N RULE_9
+ $IPTABLES -A OUTPUT -j RULE_9
+ $IPTABLES -A INPUT -j RULE_9
+ $IPTABLES -A FORWARD -j RULE_9
+ $IPTABLES -A RULE_9 -j LOG --log-level info --log-prefix "RULE 9 -- DENY "
+ $IPTABLES -A RULE_9 -j DROP
 }
 
 ip_forward() {
@@ -395,7 +661,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules "nat "
  configure_interfaces
  verify_interfaces
 

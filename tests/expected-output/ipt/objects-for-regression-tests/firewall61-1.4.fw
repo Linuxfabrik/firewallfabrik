@@ -312,9 +312,6 @@ configure_interfaces() {
 }
 
 script_body() {
- echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
- echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
-
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -323,7 +320,91 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
- $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+ # ================ Table 'mangle', rule set fw61-Policy
+ #
+ # Rule fw61-Policy 0 (global)
+ #
+ echo "Rule fw61-Policy 0 (global)"
+ #
+ $IPTABLES -N fw61-Policy -t mangle
+ $IPTABLES -N fw61-Policy_0 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
+ $IPTABLES -t mangle -A fw61-Policy_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_0 -j DROP
+ #
+ # Rule fw61-Policy 1 (global)
+ #
+ echo "Rule fw61-Policy 1 (global)"
+ #
+ $IPTABLES -N fw61-Policy_1 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
+ $IPTABLES -t mangle -A fw61-Policy_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_1 -j DROP
+ #
+ # Rule fw61-Policy 2 (global)
+ #
+ echo "Rule fw61-Policy 2 (global)"
+ #
+ $IPTABLES -N fw61-Policy_2 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
+ $IPTABLES -t mangle -A fw61-Policy_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_2 -j DROP
+ #
+ # Rule fw61-Policy 3 (global)
+ #
+ echo "Rule fw61-Policy 3 (global)"
+ #
+ $IPTABLES -N fw61-Policy_3 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 00:00 --timestop 23:59 --weekdays Sat,Sun -j fw61-Policy_3
+ $IPTABLES -t mangle -A fw61-Policy_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_3 -j DROP
+ #
+ # Rule fw61-Policy 4 (global)
+ #
+ echo "Rule fw61-Policy 4 (global)"
+ #
+ $IPTABLES -N fw61-Policy_4 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
+ $IPTABLES -t mangle -A fw61-Policy_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_4 -j DROP
+ #
+ # Rule fw61-Policy 5 (global)
+ #
+ echo "Rule fw61-Policy 5 (global)"
+ #
+ $IPTABLES -N fw61-Policy_5 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
+ $IPTABLES -t mangle -A fw61-Policy_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_5 -j DROP
+ #
+ # Rule fw61-Policy 6 (global)
+ #
+ echo "Rule fw61-Policy 6 (global)"
+ #
+ $IPTABLES -N fw61-Policy_6 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --datestart 2008-03-13T01:01:00 --datestop 2010-01-01T02:02:00 --weekdays Sun,Mon -j fw61-Policy_6
+ $IPTABLES -t mangle -A fw61-Policy_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_6 -j DROP
+ #
+ # Rule fw61-Policy 7 (global)
+ #
+ echo "Rule fw61-Policy 7 (global)"
+ #
+ $IPTABLES -N fw61-Policy_7 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --datestart 2008-03-13T00:00:00 --datestop 2010-01-01T01:00:00 --weekdays Fri,Sat -j fw61-Policy_7
+ $IPTABLES -t mangle -A fw61-Policy_7 -j LOG --log-level info --log-prefix "RULE 7 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_7 -j DROP
+ #
+ # Rule fw61-Policy 8 (global)
+ #
+ echo "Rule fw61-Policy 8 (global)"
+ #
+ $IPTABLES -N fw61-Policy_8 -t mangle
+ $IPTABLES -t mangle -A fw61-Policy -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
+ $IPTABLES -t mangle -A fw61-Policy_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
+ $IPTABLES -t mangle -A fw61-Policy_8 -j DROP
 
  # ================ Table 'filter', rule set Policy
  #
@@ -336,7 +417,31 @@ script_body() {
  $IPTABLES -A INPUT -j RULE_0
  $IPTABLES -A FORWARD -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- BRANCH "
- $IPTABLES -A RULE_0
+ $IPTABLES -N fw61-Policy
+ $IPTABLES -A RULE_0 -j fw61-Policy
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # ================ Table 'mangle', automatic rules
+ $IP6TABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+ # ================ Table 'filter', rule set Policy_ipv6
+ #
+ # Rule Policy_ipv6 0 (global)
+ #
+ echo "Rule Policy_ipv6 0 (global)"
+ #
+ $IP6TABLES -N Policy_ipv6_0
+ $IP6TABLES -A OUTPUT -j Policy_ipv6_0
+ $IP6TABLES -A INPUT -j Policy_ipv6_0
+ $IP6TABLES -A FORWARD -j Policy_ipv6_0
+ $IP6TABLES -A Policy_ipv6_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IP6TABLES -A Policy_ipv6_0 -j DROP
 }
 
 ip_forward() {
@@ -348,6 +453,7 @@ echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 reset_all() {
  :
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -359,6 +465,9 @@ stop_action() {
  $IPTABLES -P OUTPUT ACCEPT
  $IPTABLES -P INPUT ACCEPT
  $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 check_iptables() {
@@ -398,7 +507,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules " ipv6"
  configure_interfaces
  verify_interfaces
 

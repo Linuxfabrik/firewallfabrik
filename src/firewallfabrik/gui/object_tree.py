@@ -219,14 +219,15 @@ class ObjectTree(QWidget):
     where_used_requested = Signal(str, str, str)
     """Emitted when "Where used" is chosen: (obj_id, name, obj_type)."""
 
-    compile_requested = Signal()
-    """Emitted when "Compile" is chosen from the context menu."""
+    compile_requested = Signal(list)
+    """Emitted when "Compile" is chosen: list of selected firewall names."""
 
-    install_requested = Signal()
-    """Emitted when "Install" is chosen from the context menu."""
+    install_requested = Signal(list)
+    """Emitted when "Install" is chosen: list of selected firewall names."""
 
-    def __init__(self, parent=None):
+    def __init__(self, clipboard_store=None, parent=None):
         super().__init__(parent)
+        self._clipboard_store = clipboard_store
 
         self._filter = QLineEdit()
         self._filter.setPlaceholderText('Filter... (Ctrl+F)')
@@ -249,7 +250,7 @@ class ObjectTree(QWidget):
 
         self._db_manager = None
         self._ops = TreeOperations()
-        self._actions = TreeActionHandler(self)
+        self._actions = TreeActionHandler(self, self._clipboard_store)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -749,7 +750,12 @@ class ObjectTree(QWidget):
             font.setBold(not inactive and needs_compile(obj))
             item.setFont(0, font)
 
-            attrs = obj_brief_attrs(obj)
+            parent = item.parent()
+            under_iface = (
+                parent is not None
+                and parent.data(0, Qt.ItemDataRole.UserRole + 1) == 'Interface'
+            )
+            attrs = obj_brief_attrs(obj, under_interface=under_iface)
             item.setData(0, Qt.ItemDataRole.UserRole + 3, attrs)
             item.setText(1, attrs)
 
@@ -959,10 +965,10 @@ class ObjectTree(QWidget):
         compat_clip = (
             [
                 cb
-                for cb in self._actions._tree_clipboard
+                for cb in self._actions._clipboard_store.tree_entries
                 if allowed is None or cb['type'] in allowed
             ]
-            if self._actions._tree_clipboard is not None
+            if self._actions._clipboard_store.tree_entries is not None
             else None
         ) or None
 
@@ -1013,10 +1019,10 @@ class ObjectTree(QWidget):
         compat_clip = (
             [
                 cb
-                for cb in self._actions._tree_clipboard
+                for cb in self._actions._clipboard_store.tree_entries
                 if allowed is None or cb['type'] in allowed
             ]
-            if self._actions._tree_clipboard is not None
+            if self._actions._clipboard_store.tree_entries is not None
             else None
         ) or None
 

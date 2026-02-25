@@ -95,12 +95,20 @@ def _resolve_mgmt_address(fw):
 class CompileDialog(QDialog):
     """Modal 2-page wizard for compiling firewalls via ``cli tools``."""
 
-    def __init__(self, db_manager, current_file, parent=None, install_mode=False):
+    def __init__(
+        self,
+        db_manager,
+        current_file,
+        parent=None,
+        install_mode=False,
+        preselect_names=None,
+    ):
         super().__init__(parent)
         self._db_manager = db_manager
         self._current_file = current_file
         self._dest_dir = current_file.parent
         self._install_mode = install_mode
+        self._preselect_names = set(preselect_names) if preselect_names else None
 
         # Compile state
         self._process = None
@@ -238,17 +246,33 @@ class CompileDialog(QDialog):
 
                 # Col 1 (Compile): checkbox
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                if supported and not inactive and needs_compile:
-                    item.setCheckState(1, Qt.CheckState.Checked)
+                if self._preselect_names is not None:
+                    check_compile = (
+                        supported and not inactive and fw.name in self._preselect_names
+                    )
                 else:
-                    item.setCheckState(1, Qt.CheckState.Unchecked)
+                    check_compile = supported and not inactive and needs_compile
+                item.setCheckState(
+                    1,
+                    Qt.CheckState.Checked if check_compile else Qt.CheckState.Unchecked,
+                )
 
                 # Col 2 (Install): checkbox — only in install mode.
                 if self._install_mode:
-                    if supported and not inactive and needs_install:
-                        item.setCheckState(2, Qt.CheckState.Checked)
+                    if self._preselect_names is not None:
+                        check_install = (
+                            supported
+                            and not inactive
+                            and fw.name in self._preselect_names
+                        )
                     else:
-                        item.setCheckState(2, Qt.CheckState.Unchecked)
+                        check_install = supported and not inactive and needs_install
+                    item.setCheckState(
+                        2,
+                        Qt.CheckState.Checked
+                        if check_install
+                        else Qt.CheckState.Unchecked,
+                    )
 
                 # Col 3-5: timestamps (stored as epoch ints)
                 item.setText(3, _format_epoch(data.get('lastModified', 0)))

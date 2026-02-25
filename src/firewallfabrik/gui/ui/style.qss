@@ -1,17 +1,230 @@
 /* Global FirewallFabrik stylesheet — loaded in app.py
  *
  * Uses palette() references so rules work with both light and dark themes.
+ * Uses rgba() overlays for hover/press states to adapt to any background.
  */
 
-/* Drop area for drag-and-drop */
+
+/* --- Drop area for drag-and-drop --- */
+
 FWObjectDropArea {
     border: 1px solid palette(mid);
     background-color: palette(base);
-    border-radius: 3px;
+    border-radius: 4px;
     max-width: 200px;
     max-height: 80px;
 }
 
 FWObjectDropArea[dragOver="true"] {
     border: 2px solid palette(highlight);
+}
+
+
+/* --- Input widgets --- */
+
+QComboBox,
+QLineEdit,
+QPlainTextEdit,
+QSpinBox,
+QTextEdit {
+    border: 1px solid palette(mid);
+    border-radius: 4px;
+    padding: 2px 4px;
+}
+
+QComboBox:focus,
+QLineEdit:focus,
+QPlainTextEdit:focus,
+QSpinBox:focus,
+QTextEdit:focus {
+    border: 1px solid palette(highlight);
+}
+
+
+/* --- Header view (tree/table column headers) --- */
+
+QHeaderView::section {
+    border: none;
+    border-bottom: 1px solid palette(mid);
+    padding: 4px 8px;
+}
+
+
+/* --- Menu bar --- */
+
+QMenuBar {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.20);
+}
+
+QMenuBar::item {
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+QMenuBar::item:selected {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+
+/* --- Menus --- */
+
+QMenu {
+    background: palette(base);
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    padding: 4px 0;
+}
+
+QMenu::item {
+    padding: 4px 16px 4px 6px;
+}
+
+QMenu::icon {
+    padding-left: 6px;
+}
+
+QMenu::item:selected {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border-radius: 2px;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.12);
+    margin: 4px 8px;
+}
+
+
+/* --- Scrollbars (vertical) --- */
+
+QScrollBar:vertical {
+    width: 8px;
+    background: transparent;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background: palette(mid);
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: palette(dark);
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+
+
+/* --- Scrollbars (horizontal) --- */
+
+QScrollBar:horizontal {
+    height: 8px;
+    background: transparent;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background: palette(mid);
+    border-radius: 4px;
+    min-width: 20px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: palette(dark);
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0;
+}
+
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: transparent;
+}
+
+
+/* --- Tab bar --- */
+
+QTabBar::tab {
+    padding: 6px 12px;
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+QTabBar::tab:hover:!selected {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+QTabBar::tab:selected {
+    border-bottom: 2px solid palette(highlight);
+}
+
+
+/* --- Toolbar --- */
+
+QToolBar {
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.20);
+    spacing: 2px;
+}
+
+QToolButton {
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QToolButton:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+QToolButton:pressed {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+QToolButton:checked {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+QToolButton[popupMode="MenuButtonPopup"]::menu-button {
+    border: none;
+    border-radius: 4px;
+    width: 16px;
+}
+
+
+/* --- Splitter handle (panel separation) --- */
+
+QSplitter::handle:horizontal {
+    background: rgba(0, 0, 0, 0.20);
+    width: 1px;
+}
+
+QSplitter::handle:vertical {
+    background: rgba(0, 0, 0, 0.20);
+    height: 1px;
+}
+
+
+/* --- Tree / list views --- */
+
+QListView,
+QTreeView {
+    alternate-background-color: rgba(0, 0, 0, 0.02);
+}
+
+QListView::item,
+QTreeView::item {
+    padding: 2px 0;
 }

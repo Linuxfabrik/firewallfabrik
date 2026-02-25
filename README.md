@@ -1,9 +1,9 @@
 <h1 align="center">
-  <!--<a href="https://linuxfabrik.ch" target="_blank">
+  <a href="https://linuxfabrik.ch" target="_blank">
     <picture>
-      <img width="600" src="https://download.linuxfabrik.ch/assets/linuxfabrik-fwf-teaser.png">
+      <img width="600" src="https://raw.githubusercontent.com/Linuxfabrik/firewallfabrik/refs/heads/main/src/firewallfabrik/resources/images/fwf.png">
     </picture>
-  </a>-->
+  </a>
   <br />
   Linuxfabrik's FirewallFabrik
 </h1>

@@ -1450,6 +1450,25 @@ libraries:
           fin: false
         comment: Border Gateway Protocol
       - type: TCPService
+        name: Beats 5044
+        comment: Elastic Beats (Filebeat, Metricbeat, etc.) default input port for shipping logs, metrics and other data to Logstash.
+        dst_range_start: 5044
+        dst_range_end: 5044
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: Bitcoin 8333
         comment: Bitcoin peer-to-peer network protocol for node communication.
         dst_range_start: 8333
@@ -2744,6 +2763,63 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: GitLab Pages 8060
+        comment: GitLab Pages daemon for serving static websites hosted on GitLab (HTTP).
+        dst_range_start: 8060
+        dst_range_end: 8060
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: GitLab Pages HTTPS 8443
+        comment: GitLab Pages daemon for serving static websites hosted on GitLab (HTTPS).
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: GitLab Registry 5050
+        comment: GitLab Container Registry for storing and distributing Docker/OCI container images.
+        dst_range_start: 5050
+        dst_range_end: 5050
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: GNUnet 2086
         comment: GNUnet decentralized peer-to-peer networking framework.
         dst_range_start: 2086
@@ -2824,6 +2900,44 @@ libraries:
         comment: Grafana monitoring and observability dashboard web interface.
         dst_range_start: 3000
         dst_range_end: 3000
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Graylog GELF 12201
+        comment: Graylog Extended Log Format (GELF) input. Used by Graylog to receive structured log messages from applications and log shippers.
+        dst_range_start: 12201
+        dst_range_end: 12201
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Graylog Web 9000
+        comment: Graylog centralized log management web interface and REST API default port.
+        dst_range_start: 9000
+        dst_range_end: 9000
         tcp_flags:
           urg: false
           ack: false
@@ -5330,6 +5444,25 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: Pulp 8324
+        comment: Pulp content management platform for managing software packages and content (RPMs, Python packages, container images, etc.).
+        dst_range_start: 8324
+        dst_range_end: 8324
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: Python http.server 8000
         comment: Python 3 http.server
         dst_range_start: 8000
@@ -5562,6 +5695,25 @@ libraries:
         comment: Remote Frame Buffer protocol (RFB)
         dst_range_start: 5900
         dst_range_end: 5900
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Rocket.Chat 3000
+        comment: Rocket.Chat open-source team communication platform default web interface port.
+        dst_range_start: 3000
+        dst_range_end: 3000
         tcp_flags:
           urg: false
           ack: false
@@ -7642,6 +7794,11 @@ libraries:
         comment: Gopher document retrieval protocol. Legacy predecessor to HTTP; rarely used today.
         dst_range_start: 70
         dst_range_end: 70
+      - type: UDPService
+        name: Graylog GELF 12201
+        comment: Graylog Extended Log Format (GELF) input. Used by Graylog to receive structured log messages from applications and log shippers.
+        dst_range_start: 12201
+        dst_range_end: 12201
       - type: UDPService
         name: Groove GLRPC 9080
         comment: glrpc, Groove Collaboration software GLRPC

@@ -5,8 +5,9 @@ FirewallFabrik uses **expected output regression tests** to catch unintended cha
 ## Quick Start
 
 ```bash
-# Install test dependencies
-pip install --editable ".[test]"
+# Install the package with GUI support and test dependencies
+pip install --editable ".[gui]"
+pip install pytest
 
 # Run all tests
 pytest --verbose
@@ -25,15 +26,19 @@ tests/
 ├── update_expected_output.py            # Script to regenerate expected output files
 ├── fixtures/                            # Test data (one per feature or test suite)
 │   ├── basic_accept_deny.fwf            # Hand-crafted YAML fixture
-│   └── objects-for-regression-tests.fwb # C++ Firewall Builder regression suite (XML)
+│   ├── cluster-tests.fwb               # C++ cluster regression suite (XML)
+│   ├── compiler-tests.fwf              # Hand-crafted YAML fixture
+│   ├── objects-for-regression-tests.fwb # C++ Firewall Builder regression suite (XML)
+│   ├── optimizer-test.fwb              # C++ optimizer regression suite (XML)
+│   └── reject_actions.fwf             # Hand-crafted YAML fixture
 ├── expected-output/
 │   ├── ipt/                             # Expected iptables output (normalized)
 │   │   ├── basic_accept_deny/
 │   │   │   └── fw-test.fw
-│   │   └── objects-for-regression-tests/ # 118 C++ reference expected output files
-│   │       ├── firewall.fw
-│   │       ├── firewall1.fw
-│   │       └── ...
+│   │   ├── cluster-tests/              # 18 C++ reference expected output files
+│   │   ├── objects-for-regression-tests/ # 105 C++ reference expected output files
+│   │   ├── optimizer-test/             # 2 C++ reference expected output files
+│   │   └── ...
 │   └── nft/                             # Expected nftables output (normalized)
 │       └── basic_accept_deny/
 │           └── fw-test.fw
@@ -142,13 +147,21 @@ The script reports which files were modified and skips files that are already no
 
 ### Background
 
-The C++ Firewall Builder project (`fwbuilder`) includes a comprehensive iptables regression test suite with 118 firewall configurations and their expected `.fw` output. This test suite was developed over many years and covers a wide range of iptables features.
+The C++ Firewall Builder project (`fwbuilder`) includes comprehensive iptables regression test suites with expected `.fw` output. These test suites were developed over many years and cover a wide range of iptables features.
 
-We imported this test suite to serve as a **compatibility target** for the Python reimplementation. The expected output files represent the C++ compiler's output and define the behavior we aim to match.
+We imported these test suites to serve as a **compatibility target** for the Python reimplementation. The expected output files represent the C++ compiler's output and define the behavior we aim to match.
+
+Three C++ reference fixtures are currently imported:
+
+| Fixture | Expected Output Files |
+|---|---|
+| `objects-for-regression-tests` | 105 |
+| `cluster-tests` | 18 |
+| `optimizer-test` | 2 |
 
 ### What It Covers
 
-The 118 firewalls in `objects-for-regression-tests.fwb` exercise:
+The firewalls in `objects-for-regression-tests.fwb` exercise:
 
 - **Basic policy rules**: accept, deny, reject with various combinations of source, destination, service
 - **NAT**: SNAT, DNAT, masquerade, redirect, port translation
@@ -162,26 +175,35 @@ The 118 firewalls in `objects-for-regression-tests.fwb` exercise:
 
 ### Current Status
 
-All 118 C++ reference tests are marked `xfail` because the Python compiler does not yet produce identical output. The tests are categorized as:
-
-- **10 compilation errors** — firewalls using features not yet implemented (unsupported NAT rule types, negation in translated fields)
-- **108 output diffs** — firewalls that compile but produce output differing from the C++ reference (ranging from ~80 to ~900 differing lines)
+All C++ reference tests (across all three fixtures) are marked `xfail` because the Python compiler does not yet produce identical output.
 
 As the Python compiler is improved, individual tests will start passing. pytest reports these as `XPASS` (unexpected pass), signaling that the `xfail` marker can be removed and the test promoted to a proper passing test.
 
 ### How to Track Progress
 
 ```bash
-# Run just the fwbuilder regression tests
-pytest --verbose -k objects-for-regression-tests
+# Run all C++ reference regression tests
+pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-test"
 
 # See which tests unexpectedly pass (if any)
-pytest --verbose -k objects-for-regression-tests 2>&1 | grep XPASS
+pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-test" 2>&1 | grep XPASS
 ```
 
-### Why Not Regenerate the Expected Output Files?
+### WARNING: Do Not Modify the iptables Expected Output for `.fwb` Fixtures
 
-The expected output files for `objects-for-regression-tests` were produced by the **C++ compiler**, not the Python one. They represent the reference behavior we are porting to Python. Regenerating them with `update_expected_output.py` would overwrite the C++ reference output with Python output, defeating the purpose. Only regenerate expected output files for **`.fwf` fixtures** whose expected output files were produced by the Python compiler.
+> **The iptables expected output files for `objects-for-regression-tests`, `cluster-tests`, and `optimizer-test` were compiled with the old, known-good C++ `fwb_ipt` compiler and must not be modified or regenerated.**
+
+These files are the **ground truth** for the Python iptables compiler. They define the correct behavior we are reimplementing. If you regenerate them with `update_expected_output.py`, you will overwrite the C++ reference with Python compiler output, which defeats the entire purpose of these regression tests.
+
+**Do:**
+- Use these files as-is to validate the Python compiler against the C++ reference.
+- Regenerate expected output only for **`.fwf` fixtures** (e.g., `compiler-tests`, `basic_accept_deny`, `reject_actions`), whose expected output is produced by the Python compiler.
+- Regenerate **nftables** expected output and carefully review the changes — there is no C++ nftables reference compiler.
+
+**Do not:**
+- Run `update_expected_output.py --platform ipt` on `.fwb` fixtures.
+- Manually edit the iptables `.fw` files under `expected-output/ipt/objects-for-regression-tests/`, `expected-output/ipt/cluster-tests/`, or `expected-output/ipt/optimizer-test/`.
+- Re-normalize these files (they are already normalized).
 
 ## Limitation: Compiler Aborts Cannot Be Tested
 

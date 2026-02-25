@@ -113,8 +113,29 @@ To add FirewallFabrik to your application menu and associate its icon:
    mkdir -p $HOME/.local/share/icons/hicolor/scalable/apps/
    cp src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg \
        $HOME/.local/share/icons/hicolor/scalable/apps/ch.linuxfabrik.firewallfabrik.svg
-   update-desktop-database $HOME/.local/share/applications/ 2>/dev/null
-   gtk-update-icon-cache $HOME/.local/share/icons/hicolor/ 2>/dev/null
+   update-desktop-database $HOME/.local/share/applications/
+   gtk-update-icon-cache $HOME/.local/share/icons/hicolor/
+
+If ``gtk-update-icon-cache`` reports *No theme index file*, create ``$HOME/.local/share/icons/hicolor/index.theme`` with the following content:
+
+.. code-block:: ini
+
+   [Icon Theme]
+   Name=Hicolor
+   Comment=Fallback Icon Theme
+   Directories=scalable/apps
+
+   [scalable/apps]
+   Size=48
+   Type=Scalable
+   MinSize=16
+   MaxSize=512
+
+Then re-run:
+
+.. code-block:: bash
+
+   gtk-update-icon-cache $HOME/.local/share/icons/hicolor/
 
 If ``fwf`` is installed inside a virtual environment and is not on your system ``PATH``, update the desktop file to use the full path:
 

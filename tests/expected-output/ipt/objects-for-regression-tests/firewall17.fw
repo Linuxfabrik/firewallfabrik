@@ -12,6 +12,19 @@
 #
 # doing SNAT with virtual addresses of two external interface
 
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+# firewall17:Policy:: warning: Log prefix has been truncated to 29 characters
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -336,32 +349,32 @@ script_body() {
  #
  echo "Rule 0 (eth1)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -i eth1 -j CHAIN
+ $IPTABLES -N Cid3E1C6BE3.0
+ $IPTABLES -A INPUT -i eth1 -j Cid3E1C6BE3.0
+ $IPTABLES -A Cid3E1C6BE3.0 -d 22.22.22.22 -j RETURN
+ $IPTABLES -A Cid3E1C6BE3.0 -d 22.22.23.23 -j RETURN
+ $IPTABLES -A Cid3E1C6BE3.0 -d 33.33.33.33 -j RETURN
+ $IPTABLES -A Cid3E1C6BE3.0 -d 44.44.44.44 -j RETURN
+ $IPTABLES -A Cid3E1C6BE3.0 -d 192.168.1.1 -j RETURN
+ $IPTABLES -A Cid3E1C6BE3.0 -d 192.168.2.1 -j RETURN
+ $IPTABLES -N In_RULE_0_3
+ $IPTABLES -A Cid3E1C6BE3.0 -j In_RULE_0_3
+ $IPTABLES -A In_RULE_0_3 -j LOG --log-level debug --log-prefix "RULE 0 -- DENY on interface g"
+ $IPTABLES -A In_RULE_0_3 -j DROP
  $IPTABLES -N In_RULE_0
- $IPTABLES -A CHAIN -d 22.22.22.22 -j In_RULE_0
- $IPTABLES -A CHAIN -d 22.22.23.23 -j In_RULE_0
- $IPTABLES -A CHAIN -d 33.33.33.33 -j In_RULE_0
- $IPTABLES -A CHAIN -d 44.44.44.44 -j In_RULE_0
- $IPTABLES -A CHAIN -d 192.168.1.1 -j In_RULE_0
- $IPTABLES -A CHAIN -d 192.168.2.1 -j In_RULE_0
- $IPTABLES -A CHAIN -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -j In_RULE_0
- $IPTABLES -N CHAIN
- $IPTABLES -A In_RULE_0 -j CHAIN
- $IPTABLES -A CHAIN -j LOG --log-level debug --log-prefix "RULE 0 -- DENY on interface g"
- $IPTABLES -N CHAIN
- $IPTABLES -A In_RULE_0 -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j DROP
+ $IPTABLES -A In_RULE_0 -j LOG --log-level debug --log-prefix "RULE 0 -- DENY on interface g"
+ $IPTABLES -A In_RULE_0 -j DROP
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -A OUTPUT
- $IPTABLES -A INPUT
- $IPTABLES -A FORWARD
+ $IPTABLES -N rule0acct
+ $IPTABLES -A rule0acct -j RETURN
+ $IPTABLES -A OUTPUT -j rule0acct
+ $IPTABLES -A INPUT -j rule0acct
+ $IPTABLES -A FORWARD -j rule0acct
  #
  # Rule 2 (global)
  #
@@ -372,7 +385,9 @@ script_body() {
  $IPTABLES -A INPUT -j RULE_2
  $IPTABLES -A FORWARD -j RULE_2
  $IPTABLES -A RULE_2 -j LOG --log-level debug --log-prefix "RULE 2 -- ACCOUNTING on inter"
- $IPTABLES -A RULE_2
+ $IPTABLES -N rule1acct
+ $IPTABLES -A rule1acct -j RETURN
+ $IPTABLES -A RULE_2 -j rule1acct
  #
  # Rule 3 (global)
  #
@@ -383,38 +398,38 @@ script_body() {
  $IPTABLES -A INPUT -j RULE_3
  $IPTABLES -A FORWARD -j RULE_3
  $IPTABLES -A RULE_3 -j LOG --log-level debug --log-prefix "RULE 3 -- ACCOUNTING on inter"
- $IPTABLES -A RULE_3
+ $IPTABLES -A RULE_3 -j RETURN
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.11 -d 192.168.2.10 --dport 4000:4010
- $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.11 -d 192.168.2.10 --dport 22
+ $IPTABLES -N RULE_4
+ $IPTABLES -A RULE_4 -j RETURN
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.11 -d 192.168.2.10 --dport 4000:4010 -j RULE_4
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.11 -d 192.168.2.10 --dport 22 -j RULE_4
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A INPUT -j CHAIN
+ $IPTABLES -N Cid3E1C6BC9.0
+ $IPTABLES -A INPUT -j Cid3E1C6BC9.0
+ $IPTABLES -A Cid3E1C6BC9.0 -d 22.22.22.22 -j RETURN
+ $IPTABLES -A Cid3E1C6BC9.0 -d 22.22.23.23 -j RETURN
+ $IPTABLES -A Cid3E1C6BC9.0 -d 33.33.33.33 -j RETURN
+ $IPTABLES -A Cid3E1C6BC9.0 -d 44.44.44.44 -j RETURN
+ $IPTABLES -A Cid3E1C6BC9.0 -d 192.168.1.1 -j RETURN
+ $IPTABLES -A Cid3E1C6BC9.0 -d 192.168.2.1 -j RETURN
+ $IPTABLES -N In_RULE_5_3
+ $IPTABLES -A Cid3E1C6BC9.0 -j In_RULE_5_3
+ $IPTABLES -A In_RULE_5_3 -j LOG --log-level debug --log-prefix "RULE 5 -- DENY on interface g"
+ $IPTABLES -A In_RULE_5_3 -j DROP
  $IPTABLES -N RULE_5
- $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_5
- $IPTABLES -A CHAIN -d 22.22.23.23 -j RULE_5
- $IPTABLES -A CHAIN -d 33.33.33.33 -j RULE_5
- $IPTABLES -A CHAIN -d 44.44.44.44 -j RULE_5
- $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_5
- $IPTABLES -A CHAIN -d 192.168.2.1 -j RULE_5
- $IPTABLES -A CHAIN -j RULE_5
  $IPTABLES -A OUTPUT -j RULE_5
  $IPTABLES -A FORWARD -j RULE_5
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_5 -j CHAIN
- $IPTABLES -A CHAIN -j LOG --log-level debug --log-prefix "RULE 5 -- DENY on interface g"
- $IPTABLES -N CHAIN
- $IPTABLES -A RULE_5 -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j DROP
+ $IPTABLES -A RULE_5 -j LOG --log-level debug --log-prefix "RULE 5 -- DENY on interface g"
+ $IPTABLES -A RULE_5 -j DROP
  #
  # Rule 6 (global)
  #

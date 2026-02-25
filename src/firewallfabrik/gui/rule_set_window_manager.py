@@ -40,7 +40,17 @@ class RuleSetWindowManager(QObject):
 
     _STATE_FILE_NAME = 'last_object_state.json'
 
-    def __init__(self, db_manager, mdi_area, object_tree, window_menu, parent=None):
+    def __init__(
+        self,
+        db_manager,
+        mdi_area,
+        object_tree,
+        window_menu,
+        *,
+        clipboard_store=None,
+        policy_view_bridge=None,
+        parent=None,
+    ):
         """Initialise the rule set window manager.
 
         Args:
@@ -48,6 +58,8 @@ class RuleSetWindowManager(QObject):
             mdi_area: QMdiArea widget (``self.m_space`` on FWWindow).
             object_tree: ObjectTree instance.
             window_menu: QMenu for the Window menu.
+            clipboard_store: Shared :class:`ClipboardStore` instance.
+            policy_view_bridge: :class:`PolicyViewBridge` for main-window calls.
             parent: QObject parent (typically FWWindow).
         """
         super().__init__(parent)
@@ -55,6 +67,8 @@ class RuleSetWindowManager(QObject):
         self._mdi_area = mdi_area
         self._object_tree = object_tree
         self._window_menu = window_menu
+        self._clipboard_store = clipboard_store
+        self._policy_view_bridge = policy_view_bridge
         self._display_file = None
 
     # --- Lifecycle ---
@@ -88,7 +102,10 @@ class RuleSetWindowManager(QObject):
         )
         model.firewall_modified.connect(self.firewall_modified)
         title = f'{fw_name} / {rs_name}'
-        panel = RuleSetPanel()
+        panel = RuleSetPanel(
+            clipboard_store=self._clipboard_store,
+            bridge=self._policy_view_bridge,
+        )
         panel.set_title(title)
         panel.policy_view.setModel(model)
 
@@ -145,7 +162,10 @@ class RuleSetWindowManager(QObject):
         )
         model.firewall_modified.connect(self.firewall_modified)
         title = f'{fw_name} / {rs_name}'
-        panel = RuleSetPanel()
+        panel = RuleSetPanel(
+            clipboard_store=self._clipboard_store,
+            bridge=self._policy_view_bridge,
+        )
         panel.set_title(title)
         panel.policy_view.setModel(model)
 
@@ -480,6 +500,32 @@ class RuleSetWindowManager(QObject):
                 group.addAction(action)
                 action.triggered.connect(
                     lambda _checked, s=sub: self._mdi_area.setActiveSubWindow(s),
+                )
+
+        # --- Open files section (all FWWindow instances) ---
+        from firewallfabrik.gui.window_registry import WindowRegistry
+
+        registry = WindowRegistry.instance()
+        windows = registry.all_windows()
+        if len(windows) > 1:
+            menu.addSeparator()
+            parent_window = self.parent()
+            file_group = QActionGroup(menu)
+            file_group.setExclusive(True)
+            for win in windows:
+                display = getattr(win, '_display_file', None)
+                current = getattr(win, '_current_file', None)
+                label = str(
+                    display.name
+                    if display
+                    else (current.name if current else 'Untitled')
+                )
+                action = menu.addAction(label)
+                action.setCheckable(True)
+                action.setChecked(win is parent_window)
+                file_group.addAction(action)
+                action.triggered.connect(
+                    lambda _checked, w=win: (w.activateWindow(), w.raise_()),
                 )
 
     def minimize_active(self):

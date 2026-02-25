@@ -75,11 +75,12 @@ An `ObjectTree` (left-hand side) is added programmatically and placed into a `QS
 
 **Singular vs. plural.** Files containing multiple related editor classes use the plural form (`device_dialogs.py` for `FirewallDialog`, `HostDialog`, `InterfaceDialog`; `service_dialogs.py` for TCP/UDP/ICMP/IP). Files containing a single class use the singular form (`time_dialog.py`, `library_dialog.py`).
 
-**`object_tree_*.py` split.** The object tree implementation is split across four files to keep each one focused:
+**`object_tree_*.py` split.** The object tree implementation is split across five files to keep each one focused:
 
 | File | Responsibility |
 |---|---|
 | `object_tree.py` | Widget class, signal/slot wiring, event dispatch |
+| `object_tree_actions.py` | Context-menu and keyboard-shortcut action handlers |
 | `object_tree_data.py` | Constants: icon maps, type lists, folder-to-type mappings |
 | `object_tree_menu.py` | Builds context menus and returns handler mappings |
 | `object_tree_ops.py` | Database operations (create, delete, duplicate, move) |

@@ -335,14 +335,6 @@ script_body() {
  #
  $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE
 
- # ================ Table 'filter', rule set Policy_B
- #
- # Rule Policy_B 0 (global)
- #
- echo "Rule Policy_B 0 (global)"
- #
- $IPTABLES -N Policy_B
- $IPTABLES -A Policy_B -d 192.0.2.100 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_A
  #
  # Rule Policy_A 0 (global)
@@ -350,6 +342,7 @@ script_body() {
  echo "Rule Policy_A 0 (global)"
  #
  $IPTABLES -N Policy_A
+ $IPTABLES -N Policy_B
  $IPTABLES -A Policy_A -j Policy_B
  #
  # Rule Policy_A 1 (global)
@@ -365,6 +358,13 @@ script_body() {
  echo "Rule Policy_A 2 (global)"
  #
  $IPTABLES -A Policy_A -j Policy_A
+ # ================ Table 'filter', rule set Policy_B
+ #
+ # Rule Policy_B 0 (global)
+ #
+ echo "Rule Policy_B 0 (global)"
+ #
+ $IPTABLES -A Policy_B -d 192.0.2.100 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy
  #
  # Rule 0 (global)

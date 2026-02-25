@@ -213,9 +213,7 @@ class CompilerDriver(BaseCompiler):
         self.file_names[str(fw.id)] = str(Path(output_dir) / file_name)
 
         # Compute remote file name from firewall options
-        firewall_dir = (
-            fw.opt_firewall_dir if fw.opt_firewall_dir is not None else '/etc/fw'
-        )
+        firewall_dir = fw.opt_firewall_dir or ''
         script_name = fw.opt_script_name_on_firewall or ''
         if script_name:
             remote_file_name = str(script_name)

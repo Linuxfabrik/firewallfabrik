@@ -10,11 +10,32 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Clipboard routing based on explicit focus registration.
+
+Instead of querying ``QApplication.focusWidget()`` on every clipboard
+operation, the main window connects ``QApplication.focusChanged`` to
+:meth:`ClipboardRouter.on_focus_changed` once.  The router then tracks
+which logical component owns focus and routes clipboard operations
+without additional ``focusWidget()`` calls.
+"""
+
+from enum import Enum, auto
+
+import shiboken6
 from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
 
 
+class FocusOwner(Enum):
+    """Logical component that currently owns keyboard focus."""
+
+    NONE = auto()
+    POLICY = auto()
+    TEXT = auto()
+    TREE = auto()
+
+
 class ClipboardRouter:
-    """Routes clipboard operations to object tree or policy view based on focus.
+    """Routes clipboard operations to object tree or policy view.
 
     The routing rule mirrors fwbuilder: if the object tree has keyboard
     focus the operation targets tree objects; otherwise it targets the
@@ -22,45 +43,54 @@ class ClipboardRouter:
     QLineEdit, etc.) always get native clipboard handling.
     """
 
-    def __init__(self, object_tree, get_active_policy_view):
+    def __init__(self, object_tree, get_active_policy_view, *, parent_window=None):
         """Initialise the router.
 
         Args:
             object_tree: :class:`ObjectTree` instance.
             get_active_policy_view: Callable returning the active
                 :class:`PolicyView` or *None*.
+            parent_window: The owning :class:`FWWindow`.  When set,
+                focus changes in other windows are ignored.
         """
         self._object_tree = object_tree
         self._get_active_policy_view = get_active_policy_view
+        self._parent_window = parent_window
+        self._focus_owner: FocusOwner = FocusOwner.NONE
 
-    @staticmethod
-    def _focus_is_text_widget():
-        """Return True if a text-input widget has keyboard focus.
+    def on_focus_changed(self, _old, new):
+        """Update the logical focus owner when Qt focus changes.
 
-        Covers QTextEdit (and subclasses like QTextBrowser) as well as
-        QLineEdit — these all handle Ctrl+C/X/V natively.
+        Connect this to ``QApplication.instance().focusChanged``.
+
+        The handler is wrapped in a try/except because Qt may fire
+        ``focusChanged`` while widgets are being destroyed (e.g. during
+        ``QTreeWidget.clear()``).  Accessing the already-deleted C++
+        object via Shiboken raises ``RuntimeError``.
         """
-        focus = QApplication.focusWidget()
-        return isinstance(focus, (QLineEdit, QTextEdit))
-
-    def _tree_has_focus(self):
-        """Return True if the object tree widget has keyboard focus.
-
-        Specifically checks for the tree widget itself (not the filter
-        QLineEdit) so that Ctrl+C in the filter field still copies text.
-        """
-        focus = QApplication.focusWidget()
-        if focus is None:
-            return False
+        if new is None or not shiboken6.isValid(new):
+            self._focus_owner = FocusOwner.NONE
+            return
+        # Ignore focus changes that belong to a different FWWindow.
+        if self._parent_window is not None and new.window() is not self._parent_window:
+            return
+        if isinstance(new, (QLineEdit, QTextEdit)):
+            self._focus_owner = FocusOwner.TEXT
+            return
         tree_widget = self._object_tree._tree
-        return focus is tree_widget or tree_widget.isAncestorOf(focus)
+        if new is tree_widget or tree_widget.isAncestorOf(new):
+            self._focus_owner = FocusOwner.TREE
+            return
+        self._focus_owner = FocusOwner.POLICY
 
     def copy(self):
         """Route a *copy* operation."""
-        if self._focus_is_text_widget():
-            QApplication.focusWidget().copy()
+        if self._focus_owner == FocusOwner.TEXT:
+            widget = QApplication.focusWidget()
+            if widget is not None:
+                widget.copy()
             return
-        if self._tree_has_focus():
+        if self._focus_owner == FocusOwner.TREE:
             self._object_tree._actions._shortcut_copy()
             return
         view = self._get_active_policy_view()
@@ -69,10 +99,12 @@ class ClipboardRouter:
 
     def cut(self):
         """Route a *cut* operation."""
-        if self._focus_is_text_widget():
-            QApplication.focusWidget().cut()
+        if self._focus_owner == FocusOwner.TEXT:
+            widget = QApplication.focusWidget()
+            if widget is not None:
+                widget.cut()
             return
-        if self._tree_has_focus():
+        if self._focus_owner == FocusOwner.TREE:
             self._object_tree._actions._shortcut_cut()
             return
         view = self._get_active_policy_view()
@@ -81,7 +113,7 @@ class ClipboardRouter:
 
     def delete(self):
         """Route a *delete* operation."""
-        if self._tree_has_focus():
+        if self._focus_owner == FocusOwner.TREE:
             self._object_tree._actions._shortcut_delete()
             return
         view = self._get_active_policy_view()
@@ -90,10 +122,12 @@ class ClipboardRouter:
 
     def paste(self):
         """Route a *paste* operation."""
-        if self._focus_is_text_widget():
-            QApplication.focusWidget().paste()
+        if self._focus_owner == FocusOwner.TEXT:
+            widget = QApplication.focusWidget()
+            if widget is not None:
+                widget.paste()
             return
-        if self._tree_has_focus():
+        if self._focus_owner == FocusOwner.TREE:
             self._object_tree._actions._shortcut_paste()
             return
         view = self._get_active_policy_view()

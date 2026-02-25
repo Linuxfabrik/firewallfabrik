@@ -1,6 +1,6 @@
 # Rule Processor Developer Documentation
 
-This document describes the rule processor pipeline architecture used by the firewallfabrik compilers, covering the base (platform-independent) processors and the iptables- and nftables-specific processors. The Python implementation follows the same architecture as the original C++ code.
+This document describes the rule processor pipeline architecture used by the FirewallFabrik compilers, covering the base (platform-independent) processors and the iptables- and nftables-specific processors. The Python implementation follows the same architecture as the original C++ code.
 
 ---
 
