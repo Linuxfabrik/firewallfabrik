@@ -309,8 +309,11 @@ class GroupObjectDialog(BaseObjectDialog):
             self.listViewBtn.setChecked(True)
 
         # Delete key removes selected members from the group.
+        # Use WidgetShortcut so this only fires when the view has focus
+        # and does not conflict with the main window's editDeleteAction.
         delete_action = QAction(self)
         delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+        delete_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
         delete_action.triggered.connect(self._remove_selected_members)
         self._icon_view.addAction(delete_action)
         self._list_view.addAction(delete_action)
