@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall80.fw /firewall80.fw
+# files: * firewall80.fw /etc/fw/firewall80.fw
 #
 #  Branch rules in NAT
 #

@@ -120,42 +120,43 @@ def compile_and_update(
 
     updated = []
 
-    # Collect firewall IDs/names first, then close the session before
-    # compiling — driver.run() opens its own session and nested sessions
-    # with in-memory SQLite can cause issues.
     with db.session() as session:
         firewalls = session.execute(sqlalchemy.select(Firewall)).scalars().all()
-        fw_list = [(str(fw.id), fw.name) for fw in firewalls]
 
-    for fw_id, fw_name in fw_list:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            driver = driver_cls(db)
-            driver.wdir = tmp_dir
-            driver.source_dir = str(fwf_path.parent)
-            driver.file_name_setting = f'{fw_name}.fw'
+        for fw in firewalls:
+            fw_id = str(fw.id)
+            fw_name = fw.name
 
-            result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                driver = driver_cls(db)
+                driver.wdir = tmp_dir
+                driver.source_dir = str(fwf_path.parent)
+                driver.file_name_setting = f'{fw_name}.fw'
 
-            if result:
-                print(
-                    f'  ERROR compiling {fw_name} ({platform}): {result}',
-                    file=sys.stderr,
-                )
-                continue
+                result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
 
-            # Don't skip on driver.all_errors — the compiler produces
-            # output even when errors/warnings occur.  They are embedded
-            # as comments in the generated script and will be caught by
-            # the output diff against the expected output file.
+                if result:
+                    print(
+                        f'  ERROR compiling {fw_name} ({platform}): {result}',
+                        file=sys.stderr,
+                    )
+                    continue
+                if driver.all_errors:
+                    print(
+                        f'  ERROR compiling {fw_name} ({platform}): '
+                        + '; '.join(driver.all_errors),
+                        file=sys.stderr,
+                    )
+                    continue
 
-            output_path = Path(driver.file_names[fw_id])
-            raw_output = output_path.read_text()
+                output_path = Path(driver.file_names[fw_id])
+                raw_output = output_path.read_text()
 
-        normalized = normalize(raw_output)
-        expected_path = expected_fixture_dir / f'{fw_name}.fw'
-        expected_path.write_text(normalized)
-        updated.append(str(expected_path.relative_to(TESTS_DIR.parent)))
-        print(f'  Updated: {expected_path.relative_to(TESTS_DIR.parent)}')
+            normalized = normalize(raw_output)
+            expected_path = expected_fixture_dir / f'{fw_name}.fw'
+            expected_path.write_text(normalized)
+            updated.append(str(expected_path.relative_to(TESTS_DIR.parent)))
+            print(f'  Updated: {expected_path.relative_to(TESTS_DIR.parent)}')
 
     return updated
 

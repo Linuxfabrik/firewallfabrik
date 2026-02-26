@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall16.fw /firewall16.fw
+# files: * firewall16.fw /etc/fw/firewall16.fw
 #
 #  testing translation from outside to the web server on DMZ, need to see what happens if clients on internal net connect to the NATted address of this server. This is a kind of "NAT back to the same subnet" with a twist.
 

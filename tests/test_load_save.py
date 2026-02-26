@@ -17,7 +17,6 @@ import sqlalchemy
 
 import firewallfabrik.core
 from firewallfabrik.core.objects import Host, Library, Rule, RuleSet, Service
-from firewallfabrik.core.options._metadata import RULE_OPTIONS, build_options_dict
 
 from .conftest import FIXTURES_DIR, _get_db
 
@@ -66,16 +65,21 @@ def _assert_no_string_bools(d, context):
     _FWB_FILES,
     ids=[p.stem for p in _FWB_FILES],
 )
-def test_fwb_rule_options_are_booleans(fixture_path):
-    """XML rule options must be coerced from strings to Python bools."""
+def test_fwb_rule_options_are_typed(fixture_path):
+    """Rule option typed columns must have correct Python types, not strings."""
+    from firewallfabrik.core.options._metadata import RULE_OPTIONS
+
     db = _get_db(fixture_path)
 
     with db.session() as session:
         for rule in session.execute(sqlalchemy.select(Rule)).scalars():
-            _assert_no_string_bools(
-                build_options_dict(rule, RULE_OPTIONS),
-                f'Rule({rule.id}).options',
-            )
+            for meta in RULE_OPTIONS.values():
+                value = getattr(rule, meta.column_name)
+                if meta.col_type is bool and isinstance(value, str):
+                    pytest.fail(
+                        f'Rule({rule.id}).{meta.column_name} is a string '
+                        f'{value!r}, expected a Python bool',
+                    )
 
 
 @pytest.mark.parametrize(

@@ -205,6 +205,12 @@ libraries:
               - type: 'Host'
                 name: 'internal server'
                 comment: 'This host is used in examples and template objects'
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
                 management:
                   address: '192.168.1.10'
                   snmp:
@@ -236,6 +242,12 @@ libraries:
               - type: 'Host'
                 name: 'server on dmz'
                 comment: 'This host is used in examples and template objects'
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
                 management:
                   address: '192.168.2.10'
                   snmp:
@@ -3038,26 +3050,13 @@ libraries:
               lastInstalled: '0'
               lastModified: '1770822325'
               platform: 'iptables'
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
               action_on_reject: ''
               activationCmd: ''
               add_mgmt_ssh_rule_when_stoped: false
+              add_rules_for_ipv6_neighbor_discovery: false
               admUser: ''
               altAddress: ''
               bridging_fw: false
@@ -3075,9 +3074,11 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
+              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: false
               local_nat: false
@@ -3088,23 +3089,40 @@ libraries:
               log_prefix: 'RULE %N -- %A '
               log_tcp_opt: false
               log_tcp_seq: false
+              loopback_interface: 'lo'
               manage_virtual_addr: true
               mgmt_addr: ''
               mgmt_ssh: false
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
               output_file: ''
               prolog_place: 'top'
               prolog_script: ''
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_nlgroup: 1
-              ulog_qthreshold: 1
+              ulog_cprange: '0'
+              ulog_nlgroup: '1'
+              ulog_qthreshold: '1'
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: false
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
@@ -3157,10 +3175,13 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
-                    options:
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3173,11 +3194,17 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      action_on_reject: 'ICMP host unreachable'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
-                    options:
-                      action_on_reject: 'ICMP host unreachable'
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3190,11 +3217,17 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      action_on_reject: 'ICMP net unreachable'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
-                    options:
-                      action_on_reject: 'ICMP net unreachable'
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3207,11 +3240,17 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      action_on_reject: 'ICMP admin prohibited'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
-                    options:
-                      action_on_reject: 'ICMP admin prohibited'
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3224,11 +3263,17 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 4
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      action_on_reject: 'TCP RST'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
                     action: 'Reject'
                     direction: 'Inbound'
-                    options:
-                      action_on_reject: 'TCP RST'
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3241,10 +3286,13 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
-                    options:
-                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:

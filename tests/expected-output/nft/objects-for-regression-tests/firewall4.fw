@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall4.fw /firewall4.fw
+# files: * firewall4.fw /etc/fw/firewall4.fw
 #
 #  this object is used to test a configuration where firewall has dynamic address
 #
@@ -329,11 +329,11 @@ table ip filter {
         # Rule 13 (global)
         #
         # testing negation in service field
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log level debug drop
         #
         # Rule 14 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 25 log level debug drop
+        ip daddr 192.168.1.10 tcp dport 25 meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log level debug drop
         #
         # Rule 17 (global)
         #
@@ -371,11 +371,11 @@ table ip filter {
         # Rule 13 (global)
         #
         # testing negation in service field
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log level debug drop
         #
         # Rule 14 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 25 log level debug drop
+        ip daddr 192.168.1.10 tcp dport 25 meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log level debug drop
         #
         # Rule 15 (global)
         #

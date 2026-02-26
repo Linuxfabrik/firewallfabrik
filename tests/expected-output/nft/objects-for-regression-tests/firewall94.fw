@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall94.fw /firewall94.fw
+# files: * firewall94.fw /etc/fw/firewall94.fw
 #
 #  testing rules that use address ranges that include or not include fw
 #

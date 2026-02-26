@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall18.fw /firewall18.fw
+# files: * firewall18.fw /etc/fw/firewall18.fw
 #
 #  this firewall translates outgoing connections using address of the particular interface (not external one). Also testing different cmbinations of objects in the policy rules on loopback interface. Finally, testing for a situation when dynamic interface "shades" a rule with old broadcast
 #
