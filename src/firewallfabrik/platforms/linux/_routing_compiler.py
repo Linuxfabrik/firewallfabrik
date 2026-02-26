@@ -95,7 +95,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
         dst = self._print_rdst(rule)
         gtw = self._print_rgtw(rule)
         itf = self._print_ritf(rule)
-        metric = rule.get_option('metric', 0)
+        metric = rule.opt_metric
 
         if dst:
             parts.append(dst)
@@ -103,7 +103,7 @@ class RoutingPrintRule(RoutingRuleProcessor):
             parts.append(f'via {gtw}')
         if itf:
             parts.append(f'dev {itf}')
-        if metric and int(metric) > 0:
+        if metric > 0:
             parts.append(f'metric {metric}')
 
         return ' '.join(parts)

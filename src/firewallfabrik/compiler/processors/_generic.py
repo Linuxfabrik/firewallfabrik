@@ -604,7 +604,7 @@ class DetectShadowing(BasicRuleProcessor):
         ):
             return False
         # Routing rules may or may not be terminal — skip
-        if r1.get_option('routing', False) or r2.get_option('routing', False):
+        if r1.opt_routing or r2.opt_routing:
             return False
         # r2 with Continue action is non-terminating, can't be shadowed
         if r2.action == PolicyAction.Continue:

@@ -35,12 +35,14 @@ class OptionMeta:
         column_name: SQLAlchemy column name (opt_xxx)
         default: Default value for the column
         col_type: Python type (bool, str, int)
+        compiler_default: Fallback when value is falsy; None = no fallback
     """
 
     yaml_key: str
     column_name: str
     default: Any
     col_type: type
+    compiler_default: Any = None
 
 
 def _make_column_name(yaml_key: str) -> str:
@@ -263,6 +265,32 @@ _add(
     default=None,
     col_type=str,
 )
+
+# Compiler defaults for options where empty/None means "use this value".
+# These are the single source of truth for both compiler fallbacks and GUI
+# placeholders.
+for _key, _cd in [
+    ('firewall_dir', '/etc/fw'),
+    ('admUser', 'root'),
+    ('prolog_place', 'top'),
+    ('ipv4_6_order', 'ipv4_first'),
+]:
+    _m = HOST_OPTIONS[_key]
+    HOST_OPTIONS[_key] = OptionMeta(
+        yaml_key=_m.yaml_key,
+        column_name=_m.column_name,
+        default=_m.default,
+        col_type=_m.col_type,
+        compiler_default=_cd,
+    )
+
+# Pre-built lookup: column_name -> compiler_default (only for options that
+# have one).
+HOST_COMPILER_DEFAULTS: dict[str, Any] = {
+    m.column_name: m.compiler_default
+    for m in HOST_OPTIONS.values()
+    if m.compiler_default is not None
+}
 
 # ---------------------------------------------------------------------------
 # Interface options

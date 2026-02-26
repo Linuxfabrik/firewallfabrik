@@ -24,7 +24,6 @@ import copy
 import dataclasses
 import uuid
 from collections import defaultdict
-from typing import Any
 
 import sqlalchemy
 
@@ -58,7 +57,6 @@ class CompRule:
     position: int
     label: str
     comment: str
-    options: dict  # copy of Rule.options JSON
     negations: dict  # copy of Rule.negations JSON
 
     # Rule elements — lists of resolved SQLAlchemy model objects.
@@ -95,7 +93,69 @@ class CompRule:
     fallback: bool = False
     hidden: bool = False
 
-    # Compilation metadata (set during processing)
+    # -- Rule options (typed fields from RULE_OPTIONS) --
+
+    # Int options
+    opt_limit_value: int = 0
+    opt_limit_burst: int = 0
+    opt_hashlimit_value: int = 0
+    opt_hashlimit_burst: int = 0
+    opt_hashlimit_size: int = 0
+    opt_hashlimit_max: int = 0
+    opt_hashlimit_expire: int = 0
+    opt_hashlimit_gcinterval: int = 0
+    opt_connlimit_value: int = 0
+    opt_connlimit_masklen: int = 0
+    opt_ulog_nlgroup: int = 0
+    opt_metric: int = 0
+
+    # Bool options
+    opt_limit_value_not: bool = False
+    opt_hashlimit_dstlimit: bool = False
+    opt_hashlimit_dstip: bool = False
+    opt_hashlimit_dstport: bool = False
+    opt_hashlimit_srcip: bool = False
+    opt_hashlimit_srcport: bool = False
+    opt_connlimit_above_not: bool = False
+    opt_stateless: bool = False
+    opt_ipt_continue: bool = False
+    opt_ipt_mark_connections: bool = False
+    opt_ipt_tee: bool = False
+    opt_tagging: bool = False
+    opt_firewall_is_part_of_any_and_networks: bool = False
+    opt_log: bool = False
+    opt_logging: bool = False
+    opt_routing: bool = False
+    opt_classification: bool = False
+    opt_no_output_chain: bool = False
+    opt_no_input_chain: bool = False
+    opt_do_not_optimize_by_srv: bool = False
+    opt_put_in_mangle_table: bool = False
+    opt_ipt_branch_in_mangle: bool = False
+    opt_ipt_nat_random: bool = False
+    opt_ipt_nat_persistent: bool = False
+    opt_rule_added_for_osrc_neg: bool = False
+    opt_rule_added_for_odst_neg: bool = False
+    opt_rule_added_for_osrv_neg: bool = False
+    opt_mangle_only_rule_set: bool = False
+
+    # Str options
+    opt_limit_suffix: str = ''
+    opt_hashlimit_suffix: str = ''
+    opt_hashlimit_name: str = ''
+    opt_log_level: str = ''
+    opt_log_prefix: str = ''
+    opt_ipt_iif: str = ''
+    opt_ipt_oif: str = ''
+    opt_ipt_gw: str = ''
+    opt_tagobject_id: str = ''
+    opt_classify_str: str = ''
+    opt_counter_name: str = ''
+    opt_action_on_reject: str = ''
+    opt_rule_name_accounting: str = ''
+    opt_custom_str: str = ''
+
+    # -- Compilation metadata (set during processing) --
     abs_rule_number: int = 0
     ipt_chain: str = ''
     ipt_target: str = ''
@@ -146,25 +206,8 @@ class CompRule:
         # Give the clone its own element lists
         for slot in SLOT_VALUES:
             setattr(new, slot, list(getattr(self, slot)))
-        new.options = dict(self.options) if self.options else {}
         new.negations = dict(self.negations) if self.negations else {}
         return new
-
-    def get_option(self, key: str, default: Any = None) -> Any:
-        if self.options:
-            val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
-        return default
-
-    def set_option(self, key: str, value: object) -> None:
-        if self.options is None:
-            self.options = {}
-        self.options[key] = value
 
     def get_neg(self, slot: str) -> bool:
         """Return True if the given slot is negated."""
@@ -311,13 +354,6 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
         if rule.routing_rule_type is not None:
             routing_rule_type = RoutingRuleType(rule.routing_rule_type)
 
-        # Build options dict from typed columns
-        options = {}
-        for enum_key, meta in RULE_OPTIONS.items():
-            value = getattr(rule, meta.column_name)
-            if value != meta.default:
-                options[enum_key] = value
-
         # Check disabled from typed column
         disabled = rule.opt_disabled
 
@@ -327,7 +363,6 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             position=rule.position,
             label=rule.label or '',
             comment=rule.comment or '',
-            options=options,
             negations=dict(rule.negations) if rule.negations else {},
             # Element lists — get from resolved elements, empty = "any"
             src=elems.get('src', []),
@@ -355,6 +390,13 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             hidden=rule.hidden,
             compiler_message=rule.compiler_message or '',
         )
+
+        # Populate option fields from typed ORM columns
+        for meta in RULE_OPTIONS.values():
+            value = getattr(rule, meta.column_name)
+            if value != meta.default:
+                setattr(comp_rule, meta.column_name, value)
+
         comp_rules.append(comp_rule)
 
     return comp_rules

@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 
@@ -154,9 +155,12 @@ class CompilerDriver_nft(CompilerDriver):
                     .all()
                 )
 
-                # Determine IPv4/IPv6 run order (based on GUI option)
+                # Determine IPv4/IPv6 run order (based on GUI option).
+                # Empty means "use default ipv4_first".
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = fw.opt_ipv4_6_order or ''
+                ipv4_6_order = (
+                    fw.opt_ipv4_6_order or HOST_COMPILER_DEFAULTS['opt_ipv4_6_order']
+                )
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -575,7 +579,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         prolog_script = fw.opt_prolog_script or ''
         epilog_script = fw.opt_epilog_script or ''
-        prolog_place = fw.opt_prolog_place or 'top'
+        prolog_place = fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
 
         nft_path = fw.opt_nft_path or '/usr/sbin/nft'
 

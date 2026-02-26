@@ -503,7 +503,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""
-        stateless = rule.get_option('stateless', False)
+        stateless = rule.opt_stateless
         force_state = rule.force_state_check
         if not stateless or force_state:
             if _version_compare(self.version, '1.4.4') >= 0:
@@ -546,20 +546,12 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
-        limit_val = rule.get_option('limit_value', -1)
-        try:
-            limit_val = int(limit_val)
-        except (ValueError, TypeError):
-            limit_val = -1
+        limit_val = rule.opt_limit_value
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
-        burst = rule.get_option('limit_burst', 0)
-        try:
-            burst = int(burst)
-        except (ValueError, TypeError):
-            burst = 0
+        limit_suffix = rule.opt_limit_suffix or '/second'
+        burst = rule.opt_limit_burst
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'
         if burst > 0:
@@ -600,7 +592,7 @@ class PrintRule(PolicyRuleProcessor):
         return f' -j {target_name}'
 
     def _print_action_on_reject(self, rule: CompRule) -> str:
-        reject_with = rule.get_option('action_on_reject', '')
+        reject_with = rule.opt_action_on_reject
         if not reject_with:
             return ''
 
@@ -609,11 +601,14 @@ class PrintRule(PolicyRuleProcessor):
         # the C++ compiler maps these via substring matching (see
         # PolicyCompiler_PrintRule.cpp:_printActionOnReject).
         reject_map = {
+            'ICMP unreachable': 'icmp-host-unreachable',
             'ICMP host unreachable': 'icmp-host-unreachable',
             'ICMP net unreachable': 'icmp-net-unreachable',
             'ICMP port unreachable': 'icmp-port-unreachable',
             'ICMP protocol unreachable': 'icmp-proto-unreachable',
             'ICMP admin prohibited': 'icmp-admin-prohibited',
+            'ICMP net prohibited': 'icmp-net-unreachable',
+            'ICMP host prohibited': 'icmp-host-prohibited',
             'ICMP-unreachable': 'icmp-host-unreachable',
             'TCP RST': 'tcp-reset',
         }
@@ -632,13 +627,13 @@ class PrintRule(PolicyRuleProcessor):
         """Print logging parameters."""
         parts = []
 
-        log_level = rule.get_option('log_level', '')
+        log_level = rule.opt_log_level
         if not log_level:
             log_level = self.compiler.fw.opt_log_level or ''
         if log_level:
             parts.append(f'--log-level {log_level}')
 
-        log_prefix = rule.get_option('log_prefix', '')
+        log_prefix = rule.opt_log_prefix
         if not log_prefix:
             log_prefix = self.compiler.fw.opt_log_prefix or ''
         if log_prefix:

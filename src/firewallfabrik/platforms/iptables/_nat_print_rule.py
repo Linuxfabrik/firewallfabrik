@@ -188,7 +188,7 @@ class NATPrintRule(NATRuleProcessor):
         tsrv = ipt_comp.get_first_tsrv(rule)
 
         if rt == NATRuleType.Masq:
-            if rule.get_option('ipt_nat_random', False):
+            if rule.opt_ipt_nat_random:
                 return '--random'
             return ''
 
@@ -204,10 +204,11 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{addr_part}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
-            if rule.get_option('ipt_nat_random', False):
+            if rule.opt_ipt_nat_random:
                 parts.append('--random')
-            if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
+            if (
+                _version_compare(self.version, '1.4.3') >= 0
+                and rule.opt_ipt_nat_persistent
             ):
                 parts.append('--persistent')
             return ' '.join(parts)
@@ -224,10 +225,11 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{addr_part}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
-            if rule.get_option('ipt_nat_random', False):
+            if rule.opt_ipt_nat_random:
                 parts.append('--random')
-            if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
+            if (
+                _version_compare(self.version, '1.4.3') >= 0
+                and rule.opt_ipt_nat_persistent
             ):
                 parts.append('--persistent')
             return ' '.join(parts)

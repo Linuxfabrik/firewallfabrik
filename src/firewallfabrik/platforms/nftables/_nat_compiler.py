@@ -446,11 +446,11 @@ class SplitIfOSrcAny(NATRuleProcessor):
             return True
 
         # Skip rules added to handle negation
-        if rule.get_option('rule_added_for_osrc_neg', False):
+        if rule.opt_rule_added_for_osrc_neg:
             return True
-        if rule.get_option('rule_added_for_odst_neg', False):
+        if rule.opt_rule_added_for_odst_neg:
             return True
-        if rule.get_option('rule_added_for_osrv_neg', False):
+        if rule.opt_rule_added_for_osrv_neg:
             return True
 
         if rule.nat_rule_type == NATRuleType.DNAT and (

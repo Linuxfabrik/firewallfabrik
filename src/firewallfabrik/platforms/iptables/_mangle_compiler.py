@@ -134,39 +134,25 @@ class KeepMangleTableRules(PolicyRuleProcessor):
             return False
 
         # Keep rules with tagging, routing, or classification options
-        if (
-            rule.get_option('tagging', False)
-            or rule.get_option('routing', False)
-            or rule.get_option('classification', False)
-        ):
+        if rule.opt_tagging or rule.opt_routing or rule.opt_classification:
             self.tmp_queue.append(rule)
             return True
 
         # Keep rules with put_in_mangle_table option
-        if rule.get_option('put_in_mangle_table', False):
+        if rule.opt_put_in_mangle_table:
             self.tmp_queue.append(rule)
             return True
 
         # Handle branch rules that need mangle table
-        if rule.action == PolicyAction.Branch and rule.get_option(
-            'ipt_branch_in_mangle', False
-        ):
+        if rule.action == PolicyAction.Branch and rule.opt_ipt_branch_in_mangle:
             self.tmp_queue.append(rule)
             return True
 
         # Check if rule belongs to a mangle-only ruleset
-        if (
-            self.compiler
-            and self.compiler.source_ruleset
-            and hasattr(self.compiler.source_ruleset, 'options')
-        ):
-            rs_opts = self.compiler.source_ruleset.options or {}
-            mangle_only = rs_opts.get('mangle_only_rule_set', False)
-            if isinstance(mangle_only, str):
-                mangle_only = mangle_only.lower() == 'true'
-            if mangle_only:
-                self.tmp_queue.append(rule)
-                return True
+        rs = self.compiler.source_ruleset if self.compiler else None
+        if rs is not None and rs.options and rs.options.get('mangle_only_rule_set'):
+            self.tmp_queue.append(rule)
+            return True
 
         # Drop all other rules (they go to filter table)
         return True

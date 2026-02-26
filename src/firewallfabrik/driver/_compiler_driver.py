@@ -28,6 +28,7 @@ from firewallfabrik.core.objects import (
     Cluster,
     Firewall,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.driver._configlet import Configlet
 
 if TYPE_CHECKING:
@@ -162,7 +163,6 @@ class CompilerDriver(BaseCompiler):
 
         # Set variables
         skeleton.set_variable('shell_debug', '')
-        skeleton.set_variable('firewall_dir', '/etc/fw')
         skeleton.set_variable('timestamp', time.strftime('%c'))
         skeleton.set_variable('user', os.environ.get('USER', 'unknown'))
         skeleton.set_variable('platform', fw.platform)
@@ -212,8 +212,9 @@ class CompilerDriver(BaseCompiler):
         output_dir = self.wdir if self.wdir else '.'
         self.file_names[str(fw.id)] = str(Path(output_dir) / file_name)
 
-        # Compute remote file name from firewall options
-        firewall_dir = fw.opt_firewall_dir or ''
+        # Compute remote file name from firewall options.
+        # Empty firewall_dir means "use default /etc/fw".
+        firewall_dir = fw.opt_firewall_dir or HOST_COMPILER_DEFAULTS['opt_firewall_dir']
         script_name = fw.opt_script_name_on_firewall or ''
         if script_name:
             remote_file_name = str(script_name)

@@ -39,6 +39,7 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
 
@@ -152,8 +153,11 @@ class CompilerDriver_ipt(CompilerDriver):
             try:
                 fw_version = fw.version or '(any version)'
 
-                # Validate prolog placement with iptables-restore
-                prolog_place = fw.opt_prolog_place or ''
+                # Validate prolog placement with iptables-restore.
+                # Empty means "use default top".
+                prolog_place = (
+                    fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
+                )
                 if prolog_place == 'after_flush' and fw.opt_use_iptables_restore:
                     self.error(
                         'Prolog place "after policy reset" can not be used'
@@ -213,9 +217,12 @@ class CompilerDriver_ipt(CompilerDriver):
                 minus_n_commands_mangle: dict[str, bool] = {}
                 minus_n_commands_nat: dict[str, bool] = {}
 
-                # Determine IPv4/IPv6 run order
+                # Determine IPv4/IPv6 run order.
+                # Empty means "use default ipv4_first".
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = fw.opt_ipv4_6_order or ''
+                ipv4_6_order = (
+                    fw.opt_ipv4_6_order or HOST_COMPILER_DEFAULTS['opt_ipv4_6_order']
+                )
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -458,9 +465,6 @@ class CompilerDriver_ipt(CompilerDriver):
                     script_skeleton.set_variable('verify_interfaces', '')
 
                 # Prolog placement
-                if not prolog_place:
-                    prolog_place = 'top'
-
                 script_skeleton.set_variable(
                     'prolog_top', 1 if prolog_place == 'top' else 0
                 )
