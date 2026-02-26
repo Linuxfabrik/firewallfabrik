@@ -309,10 +309,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
             itf_names.append(s)
         itf_names = itf_names or ['Any']
 
-        src_neg = '!' if rule.negations.get('src') else ''
-        dst_neg = '!' if rule.negations.get('dst') else ''
-        srv_neg = '!' if rule.negations.get('srv') else ''
-        itf_neg = '!' if rule.negations.get('itf') else ''
+        src_neg = '!' if rule.neg_src else ''
+        dst_neg = '!' if rule.neg_dst else ''
+        srv_neg = '!' if rule.neg_srv else ''
+        itf_neg = '!' if rule.neg_itf else ''
 
         lines = []
         max_rows = max(len(src_names), len(dst_names), len(srv_names), len(itf_names))

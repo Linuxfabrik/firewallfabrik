@@ -181,6 +181,9 @@ class Service(Base):
     userid: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, nullable=True, default=None
     )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
         'Library',
@@ -347,6 +350,9 @@ class Interval(Base):
     data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
+    )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(

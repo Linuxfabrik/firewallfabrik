@@ -210,7 +210,9 @@ class YamlReader:
         addr.name = data.get('name', '')
         addr.comment = data.get('comment', '')
         addr.keywords = set(data.get('keywords', []))
-        addr.data = data.get('data', {})
+        raw_addr_data = data.get('data', {})
+        addr.folder = (raw_addr_data or {}).pop('folder', '')
+        addr.data = raw_addr_data
 
         # Type-specific fields
         if 'inet_addr_mask' in data:
@@ -295,6 +297,7 @@ class YamlReader:
                 svc.tag_code = raw_data.pop('code')
         if 'tagvalue' in raw_data:
             svc.tag_code = raw_data.pop('tagvalue')
+        svc.folder = raw_data.pop('folder', '')
         svc.data = raw_data
         svc.library = library
 
@@ -344,7 +347,9 @@ class YamlReader:
         itv.name = data.get('name', '')
         itv.comment = data.get('comment', '')
         itv.keywords = set(data.get('keywords', []))
-        itv.data = data.get('data', {})
+        raw_itv_data = data.get('data', {})
+        itv.folder = (raw_itv_data or {}).pop('folder', '')
+        itv.data = raw_itv_data
         itv.library = library
 
         self._register_ref(
@@ -362,7 +367,9 @@ class YamlReader:
         grp.comment = data.get('comment', '')
         grp.ro = data.get('ro', False)
         grp.keywords = set(data.get('keywords', []))
-        grp.data = data.get('data', {})
+        raw_grp_data = data.get('data', {})
+        grp.folder = (raw_grp_data or {}).pop('folder', '')
+        grp.data = raw_grp_data
         grp.options = data.get('options', {})
         grp.library = library
 
@@ -400,6 +407,7 @@ class YamlReader:
         dev.host_last_compiled = int(raw_data.pop('lastCompiled', 0) or 0)
         dev.host_last_installed = int(raw_data.pop('lastInstalled', 0) or 0)
         dev.host_mac_filter_enabled = bool(raw_data.pop('mac_filter_enabled', False))
+        dev.folder = raw_data.pop('folder', '')
         dev.data = raw_data
         dev.management = data.get('management', {})
         dev.library = library
@@ -438,6 +446,7 @@ class YamlReader:
         iface.iface_management = bool(raw_data.pop('management', False))
         iface.iface_unprotected = bool(raw_data.pop('unprotected', False))
         iface.iface_dedicated_failover = bool(raw_data.pop('dedicated_failover', False))
+        iface.folder = raw_data.pop('folder', '')
         iface.data = raw_data
         iface.bcast_bits = data.get('bcast_bits', 0)
         iface.ostatus = data.get('ostatus', False)
@@ -497,7 +506,8 @@ class YamlReader:
         rule.position = data.get('position', 0)
         rule.fallback = data.get('fallback', False)
         rule.hidden = data.get('hidden', False)
-        rule.negations = data.get('negations', {})
+        for slot, val in data.get('negations', {}).items():
+            setattr(rule, f'neg_{slot}', bool(val))
         rule.rule_set = rule_set
 
         # Extract 'group' (legacy files stored it inside options).

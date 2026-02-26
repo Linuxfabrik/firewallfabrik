@@ -107,6 +107,9 @@ class Host(Base):
     host_mac_filter_enabled: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean, default=False
     )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
 
     # -- Typed option columns --
     # Linux kernel options (sysctl)
@@ -622,6 +625,9 @@ class Interface(Base):
     )
     iface_dedicated_failover: sqlalchemy.orm.Mapped[bool] = (
         sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     # -- Typed option columns --

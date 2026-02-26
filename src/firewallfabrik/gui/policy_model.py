@@ -25,6 +25,7 @@ import sqlalchemy
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QSettings, Qt, Signal
 from PySide6.QtGui import QColor, QIcon
 
+from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
     Direction,
@@ -514,7 +515,9 @@ class PolicyTreeModel(QAbstractItemModel):
             metric=rule.opt_metric or 0,
             nat_action=nat_action_name,
             nat_action_int=nat_action_int,
-            negations=rule.negations or {},
+            negations={
+                s: True for s in SLOT_VALUES if getattr(rule, f'neg_{s}', False)
+            },
             odst=slots.get('odst', []),
             options=opts,
             options_display=build_options_display(opts, self._rule_set_type),
@@ -1192,7 +1195,10 @@ class PolicyTreeModel(QAbstractItemModel):
                     'comment': src_rule.comment or '',
                     'id': new_id,
                     'label': src_rule.label or '',
-                    'negations': dict(src_rule.negations or {}),
+                    **{
+                        f'neg_{s}': getattr(src_rule, f'neg_{s}', False)
+                        for s in SLOT_VALUES
+                    },
                     'position': position + i,
                     'rule_set_id': self._rule_set_id,
                 }
@@ -1647,9 +1653,7 @@ class PolicyTreeModel(QAbstractItemModel):
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                negs = dict(rule.negations or {})
-                negs[slot] = new_val
-                rule.negations = negs
+                setattr(rule, f'neg_{slot}', new_val)
         row_data.negations[slot] = new_val
         col = self._slot_to_col.get(slot)
         if col is not None:

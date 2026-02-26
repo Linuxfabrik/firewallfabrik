@@ -100,6 +100,9 @@ class Address(Base):
     run_time: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean, nullable=True, default=None
     )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
 
     library: sqlalchemy.orm.Mapped[Library | None] = sqlalchemy.orm.relationship(
         'Library',

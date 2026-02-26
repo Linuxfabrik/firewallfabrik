@@ -89,13 +89,16 @@ def test_fwb_rule_options_are_typed(fixture_path):
 )
 def test_fwb_rule_negations_are_booleans(fixture_path):
     """XML rule negation flags must be Python bools, not strings."""
+    from firewallfabrik.core._util import SLOT_VALUES
+
     db = _get_db(fixture_path)
 
     with db.session() as session:
         for rule in session.execute(sqlalchemy.select(Rule)).scalars():
+            negs = {s: getattr(rule, f'neg_{s}') for s in SLOT_VALUES}
             _assert_no_string_bools(
-                rule.negations,
-                f'Rule({rule.id}).negations',
+                negs,
+                f'Rule({rule.id}).neg_*',
             )
 
 

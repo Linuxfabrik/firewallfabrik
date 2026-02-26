@@ -339,7 +339,8 @@ def _parse_rule_children(rule, elem):
 
     rule.group = options.pop('group', '')
     apply_options(rule, options, RULE_OPTIONS)
-    rule.negations = negations
+    for slot, val in negations.items():
+        setattr(rule, f'neg_{slot}', val)
 
 
 class XmlReader:

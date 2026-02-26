@@ -57,7 +57,23 @@ class CompRule:
     position: int
     label: str
     comment: str
-    negations: dict  # copy of Rule.negations JSON
+    # -- Negation flags (one per rule-element slot) --
+    neg_src: bool = False
+    neg_dst: bool = False
+    neg_srv: bool = False
+    neg_itf: bool = False
+    neg_when: bool = False
+    neg_osrc: bool = False
+    neg_odst: bool = False
+    neg_osrv: bool = False
+    neg_tsrc: bool = False
+    neg_tdst: bool = False
+    neg_tsrv: bool = False
+    neg_itf_inb: bool = False
+    neg_itf_outb: bool = False
+    neg_rdst: bool = False
+    neg_rgtw: bool = False
+    neg_ritf: bool = False
 
     # Rule elements — lists of resolved SQLAlchemy model objects.
     # Empty list [] = element is "any" (matches everything).
@@ -201,24 +217,20 @@ class CompRule:
 
         Element lists are shallow-copied (new lists, same model objects),
         because the compiler never mutates the model objects themselves.
+        Scalar fields (including neg_* bools) are copied by copy.copy().
         """
         new = copy.copy(self)
         # Give the clone its own element lists
         for slot in SLOT_VALUES:
             setattr(new, slot, list(getattr(self, slot)))
-        new.negations = dict(self.negations) if self.negations else {}
         return new
 
     def get_neg(self, slot: str) -> bool:
         """Return True if the given slot is negated."""
-        if self.negations:
-            return bool(self.negations.get(slot, False))
-        return False
+        return bool(getattr(self, f'neg_{slot}', False))
 
     def set_neg(self, slot: str, value: bool) -> None:
-        if self.negations is None:
-            self.negations = {}
-        self.negations[slot] = value
+        setattr(self, f'neg_{slot}', value)
 
     # Convenience "any" checks (empty list = any)
     def is_src_any(self) -> bool:
@@ -363,7 +375,6 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             position=rule.position,
             label=rule.label or '',
             comment=rule.comment or '',
-            negations=dict(rule.negations) if rule.negations else {},
             # Element lists — get from resolved elements, empty = "any"
             src=elems.get('src', []),
             dst=elems.get('dst', []),
@@ -390,6 +401,12 @@ def load_rules(session, rule_set: RuleSet) -> list[CompRule]:
             hidden=rule.hidden,
             compiler_message=rule.compiler_message or '',
         )
+
+        # Copy negation flags from typed ORM columns
+        for slot in SLOT_VALUES:
+            col = f'neg_{slot}'
+            if getattr(rule, col, False):
+                setattr(comp_rule, col, True)
 
         # Populate option fields from typed ORM columns
         for meta in RULE_OPTIONS.values():

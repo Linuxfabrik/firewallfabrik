@@ -41,7 +41,6 @@ def _make_rule(
         position=1,
         label='',
         comment='',
-        negations={},
         action=action,
         **kwargs,
     )

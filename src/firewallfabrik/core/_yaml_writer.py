@@ -20,7 +20,7 @@ import sqlalchemy
 import yaml
 
 from . import objects
-from ._util import ENUM_FIELDS, escape_obj_name
+from ._util import ENUM_FIELDS, SLOT_VALUES, escape_obj_name
 from .options._metadata import (
     HOST_OPTIONS,
     INTERFACE_OPTIONS,
@@ -391,8 +391,12 @@ class YamlWriter:
                 objects.Interval.group_id.is_(None),
             ),
         ).all():
-            d_itv = _serialize_obj(i)
+            d_itv = _serialize_obj(i, extra_skip=frozenset({'folder'}))
             d_itv.setdefault('type', 'Interval')
+            if i.folder:
+                itv_data = d_itv.get('data') or {}
+                itv_data['folder'] = i.folder
+                d_itv['data'] = itv_data
             children.append(d_itv)
 
         # Root groups
@@ -438,9 +442,15 @@ class YamlWriter:
                     'inet_netmask',
                     'range_start',
                     'range_end',
+                    'folder',
                 }
             ),
         )
+        # Merge folder into data dict for YAML backward compat
+        if addr.folder:
+            data = d.get('data') or {}
+            data['folder'] = addr.folder
+            d['data'] = data
         # Reconstruct inet_addr_mask dict for YAML compat
         if addr.inet_address is not None or addr.inet_netmask is not None:
             iam = {}
@@ -487,6 +497,7 @@ class YamlWriter:
                 'ip_tos',
                 'ip_dscp',
                 'tag_code',
+                'folder',
             }
         )
         d = _serialize_obj(svc, extra_skip=_SERVICE_TYPED_COLS)
@@ -534,13 +545,19 @@ class YamlWriter:
             data['dscp'] = svc.ip_dscp
         if svc.tag_code is not None:
             data['code'] = svc.tag_code
+        if svc.folder:
+            data['folder'] = svc.folder
         if data:
             d['data'] = data
 
         return d
 
     def _serialize_group(self, session, grp):
-        d = _serialize_obj(grp, extra_skip=frozenset({'ro'}))
+        d = _serialize_obj(grp, extra_skip=frozenset({'ro', 'folder'}))
+        if grp.folder:
+            data = d.get('data') or {}
+            data['folder'] = grp.folder
+            d['data'] = data
         if grp.ro:
             d['ro'] = True
 
@@ -568,8 +585,12 @@ class YamlWriter:
                 objects.Interval.group_id == grp.id,
             ),
         ).all():
-            d_itv = _serialize_obj(i)
+            d_itv = _serialize_obj(i, extra_skip=frozenset({'folder'}))
             d_itv.setdefault('type', 'Interval')
+            if i.folder:
+                itv_data = d_itv.get('data') or {}
+                itv_data['folder'] = i.folder
+                d_itv['data'] = itv_data
             children.append(d_itv)
 
         # Child devices
@@ -612,6 +633,7 @@ class YamlWriter:
             'host_last_compiled',
             'host_last_installed',
             'host_mac_filter_enabled',
+            'folder',
         }
     )
 
@@ -647,6 +669,8 @@ class YamlWriter:
             typed_data['lastInstalled'] = dev.host_last_installed
         if dev.host_mac_filter_enabled:
             typed_data['mac_filter_enabled'] = True
+        if dev.folder:
+            typed_data['folder'] = dev.folder
         # Merge unknown keys from leftover data dict after typed columns
         leftover = d.get('data', None) or {}
         data = {**typed_data, **leftover}
@@ -685,6 +709,7 @@ class YamlWriter:
             'iface_management',
             'iface_unprotected',
             'iface_dedicated_failover',
+            'folder',
         }
     )
 
@@ -711,6 +736,8 @@ class YamlWriter:
             typed_data['unprotected'] = True
         if iface.iface_dedicated_failover:
             typed_data['dedicated_failover'] = True
+        if iface.folder:
+            typed_data['folder'] = iface.folder
         leftover = d.get('data', None) or {}
         data = {**typed_data, **leftover}
         if data:
@@ -759,9 +786,10 @@ class YamlWriter:
         return d
 
     def _serialize_rule(self, session, rule):
+        _NEG_COLUMNS = frozenset(f'neg_{s}' for s in SLOT_VALUES)
         d = _serialize_obj(
             rule,
-            extra_skip=frozenset({'sorted_dst_ids', 'negations'}),
+            extra_skip=frozenset({'sorted_dst_ids'}) | _NEG_COLUMNS,
             skip_opt_columns=True,
         )
 
@@ -769,11 +797,10 @@ class YamlWriter:
         if opts:
             d['options'] = dict(sorted(opts.items()))
 
-        # Negations — only include slots that are True
-        if rule.negations:
-            active_negs = {k: v for k, v in rule.negations.items() if v}
-            if active_negs:
-                d['negations'] = active_negs
+        # Negations — reconstruct dict from typed columns, only include True
+        active_negs = {s: True for s in SLOT_VALUES if getattr(rule, f'neg_{s}', False)}
+        if active_negs:
+            d['negations'] = active_negs
 
         # Rule elements grouped by slot
         rows = session.execute(
