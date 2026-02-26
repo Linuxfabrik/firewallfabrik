@@ -85,7 +85,7 @@ class ActionsPanel(QWidget):
         """Read options from the database and populate all widgets."""
         self._loading = True
         try:
-            opts = self._read_rule_options()
+            rule = self._get_rule()
             row_data = self._get_row_data()
             action_int = row_data.action_int if row_data is not None else 0
 
@@ -101,24 +101,26 @@ class ActionsPanel(QWidget):
 
             # Reject page.
             if hasattr(self, 'rejectvalue'):
-                val = str(opts.get('opt_action_on_reject', ''))
-                idx = self.rejectvalue.findText(val)
+                val = rule.opt_action_on_reject if rule else ''
+                idx = self.rejectvalue.findText(val or '')
                 self.rejectvalue.setCurrentIndex(idx if idx >= 0 else 0)
 
             # Accounting page.
             if hasattr(self, 'accountingvalue_str'):
                 self.accountingvalue_str.setText(
-                    str(opts.get('opt_rule_name_accounting', '')),
+                    rule.opt_rule_name_accounting if rule else '',
                 )
 
             # Custom page.
             if hasattr(self, 'custom_str'):
-                self.custom_str.setText(str(opts.get('opt_custom_str', '')))
+                self.custom_str.setText(
+                    rule.opt_custom_str if rule else '',
+                )
 
             # Branch page.
             if hasattr(self, 'ipt_branch_in_mangle'):
                 self.ipt_branch_in_mangle.setChecked(
-                    bool(opts.get('opt_ipt_branch_in_mangle')),
+                    rule.opt_ipt_branch_in_mangle if rule else False,
                 )
         finally:
             self._loading = False
@@ -127,7 +129,7 @@ class ActionsPanel(QWidget):
         """Collect values from all widgets and persist via the model."""
         if self._model is None or self._index is None:
             return
-        opts = self._read_rule_options()
+        opts = {}
 
         # Reject.
         if hasattr(self, 'rejectvalue'):
@@ -145,14 +147,7 @@ class ActionsPanel(QWidget):
         if hasattr(self, 'ipt_branch_in_mangle'):
             opts['opt_ipt_branch_in_mangle'] = self.ipt_branch_in_mangle.isChecked()
 
-        # Clean out empty/zero/false values to keep storage lean.
-        cleaned = {}
-        for k, v in opts.items():
-            if v is None or v == '' or v == 0 or v is False:
-                continue
-            cleaned[k] = v
-
-        self._model.set_options(self._index, cleaned)
+        self._model.set_options(self._index, opts)
         # set_options() calls reload(), invalidating all QModelIndex objects.
         # Re-resolve so subsequent saves use a valid index.
         if self._rule_id is not None:
@@ -170,24 +165,17 @@ class ActionsPanel(QWidget):
             return None
         return self._model.get_row_data(self._index)
 
-    def _read_rule_options(self):
-        """Read options from the database rule, keyed by column name."""
+    def _get_rule(self):
+        """Return the ORM Rule object for the current index, or None."""
         if self._model is None or self._index is None:
-            return {}
+            return None
         row_data = self._get_row_data()
         if row_data is None:
-            return {}
+            return None
         from firewallfabrik.core.objects import PolicyRule
-        from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
         with self._model._db_manager.session() as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
-            if rule is not None:
-                return {
-                    meta.column_name: getattr(rule, meta.column_name)
-                    for meta in RULE_OPTIONS.values()
-                }
-        return {}
+            return session.get(PolicyRule, row_data.rule_id)
 
     # ------------------------------------------------------------------
     # Signal management

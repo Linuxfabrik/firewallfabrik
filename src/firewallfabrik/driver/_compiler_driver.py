@@ -215,7 +215,7 @@ class CompilerDriver(BaseCompiler):
         # Compute remote file name from firewall options.
         # Empty firewall_dir means "use default /etc/fw".
         firewall_dir = fw.opt_firewall_dir or HOST_COMPILER_DEFAULTS['opt_firewall_dir']
-        script_name = fw.opt_script_name_on_firewall or ''
+        script_name = fw.opt_script_name_on_firewall
         if script_name:
             remote_file_name = str(script_name)
         else:
