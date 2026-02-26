@@ -69,21 +69,19 @@ def obj_tooltip(obj):
 
     # -- Addresses --
     if type_str in ('IPv4', 'IPv6', 'Network', 'NetworkIPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        mask = iam.get('netmask', '')
+        addr = getattr(obj, 'inet_address', '') or ''
+        mask = getattr(obj, 'inet_netmask', '') or ''
         if addr:
             lines.append(f'{addr}/{mask}' if mask else addr)
 
     elif type_str == 'AddressRange':
-        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
-        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
+        start = getattr(obj, 'range_start', '') or ''
+        end = getattr(obj, 'range_end', '') or ''
         if start or end:
             lines.append(f'{start} - {end}')
 
     elif type_str == 'PhysAddress':
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        mac = iam.get('address', '')
+        mac = getattr(obj, 'inet_address', '') or ''
         if mac:
             lines.append(mac)
 
@@ -156,26 +154,23 @@ def obj_tooltip(obj):
         for addr in getattr(obj, 'addresses', []):
             if getattr(addr, 'type', '') == 'PhysAddress':
                 continue
-            iam = getattr(addr, 'inet_addr_mask', None) or {}
-            a = iam.get('address', '')
+            a = getattr(addr, 'inet_address', '') or ''
             if a:
-                m = iam.get('netmask', '')
+                m = getattr(addr, 'inet_netmask', '') or ''
                 lines.append(f'{a}/{m}' if m else a)
         # Interface type.
-        options = getattr(obj, 'options', None) or {}
-        intf_type = options.get('type', '')
+        intf_type = getattr(obj, 'opt_type', '') or ''
         if intf_type:
             type_text = intf_type
             if intf_type == '8021q':
-                vlan_id = options.get('vlan_id', '')
+                vlan_id = getattr(obj, 'opt_vlan_id', '') or ''
                 if vlan_id:
                     type_text += f' VLAN ID={vlan_id}'
             lines.append(f'<b>Interface Type: </b>{type_text}')
         # MAC address.
         for addr in getattr(obj, 'addresses', []):
             if getattr(addr, 'type', '') == 'PhysAddress':
-                iam = getattr(addr, 'inet_addr_mask', None) or {}
-                mac = iam.get('address', '')
+                mac = getattr(addr, 'inet_address', '') or ''
                 if mac:
                     lines.append(f'MAC: {mac}')
         # Flags.
@@ -205,15 +200,15 @@ def obj_tooltip(obj):
         )
 
     elif type_str in ('ICMP6Service', 'ICMPService'):
-        codes = getattr(obj, 'codes', None) or {}
-        icmp_type = codes.get('type', -1)
-        code = codes.get('code', -1)
-        lines.append(f'type: {icmp_type}  code: {code}')
+        icmp_type = getattr(obj, 'icmp_type', None)
+        icmp_code = getattr(obj, 'icmp_code', None)
+        t_str = icmp_type if icmp_type is not None else -1
+        c_str = icmp_code if icmp_code is not None else -1
+        lines.append(f'type: {t_str}  code: {c_str}')
 
     elif type_str == 'IPService':
-        named = getattr(obj, 'named_protocols', None) or {}
-        protocol_num = named.get('protocol_num', '')
-        if protocol_num:
+        protocol_num = getattr(obj, 'protocol_num', None)
+        if protocol_num is not None:
             lines.append(f'protocol {protocol_num}')
 
     elif type_str == 'CustomService':
@@ -228,8 +223,7 @@ def obj_tooltip(obj):
                 lines.append(f'<table cellspacing="0" cellpadding="0">{rows}</table>')
 
     elif type_str == 'TagService':
-        data = getattr(obj, 'data', None) or {}
-        tag_code = data.get('tagcode', '')
+        tag_code = getattr(obj, 'tag_code', None) or ''
         if tag_code:
             lines.append(f'Pattern: "{tag_code}"')
 
@@ -276,10 +270,9 @@ def _iface_brief(iface):
     data = getattr(iface, 'data', None) or {}
     parts = []
     for addr in getattr(iface, 'addresses', []):
-        iam = getattr(addr, 'inet_addr_mask', None) or {}
-        a = iam.get('address', '')
+        a = getattr(addr, 'inet_address', '') or ''
         if a:
-            m = iam.get('netmask', '')
+            m = getattr(addr, 'inet_netmask', '') or ''
             parts.append(f'{a}/{m}' if m else a)
     flags = []
     if data.get('dyn'):

@@ -95,3 +95,35 @@ Connections between signals and slots are established in two ways:
 2. **In Python** -- explicit `.connect()` calls for signals not covered by the .ui file (e.g. custom tree signals, dynamically created widgets).
 
 A slot must not be connected both ways. If a connection already exists in the .ui file, adding a Python `.connect()` call for the same signal/slot pair will cause the slot to fire twice per signal emission.
+
+
+## Firewall Option Defaults Convention
+
+Firewall string options (`opt_firewall_dir`, `opt_admuser`, `opt_log_prefix`, `opt_prolog_place`, `opt_ipv4_6_order`, `opt_action_on_reject`) are stored as nullable strings on the `Host` model. When not set by the user, the column value is `None`; when cleared in the GUI, it becomes `''`. Both are falsy and both mean "not set."
+
+**Defaults are applied at consumption time, never stored implicitly.** Each consumption point (compiler, driver, installer) applies its own default using the `or HOST_COMPILER_DEFAULTS[col]` pattern:
+
+```python
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
+firewall_dir = fw.opt_firewall_dir or HOST_COMPILER_DEFAULTS['opt_firewall_dir']
+prolog_place = fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
+```
+
+The single source of truth for compiler fallbacks is the `compiler_default` field on `OptionMeta` in `core/options/_metadata.py`. The `HOST_COMPILER_DEFAULTS` dict is a pre-built lookup from column name to compiler default. Both compiler code and GUI placeholder text use this dict, so they can never drift apart.
+
+The YAML/database stores only user-provided values. `None` and `''` are equivalent and always mean "use the platform default."
+
+**GUI placeholder text.** The settings dialogs show the platform default as placeholder text (greyed-out hint) in fields like `ipt_fw_dir` and `ipt_user`, so the user understands what value the compiler will use when the field is left empty. These are read from `HOST_COMPILER_DEFAULTS`.
+
+**`_PLATFORM_DEFAULTS` in `new_device_dialog.py`.** These set initial values for newly created firewalls (e.g. `opt_log_prefix`). These are real stored values in the database, not implicit defaults. Options like `opt_log_prefix` are pre-filled at creation time because the compiler needs a non-empty value to emit log rules -- unlike `opt_firewall_dir` where the compiler can fall back to a sensible default.
+
+
+## CompRule Typed Option Fields
+
+During compilation, `CompRule` (in `compiler/_comp_rule.py`) is the mutable in-memory copy of a `Rule`. Rule options are represented as **typed dataclass fields** (e.g. `opt_tagging: bool = False`, `opt_limit_value: int = 0`, `opt_action_on_reject: str = ''`) rather than an untyped dict. This gives:
+
+- **Static analysis** — typos in field names produce `AttributeError` at runtime and Pyright warnings at edit time, rather than silently returning a default.
+- **No string coercion** — boolean fields are `bool`, integer fields are `int`. No need for `val.lower() == 'true'` checks.
+- **Simpler cloning** — `copy.copy()` copies all scalar fields automatically; no separate `dict(self.options)` step.
+
+The field names match the ORM column names from `RULE_OPTIONS` in `core/options/_metadata.py` (e.g. yaml key `tagging` → column `opt_tagging` → CompRule field `opt_tagging`). The `load_rules()` function populates these fields from the ORM using `setattr(comp_rule, meta.column_name, value)`.

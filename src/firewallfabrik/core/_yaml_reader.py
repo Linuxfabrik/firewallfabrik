@@ -30,6 +30,13 @@ from ._util import (
     ParseResult,
     escape_obj_name,
 )
+from .options._metadata import (
+    HOST_OPTIONS,
+    INTERFACE_OPTIONS,
+    RULE_OPTIONS,
+    RULESET_OPTIONS,
+    apply_options,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -203,15 +210,19 @@ class YamlReader:
         addr.name = data.get('name', '')
         addr.comment = data.get('comment', '')
         addr.keywords = set(data.get('keywords', []))
-        addr.data = data.get('data', {})
+        raw_addr_data = data.get('data', {})
+        addr.folder = (raw_addr_data or {}).pop('folder', '')
+        addr.data = raw_addr_data
 
         # Type-specific fields
         if 'inet_addr_mask' in data:
-            addr.inet_addr_mask = data['inet_addr_mask']
+            iam = data['inet_addr_mask']
+            addr.inet_address = iam.get('address')
+            addr.inet_netmask = iam.get('netmask')
         if 'start_address' in data:
-            addr.start_address = data['start_address']
+            addr.range_start = data['start_address'].get('address')
         if 'end_address' in data:
-            addr.end_address = data['end_address']
+            addr.range_end = data['end_address'].get('address')
         if 'subst_type_name' in data:
             addr.subst_type_name = data['subst_type_name']
         if 'source_name' in data:
@@ -238,7 +249,56 @@ class YamlReader:
         svc.name = data.get('name', '')
         svc.comment = data.get('comment', '')
         svc.keywords = set(data.get('keywords', []))
-        svc.data = data.get('data', {})
+        raw_data = data.get('data', {})
+        # Extract known keys from data dict into typed columns
+        if raw_data.get('established') is not None:
+            svc.tcp_established = str(raw_data.pop('established')).lower() in (
+                'true',
+                '1',
+                'yes',
+            )
+        for xml_key, col_name in (
+            ('fragm', 'ip_opt_fragm'),
+            ('short_fragm', 'ip_opt_short_fragm'),
+            ('lsrr', 'ip_opt_lsrr'),
+            ('ssrr', 'ip_opt_ssrr'),
+            ('rr', 'ip_opt_rr'),
+            ('ts', 'ip_opt_ts'),
+            ('rtralt', 'ip_opt_rtralt'),
+            ('any_opt', 'ip_opt_any_opt'),
+        ):
+            if xml_key in raw_data:
+                setattr(
+                    svc,
+                    col_name,
+                    str(raw_data.pop(xml_key)).lower()
+                    in (
+                        'true',
+                        '1',
+                        'yes',
+                    ),
+                )
+        for key, col_name in (
+            ('tos', 'ip_tos'),
+            ('tos_code', 'ip_tos'),
+            ('dscp', 'ip_dscp'),
+            ('dscp_code', 'ip_dscp'),
+        ):
+            if key in raw_data:
+                setattr(svc, col_name, raw_data.pop(key))
+        # ICMP type/code may live in the data dict (legacy YAML format)
+        if type_name in ('ICMPService', 'ICMP6Service'):
+            if 'type' in raw_data:
+                svc.icmp_type = int(raw_data.pop('type'))
+            if 'code' in raw_data:
+                svc.icmp_code = int(raw_data.pop('code'))
+        else:
+            if 'code' in raw_data:
+                svc.tag_code = raw_data.pop('code')
+        if 'tagvalue' in raw_data:
+            svc.tag_code = raw_data.pop('tagvalue')
+        svc.folder = raw_data.pop('folder', '')
+        svc.data = raw_data
         svc.library = library
 
         # Type-specific fields
@@ -252,13 +312,22 @@ class YamlReader:
                 setattr(svc, field, data[field])
 
         if 'tcp_flags' in data:
-            svc.tcp_flags = data['tcp_flags']
+            flags = data['tcp_flags']
+            for f in ('urg', 'ack', 'psh', 'rst', 'syn', 'fin'):
+                setattr(svc, f'tcp_flag_{f}', flags.get(f))
         if 'tcp_flags_masks' in data:
-            svc.tcp_flags_masks = data['tcp_flags_masks']
+            masks = data['tcp_flags_masks']
+            for f in ('urg', 'ack', 'psh', 'rst', 'syn', 'fin'):
+                setattr(svc, f'tcp_mask_{f}', masks.get(f))
         if 'named_protocols' in data:
-            svc.named_protocols = data['named_protocols']
+            svc.protocol_num = int(data['named_protocols'].get('protocol_num', 0))
         if 'codes' in data:
-            svc.codes = data['codes']
+            codes = data['codes']
+            if type_name in ('ICMPService', 'ICMP6Service'):
+                svc.icmp_type = codes.get('type')
+                svc.icmp_code = codes.get('code')
+            else:
+                svc.codes = codes
         if 'protocol' in data:
             svc.protocol = data['protocol']
         if 'custom_address_family' in data:
@@ -278,7 +347,9 @@ class YamlReader:
         itv.name = data.get('name', '')
         itv.comment = data.get('comment', '')
         itv.keywords = set(data.get('keywords', []))
-        itv.data = data.get('data', {})
+        raw_itv_data = data.get('data', {})
+        itv.folder = (raw_itv_data or {}).pop('folder', '')
+        itv.data = raw_itv_data
         itv.library = library
 
         self._register_ref(
@@ -296,7 +367,9 @@ class YamlReader:
         grp.comment = data.get('comment', '')
         grp.ro = data.get('ro', False)
         grp.keywords = set(data.get('keywords', []))
-        grp.data = data.get('data', {})
+        raw_grp_data = data.get('data', {})
+        grp.folder = (raw_grp_data or {}).pop('folder', '')
+        grp.data = raw_grp_data
         grp.options = data.get('options', {})
         grp.library = library
 
@@ -325,10 +398,21 @@ class YamlReader:
         dev.comment = data.get('comment', '')
         dev.ro = data.get('ro', False)
         dev.keywords = set(data.get('keywords', []))
-        dev.data = data.get('data', {})
-        dev.options = data.get('options', {})
+        raw_data = data.get('data', {})
+        dev.host_platform = raw_data.pop('platform', None)
+        dev.host_os_val = raw_data.pop('host_OS', None)
+        dev.host_version = raw_data.pop('version', None)
+        dev.host_inactive = bool(raw_data.pop('inactive', False))
+        dev.host_last_modified = int(raw_data.pop('lastModified', 0) or 0)
+        dev.host_last_compiled = int(raw_data.pop('lastCompiled', 0) or 0)
+        dev.host_last_installed = int(raw_data.pop('lastInstalled', 0) or 0)
+        dev.host_mac_filter_enabled = bool(raw_data.pop('mac_filter_enabled', False))
+        dev.folder = raw_data.pop('folder', '')
+        dev.data = raw_data
         dev.management = data.get('management', {})
         dev.library = library
+
+        apply_options(dev, data.get('options', {}), HOST_OPTIONS)
 
         if 'id_mapping_for_duplicate' in data:
             dev.id_mapping_for_duplicate = data['id_mapping_for_duplicate']
@@ -354,13 +438,23 @@ class YamlReader:
         iface.name = data.get('name', '')
         iface.comment = data.get('comment', '')
         iface.keywords = set(data.get('keywords', []))
-        iface.data = data.get('data', {})
-        iface.options = data.get('options', {})
+        raw_data = data.get('data', {})
+        iface.iface_dyn = bool(raw_data.pop('dyn', False))
+        iface.iface_unnum = bool(raw_data.pop('unnum', False))
+        iface.iface_label = raw_data.pop('label', None)
+        iface.iface_security_level = raw_data.pop('security_level', None)
+        iface.iface_management = bool(raw_data.pop('management', False))
+        iface.iface_unprotected = bool(raw_data.pop('unprotected', False))
+        iface.iface_dedicated_failover = bool(raw_data.pop('dedicated_failover', False))
+        iface.folder = raw_data.pop('folder', '')
+        iface.data = raw_data
         iface.bcast_bits = data.get('bcast_bits', 0)
         iface.ostatus = data.get('ostatus', False)
         iface.snmp_type = data.get('snmp_type', 0)
         iface.library = library
         iface.device = device
+
+        apply_options(iface, data.get('options', {}), INTERFACE_OPTIONS)
 
         if parent_interface is not None:
             iface.parent_interface = parent_interface
@@ -387,7 +481,7 @@ class YamlReader:
         rs.id = uuid.uuid4()
         rs.name = data.get('name', '')
         rs.comment = data.get('comment', '')
-        rs.options = data.get('options', {})
+        apply_options(rs, data.get('options', {}), RULESET_OPTIONS)
         rs.ipv4 = data.get('ipv4', False)
         rs.ipv6 = data.get('ipv6', False)
         rs.top = data.get('top', False)
@@ -412,9 +506,15 @@ class YamlReader:
         rule.position = data.get('position', 0)
         rule.fallback = data.get('fallback', False)
         rule.hidden = data.get('hidden', False)
-        rule.options = data.get('options', {})
-        rule.negations = data.get('negations', {})
+        for slot, val in data.get('negations', {}).items():
+            setattr(rule, f'neg_{slot}', bool(val))
         rule.rule_set = rule_set
+
+        # Extract 'group' (legacy files stored it inside options).
+        opts = data.get('options', {})
+        legacy_group = opts.pop('group', '')
+        rule.group = data.get('group', '') or legacy_group
+        apply_options(rule, opts, RULE_OPTIONS)
 
         # Enum fields
         enum_map = _ENUM_REVERSE.get(type_name, {})

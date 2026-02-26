@@ -20,7 +20,14 @@ import sqlalchemy
 import yaml
 
 from . import objects
-from ._util import ENUM_FIELDS, escape_obj_name
+from ._util import ENUM_FIELDS, SLOT_VALUES, escape_obj_name
+from .options._metadata import (
+    HOST_OPTIONS,
+    INTERFACE_OPTIONS,
+    RULE_OPTIONS,
+    RULESET_OPTIONS,
+    build_options_dict,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +87,12 @@ def _is_default(value):
     return bool(isinstance(value, set | list) and not value)
 
 
-def _serialize_obj(obj, extra_skip=frozenset()):
+def _serialize_obj(obj, extra_skip=frozenset(), skip_opt_columns=False):
     """Serialize an ORM object to a dict, omitting defaults and skipped fields.
 
     Handles enum remapping and set→sorted list conversion.
+    If skip_opt_columns is True, skips all opt_* columns (they are serialized
+    separately as an options dict).
     """
     skip = _SKIP_ALWAYS | extra_skip
     result = {}
@@ -92,6 +101,10 @@ def _serialize_obj(obj, extra_skip=frozenset()):
     for col in mapper.columns:
         key = col.key
         if key in skip:
+            continue
+
+        # Skip opt_* columns when requested
+        if skip_opt_columns and key.startswith('opt_'):
             continue
 
         value = getattr(obj, key)
@@ -369,7 +382,7 @@ class YamlWriter:
                 objects.Service.group_id.is_(None),
             ),
         ).all():
-            children.append(_serialize_obj(s))
+            children.append(self._serialize_service(s))
 
         # Orphan intervals (Interval has no STI type column)
         for i in session.scalars(
@@ -378,8 +391,12 @@ class YamlWriter:
                 objects.Interval.group_id.is_(None),
             ),
         ).all():
-            d_itv = _serialize_obj(i)
+            d_itv = _serialize_obj(i, extra_skip=frozenset({'folder'}))
             d_itv.setdefault('type', 'Interval')
+            if i.folder:
+                itv_data = d_itv.get('data') or {}
+                itv_data['folder'] = i.folder
+                d_itv['data'] = itv_data
             children.append(d_itv)
 
         # Root groups
@@ -417,10 +434,130 @@ class YamlWriter:
         return d
 
     def _serialize_address(self, addr):
-        return _serialize_obj(addr)
+        d = _serialize_obj(
+            addr,
+            extra_skip=frozenset(
+                {
+                    'inet_address',
+                    'inet_netmask',
+                    'range_start',
+                    'range_end',
+                    'folder',
+                }
+            ),
+        )
+        # Merge folder into data dict for YAML backward compat
+        if addr.folder:
+            data = d.get('data') or {}
+            data['folder'] = addr.folder
+            d['data'] = data
+        # Reconstruct inet_addr_mask dict for YAML compat
+        if addr.inet_address is not None or addr.inet_netmask is not None:
+            iam = {}
+            if addr.inet_address is not None:
+                iam['address'] = addr.inet_address
+            if addr.inet_netmask is not None:
+                iam['netmask'] = addr.inet_netmask
+            d['inet_addr_mask'] = iam
+        # Reconstruct start_address / end_address dicts for YAML compat
+        if addr.range_start is not None:
+            d['start_address'] = {'address': addr.range_start}
+        if addr.range_end is not None:
+            d['end_address'] = {'address': addr.range_end}
+        return d
+
+    @staticmethod
+    def _serialize_service(svc):
+        _SERVICE_TYPED_COLS = frozenset(
+            {
+                'icmp_type',
+                'icmp_code',
+                'protocol_num',
+                'tcp_flag_urg',
+                'tcp_flag_ack',
+                'tcp_flag_psh',
+                'tcp_flag_rst',
+                'tcp_flag_syn',
+                'tcp_flag_fin',
+                'tcp_mask_urg',
+                'tcp_mask_ack',
+                'tcp_mask_psh',
+                'tcp_mask_rst',
+                'tcp_mask_syn',
+                'tcp_mask_fin',
+                'tcp_established',
+                'ip_opt_fragm',
+                'ip_opt_short_fragm',
+                'ip_opt_lsrr',
+                'ip_opt_ssrr',
+                'ip_opt_rr',
+                'ip_opt_ts',
+                'ip_opt_rtralt',
+                'ip_opt_any_opt',
+                'ip_tos',
+                'ip_dscp',
+                'tag_code',
+                'folder',
+            }
+        )
+        d = _serialize_obj(svc, extra_skip=_SERVICE_TYPED_COLS)
+
+        # Reconstruct codes dict for YAML compat (ICMP or CustomService)
+        if svc.icmp_type is not None or svc.icmp_code is not None:
+            d['codes'] = {
+                'type': svc.icmp_type if svc.icmp_type is not None else -1,
+                'code': svc.icmp_code if svc.icmp_code is not None else -1,
+            }
+
+        # Reconstruct named_protocols dict
+        if svc.protocol_num is not None:
+            d['named_protocols'] = {'protocol_num': str(svc.protocol_num)}
+
+        # Reconstruct tcp_flags / tcp_flags_masks dicts
+        flag_names = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+        flags = {f: getattr(svc, f'tcp_flag_{f}') for f in flag_names}
+        masks = {f: getattr(svc, f'tcp_mask_{f}') for f in flag_names}
+        if any(v is not None for v in flags.values()):
+            d['tcp_flags'] = {f: bool(v) for f, v in flags.items()}
+        if any(v is not None for v in masks.values()):
+            d['tcp_flags_masks'] = {f: bool(v) for f, v in masks.items()}
+
+        # Reconstruct known data keys into the data dict for YAML compat
+        data = d.get('data', {})
+        if svc.tcp_established is not None:
+            data['established'] = bool(svc.tcp_established)
+        for xml_key, col_name in (
+            ('fragm', 'ip_opt_fragm'),
+            ('short_fragm', 'ip_opt_short_fragm'),
+            ('lsrr', 'ip_opt_lsrr'),
+            ('ssrr', 'ip_opt_ssrr'),
+            ('rr', 'ip_opt_rr'),
+            ('ts', 'ip_opt_ts'),
+            ('rtralt', 'ip_opt_rtralt'),
+            ('any_opt', 'ip_opt_any_opt'),
+        ):
+            val = getattr(svc, col_name)
+            if val is not None:
+                data[xml_key] = bool(val)
+        if svc.ip_tos is not None:
+            data['tos'] = svc.ip_tos
+        if svc.ip_dscp is not None:
+            data['dscp'] = svc.ip_dscp
+        if svc.tag_code is not None:
+            data['code'] = svc.tag_code
+        if svc.folder:
+            data['folder'] = svc.folder
+        if data:
+            d['data'] = data
+
+        return d
 
     def _serialize_group(self, session, grp):
-        d = _serialize_obj(grp, extra_skip=frozenset({'ro'}))
+        d = _serialize_obj(grp, extra_skip=frozenset({'ro', 'folder'}))
+        if grp.folder:
+            data = d.get('data') or {}
+            data['folder'] = grp.folder
+            d['data'] = data
         if grp.ro:
             d['ro'] = True
 
@@ -440,7 +577,7 @@ class YamlWriter:
                 objects.Service.group_id == grp.id,
             ),
         ).all():
-            children.append(_serialize_obj(s))
+            children.append(self._serialize_service(s))
 
         # Child intervals (Interval has no STI type column)
         for i in session.scalars(
@@ -448,8 +585,12 @@ class YamlWriter:
                 objects.Interval.group_id == grp.id,
             ),
         ).all():
-            d_itv = _serialize_obj(i)
+            d_itv = _serialize_obj(i, extra_skip=frozenset({'folder'}))
             d_itv.setdefault('type', 'Interval')
+            if i.folder:
+                itv_data = d_itv.get('data') or {}
+                itv_data['folder'] = i.folder
+                d_itv['data'] = itv_data
             children.append(d_itv)
 
         # Child devices
@@ -482,15 +623,65 @@ class YamlWriter:
 
         return d
 
+    _DEVICE_DATA_COLUMNS = frozenset(
+        {
+            'host_platform',
+            'host_os_val',
+            'host_version',
+            'host_inactive',
+            'host_last_modified',
+            'host_last_compiled',
+            'host_last_installed',
+            'host_mac_filter_enabled',
+            'folder',
+        }
+    )
+
     def _serialize_device(self, session, dev):
         d = _serialize_obj(
             dev,
-            extra_skip=frozenset({'id_mapping_for_duplicate'}),
+            extra_skip=frozenset({'id_mapping_for_duplicate'})
+            | self._DEVICE_DATA_COLUMNS,
+            skip_opt_columns=True,
         )
         if dev.ro:
             d['ro'] = True
         if dev.id_mapping_for_duplicate:
             d['id_mapping_for_duplicate'] = dev.id_mapping_for_duplicate
+
+        # Reconstruct data dict with typed columns merged back in.
+        # Use an ordered dict so typed columns appear before any leftover
+        # unknown keys from the original data dict (preserving round-trip order).
+        typed_data = {}
+        if dev.host_platform is not None:
+            typed_data['platform'] = dev.host_platform
+        if dev.host_os_val is not None:
+            typed_data['host_OS'] = dev.host_os_val
+        if dev.host_version is not None:
+            typed_data['version'] = dev.host_version
+        if dev.host_inactive:
+            typed_data['inactive'] = True
+        if dev.host_last_modified:
+            typed_data['lastModified'] = dev.host_last_modified
+        if dev.host_last_compiled:
+            typed_data['lastCompiled'] = dev.host_last_compiled
+        if dev.host_last_installed:
+            typed_data['lastInstalled'] = dev.host_last_installed
+        if dev.host_mac_filter_enabled:
+            typed_data['mac_filter_enabled'] = True
+        if dev.folder:
+            typed_data['folder'] = dev.folder
+        # Merge unknown keys from leftover data dict after typed columns
+        leftover = d.get('data', None) or {}
+        data = {**typed_data, **leftover}
+        if data:
+            d['data'] = data
+        elif 'data' in d:
+            del d['data']
+
+        opts = build_options_dict(dev, HOST_OPTIONS)
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Interfaces (top-level only; sub-interfaces are nested within)
         top_ifaces = [i for i in dev.interfaces if i.parent_interface_id is None]
@@ -509,8 +700,54 @@ class YamlWriter:
 
         return d
 
+    _IFACE_DATA_COLUMNS = frozenset(
+        {
+            'iface_dyn',
+            'iface_unnum',
+            'iface_label',
+            'iface_security_level',
+            'iface_management',
+            'iface_unprotected',
+            'iface_dedicated_failover',
+            'folder',
+        }
+    )
+
     def _serialize_interface(self, iface):
-        d = _serialize_obj(iface)
+        d = _serialize_obj(
+            iface,
+            extra_skip=self._IFACE_DATA_COLUMNS,
+            skip_opt_columns=True,
+        )
+
+        # Reconstruct data dict with typed columns merged back in
+        typed_data = {}
+        if iface.iface_dyn:
+            typed_data['dyn'] = True
+        if iface.iface_unnum:
+            typed_data['unnum'] = True
+        if iface.iface_label:
+            typed_data['label'] = iface.iface_label
+        if iface.iface_security_level:
+            typed_data['security_level'] = iface.iface_security_level
+        if iface.iface_management:
+            typed_data['management'] = True
+        if iface.iface_unprotected:
+            typed_data['unprotected'] = True
+        if iface.iface_dedicated_failover:
+            typed_data['dedicated_failover'] = True
+        if iface.folder:
+            typed_data['folder'] = iface.folder
+        leftover = d.get('data', None) or {}
+        data = {**typed_data, **leftover}
+        if data:
+            d['data'] = data
+        elif 'data' in d:
+            del d['data']
+
+        opts = build_options_dict(iface, INTERFACE_OPTIONS)
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Interface addresses
         if iface.addresses:
@@ -529,7 +766,11 @@ class YamlWriter:
         return d
 
     def _serialize_ruleset(self, session, rs):
-        d = _serialize_obj(rs)
+        d = _serialize_obj(rs, skip_opt_columns=True)
+
+        opts = build_options_dict(rs, RULESET_OPTIONS)
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
 
         # Rules (ordered by position)
         rules = session.scalars(
@@ -545,13 +786,21 @@ class YamlWriter:
         return d
 
     def _serialize_rule(self, session, rule):
-        d = _serialize_obj(rule, extra_skip=frozenset({'sorted_dst_ids', 'negations'}))
+        _NEG_COLUMNS = frozenset(f'neg_{s}' for s in SLOT_VALUES)
+        d = _serialize_obj(
+            rule,
+            extra_skip=frozenset({'sorted_dst_ids'}) | _NEG_COLUMNS,
+            skip_opt_columns=True,
+        )
 
-        # Negations — only include slots that are True
-        if rule.negations:
-            active_negs = {k: v for k, v in rule.negations.items() if v}
-            if active_negs:
-                d['negations'] = active_negs
+        opts = build_options_dict(rule, RULE_OPTIONS)
+        if opts:
+            d['options'] = dict(sorted(opts.items()))
+
+        # Negations — reconstruct dict from typed columns, only include True
+        active_negs = {s: True for s in SLOT_VALUES if getattr(rule, f'neg_{s}', False)}
+        if active_negs:
+            d['negations'] = active_negs
 
         # Rule elements grouped by slot
         rows = session.execute(

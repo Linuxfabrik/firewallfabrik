@@ -53,9 +53,8 @@ class RuleSet(Base):
         sqlalchemy.Text,
         default='',
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
+    opt_mangle_only_rule_set: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
     )
     ipv4: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean,
@@ -162,6 +161,10 @@ class Rule(Base):
         sqlalchemy.String,
         default='',
     )
+    group: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String,
+        default='',
+    )
     rule_unique_id: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String,
         default='',
@@ -178,13 +181,54 @@ class Rule(Base):
         sqlalchemy.Boolean,
         default=False,
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
+    # -- Negation columns (one per rule-element slot) --
+    neg_src: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
     )
-    negations: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
+    neg_dst: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_srv: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_itf: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_when: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_osrc: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_odst: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_osrv: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_tsrc: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_tdst: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_tsrv: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_itf_inb: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_itf_outb: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_rdst: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_rgtw: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    neg_ritf: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
     )
     policy_action: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer, nullable=True, default=None
@@ -203,6 +247,196 @@ class Rule(Base):
     )
     sorted_dst_ids: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, nullable=True, default=None
+    )
+
+    # -- Typed option columns --
+    # Rate limiting
+    opt_limit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_limit_value_not: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_limit_suffix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_limit_burst: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Hashlimit
+    opt_hashlimit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_suffix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_hashlimit_burst: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_hashlimit_size: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_max: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_expire: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_gcinterval: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_hashlimit_dstlimit: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_dstip: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_dstport: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_srcip: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_hashlimit_srcport: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    # Connlimit
+    opt_connlimit_value: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    opt_connlimit_above_not: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_connlimit_masklen: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Logging
+    opt_log_level: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_log_prefix: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ulog_nlgroup: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Rule behavior
+    opt_disabled: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_stateless: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_continue: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_mark_connections: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_ipt_tee: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_iif: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ipt_oif: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_ipt_gw: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Tagging
+    opt_tagging: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_tagobject_id: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_classify_str: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Per-rule firewall scope
+    opt_firewall_is_part_of_any_and_networks: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # Rule flags
+    opt_log: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_logging: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_counter_name: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_routing: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_classification: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_no_output_chain: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_no_input_chain: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_do_not_optimize_by_srv: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_put_in_mangle_table: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_branch_in_mangle: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # NAT options
+    opt_ipt_nat_random: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_nat_persistent: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_use_masq: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_use_snat_instead_of_masq: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_no_fail: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    # Internal compiler bookkeeping
+    opt_rule_added_for_osrc_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_rule_added_for_odst_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_rule_added_for_osrv_neg: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    # Per-rule reject action override
+    opt_action_on_reject: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Routing rule metric
+    opt_metric: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    # Accounting and custom actions
+    opt_rule_name_accounting: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    opt_custom_str: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
+    )
+    # Ruleset option (mangle table only)
+    opt_mangle_only_rule_set: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
     )
 
     rule_set: sqlalchemy.orm.Mapped[RuleSet] = sqlalchemy.orm.relationship(

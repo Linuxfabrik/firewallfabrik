@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     Routing,
     RuleSet,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 
@@ -116,9 +117,7 @@ class CompilerDriver_nft(CompilerDriver):
             self.fw = fw
 
             try:
-                options = fw.options or {}
-
-                self._warn_unsupported_options(options)
+                self._warn_unsupported_options(fw)
 
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)
@@ -156,9 +155,12 @@ class CompilerDriver_nft(CompilerDriver):
                     .all()
                 )
 
-                # Determine IPv4/IPv6 run order (based on GUI option)
+                # Determine IPv4/IPv6 run order (based on GUI option).
+                # Empty means "use default ipv4_first".
                 ipv4_6_runs: list[int] = []
-                ipv4_6_order = options.get('ipv4_6_order', '')
+                ipv4_6_order = (
+                    fw.opt_ipv4_6_order or HOST_COMPILER_DEFAULTS['opt_ipv4_6_order']
+                )
                 if not ipv4_6_order or ipv4_6_order == 'ipv4_first':
                     if self.ipv4_run:
                         ipv4_6_runs.append(AF_INET)
@@ -568,20 +570,18 @@ class CompilerDriver_nft(CompilerDriver):
         oscnf=None,
     ) -> str:
         """Assemble the complete shell script using the Jinja2 template."""
-        options = fw.options or {}
-
         timestr = time.strftime('%c')
         tz = time.strftime('%Z')
         user_name = os.environ.get('USER', 'unknown')
 
-        debug = options.get('debug', False)
+        debug = fw.opt_debug
         shell_debug = 'set -x' if debug else ''
 
-        prolog_script = options.get('prolog_script', '')
-        epilog_script = options.get('epilog_script', '')
-        prolog_place = options.get('prolog_place', '') or 'top'
+        prolog_script = fw.opt_prolog_script or ''
+        epilog_script = fw.opt_epilog_script or ''
+        prolog_place = fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
 
-        nft_path = options.get('nft_path', '') or '/usr/sbin/nft'
+        nft_path = fw.opt_nft_path or HOST_COMPILER_DEFAULTS['opt_nft_path']
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
@@ -593,16 +593,16 @@ class CompilerDriver_nft(CompilerDriver):
             errors_and_warnings = '\n'.join(f'# {err}' for err in self.all_errors)
 
         # Management access for block action
-        mgmt_access = bool(options.get('mgmt_access', False))
-        ssh_management_address = options.get('mgmt_addr', '')
+        mgmt_access = bool(fw.opt_mgmt_access)
+        ssh_management_address = fw.opt_mgmt_addr or ''
 
         # IP forwarding commands
         ip_forward_commands = self._get_ip_forward_commands(fw)
 
         # Interface configuration
-        configure_interfaces = options.get('configure_interfaces', False)
-        verify_interfaces_opt = options.get('verify_interfaces', False)
-        ip_path = options.get('ip_path', '') or 'ip'
+        configure_interfaces = fw.opt_configure_interfaces
+        verify_interfaces_opt = fw.opt_verify_interfaces
+        ip_path = fw.opt_ip_path or HOST_COMPILER_DEFAULTS['opt_ip_path']
 
         shell_functions = ''
         configure_interfaces_code = ''
@@ -669,12 +669,12 @@ class CompilerDriver_nft(CompilerDriver):
         """Generate IP forwarding sysctl commands."""
         lines = []
 
-        ipv4_fwd = str(fw.get_option('linux24_ip_forward', '') or '')
+        ipv4_fwd = str(fw.opt_ip_forward or '')
         if ipv4_fwd:
             val = 1 if ipv4_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv4/ip_forward')
 
-        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward', '') or '')
+        ipv6_fwd = str(fw.opt_ipv6_forward or '')
         if ipv6_fwd:
             val = 1 if ipv6_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv6/conf/all/forwarding')

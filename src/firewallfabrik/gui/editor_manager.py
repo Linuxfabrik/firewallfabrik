@@ -485,9 +485,7 @@ class EditorManager(QObject):
             now_epoch = None
             if fw is not None:
                 now_epoch = int(datetime.now(tz=UTC).timestamp())
-                data = dict(fw.data or {})
-                data['lastModified'] = now_epoch
-                fw.data = data
+                fw.host_last_modified = now_epoch
             elif obj is not None:
                 # Shared library object: stamp every Firewall that
                 # references it (directly or through group membership).
@@ -498,9 +496,7 @@ class EditorManager(QObject):
                 if ref_firewalls:
                     now_epoch = int(datetime.now(tz=UTC).timestamp())
                     for rfw in ref_firewalls:
-                        data = dict(rfw.data or {})
-                        data['lastModified'] = now_epoch
-                        rfw.data = data
+                        rfw.host_last_modified = now_epoch
 
             try:
                 session.commit()

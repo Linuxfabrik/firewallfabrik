@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Platform -> CLI tool mapping
@@ -78,16 +79,13 @@ def _fw_tree_path(fw):
 def _resolve_mgmt_address(fw):
     """Return the management address for a firewall.
 
-    Checks ``fw.options['altAddress']`` first, then scans interfaces
+    Checks ``fw.opt_altaddress`` first, then scans interfaces
     for one flagged as management and returns its first address.
     """
-    options = fw.options or {}
-    alt = options.get('altAddress', '')
-    if alt:
-        return alt
+    if fw.opt_altaddress:
+        return fw.opt_altaddress
     for iface in fw.interfaces:
-        iface_data = iface.data or {}
-        if str(iface_data.get('management', '')).lower() in ('true', '1'):
+        if iface.iface_management:
             for addr in iface.addresses:
                 return str(addr.address) if hasattr(addr, 'address') else addr.name
     return ''
@@ -218,14 +216,12 @@ class CompileDialog(QDialog):
                 .all()
             )
             for fw in firewalls:
-                data = fw.data or {}
-                options = fw.options or {}
-                platform = data.get('platform', '')
-                inactive = data.get('inactive') in (True, 'True')
+                platform = fw.host_platform or ''
+                inactive = fw.host_inactive
                 supported = platform in _PLATFORM_CLI
-                last_modified = int(data.get('lastModified', 0) or 0)
-                last_compiled = int(data.get('lastCompiled', 0) or 0)
-                last_installed = int(data.get('lastInstalled', 0) or 0)
+                last_modified = fw.host_last_modified
+                last_compiled = fw.host_last_compiled
+                last_installed = fw.host_last_installed
                 needs_compile = last_modified > last_compiled or last_compiled == 0
                 needs_install = last_compiled > last_installed or last_installed == 0
 
@@ -236,18 +232,10 @@ class CompileDialog(QDialog):
                 item.setData(0, _R_TREE_PATH, tree_path)
                 item.setData(0, _R_FW_NAME, fw.name)
                 item.setData(0, _R_PLATFORM, platform)
-                item.setData(
-                    0,
-                    _R_OUTPUT_FILE,
-                    options.get('output_file', '') or options.get('outputFileName', ''),
-                )
+                item.setData(0, _R_OUTPUT_FILE, fw.opt_output_file or '')
                 item.setData(0, _R_FW_UUID, str(fw.id))
-                item.setData(
-                    0,
-                    _R_CMDLINE,
-                    options.get('cmdline', '') or options.get('compilerArgs', ''),
-                )
-                item.setData(0, _R_COMPILER, options.get('compiler', ''))
+                item.setData(0, _R_CMDLINE, fw.opt_cmdline or '')
+                item.setData(0, _R_COMPILER, fw.opt_compiler or '')
                 item.setData(0, _R_NEEDS_COMPILE, needs_compile)
                 item.setData(0, _R_NEEDS_INSTALL, needs_install)
                 item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
@@ -285,9 +273,9 @@ class CompileDialog(QDialog):
                     )
 
                 # Col 3-5: timestamps (stored as epoch ints)
-                item.setText(3, _format_epoch(data.get('lastModified', 0)))
-                item.setText(4, _format_epoch(data.get('lastCompiled', 0)))
-                item.setText(5, _format_epoch(data.get('lastInstalled', 0)))
+                item.setText(3, _format_epoch(last_modified))
+                item.setText(4, _format_epoch(last_compiled))
+                item.setText(5, _format_epoch(last_installed))
 
                 # Unsupported platform: disable the item
                 if not supported:
@@ -608,16 +596,7 @@ class CompileDialog(QDialog):
                 session.execute(
                     sqlalchemy.update(Firewall)
                     .where(Firewall.id.in_(fw_uuids))
-                    .values(
-                        data=sqlalchemy.func.json_set(
-                            sqlalchemy.func.coalesce(
-                                Firewall.data,
-                                sqlalchemy.literal_column("'{}'"),
-                            ),
-                            '$.lastCompiled',
-                            epoch,
-                        )
-                    )
+                    .values(host_last_compiled=epoch)
                 )
             self._db_manager.save_state('Compile firewalls')
 
@@ -700,37 +679,33 @@ class CompileDialog(QDialog):
         # Load options from the firewall object.
         with self._db_manager.session() as session:
             fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
-            options = (fw.options or {}) if fw else {}
 
         config = InstallConfig(
-            user=options.get('admUser', '') or 'root',
+            user=fw.opt_admuser or HOST_COMPILER_DEFAULTS['opt_admuser'],
             mgmt_address=mgmt_addr,
-            firewall_dir=options.get('firewall_dir', '/etc/fw'),
-            ssh_args=options.get('sshArgs', ''),
-            scp_args=options.get('scpArgs', ''),
-            activation_cmd=options.get('activationCmd', ''),
-            install_script=options.get('installScript', ''),
-            install_script_args=options.get('installScriptArgs', ''),
+            firewall_dir=fw.opt_firewall_dir
+            or HOST_COMPILER_DEFAULTS['opt_firewall_dir'],
+            ssh_args=fw.opt_sshargs or '',
+            scp_args=fw.opt_scpargs or '',
+            activation_cmd=fw.opt_activationcmd or '',
+            install_script=fw.opt_installscript or '',
+            install_script_args=fw.opt_installscriptargs or '',
             firewall_name=fw_name,
             fwb_file=str(self._current_file),
             working_dir=str(self._dest_dir),
-            alt_address=options.get('altAddress', ''),
+            alt_address=fw.opt_altaddress or '',
         )
 
         # Determine the compiled script path.
-        output_file = options.get('output_file', '') or options.get(
-            'outputFileName', ''
-        )
-        if output_file:
-            config.script_path = str(self._dest_dir / output_file)
+        if fw.opt_output_file:
+            config.script_path = str(self._dest_dir / fw.opt_output_file)
         else:
             base_name = fw_name.replace(' ', '_').replace('/', '_')
             config.script_path = str(self._dest_dir / f'{base_name}.fw')
 
         # Determine remote script name from options.
-        script_on_fw = options.get('script_name_on_firewall', '')
-        if script_on_fw:
-            config.remote_script = script_on_fw
+        if fw.opt_script_name_on_firewall:
+            config.remote_script = fw.opt_script_name_on_firewall
         else:
             config.remote_script = (
                 f'{config.firewall_dir}/{Path(config.script_path).name}'
@@ -812,16 +787,7 @@ class CompileDialog(QDialog):
                 session.execute(
                     sqlalchemy.update(Firewall)
                     .where(Firewall.id.in_(fw_uuids))
-                    .values(
-                        data=sqlalchemy.func.json_set(
-                            sqlalchemy.func.coalesce(
-                                Firewall.data,
-                                sqlalchemy.literal_column("'{}'"),
-                            ),
-                            '$.lastInstalled',
-                            epoch,
-                        )
-                    )
+                    .values(host_last_installed=epoch)
                 )
             self._db_manager.save_state('Install firewalls')
 

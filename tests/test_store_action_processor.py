@@ -33,7 +33,7 @@ class _Feeder(BasicRuleProcessor):
 
 def _make_rule(
     action: PolicyAction = PolicyAction.Accept,
-    options: dict | None = None,
+    **kwargs,
 ) -> CompRule:
     return CompRule(
         id=uuid.uuid4(),
@@ -41,9 +41,8 @@ def _make_rule(
         position=1,
         label='',
         comment='',
-        options=options or {},
-        negations={},
         action=action,
+        **kwargs,
     )
 
 
@@ -76,48 +75,46 @@ class TestStoreActionIpt:
         assert out.stored_action == 'Deny'
 
     def test_tagging_true(self):
-        rule = _make_rule(options={'tagging': True})
+        rule = _make_rule(opt_tagging=True)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_tagging is True
 
     def test_tagging_false(self):
-        rule = _make_rule(options={'tagging': False})
+        rule = _make_rule(opt_tagging=False)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_tagging is False
 
     def test_tagging_absent(self):
-        rule = _make_rule(options={})
+        rule = _make_rule()
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_tagging is False
 
     def test_classification_true(self):
-        rule = _make_rule(options={'classification': True})
+        rule = _make_rule(opt_classification=True)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_classification is True
 
     def test_classification_false(self):
-        rule = _make_rule(options={'classification': False})
+        rule = _make_rule(opt_classification=False)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_classification is False
 
     def test_routing_true(self):
-        rule = _make_rule(options={'routing': True})
+        rule = _make_rule(opt_routing=True)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_routing is True
 
     def test_routing_false(self):
-        rule = _make_rule(options={'routing': False})
+        rule = _make_rule(opt_routing=False)
         out = _run_store_action(rule)
         assert out.originated_from_a_rule_with_routing is False
 
     def test_all_flags_combined(self):
         rule = _make_rule(
             action=PolicyAction.Continue,
-            options={
-                'tagging': True,
-                'classification': True,
-                'routing': True,
-            },
+            opt_tagging=True,
+            opt_classification=True,
+            opt_routing=True,
         )
         out = _run_store_action(rule)
         assert out.stored_action == 'Continue'
@@ -126,24 +123,12 @@ class TestStoreActionIpt:
         assert out.originated_from_a_rule_with_routing is True
 
     def test_no_flags_set(self):
-        rule = _make_rule(action=PolicyAction.Reject, options={})
+        rule = _make_rule(action=PolicyAction.Reject)
         out = _run_store_action(rule)
         assert out.stored_action == 'Reject'
         assert out.originated_from_a_rule_with_tagging is False
         assert out.originated_from_a_rule_with_classification is False
         assert out.originated_from_a_rule_with_routing is False
-
-    def test_tagging_string_true(self):
-        """XML-parsed options store booleans as strings."""
-        rule = _make_rule(options={'tagging': 'True'})
-        out = _run_store_action(rule)
-        assert out.originated_from_a_rule_with_tagging is True
-
-    def test_tagging_string_false(self):
-        """XML-parsed 'False' string must not be truthy."""
-        rule = _make_rule(options={'tagging': 'False'})
-        out = _run_store_action(rule)
-        assert out.originated_from_a_rule_with_tagging is False
 
 
 class TestStoreActionNft:
@@ -156,11 +141,9 @@ class TestStoreActionNft:
 
     def test_all_flags(self):
         rule = _make_rule(
-            options={
-                'tagging': True,
-                'classification': True,
-                'routing': True,
-            },
+            opt_tagging=True,
+            opt_classification=True,
+            opt_routing=True,
         )
         out = _run_store_action(rule, platform='nft')
         assert out.originated_from_a_rule_with_tagging is True
@@ -168,7 +151,7 @@ class TestStoreActionNft:
         assert out.originated_from_a_rule_with_routing is True
 
     def test_no_flags(self):
-        rule = _make_rule(options={})
+        rule = _make_rule()
         out = _run_store_action(rule, platform='nft')
         assert out.originated_from_a_rule_with_tagging is False
         assert out.originated_from_a_rule_with_classification is False

@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
@@ -462,11 +463,8 @@ class PrintRule(PolicyRuleProcessor):
         return f'{flag} {start}:{end} '
 
     def _print_icmp(self, srv) -> str:
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
+        icmp_type = srv.icmp_type if srv.icmp_type is not None else -1
+        icmp_code = srv.icmp_code if srv.icmp_code is not None else -1
 
         flag = '--icmpv6-type' if self.compiler.ipv6_policy else '--icmp-type'
         if icmp_type < 0:
@@ -480,9 +478,8 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         parts = []
         if isinstance(srv, IPService):
-            data = srv.data or {}
-            tos = data.get('tos_code', '')
-            dscp = data.get('dscp_code', '')
+            tos = srv.ip_tos or ''
+            dscp = srv.ip_dscp or ''
             if tos:
                 parts.append(f'-m tos --tos {tos}')
             if dscp:
@@ -494,16 +491,24 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(parts)
 
     def _print_tcp_flags(self, srv) -> str:
-        data = srv.data or {}
-        flags_mask = data.get('tcp_flags_mask', '')
-        flags_comp = data.get('tcp_flags_comp', '')
-        if flags_mask and flags_comp:
-            return f'--tcp-flags {flags_mask} {flags_comp}'
-        return ''
+        flag_names = ('URG', 'ACK', 'PSH', 'RST', 'SYN', 'FIN')
+        flag_attrs = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+        mask_parts = []
+        set_parts = []
+        for name, attr in zip(flag_names, flag_attrs, strict=True):
+            if getattr(srv, f'tcp_mask_{attr}', None):
+                mask_parts.append(name)
+            if getattr(srv, f'tcp_flag_{attr}', None):
+                set_parts.append(name)
+        if not mask_parts:
+            return ''
+        mask_str = ','.join(mask_parts)
+        set_str = ','.join(set_parts) if set_parts else 'NONE'
+        return f'--tcp-flags {mask_str} {set_str}'
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""
-        stateless = rule.get_option('stateless', False)
+        stateless = rule.opt_stateless
         force_state = rule.force_state_check
         if not stateless or force_state:
             if _version_compare(self.version, '1.4.4') >= 0:
@@ -546,20 +551,14 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
-        limit_val = rule.get_option('limit_value', -1)
-        try:
-            limit_val = int(limit_val)
-        except (ValueError, TypeError):
-            limit_val = -1
+        limit_val = rule.opt_limit_value
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
-        burst = rule.get_option('limit_burst', 0)
-        try:
-            burst = int(burst)
-        except (ValueError, TypeError):
-            burst = 0
+        limit_suffix = (
+            rule.opt_limit_suffix or HOST_COMPILER_DEFAULTS['opt_limit_suffix']
+        )
+        burst = rule.opt_limit_burst
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'
         if burst > 0:
@@ -600,7 +599,7 @@ class PrintRule(PolicyRuleProcessor):
         return f' -j {target_name}'
 
     def _print_action_on_reject(self, rule: CompRule) -> str:
-        reject_with = rule.get_option('action_on_reject', '')
+        reject_with = rule.opt_action_on_reject
         if not reject_with:
             return ''
 
@@ -609,11 +608,14 @@ class PrintRule(PolicyRuleProcessor):
         # the C++ compiler maps these via substring matching (see
         # PolicyCompiler_PrintRule.cpp:_printActionOnReject).
         reject_map = {
+            'ICMP unreachable': 'icmp-host-unreachable',
             'ICMP host unreachable': 'icmp-host-unreachable',
             'ICMP net unreachable': 'icmp-net-unreachable',
             'ICMP port unreachable': 'icmp-port-unreachable',
             'ICMP protocol unreachable': 'icmp-proto-unreachable',
             'ICMP admin prohibited': 'icmp-admin-prohibited',
+            'ICMP net prohibited': 'icmp-net-unreachable',
+            'ICMP host prohibited': 'icmp-host-prohibited',
             'ICMP-unreachable': 'icmp-host-unreachable',
             'TCP RST': 'tcp-reset',
         }
@@ -632,18 +634,15 @@ class PrintRule(PolicyRuleProcessor):
         """Print logging parameters."""
         parts = []
 
-        log_level = rule.get_option('log_level', '')
+        log_level = rule.opt_log_level
         if not log_level:
-            log_level = self.compiler.fw.get_option('log_level', 'info')
+            log_level = self.compiler.fw.opt_log_level or ''
         if log_level:
             parts.append(f'--log-level {log_level}')
 
-        log_prefix = rule.get_option('log_prefix', '')
+        log_prefix = rule.opt_log_prefix
         if not log_prefix:
-            log_prefix = self.compiler.fw.get_option(
-                'log_prefix',
-                'RULE %N -- %A ',
-            )
+            log_prefix = self.compiler.fw.opt_log_prefix or ''
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]

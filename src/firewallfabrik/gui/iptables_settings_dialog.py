@@ -18,61 +18,61 @@ from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui'
 
-# Checkbox widget → canonical compiler option key.
-# The compiler reads options by the canonical key (right-hand side).
+# Checkbox widget → typed column name on the Firewall ORM object.
 _CHECKBOX_MAP: dict[str, str] = {
-    'assumeFwIsPartOfAny': 'firewall_is_part_of_any_and_networks',
-    'acceptSessions': 'accept_new_tcp_with_no_syn',
-    'acceptESTBeforeFirst': 'accept_established',
-    'dropInvalid': 'drop_invalid',
-    'logInvalid': 'log_invalid',
-    'localNAT': 'local_nat',
-    'shadowing': 'check_shading',
-    'emptyGroups': 'ignore_empty_groups',
-    'clampMSStoMTU': 'clamp_mss_to_mtu',
-    'bridge': 'bridging_fw',
-    'ipv6NeighborDiscovery': 'ipv6_neighbor_discovery',
-    'mgmt_ssh': 'mgmt_ssh',
-    'add_mgmt_ssh_rule_when_stoped': 'add_mgmt_ssh_rule_when_stoped',
-    'useModuleSet': 'use_m_set',
-    'useKernelTz': 'use_kerneltz',
-    'logTCPseq': 'log_tcp_seq',
-    'logTCPopt': 'log_tcp_opt',
-    'logIPopt': 'log_ip_opt',
-    'logNumsyslog': 'use_numeric_log_levels',
-    'logAll': 'log_all',
-    'loadModules': 'load_modules',
-    'iptDebug': 'debug',
-    'verifyInterfaces': 'verify_interfaces',
-    'configureInterfaces': 'configure_interfaces',
-    'clearUnknownInterfaces': 'clear_unknown_interfaces',
-    'configure_vlan_interfaces': 'configure_vlan_interfaces',
-    'configure_bridge_interfaces': 'configure_bridge_interfaces',
-    'configure_bonding_interfaces': 'configure_bonding_interfaces',
-    'addVirtualsforNAT': 'manage_virtual_addr',
-    'iptablesRestoreActivation': 'use_iptables_restore',
+    'assumeFwIsPartOfAny': 'opt_firewall_is_part_of_any_and_networks',
+    'acceptSessions': 'opt_accept_new_tcp_with_no_syn',
+    'acceptESTBeforeFirst': 'opt_accept_established',
+    'dropInvalid': 'opt_drop_invalid',
+    'logInvalid': 'opt_log_invalid',
+    'localNAT': 'opt_local_nat',
+    'shadowing': 'opt_check_shading',
+    'emptyGroups': 'opt_ignore_empty_groups',
+    'clampMSStoMTU': 'opt_clamp_mss_to_mtu',
+    'bridge': 'opt_bridging_fw',
+    'ipv6NeighborDiscovery': 'opt_ipv6_neighbor_discovery',
+    'mgmt_ssh': 'opt_mgmt_ssh',
+    'add_mgmt_ssh_rule_when_stoped': 'opt_add_mgmt_ssh_rule_when_stoped',
+    'useModuleSet': 'opt_use_m_set',
+    'useKernelTz': 'opt_use_kerneltz',
+    'logTCPseq': 'opt_log_tcp_seq',
+    'logTCPopt': 'opt_log_tcp_opt',
+    'logIPopt': 'opt_log_ip_opt',
+    'logNumsyslog': 'opt_use_numeric_log_levels',
+    'logAll': 'opt_log_all',
+    'loadModules': 'opt_load_modules',
+    'iptDebug': 'opt_debug',
+    'verifyInterfaces': 'opt_verify_interfaces',
+    'configureInterfaces': 'opt_configure_interfaces',
+    'clearUnknownInterfaces': 'opt_clear_unknown_interfaces',
+    'configure_vlan_interfaces': 'opt_configure_vlan_interfaces',
+    'configure_bridge_interfaces': 'opt_configure_bridge_interfaces',
+    'configure_bonding_interfaces': 'opt_configure_bonding_interfaces',
+    'addVirtualsforNAT': 'opt_manage_virtual_addr',
+    'iptablesRestoreActivation': 'opt_use_iptables_restore',
 }
 
-# Line-edit widget → canonical compiler option key.
+# Line-edit widget → typed column name on the Firewall ORM object.
 _LINE_EDIT_MAP: dict[str, str] = {
-    'compiler': 'compiler',
-    'compilerArgs': 'cmdline',
-    'outputFileName': 'output_file',
-    'fileNameOnFw': 'script_name_on_firewall',
-    'mgmt_addr': 'mgmt_addr',
-    'logprefix': 'log_prefix',
-    'ipt_fw_dir': 'firewall_dir',
-    'ipt_user': 'admUser',
-    'altAddress': 'altAddress',
-    'activationCmd': 'activationCmd',
-    'sshArgs': 'sshArgs',
-    'scpArgs': 'scpArgs',
-    'installScript': 'installScript',
-    'installScriptArgs': 'installScriptArgs',
+    'compiler': 'opt_compiler',
+    'compilerArgs': 'opt_cmdline',
+    'outputFileName': 'opt_output_file',
+    'fileNameOnFw': 'opt_script_name_on_firewall',
+    'mgmt_addr': 'opt_mgmt_addr',
+    'logprefix': 'opt_log_prefix',
+    'ipt_fw_dir': 'opt_firewall_dir',
+    'ipt_user': 'opt_admuser',
+    'altAddress': 'opt_altaddress',
+    'activationCmd': 'opt_activationcmd',
+    'sshArgs': 'opt_sshargs',
+    'scpArgs': 'opt_scpargs',
+    'installScript': 'opt_installscript',
+    'installScriptArgs': 'opt_installscriptargs',
 }
 
 # LOG level syslog names matching the C++ dialog.
@@ -154,6 +154,20 @@ class IptablesSettingsDialog(QDialog):
 
         self._populate()
         self._disable_unsupported()
+
+        # Show compiler defaults as placeholder text so the user knows
+        # what value will be used when the field is left empty.
+        self.ipt_fw_dir.setPlaceholderText(HOST_COMPILER_DEFAULTS['opt_firewall_dir'])
+        self.ipt_fw_dir.setToolTip(
+            'Directory on the firewall where the script will be installed.\n'
+            f'Leave empty to use the compiler default ({HOST_COMPILER_DEFAULTS["opt_firewall_dir"]}).'
+        )
+        self.ipt_user.setPlaceholderText(HOST_COMPILER_DEFAULTS['opt_admuser'])
+        self.ipt_user.setToolTip(
+            'User account for SCP/SSH installation.\n'
+            f'Leave empty to use the default ({HOST_COMPILER_DEFAULTS["opt_admuser"]}).'
+        )
+
         self.accepted.connect(self._save_settings)
 
     def _disable_unsupported(self):
@@ -164,44 +178,31 @@ class IptablesSettingsDialog(QDialog):
                 widget.setEnabled(False)
 
     def _populate(self):
-        opts = self._fw.options or {}
-
-        # Checkboxes — read canonical key, fall back to widget name for
-        # backward compat with old .fwf files that stored widget names.
-        for widget_name, key in _CHECKBOX_MAP.items():
+        # Checkboxes — read directly from typed columns.
+        for widget_name, col in _CHECKBOX_MAP.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key in opts:
-                val = str(opts[key]).lower() == 'true'
-            elif widget_name in opts:
-                val = str(opts[widget_name]).lower() == 'true'
-            else:
-                val = False
+            val = bool(getattr(self._fw, col))
             # acceptSessions checkbox has inverted semantics:
-            if key == 'accept_new_tcp_with_no_syn':
+            if col == 'opt_accept_new_tcp_with_no_syn':
                 widget.setChecked(not val)
             else:
                 widget.setChecked(val)
 
-        # Line edits — read canonical key, fall back to widget name.
-        for widget_name, key in _LINE_EDIT_MAP.items():
+        # Line edits — read directly from typed columns.
+        for widget_name, col in _LINE_EDIT_MAP.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            if key in opts:
-                widget.setText(str(opts[key]))
-            elif widget_name in opts:
-                widget.setText(str(opts[widget_name]))
-            else:
-                widget.setText('')
+            widget.setText(str(getattr(self._fw, col) or ''))
 
         # Text edits (prolog / epilog)
-        self.prolog_script.setPlainText(opts.get('prolog_script', ''))
-        self.epilog_script.setPlainText(opts.get('epilog_script', ''))
+        self.prolog_script.setPlainText(self._fw.opt_prolog_script or '')
+        self.epilog_script.setPlainText(self._fw.opt_epilog_script or '')
 
         # Prolog placement combo
-        place = opts.get('prolog_place', 'top')
+        place = self._fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
         try:
             idx = _PROLOG_PLACES.index(place)
         except ValueError:
@@ -209,107 +210,99 @@ class IptablesSettingsDialog(QDialog):
         self.prologPlace.setCurrentIndex(idx)
 
         # LOG, ULOG, and NFLOG radio buttons
-        if str(opts.get('use_ULOG', '')).lower() == 'true':
+        if self._fw.opt_use_ulog:
             self.useULOG.setChecked(True)
-        elif str(opts.get('use_NFLOG', '')).lower() == 'true':
+        elif self._fw.opt_use_nflog:
             self.useNFLOG.setChecked(True)
         else:
             self.useLOG.setChecked(True)
         self._update_log_stack()
 
         # Log level combo
-        level = opts.get('log_level', '')
+        level = self._fw.opt_log_level or ''
         idx = self.logLevel.findText(level)
         self.logLevel.setCurrentIndex(max(idx, 0))
 
         # Logging limit
-        limit_val = opts.get('limit_value', '0')
-        try:
-            self.logLimitVal.setValue(int(limit_val))
-        except (ValueError, TypeError):
-            self.logLimitVal.setValue(0)
+        self.logLimitVal.setValue(self._fw.opt_limit_value)
 
-        limit_suffix = opts.get('limit_suffix', '/second')
+        limit_suffix = (
+            self._fw.opt_limit_suffix or HOST_COMPILER_DEFAULTS['opt_limit_suffix']
+        )
         idx = self.logLimitSuffix.findText(limit_suffix)
         self.logLimitSuffix.setCurrentIndex(max(idx, 0))
 
         # Action on reject combo
-        action = opts.get('action_on_reject', '')
+        action = self._fw.opt_action_on_reject or ''
         idx = self.actionOnReject.findText(action)
         self.actionOnReject.setCurrentIndex(max(idx, 0))
 
         # ULOG spin boxes
-        self.cprange.setValue(int(opts.get('ulog_cprange', 0)))
-        self.qthreshold.setValue(int(opts.get('ulog_qthreshold', 1)))
-        self.nlgroup.setValue(int(opts.get('ulog_nlgroup', 1)))
+        self.cprange.setValue(
+            self._fw.opt_ulog_cprange or HOST_COMPILER_DEFAULTS['opt_ulog_cprange'],
+        )
+        self.qthreshold.setValue(
+            self._fw.opt_ulog_qthreshold
+            or HOST_COMPILER_DEFAULTS['opt_ulog_qthreshold'],
+        )
+        self.nlgroup.setValue(
+            self._fw.opt_ulog_nlgroup or HOST_COMPILER_DEFAULTS['opt_ulog_nlgroup'],
+        )
 
         # IPv4 before IPv6 combo
-        if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_first':
+        if (self._fw.opt_ipv4_6_order or '').lower() == 'ipv6_first':
             self.ipv4before.setCurrentIndex(1)
         else:
             self.ipv4before.setCurrentIndex(0)
 
     def _save_settings(self):
-        opts = dict(self._fw.options or {})
-
-        # Checkboxes — always write under canonical key; remove stale
-        # widget-name key if it differs from the canonical key.
-        for widget_name, key in _CHECKBOX_MAP.items():
+        # Checkboxes — write directly to typed columns.
+        for widget_name, col in _CHECKBOX_MAP.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            # Store as Python bool (not string) so that raw
-            # ``options.get(key, False)`` in the compiler works correctly.
             # acceptSessions has inverted semantics.
-            if key == 'accept_new_tcp_with_no_syn':
-                opts[key] = not widget.isChecked()
+            if col == 'opt_accept_new_tcp_with_no_syn':
+                setattr(self._fw, col, not widget.isChecked())
             else:
-                opts[key] = widget.isChecked()
-            # Clean up stale widget-name key.
-            if widget_name != key:
-                opts.pop(widget_name, None)
+                setattr(self._fw, col, widget.isChecked())
 
-        # Line edits — always write under canonical key.
-        for widget_name, key in _LINE_EDIT_MAP.items():
+        # Line edits — write directly to typed columns.
+        for widget_name, col in _LINE_EDIT_MAP.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.text()
-            if widget_name != key:
-                opts.pop(widget_name, None)
+            setattr(self._fw, col, widget.text())
 
         # Text edits
-        opts['prolog_script'] = self.prolog_script.toPlainText()
-        opts['epilog_script'] = self.epilog_script.toPlainText()
+        self._fw.opt_prolog_script = self.prolog_script.toPlainText()
+        self._fw.opt_epilog_script = self.epilog_script.toPlainText()
 
         # Prolog placement
         idx = self.prologPlace.currentIndex()
-        opts['prolog_place'] = (
+        self._fw.opt_prolog_place = (
             _PROLOG_PLACES[idx] if idx < len(_PROLOG_PLACES) else 'top'
         )
 
         # LOG / ULOG / NFLOG
-        opts['use_ULOG'] = self.useULOG.isChecked()
-        opts['use_NFLOG'] = self.useNFLOG.isChecked()
+        self._fw.opt_use_ulog = self.useULOG.isChecked()
+        self._fw.opt_use_nflog = self.useNFLOG.isChecked()
 
         # Log options
-        opts['log_level'] = self.logLevel.currentText()
-        opts['limit_value'] = str(self.logLimitVal.value())
-        opts['limit_suffix'] = self.logLimitSuffix.currentText()
-        opts['action_on_reject'] = self.actionOnReject.currentText()
+        self._fw.opt_log_level = self.logLevel.currentText()
+        self._fw.opt_limit_value = self.logLimitVal.value()
+        self._fw.opt_limit_suffix = self.logLimitSuffix.currentText()
+        self._fw.opt_action_on_reject = self.actionOnReject.currentText()
 
         # ULOG options
-        opts['ulog_cprange'] = str(self.cprange.value())
-        opts['ulog_qthreshold'] = str(self.qthreshold.value())
-        opts['ulog_nlgroup'] = str(self.nlgroup.value())
+        self._fw.opt_ulog_cprange = self.cprange.value()
+        self._fw.opt_ulog_qthreshold = self.qthreshold.value()
+        self._fw.opt_ulog_nlgroup = self.nlgroup.value()
 
         # IPv4/IPv6 order
-        opts['ipv4_6_order'] = (
+        self._fw.opt_ipv4_6_order = (
             'ipv6_first' if self.ipv4before.currentIndex() == 1 else 'ipv4_first'
         )
-
-        # Reassign to trigger SQLAlchemy JSON mutation detection.
-        self._fw.options = opts
 
     def _update_log_stack(self):
         self.logTargetStack.setCurrentIndex(0 if self.useLOG.isChecked() else 1)

@@ -174,14 +174,13 @@ def _get_object_properties(obj):
     type_str = getattr(obj, 'type', '')
 
     if type_str in ('IPv4', 'IPv6', 'Network', 'NetworkIPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        mask = iam.get('netmask', '')
+        addr = getattr(obj, 'inet_address', '') or ''
+        mask = getattr(obj, 'inet_netmask', '') or ''
         return f'{addr}/{mask}' if mask else addr
 
     if type_str == 'AddressRange':
-        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
-        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
+        start = getattr(obj, 'range_start', '') or ''
+        end = getattr(obj, 'range_end', '') or ''
         return f'{start} - {end}'
 
     if type_str in ('TCPService', 'UDPService'):
@@ -192,12 +191,15 @@ def _get_object_properties(obj):
         return f'{ss}:{se} / {ds}:{de}'
 
     if type_str == 'IPService':
-        named = getattr(obj, 'named_protocols', None) or {}
-        return f'protocol: {named.get("protocol_num", "")}'
+        proto = getattr(obj, 'protocol_num', None)
+        return f'protocol: {proto if proto is not None else ""}'
 
     if type_str in ('ICMP6Service', 'ICMPService'):
-        codes = getattr(obj, 'codes', None) or {}
-        return f'type: {codes.get("type", "")}  code: {codes.get("code", "")}'
+        icmp_t = getattr(obj, 'icmp_type', None)
+        icmp_c = getattr(obj, 'icmp_code', None)
+        t_str = icmp_t if icmp_t is not None else ''
+        c_str = icmp_c if icmp_c is not None else ''
+        return f'type: {t_str}  code: {c_str}'
 
     if type_str == 'CustomService':
         data = getattr(obj, 'data', None) or {}
@@ -211,8 +213,7 @@ def _get_object_properties(obj):
         return f'Address Table: {getattr(obj, "source_name", "") or ""}'
 
     if type_str == 'TagService':
-        data = getattr(obj, 'data', None) or {}
-        code = data.get('tagcode', '')
+        code = getattr(obj, 'tag_code', None) or ''
         return f'tag: {code}' if code else ''
 
     if type_str == 'UserService':
@@ -230,8 +231,7 @@ def _get_object_properties(obj):
             for addr in iface.addresses:
                 if getattr(addr, 'type', '') == 'PhysAddress':
                     continue
-                iam = getattr(addr, 'inet_addr_mask', None) or {}
-                a = iam.get('address', '')
+                a = getattr(addr, 'inet_address', '') or ''
                 if a:
                     return a
         return ''

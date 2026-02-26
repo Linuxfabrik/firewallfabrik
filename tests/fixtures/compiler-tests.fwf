@@ -52,11 +52,8 @@ libraries:
       - name: 'Dummy'
         comment: 'Dummy Interface'
         data:
-          dedicated_failover: false
-          dyn: false
-          security_level: '0'
           unnum: true
-          unprotected: false
+          security_level: '0'
         type: 'Interface'
       - type: 'ObjectGroup'
         name: 'Firewalls'
@@ -205,12 +202,6 @@ libraries:
               - type: 'Host'
                 name: 'internal server'
                 comment: 'This host is used in examples and template objects'
-                options:
-                  snmp_contact: ''
-                  snmp_description: ''
-                  snmp_location: ''
-                  use_mac_addr: false
-                  use_mac_addr_filter: false
                 management:
                   address: '192.168.1.10'
                   snmp:
@@ -225,14 +216,16 @@ libraries:
                     enabled: false
                     command: ''
                     arguments: ''
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -242,12 +235,6 @@ libraries:
               - type: 'Host'
                 name: 'server on dmz'
                 comment: 'This host is used in examples and template objects'
-                options:
-                  snmp_contact: ''
-                  snmp_description: ''
-                  snmp_location: ''
-                  use_mac_addr: false
-                  use_mac_addr_filter: false
                 management:
                   address: '192.168.2.10'
                   snmp:
@@ -262,14 +249,16 @@ libraries:
                     enabled: false
                     command: ''
                     arguments: ''
+                options:
+                  snmp_contact: ''
+                  snmp_description: ''
+                  snmp_location: ''
+                  use_mac_addr: false
+                  use_mac_addr_filter: false
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -913,53 +902,53 @@ libraries:
               - type: 'IPService'
                 name: 'AH'
                 comment: 'IPSEC Authentication Header Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '51'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'ESP'
                 comment: 'IPSEC Encapsulating Security Payload Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '50'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'GRE'
                 comment: 'Generic Routing Encapsulation
 
                   '
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '47'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'IGMP'
                 comment: 'Internet Group Management Protocol, Version 3, RFC 3376'
                 data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  rtralt: true
                   rtralt_value: '0'
+                  fragm: false
                   short_fragm: false
+                  lsrr: false
                   ssrr: false
+                  rr: false
                   ts: false
+                  rtralt: true
                 named_protocols:
                   protocol_num: '2'
               - type: 'IPService'
@@ -968,76 +957,76 @@ libraries:
                   3973, or Protocol Independent Multicast-Sparse Mode (PIM-SM) RFC
                   2362'
                 data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  rtralt: false
                   rtralt_value: '0'
+                  fragm: false
                   short_fragm: false
+                  lsrr: false
                   ssrr: false
+                  rr: false
                   ts: false
+                  rtralt: false
                 named_protocols:
                   protocol_num: '103'
               - type: 'IPService'
                 name: 'RR'
                 comment: 'Route recording packets'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: true
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: true
+                  ts: false
               - type: 'IPService'
                 name: 'SKIP'
                 comment: 'IPSEC Simple Key Management for Internet Protocols'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '57'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'SRR'
                 comment: 'All sorts of Source Routing Packets'
-                data:
-                  fragm: false
-                  lsrr: true
-                  rr: false
-                  short_fragm: false
-                  ssrr: true
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: true
+                  ssrr: true
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'ip_fragments'
                 comment: '''Short'' fragments'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: true
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: true
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'vrrp'
                 comment: 'Virtual Router Redundancy Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '112'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
           - type: 'ServiceGroup'
             name: 'TCP'
             children:
@@ -1109,8 +1098,6 @@ libraries:
                   set source port range to match the service.
 
                   '
-                data:
-                  established: true
                 tcp_flags:
                   urg: false
                   ack: false
@@ -1125,6 +1112,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: true
               - type: 'TCPService'
                 name: 'Citrix-ICA'
                 dst_range_start: 1494
@@ -2022,8 +2011,6 @@ libraries:
                 comment: 'NRPE add-on for Nagios  http://www.nagios.org/
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5666
                 dst_range_end: 5666
                 tcp_flags:
@@ -2040,6 +2027,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'pop3'
                 dst_range_start: 110
@@ -2244,8 +2233,6 @@ libraries:
               - type: 'TCPService'
                 name: 'rtmp'
                 comment: 'Real Time Messaging Protocol'
-                data:
-                  established: false
                 dst_range_start: 1935
                 dst_range_end: 1935
                 tcp_flags:
@@ -2262,6 +2249,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'rtsp'
                 comment: 'Real Time Streaming Protocol'
@@ -2706,8 +2695,6 @@ libraries:
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5222
                 dst_range_end: 5222
                 tcp_flags:
@@ -2724,13 +2711,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-client-ssl'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5223
                 dst_range_end: 5223
                 tcp_flags:
@@ -2747,13 +2734,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-server'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5269
                 dst_range_end: 5269
                 tcp_flags:
@@ -2770,13 +2757,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-server-ssl'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5270
                 dst_range_end: 5270
                 tcp_flags:
@@ -2793,6 +2780,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
           - type: 'ServiceGroup'
             name: 'TagServices'
           - type: 'ServiceGroup'
@@ -3044,32 +3033,6 @@ libraries:
         children:
           - type: 'Firewall'
             name: 'fw-dns-names'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770924730'
-              lastInstalled: '0'
-              lastModified: '1770924724'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -3084,16 +3047,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770924724
+              lastCompiled: 1770924730
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3104,13 +3085,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3121,12 +3098,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-dns-names:lo:ip'
@@ -3142,11 +3114,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3161,11 +3128,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3183,14 +3145,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-empty-groups'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770916395'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770916395
+              lastCompiled: 1770922821
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -3215,11 +3189,9 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: true
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -3241,39 +3213,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3284,13 +3237,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3301,12 +3250,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-empty-groups:lo:ip'
@@ -3322,11 +3266,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3341,11 +3280,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3363,14 +3297,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-empty-groups-abort'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770882452'
-              lastInstalled: '0'
-              lastModified: '1770916422'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770916422
+              lastCompiled: 1770882452
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -3395,11 +3341,9 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -3421,39 +3365,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3464,13 +3389,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3481,12 +3402,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-empty-groups-abort:lo:ip'
@@ -3502,11 +3418,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3521,11 +3432,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3543,32 +3449,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-empty-src'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770914360'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -3583,16 +3463,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770914360
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3603,13 +3501,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3620,12 +3514,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-empty-src:lo:ip'
@@ -3641,11 +3530,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3664,32 +3548,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-interfaces'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770825381'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -3704,16 +3562,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770825381
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3724,13 +3600,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3741,12 +3613,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-interfaces:lo:ip'
@@ -3762,11 +3629,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -3781,11 +3643,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
@@ -3800,11 +3657,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
@@ -3819,11 +3671,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
@@ -3838,13 +3685,10 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 4
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
+                    options:
+                      stateless: true
                     dst:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-interfaces'
                     itf:
@@ -3857,13 +3701,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -3879,14 +3721,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-local-nat'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770916040'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770916040
+              lastCompiled: 1770922821
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -3911,11 +3765,9 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: true
@@ -3937,39 +3789,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3980,13 +3813,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -3997,13 +3826,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth2'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'dmz'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4014,12 +3839,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-local-nat:lo:ip'
@@ -4032,9 +3852,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'NATRule'
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4054,9 +3871,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4076,9 +3890,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4098,9 +3909,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 3
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4121,9 +3929,6 @@ libraries:
                         8080'
                   - type: 'NATRule'
                     position: 4
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4143,9 +3948,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 5
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4165,9 +3967,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 6
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4190,11 +3989,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4209,11 +4003,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4228,13 +4017,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -4250,32 +4037,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-logging'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770825667'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -4290,16 +4051,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770825667
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4310,13 +4089,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4327,12 +4102,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-logging:lo:ip'
@@ -4348,48 +4118,13 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      classification: false
-                      classify_str: ''
-                      connlimit_above_not: false
-                      connlimit_masklen: '0'
-                      connlimit_value: '0'
-                      firewall_is_part_of_any_and_networks: ''
-                      hashlimit_burst: '0'
-                      hashlimit_dstlimit: false
-                      hashlimit_expire: '0'
-                      hashlimit_gcinterval: '0'
-                      hashlimit_max: '0'
-                      hashlimit_mode_dstip: false
-                      hashlimit_mode_dstport: false
-                      hashlimit_mode_srcip: false
-                      hashlimit_mode_srcport: false
-                      hashlimit_name: ''
-                      hashlimit_size: '0'
-                      hashlimit_suffix: ''
-                      hashlimit_value: '0'
-                      ipt_continue: false
-                      ipt_gw: ''
-                      ipt_iif: ''
-                      ipt_mark_connections: false
-                      ipt_oif: ''
-                      ipt_tee: false
-                      limit_burst: '0'
-                      limit_suffix: ''
-                      limit_value: '0'
-                      limit_value_not: false
-                      log_level: ''
-                      log_prefix: 'SSH_DENIED'
-                      routing: false
-                      stateless: true
-                      tagging: false
-                      tagobject_id: ''
-                      ulog_nlgroup: '1'
                     action: 'Deny'
                     direction: 'Inbound'
+                    options:
+                      log: true
+                      log_prefix: 'SSH_DENIED'
+                      stateless: true
+                      ulog_nlgroup: 1
                     dst:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-logging'
                     itf:
@@ -4402,48 +4137,12 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      classification: false
-                      classify_str: ''
-                      connlimit_above_not: false
-                      connlimit_masklen: '0'
-                      connlimit_value: '0'
-                      firewall_is_part_of_any_and_networks: ''
-                      hashlimit_burst: '0'
-                      hashlimit_dstlimit: false
-                      hashlimit_expire: '0'
-                      hashlimit_gcinterval: '0'
-                      hashlimit_max: '0'
-                      hashlimit_mode_dstip: false
-                      hashlimit_mode_dstport: false
-                      hashlimit_mode_srcip: false
-                      hashlimit_mode_srcport: false
-                      hashlimit_name: ''
-                      hashlimit_size: '0'
-                      hashlimit_suffix: ''
-                      hashlimit_value: '0'
-                      ipt_continue: false
-                      ipt_gw: ''
-                      ipt_iif: ''
-                      ipt_mark_connections: false
-                      ipt_oif: ''
-                      ipt_tee: false
-                      limit_burst: '0'
-                      limit_suffix: ''
-                      limit_value: '0'
-                      limit_value_not: false
-                      log_level: ''
-                      log_prefix: 'HTTP_ACCEPT'
-                      routing: false
-                      stateless: false
-                      tagging: false
-                      tagobject_id: ''
-                      ulog_nlgroup: '1'
                     action: 'Accept'
                     direction: 'Inbound'
+                    options:
+                      log: true
+                      log_prefix: 'HTTP_ACCEPT'
+                      ulog_nlgroup: 1
                     dst:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-logging'
                     itf:
@@ -4456,13 +4155,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -4478,32 +4175,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-nat'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770913727'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -4518,16 +4189,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770913727
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4538,13 +4227,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4555,13 +4240,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth2'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'dmz'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4572,12 +4253,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-nat:lo:ip'
@@ -4590,9 +4266,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'NATRule'
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4612,9 +4285,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4634,9 +4304,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4656,9 +4323,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 3
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4679,9 +4343,6 @@ libraries:
                         8080'
                   - type: 'NATRule'
                     position: 4
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4701,9 +4362,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 5
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4723,9 +4381,6 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 6
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'
@@ -4748,11 +4403,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4767,11 +4417,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4786,13 +4431,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -4808,32 +4451,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-nat-negation'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770913669'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -4848,16 +4465,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770913669
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4868,13 +4503,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4885,13 +4516,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth2'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'dmz'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -4902,12 +4529,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-nat-negation:lo:ip'
@@ -4920,9 +4542,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'NATRule'
-                    options:
-                      disabled: false
-                      group: ''
                     action: 'Translate'
                     negations:
                       odst: true
@@ -4947,11 +4566,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4966,11 +4580,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -4985,13 +4594,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5007,32 +4614,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-negation'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770825591'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -5047,16 +4628,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770825591
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5067,13 +4666,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5084,12 +4679,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-negation:lo:ip'
@@ -5105,13 +4695,10 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
+                    options:
+                      stateless: true
                     negations:
                       src: true
                     dst:
@@ -5126,11 +4713,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     negations:
@@ -5147,13 +4729,10 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: true
                     action: 'Deny'
                     direction: 'Inbound'
+                    options:
+                      stateless: true
                     negations:
                       srv: true
                     dst:
@@ -5168,13 +4747,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5190,32 +4767,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-part-of-any'
-            data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770915904'
-              platform: 'iptables'
-              version: ''
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -5230,16 +4781,34 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              version: ''
+              lastModified: 1770915904
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5250,13 +4819,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5267,12 +4832,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-part-of-any:lo:ip'
@@ -5288,11 +4848,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Both'
                     dst:
@@ -5307,11 +4862,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Both'
                     dst:
@@ -5326,13 +4876,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5348,14 +4896,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-prolog-epilog1'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770934959'
-              lastInstalled: '0'
-              lastModified: '1770934851'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770934851
+              lastCompiled: 1770934959
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -5380,11 +4940,9 @@ libraries:
               epilog_script: '# epilog'
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -5406,39 +4964,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5449,13 +4988,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5466,12 +5001,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-prolog-epilog1:lo:ip'
@@ -5487,11 +5017,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -5506,13 +5031,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5528,14 +5051,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-prolog-epilog2'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770934959'
-              lastInstalled: '0'
-              lastModified: '1770934848'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770934848
+              lastCompiled: 1770934959
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -5560,11 +5095,9 @@ libraries:
               epilog_script: '# epilog'
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -5586,39 +5119,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5629,13 +5143,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5646,12 +5156,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-prolog-epilog2:lo:ip'
@@ -5667,11 +5172,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -5686,13 +5186,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5708,14 +5206,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-prolog-epilog3'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770934959'
-              lastInstalled: '0'
-              lastModified: '1770934865'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770934865
+              lastCompiled: 1770934959
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -5740,11 +5250,9 @@ libraries:
               epilog_script: '# epilog'
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -5766,39 +5274,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5809,13 +5298,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5826,12 +5311,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-prolog-epilog3:lo:ip'
@@ -5847,11 +5327,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -5866,13 +5341,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -5888,14 +5361,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-script-options'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770934960'
-              lastInstalled: '0'
-              lastModified: '1770934947'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770934947
+              lastCompiled: 1770934960
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -5920,11 +5405,9 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: false
               local_nat: false
@@ -5946,39 +5429,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: false
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -5989,13 +5453,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -6006,12 +5466,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-script-options:lo:ip'
@@ -6027,11 +5482,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6046,13 +5496,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -6068,30 +5516,6 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-services'
-            data:
-              host_OS: 'linux24'
-              lastCompiled: '1770922821'
-              lastInstalled: '0'
-              lastModified: '1770825218'
-              platform: 'iptables'
-            options:
-              accept_established: true
-              accept_new_tcp_with_no_syn: true
-              check_shading: true
-              configure_interfaces: true
-              firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
-              limit_value: '0'
-              linux24_ip_forward: '1'
-              load_modules: true
-              local_nat: false
-              log_level: 'info'
-              log_prefix: 'RULE %N -- %A '
-              loopback_interface: 'lo'
-              manage_virtual_addr: true
-              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
-              ulog_nlgroup: '1'
-              verify_interfaces: true
             management:
               address: '0.0.0.0'
               snmp:
@@ -6106,16 +5530,33 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              lastModified: 1770825218
+              lastCompiled: 1770922821
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: 1
+              verify_interfaces: true
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -6126,13 +5567,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -6143,12 +5580,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-services:lo:ip'
@@ -6164,11 +5596,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6183,11 +5610,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6203,11 +5625,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 2
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6222,11 +5639,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 3
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6241,11 +5653,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 4
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6261,11 +5668,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 5
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Outbound'
                     dst:
@@ -6281,11 +5683,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 6
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6301,13 +5698,11 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 7
-                    options:
-                      disabled: false
-                      group: ''
-                      log: true
-                      stateless: true
                     action: 'Deny'
                     direction: 'Both'
+                    options:
+                      log: true
+                      stateless: true
                     dst:
                       - 'Library:Standard/Network:Any'
                     itf:
@@ -6323,14 +5718,26 @@ libraries:
                 top: true
           - type: 'Firewall'
             name: 'fw-shadowing'
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
             data:
-              host_OS: 'linux24'
-              inactive: false
-              lastCompiled: '1770882452'
-              lastInstalled: '0'
-              lastModified: '1770916504'
               platform: 'iptables'
+              host_OS: 'linux24'
               version: ''
+              lastModified: 1770916504
+              lastCompiled: 1770882452
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -6355,11 +5762,9 @@ libraries:
               epilog_script: ''
               firewall_dir: ''
               firewall_is_part_of_any_and_networks: true
-              flush_and_set_default_policy: true
               ignore_empty_groups: false
               ipv4_6_order: 'ipv4_first'
               limit_suffix: ''
-              limit_value: '0'
               linux24_ip_forward: '1'
               load_modules: true
               local_nat: false
@@ -6381,39 +5786,20 @@ libraries:
               scpArgs: ''
               script_name_on_firewall: ''
               sshArgs: ''
-              ulog_cprange: '0'
-              ulog_nlgroup: '1'
-              ulog_qthreshold: '1'
+              ulog_nlgroup: 1
+              ulog_qthreshold: 1
               use_ULOG: false
               use_iptables_restore: false
               use_kerneltz: false
               use_m_set: false
               use_numeric_log_levels: false
               verify_interfaces: true
-            management:
-              address: '0.0.0.0'
-              snmp:
-                enabled: false
-                read_community: ''
-                write_community: ''
-              fwbd:
-                enabled: false
-                identity: ''
-                port: -1
-              install_script:
-                enabled: false
-                command: ''
-                arguments: ''
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'external'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -6424,13 +5810,9 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'internal'
-                  mgmt: false
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
+                  mgmt: false
                 options:
                   type: 'ethernet'
                 addresses:
@@ -6441,12 +5823,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-shadowing:lo:ip'
@@ -6462,11 +5839,6 @@ libraries:
                 top: true
                 rules:
                   - type: 'PolicyRule'
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6481,11 +5853,6 @@ libraries:
                       - 'Library:Standard/Interval:Any'
                   - type: 'PolicyRule'
                     position: 1
-                    options:
-                      disabled: false
-                      group: ''
-                      log: false
-                      stateless: false
                     action: 'Accept'
                     direction: 'Inbound'
                     dst:
@@ -6547,8 +5914,6 @@ libraries:
             children:
               - type: 'Host'
                 name: 'dns-server'
-                options:
-                  use_mac_addr_filter: false
                 management:
                   address: '0.0.0.0'
                   snmp:
@@ -6563,15 +5928,12 @@ libraries:
                     enabled: false
                     command: ''
                     arguments: ''
+                options:
+                  use_mac_addr_filter: false
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
-                      label: ''
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'dns-server:eth0:ip'
@@ -6597,12 +5959,7 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
-                      label: ''
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
               - type: 'Host'
                 name: 'external-host'
                 management:
@@ -6622,12 +5979,7 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
-                      label: ''
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'external-host:eth0:ip'
@@ -6653,12 +6005,7 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
-                      label: ''
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'web-server:eth0:ip'
@@ -6699,8 +6046,6 @@ libraries:
             children:
               - type: 'TCPService'
                 name: 'high-ports'
-                data:
-                  established: false
                 dst_range_start: 8080
                 dst_range_end: 8089
                 tcp_flags:
@@ -6717,10 +6062,10 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
-              - type: 'TCPService'
-                name: 'http 8080'
                 data:
                   established: false
+              - type: 'TCPService'
+                name: 'http 8080'
                 dst_range_start: 8080
                 dst_range_end: 8080
                 tcp_flags:
@@ -6737,6 +6082,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
           - type: 'ServiceGroup'
             name: 'TagServices'
           - type: 'ServiceGroup'

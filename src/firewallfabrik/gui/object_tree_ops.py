@@ -60,9 +60,7 @@ def _stamp_parent_firewall(obj):
     elif isinstance(obj, Address) and obj.interface is not None:
         return _stamp_parent_firewall(obj.interface)
     if fw is not None:
-        data = dict(fw.data or {})
-        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
-        fw.data = data
+        fw.host_last_modified = int(datetime.now(tz=UTC).timestamp())
     return fw
 
 
@@ -289,15 +287,11 @@ class TreeOperations:
                         'services',
                     ):
                         for child in getattr(parent, attr, []):
-                            obj_data = child.data or {}
-                            if _folder_matches(obj_data.get('folder', '')):
-                                new_data = {
-                                    k: v for k, v in obj_data.items() if k != 'folder'
-                                }
-                                child.data = new_data or None
+                            if _folder_matches(getattr(child, 'folder', '')):
+                                child.folder = ''
             else:
                 for cls in _LIB_OWNED_CLASSES:
-                    if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
+                    if not hasattr(cls, 'folder') or not hasattr(cls, 'library_id'):
                         continue
                     for obj in (
                         session.scalars(
@@ -306,12 +300,8 @@ class TreeOperations:
                         .unique()
                         .all()
                     ):
-                        obj_data = obj.data or {}
-                        if _folder_matches(obj_data.get('folder', '')):
-                            new_data = {
-                                k: v for k, v in obj_data.items() if k != 'folder'
-                            }
-                            obj.data = new_data or None
+                        if _folder_matches(getattr(obj, 'folder', '')):
+                            obj.folder = ''
                 parent = session.get(Library, lib_id)
 
             # Remove folder and all nested child paths from subfolders list.
@@ -394,13 +384,8 @@ class TreeOperations:
 
             # Place clone in the target user subfolder, or clear folder
             # when pasting to the group root (empty string).
-            if folder is not None and hasattr(new_obj, 'data'):
-                data = copy.deepcopy(new_obj.data or {})
-                if folder:
-                    data['folder'] = folder
-                else:
-                    data.pop('folder', None)
-                new_obj.data = data
+            if folder is not None and hasattr(new_obj, 'folder'):
+                new_obj.folder = folder or ''
 
             # Make name unique within the target scope.
             new_obj.name = self.make_name_unique(session, new_obj)
@@ -576,13 +561,8 @@ class TreeOperations:
                 if hasattr(new_obj, 'library_id'):
                     new_obj.library_id = target_lib_id
 
-            if folder is not None and hasattr(new_obj, 'data'):
-                data = copy.deepcopy(new_obj.data or {})
-                if folder:
-                    data['folder'] = folder
-                else:
-                    data.pop('folder', None)
-                new_obj.data = data
+            if folder is not None and hasattr(new_obj, 'folder'):
+                new_obj.folder = folder or ''
 
             # Make name unique in the target database.
             new_obj.name = self.make_name_unique(target_session, new_obj)
@@ -766,13 +746,8 @@ class TreeOperations:
                     obj.parent_group_id = target_group_id
 
             # Set/clear user subfolder path.
-            if folder is not None and hasattr(obj, 'data'):
-                data = copy.deepcopy(obj.data or {})
-                if folder:
-                    data['folder'] = folder
-                else:
-                    data.pop('folder', None)
-                obj.data = data
+            if folder is not None and hasattr(obj, 'folder'):
+                obj.folder = folder or ''
 
             # For devices, also move child interfaces.
             if isinstance(obj, Host):
@@ -877,22 +852,25 @@ class TreeOperations:
                     if folder in NEW_TYPES_FOR_FOLDER:
                         folder = None
 
-            # Extract options from extra_data (platform defaults for devices).
-            options = extra_data.pop('options', None) if extra_data else None
+            # Extract platform defaults from extra_data (typed column values).
+            platform_defaults = (
+                extra_data.pop('platform_defaults', None) if extra_data else None
+            )
 
-            # Build data dict: merge folder and extra_data.
-            data = {}
-            if folder:
-                data['folder'] = folder
-            if extra_data:
-                data.update(extra_data)
-            if data and hasattr(model_cls, 'data'):
-                kwargs['data'] = data
-
-            if options and hasattr(model_cls, 'options'):
-                kwargs['options'] = options
+            # Build data dict from extra_data (folder is a typed column now).
+            if extra_data and hasattr(model_cls, 'data'):
+                kwargs['data'] = extra_data
 
             new_obj = model_cls(**kwargs)
+
+            if folder and hasattr(new_obj, 'folder'):
+                new_obj.folder = folder
+
+            # Apply platform defaults to typed columns.
+            if platform_defaults:
+                for col_name, value in platform_defaults.items():
+                    if hasattr(new_obj, col_name):
+                        setattr(new_obj, col_name, value)
             new_obj.name = name or f'New {type_name}'
 
             # Make name unique.
@@ -959,9 +937,9 @@ class TreeOperations:
             target_group = find_group_by_path(session, lib_id, path)
             if target_group is not None:
                 host_kwargs['group_id'] = target_group.id
-            elif folder:
-                host_kwargs['data'] = {'folder': folder}
             host = Host(**host_kwargs)
+            if folder:
+                host.folder = folder
             host.name = name or 'New Host'
             host.name = self.make_name_unique(session, host)
             session.add(host)
@@ -1003,10 +981,8 @@ class TreeOperations:
                             type=addr_type,
                             interface_id=iface_id,
                             name=addr_name,
-                            inet_addr_mask={
-                                'address': addr_str,
-                                'netmask': mask_str,
-                            },
+                            inet_address=addr_str,
+                            inet_netmask=mask_str,
                         )
                         session.add(addr)
 
@@ -1036,19 +1012,14 @@ class TreeOperations:
         session = self._db_manager.create_session()
         try:
             obj = session.get(model_cls, obj_id)
-            if obj is None or not hasattr(obj, 'data'):
+            if obj is None or not hasattr(obj, 'folder'):
                 session.close()
                 return False
-            data = copy.deepcopy(obj.data or {})
-            old_folder = data.get('folder', '')
+            old_folder = obj.folder or ''
             if old_folder == folder:
                 session.close()
                 return False  # No-op.
-            if folder:
-                data['folder'] = folder
-            else:
-                data.pop('folder', None)
-            obj.data = data
+            obj.folder = folder or ''
             session.commit()
             self._db_manager.save_state(
                 f'{prefix}Move {getattr(obj, "type", type(obj).__name__)}'
@@ -1130,14 +1101,13 @@ class TreeOperations:
                         'services',
                     ):
                         for child in getattr(parent_grp, attr, []):
-                            obj_data = child.data or {}
-                            renamed = _rename_folder_value(obj_data.get('folder', ''))
+                            renamed = _rename_folder_value(getattr(child, 'folder', ''))
                             if renamed is not None:
-                                child.data = {**obj_data, 'folder': renamed}
+                                child.folder = renamed
                 parent = parent_grp
             else:
                 for cls in _LIB_OWNED_CLASSES:
-                    if not hasattr(cls, 'data') or not hasattr(cls, 'library_id'):
+                    if not hasattr(cls, 'folder') or not hasattr(cls, 'library_id'):
                         continue
                     for obj in (
                         session.scalars(
@@ -1146,10 +1116,9 @@ class TreeOperations:
                         .unique()
                         .all()
                     ):
-                        obj_data = obj.data or {}
-                        renamed = _rename_folder_value(obj_data.get('folder', ''))
+                        renamed = _rename_folder_value(getattr(obj, 'folder', ''))
                         if renamed is not None:
-                            obj.data = {**obj_data, 'folder': renamed}
+                            obj.folder = renamed
                 parent = session.get(Library, lib_id)
 
             # Update parent's data['subfolders'] list — rename exact

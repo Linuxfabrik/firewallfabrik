@@ -149,7 +149,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # ipset usage flag
         self.using_ipset: bool = False
         if _version_compare(self.version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option('use_m_set', False))
+            self.using_ipset = bool(fw.opt_use_m_set)
 
     @staticmethod
     def get_standard_chains() -> list[str]:
@@ -282,10 +282,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
-        if (
-            self.fw.get_option('check_shading', True)
-            and not self.single_rule_compile_mode
-        ):
+        if self.fw.opt_check_shading and not self.single_rule_compile_mode:
             self.add(DetectShadowing('detect rule shadowing'))
 
         self.add(CountChainUsage('count chain usage'))
@@ -312,10 +309,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
             itf_names.append(s)
         itf_names = itf_names or ['Any']
 
-        src_neg = '!' if rule.negations.get('src') else ''
-        dst_neg = '!' if rule.negations.get('dst') else ''
-        srv_neg = '!' if rule.negations.get('srv') else ''
-        itf_neg = '!' if rule.negations.get('itf') else ''
+        src_neg = '!' if rule.neg_src else ''
+        dst_neg = '!' if rule.neg_dst else ''
+        srv_neg = '!' if rule.neg_srv else ''
+        itf_neg = '!' if rule.neg_itf else ''
 
         lines = []
         max_rows = max(len(src_names), len(dst_names), len(srv_names), len(itf_names))
@@ -340,7 +337,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             if row == 0:
                 action_str = str(rule.action.value) if rule.action else ''
                 dir_str = str(rule.direction.value) if rule.direction else ''
-                logging_str = ' LOG' if rule.options.get('logging') else ''
+                logging_str = ' LOG' if rule.opt_logging else ''
                 line += f'{action_str:>9s}{dir_str:>9s}{logging_str}'
 
             lines.append(line)
@@ -353,23 +350,23 @@ class PolicyCompiler_ipt(PolicyCompiler):
         if iface_str:
             meta += f' .iface={iface_str}'
 
-        if rule.options.get('tagging'):
+        if rule.opt_tagging:
             meta += ' (tag)'
-        if rule.options.get('classification'):
+        if rule.opt_classification:
             meta += ' (class)'
-        if rule.options.get('routing'):
+        if rule.opt_routing:
             meta += ' (route)'
 
         if rule.action and str(rule.action.value) == 'Reject':
-            aor = rule.options.get('action_on_reject', '')
+            aor = rule.opt_action_on_reject
             if aor:
                 meta += f' {aor}'
 
-        if rule.options.get('limit_value', 0) > 0:
+        if rule.opt_limit_value > 0:
             meta += ' limit'
-        if rule.options.get('connlimit_value', 0) > 0:
+        if rule.opt_connlimit_value > 0:
             meta += ' connlimit'
-        if rule.options.get('hashlimit_value', 0) > 0:
+        if rule.opt_hashlimit_value > 0:
             meta += ' hashlimit'
 
         lines.append(meta)
@@ -378,7 +375,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
     def epilog(self) -> None:
         """Finalize compilation."""
         if (
-            self.fw.get_option('use_iptables_restore', False)
+            self.fw.opt_use_iptables_restore
             and self.get_compiled_script_length() > 0
             and not self.single_rule_compile_mode
         ):
@@ -395,7 +392,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             PrintRuleIptRstEcho,
         )
 
-        use_restore = bool(self.fw.get_option('use_iptables_restore', False))
+        use_restore = bool(self.fw.opt_use_iptables_restore)
 
         if use_restore:
             pr = PrintRuleIptRstEcho('generate code for iptables-restore')
@@ -502,7 +499,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
     # -- Action helpers --
 
     def get_action_on_reject(self, rule: CompRule) -> str:
-        return rule.get_option('action_on_reject', '') or ''
+        return rule.opt_action_on_reject or ''
 
     # -- Output generation --
 
@@ -510,7 +507,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         """Generate flush and default policy commands for iptables-restore."""
         if self.single_rule_compile_mode:
             return ''
-        if not self.fw.get_option('use_iptables_restore', False):
+        if not self.fw.opt_use_iptables_restore:
             return ''
 
         result = ''
@@ -530,7 +527,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         ipv6 = self.ipv6_policy
         iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
 
-        use_restore = bool(self.fw.get_option('use_iptables_restore', False))
+        use_restore = bool(self.fw.opt_use_iptables_restore)
 
         begin_rule = '' if use_restore else f'{iptables_cmd} -A'
 
@@ -548,28 +545,29 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         conf.set_variable(
             'accept_established',
-            1 if self.fw.get_option('accept_established', False) else 0,
+            1 if self.fw.opt_accept_established else 0,
         )
 
-        ipv4_fwd = self.fw.get_option('linux24_ip_forward', '')
+        ipv4_fwd = self.fw.opt_ip_forward or ''
         ipforw = str(ipv4_fwd) in ('1', 'On', 'on', '')
         conf.set_variable('ipforw', 1 if ipforw else 0)
 
         conf.set_variable('mgmt_access', 0)
         conf.set_variable(
-            'bridging_firewall', 1 if self.fw.get_option('bridging_fw', False) else 0
+            'bridging_firewall',
+            1 if self.fw.opt_bridging_fw else 0,
         )
         conf.set_variable(
             'drop_new_tcp_with_no_syn',
-            1 if self.fw.get_option('drop_new_tcp_with_no_syn', False) else 0,
+            1 if self.fw.opt_drop_new_tcp_with_no_syn else 0,
         )
         conf.set_variable(
             'add_rules_for_ipv6_neighbor_discovery',
-            1 if (ipv6 and self.fw.get_option('ipv6_neighbor_discovery', False)) else 0,
+            1 if (ipv6 and self.fw.opt_ipv6_neighbor_discovery) else 0,
         )
 
-        drop_invalid = self.fw.get_option('drop_invalid', False)
-        log_invalid = self.fw.get_option('log_invalid', False)
+        drop_invalid = self.fw.opt_drop_invalid
+        log_invalid = self.fw.opt_log_invalid
         conf.set_variable(
             'drop_invalid', 1 if (drop_invalid and not log_invalid) else 0
         )
@@ -588,7 +586,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def commit(self) -> str:
         """Generate COMMIT for iptables-restore format."""
-        if self.fw.get_option('use_iptables_restore', False):
+        if self.fw.opt_use_iptables_restore:
             return "echo 'COMMIT'\n"
         return ''
 
@@ -618,23 +616,13 @@ class DropMangleTableRules(PolicyRuleProcessor):
             return False
 
         rs = self.compiler.source_ruleset
-        if rs is not None:
-            mangle_only = (
-                rs.options.get('mangle_only_rule_set', False) if rs.options else False
-            )
-            if isinstance(mangle_only, str):
-                mangle_only = mangle_only.lower() == 'true'
-            if mangle_only:
-                return True  # drop
+        if rs is not None and rs.opt_mangle_only_rule_set:
+            return True  # drop
 
         if (
             rule.action == PolicyAction.Continue
-            and not rule.get_option('log', False)
-            and (
-                rule.get_option('tagging', False)
-                or rule.get_option('routing', False)
-                or rule.get_option('classification', False)
-            )
+            and not rule.opt_log
+            and (rule.opt_tagging or rule.opt_routing or rule.opt_classification)
         ):
             return True  # drop
 
@@ -651,15 +639,9 @@ class StoreAction(PolicyRuleProcessor):
             return False
         action_str = rule.action.name if rule.action else ''
         rule.stored_action = action_str
-        rule.originated_from_a_rule_with_tagging = bool(
-            rule.get_option('tagging', False)
-        )
-        rule.originated_from_a_rule_with_classification = bool(
-            rule.get_option('classification', False)
-        )
-        rule.originated_from_a_rule_with_routing = bool(
-            rule.get_option('routing', False)
-        )
+        rule.originated_from_a_rule_with_tagging = bool(rule.opt_tagging)
+        rule.originated_from_a_rule_with_classification = bool(rule.opt_classification)
+        rule.originated_from_a_rule_with_routing = bool(rule.opt_routing)
         self.tmp_queue.append(rule)
         return True
 
@@ -672,7 +654,7 @@ class Logging2(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if not rule.get_option('log', False):
+        if not rule.opt_log:
             self.tmp_queue.append(rule)
             return True
 
@@ -681,9 +663,9 @@ class Logging2(PolicyRuleProcessor):
         # Special case: Continue action without tagging/classification/routing
         if (
             rule.action == PolicyAction.Continue
-            and not rule.get_option('tagging', False)
-            and not rule.get_option('classification', False)
-            and not rule.get_option('routing', False)
+            and not rule.opt_tagging
+            and not rule.opt_classification
+            and not rule.opt_routing
         ):
             rule.ipt_target = 'LOG'
             self.tmp_queue.append(rule)
@@ -695,10 +677,10 @@ class Logging2(PolicyRuleProcessor):
         # 1) Jump rule: from current chain to new_chain
         r = rule.clone()
         r.ipt_target = new_chain
-        r.set_option('classification', False)
-        r.set_option('routing', False)
-        r.set_option('tagging', False)
-        r.set_option('log', False)
+        r.opt_classification = False
+        r.opt_routing = False
+        r.opt_tagging = False
+        r.opt_log = False
         r.action = PolicyAction.Continue
         self.tmp_queue.append(r)
 
@@ -716,12 +698,12 @@ class Logging2(PolicyRuleProcessor):
         r2.ipt_target = 'LOG'
         r2.action = PolicyAction.Continue
         r2.direction = Direction.Both
-        r2.set_option('log', False)
-        r2.set_option('classification', False)
-        r2.set_option('routing', False)
-        r2.set_option('tagging', False)
-        r2.set_option('stateless', True)
-        r2.set_option('limit_value', -1)
+        r2.opt_log = False
+        r2.opt_classification = False
+        r2.opt_routing = False
+        r2.opt_tagging = False
+        r2.opt_stateless = True
+        r2.opt_limit_value = -1
         r2.force_state_check = False
         self.tmp_queue.append(r2)
 
@@ -738,10 +720,10 @@ class Logging2(PolicyRuleProcessor):
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         r3.iface_label = 'nil'
         r3.direction = Direction.Both
-        r3.set_option('log', False)
+        r3.opt_log = False
         r3.final = True
-        r3.set_option('stateless', True)
-        r3.set_option('limit_value', -1)
+        r3.opt_stateless = True
+        r3.opt_limit_value = -1
         r3.force_state_check = False
         self.tmp_queue.append(r3)
 
@@ -837,7 +819,7 @@ class SplitIfSrcNegAndFw(PolicyRuleProcessor):
         rule.src = not_fw_likes
         if not not_fw_likes:
             rule.set_neg('src', False)
-        rule.set_option('no_output_chain', True)
+        rule.opt_no_output_chain = True
         self.tmp_queue.append(rule)
         return True
 
@@ -882,7 +864,7 @@ class SplitIfDstNegAndFw(PolicyRuleProcessor):
         rule.dst = not_fw_likes
         if not not_fw_likes:
             rule.set_neg('dst', False)
-        rule.set_option('no_input_chain', True)
+        rule.opt_no_input_chain = True
         self.tmp_queue.append(rule)
         return True
 
@@ -910,13 +892,13 @@ class SrcNegation(PolicyRuleProcessor):
         r_jump.src = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
-        r_jump.set_option('classification', False)
-        r_jump.set_option('routing', False)
-        r_jump.set_option('tagging', False)
-        r_jump.set_option('log', False)
-        r_jump.set_option('limit_value', -1)
-        r_jump.set_option('connlimit_value', -1)
-        r_jump.set_option('hashlimit_value', -1)
+        r_jump.opt_classification = False
+        r_jump.opt_routing = False
+        r_jump.opt_tagging = False
+        r_jump.opt_log = False
+        r_jump.opt_limit_value = -1
+        r_jump.opt_connlimit_value = -1
+        r_jump.opt_hashlimit_value = -1
         self.tmp_queue.append(r_jump)
 
         # Return rule: keep only src objects
@@ -928,14 +910,14 @@ class SrcNegation(PolicyRuleProcessor):
         r_return.ipt_chain = new_chain
         r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
-        r_return.set_option('classification', False)
-        r_return.set_option('routing', False)
-        r_return.set_option('tagging', False)
-        r_return.set_option('log', False)
-        r_return.set_option('stateless', True)
-        r_return.set_option('limit_value', -1)
-        r_return.set_option('connlimit_value', -1)
-        r_return.set_option('hashlimit_value', -1)
+        r_return.opt_classification = False
+        r_return.opt_routing = False
+        r_return.opt_tagging = False
+        r_return.opt_log = False
+        r_return.opt_stateless = True
+        r_return.opt_limit_value = -1
+        r_return.opt_connlimit_value = -1
+        r_return.opt_hashlimit_value = -1
         r_return.force_state_check = False
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
@@ -951,7 +933,7 @@ class SrcNegation(PolicyRuleProcessor):
         r_action.when = []
         r_action.ipt_chain = new_chain
         r_action.upstream_rule_chain = this_chain
-        r_action.set_option('stateless', True)
+        r_action.opt_stateless = True
         r_action.force_state_check = False
         r_action.final = True
         ipt_comp.register_chain(new_chain)
@@ -984,13 +966,13 @@ class DstNegation(PolicyRuleProcessor):
         r_jump.dst = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
-        r_jump.set_option('classification', False)
-        r_jump.set_option('routing', False)
-        r_jump.set_option('tagging', False)
-        r_jump.set_option('log', False)
-        r_jump.set_option('limit_value', -1)
-        r_jump.set_option('connlimit_value', -1)
-        r_jump.set_option('hashlimit_value', -1)
+        r_jump.opt_classification = False
+        r_jump.opt_routing = False
+        r_jump.opt_tagging = False
+        r_jump.opt_log = False
+        r_jump.opt_limit_value = -1
+        r_jump.opt_connlimit_value = -1
+        r_jump.opt_hashlimit_value = -1
         self.tmp_queue.append(r_jump)
 
         # Return rule: keep only dst objects
@@ -1002,14 +984,14 @@ class DstNegation(PolicyRuleProcessor):
         r_return.ipt_chain = new_chain
         r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
-        r_return.set_option('classification', False)
-        r_return.set_option('routing', False)
-        r_return.set_option('tagging', False)
-        r_return.set_option('log', False)
-        r_return.set_option('stateless', True)
-        r_return.set_option('limit_value', -1)
-        r_return.set_option('connlimit_value', -1)
-        r_return.set_option('hashlimit_value', -1)
+        r_return.opt_classification = False
+        r_return.opt_routing = False
+        r_return.opt_tagging = False
+        r_return.opt_log = False
+        r_return.opt_stateless = True
+        r_return.opt_limit_value = -1
+        r_return.opt_connlimit_value = -1
+        r_return.opt_hashlimit_value = -1
         r_return.force_state_check = False
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
@@ -1025,7 +1007,7 @@ class DstNegation(PolicyRuleProcessor):
         r_action.when = []
         r_action.ipt_chain = new_chain
         r_action.upstream_rule_chain = this_chain
-        r_action.set_option('stateless', True)
+        r_action.opt_stateless = True
         r_action.force_state_check = False
         r_action.final = True
         ipt_comp.register_chain(new_chain)
@@ -1058,13 +1040,13 @@ class SrvNegation(PolicyRuleProcessor):
         r_jump.srv = []
         r_jump.ipt_target = new_chain
         r_jump.action = PolicyAction.Continue
-        r_jump.set_option('classification', False)
-        r_jump.set_option('routing', False)
-        r_jump.set_option('tagging', False)
-        r_jump.set_option('log', False)
-        r_jump.set_option('limit_value', -1)
-        r_jump.set_option('connlimit_value', -1)
-        r_jump.set_option('hashlimit_value', -1)
+        r_jump.opt_classification = False
+        r_jump.opt_routing = False
+        r_jump.opt_tagging = False
+        r_jump.opt_log = False
+        r_jump.opt_limit_value = -1
+        r_jump.opt_connlimit_value = -1
+        r_jump.opt_hashlimit_value = -1
         self.tmp_queue.append(r_jump)
 
         # Return rule: keep only srv objects
@@ -1076,14 +1058,14 @@ class SrvNegation(PolicyRuleProcessor):
         r_return.ipt_chain = new_chain
         r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
-        r_return.set_option('classification', False)
-        r_return.set_option('routing', False)
-        r_return.set_option('tagging', False)
-        r_return.set_option('log', False)
-        r_return.set_option('stateless', True)
-        r_return.set_option('limit_value', -1)
-        r_return.set_option('connlimit_value', -1)
-        r_return.set_option('hashlimit_value', -1)
+        r_return.opt_classification = False
+        r_return.opt_routing = False
+        r_return.opt_tagging = False
+        r_return.opt_log = False
+        r_return.opt_stateless = True
+        r_return.opt_limit_value = -1
+        r_return.opt_connlimit_value = -1
+        r_return.opt_hashlimit_value = -1
         r_return.force_state_check = False
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
@@ -1098,7 +1080,7 @@ class SrvNegation(PolicyRuleProcessor):
         r_action.when = []
         r_action.ipt_chain = new_chain
         r_action.upstream_rule_chain = this_chain
-        r_action.set_option('stateless', True)
+        r_action.opt_stateless = True
         r_action.force_state_check = False
         r_action.final = True
         ipt_comp.register_chain(new_chain)
@@ -1164,12 +1146,10 @@ class FillActionOnReject(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if rule.action == PolicyAction.Reject and not rule.get_option(
-            'action_on_reject', ''
-        ):
-            global_reject = self.compiler.fw.get_option('action_on_reject', '')
+        if rule.action == PolicyAction.Reject and not rule.opt_action_on_reject:
+            global_reject = self.compiler.fw.opt_action_on_reject or ''
             if global_reject:
-                rule.set_option('action_on_reject', global_reject)
+                rule.opt_action_on_reject = global_reject
 
         self.tmp_queue.append(rule)
         return True
@@ -1184,18 +1164,16 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        afpa = rule.opt_firewall_is_part_of_any_and_networks
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
-        if rule.get_option('no_output_chain', False):
+        if rule.opt_no_output_chain:
             self.tmp_queue.append(rule)
             return True
 
@@ -1229,18 +1207,16 @@ class SplitIfDstAny(PolicyRuleProcessor):
             return False
 
         # Check per-rule option first, then fall back to global firewall option
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        afpa = rule.opt_firewall_is_part_of_any_and_networks
         if not afpa:
-            afpa = self.compiler.fw.get_option(
-                'firewall_is_part_of_any_and_networks', False
-            )
+            afpa = self.compiler.fw.opt_firewall_is_part_of_any_and_networks
         if not afpa:
             self.tmp_queue.append(rule)
             return True
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
-        if rule.get_option('no_input_chain', False):
+        if rule.opt_no_input_chain:
             self.tmp_queue.append(rule)
             return True
 
@@ -1711,7 +1687,7 @@ class Optimize1(PolicyRuleProcessor):
             not srvany
             and srvn <= dstn
             and srvn <= srcn
-            and not rule.get_option('do_not_optimize_by_srv', False)
+            and not rule.opt_do_not_optimize_by_srv
         ):
             self._optimize(rule, 'srv', ipt_comp)
             return True
@@ -1755,7 +1731,7 @@ class Optimize1(PolicyRuleProcessor):
         self.tmp_queue.append(r)
 
         # Original rule: moved to temp chain, made stateless
-        rule.set_option('stateless', True)
+        rule.opt_stateless = True
         rule.force_state_check = False
         rule.ipt_chain = new_chain
         rule.upstream_rule_chain = this_chain

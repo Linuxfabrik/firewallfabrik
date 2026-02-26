@@ -79,14 +79,17 @@ class Address(Base):
         sqlalchemy.JSON,
         default=dict,
     )
-    inet_addr_mask: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
+    inet_address: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
     )
-    start_address: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
+    inet_netmask: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
     )
-    end_address: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
+    range_start: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    range_end: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
     )
     subst_type_name: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, nullable=True, default=None
@@ -96,6 +99,9 @@ class Address(Base):
     )
     run_time: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean, nullable=True, default=None
+    )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     library: sqlalchemy.orm.Mapped[Library | None] = sqlalchemy.orm.relationship(
@@ -142,28 +148,20 @@ class Address(Base):
     # -- Compiler helper methods --
 
     def get_address(self) -> str:
-        """Return the address string from inet_addr_mask JSON."""
-        if self.inet_addr_mask:
-            return self.inet_addr_mask.get('address', '')
-        return ''
+        """Return the address string."""
+        return self.inet_address or ''
 
     def get_netmask(self) -> str:
-        """Return the netmask string from inet_addr_mask JSON."""
-        if self.inet_addr_mask:
-            return self.inet_addr_mask.get('netmask', '')
-        return ''
+        """Return the netmask string."""
+        return self.inet_netmask or ''
 
     def get_start_address(self) -> str:
         """Return start address string (for AddressRange)."""
-        if self.start_address:
-            return self.start_address.get('address', '')
-        return ''
+        return self.range_start or ''
 
     def get_end_address(self) -> str:
         """Return end address string (for AddressRange)."""
-        if self.end_address:
-            return self.end_address.get('address', '')
-        return ''
+        return self.range_end or ''
 
     def is_v4(self) -> bool:
         """True if this address is an IPv4-family address."""

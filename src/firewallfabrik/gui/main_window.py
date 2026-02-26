@@ -258,14 +258,19 @@ def _identity_key(obj):
 
     # IPv4 / IPv6 / Network / NetworkIPv6: type + address + netmask
     if obj_type in ('IPv4', 'IPv6', 'Network', 'NetworkIPv6'):
-        mask = getattr(obj, 'inet_addr_mask', None) or {}
-        return (obj_type, mask.get('address'), mask.get('netmask'))
+        return (
+            obj_type,
+            getattr(obj, 'inet_address', None),
+            getattr(obj, 'inet_netmask', None),
+        )
 
     # AddressRange: type + start + end
     if obj_type == 'AddressRange':
-        start = getattr(obj, 'start_address', None) or {}
-        end = getattr(obj, 'end_address', None) or {}
-        return (obj_type, start.get('address'), end.get('address'))
+        return (
+            obj_type,
+            getattr(obj, 'range_start', None),
+            getattr(obj, 'range_end', None),
+        )
 
     # CustomService: type + code_*  (platform-specific)
     if obj_type == 'CustomService':
@@ -357,9 +362,10 @@ _DIFF_COLUMNS = {
     Address: [
         'name',
         'comment',
-        'inet_addr_mask',
-        'start_address',
-        'end_address',
+        'inet_address',
+        'inet_netmask',
+        'range_start',
+        'range_end',
     ],
     Group: ['name', 'comment'],
     Host: ['name', 'comment', 'options', 'management'],
@@ -2608,7 +2614,7 @@ class FWWindow(QMainWindow):
             device_id = device.id
             fw_name = device.name
             rs_name = rs.name
-            platform = (device.data or {}).get('platform', '')
+            platform = device.host_platform or ''
             rule = session.get(Rule, rule_id)
             rule_position = rule.position if rule is not None else '?'
 

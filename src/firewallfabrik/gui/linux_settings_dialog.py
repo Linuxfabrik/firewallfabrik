@@ -23,51 +23,53 @@ from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'linuxsettingsdialog_q.ui'
 
-# Combo box widget names — all use "No change" / "On" / "Off" text values.
-_COMBOS = [
-    'linux24_ip_forward',
-    'linux24_ipv6_forward',
-    'linux24_rp_filter',
-    'linux24_icmp_echo_ignore_broadcasts',
-    'linux24_icmp_echo_ignore_all',
-    'linux24_accept_source_route',
-    'linux24_accept_redirects',
-    'linux24_icmp_ignore_bogus_error_responses',
-    'linux24_ip_dynaddr',
-    'linux24_log_martians',
-    'linux24_tcp_window_scaling',
-    'linux24_tcp_sack',
-    'linux24_tcp_fack',
-    'linux24_tcp_ecn',
-    'linux24_tcp_syncookies',
-    'linux24_tcp_timestamps',
-    'conntrack_tcp_be_liberal',
-]
+# Combo box widgets: maps widget name to typed column name.
+# All use "No change" / "On" / "Off" text values.
+_COMBOS: dict[str, str] = {
+    'linux24_ip_forward': 'opt_ip_forward',
+    'linux24_ipv6_forward': 'opt_ipv6_forward',
+    'linux24_rp_filter': 'opt_rp_filter',
+    'linux24_icmp_echo_ignore_broadcasts': 'opt_icmp_echo_ignore_broadcasts',
+    'linux24_icmp_echo_ignore_all': 'opt_icmp_echo_ignore_all',
+    'linux24_accept_source_route': 'opt_accept_source_route',
+    'linux24_accept_redirects': 'opt_accept_redirects',
+    'linux24_icmp_ignore_bogus_error_responses': 'opt_icmp_ignore_bogus_error_responses',
+    'linux24_ip_dynaddr': 'opt_ip_dynaddr',
+    'linux24_log_martians': 'opt_log_martians',
+    'linux24_tcp_window_scaling': 'opt_tcp_window_scaling',
+    'linux24_tcp_sack': 'opt_tcp_sack',
+    'linux24_tcp_fack': 'opt_tcp_fack',
+    'linux24_tcp_ecn': 'opt_tcp_ecn',
+    'linux24_tcp_syncookies': 'opt_tcp_syncookies',
+    'linux24_tcp_timestamps': 'opt_tcp_timestamps',
+    # Widget named 'conntrack_tcp_be_liberal' but column strips linux24_ prefix
+    'conntrack_tcp_be_liberal': 'opt_conntrack_tcp_be_liberal',
+}
 
-# SpinBox widget names that map to integer option keys.
-_SPINBOXES = [
-    'linux24_tcp_fin_timeout',
-    'linux24_tcp_keepalive_interval',
-    'conntrack_max',
-    'conntrack_hashsize',
-]
+# SpinBox widgets: maps widget name to typed column name.
+_SPINBOXES: dict[str, str] = {
+    'linux24_tcp_fin_timeout': 'opt_tcp_fin_timeout',
+    'linux24_tcp_keepalive_interval': 'opt_tcp_keepalive_interval',
+    'conntrack_max': 'opt_conntrack_max',
+    'conntrack_hashsize': 'opt_conntrack_hashsize',
+}
 
-# Line-edit widget names for path settings.
-_LINE_EDITS = [
-    'linux24_path_iptables',
-    'linux24_path_ip6tables',
-    'linux24_path_ip',
-    'linux24_path_logger',
-    'linux24_path_vconfig',
-    'linux24_path_brctl',
-    'linux24_path_ifenslave',
-    'linux24_path_modprobe',
-    'linux24_path_lsmod',
-    'linux24_path_ipset',
-    'linux24_path_iptables_restore',
-    'linux24_path_ip6tables_restore',
-    'linux24_data_dir',
-]
+# Line-edit widgets: maps widget name to typed column name.
+_LINE_EDITS: dict[str, str] = {
+    'linux24_path_iptables': 'opt_path_iptables',
+    'linux24_path_ip6tables': 'opt_path_ip6tables',
+    'linux24_path_ip': 'opt_path_ip',
+    'linux24_path_logger': 'opt_path_logger',
+    'linux24_path_vconfig': 'opt_path_vconfig',
+    'linux24_path_brctl': 'opt_path_brctl',
+    'linux24_path_ifenslave': 'opt_path_ifenslave',
+    'linux24_path_modprobe': 'opt_path_modprobe',
+    'linux24_path_lsmod': 'opt_path_lsmod',
+    'linux24_path_ipset': 'opt_path_ipset',
+    'linux24_path_iptables_restore': 'opt_path_iptables_restore',
+    'linux24_path_ip6tables_restore': 'opt_path_ip6tables_restore',
+    'linux24_data_dir': 'opt_data_dir',
+}
 
 # Mapping from combo text to stored option value.
 _COMBO_TEXT_TO_VALUE = {
@@ -143,59 +145,55 @@ class LinuxSettingsDialog(QDialog):
             self.tabWidget.setTabEnabled(idx, False)
 
     def _populate(self):
-        opts = self._fw.options or {}
-
-        # Combo boxes
-        for name in _COMBOS:
-            widget = getattr(self, name, None)
+        # Combo boxes — read directly from typed columns.
+        for widget_name, col in _COMBOS.items():
+            widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            val = opts.get(name, '')
+            val = getattr(self._fw, col) or ''
             text = _VALUE_TO_COMBO_TEXT.get(str(val), 'No change')
             idx = widget.findText(text)
             widget.setCurrentIndex(max(idx, 0))
 
-        # Spin boxes
-        for name in _SPINBOXES:
-            widget = getattr(self, name, None)
+        # Spin boxes — read directly from typed columns.
+        for widget_name, col in _SPINBOXES.items():
+            widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
+            val = getattr(self._fw, col)
             try:
-                widget.setValue(int(opts.get(name, 0)))
+                widget.setValue(int(val))
             except (ValueError, TypeError):
                 widget.setValue(0)
 
-        # Line edits
-        for name in _LINE_EDITS:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                widget.setText(opts.get(name, ''))
+        # Line edits — read directly from typed columns.
+        for widget_name, col in _LINE_EDITS.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            widget.setText(str(getattr(self._fw, col) or ''))
 
     def _save_settings(self):
-        opts = dict(self._fw.options or {})
-
-        # Combo boxes
-        for name in _COMBOS:
-            widget = getattr(self, name, None)
+        # Combo boxes — write directly to typed columns.
+        for widget_name, col in _COMBOS.items():
+            widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[name] = _COMBO_TEXT_TO_VALUE.get(widget.currentText(), '')
+            setattr(self._fw, col, _COMBO_TEXT_TO_VALUE.get(widget.currentText(), ''))
 
-        # Spin boxes
-        for name in _SPINBOXES:
-            widget = getattr(self, name, None)
+        # Spin boxes — write directly to typed columns.
+        for widget_name, col in _SPINBOXES.items():
+            widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[name] = str(widget.value())
+            setattr(self._fw, col, widget.value())
 
-        # Line edits
-        for name in _LINE_EDITS:
-            widget = getattr(self, name, None)
-            if widget is not None:
-                opts[name] = widget.text()
-
-        # Reassign to trigger SQLAlchemy JSON mutation detection.
-        self._fw.options = opts
+        # Line edits — write directly to typed columns.
+        for widget_name, col in _LINE_EDITS.items():
+            widget = getattr(self, widget_name, None)
+            if widget is None:
+                continue
+            setattr(self._fw, col, widget.text())
 
     @Slot()
     def help(self):

@@ -507,11 +507,8 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_icmp_service(self, srv) -> str:
         """Print ICMP type/code matching."""
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
+        icmp_type = srv.icmp_type if srv.icmp_type is not None else -1
+        icmp_code = srv.icmp_code if srv.icmp_code is not None else -1
 
         proto = 'icmpv6' if self.compiler.ipv6_policy else 'icmp'
         type_names = (
@@ -529,7 +526,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""
-        stateless = rule.get_option('stateless', False)
+        stateless = rule.opt_stateless
         force_state = rule.force_state_check
 
         if not stateless or force_state:
@@ -581,21 +578,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         log_prefix = self._get_log_prefix(rule)
         if log_prefix:
             parts.append(f'prefix "{log_prefix}"')
-        log_level = rule.get_option('log_level', '')
+        log_level = rule.opt_log_level
         if not log_level:
-            log_level = self.compiler.fw.get_option('log_level', 'info')
+            log_level = self.compiler.fw.opt_log_level or ''
         if log_level:
             parts.append(f'level {log_level}')
         return ' '.join(parts)
 
     def _get_log_prefix(self, rule: CompRule) -> str:
         """Get log prefix, expanding macros."""
-        log_prefix = rule.get_option('log_prefix', '')
+        log_prefix = rule.opt_log_prefix
         if not log_prefix:
-            log_prefix = self.compiler.fw.get_option(
-                'log_prefix',
-                'RULE %N -- %A ',
-            )
+            log_prefix = self.compiler.fw.opt_log_prefix or ''
         if not log_prefix:
             return ''
 
@@ -672,7 +666,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_reject(self, rule: CompRule) -> str:
         """Print reject with specific type."""
-        action_on_reject = rule.get_option('action_on_reject', '')
+        action_on_reject = rule.opt_action_on_reject
 
         if not action_on_reject:
             return 'reject'
@@ -682,11 +676,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         # iptables syntax ("icmp-host-unreachable"), or legacy aliases.
         # The GUI names are defined in platforms.cpp:actionsOnReject.
         reject_map = {
+            'ICMP unreachable': 'reject with icmp host-unreachable',
             'ICMP host unreachable': 'reject with icmp host-unreachable',
             'ICMP net unreachable': 'reject with icmp net-unreachable',
             'ICMP port unreachable': 'reject with icmp port-unreachable',
             'ICMP protocol unreachable': 'reject with icmp prot-unreachable',
             'ICMP admin prohibited': 'reject with icmp admin-prohibited',
+            'ICMP net prohibited': 'reject with icmp net-unreachable',
+            'ICMP host prohibited': 'reject with icmp host-prohibited',
             'ICMP-unreachable': 'reject with icmp host-unreachable',
             'TCP RST': 'reject with tcp reset',
             'icmp-host-unreachable': 'reject with icmp host-unreachable',

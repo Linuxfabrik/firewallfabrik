@@ -83,7 +83,6 @@ class SimplePrintProgress(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is not None:
             self.tmp_queue.append(rule)
@@ -98,7 +97,6 @@ class SingleRuleFilter(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -118,7 +116,6 @@ class SkipDisabledRules(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -236,7 +233,7 @@ class EmptyGroupsInRE(BasicRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if self.compiler.fw.get_option('ignore_empty_groups', False):
+        if self.compiler.fw.opt_ignore_empty_groups:
             # Remove empty groups and warn
             for obj in empty_groups:
                 name = getattr(obj, 'name', str(obj))
@@ -280,7 +277,6 @@ class ExpandGroups(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -306,7 +302,6 @@ class ConvertToAtomic(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -342,7 +337,6 @@ class ConvertToAtomicForAddresses(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -371,7 +365,6 @@ class ConvertToAtomicForInterfaces(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -443,7 +436,6 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         return False
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -490,7 +482,6 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -514,7 +505,6 @@ class EliminateDuplicatesInSRC(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -530,7 +520,6 @@ class EliminateDuplicatesInDST(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -546,7 +535,6 @@ class EliminateDuplicatesInSRV(BasicRuleProcessor):
         super().__init__(name)
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False
@@ -616,7 +604,7 @@ class DetectShadowing(BasicRuleProcessor):
         ):
             return False
         # Routing rules may or may not be terminal — skip
-        if r1.get_option('routing', False) or r2.get_option('routing', False):
+        if r1.opt_routing or r2.opt_routing:
             return False
         # r2 with Continue action is non-terminating, can't be shadowed
         if r2.action == PolicyAction.Continue:
@@ -741,20 +729,14 @@ def _addr_range(obj) -> tuple | None:
     return None
 
 
-def _srv_data_val(srv, key: str) -> str:
-    """Get a service data-dict value as a string for comparison.
-
-    Matches C++ ``FWObject::getStr()`` semantics: missing/None → empty string.
-    """
-    if not srv.data:
-        return ''
-    val = srv.data.get(key)
-    if val is None or val == '':
-        return ''
-    return str(val)
-
-
-_IP_FLAGS = ('fragm', 'short_fragm', 'lsrr', 'ssrr', 'rr', 'ts')
+_IP_OPT_ATTRS = (
+    'ip_opt_fragm',
+    'ip_opt_short_fragm',
+    'ip_opt_lsrr',
+    'ip_opt_ssrr',
+    'ip_opt_rr',
+    'ip_opt_ts',
+)
 
 
 def _srv_contains(s1, s2) -> bool:
@@ -778,13 +760,13 @@ def _srv_contains(s1, s2) -> bool:
     # (C++ Compiler_ops.cpp:373-400)
     if isinstance(s1, IPService) and isinstance(s2, IPService):
         # All six IP option flags must match
-        for flag in _IP_FLAGS:
-            if _srv_data_val(s1, flag) != _srv_data_val(s2, flag):
+        for attr in _IP_OPT_ATTRS:
+            if getattr(s1, attr, None) != getattr(s2, attr, None):
                 return False
         # TOS and DSCP codes must match
-        if _srv_data_val(s1, 'tos_code') != _srv_data_val(s2, 'tos_code'):
+        if (s1.ip_tos or '') != (s2.ip_tos or ''):
             return False
-        if _srv_data_val(s1, 'dscp_code') != _srv_data_val(s2, 'dscp_code'):
+        if (s1.ip_dscp or '') != (s2.ip_dscp or ''):
             return False
         p1 = s1.get_protocol_number()
         p2 = s2.get_protocol_number()
@@ -799,10 +781,16 @@ def _srv_contains(s1, s2) -> bool:
             return False
         # TCP flag check: flags and masks must match (C++ Compiler_ops.cpp:406-415)
         if isinstance(s1, TCPService) and isinstance(s2, TCPService):
-            if (s1.tcp_flags or {}) != (s2.tcp_flags or {}):
-                return False
-            if (s1.tcp_flags_masks or {}) != (s2.tcp_flags_masks or {}):
-                return False
+            flag_names = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+            for f in flag_names:
+                if getattr(s1, f'tcp_flag_{f}', None) != getattr(
+                    s2, f'tcp_flag_{f}', None
+                ):
+                    return False
+                if getattr(s1, f'tcp_mask_{f}', None) != getattr(
+                    s2, f'tcp_mask_{f}', None
+                ):
+                    return False
         srs1 = s1.src_range_start or 0
         sre1 = s1.src_range_end or 0
         drs1 = s1.dst_range_start or 0
@@ -828,10 +816,8 @@ def _srv_contains(s1, s2) -> bool:
     if isinstance(s1, ICMPService) and isinstance(s2, ICMPService):
         if type(s1) is not type(s2):  # ICMPv4 vs ICMPv6
             return False
-        codes1 = s1.codes or {}
-        codes2 = s2.codes or {}
-        t1 = codes1.get('type', -1)
-        t2 = codes2.get('type', -1)
+        t1 = s1.icmp_type if s1.icmp_type is not None else -1
+        t2 = s2.icmp_type if s2.icmp_type is not None else -1
         return t2 != -1 and t1 == -1
 
     # Cross-type: IPService with proto=0 and all IP flags cleared
@@ -839,12 +825,7 @@ def _srv_contains(s1, s2) -> bool:
     if isinstance(s1, IPService) and not isinstance(s2, IPService):
         if s1.get_protocol_number() != 0:
             return False
-        data = s1.data or {}
-        for flag in _IP_FLAGS:
-            val = data.get(flag)
-            if val is not None and str(val) == 'True':
-                return False
-        return True
+        return all(not getattr(s1, attr, None) for attr in _IP_OPT_ATTRS)
 
     return False
 
@@ -857,7 +838,6 @@ class AssignUniqueRuleId(BasicRuleProcessor):
         self._counter = 0
 
     def process_next(self) -> bool:
-
         rule = self.prev_processor.get_next_rule()
         if rule is None:
             return False

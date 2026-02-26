@@ -80,17 +80,97 @@ class Service(Base):
     dst_range_end: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer, nullable=True, default=None
     )
-    tcp_flags: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
+    # ICMP type/code (ICMPService, ICMP6Service)
+    icmp_type: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    tcp_flags_masks: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
+    icmp_code: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
     )
-    named_protocols: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON, nullable=True, default=None
-    )
+    # CustomService per-platform code strings (variable keys — stays JSON)
     codes: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON, nullable=True, default=None
+    )
+    # IP protocol number (IPService)
+    protocol_num: sqlalchemy.orm.Mapped[int | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, nullable=True, default=None
+    )
+    # TCP flags (TCPService) — 6 flag bools + 6 mask bools
+    tcp_flag_urg: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_flag_ack: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_flag_psh: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_flag_rst: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_flag_syn: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_flag_fin: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_urg: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_ack: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_psh: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_rst: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_syn: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    tcp_mask_fin: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    # TCPService established flag
+    tcp_established: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    # IPService option flags
+    ip_opt_fragm: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_short_fragm: sqlalchemy.orm.Mapped[bool | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, nullable=True, default=None)
+    )
+    ip_opt_lsrr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_ssrr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_rr: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_ts: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_rtralt: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    ip_opt_any_opt: sqlalchemy.orm.Mapped[bool | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, nullable=True, default=None
+    )
+    # IPService TOS/DSCP
+    ip_tos: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    ip_dscp: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    # TagService code
+    tag_code: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
     )
     protocol: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, nullable=True, default=None
@@ -100,6 +180,9 @@ class Service(Base):
     )
     userid: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String, nullable=True, default=None
+    )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(
@@ -267,6 +350,9 @@ class Interval(Base):
     data: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.JSON,
         default=dict,
+    )
+    folder: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, default=''
     )
 
     library: sqlalchemy.orm.Mapped[Library] = sqlalchemy.orm.relationship(

@@ -607,8 +607,7 @@ class ObjectTree(QWidget):
     @staticmethod
     def _get_folder_name(obj):
         """Return the folder name for *obj*, or empty string."""
-        data = getattr(obj, 'data', None) or {}
-        return data.get('folder', '')
+        return getattr(obj, 'folder', '') or ''
 
     def _add_device_children(self, device, parent_item):
         """Add rule sets and interfaces of *device*."""
