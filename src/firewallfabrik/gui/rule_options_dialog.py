@@ -108,7 +108,7 @@ class RuleOptionsPanel(QWidget):
         """Read options from the database and populate all widgets."""
         self._loading = True
         try:
-            opts = self._read_rule_options()
+            rule = self._get_rule()
 
             # Combo boxes.
             for widget_name, col in _COMBO_WIDGETS.items():
@@ -116,42 +116,40 @@ class RuleOptionsPanel(QWidget):
                 if widget is None:
                     continue
                 if col == 'opt_firewall_is_part_of_any_and_networks':
-                    idx = _FW_PART_OF_ANY_REVERSE.get(str(opts.get(col, '')), 0)
+                    val = str(getattr(rule, col, '')) if rule else ''
+                    idx = _FW_PART_OF_ANY_REVERSE.get(val, 0)
                     widget.setCurrentIndex(idx)
                 else:
-                    val = str(opts.get(col, ''))
-                    idx = widget.findText(val)
-                    if idx >= 0:
-                        widget.setCurrentIndex(idx)
-                    else:
-                        widget.setCurrentIndex(0)
+                    val = getattr(rule, col, '') if rule else ''
+                    idx = widget.findText(val or '')
+                    widget.setCurrentIndex(idx if idx >= 0 else 0)
 
             # Check boxes.
             for widget_name, col in _CHECKBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setChecked(bool(opts.get(col)))
+                widget.setChecked(getattr(rule, col, False) if rule else False)
 
             # Line edits.
             for widget_name, col in _LINEEDIT_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setText(str(opts.get(col, '')))
+                widget.setText(getattr(rule, col, '') or '' if rule else '')
 
             # Spin boxes.
             for widget_name, col in _SPINBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setValue(_to_int(opts.get(col, 0)))
+                widget.setValue(getattr(rule, col, 0) if rule else 0)
 
             # Tag drop area.
             drop = getattr(self, 'iptTagDropArea', None)
             if drop is not None:
                 drop.delete_object()
-                tag_id = opts.get('opt_tagobject_id', '')
+                tag_id = (getattr(rule, 'opt_tagobject_id', '') if rule else '') or ''
                 if tag_id:
                     self._load_tag_object(drop, tag_id)
 
@@ -164,7 +162,7 @@ class RuleOptionsPanel(QWidget):
         """Collect values from all widgets and persist via the model."""
         if self._model is None or self._index is None:
             return
-        opts = self._read_rule_options()
+        opts = {}
 
         # Combo boxes.
         for widget_name, col in _COMBO_WIDGETS.items():
@@ -205,17 +203,10 @@ class RuleOptionsPanel(QWidget):
                 opts['opt_tagobject_id'] = str(tag_obj_id)
                 opts['opt_tagging'] = True
             else:
-                opts.pop('opt_tagobject_id', None)
-                opts.pop('opt_tagging', None)
+                opts['opt_tagobject_id'] = ''
+                opts['opt_tagging'] = False
 
-        # Clean out empty/zero/false values to keep storage lean.
-        cleaned = {}
-        for k, v in opts.items():
-            if v is None or v == '' or v == 0 or v is False:
-                continue
-            cleaned[k] = v
-
-        self._model.set_options(self._index, cleaned)
+        self._model.set_options(self._index, opts)
         # set_options() calls reload(), invalidating all QModelIndex objects.
         # Re-resolve so subsequent saves use a valid index.
         if self._rule_id is not None:
@@ -265,24 +256,21 @@ class RuleOptionsPanel(QWidget):
         if tee is not None:
             tee.setEnabled(not disabled)
 
-    def _read_rule_options(self):
-        """Read options from the database rule, keyed by column name."""
+    def _get_row_data(self):
+        """Return the row data for the current index."""
         if self._model is None or self._index is None:
-            return {}
-        row_data = self._model.get_row_data(self._index)
+            return None
+        return self._model.get_row_data(self._index)
+
+    def _get_rule(self):
+        """Return the ORM Rule object for the current index, or None."""
+        row_data = self._get_row_data()
         if row_data is None:
-            return {}
+            return None
         from firewallfabrik.core.objects import PolicyRule
-        from firewallfabrik.core.options._metadata import RULE_OPTIONS
 
         with self._model._db_manager.session() as session:
-            rule = session.get(PolicyRule, row_data.rule_id)
-            if rule is not None:
-                return {
-                    meta.column_name: getattr(rule, meta.column_name)
-                    for meta in RULE_OPTIONS.values()
-                }
-        return {}
+            return session.get(PolicyRule, row_data.rule_id)
 
     # ------------------------------------------------------------------
     # Signal management
@@ -353,11 +341,3 @@ class RuleOptionsPanel(QWidget):
             drop.objectDeleted.disconnect(self._on_widget_changed)
 
         self._signals_connected = False
-
-
-def _to_int(val):
-    """Convert a value to int, returning 0 on failure."""
-    try:
-        return int(val)
-    except (TypeError, ValueError):
-        return 0
