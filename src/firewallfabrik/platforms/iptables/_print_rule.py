@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
 )
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
 
@@ -550,7 +551,9 @@ class PrintRule(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.opt_limit_suffix or '/second'
+        limit_suffix = (
+            rule.opt_limit_suffix or HOST_COMPILER_DEFAULTS['opt_limit_suffix']
+        )
         burst = rule.opt_limit_burst
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'

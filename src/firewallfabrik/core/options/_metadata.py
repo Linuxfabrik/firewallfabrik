@@ -274,6 +274,7 @@ for _key, _cd in [
     ('admUser', 'root'),
     ('prolog_place', 'top'),
     ('ipv4_6_order', 'ipv4_first'),
+    ('limit_suffix', '/second'),
 ]:
     _m = HOST_OPTIONS[_key]
     HOST_OPTIONS[_key] = OptionMeta(

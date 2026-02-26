@@ -236,7 +236,9 @@ class NftablesSettingsDialog(QDialog):
         # Logging limit
         self.logLimitVal.setValue(self._fw.opt_limit_value or 0)
 
-        limit_suffix = self._fw.opt_limit_suffix or '/second'
+        limit_suffix = (
+            self._fw.opt_limit_suffix or HOST_COMPILER_DEFAULTS['opt_limit_suffix']
+        )
         idx = self.logLimitSuffix.findText(limit_suffix)
         self.logLimitSuffix.setCurrentIndex(max(idx, 0))
 
