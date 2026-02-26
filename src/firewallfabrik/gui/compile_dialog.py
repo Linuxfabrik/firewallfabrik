@@ -82,9 +82,8 @@ def _resolve_mgmt_address(fw):
     Checks ``fw.opt_altaddress`` first, then scans interfaces
     for one flagged as management and returns its first address.
     """
-    alt = fw.opt_altaddress or ''
-    if alt:
-        return alt
+    if fw.opt_altaddress:
+        return fw.opt_altaddress
     for iface in fw.interfaces:
         iface_data = iface.data or {}
         if str(iface_data.get('management', '')).lower() in ('true', '1'):
@@ -693,34 +692,31 @@ class CompileDialog(QDialog):
             fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
 
         config = InstallConfig(
-            user=(fw.opt_admuser if fw else '')
-            or HOST_COMPILER_DEFAULTS['opt_admuser'],
+            user=fw.opt_admuser or HOST_COMPILER_DEFAULTS['opt_admuser'],
             mgmt_address=mgmt_addr,
-            firewall_dir=(fw.opt_firewall_dir if fw else '')
+            firewall_dir=fw.opt_firewall_dir
             or HOST_COMPILER_DEFAULTS['opt_firewall_dir'],
-            ssh_args=(fw.opt_sshargs if fw else '') or '',
-            scp_args=(fw.opt_scpargs if fw else '') or '',
-            activation_cmd=(fw.opt_activationcmd if fw else '') or '',
-            install_script=(fw.opt_installscript if fw else '') or '',
-            install_script_args=(fw.opt_installscriptargs if fw else '') or '',
+            ssh_args=fw.opt_sshargs or '',
+            scp_args=fw.opt_scpargs or '',
+            activation_cmd=fw.opt_activationcmd or '',
+            install_script=fw.opt_installscript or '',
+            install_script_args=fw.opt_installscriptargs or '',
             firewall_name=fw_name,
             fwb_file=str(self._current_file),
             working_dir=str(self._dest_dir),
-            alt_address=(fw.opt_altaddress if fw else '') or '',
+            alt_address=fw.opt_altaddress or '',
         )
 
         # Determine the compiled script path.
-        output_file = (fw.opt_output_file if fw else '') or ''
-        if output_file:
-            config.script_path = str(self._dest_dir / output_file)
+        if fw.opt_output_file:
+            config.script_path = str(self._dest_dir / fw.opt_output_file)
         else:
             base_name = fw_name.replace(' ', '_').replace('/', '_')
             config.script_path = str(self._dest_dir / f'{base_name}.fw')
 
         # Determine remote script name from options.
-        script_on_fw = (fw.opt_script_name_on_firewall if fw else '') or ''
-        if script_on_fw:
-            config.remote_script = script_on_fw
+        if fw.opt_script_name_on_firewall:
+            config.remote_script = fw.opt_script_name_on_firewall
         else:
             config.remote_script = (
                 f'{config.firewall_dir}/{Path(config.script_path).name}'
