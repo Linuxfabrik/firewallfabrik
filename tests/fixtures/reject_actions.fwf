@@ -52,11 +52,8 @@ libraries:
       - name: 'Dummy'
         comment: 'Dummy Interface'
         data:
-          dedicated_failover: false
-          dyn: false
-          security_level: '0'
           unnum: true
-          unprotected: false
+          security_level: '0'
         type: 'Interface'
       - type: 'ObjectGroup'
         name: 'Firewalls'
@@ -228,11 +225,7 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -265,11 +258,7 @@ libraries:
                 interfaces:
                   - name: 'eth0'
                     data:
-                      dedicated_failover: false
-                      dyn: false
                       security_level: '0'
-                      unnum: false
-                      unprotected: false
                     addresses:
                       - type: 'IPv4'
                         name: 'ip'
@@ -788,178 +777,178 @@ libraries:
             children:
               - type: 'ICMPService'
                 name: 'all ICMP unreachables'
-                data:
-                  code: '-1'
-                  type: '3'
+                codes:
+                  type: 3
+                  code: -1
               - type: 'ICMPService'
                 name: 'any ICMP'
-                data:
-                  code: '-1'
-                  type: '-1'
+                codes:
+                  type: -1
+                  code: -1
               - type: 'ICMPService'
                 name: 'host_unreach'
-                data:
-                  code: '1'
-                  type: '3'
+                codes:
+                  type: 3
+                  code: 1
               - type: 'ICMP6Service'
                 name: 'ipv6 all dest unreachable'
                 comment: 'All icmpv6 codes for type "destination unreachable"
 
                   '
-                data:
-                  code: '-1'
-                  type: '1'
+                codes:
+                  type: 1
+                  code: -1
               - type: 'ICMP6Service'
                 name: 'ipv6 any ICMP6'
                 comment: 'any ICMPv6'
-                data:
-                  code: '-1'
-                  type: '-1'
+                codes:
+                  type: -1
+                  code: -1
               - type: 'ICMP6Service'
                 name: 'ipv6 neighbradv'
                 comment: 'IPv6 neighbor advertisement'
-                data:
-                  code: '0'
-                  type: '136'
+                codes:
+                  type: 136
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 neighbrsol'
                 comment: 'IPv6 neighbor solicitation'
-                data:
-                  code: '0'
-                  type: '135'
+                codes:
+                  type: 135
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 packet too big'
-                data:
-                  code: '-1'
-                  type: '2'
+                codes:
+                  type: 2
+                  code: -1
               - type: 'ICMP6Service'
                 name: 'ipv6 parameter problem'
                 comment: 'IPv6 Parameter Problem: RFC4443'
-                data:
-                  code: '-1'
-                  type: '4'
+                codes:
+                  type: 4
+                  code: -1
               - type: 'ICMP6Service'
                 name: 'ipv6 ping reply'
                 comment: 'IPv6 ping reply'
-                data:
-                  code: '0'
-                  type: '129'
+                codes:
+                  type: 129
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 ping request'
                 comment: 'IPv6 ping request'
-                data:
-                  code: '0'
-                  type: '128'
+                codes:
+                  type: 128
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 redir'
                 comment: 'IPv6 redirect: shorter route exists'
-                data:
-                  code: '0'
-                  type: '137'
+                codes:
+                  type: 137
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 routeradv'
                 comment: 'IPv6 router advertisement'
-                data:
-                  code: '0'
-                  type: '134'
+                codes:
+                  type: 134
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 routersol'
                 comment: 'IPv6 router solicitation'
-                data:
-                  code: '0'
-                  type: '133'
+                codes:
+                  type: 133
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 time exceeded'
                 comment: 'Time exceeded in transit'
-                data:
-                  code: '0'
-                  type: '3'
+                codes:
+                  type: 3
+                  code: 0
               - type: 'ICMP6Service'
                 name: 'ipv6 time exceeded in reassembly'
                 comment: 'Time exceeded in reassembly'
-                data:
-                  code: '1'
-                  type: '3'
+                codes:
+                  type: 3
+                  code: 1
               - type: 'ICMPService'
                 name: 'ping reply'
-                data:
-                  code: '0'
-                  type: '0'
+                codes:
+                  type: 0
+                  code: 0
               - type: 'ICMPService'
                 name: 'ping request'
-                data:
-                  code: '0'
-                  type: '8'
+                codes:
+                  type: 8
+                  code: 0
               - type: 'ICMPService'
                 name: 'port unreach'
                 comment: 'Port unreachable'
-                data:
-                  code: '3'
-                  type: '3'
+                codes:
+                  type: 3
+                  code: 3
               - type: 'ICMPService'
                 name: 'time exceeded'
                 comment: 'ICMP messages of this type are needed for traceroute'
-                data:
-                  code: '0'
-                  type: '11'
+                codes:
+                  type: 11
+                  code: 0
               - type: 'ICMPService'
                 name: 'time exceeded in transit'
-                data:
-                  code: '1'
-                  type: '11'
+                codes:
+                  type: 11
+                  code: 1
           - type: 'ServiceGroup'
             name: 'IP'
             children:
               - type: 'IPService'
                 name: 'AH'
                 comment: 'IPSEC Authentication Header Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '51'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'ESP'
                 comment: 'IPSEC Encapsulating Security Payload Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '50'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'GRE'
                 comment: 'Generic Routing Encapsulation
 
                   '
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '47'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'IGMP'
                 comment: 'Internet Group Management Protocol, Version 3, RFC 3376'
                 data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  rtralt: true
                   rtralt_value: '0'
+                  fragm: false
                   short_fragm: false
+                  lsrr: false
                   ssrr: false
+                  rr: false
                   ts: false
+                  rtralt: true
                 named_protocols:
                   protocol_num: '2'
               - type: 'IPService'
@@ -968,76 +957,76 @@ libraries:
                   3973, or Protocol Independent Multicast-Sparse Mode (PIM-SM) RFC
                   2362'
                 data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  rtralt: false
                   rtralt_value: '0'
+                  fragm: false
                   short_fragm: false
+                  lsrr: false
                   ssrr: false
+                  rr: false
                   ts: false
+                  rtralt: false
                 named_protocols:
                   protocol_num: '103'
               - type: 'IPService'
                 name: 'RR'
                 comment: 'Route recording packets'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: true
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: true
+                  ts: false
               - type: 'IPService'
                 name: 'SKIP'
                 comment: 'IPSEC Simple Key Management for Internet Protocols'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '57'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'SRR'
                 comment: 'All sorts of Source Routing Packets'
-                data:
-                  fragm: false
-                  lsrr: true
-                  rr: false
-                  short_fragm: false
-                  ssrr: true
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: true
+                  ssrr: true
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'ip_fragments'
                 comment: '''Short'' fragments'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: true
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '0'
+                data:
+                  fragm: false
+                  short_fragm: true
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
               - type: 'IPService'
                 name: 'vrrp'
                 comment: 'Virtual Router Redundancy Protocol'
-                data:
-                  fragm: false
-                  lsrr: false
-                  rr: false
-                  short_fragm: false
-                  ssrr: false
-                  ts: false
                 named_protocols:
                   protocol_num: '112'
+                data:
+                  fragm: false
+                  short_fragm: false
+                  lsrr: false
+                  ssrr: false
+                  rr: false
+                  ts: false
           - type: 'ServiceGroup'
             name: 'TCP'
             children:
@@ -1109,8 +1098,6 @@ libraries:
                   set source port range to match the service.
 
                   '
-                data:
-                  established: true
                 tcp_flags:
                   urg: false
                   ack: false
@@ -1125,6 +1112,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: true
               - type: 'TCPService'
                 name: 'Citrix-ICA'
                 dst_range_start: 1494
@@ -2022,8 +2011,6 @@ libraries:
                 comment: 'NRPE add-on for Nagios  http://www.nagios.org/
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5666
                 dst_range_end: 5666
                 tcp_flags:
@@ -2040,6 +2027,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'pop3'
                 dst_range_start: 110
@@ -2244,8 +2233,6 @@ libraries:
               - type: 'TCPService'
                 name: 'rtmp'
                 comment: 'Real Time Messaging Protocol'
-                data:
-                  established: false
                 dst_range_start: 1935
                 dst_range_end: 1935
                 tcp_flags:
@@ -2262,6 +2249,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'rtsp'
                 comment: 'Real Time Streaming Protocol'
@@ -2706,8 +2695,6 @@ libraries:
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5222
                 dst_range_end: 5222
                 tcp_flags:
@@ -2724,13 +2711,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-client-ssl'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5223
                 dst_range_end: 5223
                 tcp_flags:
@@ -2747,13 +2734,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-server'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5269
                 dst_range_end: 5269
                 tcp_flags:
@@ -2770,13 +2757,13 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
               - type: 'TCPService'
                 name: 'xmpp-server-ssl'
                 comment: 'Extensible Messaging and Presence Protocol (XMPP)   RFC3920
 
                   '
-                data:
-                  established: false
                 dst_range_start: 5270
                 dst_range_end: 5270
                 tcp_flags:
@@ -2793,6 +2780,8 @@ libraries:
                   rst: false
                   syn: false
                   fin: false
+                data:
+                  established: false
           - type: 'ServiceGroup'
             name: 'TagServices'
           - type: 'ServiceGroup'
@@ -3044,12 +3033,6 @@ libraries:
         children:
           - type: 'Firewall'
             name: 'fw-test'
-            data:
-              host_OS: 'linux24'
-              lastCompiled: '0'
-              lastInstalled: '0'
-              lastModified: '1770822325'
-              platform: 'iptables'
             management:
               address: '0.0.0.0'
               snmp:
@@ -3064,6 +3047,10 @@ libraries:
                 enabled: false
                 command: ''
                 arguments: ''
+            data:
+              platform: 'iptables'
+              host_OS: 'linux24'
+              lastModified: 1770822325
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -3123,12 +3110,8 @@ libraries:
             interfaces:
               - name: 'eth0'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'outside'
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:eth0:ip'
@@ -3137,12 +3120,8 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'eth1'
                 data:
-                  dedicated_failover: false
-                  dyn: false
                   label: 'inside'
                   security_level: '100'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:eth1:ip'
@@ -3151,12 +3130,7 @@ libraries:
                       netmask: '255.255.255.0'
               - name: 'lo'
                 data:
-                  dedicated_failover: false
-                  dyn: false
-                  label: ''
                   security_level: '0'
-                  unnum: false
-                  unprotected: false
                 addresses:
                   - type: 'IPv4'
                     name: 'fw-test:lo:ip'

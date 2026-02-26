@@ -361,6 +361,25 @@ INTERFACE_OPTIONS: dict[str, OptionMeta] = {
 }
 
 # ---------------------------------------------------------------------------
+# RuleSet options
+# ---------------------------------------------------------------------------
+
+RULESET_OPTIONS: dict[str, OptionMeta] = {
+    'mangle_only_rule_set': OptionMeta(
+        yaml_key='mangle_only_rule_set',
+        column_name='opt_mangle_only_rule_set',
+        default=False,
+        col_type=bool,
+    ),
+}
+
+
+def get_ruleset_option_columns() -> list[tuple[str, type, Any]]:
+    """Return list of (column_name, col_type, default) for RuleSet options."""
+    return [(m.column_name, m.col_type, m.default) for m in RULESET_OPTIONS.values()]
+
+
+# ---------------------------------------------------------------------------
 # Rule options
 # ---------------------------------------------------------------------------
 
@@ -416,6 +435,9 @@ _add(
         'ipt_branch_in_mangle',
         'ipt_nat_random',
         'ipt_nat_persistent',
+        'ipt_use_masq',
+        'ipt_use_snat_instead_of_masq',
+        'no_fail',
         'rule_added_for_osrc_neg',
         'rule_added_for_odst_neg',
         'rule_added_for_osrv_neg',

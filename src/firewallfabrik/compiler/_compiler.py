@@ -356,7 +356,8 @@ class Compiler(BaseCompiler):
                 id=uuid.uuid4(),
                 type=addr_type.__mapper_args__['polymorphic_identity'],
                 name='address',
-                inet_addr_mask={'address': ip_str, 'netmask': netmask},
+                inet_address=ip_str,
+                inet_netmask=netmask,
             )
             results.append(addr)
         return results
@@ -414,10 +415,8 @@ class Compiler(BaseCompiler):
                     id=uuid.uuid4(),
                     type='Network',
                     name=addr_str,
-                    inet_addr_mask={
-                        'address': str(net.network_address),
-                        'netmask': str(net.netmask),
-                    },
+                    inet_address=str(net.network_address),
+                    inet_netmask=str(net.netmask),
                 )
                 results.append(addr)
             elif ':' in addr_str and self.ipv6_policy:
@@ -430,10 +429,8 @@ class Compiler(BaseCompiler):
                     id=uuid.uuid4(),
                     type='NetworkIPv6',
                     name=addr_str,
-                    inet_addr_mask={
-                        'address': str(net.network_address),
-                        'netmask': str(net.netmask),
-                    },
+                    inet_address=str(net.network_address),
+                    inet_netmask=str(net.netmask),
                 )
                 results.append(addr)
         return results

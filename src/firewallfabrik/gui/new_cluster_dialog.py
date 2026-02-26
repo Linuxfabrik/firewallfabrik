@@ -110,7 +110,16 @@ class NewClusterDialog(QDialog):
                 .order_by(Host.name),
             ).all()
             self._firewalls = [
-                (str(fw.id), fw.name, dict(fw.data or {})) for fw in firewalls
+                (
+                    str(fw.id),
+                    fw.name,
+                    {
+                        'host_OS': fw.host_os_val or '',
+                        'platform': fw.host_platform or '',
+                        'version': fw.host_version or '',
+                    },
+                )
+                for fw in firewalls
             ]
         finally:
             session.close()

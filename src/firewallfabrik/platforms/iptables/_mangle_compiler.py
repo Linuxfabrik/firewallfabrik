@@ -150,7 +150,7 @@ class KeepMangleTableRules(PolicyRuleProcessor):
 
         # Check if rule belongs to a mangle-only ruleset
         rs = self.compiler.source_ruleset if self.compiler else None
-        if rs is not None and rs.options and rs.options.get('mangle_only_rule_set'):
+        if rs is not None and rs.opt_mangle_only_rule_set:
             self.tmp_queue.append(rule)
             return True
 

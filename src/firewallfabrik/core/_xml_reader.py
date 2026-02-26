@@ -37,6 +37,7 @@ from .options._metadata import (
     HOST_OPTIONS,
     INTERFACE_OPTIONS,
     RULE_OPTIONS,
+    RULESET_OPTIONS,
     apply_options,
 )
 
@@ -96,7 +97,13 @@ def _tag(elem):
 
 
 def _bool(value):
-    """Parse an XML boolean string to Python bool."""
+    """Parse an XML boolean string to Python bool.
+
+    Also accepts Python bools (returned by ``_coerce_bool`` inside
+    ``_extra_attrs``), so callers don't need to type-check first.
+    """
+    if isinstance(value, bool):
+        return value
     return value.lower() in ('true', '1', 'yes')
 
 
@@ -172,25 +179,24 @@ def _address_type_attrs(addr, elem, known):
     start/end, and MultiAddressRunTime fields.  Adds consumed
     attribute names to *known*.
     """
-    # address / netmask -> inet_addr_mask JSON
+    # address / netmask -> typed columns
     address_str = elem.get('address')
     netmask_str = elem.get('netmask')
+    if address_str is not None:
+        addr.inet_address = address_str
+    if netmask_str is not None:
+        addr.inet_netmask = netmask_str
     if address_str is not None or netmask_str is not None:
-        addr.inet_addr_mask = {}
-        if address_str is not None:
-            addr.inet_addr_mask['address'] = address_str
-        if netmask_str is not None:
-            addr.inet_addr_mask['netmask'] = netmask_str
         known |= {'address', 'netmask'}
 
     # AddressRange
     start = elem.get('start_address')
     end = elem.get('end_address')
     if start is not None:
-        addr.start_address = {'address': start}
+        addr.range_start = start
         known.add('start_address')
     if end is not None:
-        addr.end_address = {'address': end}
+        addr.range_end = end
         known.add('end_address')
 
     # MultiAddressRunTime
@@ -228,18 +234,15 @@ def _service_type_attrs(svc, elem, known):
     # TCPService flags
     flag_names = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
     if elem.get('ack_flag') is not None:
-        svc.tcp_flags = {f: _bool(elem.get(f'{f}_flag', 'False')) for f in flag_names}
-        svc.tcp_flags_masks = {
-            f: _bool(elem.get(f'{f}_flag_mask', 'False')) for f in flag_names
-        }
+        for f in flag_names:
+            setattr(svc, f'tcp_flag_{f}', _bool(elem.get(f'{f}_flag', 'False')))
+            setattr(svc, f'tcp_mask_{f}', _bool(elem.get(f'{f}_flag_mask', 'False')))
         known |= {f'{f}_flag' for f in flag_names}
         known |= {f'{f}_flag_mask' for f in flag_names}
 
     # IPService
     if elem.get('protocol_num') is not None:
-        svc.named_protocols = {
-            'protocol_num': elem.get('protocol_num'),
-        }
+        svc.protocol_num = _int(elem.get('protocol_num'))
         known.add('protocol_num')
 
     # CustomService
@@ -252,16 +255,52 @@ def _service_type_attrs(svc, elem, known):
     # ICMPService / ICMP6Service
     tag = _tag(elem)
     if tag in ('ICMPService', 'ICMP6Service'):
-        svc.codes = {
-            'type': _int(elem.get('type', '-1')),
-            'code': _int(elem.get('code', '-1')),
-        }
+        svc.icmp_type = _int(elem.get('type', '-1'))
+        svc.icmp_code = _int(elem.get('code', '-1'))
         known |= {'type', 'code'}
 
     # UserService
     if elem.get('userid') is not None:
         svc.userid = elem.get('userid')
         known.add('userid')
+
+    # TCPService established flag
+    if elem.get('established') is not None:
+        svc.tcp_established = _bool(elem.get('established', 'False'))
+        known.add('established')
+
+    # IPService data fields -> typed columns
+    for xml_key, col_name in (
+        ('fragm', 'ip_opt_fragm'),
+        ('short_fragm', 'ip_opt_short_fragm'),
+        ('lsrr', 'ip_opt_lsrr'),
+        ('ssrr', 'ip_opt_ssrr'),
+        ('rr', 'ip_opt_rr'),
+        ('ts', 'ip_opt_ts'),
+        ('rtralt', 'ip_opt_rtralt'),
+        ('any_opt', 'ip_opt_any_opt'),
+    ):
+        if elem.get(xml_key) is not None:
+            setattr(svc, col_name, _bool(elem.get(xml_key, 'False')))
+            known.add(xml_key)
+
+    # IPService TOS/DSCP — XML uses both tos/dscp and tos_code/dscp_code
+    for tos_key in ('tos', 'tos_code'):
+        if elem.get(tos_key) is not None:
+            svc.ip_tos = elem.get(tos_key)
+            known.add(tos_key)
+    for dscp_key in ('dscp', 'dscp_code'):
+        if elem.get(dscp_key) is not None:
+            svc.ip_dscp = elem.get(dscp_key)
+            known.add(dscp_key)
+
+    # TagService code
+    if elem.get('tagvalue') is not None:
+        svc.tag_code = elem.get('tagvalue')
+        known.add('tagvalue')
+    elif elem.get('code') is not None and tag not in ('ICMPService', 'ICMP6Service'):
+        svc.tag_code = elem.get('code')
+        known.add('code')
 
 
 def _service_codes(elem):
@@ -472,7 +511,19 @@ class XmlReader:
         device.name = elem.get('name', '')
         device.comment = elem.get('comment', '')
         device.ro = _bool(elem.get('ro', 'False'))
-        device.data = _extra_attrs(elem, _COMMON_KNOWN)
+        raw_data = _extra_attrs(elem, _COMMON_KNOWN)
+        # Extract known data keys into typed columns
+        device.host_platform = raw_data.pop('platform', None)
+        device.host_os_val = raw_data.pop('host_OS', None)
+        device.host_version = raw_data.pop('version', None)
+        device.host_inactive = _bool(raw_data.pop('inactive', 'False'))
+        device.host_last_modified = int(raw_data.pop('lastModified', 0) or 0)
+        device.host_last_compiled = int(raw_data.pop('lastCompiled', 0) or 0)
+        device.host_last_installed = int(raw_data.pop('lastInstalled', 0) or 0)
+        device.host_mac_filter_enabled = _bool(
+            raw_data.pop('mac_filter_enabled', 'False')
+        )
+        device.data = raw_data
         device.library = library
 
         if parent_group is not None:
@@ -500,7 +551,18 @@ class XmlReader:
         iface.id = self._register(elem.get('id', ''))
         iface.name = elem.get('name', '')
         iface.comment = elem.get('comment', '')
-        iface.data = _extra_attrs(elem, _COMMON_KNOWN)
+        raw_data = _extra_attrs(elem, _COMMON_KNOWN)
+        # Extract known data keys into typed columns
+        iface.iface_dyn = _bool(raw_data.pop('dyn', 'False'))
+        iface.iface_unnum = _bool(raw_data.pop('unnum', 'False'))
+        iface.iface_label = raw_data.pop('label', None)
+        iface.iface_security_level = raw_data.pop('security_level', None)
+        iface.iface_management = _bool(raw_data.pop('management', 'False'))
+        iface.iface_unprotected = _bool(raw_data.pop('unprotected', 'False'))
+        iface.iface_dedicated_failover = _bool(
+            raw_data.pop('dedicated_failover', 'False')
+        )
+        iface.data = raw_data
         iface.library = library
         iface.device = device
 
@@ -592,7 +654,7 @@ class XmlReader:
             if tag in _RULE_TAGS:
                 self._parse_rule(child, _RULE_TAGS[tag], rs)
             elif tag in _OPTIONS_TAGS:
-                rs.options = _parse_options_children(child)
+                apply_options(rs, _parse_options_children(child), RULESET_OPTIONS)
             else:
                 logger.warning('Unhandled ruleset child: %s (in %s)', tag, rs.name)
         return rs

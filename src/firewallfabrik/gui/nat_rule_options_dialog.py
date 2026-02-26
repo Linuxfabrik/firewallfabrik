@@ -18,12 +18,12 @@ from PySide6.QtWidgets import QWidget
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
-# Widget name -> options key mapping for the 4 iptables NAT checkboxes.
+# Widget name → typed column name on the Rule ORM object.
 _CHECKBOX_WIDGETS = {
-    'ipt_nat_persistent': 'ipt_nat_persistent',
-    'ipt_nat_random': 'ipt_nat_random',
-    'ipt_use_masq': 'ipt_use_masq',
-    'ipt_use_snat_instead_of_masq': 'ipt_use_snat_instead_of_masq',
+    'ipt_nat_persistent': 'opt_ipt_nat_persistent',
+    'ipt_nat_random': 'opt_ipt_nat_random',
+    'ipt_use_masq': 'opt_ipt_use_masq',
+    'ipt_use_snat_instead_of_masq': 'opt_ipt_use_snat_instead_of_masq',
 }
 
 
@@ -60,13 +60,13 @@ class NATRuleOptionsPanel(QWidget):
         """Read options from the database and populate all widgets."""
         self._loading = True
         try:
-            opts = self._read_rule_options()
+            rule = self._get_rule()
 
-            for widget_name, key in _CHECKBOX_WIDGETS.items():
+            for widget_name, col in _CHECKBOX_WIDGETS.items():
                 widget = getattr(self, widget_name, None)
                 if widget is None:
                     continue
-                widget.setChecked(_to_bool(opts.get(key)))
+                widget.setChecked(getattr(rule, col, False) if rule else False)
         finally:
             self._loading = False
 
@@ -74,22 +74,15 @@ class NATRuleOptionsPanel(QWidget):
         """Collect values from all widgets and persist via the model."""
         if self._model is None or self._index is None:
             return
-        opts = self._read_rule_options()
+        opts = {}
 
-        for widget_name, key in _CHECKBOX_WIDGETS.items():
+        for widget_name, col in _CHECKBOX_WIDGETS.items():
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
-            opts[key] = widget.isChecked()
+            opts[col] = widget.isChecked()
 
-        # Clean out empty/zero/false values to keep storage lean.
-        cleaned = {}
-        for k, v in opts.items():
-            if v is None or v == '' or v == 0 or v is False:
-                continue
-            cleaned[k] = v
-
-        self._model.set_options(self._index, cleaned)
+        self._model.set_options(self._index, opts)
         # set_options() calls reload(), invalidating all QModelIndex objects.
         # Re-resolve so subsequent saves use a valid index.
         if self._rule_id is not None:
@@ -101,20 +94,17 @@ class NATRuleOptionsPanel(QWidget):
             return
         self._save_options()
 
-    def _read_rule_options(self):
-        """Read the full options dict from the database rule."""
+    def _get_rule(self):
+        """Return the ORM NATRule object for the current index, or None."""
         if self._model is None or self._index is None:
-            return {}
+            return None
         row_data = self._model.get_row_data(self._index)
         if row_data is None:
-            return {}
+            return None
         from firewallfabrik.core.objects import NATRule
 
         with self._model._db_manager.session() as session:
-            rule = session.get(NATRule, row_data.rule_id)
-            if rule is not None:
-                return dict(rule.options or {})
-        return {}
+            return session.get(NATRule, row_data.rule_id)
 
     # ------------------------------------------------------------------
     # Signal management
@@ -139,10 +129,3 @@ class NATRuleOptionsPanel(QWidget):
             if widget is not None:
                 widget.toggled.disconnect(self._on_widget_changed)
         self._signals_connected = False
-
-
-def _to_bool(val):
-    """Convert a value to bool, handling string representations."""
-    if isinstance(val, str):
-        return val.lower() in ('true', '1')
-    return bool(val)

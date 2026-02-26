@@ -53,9 +53,8 @@ class RuleSet(Base):
         sqlalchemy.Text,
         default='',
     )
-    options: sqlalchemy.orm.Mapped[dict | None] = sqlalchemy.orm.mapped_column(
-        sqlalchemy.JSON,
-        default=dict,
+    opt_mangle_only_rule_set: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
     )
     ipv4: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean,
@@ -354,6 +353,15 @@ class Rule(Base):
         sqlalchemy.Boolean, default=False
     )
     opt_ipt_nat_persistent: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_use_masq: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    opt_ipt_use_snat_instead_of_masq: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
+    )
+    opt_no_fail: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Boolean, default=False
     )
     # Internal compiler bookkeeping

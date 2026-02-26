@@ -463,11 +463,8 @@ class PrintRule(PolicyRuleProcessor):
         return f'{flag} {start}:{end} '
 
     def _print_icmp(self, srv) -> str:
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
+        icmp_type = srv.icmp_type if srv.icmp_type is not None else -1
+        icmp_code = srv.icmp_code if srv.icmp_code is not None else -1
 
         flag = '--icmpv6-type' if self.compiler.ipv6_policy else '--icmp-type'
         if icmp_type < 0:
@@ -481,9 +478,8 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         parts = []
         if isinstance(srv, IPService):
-            data = srv.data or {}
-            tos = data.get('tos_code', '')
-            dscp = data.get('dscp_code', '')
+            tos = srv.ip_tos or ''
+            dscp = srv.ip_dscp or ''
             if tos:
                 parts.append(f'-m tos --tos {tos}')
             if dscp:
@@ -495,12 +491,20 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(parts)
 
     def _print_tcp_flags(self, srv) -> str:
-        data = srv.data or {}
-        flags_mask = data.get('tcp_flags_mask', '')
-        flags_comp = data.get('tcp_flags_comp', '')
-        if flags_mask and flags_comp:
-            return f'--tcp-flags {flags_mask} {flags_comp}'
-        return ''
+        flag_names = ('URG', 'ACK', 'PSH', 'RST', 'SYN', 'FIN')
+        flag_attrs = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+        mask_parts = []
+        set_parts = []
+        for name, attr in zip(flag_names, flag_attrs, strict=True):
+            if getattr(srv, f'tcp_mask_{attr}', None):
+                mask_parts.append(name)
+            if getattr(srv, f'tcp_flag_{attr}', None):
+                set_parts.append(name)
+        if not mask_parts:
+            return ''
+        mask_str = ','.join(mask_parts)
+        set_str = ','.join(set_parts) if set_parts else 'NONE'
+        return f'--tcp-flags {mask_str} {set_str}'
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""

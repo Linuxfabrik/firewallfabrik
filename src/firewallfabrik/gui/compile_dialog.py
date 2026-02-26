@@ -85,8 +85,7 @@ def _resolve_mgmt_address(fw):
     if fw.opt_altaddress:
         return fw.opt_altaddress
     for iface in fw.interfaces:
-        iface_data = iface.data or {}
-        if str(iface_data.get('management', '')).lower() in ('true', '1'):
+        if iface.iface_management:
             for addr in iface.addresses:
                 return str(addr.address) if hasattr(addr, 'address') else addr.name
     return ''
@@ -217,13 +216,12 @@ class CompileDialog(QDialog):
                 .all()
             )
             for fw in firewalls:
-                data = fw.data or {}
-                platform = data.get('platform', '')
-                inactive = data.get('inactive') in (True, 'True')
+                platform = fw.host_platform or ''
+                inactive = fw.host_inactive
                 supported = platform in _PLATFORM_CLI
-                last_modified = int(data.get('lastModified', 0) or 0)
-                last_compiled = int(data.get('lastCompiled', 0) or 0)
-                last_installed = int(data.get('lastInstalled', 0) or 0)
+                last_modified = fw.host_last_modified
+                last_compiled = fw.host_last_compiled
+                last_installed = fw.host_last_installed
                 needs_compile = last_modified > last_compiled or last_compiled == 0
                 needs_install = last_compiled > last_installed or last_installed == 0
 
@@ -275,9 +273,9 @@ class CompileDialog(QDialog):
                     )
 
                 # Col 3-5: timestamps (stored as epoch ints)
-                item.setText(3, _format_epoch(data.get('lastModified', 0)))
-                item.setText(4, _format_epoch(data.get('lastCompiled', 0)))
-                item.setText(5, _format_epoch(data.get('lastInstalled', 0)))
+                item.setText(3, _format_epoch(last_modified))
+                item.setText(4, _format_epoch(last_compiled))
+                item.setText(5, _format_epoch(last_installed))
 
                 # Unsupported platform: disable the item
                 if not supported:
@@ -598,16 +596,7 @@ class CompileDialog(QDialog):
                 session.execute(
                     sqlalchemy.update(Firewall)
                     .where(Firewall.id.in_(fw_uuids))
-                    .values(
-                        data=sqlalchemy.func.json_set(
-                            sqlalchemy.func.coalesce(
-                                Firewall.data,
-                                sqlalchemy.literal_column("'{}'"),
-                            ),
-                            '$.lastCompiled',
-                            epoch,
-                        )
-                    )
+                    .values(host_last_compiled=epoch)
                 )
             self._db_manager.save_state('Compile firewalls')
 
@@ -798,16 +787,7 @@ class CompileDialog(QDialog):
                 session.execute(
                     sqlalchemy.update(Firewall)
                     .where(Firewall.id.in_(fw_uuids))
-                    .values(
-                        data=sqlalchemy.func.json_set(
-                            sqlalchemy.func.coalesce(
-                                Firewall.data,
-                                sqlalchemy.literal_column("'{}'"),
-                            ),
-                            '$.lastInstalled',
-                            epoch,
-                        )
-                    )
+                    .values(host_last_installed=epoch)
                 )
             self._db_manager.save_state('Install firewalls')
 

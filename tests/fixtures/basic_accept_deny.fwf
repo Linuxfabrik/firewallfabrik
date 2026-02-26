@@ -4,9 +4,9 @@ libraries:
     children:
       - type: 'ICMPService'
         name: 'echo request'
-        data:
-          type: '8'
-          code: '0'
+        codes:
+          type: 8
+          code: 0
       - type: 'IPv4'
         name: 'external-host'
         inet_addr_mask:

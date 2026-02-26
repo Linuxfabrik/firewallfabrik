@@ -482,28 +482,26 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_icmp(self, srv) -> str:
-        data = srv.data or {}
-        icmp_type = int(data.get('type', -1) or -1)
+        icmp_type = srv.icmp_type if srv.icmp_type is not None else -1
+        icmp_code = srv.icmp_code if srv.icmp_code is not None else -1
         if icmp_type < 0:
             return ''
-        icmp_code = int(data.get('code', -1) or -1)
         if icmp_code >= 0:
             return f'{icmp_type}/{icmp_code}'
         return str(icmp_type)
 
     def _print_ip(self, srv) -> str:
-        data = srv.data or {}
         parts = []
-        if data.get('fragm') or data.get('short_fragm'):
+        if srv.ip_opt_fragm or srv.ip_opt_short_fragm:
             parts.append('-f')
         options = []
-        if data.get('lsrr'):
+        if srv.ip_opt_lsrr:
             options.append('--lsrr')
-        if data.get('ssrr'):
+        if srv.ip_opt_ssrr:
             options.append('--ssrr')
-        if data.get('rr'):
+        if srv.ip_opt_rr:
             options.append('--rr')
-        if data.get('ts'):
+        if srv.ip_opt_ts:
             options.append('--ts')
         if options:
             parts.append('-m ipv4options')

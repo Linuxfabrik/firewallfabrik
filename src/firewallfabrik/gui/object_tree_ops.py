@@ -60,9 +60,7 @@ def _stamp_parent_firewall(obj):
     elif isinstance(obj, Address) and obj.interface is not None:
         return _stamp_parent_firewall(obj.interface)
     if fw is not None:
-        data = dict(fw.data or {})
-        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
-        fw.data = data
+        fw.host_last_modified = int(datetime.now(tz=UTC).timestamp())
     return fw
 
 
@@ -1008,10 +1006,8 @@ class TreeOperations:
                             type=addr_type,
                             interface_id=iface_id,
                             name=addr_name,
-                            inet_addr_mask={
-                                'address': addr_str,
-                                'netmask': mask_str,
-                            },
+                            inet_address=addr_str,
+                            inet_netmask=mask_str,
                         )
                         session.add(addr)
 

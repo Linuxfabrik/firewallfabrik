@@ -16,16 +16,6 @@ from PySide6.QtCore import Slot
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
-
-def _is_true(val):
-    """Return True for bool True or string 'True'/'true'."""
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.lower() == 'true'
-    return bool(val)
-
-
 _TCP_FLAGS = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
 _TCP_FLAG_LABELS = (
     'flags_lbl_1',
@@ -50,17 +40,14 @@ class TCPServiceDialog(BaseObjectDialog):
         self.se.setValue(self._obj.src_range_end or 0)
         self.ds.setValue(self._obj.dst_range_start or 0)
         self.de.setValue(self._obj.dst_range_end or 0)
-        data = self._obj.data or {}
-        self.established.setChecked(data.get('established') == 'True')
-        flags = self._obj.tcp_flags or {}
-        masks = self._obj.tcp_flags_masks or {}
+        self.established.setChecked(bool(self._obj.tcp_established))
         for flag in _TCP_FLAGS:
             mask_cb = getattr(self, f'{flag}_m', None)
             set_cb = getattr(self, f'{flag}_s', None)
             if mask_cb:
-                mask_cb.setChecked(bool(masks.get(flag)))
+                mask_cb.setChecked(bool(getattr(self._obj, f'tcp_mask_{flag}', None)))
             if set_cb:
-                set_cb.setChecked(bool(flags.get(flag)))
+                set_cb.setChecked(bool(getattr(self._obj, f'tcp_flag_{flag}', None)))
         self.toggleEstablished()
 
     def _apply_changes(self):
@@ -74,20 +61,14 @@ class TCPServiceDialog(BaseObjectDialog):
         self._obj.src_range_end = self.se.value()
         self._obj.dst_range_start = self.ds.value()
         self._obj.dst_range_end = self.de.value()
-        data = dict(self._obj.data or {})
-        data['established'] = str(self.established.isChecked())
-        self._obj.data = data
-        flags = {}
-        masks = {}
+        self._obj.tcp_established = self.established.isChecked()
         for flag in _TCP_FLAGS:
             mask_cb = getattr(self, f'{flag}_m', None)
             set_cb = getattr(self, f'{flag}_s', None)
             if mask_cb:
-                masks[flag] = mask_cb.isChecked()
+                setattr(self._obj, f'tcp_mask_{flag}', mask_cb.isChecked())
             if set_cb:
-                flags[flag] = set_cb.isChecked()
-        self._obj.tcp_flags = flags
-        self._obj.tcp_flags_masks = masks
+                setattr(self._obj, f'tcp_flag_{flag}', set_cb.isChecked())
 
     @Slot()
     def toggleEstablished(self):
@@ -134,16 +115,17 @@ class ICMPServiceDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        codes = self._obj.codes or {}
-        self.icmpType.setValue(int(codes.get('type', -1)))
-        self.icmpCode.setValue(int(codes.get('code', -1)))
+        self.icmpType.setValue(
+            self._obj.icmp_type if self._obj.icmp_type is not None else -1
+        )
+        self.icmpCode.setValue(
+            self._obj.icmp_code if self._obj.icmp_code is not None else -1
+        )
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        self._obj.codes = {
-            'type': self.icmpType.value(),
-            'code': self.icmpCode.value(),
-        }
+        self._obj.icmp_type = self.icmpType.value()
+        self._obj.icmp_code = self.icmpCode.value()
 
 
 _IP_OPTION_CHECKBOXES = ('lsrr', 'router_alert', 'rr', 'ssrr', 'timestamp')
@@ -155,49 +137,43 @@ class IPServiceDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        protocols = self._obj.named_protocols or {}
-        self.protocolNum.setValue(int(protocols.get('protocol_num', 0)))
-        data = self._obj.data or {}
-        dscp = data.get('dscp')
+        self.protocolNum.setValue(self._obj.protocol_num or 0)
+        dscp = self._obj.ip_dscp or ''
         if dscp:
             self.use_dscp.setChecked(True)
             self.code.setText(dscp)
         else:
-            tos = data.get('tos')
+            tos = self._obj.ip_tos or ''
             if tos:
                 self.use_tos.setChecked(True)
                 self.code.setText(tos)
-        self.any_opt.setChecked(_is_true(data.get('any_opt')))
-        self.lsrr.setChecked(_is_true(data.get('lsrr')))
-        self.ssrr.setChecked(_is_true(data.get('ssrr')))
-        self.rr.setChecked(_is_true(data.get('rr')))
-        self.timestamp.setChecked(_is_true(data.get('ts')))
-        self.router_alert.setChecked(_is_true(data.get('rtralt')))
-        self.all_fragments.setChecked(_is_true(data.get('fragm')))
-        self.short_fragments.setChecked(_is_true(data.get('short_fragm')))
+        self.any_opt.setChecked(bool(self._obj.ip_opt_any_opt))
+        self.lsrr.setChecked(bool(self._obj.ip_opt_lsrr))
+        self.ssrr.setChecked(bool(self._obj.ip_opt_ssrr))
+        self.rr.setChecked(bool(self._obj.ip_opt_rr))
+        self.timestamp.setChecked(bool(self._obj.ip_opt_ts))
+        self.router_alert.setChecked(bool(self._obj.ip_opt_rtralt))
+        self.all_fragments.setChecked(bool(self._obj.ip_opt_fragm))
+        self.short_fragments.setChecked(bool(self._obj.ip_opt_short_fragm))
         self.anyOptionsStateChanged()
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        self._obj.named_protocols = {
-            'protocol_num': str(self.protocolNum.value()),
-        }
-        data = dict(self._obj.data or {})
+        self._obj.protocol_num = self.protocolNum.value()
         if self.use_dscp.isChecked():
-            data['dscp'] = self.code.text()
-            data.pop('tos', None)
+            self._obj.ip_dscp = self.code.text()
+            self._obj.ip_tos = None
         else:
-            data['tos'] = self.code.text()
-            data.pop('dscp', None)
-        data['any_opt'] = str(self.any_opt.isChecked())
-        data['lsrr'] = str(self.lsrr.isChecked())
-        data['ssrr'] = str(self.ssrr.isChecked())
-        data['rr'] = str(self.rr.isChecked())
-        data['ts'] = str(self.timestamp.isChecked())
-        data['rtralt'] = str(self.router_alert.isChecked())
-        data['fragm'] = str(self.all_fragments.isChecked())
-        data['short_fragm'] = str(self.short_fragments.isChecked())
-        self._obj.data = data
+            self._obj.ip_tos = self.code.text()
+            self._obj.ip_dscp = None
+        self._obj.ip_opt_any_opt = self.any_opt.isChecked()
+        self._obj.ip_opt_lsrr = self.lsrr.isChecked()
+        self._obj.ip_opt_ssrr = self.ssrr.isChecked()
+        self._obj.ip_opt_rr = self.rr.isChecked()
+        self._obj.ip_opt_ts = self.timestamp.isChecked()
+        self._obj.ip_opt_rtralt = self.router_alert.isChecked()
+        self._obj.ip_opt_fragm = self.all_fragments.isChecked()
+        self._obj.ip_opt_short_fragm = self.short_fragments.isChecked()
 
     @Slot()
     def anyOptionsStateChanged(self):

@@ -595,29 +595,26 @@ def obj_brief_attrs(obj, under_interface=False):
 
     # -- Addresses --
     if type_str in ('IPv4', 'IPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
+        addr = getattr(obj, 'inet_address', '') or ''
         if under_interface:
-            mask = iam.get('netmask', '')
+            mask = getattr(obj, 'inet_netmask', '') or ''
             return f'{addr}/{mask}' if addr else ''
         return addr or ''
 
     if type_str in ('Network', 'NetworkIPv6'):
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        addr = iam.get('address', '')
-        mask = iam.get('netmask', '')
+        addr = getattr(obj, 'inet_address', '') or ''
+        mask = getattr(obj, 'inet_netmask', '') or ''
         return f'{addr}/{mask}' if addr else ''
 
     if type_str == 'AddressRange':
-        start = (getattr(obj, 'start_address', None) or {}).get('address', '')
-        end = (getattr(obj, 'end_address', None) or {}).get('address', '')
+        start = getattr(obj, 'range_start', '') or ''
+        end = getattr(obj, 'range_end', '') or ''
         if start or end:
             return f'{start} - {end}'
         return ''
 
     if type_str == 'PhysAddress':
-        iam = getattr(obj, 'inet_addr_mask', None) or {}
-        return iam.get('address', '') or ''
+        return getattr(obj, 'inet_address', '') or ''
 
     # -- Devices --
     if type_str in ('Cluster', 'Firewall'):
@@ -640,22 +637,21 @@ def obj_brief_attrs(obj, under_interface=False):
         return f'{ss}:{se} / {ds}:{de}'
 
     if type_str in ('ICMP6Service', 'ICMPService'):
-        codes = getattr(obj, 'codes', None) or {}
-        icmp_type = codes.get('type', -1)
-        code = codes.get('code', -1)
-        return f'type: {icmp_type}  code: {code}'
+        icmp_type = getattr(obj, 'icmp_type', None)
+        icmp_code = getattr(obj, 'icmp_code', None)
+        t_str = icmp_type if icmp_type is not None else -1
+        c_str = icmp_code if icmp_code is not None else -1
+        return f'type: {t_str}  code: {c_str}'
 
     if type_str == 'IPService':
-        named = getattr(obj, 'named_protocols', None) or {}
-        protocol_num = named.get('protocol_num', '')
-        if protocol_num:
+        protocol_num = getattr(obj, 'protocol_num', None)
+        if protocol_num is not None:
             return f'protocol: {protocol_num}'
         return ''
 
     # -- Interface --
     if type_str == 'Interface':
-        data = getattr(obj, 'data', None) or {}
-        label = data.get('label', '')
+        label = getattr(obj, 'iface_label', None) or ''
         flags = []
         if getattr(obj, 'is_dynamic', lambda: False)():
             flags.append('dyn')

@@ -54,8 +54,10 @@ class RoutingRuleOptionsPanel(QWidget):
         """Read options from the database and populate all widgets."""
         self._loading = True
         try:
-            opts = self._read_rule_options()
-            self.routing_non_critical_rule.setChecked(_to_bool(opts.get('no_fail')))
+            rule = self._get_rule()
+            self.routing_non_critical_rule.setChecked(
+                getattr(rule, 'opt_no_fail', False) if rule else False
+            )
         finally:
             self._loading = False
 
@@ -63,18 +65,11 @@ class RoutingRuleOptionsPanel(QWidget):
         """Collect values from all widgets and persist via the model."""
         if self._model is None or self._index is None:
             return
-        opts = self._read_rule_options()
+        opts = {
+            'opt_no_fail': self.routing_non_critical_rule.isChecked(),
+        }
 
-        opts['no_fail'] = self.routing_non_critical_rule.isChecked()
-
-        # Clean out empty/zero/false values to keep storage lean.
-        cleaned = {}
-        for k, v in opts.items():
-            if v is None or v == '' or v == 0 or v is False:
-                continue
-            cleaned[k] = v
-
-        self._model.set_options(self._index, cleaned)
+        self._model.set_options(self._index, opts)
         # set_options() calls reload(), invalidating all QModelIndex objects.
         # Re-resolve so subsequent saves use a valid index.
         if self._rule_id is not None:
@@ -86,20 +81,17 @@ class RoutingRuleOptionsPanel(QWidget):
             return
         self._save_options()
 
-    def _read_rule_options(self):
-        """Read the full options dict from the database rule."""
+    def _get_rule(self):
+        """Return the ORM RoutingRule object for the current index, or None."""
         if self._model is None or self._index is None:
-            return {}
+            return None
         row_data = self._model.get_row_data(self._index)
         if row_data is None:
-            return {}
+            return None
         from firewallfabrik.core.objects import RoutingRule
 
         with self._model._db_manager.session() as session:
-            rule = session.get(RoutingRule, row_data.rule_id)
-            if rule is not None:
-                return dict(rule.options or {})
-        return {}
+            return session.get(RoutingRule, row_data.rule_id)
 
     # ------------------------------------------------------------------
     # Signal management
@@ -118,10 +110,3 @@ class RoutingRuleOptionsPanel(QWidget):
             return
         self.routing_non_critical_rule.toggled.disconnect(self._on_widget_changed)
         self._signals_connected = False
-
-
-def _to_bool(val):
-    """Convert a value to bool, handling string representations."""
-    if isinstance(val, str):
-        return val.lower() in ('true', '1')
-    return bool(val)

@@ -616,7 +616,7 @@ class DropMangleTableRules(PolicyRuleProcessor):
             return False
 
         rs = self.compiler.source_ruleset
-        if rs is not None and rs.options and rs.options.get('mangle_only_rule_set'):
+        if rs is not None and rs.opt_mangle_only_rule_set:
             return True  # drop
 
         if (

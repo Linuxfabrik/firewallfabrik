@@ -82,6 +82,32 @@ class Host(Base):
         sqlalchemy.orm.mapped_column(sqlalchemy.JSON, nullable=True, default=None)
     )
 
+    # -- Typed data columns (promoted from data JSON dict) --
+    host_platform: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    host_os_val: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    host_version: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    host_inactive: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    host_last_modified: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    host_last_compiled: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    host_last_installed: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer, default=0
+    )
+    host_mac_filter_enabled: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+
     # -- Typed option columns --
     # Linux kernel options (sysctl)
     opt_ip_forward: sqlalchemy.orm.Mapped[str] = sqlalchemy.orm.mapped_column(
@@ -503,21 +529,15 @@ class Host(Base):
 
     @property
     def platform(self) -> str:
-        if self.data:
-            return self.data.get('platform', '')
-        return ''
+        return self.host_platform or ''
 
     @property
     def host_os(self) -> str:
-        if self.data:
-            return self.data.get('host_OS', '')
-        return ''
+        return self.host_os_val or ''
 
     @property
     def version(self) -> str:
-        if self.data:
-            return self.data.get('version', '')
-        return ''
+        return self.host_version or ''
 
 
 class Firewall(Host):
@@ -579,6 +599,29 @@ class Interface(Base):
     snmp_type: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer,
         default=0,
+    )
+
+    # -- Typed data columns (promoted from data JSON dict) --
+    iface_dyn: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    iface_unnum: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    iface_label: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.String, nullable=True, default=None
+    )
+    iface_security_level: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.String, nullable=True, default=None)
+    )
+    iface_management: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    iface_unprotected: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean, default=False
+    )
+    iface_dedicated_failover: sqlalchemy.orm.Mapped[bool] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Boolean, default=False)
     )
 
     # -- Typed option columns --
@@ -659,10 +702,10 @@ class Interface(Base):
         return self.name == 'lo'
 
     def is_dynamic(self) -> bool:
-        return bool((self.data or {}).get('dyn', False))
+        return self.iface_dyn
 
     def is_unnumbered(self) -> bool:
-        return bool((self.data or {}).get('unnum', False))
+        return self.iface_unnum
 
     def is_regular(self) -> bool:
         return (

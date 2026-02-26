@@ -71,17 +71,14 @@ class _BaseAddressDialog(BaseObjectDialog):
     """Base for IPv4/IPv6/Network/NetworkIPv6 dialogs (name + address + netmask)."""
 
     def _populate(self):
-        inet = self._obj.inet_addr_mask or {}
         self.obj_name.setText(self._obj.name or '')
-        self.address.setText(inet.get('address', ''))
-        self.netmask.setText(inet.get('netmask', ''))
+        self.address.setText(self._obj.inet_address or '')
+        self.netmask.setText(self._obj.inet_netmask or '')
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        inet = dict(self._obj.inet_addr_mask or {})
-        inet['address'] = self.address.text()
-        inet['netmask'] = self.netmask.text()
-        self._obj.inet_addr_mask = inet
+        self._obj.inet_address = self.address.text()
+        self._obj.inet_netmask = self.netmask.text()
 
 
 class IPv4Dialog(_BaseAddressDialog):
@@ -263,10 +260,8 @@ class AddressRangeDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        start = self._obj.start_address or {}
-        end = self._obj.end_address or {}
-        self.rangeStart.setText(start.get('address', ''))
-        self.rangeEnd.setText(end.get('address', ''))
+        self.rangeStart.setText(self._obj.range_start or '')
+        self.rangeEnd.setText(self._obj.range_end or '')
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
@@ -316,12 +311,8 @@ class AddressRangeDialog(BaseObjectDialog):
             if end_addr < start_addr:
                 end_addr = start_addr
                 self.rangeEnd.setText(str(end_addr))
-        start = dict(self._obj.start_address or {})
-        start['address'] = self.rangeStart.text().strip()
-        self._obj.start_address = start
-        end = dict(self._obj.end_address or {})
-        end['address'] = self.rangeEnd.text().strip()
-        self._obj.end_address = end
+        self._obj.range_start = self.rangeStart.text().strip()
+        self._obj.range_end = self.rangeEnd.text().strip()
 
     @Slot()
     def addressEntered(self):
@@ -364,14 +355,11 @@ class PhysAddressDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        inet = self._obj.inet_addr_mask or {}
-        self.pAddress.setText(inet.get('address', ''))
+        self.pAddress.setText(self._obj.inet_address or '')
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
-        inet = dict(self._obj.inet_addr_mask or {})
-        inet['address'] = self.pAddress.text()
-        self._obj.inet_addr_mask = inet
+        self._obj.inet_address = self.pAddress.text()
 
     @Slot()
     def changed(self):

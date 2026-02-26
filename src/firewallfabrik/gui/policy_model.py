@@ -564,9 +564,7 @@ class PolicyTreeModel(QAbstractItemModel):
         fw = rs.device
         if not isinstance(fw, Firewall):
             return None
-        data = dict(fw.data or {})
-        data['lastModified'] = int(datetime.now(tz=UTC).timestamp())
-        fw.data = data
+        fw.host_last_modified = int(datetime.now(tz=UTC).timestamp())
         return fw
 
     @contextlib.contextmanager
@@ -1612,12 +1610,7 @@ class PolicyTreeModel(QAbstractItemModel):
         ) as session:
             rule = session.get(self._rule_cls, row_data.rule_id)
             if rule is not None:
-                opts = dict(rule.options or {})
-                if metric:
-                    opts['metric'] = metric
-                else:
-                    opts.pop('metric', None)
-                rule.options = opts
+                rule.opt_metric = metric or 0
         self.reload()
 
     def set_options(self, index, options):

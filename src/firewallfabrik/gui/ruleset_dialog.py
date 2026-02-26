@@ -41,7 +41,7 @@ class RuleSetDialog(BaseObjectDialog):
 
         if platform == 'iptables' and rs_type == 'Policy':
             self.iptables_only.show()
-            mangle_only = bool((rs.options or {}).get('mangle_only_rule_set'))
+            mangle_only = rs.opt_mangle_only_rule_set
             self.ipt_mangle_table.setChecked(mangle_only)
             self.ipt_filter_table.setChecked(not mangle_only)
         else:
@@ -67,6 +67,4 @@ class RuleSetDialog(BaseObjectDialog):
         device = rs.device
         platform = device.platform if device else ''
         if platform == 'iptables' and rs.type == 'Policy':
-            opts = dict(rs.options or {})
-            opts['mangle_only_rule_set'] = self.ipt_mangle_table.isChecked()
-            rs.options = opts
+            rs.opt_mangle_only_rule_set = self.ipt_mangle_table.isChecked()

@@ -105,19 +105,23 @@ def test_fwb_rule_negations_are_booleans(fixture_path):
     ids=[p.stem for p in _FWB_FILES],
 )
 def test_fwb_service_tcp_flags_are_booleans(fixture_path):
-    """XML TCP flag dicts must contain Python bools, not strings."""
+    """TCP flag typed columns must contain Python bools, not strings."""
     db = _get_db(fixture_path)
+    flag_attrs = [
+        f'tcp_{prefix}_{f}'
+        for prefix in ('flag', 'mask')
+        for f in ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+    ]
 
     with db.session() as session:
         for svc in session.execute(sqlalchemy.select(Service)).scalars():
-            _assert_no_string_bools(
-                svc.tcp_flags,
-                f'Service({svc.name}).tcp_flags',
-            )
-            _assert_no_string_bools(
-                svc.tcp_flags_masks,
-                f'Service({svc.name}).tcp_flags_masks',
-            )
+            for attr in flag_attrs:
+                val = getattr(svc, attr, None)
+                if val is not None:
+                    assert isinstance(val, bool), (
+                        f'Service({svc.name}).{attr} is {type(val).__name__} '
+                        f'{val!r}, expected bool or None'
+                    )
 
 
 @pytest.mark.parametrize(
@@ -143,14 +147,15 @@ def test_fwb_device_management_are_booleans(fixture_path):
     ids=[p.stem for p in _FWB_FILES],
 )
 def test_fwb_ruleset_options_are_booleans(fixture_path):
-    """XML RuleSet options must not contain string booleans after loading."""
+    """RuleSet typed option columns must contain Python bools, not strings."""
     db = _get_db(fixture_path)
 
     with db.session() as session:
         for rs in session.execute(sqlalchemy.select(RuleSet)).scalars():
-            _assert_no_string_bools(
-                rs.options,
-                f'RuleSet({rs.name}).options',
+            val = rs.opt_mangle_only_rule_set
+            assert isinstance(val, bool), (
+                f'RuleSet({rs.name}).opt_mangle_only_rule_set is '
+                f'{type(val).__name__} {val!r}, expected bool'
             )
 
 
