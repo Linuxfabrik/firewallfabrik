@@ -17,38 +17,9 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDialog, QMessageBox
 
+from firewallfabrik.core.options._metadata import PLATFORM_DEFAULTS
 from firewallfabrik.gui.platform_settings import get_enabled_os, get_enabled_platforms
 from firewallfabrik.gui.ui_loader import FWFUiLoader
-
-# Default options per platform, sourced from fwbuilder's iptables.xml / nftables.xml.
-# Keys are ORM column names (opt_*); values are properly typed.
-_PLATFORM_DEFAULTS: dict[str, dict[str, object]] = {
-    'iptables': {
-        'opt_accept_established': True,
-        'opt_accept_new_tcp_with_no_syn': True,
-        'opt_check_shading': True,
-        'opt_configure_interfaces': True,
-        'opt_firewall_is_part_of_any_and_networks': True,
-        'opt_limit_value': 0,
-        'opt_load_modules': True,
-        'opt_local_nat': False,
-        'opt_log_level': 'info',
-        'opt_log_prefix': 'RULE %N -- %A ',
-        'opt_manage_virtual_addr': True,
-        'opt_ulog_nlgroup': 1,
-        'opt_verify_interfaces': True,
-    },
-    'nftables': {
-        'opt_accept_established': True,
-        'opt_accept_new_tcp_with_no_syn': True,
-        'opt_check_shading': True,
-        'opt_firewall_is_part_of_any_and_networks': True,
-        'opt_limit_value': 0,
-        'opt_local_nat': False,
-        'opt_log_level': 'info',
-        'opt_log_prefix': 'RULE %N -- %A ',
-    },
-}
 
 # Display titles per object type.
 _TITLES = {
@@ -129,7 +100,7 @@ class NewDeviceDialog(QDialog):
         platform = self.platform.currentData() or ''
         return name, {
             'host_OS': self.hostOS.currentData() or '',
-            'platform_defaults': dict(_PLATFORM_DEFAULTS.get(platform, {})),
+            'platform_defaults': dict(PLATFORM_DEFAULTS.get(platform, {})),
             'platform': platform,
             'version': '',
         }

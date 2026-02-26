@@ -298,6 +298,37 @@ HOST_COMPILER_DEFAULTS: dict[str, Any] = {
     if m.compiler_default is not None
 }
 
+# Default options applied when creating a new firewall, per platform.
+# Sourced from fwbuilder's iptables.xml / nftables.xml.
+# Keys are ORM column names (opt_*); values are properly typed.
+PLATFORM_DEFAULTS: dict[str, dict[str, object]] = {
+    'iptables': {
+        'opt_accept_established': True,
+        'opt_accept_new_tcp_with_no_syn': True,
+        'opt_check_shading': True,
+        'opt_configure_interfaces': True,
+        'opt_firewall_is_part_of_any_and_networks': True,
+        'opt_limit_value': 0,
+        'opt_load_modules': True,
+        'opt_local_nat': False,
+        'opt_log_level': 'info',
+        'opt_log_prefix': 'RULE %N -- %A ',
+        'opt_manage_virtual_addr': True,
+        'opt_ulog_nlgroup': 1,
+        'opt_verify_interfaces': True,
+    },
+    'nftables': {
+        'opt_accept_established': True,
+        'opt_accept_new_tcp_with_no_syn': True,
+        'opt_check_shading': True,
+        'opt_firewall_is_part_of_any_and_networks': True,
+        'opt_limit_value': 0,
+        'opt_local_nat': False,
+        'opt_log_level': 'info',
+        'opt_log_prefix': 'RULE %N -- %A ',
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Interface options
 # ---------------------------------------------------------------------------
