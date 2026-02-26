@@ -877,8 +877,10 @@ class TreeOperations:
                     if folder in NEW_TYPES_FOR_FOLDER:
                         folder = None
 
-            # Extract options from extra_data (platform defaults for devices).
-            options = extra_data.pop('options', None) if extra_data else None
+            # Extract platform defaults from extra_data (typed column values).
+            platform_defaults = (
+                extra_data.pop('platform_defaults', None) if extra_data else None
+            )
 
             # Build data dict: merge folder and extra_data.
             data = {}
@@ -889,10 +891,13 @@ class TreeOperations:
             if data and hasattr(model_cls, 'data'):
                 kwargs['data'] = data
 
-            if options and hasattr(model_cls, 'options'):
-                kwargs['options'] = options
-
             new_obj = model_cls(**kwargs)
+
+            # Apply platform defaults to typed columns.
+            if platform_defaults:
+                for col_name, value in platform_defaults.items():
+                    if hasattr(new_obj, col_name):
+                        setattr(new_obj, col_name, value)
             new_obj.name = name or f'New {type_name}'
 
             # Make name unique.

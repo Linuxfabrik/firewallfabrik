@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import Firewall
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Platform -> CLI tool mapping
@@ -692,9 +693,11 @@ class CompileDialog(QDialog):
             fw = session.get(Firewall, uuid.UUID(fw_uuid_str))
 
         config = InstallConfig(
-            user=(fw.opt_admuser if fw else '') or 'root',
+            user=(fw.opt_admuser if fw else '')
+            or HOST_COMPILER_DEFAULTS['opt_admuser'],
             mgmt_address=mgmt_addr,
-            firewall_dir=(fw.opt_firewall_dir if fw else '') or '/etc/fw',
+            firewall_dir=(fw.opt_firewall_dir if fw else '')
+            or HOST_COMPILER_DEFAULTS['opt_firewall_dir'],
             ssh_args=(fw.opt_sshargs if fw else '') or '',
             scp_args=(fw.opt_scpargs if fw else '') or '',
             activation_cmd=(fw.opt_activationcmd if fw else '') or '',

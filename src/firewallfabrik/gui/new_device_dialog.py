@@ -21,31 +21,32 @@ from firewallfabrik.gui.platform_settings import get_enabled_os, get_enabled_pla
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 # Default options per platform, sourced from fwbuilder's iptables.xml / nftables.xml.
-_PLATFORM_DEFAULTS = {
+# Keys are ORM column names (opt_*); values are properly typed.
+_PLATFORM_DEFAULTS: dict[str, dict[str, object]] = {
     'iptables': {
-        'accept_established': True,
-        'accept_new_tcp_with_no_syn': True,
-        'check_shading': True,
-        'configure_interfaces': True,
-        'firewall_is_part_of_any_and_networks': True,
-        'limit_value': '0',
-        'load_modules': True,
-        'local_nat': False,
-        'log_level': 'info',
-        'log_prefix': 'RULE %N -- %A ',
-        'manage_virtual_addr': True,
-        'ulog_nlgroup': '1',
-        'verify_interfaces': True,
+        'opt_accept_established': True,
+        'opt_accept_new_tcp_with_no_syn': True,
+        'opt_check_shading': True,
+        'opt_configure_interfaces': True,
+        'opt_firewall_is_part_of_any_and_networks': True,
+        'opt_limit_value': 0,
+        'opt_load_modules': True,
+        'opt_local_nat': False,
+        'opt_log_level': 'info',
+        'opt_log_prefix': 'RULE %N -- %A ',
+        'opt_manage_virtual_addr': True,
+        'opt_ulog_nlgroup': 1,
+        'opt_verify_interfaces': True,
     },
     'nftables': {
-        'accept_established': True,
-        'accept_new_tcp_with_no_syn': True,
-        'check_shading': True,
-        'firewall_is_part_of_any_and_networks': True,
-        'limit_value': '0',
-        'local_nat': False,
-        'log_level': 'info',
-        'log_prefix': 'RULE %N -- %A ',
+        'opt_accept_established': True,
+        'opt_accept_new_tcp_with_no_syn': True,
+        'opt_check_shading': True,
+        'opt_firewall_is_part_of_any_and_networks': True,
+        'opt_limit_value': 0,
+        'opt_local_nat': False,
+        'opt_log_level': 'info',
+        'opt_log_prefix': 'RULE %N -- %A ',
     },
 }
 
@@ -128,7 +129,7 @@ class NewDeviceDialog(QDialog):
         platform = self.platform.currentData() or ''
         return name, {
             'host_OS': self.hostOS.currentData() or '',
-            'options': dict(_PLATFORM_DEFAULTS.get(platform, {})),
+            'platform_defaults': dict(_PLATFORM_DEFAULTS.get(platform, {})),
             'platform': platform,
             'version': '',
         }

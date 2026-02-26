@@ -18,6 +18,7 @@ from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
+from firewallfabrik.core.options._metadata import HOST_COMPILER_DEFAULTS
 from firewallfabrik.gui.ui_loader import FWFUiLoader
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui'
@@ -153,6 +154,20 @@ class IptablesSettingsDialog(QDialog):
 
         self._populate()
         self._disable_unsupported()
+
+        # Show compiler defaults as placeholder text so the user knows
+        # what value will be used when the field is left empty.
+        self.ipt_fw_dir.setPlaceholderText(HOST_COMPILER_DEFAULTS['opt_firewall_dir'])
+        self.ipt_fw_dir.setToolTip(
+            'Directory on the firewall where the script will be installed.\n'
+            f'Leave empty to use the compiler default ({HOST_COMPILER_DEFAULTS["opt_firewall_dir"]}).'
+        )
+        self.ipt_user.setPlaceholderText(HOST_COMPILER_DEFAULTS['opt_admuser'])
+        self.ipt_user.setToolTip(
+            'User account for SCP/SSH installation.\n'
+            f'Leave empty to use the default ({HOST_COMPILER_DEFAULTS["opt_admuser"]}).'
+        )
+
         self.accepted.connect(self._save_settings)
 
     def _disable_unsupported(self):
@@ -187,7 +202,7 @@ class IptablesSettingsDialog(QDialog):
         self.epilog_script.setPlainText(self._fw.opt_epilog_script or '')
 
         # Prolog placement combo
-        place = self._fw.opt_prolog_place or 'top'
+        place = self._fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
         try:
             idx = _PROLOG_PLACES.index(place)
         except ValueError:
