@@ -275,6 +275,11 @@ for _key, _cd in [
     ('prolog_place', 'top'),
     ('ipv4_6_order', 'ipv4_first'),
     ('limit_suffix', '/second'),
+    ('nft_path', '/usr/sbin/nft'),
+    ('ip_path', 'ip'),
+    ('ulog_cprange', 0),
+    ('ulog_qthreshold', 1),
+    ('ulog_nlgroup', 1),
 ]:
     _m = HOST_OPTIONS[_key]
     HOST_OPTIONS[_key] = OptionMeta(

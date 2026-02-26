@@ -581,7 +581,7 @@ class CompilerDriver_nft(CompilerDriver):
         epilog_script = fw.opt_epilog_script or ''
         prolog_place = fw.opt_prolog_place or HOST_COMPILER_DEFAULTS['opt_prolog_place']
 
-        nft_path = fw.opt_nft_path or '/usr/sbin/nft'
+        nft_path = fw.opt_nft_path or HOST_COMPILER_DEFAULTS['opt_nft_path']
 
         # Build comment block
         comment_text = (fw.comment or '').rstrip('\n')
@@ -602,7 +602,7 @@ class CompilerDriver_nft(CompilerDriver):
         # Interface configuration
         configure_interfaces = fw.opt_configure_interfaces
         verify_interfaces_opt = fw.opt_verify_interfaces
-        ip_path = fw.opt_ip_path or 'ip'
+        ip_path = fw.opt_ip_path or HOST_COMPILER_DEFAULTS['opt_ip_path']
 
         shell_functions = ''
         configure_interfaces_code = ''

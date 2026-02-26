@@ -224,7 +224,7 @@ class IptablesSettingsDialog(QDialog):
         self.logLevel.setCurrentIndex(max(idx, 0))
 
         # Logging limit
-        self.logLimitVal.setValue(self._fw.opt_limit_value or 0)
+        self.logLimitVal.setValue(self._fw.opt_limit_value)
 
         limit_suffix = (
             self._fw.opt_limit_suffix or HOST_COMPILER_DEFAULTS['opt_limit_suffix']
@@ -238,9 +238,16 @@ class IptablesSettingsDialog(QDialog):
         self.actionOnReject.setCurrentIndex(max(idx, 0))
 
         # ULOG spin boxes
-        self.cprange.setValue(self._fw.opt_ulog_cprange or 0)
-        self.qthreshold.setValue(self._fw.opt_ulog_qthreshold or 1)
-        self.nlgroup.setValue(self._fw.opt_ulog_nlgroup or 1)
+        self.cprange.setValue(
+            self._fw.opt_ulog_cprange or HOST_COMPILER_DEFAULTS['opt_ulog_cprange'],
+        )
+        self.qthreshold.setValue(
+            self._fw.opt_ulog_qthreshold
+            or HOST_COMPILER_DEFAULTS['opt_ulog_qthreshold'],
+        )
+        self.nlgroup.setValue(
+            self._fw.opt_ulog_nlgroup or HOST_COMPILER_DEFAULTS['opt_ulog_nlgroup'],
+        )
 
         # IPv4 before IPv6 combo
         if (self._fw.opt_ipv4_6_order or '').lower() == 'ipv6_first':
