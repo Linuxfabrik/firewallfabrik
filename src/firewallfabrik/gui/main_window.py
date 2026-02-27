@@ -1603,21 +1603,19 @@ class FWWindow(QMainWindow):
             # find an equivalent in the new library by content identity
             # (same type + same ports/addresses/protocol).  This catches
             # renames like "smtp" → "SMTP 25" where port 25/tcp is the
-            # same but the name changed.
+            # same but the name changed.  Path-matched new objects are
+            # included in the pool because multiple old UUIDs may need
+            # to remap to the same new UUID — e.g. user-created "smb"
+            # and the original "SMB 445" can both point to the new
+            # "SMB 445".
             new_obj_map = _build_new_obj_map(new_std)
 
-            # Build identity-key index for new objects that were NOT
-            # already claimed by path-based matching.  Multiple new
-            # objects can share the same key (e.g. several services on
-            # the same port), so we collect them in a list.
             path_matched_new_uuids = {
                 new_uuid for new_uuid, _path in uuid_remap.values()
             }
             new_key_index = {}  # {identity_key: [(new_uuid, new_obj, path)]}
             new_uuid_to_path = {uid: p for p, uid in new_ref_map.items()}
             for new_uuid, new_obj in new_obj_map.items():
-                if new_uuid in path_matched_new_uuids:
-                    continue
                 key = _identity_key(new_obj)
                 if key is not None:
                     new_key_index.setdefault(key, []).append(
@@ -1646,7 +1644,14 @@ class FWWindow(QMainWindow):
                 for new_uuid, new_obj, new_path in candidates:
                     if new_obj is best:
                         uuid_remap[old_uuid] = (new_uuid, new_path)
-                        candidates.remove((new_uuid, new_obj, new_path))
+                        # Only consume candidates that were NOT already
+                        # claimed by path matching.  Path-matched objects
+                        # stay in the pool so additional old objects can
+                        # remap to them (many-old → one-new is valid).
+                        if new_uuid not in path_matched_new_uuids:
+                            candidates.remove(
+                                (new_uuid, new_obj, new_path),
+                            )
                         break
                 removed_referenced.pop(old_uuid, None)
                 removed_unused.pop(old_uuid, None)
