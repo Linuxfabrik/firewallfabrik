@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FreeIPA service group added to the standard library.
 - Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
 - NAT and Routing rule display support with title bar dirty-state indicator.
-- Platform default options (log_level, log_prefix) applied automatically for new firewalls.
+- Platform and OS option defaults defined in YAML as single source of truth, replacing scattered hardcoded dicts.
+- Settings dialogs now show tooltips and placeholder defaults from the YAML schema.
 - Subfolder paste, drag & drop, and nested object creation in the object tree.
 - System theme icons (Breeze, Adwaita, etc.) for toolbar and menu actions, with QRC fallback.
 - Title labels on MDI rule set panels and Del key support for deleting rules.
@@ -35,10 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ICMP type/code now read from the codes field instead of data.
 - Keywords renamed to Tags in context menus.
 - Last-active rule set persisted by name instead of UUID for stability across imports.
+- Linux host settings now save under canonical `linux24_conntrack_*` keys matching the compiler.
 - Lock/Unlock menu actions wired up to tree selection.
 - MDI views refresh on object rename; undo descriptions are now human-readable.
 - Model class name used instead of `.type` in `duplicate_object`.
 - Netmask shown in tree when editing an address under an interface.
+- New objects created via the toolbar menu now land in the selected custom folder.
 - Object tree auto-selects the Policy item when opening a file.
 - ORM objects flushed before raw `rule_elements` INSERT to avoid integrity errors.
 - Output pane context menu shows Ctrl+C and Ctrl+A shortcuts.

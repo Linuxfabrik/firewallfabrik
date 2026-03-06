@@ -1,0 +1,570 @@
+# Nftables platform compiler options.
+#
+# This file is the single source of truth for all nftables compiler
+# option keys, their types, default values, widget mappings, and
+# descriptions (used as GUI tooltips).
+#
+# Options with ``supported: false`` are present in the shared .ui file
+# but are disabled because the nftables compiler does not use them.
+#
+# Keys are listed alphabetically for maintainability.
+
+name: 'nftables'
+description: 'Nftables platform compiler options'
+
+options:
+
+  accept_established:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'acceptESTBeforeFirst'
+    description: >-
+      Accept packets belonging to connections already established or
+      related to established connections.  Adds automatic rules at the
+      top of each access list.
+
+  accept_new_tcp_with_no_syn:
+    type: 'bool'
+    default: true
+    supported: false
+    widget: 'acceptSessions'
+    inverted: true
+    description: >-
+      Accept TCP sessions opened prior to firewall restart.
+      Not supported by the nftables compiler.
+
+  action_on_reject:
+    type: 'enum'
+    default: ''
+    supported: true
+    widget: 'actionOnReject'
+    values:
+      - 'ICMP unreachable'
+      - 'ICMP net unreachable'
+      - 'ICMP host unreachable'
+      - 'ICMP port unreachable'
+      - 'ICMP net prohibited'
+      - 'ICMP host prohibited'
+      - 'TCP RST'
+    description: >-
+      ICMP message type or TCP RST sent back to the sender when a
+      packet is rejected.  Leave empty to use the system default.
+
+  activationCmd:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'activationCmd'
+    description: >-
+      Custom command executed on the firewall after the script has
+      been copied.  Leave empty to use the built-in activation.
+
+  add_mgmt_ssh_rule_when_stoped:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'add_mgmt_ssh_rule_when_stoped'
+    description: >-
+      Install the rule for SSH access from the management workstation
+      even when the firewall script is run with the "block" command.
+      Not supported by the nftables compiler.
+
+  admUser:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'ipt_user'
+    description: >-
+      SSH user name for uploading the generated script to the firewall.
+      Leave empty to use the current system user.
+
+  altAddress:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'altAddress'
+    description: >-
+      Alternative address used for SCP/SSH if the primary management
+      address is unreachable.
+
+  bridging_fw:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'bridge'
+    description: >-
+      Generate rules for a bridging (transparent) firewall.
+      Not supported by the nftables compiler.
+
+  check_shading:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'shadowing'
+    description: >-
+      Detect rules that are completely shadowed by earlier rules
+      in the same access list and report a warning.
+
+  clamp_mss_to_mtu:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'clampMSStoMTU'
+    description: >-
+      Clamp MSS to MTU.  Not supported by the nftables compiler.
+
+  clear_unknown_interfaces:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'clearUnknownInterfaces'
+    description: >-
+      Clear IP addresses and bring down interfaces that are not
+      configured in FirewallFabrik.
+
+  cmdline:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'compilerArgs'
+    description: >-
+      Additional command-line arguments passed to the compiler.
+
+  compiler:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'compiler'
+    description: >-
+      Path to an alternative compiler binary.  Leave empty to use
+      the built-in compiler.
+
+  configure_bonding_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_bonding_interfaces'
+    description: >-
+      Configure bonding interfaces.
+      Not supported by the nftables compiler.
+
+  configure_bridge_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_bridge_interfaces'
+    description: >-
+      Configure bridge interfaces.
+      Not supported by the nftables compiler.
+
+  configure_interfaces:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'configureInterfaces'
+    description: >-
+      Configure IP addresses on interfaces of the firewall machine
+      as part of the generated script.
+
+  configure_vlan_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_vlan_interfaces'
+    description: >-
+      Configure VLAN interfaces.
+      Not supported by the nftables compiler.
+
+  debug:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'iptDebug'
+    description: >-
+      Turn on shell debugging (set -x) in the generated script
+      for troubleshooting.
+
+  drop_invalid:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'dropInvalid'
+    description: >-
+      Drop packets that are associated with no known connection
+      (conntrack state INVALID).
+
+  epilog_script:
+    type: 'text'
+    default: ''
+    supported: true
+    widget: 'epilog_script'
+    description: >-
+      Shell commands appended after all firewall rules.
+      Use for custom cleanup or final actions.
+
+  firewall_dir:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'ipt_fw_dir'
+    placeholder: '/etc/fw'
+    description: >-
+      Directory on the firewall where the generated script will
+      be stored.  Leave empty to use the default (/etc/fw).
+
+  firewall_is_part_of_any_and_networks:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'assumeFwIsPartOfAny'
+    description: >-
+      Assume the firewall machine is part of "any" and matching
+      network objects.  When enabled, the compiler generates rules
+      for traffic to/from the firewall itself.
+
+  ignore_empty_groups:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'emptyGroups'
+    description: >-
+      Silently ignore empty groups referenced in rules instead of
+      reporting a compiler error.
+
+  installScript:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'installScript'
+    description: >-
+      Path to a custom installation script executed instead of the
+      default SCP/SSH mechanism.
+
+  installScriptArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'installScriptArgs'
+    description: >-
+      Arguments passed to the custom installation script.
+
+  ip_path:
+    type: 'str'
+    default: '/sbin/ip'
+    supported: true
+    widget: ~
+    description: >-
+      Path to the ip command used for interface configuration
+      in the generated script.
+
+  ipv4_6_order:
+    type: 'enum'
+    default: 'ipv4_first'
+    supported: true
+    widget: 'ipv4before'
+    values:
+      - 'ipv4_first'
+      - 'ipv6_first'
+    description: >-
+      Order in which IPv4 and IPv6 rules are generated in the
+      output script.
+
+  ipv6_neighbor_discovery:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'ipv6NeighborDiscovery'
+    description: >-
+      Automatically generate rules to permit ICMPv6 Neighbor
+      Discovery packets.  Not supported by the nftables compiler.
+
+  limit_suffix:
+    type: 'enum'
+    default: '/second'
+    supported: false
+    widget: 'logLimitSuffix'
+    values:
+      - '/second'
+      - '/minute'
+      - '/hour'
+      - '/day'
+    description: >-
+      Time unit for the logging rate limit.
+      Not supported by the nftables compiler.
+
+  limit_value:
+    type: 'int'
+    default: 0
+    supported: false
+    widget: 'logLimitVal'
+    description: >-
+      Maximum number of log messages per time unit.
+      Not supported by the nftables compiler.
+
+  load_modules:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'loadModules'
+    description: >-
+      Load kernel modules.  Not applicable to nftables.
+
+  local_nat:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'localNAT'
+    description: >-
+      Enable support for NAT of locally originated connections
+      (output chain DNAT rules).
+
+  log_all:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logAll'
+    description: >-
+      Activate logging in all rules.
+      Not supported by the nftables compiler.
+
+  log_invalid:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'logInvalid'
+    description: >-
+      Log packets in INVALID conntrack state before dropping them.
+      Only effective when "Drop packets associated with no known
+      connection" is also enabled.
+
+  log_ip_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logIPopt'
+    description: >-
+      Include IP options in log messages.
+      Not supported by the nftables compiler.
+
+  log_level:
+    type: 'enum'
+    default: 'info'
+    supported: true
+    widget: 'logLevel'
+    values:
+      - ''
+      - 'alert'
+      - 'crit'
+      - 'debug'
+      - 'emerg'
+      - 'error'
+      - 'info'
+      - 'notice'
+      - 'warning'
+    description: >-
+      Syslog severity level for packets matched by logging rules.
+      Leave empty to use the system default.
+
+  log_prefix:
+    type: 'str'
+    default: 'RULE %N -- %A '
+    supported: true
+    widget: 'logprefix'
+    description: >-
+      Prefix string for log messages.  Supported macros:
+      %N = rule number, %A = action, %I = interface name,
+      %C = chain name, %R = rule set name.
+
+  log_tcp_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPopt'
+    description: >-
+      Include TCP options in log messages.
+      Not supported by the nftables compiler.
+
+  log_tcp_seq:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPseq'
+    description: >-
+      Include TCP sequence numbers in log messages.
+      Not supported by the nftables compiler.
+
+  manage_virtual_addr:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'addVirtualsforNAT'
+    description: >-
+      Manage virtual addresses for NAT.
+      Not supported by the nftables compiler.
+
+  mgmt_addr:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'mgmt_addr'
+    description: >-
+      IP address of the management workstation allowed permanent
+      SSH access.
+
+  mgmt_ssh:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'mgmt_ssh'
+    description: >-
+      Always permit SSH access from the management workstation
+      with the address specified below.
+
+  nft_path:
+    type: 'str'
+    default: '/usr/sbin/nft'
+    supported: true
+    widget: ~
+    description: >-
+      Path to the nft binary used in the generated script.
+
+  output_file:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'outputFileName'
+    description: >-
+      Name of the generated output file.  Leave empty to use
+      the default name derived from the firewall object name.
+
+  prolog_place:
+    type: 'enum'
+    default: 'top'
+    supported: true
+    widget: 'prologPlace'
+    values:
+      - 'top'
+      - 'after_interfaces'
+      - 'after_flush'
+    description: >-
+      Where in the generated script the prolog commands are
+      inserted.
+
+  prolog_script:
+    type: 'text'
+    default: ''
+    supported: true
+    widget: 'prolog_script'
+    description: >-
+      Shell commands inserted before the firewall rules.
+      Use for custom initialization.
+
+  scpArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'scpArgs'
+    description: >-
+      Additional arguments passed to scp when copying the script
+      to the firewall.
+
+  script_name_on_firewall:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'fileNameOnFw'
+    description: >-
+      Name of the script file on the firewall.  Leave empty to
+      use the same name as the output file.
+
+  sshArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'sshArgs'
+    description: >-
+      Additional arguments passed to ssh when connecting to the
+      firewall for installation.
+
+  use_iptables_restore:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'iptablesRestoreActivation'
+    description: >-
+      Use iptables-restore.  Not applicable to nftables.
+
+  use_kerneltz:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'useKernelTz'
+    description: >-
+      Use kernel timezone.  Not supported by the nftables compiler.
+
+  use_m_set:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'useModuleSet'
+    description: >-
+      Use ipset module.  Not applicable to nftables.
+
+  use_NFLOG:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'useNFLOG'
+    description: >-
+      Use the NFLOG target for logging instead of LOG.
+
+  use_numeric_log_levels:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logNumsyslog'
+    description: >-
+      Use numeric syslog levels.
+      Not supported by the nftables compiler.
+
+  use_ULOG:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'useULOG'
+    description: >-
+      Use the ULOG target for logging instead of LOG.
+
+  ulog_cprange:
+    type: 'int'
+    default: 0
+    supported: false
+    widget: 'cprange'
+    description: >-
+      ULOG copy range.  Not applicable to nftables.
+
+  ulog_nlgroup:
+    type: 'int'
+    default: 1
+    supported: false
+    widget: 'nlgroup'
+    description: >-
+      ULOG netlink group.  Not applicable to nftables.
+
+  ulog_qthreshold:
+    type: 'int'
+    default: 1
+    supported: false
+    widget: 'qthreshold'
+    description: >-
+      ULOG queue threshold.  Not applicable to nftables.
+
+  verify_interfaces:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'verifyInterfaces'
+    description: >-
+      Verify that all interfaces referenced in the policy exist
+      on the firewall machine before loading the rules.

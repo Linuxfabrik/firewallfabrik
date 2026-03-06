@@ -1,0 +1,384 @@
+# Linux host OS options.
+#
+# This file is the single source of truth for all Linux host OS
+# option keys, their types, default values, widget mappings, and
+# descriptions (used as GUI tooltips).
+#
+# Tri-state options use '' (No change), '1' (On), '0' (Off).
+# Integer options use -1 to mean "not set / use kernel default".
+#
+# Options with ``nftables_supported: false`` are disabled in the GUI
+# when the firewall platform is nftables.
+#
+# Keys are listed alphabetically for maintainability.
+
+name: 'linux'
+description: 'Linux host OS settings'
+
+options:
+
+  linux24_accept_redirects:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_accept_redirects'
+    label: 'label373'
+    description: >-
+      Accept ICMP redirect messages.  Controls
+      /proc/sys/net/ipv4/conf/all/accept_redirects.
+
+  linux24_accept_source_route:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_accept_source_route'
+    label: 'label371'
+    description: >-
+      Accept source-routed packets.  Controls
+      /proc/sys/net/ipv4/conf/all/accept_source_route.
+
+  linux24_conntrack_hashsize:
+    type: 'int'
+    default: -1
+    supported: true
+    nftables_supported: false
+    widget: 'conntrack_hashsize'
+    description: >-
+      Size of the hash table storing conntrack entry lists.
+      Set to -1 to use the kernel default.  Tuning this can
+      improve performance on firewalls with many concurrent
+      connections.
+
+  linux24_conntrack_max:
+    type: 'int'
+    default: -1
+    supported: true
+    nftables_supported: false
+    widget: 'conntrack_max'
+    description: >-
+      Maximum number of simultaneous connection tracking entries
+      (sessions) in kernel memory.  Set to -1 to use the kernel
+      default.
+
+  linux24_conntrack_tcp_be_liberal:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'conntrack_tcp_be_liberal'
+    description: >-
+      Disable strict TCP window tracking in conntrack.  When
+      enabled, only out-of-window RSTs are marked INVALID.
+      Controls /proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal.
+
+  linux24_data_dir:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_data_dir'
+    description: >-
+      Directory for runtime data files such as address tables
+      on the firewall.
+
+  linux24_icmp_echo_ignore_all:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_icmp_echo_ignore_all'
+    label: 'label386'
+    description: >-
+      Ignore all ICMP echo requests (ping).  Controls
+      /proc/sys/net/ipv4/icmp_echo_ignore_all.
+
+  linux24_icmp_echo_ignore_broadcasts:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_icmp_echo_ignore_broadcasts'
+    label: 'label370'
+    description: >-
+      Ignore ICMP echo requests sent to broadcast addresses.
+      Controls /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts.
+
+  linux24_icmp_ignore_bogus_error_responses:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_icmp_ignore_bogus_error_responses'
+    label: 'label374'
+    description: >-
+      Ignore bogus ICMP error responses.  Controls
+      /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses.
+
+  linux24_ip_dynaddr:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_ip_dynaddr'
+    label: 'label375'
+    description: >-
+      Allow dynamic address changes (useful for DHCP or dial-up).
+      Controls /proc/sys/net/ipv4/ip_dynaddr.
+
+  linux24_ip_forward:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: true
+    widget: 'linux24_ip_forward'
+    description: >-
+      Enable IPv4 packet forwarding.  Controls
+      /proc/sys/net/ipv4/ip_forward.
+
+  linux24_ipv6_forward:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: true
+    widget: 'linux24_ipv6_forward'
+    description: >-
+      Enable IPv6 packet forwarding.  Controls
+      /proc/sys/net/ipv6/conf/all/forwarding.
+
+  linux24_log_martians:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_log_martians'
+    label: 'label380'
+    description: >-
+      Log packets with impossible source addresses (martians).
+      Controls /proc/sys/net/ipv4/conf/all/log_martians.
+
+  linux24_path_brctl:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_brctl'
+    placeholder: '/sbin/brctl'
+    description: >-
+      Path to the brctl binary for bridge interface management.
+      Leave empty to use the compiler default.
+
+  linux24_path_ifenslave:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ifenslave'
+    placeholder: '/sbin/ifenslave'
+    description: >-
+      Path to the ifenslave binary for bonding interface management.
+      Leave empty to use the compiler default.
+
+  linux24_path_ip:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ip'
+    placeholder: '/sbin/ip'
+    description: >-
+      Path to the ip binary (iproute2) for interface and address
+      configuration.  Leave empty to use the compiler default.
+
+  linux24_path_ip6tables:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ip6tables'
+    placeholder: '/sbin/ip6tables'
+    description: >-
+      Path to the ip6tables binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_ip6tables_restore:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ip6tables_restore'
+    placeholder: '/sbin/ip6tables-restore'
+    description: >-
+      Path to the ip6tables-restore binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_iptables:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_iptables'
+    placeholder: '/sbin/iptables'
+    description: >-
+      Path to the iptables binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_iptables_restore:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_iptables_restore'
+    placeholder: '/sbin/iptables-restore'
+    description: >-
+      Path to the iptables-restore binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_ipset:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_ipset'
+    placeholder: '/usr/sbin/ipset'
+    description: >-
+      Path to the ipset binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_logger:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_logger'
+    placeholder: '/usr/bin/logger'
+    description: >-
+      Path to the logger binary for syslog messages.
+      Leave empty to use the compiler default.
+
+  linux24_path_lsmod:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_lsmod'
+    placeholder: '/sbin/lsmod'
+    description: >-
+      Path to the lsmod binary.
+      Leave empty to use the compiler default.
+
+  linux24_path_modprobe:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_modprobe'
+    placeholder: '/sbin/modprobe'
+    description: >-
+      Path to the modprobe binary for loading kernel modules.
+      Leave empty to use the compiler default.
+
+  linux24_path_vconfig:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_path_vconfig'
+    placeholder: '/sbin/vconfig'
+    description: >-
+      Path to the vconfig binary for VLAN interface management.
+      Leave empty to use the compiler default.
+
+  linux24_rp_filter:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_rp_filter'
+    label: 'label369'
+    description: >-
+      Enable kernel reverse-path filter for anti-spoofing
+      protection.  Controls /proc/sys/net/ipv4/conf/all/rp_filter.
+
+  linux24_tcp_ecn:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_ecn'
+    description: >-
+      Enable TCP Explicit Congestion Notification.
+      Controls /proc/sys/net/ipv4/tcp_ecn.
+
+  linux24_tcp_fack:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_fack'
+    description: >-
+      Enable TCP Forward Acknowledgment.
+      Controls /proc/sys/net/ipv4/tcp_fack.
+
+  linux24_tcp_fin_timeout:
+    type: 'int'
+    default: -1
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_fin_timeout'
+    description: >-
+      TCP FIN wait timeout in seconds.  Set to -1 to use the
+      kernel default.
+      Controls /proc/sys/net/ipv4/tcp_fin_timeout.
+
+  linux24_tcp_keepalive_interval:
+    type: 'int'
+    default: -1
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_keepalive_interval'
+    description: >-
+      TCP keepalive probe interval in seconds.  Set to -1 to
+      use the kernel default.
+      Controls /proc/sys/net/ipv4/tcp_keepalive_intvl.
+
+  linux24_tcp_sack:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_sack'
+    description: >-
+      Enable TCP Selective Acknowledgments.
+      Controls /proc/sys/net/ipv4/tcp_sack.
+
+  linux24_tcp_syncookies:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_syncookies'
+    description: >-
+      Enable TCP SYN cookies for SYN flood protection.
+      Controls /proc/sys/net/ipv4/tcp_syncookies.
+
+  linux24_tcp_timestamps:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_timestamps'
+    description: >-
+      Enable TCP timestamps.
+      Controls /proc/sys/net/ipv4/tcp_timestamps.
+
+  linux24_tcp_window_scaling:
+    type: 'tristate'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: 'linux24_tcp_window_scaling'
+    description: >-
+      Enable TCP window scaling for high-bandwidth connections.
+      Controls /proc/sys/net/ipv4/tcp_window_scaling.

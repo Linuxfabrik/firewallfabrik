@@ -2119,28 +2119,46 @@ class FWWindow(QMainWindow):
         """
         self._new_object_menu.popup(QCursor.pos())
 
-    def _get_target_library_id(self):
-        """Return the writable library id for new-object creation, or None."""
+    def _get_target_library_and_folder(self):
+        """Return ``(lib_id, folder)`` for new-object creation.
+
+        *folder* is the category folder path derived from the currently
+        selected tree item (e.g. ``'MyFolder/Sub'``), or ``None`` if
+        the selection is not inside a custom folder.
+        """
         if self._db_manager is None:
-            return None
+            return None, None
         libs = self._object_tree._actions._get_writable_libraries()
         if not libs:
-            return None
+            return None, None
         writable_ids = {lid for lid, _name in libs}
         lib_id = None
+        folder = None
         item = self._object_tree._tree.currentItem()
         if item is not None:
             item_lib_id = ObjectTree._get_item_library_id(item)
             if item_lib_id in writable_ids:
                 lib_id = item_lib_id
+            # Determine folder from selected item (mirrors _ctx_new_object).
+            obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type is None:
+                folder = ObjectTree._get_category_folder_path(item)
+            else:
+                parent = item.parent()
+                while parent is not None:
+                    pt = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+                    if pt is not None:
+                        break
+                    folder = ObjectTree._get_category_folder_path(parent)
+                    break
         if lib_id is None:
             lib_id = libs[0][0]
-        return lib_id
+        return lib_id, folder
 
     def _populate_new_object_menu(self):
         """Rebuild the "New Object" dropdown menu entries."""
         self._new_object_menu.clear()
-        lib_id = self._get_target_library_id()
+        lib_id, folder = self._get_target_library_and_folder()
         if lib_id is None:
             return
         for entry in _NEW_OBJECT_MENU_ENTRIES:
@@ -2152,12 +2170,12 @@ class FWWindow(QMainWindow):
             action = self._new_object_menu.addAction(QIcon(icon_path), label)
             action.setData(type_name)
             action.triggered.connect(
-                lambda checked=False, t=type_name, lid=lib_id: (
-                    self._on_new_object_action(t, lid)
+                lambda checked=False, t=type_name, lid=lib_id, f=folder: (
+                    self._on_new_object_action(t, lid, folder=f)
                 )
             )
 
-    def _on_new_object_action(self, type_name, lib_id):
+    def _on_new_object_action(self, type_name, lib_id, *, folder=None):
         """Handle a selection from the "New Object" menu."""
         if type_name == 'Cluster':
             from firewallfabrik.gui.new_cluster_dialog import NewClusterDialog
@@ -2173,6 +2191,7 @@ class FWWindow(QMainWindow):
                 type_name,
                 lib_id,
                 extra_data=extra_data,
+                folder=folder,
                 name=name,
             )
         elif type_name == 'Host':
@@ -2184,6 +2203,7 @@ class FWWindow(QMainWindow):
             name, interfaces = dlg.get_result()
             self._object_tree._actions.create_host_in_library(
                 lib_id,
+                folder=folder,
                 name=name,
                 interfaces=interfaces,
             )
@@ -2198,10 +2218,15 @@ class FWWindow(QMainWindow):
                 type_name,
                 lib_id,
                 extra_data=extra_data,
+                folder=folder,
                 name=name,
             )
         else:
-            self._object_tree._actions.create_new_object_in_library(type_name, lib_id)
+            self._object_tree._actions.create_new_object_in_library(
+                type_name,
+                lib_id,
+                folder=folder,
+            )
 
     def _on_create_group_member(self, type_name, group_id_hex):
         """Handle 'Create new object and add to this group'.

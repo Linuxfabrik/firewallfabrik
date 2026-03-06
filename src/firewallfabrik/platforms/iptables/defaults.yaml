@@ -1,0 +1,556 @@
+# Iptables platform compiler options.
+#
+# This file is the single source of truth for all iptables compiler
+# option keys, their types, default values, widget mappings, and
+# descriptions (used as GUI tooltips).
+#
+# Keys are listed alphabetically for maintainability.
+
+name: 'iptables'
+description: 'Iptables platform compiler options'
+
+options:
+
+  accept_established:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'acceptESTBeforeFirst'
+    description: >-
+      Accept packets belonging to connections already established or
+      related to established connections.  Adds automatic rules at the
+      top of each access list.
+
+  accept_new_tcp_with_no_syn:
+    type: 'bool'
+    default: true
+    supported: false
+    widget: 'acceptSessions'
+    inverted: true
+    description: >-
+      Accept TCP sessions opened prior to firewall restart.
+      The checkbox label shows inverted semantics ("Drop new TCP
+      sessions that do not begin with SYN flag").
+
+  action_on_reject:
+    type: 'enum'
+    default: ''
+    supported: true
+    widget: 'actionOnReject'
+    values:
+      - 'ICMP unreachable'
+      - 'ICMP net unreachable'
+      - 'ICMP host unreachable'
+      - 'ICMP port unreachable'
+      - 'ICMP net prohibited'
+      - 'ICMP host prohibited'
+      - 'TCP RST'
+    description: >-
+      ICMP message type or TCP RST sent back to the sender when a
+      packet is rejected.  Leave empty to use the system default.
+
+  activationCmd:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'activationCmd'
+    description: >-
+      Custom command executed on the firewall after the script has
+      been copied.  Leave empty to use the built-in activation.
+
+  add_mgmt_ssh_rule_when_stoped:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'add_mgmt_ssh_rule_when_stoped'
+    description: >-
+      Install the rule for SSH access from the management workstation
+      even when the firewall script is run with the "block" command.
+
+  admUser:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'ipt_user'
+    description: >-
+      SSH user name for uploading the generated script to the firewall.
+      Leave empty to use the current system user.
+
+  altAddress:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'altAddress'
+    description: >-
+      Alternative address used for SCP/SSH if the primary management
+      address is unreachable.
+
+  bridging_fw:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'bridge'
+    description: >-
+      Generate rules for a bridging (transparent) firewall.
+      Adds FORWARD chain physdev match rules.
+
+  check_shading:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'shadowing'
+    description: >-
+      Detect rules that are completely shadowed by earlier rules
+      in the same access list and report a warning.
+
+  clamp_mss_to_mtu:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'clampMSStoMTU'
+    description: >-
+      Add a rule at the top of the policy with the iptables TCPMSS
+      target and --clamp-mss-to-pmtu option.  Generation of this
+      command depends on IP forwarding settings in the host OS dialog.
+
+  clear_unknown_interfaces:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'clearUnknownInterfaces'
+    description: >-
+      Clear IP addresses and bring down interfaces that are not
+      configured in FirewallFabrik.
+
+  cmdline:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'compilerArgs'
+    description: >-
+      Additional command-line arguments passed to the compiler.
+
+  compiler:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'compiler'
+    description: >-
+      Path to an alternative compiler binary.  Leave empty to use
+      the built-in compiler.
+
+  configure_bonding_interfaces:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'configure_bonding_interfaces'
+    description: >-
+      Configure bonding (link aggregation) interfaces in the
+      generated script.  Requires ifenslave.
+
+  configure_bridge_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_bridge_interfaces'
+    description: >-
+      Configure bridge interfaces in the generated script.
+      Requires brctl.
+
+  configure_interfaces:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'configureInterfaces'
+    description: >-
+      Configure IP addresses on interfaces of the firewall machine
+      as part of the generated script.
+
+  configure_vlan_interfaces:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'configure_vlan_interfaces'
+    description: >-
+      Configure VLAN (802.1Q) interfaces in the generated script.
+      Requires vconfig.
+
+  debug:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'iptDebug'
+    description: >-
+      Turn on shell debugging (set -x) in the generated script
+      for troubleshooting.
+
+  drop_invalid:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'dropInvalid'
+    description: >-
+      Drop packets that are associated with no known connection
+      (conntrack state INVALID).
+
+  epilog_script:
+    type: 'text'
+    default: ''
+    supported: true
+    widget: 'epilog_script'
+    description: >-
+      Shell commands appended after all firewall rules.
+      Use for custom cleanup or final actions.
+
+  firewall_dir:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'ipt_fw_dir'
+    placeholder: '/etc/fw'
+    description: >-
+      Directory on the firewall where the generated script will
+      be stored.  Leave empty to use the default (/etc/fw).
+
+  firewall_is_part_of_any_and_networks:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'assumeFwIsPartOfAny'
+    description: >-
+      Assume the firewall machine is part of "any" and matching
+      network objects.  When enabled, the compiler generates rules
+      for traffic to/from the firewall itself.
+
+  ignore_empty_groups:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'emptyGroups'
+    description: >-
+      Silently ignore empty groups referenced in rules instead of
+      reporting a compiler error.
+
+  installScript:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'installScript'
+    description: >-
+      Path to a custom installation script executed instead of the
+      default SCP/SSH mechanism.
+
+  installScriptArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'installScriptArgs'
+    description: >-
+      Arguments passed to the custom installation script.
+
+  ipv4_6_order:
+    type: 'enum'
+    default: 'ipv4_first'
+    supported: true
+    widget: 'ipv4before'
+    values:
+      - 'ipv4_first'
+      - 'ipv6_first'
+    description: >-
+      Order in which IPv4 and IPv6 rules are generated in the
+      output script.
+
+  ipv6_neighbor_discovery:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'ipv6NeighborDiscovery'
+    description: >-
+      Automatically generate rules to permit ICMPv6 packets used
+      in IPv6 Neighbor Discovery.  These rules are inserted after
+      the ESTABLISHED,RELATED accept and before the INVALID drop.
+
+  limit_suffix:
+    type: 'enum'
+    default: '/second'
+    supported: true
+    widget: 'logLimitSuffix'
+    values:
+      - '/second'
+      - '/minute'
+      - '/hour'
+      - '/day'
+    description: >-
+      Time unit for the logging rate limit.
+
+  limit_value:
+    type: 'int'
+    default: 0
+    supported: true
+    widget: 'logLimitVal'
+    description: >-
+      Maximum number of log messages per time unit.
+      Set to 0 to disable rate limiting.
+
+  load_modules:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'loadModules'
+    description: >-
+      Load required iptables kernel modules at the beginning of
+      the generated script.
+
+  local_nat:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'localNAT'
+    description: >-
+      Enable support for NAT of locally originated connections
+      (OUTPUT chain DNAT rules).
+
+  log_all:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logAll'
+    description: >-
+      Activate logging in all rules, overriding individual rule
+      logging options.  Use for debugging only.
+
+  log_invalid:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'logInvalid'
+    description: >-
+      Log packets in INVALID conntrack state before dropping them.
+      Only effective when "Drop packets associated with no known
+      connection" is also enabled.
+
+  log_ip_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logIPopt'
+    description: >-
+      Include IP options in log messages.
+
+  log_level:
+    type: 'enum'
+    default: 'info'
+    supported: true
+    widget: 'logLevel'
+    values:
+      - ''
+      - 'alert'
+      - 'crit'
+      - 'debug'
+      - 'emerg'
+      - 'error'
+      - 'info'
+      - 'notice'
+      - 'warning'
+    description: >-
+      Syslog severity level for packets matched by logging rules.
+      Leave empty to use the system default.
+
+  log_prefix:
+    type: 'str'
+    default: 'RULE %N -- %A '
+    supported: true
+    widget: 'logprefix'
+    description: >-
+      Prefix string for log messages.  Supported macros:
+      %N = rule number, %A = action, %I = interface name,
+      %C = chain name, %R = rule set name.
+
+  log_tcp_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPopt'
+    description: >-
+      Include TCP options in log messages.
+
+  log_tcp_seq:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPseq'
+    description: >-
+      Include TCP sequence numbers in log messages.
+
+  manage_virtual_addr:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'addVirtualsforNAT'
+    description: >-
+      Automatically add virtual IP addresses for NAT rules
+      to the corresponding interfaces.
+
+  mgmt_addr:
+    type: 'str'
+    default: ''
+    supported: false
+    widget: 'mgmt_addr'
+    description: >-
+      IP address of the management workstation allowed permanent
+      SSH access.
+
+  mgmt_ssh:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'mgmt_ssh'
+    description: >-
+      Always permit SSH access from the management workstation
+      with the address specified below.
+
+  output_file:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'outputFileName'
+    description: >-
+      Name of the generated output file.  Leave empty to use
+      the default name derived from the firewall object name.
+
+  prolog_place:
+    type: 'enum'
+    default: 'top'
+    supported: true
+    widget: 'prologPlace'
+    values:
+      - 'top'
+      - 'after_interfaces'
+      - 'after_flush'
+    description: >-
+      Where in the generated script the prolog commands are
+      inserted.
+
+  prolog_script:
+    type: 'text'
+    default: ''
+    supported: true
+    widget: 'prolog_script'
+    description: >-
+      Shell commands inserted before the firewall rules.
+      Use for custom initialization.
+
+  scpArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'scpArgs'
+    description: >-
+      Additional arguments passed to scp when copying the script
+      to the firewall.
+
+  script_name_on_firewall:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'fileNameOnFw'
+    description: >-
+      Name of the script file on the firewall.  Leave empty to
+      use the same name as the output file.
+
+  sshArgs:
+    type: 'str'
+    default: ''
+    supported: true
+    widget: 'sshArgs'
+    description: >-
+      Additional arguments passed to ssh when connecting to the
+      firewall for installation.
+
+  use_iptables_restore:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'iptablesRestoreActivation'
+    description: >-
+      Use iptables-restore to activate the policy in one atomic
+      transaction instead of calling iptables for each rule.
+
+  use_kerneltz:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'useKernelTz'
+    description: >-
+      Use the kernel timezone instead of UTC for time-based rules.
+      Only available in iptables v1.4.11 and later.
+
+  use_m_set:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'useModuleSet'
+    description: >-
+      Use the ipset kernel module ("set" match) for run-time
+      address table objects.  Only available in iptables v1.4.1.1
+      and later.
+
+  use_NFLOG:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'useNFLOG'
+    description: >-
+      Use the NFLOG target for logging instead of LOG.
+
+  use_numeric_log_levels:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logNumsyslog'
+    description: >-
+      Use numeric syslog levels instead of symbolic names
+      in log rules.
+
+  use_ULOG:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'useULOG'
+    description: >-
+      Use the ULOG target for logging instead of LOG.
+
+  ulog_cprange:
+    type: 'int'
+    default: 0
+    supported: true
+    widget: 'cprange'
+    description: >-
+      Number of bytes of each packet to copy to userspace
+      via ULOG.  0 copies the entire packet.
+
+  ulog_nlgroup:
+    type: 'int'
+    default: 1
+    supported: true
+    widget: 'nlgroup'
+    description: >-
+      ULOG netlink multicast group number (1-32).
+
+  ulog_qthreshold:
+    type: 'int'
+    default: 1
+    supported: true
+    widget: 'qthreshold'
+    description: >-
+      Number of packets to queue inside the kernel before
+      sending them to userspace via ULOG.
+
+  verify_interfaces:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'verifyInterfaces'
+    description: >-
+      Verify that all interfaces referenced in the policy exist
+      on the firewall machine before loading the rules.

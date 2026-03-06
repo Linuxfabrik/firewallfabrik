@@ -16,118 +16,32 @@ from pathlib import Path
 
 from PySide6.QtCore import QUrl, Slot
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QLineEdit
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
+from firewallfabrik.platforms._defaults import get_platform_defaults
 
 _UI_PATH = Path(__file__).resolve().parent / 'ui' / 'iptablessettingsdialog_q.ui'
 
-# Checkbox widget → canonical compiler option key.
-# The compiler reads options by the canonical key (right-hand side).
-_CHECKBOX_MAP: dict[str, str] = {
-    'assumeFwIsPartOfAny': 'firewall_is_part_of_any_and_networks',
-    'acceptSessions': 'accept_new_tcp_with_no_syn',
-    'acceptESTBeforeFirst': 'accept_established',
-    'dropInvalid': 'drop_invalid',
-    'logInvalid': 'log_invalid',
-    'localNAT': 'local_nat',
-    'shadowing': 'check_shading',
-    'emptyGroups': 'ignore_empty_groups',
-    'clampMSStoMTU': 'clamp_mss_to_mtu',
-    'bridge': 'bridging_fw',
-    'ipv6NeighborDiscovery': 'ipv6_neighbor_discovery',
-    'mgmt_ssh': 'mgmt_ssh',
-    'add_mgmt_ssh_rule_when_stoped': 'add_mgmt_ssh_rule_when_stoped',
-    'useModuleSet': 'use_m_set',
-    'useKernelTz': 'use_kerneltz',
-    'logTCPseq': 'log_tcp_seq',
-    'logTCPopt': 'log_tcp_opt',
-    'logIPopt': 'log_ip_opt',
-    'logNumsyslog': 'use_numeric_log_levels',
-    'logAll': 'log_all',
-    'loadModules': 'load_modules',
-    'iptDebug': 'debug',
-    'verifyInterfaces': 'verify_interfaces',
-    'configureInterfaces': 'configure_interfaces',
-    'clearUnknownInterfaces': 'clear_unknown_interfaces',
-    'configure_vlan_interfaces': 'configure_vlan_interfaces',
-    'configure_bridge_interfaces': 'configure_bridge_interfaces',
-    'configure_bonding_interfaces': 'configure_bonding_interfaces',
-    'addVirtualsforNAT': 'manage_virtual_addr',
-    'iptablesRestoreActivation': 'use_iptables_restore',
-}
+# Load the full option schema once at import time.
+_SCHEMA = get_platform_defaults('iptables')
 
-# Line-edit widget → canonical compiler option key.
-_LINE_EDIT_MAP: dict[str, str] = {
-    'compiler': 'compiler',
-    'compilerArgs': 'cmdline',
-    'outputFileName': 'output_file',
-    'fileNameOnFw': 'script_name_on_firewall',
-    'mgmt_addr': 'mgmt_addr',
-    'logprefix': 'log_prefix',
-    'ipt_fw_dir': 'firewall_dir',
-    'ipt_user': 'admUser',
-    'altAddress': 'altAddress',
-    'activationCmd': 'activationCmd',
-    'sshArgs': 'sshArgs',
-    'scpArgs': 'scpArgs',
-    'installScript': 'installScript',
-    'installScriptArgs': 'installScriptArgs',
-}
+# Build widget → canonical key maps from the YAML schema.
+_CHECKBOX_MAP: dict[str, str] = {}
+_LINE_EDIT_MAP: dict[str, str] = {}
+_UNSUPPORTED_WIDGETS: list[str] = []
 
-# LOG level syslog names matching the C++ dialog.
-_LOG_LEVELS = [
-    '',
-    'alert',
-    'crit',
-    'debug',
-    'emerg',
-    'error',
-    'info',
-    'notice',
-    'warning',
-]
-
-# Logging limit suffix options.
-_LOG_LIMIT_SUFFIXES = ['/second', '/minute', '/hour', '/day']
-
-# Reject action options.
-_ACTION_ON_REJECT = [
-    'ICMP unreachable',
-    'ICMP net unreachable',
-    'ICMP host unreachable',
-    'ICMP port unreachable',
-    'ICMP net prohibited',
-    'ICMP host prohibited',
-    'TCP RST',
-]
-
-# Prolog placement combo values matching the .ui order.
-_PROLOG_PLACES = [
-    'top',
-    'after_interfaces',
-    'after_flush',
-]
-
-# Widgets for options that are not supported by the iptables compiler.
-# These are disabled in the UI to prevent users from setting options
-# that would be silently ignored.
-_UNSUPPORTED_WIDGETS = (
-    # Compiler tab — not implemented / hardcoded off
-    'acceptSessions',
-    'useKernelTz',
-    'mgmt_ssh',
-    'mgmt_addr',
-    'add_mgmt_ssh_rule_when_stoped',
-    # Logging tab — warns only
-    'logTCPseq',
-    'logTCPopt',
-    'logIPopt',
-    'logNumsyslog',
-    'logAll',
-    # Script tab — warns only
-    'configure_bridge_interfaces',
-)
+for _key, _entry in _SCHEMA.items():
+    _widget = _entry.get('widget')
+    if not _widget:
+        continue
+    _typ = _entry['type']
+    if _typ == 'bool':
+        _CHECKBOX_MAP[_widget] = _key
+    elif _typ == 'str':
+        _LINE_EDIT_MAP[_widget] = _key
+    if not _entry.get('supported', True):
+        _UNSUPPORTED_WIDGETS.append(_widget)
 
 
 class IptablesSettingsDialog(QDialog):
@@ -147,14 +61,44 @@ class IptablesSettingsDialog(QDialog):
                 parent_center.y() - self.height() // 2,
             )
 
-        # Populate combo boxes with fixed option lists.
-        self.actionOnReject.addItems(_ACTION_ON_REJECT)
-        self.logLevel.addItems(_LOG_LEVELS)
-        self.logLimitSuffix.addItems(_LOG_LIMIT_SUFFIXES)
+        # Populate combo boxes from YAML schema values.
+        self.actionOnReject.addItems(
+            _SCHEMA['action_on_reject'].get('values', []),
+        )
+        self.logLevel.addItems(_SCHEMA['log_level'].get('values', []))
+        self.logLimitSuffix.addItems(
+            _SCHEMA['limit_suffix'].get('values', []),
+        )
 
+        self._apply_tooltips()
+        self._apply_placeholders()
         self._populate()
         self._disable_unsupported()
         self.accepted.connect(self._save_settings)
+
+    def _apply_tooltips(self):
+        """Set tooltip text on every widget from the YAML descriptions."""
+        for entry in _SCHEMA.values():
+            widget_name = entry.get('widget')
+            if not widget_name:
+                continue
+            widget = getattr(self, widget_name, None)
+            if widget is not None:
+                widget.setToolTip(entry.get('description', ''))
+
+    def _apply_placeholders(self):
+        """Set placeholder text on QLineEdits showing the YAML default."""
+        for entry in _SCHEMA.values():
+            if entry['type'] != 'str':
+                continue
+            widget_name = entry.get('widget')
+            if not widget_name:
+                continue
+            widget = getattr(self, widget_name, None)
+            if isinstance(widget, QLineEdit):
+                text = entry.get('placeholder') or entry.get('default', '')
+                if text:
+                    widget.setPlaceholderText(str(text))
 
     def _disable_unsupported(self):
         """Disable widgets for options not supported by the iptables compiler."""
@@ -172,14 +116,16 @@ class IptablesSettingsDialog(QDialog):
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
+            entry = _SCHEMA.get(key, {})
+            default = entry.get('default', False)
             if key in opts:
                 val = str(opts[key]).lower() == 'true'
             elif widget_name in opts:
                 val = str(opts[widget_name]).lower() == 'true'
             else:
-                val = False
+                val = bool(default)
             # acceptSessions checkbox has inverted semantics:
-            if key == 'accept_new_tcp_with_no_syn':
+            if entry.get('inverted', False):
                 widget.setChecked(not val)
             else:
                 widget.setChecked(val)
@@ -201,9 +147,10 @@ class IptablesSettingsDialog(QDialog):
         self.epilog_script.setPlainText(opts.get('epilog_script', ''))
 
         # Prolog placement combo
-        place = opts.get('prolog_place', 'top')
+        prolog_values = _SCHEMA['prolog_place'].get('values', ['top'])
+        place = opts.get('prolog_place', _SCHEMA['prolog_place']['default'])
         try:
-            idx = _PROLOG_PLACES.index(place)
+            idx = prolog_values.index(place)
         except ValueError:
             idx = 0
         self.prologPlace.setCurrentIndex(idx)
@@ -218,18 +165,20 @@ class IptablesSettingsDialog(QDialog):
         self._update_log_stack()
 
         # Log level combo
-        level = opts.get('log_level', '')
+        level = opts.get('log_level', _SCHEMA['log_level']['default'])
         idx = self.logLevel.findText(level)
         self.logLevel.setCurrentIndex(max(idx, 0))
 
         # Logging limit
-        limit_val = opts.get('limit_value', '0')
+        default_limit = _SCHEMA['limit_value']['default']
+        limit_val = opts.get('limit_value', default_limit)
         try:
             self.logLimitVal.setValue(int(limit_val))
         except (ValueError, TypeError):
-            self.logLimitVal.setValue(0)
+            self.logLimitVal.setValue(int(default_limit))
 
-        limit_suffix = opts.get('limit_suffix', '/second')
+        default_suffix = _SCHEMA['limit_suffix']['default']
+        limit_suffix = opts.get('limit_suffix', default_suffix)
         idx = self.logLimitSuffix.findText(limit_suffix)
         self.logLimitSuffix.setCurrentIndex(max(idx, 0))
 
@@ -239,9 +188,17 @@ class IptablesSettingsDialog(QDialog):
         self.actionOnReject.setCurrentIndex(max(idx, 0))
 
         # ULOG spin boxes
-        self.cprange.setValue(int(opts.get('ulog_cprange', 0)))
-        self.qthreshold.setValue(int(opts.get('ulog_qthreshold', 1)))
-        self.nlgroup.setValue(int(opts.get('ulog_nlgroup', 1)))
+        self.cprange.setValue(
+            int(opts.get('ulog_cprange', _SCHEMA['ulog_cprange']['default'])),
+        )
+        self.qthreshold.setValue(
+            int(
+                opts.get('ulog_qthreshold', _SCHEMA['ulog_qthreshold']['default']),
+            ),
+        )
+        self.nlgroup.setValue(
+            int(opts.get('ulog_nlgroup', _SCHEMA['ulog_nlgroup']['default'])),
+        )
 
         # IPv4 before IPv6 combo
         if str(opts.get('ipv4_6_order', '')).lower() == 'ipv6_first':
@@ -258,10 +215,10 @@ class IptablesSettingsDialog(QDialog):
             widget = getattr(self, widget_name, None)
             if widget is None:
                 continue
+            entry = _SCHEMA.get(key, {})
             # Store as Python bool (not string) so that raw
             # ``options.get(key, False)`` in the compiler works correctly.
-            # acceptSessions has inverted semantics.
-            if key == 'accept_new_tcp_with_no_syn':
+            if entry.get('inverted', False):
                 opts[key] = not widget.isChecked()
             else:
                 opts[key] = widget.isChecked()
@@ -283,10 +240,9 @@ class IptablesSettingsDialog(QDialog):
         opts['epilog_script'] = self.epilog_script.toPlainText()
 
         # Prolog placement
+        prolog_values = _SCHEMA['prolog_place'].get('values', ['top'])
         idx = self.prologPlace.currentIndex()
-        opts['prolog_place'] = (
-            _PROLOG_PLACES[idx] if idx < len(_PROLOG_PLACES) else 'top'
-        )
+        opts['prolog_place'] = prolog_values[idx] if idx < len(prolog_values) else 'top'
 
         # LOG / ULOG / NFLOG
         opts['use_ULOG'] = self.useULOG.isChecked()

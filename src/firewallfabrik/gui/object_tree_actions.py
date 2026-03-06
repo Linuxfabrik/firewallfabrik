@@ -1072,12 +1072,14 @@ class TreeActionHandler:
     # ------------------------------------------------------------------
 
     def create_new_object_in_library(
-        self, type_name, lib_id, *, extra_data=None, name=None
+        self, type_name, lib_id, *, extra_data=None, folder=None, name=None
     ):
         """Create a new object of *type_name* in library *lib_id*.
 
         This is the toolbar/menu variant of ``_ctx_new_object()`` — it
-        does not require a tree selection.
+        does not require a tree selection.  When *folder* is given
+        (e.g. from the current tree selection), the object is placed
+        there instead of the default category folder.
 
         Returns the new object's UUID, or ``None`` on failure.
         """
@@ -1085,9 +1087,8 @@ class TreeActionHandler:
         if model_cls is None:
             return None
 
-        # Library creation has no folder.
-        folder = None
-        if model_cls is not Library:
+        # Use caller-supplied folder, otherwise derive from type.
+        if folder is None and model_cls is not Library:
             for f, type_list in NEW_TYPES_FOR_FOLDER.items():
                 if any(tn == type_name for tn, _dn in type_list):
                     folder = f
@@ -1106,7 +1107,9 @@ class TreeActionHandler:
             QTimer.singleShot(0, lambda: self._ot.select_object(new_id))
         return new_id
 
-    def create_host_in_library(self, lib_id, *, name=None, interfaces=None):
+    def create_host_in_library(
+        self, lib_id, *, folder=None, name=None, interfaces=None
+    ):
         """Create a new Host (with interfaces) in library *lib_id*.
 
         Returns the new Host's UUID, or ``None`` on failure.
@@ -1115,7 +1118,7 @@ class TreeActionHandler:
             lib_id,
             name=name,
             interfaces=interfaces or [],
-            folder='Hosts',
+            folder=folder or 'Hosts',
         )
         if new_id is not None:
             self._ot.tree_changed.emit(str(new_id), 'Host')

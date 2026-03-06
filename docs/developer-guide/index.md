@@ -6,6 +6,7 @@
 DatabaseManager
 Debugging
 DesignDecisions
+PlatformDefaults
 RuleProcessors
 Testing
 ```
