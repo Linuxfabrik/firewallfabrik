@@ -163,3 +163,4 @@ cython_debug/
 
 CLAUDE.md
 docs/*.md
+examples/*.fw
