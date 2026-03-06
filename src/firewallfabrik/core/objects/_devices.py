@@ -129,20 +129,42 @@ class Host(Base):
 
     # -- Compiler helper methods --
 
+    _GET_OPTION_SENTINEL = object()
+
     def get_option(self, key: str, default: Any = None) -> Any:
         """Look up a value in the device options dict.
 
-        Coerces string ``"True"``/``"False"`` to Python bools so that
-        values loaded from XML work correctly with ``bool()`` / ``if``.
+        Resolution order:
+
+        1. Explicit value in ``self.options[key]`` (if present).
+        2. YAML default from ``platforms/<platform>/defaults.yaml``
+           or ``platforms/<os>/defaults.yaml``.
+        3. The caller-supplied *default* argument.
+
+        String ``"True"``/``"False"`` values are coerced to Python
+        bools so that values loaded from XML work correctly.
         """
+        _S = self._GET_OPTION_SENTINEL
         if self.options:
-            val = self.options.get(key, default)
-            if isinstance(val, str):
-                if val.lower() == 'true':
-                    return True
-                if val.lower() == 'false':
-                    return False
-            return val
+            val = self.options.get(key, _S)
+            if val is not _S:
+                if isinstance(val, str):
+                    if val.lower() == 'true':
+                        return True
+                    if val.lower() == 'false':
+                        return False
+                return val
+        # Fall back to YAML platform / OS defaults.
+        from firewallfabrik.platforms._defaults import get_option_default
+
+        yaml_val = get_option_default(
+            self.platform,
+            self.host_os,
+            key,
+            fallback=_S,
+        )
+        if yaml_val is not _S:
+            return yaml_val
         return default
 
     @property

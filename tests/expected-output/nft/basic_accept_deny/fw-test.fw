@@ -61,6 +61,10 @@ table ip filter {
         # Rule 1 (global)
         #
         ip daddr { 192.168.1.1, 203.0.113.1 } icmp type echo-request icmp code 0 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        ct state new drop
     }
 
     chain forward {

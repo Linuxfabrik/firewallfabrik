@@ -90,11 +90,17 @@ The settings dialogs (`iptables_settings_dialog.py`, `nftables_settings_dialog.p
 * **Unsupported marking** -- widgets for `supported: false` options are disabled
 * **Populate fallback** -- if an option is missing from the stored JSON, the YAML default is used for populating the dialog
 
-### 3. Compiler / ORM
+### 3. Compiler / ORM (`get_option()`)
 
-`Firewall.get_option(key, default)` returns the explicit value from the JSON `options` dict if present, otherwise the caller-supplied *default*. The compiler controls its own fallback values -- YAML defaults are **not** injected at runtime. This ensures existing firewall objects behave identically regardless of YAML changes.
+`Host.get_option(key, default)` resolves an option value using a three-tier lookup:
 
-New objects created via the GUI are seeded with YAML defaults (step 1), so the compiler receives the correct values through the stored options dict.
+1. **Explicit value** in `self.options[key]` (the JSON dict stored in the database).
+2. **YAML default** from `platforms/<platform>/defaults.yaml` or `platforms/<os>/defaults.yaml`.
+3. **Caller-supplied fallback** (the `default` argument).
+
+This means the YAML files serve as runtime fallback for *every* `get_option()` call -- not just for seeding new objects. If a key is absent from the stored JSON, the YAML default is returned automatically. Compiler call sites no longer need to specify their own fallback values for options that have a YAML default; they can simply call `get_option('some_key')` and the YAML value will be used.
+
+String values `"True"` / `"False"` (common in XML imports) are coerced to Python bools.
 
 
 ## The `placeholder` Field
@@ -111,7 +117,7 @@ Some options have an empty-string default (`''`) but the GUI should show a meani
       be stored.  Leave empty to use the default (/etc/fw).
 ```
 
-The dialog's `_apply_placeholders()` method checks `placeholder` first, then falls back to `default`. This lets the compiler use its own fallback (e.g. `/etc/fw`) while the GUI shows the user what will happen when the field is empty.
+The dialog's `_apply_placeholders()` method checks `placeholder` first, then falls back to `default`. This lets the GUI show a meaningful hint even when the stored default is an empty string.
 
 
 ## Adding a New Option
@@ -119,9 +125,9 @@ The dialog's `_apply_placeholders()` method checks `placeholder` first, then fal
 1. Add the entry to the appropriate `defaults.yaml` file (alphabetical order).
 2. If it needs a GUI widget, add the widget to the `.ui` file and set the `widget` field.
 3. The settings dialog will pick it up automatically via the YAML-driven widget maps.
-4. The compiler reads the value via `get_option(key, fallback)` -- ensure the compiler's fallback matches the YAML default for consistency.
+4. The compiler reads the value via `get_option(key)` -- the YAML default is returned automatically if the option is absent from the stored JSON.
 
 
 ## JSON Remains the Storage Format
 
-The `options` column still stores a JSON dict in the SQLite database. JSON holds the *user-set values*. The YAML files define the *schema and defaults*. If a key is absent from JSON, the YAML default applies transparently.
+The `options` column still stores a JSON dict in the SQLite database. JSON holds the *user-set values*. The YAML files define the *schema and defaults*. If a key is absent from JSON, `get_option()` returns the YAML default automatically -- no extra logic needed at the call site.
