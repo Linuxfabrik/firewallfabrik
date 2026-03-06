@@ -669,12 +669,12 @@ class CompilerDriver_nft(CompilerDriver):
         """Generate IP forwarding sysctl commands."""
         lines = []
 
-        ipv4_fwd = str(fw.get_option('linux24_ip_forward', '') or '')
+        ipv4_fwd = str(fw.get_option('linux24_ip_forward') or '')
         if ipv4_fwd:
             val = 1 if ipv4_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv4/ip_forward')
 
-        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward', '') or '')
+        ipv6_fwd = str(fw.get_option('linux24_ipv6_forward') or '')
         if ipv6_fwd:
             val = 1 if ipv6_fwd in ('1', 'On', 'on') else 0
             lines.append(f'echo {val} > /proc/sys/net/ipv6/conf/all/forwarding')

@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QSplitter,
+    QTreeWidgetItem,
     QVBoxLayout,
 )
 
@@ -2386,6 +2387,9 @@ class FWWindow(QMainWindow):
             self._current_file = None
         else:
             self._current_file = file_path
+
+        if original_path.suffix == '.fwb':
+            self._offer_clear_legacy_compiler_paths()
         self._display_file = original_path
         self._rs_mgr.set_display_file(original_path)
         self._update_title()
@@ -2418,6 +2422,59 @@ class FWWindow(QMainWindow):
             self._rs_mgr.open_first_firewall_policy()
 
         self._object_tree.focus_filter()
+
+    def _offer_clear_legacy_compiler_paths(self):
+        """Show a dialog offering to clear fwbuilder C++ compiler paths.
+
+        Called after importing a .fwb file.  Firewalls that have a
+        ``compiler`` option pointing to an old fwbuilder binary
+        (containing ``fwb_``) are listed so the user can decide whether
+        to clear them.
+        """
+        affected = []  # (fw_id, fw_name, compiler_path)
+        with self._db_manager.session() as session:
+            for fw in session.execute(
+                sqlalchemy.select(Firewall).order_by(Firewall.name),
+            ).scalars():
+                comp = (fw.options or {}).get('compiler', '')
+                if comp and 'fwb_' in comp:
+                    affected.append((fw.id, fw.name, comp))
+
+        if not affected:
+            return
+
+        ui_path = Path(__file__).resolve().parent / 'ui' / 'legacycompilerdialog_q.ui'
+        dlg = QDialog(self)
+        FWFUiLoader(dlg).load(str(ui_path))
+        dlg.resize(620, 400)
+
+        # Centre on parent
+        center = self.geometry().center()
+        geo = dlg.geometry()
+        geo.moveCenter(center)
+        dlg.setGeometry(geo)
+
+        # Populate the firewall list
+        for _fw_id, fw_name, comp_path in affected:
+            item = QTreeWidgetItem()
+            item.setText(0, fw_name)
+            item.setText(1, comp_path)
+            dlg.firewallList.addTopLevelItem(item)
+        dlg.firewallList.resizeColumnToContents(0)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        # Clear the compiler option for all affected firewalls.
+        fw_ids = [fw_id for fw_id, _name, _path in affected]
+        with self._db_manager.session() as session:
+            for fw in session.execute(
+                sqlalchemy.select(Firewall).where(Firewall.id.in_(fw_ids)),
+            ).scalars():
+                opts = dict(fw.options or {})
+                opts['compiler'] = ''
+                fw.options = opts
+            session.commit()
 
     def _prepare_recent_menu(self):
         """Populate the empty *menuOpen_Recent* with dynamic actions."""

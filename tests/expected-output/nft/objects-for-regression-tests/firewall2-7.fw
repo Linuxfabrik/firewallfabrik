@@ -241,6 +241,7 @@ table ip filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
         #
         # Rule 0 (global)
         #
@@ -252,6 +253,7 @@ table ip filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
         #
         # Rule 0 (global)
         #
@@ -263,6 +265,7 @@ table ip filter {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
         #
         # Rule 0 (global)
         #

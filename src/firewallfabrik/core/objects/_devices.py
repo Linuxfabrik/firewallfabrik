@@ -131,7 +131,7 @@ class Host(Base):
 
     _GET_OPTION_SENTINEL = object()
 
-    def get_option(self, key: str, default: Any = None) -> Any:
+    def get_option(self, key: str) -> Any:
         """Look up a value in the device options dict.
 
         Resolution order:
@@ -139,7 +139,10 @@ class Host(Base):
         1. Explicit value in ``self.options[key]`` (if present).
         2. YAML default from ``platforms/<platform>/defaults.yaml``
            or ``platforms/<os>/defaults.yaml``.
-        3. The caller-supplied *default* argument.
+
+        Raises ``KeyError`` if the key is unknown in both the stored
+        options and all YAML schemas.  This catches typos in compiler
+        code at the earliest possible moment.
 
         String ``"True"``/``"False"`` values are coerced to Python
         bools so that values loaded from XML work correctly.
@@ -157,15 +160,8 @@ class Host(Base):
         # Fall back to YAML platform / OS defaults.
         from firewallfabrik.platforms._defaults import get_option_default
 
-        yaml_val = get_option_default(
-            self.platform,
-            self.host_os,
-            key,
-            fallback=_S,
-        )
-        if yaml_val is not _S:
-            return yaml_val
-        return default
+        # get_option_default raises KeyError when the key is unknown.
+        return get_option_default(self.platform, self.host_os, key)
 
     @property
     def platform(self) -> str:

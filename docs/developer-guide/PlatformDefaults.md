@@ -92,13 +92,16 @@ The settings dialogs (`iptables_settings_dialog.py`, `nftables_settings_dialog.p
 
 ### 3. Compiler / ORM (`get_option()`)
 
-`Host.get_option(key, default)` resolves an option value using a three-tier lookup:
+`Host.get_option(key)` resolves an option value using a two-tier lookup:
 
 1. **Explicit value** in `self.options[key]` (the JSON dict stored in the database).
 2. **YAML default** from `platforms/<platform>/defaults.yaml` or `platforms/<os>/defaults.yaml`.
-3. **Caller-supplied fallback** (the `default` argument).
 
-This means the YAML files serve as runtime fallback for *every* `get_option()` call -- not just for seeding new objects. If a key is absent from the stored JSON, the YAML default is returned automatically. Compiler call sites no longer need to specify their own fallback values for options that have a YAML default; they can simply call `get_option('some_key')` and the YAML value will be used.
+If the key is not found in either tier, `get_option()` raises a **`KeyError`**. This catches typos in compiler code (e.g. `get_option('acept_established')`) at the earliest possible moment -- the first test run will fail with a clear error message instead of silently returning `None`.
+
+The method accepts **no caller-supplied fallback**. All defaults live in the YAML files. Compiler call sites simply call `fw.get_option('some_key')` without a second argument.
+
+> **Note**: `rule.get_option(key, default)` on `CompRule` objects is a *different method* that still accepts a caller-supplied default, because rules have their own per-rule options dict and no YAML schema.
 
 String values `"True"` / `"False"` (common in XML imports) are coerced to Python bools.
 
@@ -108,16 +111,18 @@ String values `"True"` / `"False"` (common in XML imports) are coerced to Python
 Some options have an empty-string default (`''`) but the GUI should show a meaningful hint. For these, the YAML entry includes a `placeholder` field:
 
 ```yaml
-  firewall_dir:
+  linux24_path_iptables:
     type: 'str'
     default: ''
-    placeholder: '/etc/fw'
+    placeholder: '/sbin/iptables'
     description: >-
-      Directory on the firewall where the generated script will
-      be stored.  Leave empty to use the default (/etc/fw).
+      Path to the iptables binary.
+      Leave empty to use the compiler default.
 ```
 
 The dialog's `_apply_placeholders()` method checks `placeholder` first, then falls back to `default`. This lets the GUI show a meaningful hint even when the stored default is an empty string.
+
+> **Important**: Only use `placeholder` for options where an empty string genuinely means "use the compiler's built-in logic" (e.g. tool paths, where the compiler has its own `DEFAULT_TOOL_PATHS` dict). For options where the default is a concrete value, set `default` directly -- do **not** leave `default` empty and hide the real value in a Python `or` fallback.
 
 
 ## Adding a New Option
@@ -125,9 +130,9 @@ The dialog's `_apply_placeholders()` method checks `placeholder` first, then fal
 1. Add the entry to the appropriate `defaults.yaml` file (alphabetical order).
 2. If it needs a GUI widget, add the widget to the `.ui` file and set the `widget` field.
 3. The settings dialog will pick it up automatically via the YAML-driven widget maps.
-4. The compiler reads the value via `get_option(key)` -- the YAML default is returned automatically if the option is absent from the stored JSON.
+4. The compiler reads the value via `fw.get_option('key')` -- the YAML default is returned automatically if the option is absent from the stored JSON. If you forget to add the YAML entry, `get_option()` raises `KeyError` immediately.
 
 
 ## JSON Remains the Storage Format
 
-The `options` column still stores a JSON dict in the SQLite database. JSON holds the *user-set values*. The YAML files define the *schema and defaults*. If a key is absent from JSON, `get_option()` returns the YAML default automatically -- no extra logic needed at the call site.
+The `options` column still stores a JSON dict in the SQLite database. JSON holds the *user-set values*. The YAML files define the *schema and defaults*. If a key is absent from JSON, `get_option()` returns the YAML default automatically. If the key is absent from both JSON and YAML, `get_option()` raises `KeyError` -- there is no silent fallback to `None`.

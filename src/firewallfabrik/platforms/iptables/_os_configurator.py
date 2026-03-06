@@ -103,7 +103,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
         version = fw.version or ''
         if _version_compare(version, '1.4.1.1') >= 0:
-            self.using_ipset = bool(fw.get_option('use_m_set', False))
+            self.using_ipset = bool(fw.get_option('use_m_set'))
 
     def my_platform_name(self) -> str:
         return 'Linux24'
@@ -138,14 +138,14 @@ class OSConfigurator_linux24(OSConfigurator):
             'linux24_tcp_ecn',
             'linux24_tcp_timestamps',
         ]:
-            val = str(self.fw.get_option(opt_name, '') or '')
+            val = str(self.fw.get_option(opt_name) or '')
             self._set_configlet_macro_str(val, kernel_vars, opt_name)
 
         for opt_name in [
             'linux24_tcp_fin_timeout',
             'linux24_tcp_keepalive_interval',
         ]:
-            val = self.fw.get_option(opt_name, -1)
+            val = self.fw.get_option(opt_name)
             try:
                 val = int(val)
             except (ValueError, TypeError):
@@ -170,7 +170,7 @@ class OSConfigurator_linux24(OSConfigurator):
             'linux24_conntrack_hashsize',
             'linux24_conntrack_tcp_be_liberal',
         ]:
-            val = self.fw.get_option(opt_name, -1)
+            val = self.fw.get_option(opt_name)
             try:
                 val = int(val)
             except (ValueError, TypeError):
@@ -218,17 +218,17 @@ class OSConfigurator_linux24(OSConfigurator):
         check_utils.remove_comments()
         check_utils.collapse_empty_strings(True)
 
-        load_modules = bool(self.fw.get_option('load_modules', False))
+        load_modules = bool(self.fw.get_option('load_modules'))
         check_utils.set_variable('load_modules', load_modules)
 
         need_modprobe = (
             load_modules
-            or bool(self.fw.get_option('configure_vlan_interfaces', False))
-            or bool(self.fw.get_option('configure_bonding_interfaces', False))
+            or bool(self.fw.get_option('configure_vlan_interfaces'))
+            or bool(self.fw.get_option('configure_bonding_interfaces'))
         )
         check_utils.set_variable('need_modprobe', need_modprobe)
 
-        use_iptables_restore = bool(self.fw.get_option('use_iptables_restore', False))
+        use_iptables_restore = bool(self.fw.get_option('use_iptables_restore'))
         check_utils.set_variable('need_iptables_restore', use_iptables_restore)
         check_utils.set_variable(
             'need_ip6tables_restore', use_iptables_restore and have_ipv6
@@ -261,7 +261,7 @@ class OSConfigurator_linux24(OSConfigurator):
         for var_name, tool_key in self.TOOLS:
             path = ''
             # 1. Check firewall options for user override
-            opt_val = self.fw.get_option(f'linux24_path_{tool_key}', '')
+            opt_val = self.fw.get_option(f'linux24_path_{tool_key}')
             if opt_val:
                 path = str(opt_val)
             # 2. Fall back to default paths
@@ -280,11 +280,11 @@ class OSConfigurator_linux24(OSConfigurator):
         ip_fwd.remove_comments()
         ip_fwd.collapse_empty_strings(True)
 
-        s = str(self.fw.get_option('linux24_ip_forward', '') or '')
+        s = str(self.fw.get_option('linux24_ip_forward') or '')
         ip_fwd.set_variable('ipv4', bool(s))
         ip_fwd.set_variable('ipv4_forw', 1 if s in ('1', 'On', 'on') else 0)
 
-        s = str(self.fw.get_option('linux24_ipv6_forward', '') or '')
+        s = str(self.fw.get_option('linux24_ipv6_forward') or '')
         ip_fwd.set_variable('ipv6', bool(s))
         ip_fwd.set_variable('ipv6_forw', 1 if s in ('1', 'On', 'on') else 0)
 
@@ -298,7 +298,7 @@ class OSConfigurator_linux24(OSConfigurator):
         load_modules.remove_comments()
 
         load_modules.set_variable(
-            'load_modules', bool(self.fw.get_option('load_modules', False))
+            'load_modules', bool(self.fw.get_option('load_modules'))
         )
         load_modules.set_variable('modules_dir', '/lib/modules/`uname -r`/kernel/net/')
 
@@ -385,7 +385,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def print_commands_to_clear_known_interfaces(self) -> str:
         """Generate commands to clear addresses on unknown interfaces."""
-        if not self.fw.get_option('clear_unknown_interfaces', False):
+        if not self.fw.get_option('clear_unknown_interfaces'):
             return ''
         if not self.known_interfaces:
             return ''
@@ -412,7 +412,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def add_virtual_address_for_nat(self, addr) -> None:
         """Register a virtual address needed for NAT."""
-        if not self.fw.get_option('manage_virtual_addr', False):
+        if not self.fw.get_option('manage_virtual_addr'):
             return
         self.virtual_addresses.append(addr)
 

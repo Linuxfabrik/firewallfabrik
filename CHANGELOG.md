@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Compiler option lookup (`get_option`) now raises `KeyError` on unknown keys, catching typos at the earliest possible moment; all inline Python fallbacks removed in favour of YAML defaults.
 - Clipboard router now correctly routes Ctrl+C/X/V to focused text widgets.
 - Context menus and sub-interfaces aligned with fwbuilder behavior.
 - DynamicGroup, AddressTable and DNSName now allowed in rule src/dst cells.
@@ -50,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rule shadowing detection enabled by default; error messages include rule position numbers.
 - Time dialog uses YYYY-MM-DD date format and sensible defaults.
 - `.fwb` imports allowed to compile and install without requiring a prior save.
+- Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
+- Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
 
 ### Changed
 

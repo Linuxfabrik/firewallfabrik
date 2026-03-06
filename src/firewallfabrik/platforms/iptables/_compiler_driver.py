@@ -841,7 +841,7 @@ class CompilerDriver_ipt(CompilerDriver):
     ) -> str:
         """Assemble one AF's compilation output using configlets."""
         have_auto = bool(automatic_rules_script or automatic_mangle_script)
-        use_iptables_restore = fw.get_option('use_iptables_restore', False)
+        use_iptables_restore = fw.get_option('use_iptables_restore')
 
         if self.single_rule_compile_on:
             have_auto = False

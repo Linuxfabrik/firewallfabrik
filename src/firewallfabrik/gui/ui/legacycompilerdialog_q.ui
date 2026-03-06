@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LegacyCompilerDialog_q</class>
+ <widget class="QDialog" name="LegacyCompilerDialog_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>620</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Legacy Compiler Paths Detected</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="infoLabel">
+     <property name="text">
+      <string>The imported Firewall Builder file contains firewalls with a custom compiler path pointing to the old C++ compiler binary (e.g. fwb_ipt, fwb_nft).
+
+FirewallFabrik uses its own built-in compiler. The old binary cannot process FirewallFabrik files and would produce errors during compilation.
+
+It is recommended to clear these paths so that FirewallFabrik uses its built-in compiler instead.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="listLabel">
+     <property name="text">
+      <string>Affected firewalls:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeWidget" name="firewallList">
+     <property name="rootIsDecorated">
+      <bool>false</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
+     </property>
+     <column>
+      <property name="text">
+       <string>Firewall</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Compiler Path</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
+     <item>
+      <spacer name="buttonSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="clearButton">
+       <property name="text">
+        <string>Clear Paths</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>Remove the legacy compiler paths from all listed firewalls so that FirewallFabrik uses its built-in compiler.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="keepButton">
+       <property name="text">
+        <string>Keep Paths</string>
+       </property>
+       <property name="toolTip">
+        <string>Keep the compiler paths as they are. Compilation will attempt to use the configured binary, which may fail if it is incompatible with FirewallFabrik files.</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>clearButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LegacyCompilerDialog_q</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>keepButton</sender>
+   <signal>clicked()</signal>
+   <receiver>LegacyCompilerDialog_q</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

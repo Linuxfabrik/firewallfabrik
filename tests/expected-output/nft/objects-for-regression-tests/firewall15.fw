@@ -230,6 +230,7 @@ table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        tcp flags != syn ct state new drop
         #
         # Rule 0 (lo)
         #
@@ -242,6 +243,7 @@ table ip filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        tcp flags != syn ct state new drop
         #
         # Rule 1 (global)
         #
@@ -251,6 +253,7 @@ table ip filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        tcp flags != syn ct state new drop
         #
         # Rule 0 (lo)
         #

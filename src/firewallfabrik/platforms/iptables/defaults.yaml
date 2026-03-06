@@ -18,7 +18,7 @@ options:
     widget: 'acceptESTBeforeFirst'
     description: >-
       Accept packets belonging to connections already established or
-      related to established connections.  Adds automatic rules at the
+      related to established connections. Adds automatic rules at the
       top of each access list.
 
   accept_new_tcp_with_no_syn:
@@ -47,7 +47,7 @@ options:
       - 'TCP RST'
     description: >-
       ICMP message type or TCP RST sent back to the sender when a
-      packet is rejected.  Leave empty to use the system default.
+      packet is rejected. Leave empty to use the system default.
 
   activationCmd:
     type: 'str'
@@ -56,7 +56,7 @@ options:
     widget: 'activationCmd'
     description: >-
       Custom command executed on the firewall after the script has
-      been copied.  Leave empty to use the built-in activation.
+      been copied. Leave empty to use the built-in activation.
 
   add_mgmt_ssh_rule_when_stoped:
     type: 'bool'
@@ -110,7 +110,7 @@ options:
     widget: 'clampMSStoMTU'
     description: >-
       Add a rule at the top of the policy with the iptables TCPMSS
-      target and --clamp-mss-to-pmtu option.  Generation of this
+      target and --clamp-mss-to-pmtu option. Generation of this
       command depends on IP forwarding settings in the host OS dialog.
 
   clear_unknown_interfaces:
@@ -136,7 +136,7 @@ options:
     supported: true
     widget: 'compiler'
     description: >-
-      Path to an alternative compiler binary.  Leave empty to use
+      Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
   configure_bonding_interfaces:
@@ -146,7 +146,7 @@ options:
     widget: 'configure_bonding_interfaces'
     description: >-
       Configure bonding (link aggregation) interfaces in the
-      generated script.  Requires ifenslave.
+      generated script. Requires ifenslave.
 
   configure_bridge_interfaces:
     type: 'bool'
@@ -204,13 +204,12 @@ options:
 
   firewall_dir:
     type: 'str'
-    default: ''
+    default: '/etc/fw'
     supported: true
     widget: 'ipt_fw_dir'
-    placeholder: '/etc/fw'
     description: >-
       Directory on the firewall where the generated script will
-      be stored.  Leave empty to use the default (/etc/fw).
+      be stored.
 
   firewall_is_part_of_any_and_networks:
     type: 'bool'
@@ -219,7 +218,7 @@ options:
     widget: 'assumeFwIsPartOfAny'
     description: >-
       Assume the firewall machine is part of "any" and matching
-      network objects.  When enabled, the compiler generates rules
+      network objects. When enabled, the compiler generates rules
       for traffic to/from the firewall itself.
 
   ignore_empty_groups:
@@ -267,7 +266,7 @@ options:
     widget: 'ipv6NeighborDiscovery'
     description: >-
       Automatically generate rules to permit ICMPv6 packets used
-      in IPv6 Neighbor Discovery.  These rules are inserted after
+      in IPv6 Neighbor Discovery. These rules are inserted after
       the ESTABLISHED,RELATED accept and before the INVALID drop.
 
   limit_suffix:
@@ -317,7 +316,7 @@ options:
     widget: 'logAll'
     description: >-
       Activate logging in all rules, overriding individual rule
-      logging options.  Use for debugging only.
+      logging options. Use for debugging only.
 
   log_invalid:
     type: 'bool'
@@ -362,7 +361,7 @@ options:
     supported: true
     widget: 'logprefix'
     description: >-
-      Prefix string for log messages.  Supported macros:
+      Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
 
@@ -415,7 +414,7 @@ options:
     supported: true
     widget: 'outputFileName'
     description: >-
-      Name of the generated output file.  Leave empty to use
+      Name of the generated output file. Leave empty to use
       the default name derived from the firewall object name.
 
   prolog_place:
@@ -455,7 +454,7 @@ options:
     supported: true
     widget: 'fileNameOnFw'
     description: >-
-      Name of the script file on the firewall.  Leave empty to
+      Name of the script file on the firewall. Leave empty to
       use the same name as the output file.
 
   sshArgs:
@@ -492,7 +491,7 @@ options:
     widget: 'useModuleSet'
     description: >-
       Use the ipset kernel module ("set" match) for run-time
-      address table objects.  Only available in iptables v1.4.1.1
+      address table objects. Only available in iptables v1.4.1.1
       and later.
 
   use_NFLOG:
@@ -527,7 +526,7 @@ options:
     widget: 'cprange'
     description: >-
       Number of bytes of each packet to copy to userspace
-      via ULOG.  0 copies the entire packet.
+      via ULOG. 0 copies the entire packet.
 
   ulog_nlgroup:
     type: 'int'

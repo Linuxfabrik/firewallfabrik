@@ -25,7 +25,7 @@ options:
     widget: 'linux24_accept_redirects'
     label: 'label373'
     description: >-
-      Accept ICMP redirect messages.  Controls
+      Accept ICMP redirect messages. Controls
       /proc/sys/net/ipv4/conf/all/accept_redirects.
 
   linux24_accept_source_route:
@@ -36,7 +36,7 @@ options:
     widget: 'linux24_accept_source_route'
     label: 'label371'
     description: >-
-      Accept source-routed packets.  Controls
+      Accept source-routed packets. Controls
       /proc/sys/net/ipv4/conf/all/accept_source_route.
 
   linux24_conntrack_hashsize:
@@ -47,7 +47,7 @@ options:
     widget: 'conntrack_hashsize'
     description: >-
       Size of the hash table storing conntrack entry lists.
-      Set to -1 to use the kernel default.  Tuning this can
+      Set to -1 to use the kernel default. Tuning this can
       improve performance on firewalls with many concurrent
       connections.
 
@@ -59,7 +59,7 @@ options:
     widget: 'conntrack_max'
     description: >-
       Maximum number of simultaneous connection tracking entries
-      (sessions) in kernel memory.  Set to -1 to use the kernel
+      (sessions) in kernel memory. Set to -1 to use the kernel
       default.
 
   linux24_conntrack_tcp_be_liberal:
@@ -69,7 +69,7 @@ options:
     nftables_supported: false
     widget: 'conntrack_tcp_be_liberal'
     description: >-
-      Disable strict TCP window tracking in conntrack.  When
+      Disable strict TCP window tracking in conntrack. When
       enabled, only out-of-window RSTs are marked INVALID.
       Controls /proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal.
 
@@ -91,7 +91,7 @@ options:
     widget: 'linux24_icmp_echo_ignore_all'
     label: 'label386'
     description: >-
-      Ignore all ICMP echo requests (ping).  Controls
+      Ignore all ICMP echo requests (ping). Controls
       /proc/sys/net/ipv4/icmp_echo_ignore_all.
 
   linux24_icmp_echo_ignore_broadcasts:
@@ -113,7 +113,7 @@ options:
     widget: 'linux24_icmp_ignore_bogus_error_responses'
     label: 'label374'
     description: >-
-      Ignore bogus ICMP error responses.  Controls
+      Ignore bogus ICMP error responses. Controls
       /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses.
 
   linux24_ip_dynaddr:
@@ -134,7 +134,7 @@ options:
     nftables_supported: true
     widget: 'linux24_ip_forward'
     description: >-
-      Enable IPv4 packet forwarding.  Controls
+      Enable IPv4 packet forwarding. Controls
       /proc/sys/net/ipv4/ip_forward.
 
   linux24_ipv6_forward:
@@ -144,7 +144,7 @@ options:
     nftables_supported: true
     widget: 'linux24_ipv6_forward'
     description: >-
-      Enable IPv6 packet forwarding.  Controls
+      Enable IPv6 packet forwarding. Controls
       /proc/sys/net/ipv6/conf/all/forwarding.
 
   linux24_log_martians:
@@ -169,6 +169,17 @@ options:
       Path to the brctl binary for bridge interface management.
       Leave empty to use the compiler default.
 
+  linux24_path_ifconfig:
+    type: 'str'
+    default: ''
+    supported: true
+    nftables_supported: false
+    widget: ~
+    placeholder: '/sbin/ifconfig'
+    description: >-
+      Path to the ifconfig binary (legacy, used by older configlets).
+      Leave empty to use the compiler default.
+
   linux24_path_ifenslave:
     type: 'str'
     default: ''
@@ -189,7 +200,7 @@ options:
     placeholder: '/sbin/ip'
     description: >-
       Path to the ip binary (iproute2) for interface and address
-      configuration.  Leave empty to use the compiler default.
+      configuration. Leave empty to use the compiler default.
 
   linux24_path_ip6tables:
     type: 'str'
@@ -299,7 +310,7 @@ options:
     label: 'label369'
     description: >-
       Enable kernel reverse-path filter for anti-spoofing
-      protection.  Controls /proc/sys/net/ipv4/conf/all/rp_filter.
+      protection. Controls /proc/sys/net/ipv4/conf/all/rp_filter.
 
   linux24_tcp_ecn:
     type: 'tristate'
@@ -328,7 +339,7 @@ options:
     nftables_supported: false
     widget: 'linux24_tcp_fin_timeout'
     description: >-
-      TCP FIN wait timeout in seconds.  Set to -1 to use the
+      TCP FIN wait timeout in seconds. Set to -1 to use the
       kernel default.
       Controls /proc/sys/net/ipv4/tcp_fin_timeout.
 
@@ -339,7 +350,7 @@ options:
     nftables_supported: false
     widget: 'linux24_tcp_keepalive_interval'
     description: >-
-      TCP keepalive probe interval in seconds.  Set to -1 to
+      TCP keepalive probe interval in seconds. Set to -1 to
       use the kernel default.
       Controls /proc/sys/net/ipv4/tcp_keepalive_intvl.
 

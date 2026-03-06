@@ -21,7 +21,7 @@ options:
     widget: 'acceptESTBeforeFirst'
     description: >-
       Accept packets belonging to connections already established or
-      related to established connections.  Adds automatic rules at the
+      related to established connections. Adds automatic rules at the
       top of each access list.
 
   accept_new_tcp_with_no_syn:
@@ -49,7 +49,7 @@ options:
       - 'TCP RST'
     description: >-
       ICMP message type or TCP RST sent back to the sender when a
-      packet is rejected.  Leave empty to use the system default.
+      packet is rejected. Leave empty to use the system default.
 
   activationCmd:
     type: 'str'
@@ -58,7 +58,7 @@ options:
     widget: 'activationCmd'
     description: >-
       Custom command executed on the firewall after the script has
-      been copied.  Leave empty to use the built-in activation.
+      been copied. Leave empty to use the built-in activation.
 
   add_mgmt_ssh_rule_when_stoped:
     type: 'bool'
@@ -112,7 +112,7 @@ options:
     supported: false
     widget: 'clampMSStoMTU'
     description: >-
-      Clamp MSS to MTU.  Not supported by the nftables compiler.
+      Clamp MSS to MTU. Not supported by the nftables compiler.
 
   clear_unknown_interfaces:
     type: 'bool'
@@ -137,7 +137,7 @@ options:
     supported: true
     widget: 'compiler'
     description: >-
-      Path to an alternative compiler binary.  Leave empty to use
+      Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
   configure_bonding_interfaces:
@@ -205,13 +205,12 @@ options:
 
   firewall_dir:
     type: 'str'
-    default: ''
+    default: '/etc/fw'
     supported: true
     widget: 'ipt_fw_dir'
-    placeholder: '/etc/fw'
     description: >-
       Directory on the firewall where the generated script will
-      be stored.  Leave empty to use the default (/etc/fw).
+      be stored.
 
   firewall_is_part_of_any_and_networks:
     type: 'bool'
@@ -220,7 +219,7 @@ options:
     widget: 'assumeFwIsPartOfAny'
     description: >-
       Assume the firewall machine is part of "any" and matching
-      network objects.  When enabled, the compiler generates rules
+      network objects. When enabled, the compiler generates rules
       for traffic to/from the firewall itself.
 
   ignore_empty_groups:
@@ -277,7 +276,7 @@ options:
     widget: 'ipv6NeighborDiscovery'
     description: >-
       Automatically generate rules to permit ICMPv6 Neighbor
-      Discovery packets.  Not supported by the nftables compiler.
+      Discovery packets. Not supported by the nftables compiler.
 
   limit_suffix:
     type: 'enum'
@@ -308,7 +307,7 @@ options:
     supported: false
     widget: 'loadModules'
     description: >-
-      Load kernel modules.  Not applicable to nftables.
+      Load kernel modules. Not applicable to nftables.
 
   local_nat:
     type: 'bool'
@@ -372,7 +371,7 @@ options:
     supported: true
     widget: 'logprefix'
     description: >-
-      Prefix string for log messages.  Supported macros:
+      Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
 
@@ -435,7 +434,7 @@ options:
     supported: true
     widget: 'outputFileName'
     description: >-
-      Name of the generated output file.  Leave empty to use
+      Name of the generated output file. Leave empty to use
       the default name derived from the firewall object name.
 
   prolog_place:
@@ -475,7 +474,7 @@ options:
     supported: true
     widget: 'fileNameOnFw'
     description: >-
-      Name of the script file on the firewall.  Leave empty to
+      Name of the script file on the firewall. Leave empty to
       use the same name as the output file.
 
   sshArgs:
@@ -493,7 +492,7 @@ options:
     supported: false
     widget: 'iptablesRestoreActivation'
     description: >-
-      Use iptables-restore.  Not applicable to nftables.
+      Use iptables-restore. Not applicable to nftables.
 
   use_kerneltz:
     type: 'bool'
@@ -501,7 +500,7 @@ options:
     supported: false
     widget: 'useKernelTz'
     description: >-
-      Use kernel timezone.  Not supported by the nftables compiler.
+      Use kernel timezone. Not supported by the nftables compiler.
 
   use_m_set:
     type: 'bool'
@@ -509,7 +508,7 @@ options:
     supported: false
     widget: 'useModuleSet'
     description: >-
-      Use ipset module.  Not applicable to nftables.
+      Use ipset module. Not applicable to nftables.
 
   use_NFLOG:
     type: 'bool'
@@ -542,7 +541,7 @@ options:
     supported: false
     widget: 'cprange'
     description: >-
-      ULOG copy range.  Not applicable to nftables.
+      ULOG copy range. Not applicable to nftables.
 
   ulog_nlgroup:
     type: 'int'
@@ -550,7 +549,7 @@ options:
     supported: false
     widget: 'nlgroup'
     description: >-
-      ULOG netlink group.  Not applicable to nftables.
+      ULOG netlink group. Not applicable to nftables.
 
   ulog_qthreshold:
     type: 'int'
@@ -558,7 +557,7 @@ options:
     supported: false
     widget: 'qthreshold'
     description: >-
-      ULOG queue threshold.  Not applicable to nftables.
+      ULOG queue threshold. Not applicable to nftables.
 
   verify_interfaces:
     type: 'bool'
