@@ -6,7 +6,17 @@ build-backend = "setuptools.build_meta"
 authors = [
     { name = "Linuxfabrik GmbH, Zurich, Switzerland", email = "info@linuxfabrik.ch" },
 ]
-description = "FirewallFabrik is a Qt-based GUI tool for managing firewall configurations across multiple platforms (iptables, nftables, etc.)"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Firewalls",
+]
+description = "Modern fwbuilder successor: Qt GUI for managing iptables/nftables policies. Centralized policy DB with reusable objects, scales to hundreds of firewalls, generates deployment-ready shell scripts."
 dependencies = [
     "jinja2~=3.1",
     "pyyaml~=6.0.3",
@@ -14,6 +24,12 @@ dependencies = [
 ]
 dynamic = [
     "version",
+]
+keywords = [
+    "firewall",
+    "iptables",
+    "nftables",
+    "security",
 ]
 license-files = ["LICENSE", "COPYRIGHT"]
 name = "firewallfabrik"

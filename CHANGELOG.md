@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [v1.0.0] - 2026-03-08
+
 ### Added
 
 - Compile time intervals and clean up time dialog.
 - Confirm-delete dialog when deleting objects that are still in use.
+- DNS "Resolve Name" button implemented for IPv4 and IPv6 address dialogs.
+- MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
 - DynamicGroup editor with criteria table and matched-objects preview.
 - Example files shipped with the distribution.
 - File > Reload action to re-read the current file from disk.
@@ -50,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Readonly flag passed to tree items with updated lock icons.
 - Rule shadowing detection enabled by default; error messages include rule position numbers.
 - Time dialog uses YYYY-MM-DD date format and sensible defaults.
+- Dead menu entries removed (File Compare, SNMP Discovery, Policy Import, Library Import/Export, Print, Help Contents/Index).
+- Object deletion fixed: str-vs-UUID type mismatch in where-used reference queries.
+- Title bar double-click on Wayland now works (XCB fallback).
 - `.fwb` imports allowed to compile and install without requiring a prior save.
 - Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
 - Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
@@ -137,6 +145,7 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0rc1...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.0...HEAD
+[v1.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0rc1...v1.0.0
 [v0.5.0rc1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0b1...v0.5.0rc1
 [v0.5.0b1]: https://github.com/Linuxfabrik/firewallfabrik/releases/tag/v0.5.0b1
