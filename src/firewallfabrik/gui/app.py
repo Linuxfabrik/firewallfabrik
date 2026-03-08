@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Application entry point for the FirewallFabrik GUI."""
+
 import argparse
 import os
 import pathlib

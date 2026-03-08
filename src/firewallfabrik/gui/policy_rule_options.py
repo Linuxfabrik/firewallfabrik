@@ -17,8 +17,6 @@ no Qt or model dependencies, reusable by any module that needs to inspect
 rule options.
 """
 
-from __future__ import annotations
-
 
 def build_options_display(opts, rule_set_type='Policy'):
     """Build a list of (id, label, icon_type) triples from rule options.

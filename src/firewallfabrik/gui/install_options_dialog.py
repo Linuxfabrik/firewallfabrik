@@ -12,8 +12,6 @@
 
 """Install options dialog — collects per-firewall install parameters."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from PySide6.QtCore import Slot

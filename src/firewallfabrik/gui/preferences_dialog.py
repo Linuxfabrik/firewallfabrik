@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Preferences dialog for global application settings."""
+
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, Slot

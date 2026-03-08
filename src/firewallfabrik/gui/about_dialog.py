@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""About dialog showing version and license information."""
+
 from pathlib import Path
 
 from PySide6.QtWidgets import QDialog

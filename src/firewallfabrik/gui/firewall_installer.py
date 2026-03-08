@@ -12,8 +12,6 @@
 
 """Firewall installer engine — deploys compiled scripts via SSH/SCP."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path

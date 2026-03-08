@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Main application window — equivalent to FWWindow in the C++ codebase."""
+
 import contextlib
 import importlib.resources
 import logging

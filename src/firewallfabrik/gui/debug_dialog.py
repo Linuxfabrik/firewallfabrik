@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Debugging info dialog showing runtime environment details."""
+
 import getpass
 import platform
 import sys

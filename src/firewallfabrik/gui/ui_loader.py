@@ -10,6 +10,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+"""Custom QUiLoader that populates an existing widget instead of creating a new one."""
+
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QDockWidget, QTextBrowser, QWidget
 
