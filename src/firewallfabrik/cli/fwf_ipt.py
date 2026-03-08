@@ -39,8 +39,17 @@ def parse_args(argv=None):
     )
 
     parser.add_argument(
-        'firewall_name',
-        help='name (or ID if -i is given) of the firewall object to compile',
+        'firewall_names',
+        nargs='*',
+        help='name(s) (or IDs if -i / paths if -p) of firewall objects to compile',
+    )
+
+    parser.add_argument(
+        '-a',
+        '--all',
+        action='store_true',
+        dest='COMPILE_ALL',
+        help='compile all iptables firewalls in the database',
     )
 
     parser.add_argument(
@@ -183,6 +192,11 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
+
+    if not args.firewall_names and not args.COMPILE_ALL:
+        print('Error: specify firewall name(s) or use --all', file=sys.stderr)
+        return 1
+
     t_start = time.monotonic()
 
     print(f'Loading database from {args.FILE} ...', file=sys.stderr)
@@ -221,84 +235,109 @@ def main(argv=None):
         print(f'Error: failed to load database from {args.FILE}: {e}', file=sys.stderr)
         return 1
 
-    # Verify firewall exists
+    # Resolve firewalls to compile
+    Firewall = firewallfabrik.core.objects.Firewall
+    fw_list = []
     with db.session() as session:
-        if args.FW_BY_PATH:
-            fw_uuid = db.ref_index.get(args.firewall_name)
-            if fw_uuid is None:
-                print(
-                    f"Error: tree-path '{args.firewall_name}' not found in {args.FILE}",
-                    file=sys.stderr,
+        if args.COMPILE_ALL:
+            all_fws = (
+                session.execute(
+                    sqlalchemy.select(Firewall).order_by(Firewall.name),
                 )
-                return 1
-            firewall = session.get(firewallfabrik.core.objects.Firewall, fw_uuid)
-        elif args.FW_BY_ID:
-            firewall = session.execute(
-                sqlalchemy.select(firewallfabrik.core.objects.Firewall).where(
-                    firewallfabrik.core.objects.Firewall.id == args.firewall_name
-                ),
-            ).scalar_one_or_none()
-        else:
-            firewall = session.execute(
-                sqlalchemy.select(firewallfabrik.core.objects.Firewall).where(
-                    firewallfabrik.core.objects.Firewall.name == args.firewall_name
-                ),
-            ).scalar_one_or_none()
-
-        if firewall is None:
-            if args.FW_BY_PATH:
-                label = 'tree-path'
-            elif args.FW_BY_ID:
-                label = 'id'
-            else:
-                label = 'name'
+                .scalars()
+                .all()
+            )
+            for fw in all_fws:
+                if (fw.data or {}).get('platform', '') == 'iptables':
+                    fw_list.append((str(fw.id), fw.name))
             print(
-                f"Error: firewall with {label} '{args.firewall_name}' not found in {args.FILE}",
+                f'Found {len(fw_list)} iptables firewall(s) to compile',
                 file=sys.stderr,
             )
-            return 1
+        else:
+            for name in args.firewall_names:
+                if args.FW_BY_PATH:
+                    fw_uuid = db.ref_index.get(name)
+                    if fw_uuid is None:
+                        print(
+                            f"Error: tree-path '{name}' not found in {args.FILE}",
+                            file=sys.stderr,
+                        )
+                        continue
+                    fw = session.get(Firewall, fw_uuid)
+                elif args.FW_BY_ID:
+                    fw = session.execute(
+                        sqlalchemy.select(Firewall).where(Firewall.id == name),
+                    ).scalar_one_or_none()
+                else:
+                    fw = session.execute(
+                        sqlalchemy.select(Firewall).where(Firewall.name == name),
+                    ).scalar_one_or_none()
 
-        fw_id = str(firewall.id)
-        print(f"Found firewall '{firewall.name}' (id: {fw_id})", file=sys.stderr)
+                if fw is None:
+                    label = (
+                        'tree-path'
+                        if args.FW_BY_PATH
+                        else 'id'
+                        if args.FW_BY_ID
+                        else 'name'
+                    )
+                    print(
+                        f"Error: firewall with {label} '{name}' "
+                        f'not found in {args.FILE}',
+                        file=sys.stderr,
+                    )
+                    continue
+                fw_list.append((str(fw.id), fw.name))
 
-    # Create compiler driver and run compilation
+    if not fw_list:
+        print('Error: no firewalls found to compile', file=sys.stderr)
+        return 1
+
+    # Compile each firewall (single DB load, sequential compilation)
     from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
 
-    driver = CompilerDriver_ipt(db)
-    driver.wdir = args.DESTDIR
-    driver.source_dir = str(Path(args.FILE).parent)
-    driver.verbose = args.VERBOSE
-    driver.prepend_cluster_name = args.DEBUG_CLUSTER_NAME
-    driver.test_mode = args.TEST_MODE
+    compiled_ok = 0
+    compiled_err = 0
+    for fw_id, fw_name in fw_list:
+        if len(fw_list) > 1:
+            print(f'\n--- {fw_name} ---', file=sys.stderr)
+        print(f"Compiling '{fw_name}' (id: {fw_id}) ...", file=sys.stderr)
 
-    if args.OUTPUT:
-        driver.file_name_setting = args.OUTPUT
+        driver = CompilerDriver_ipt(db)
+        driver.wdir = args.DESTDIR
+        driver.source_dir = str(Path(args.FILE).parent)
+        driver.verbose = args.VERBOSE
+        driver.prepend_cluster_name = args.DEBUG_CLUSTER_NAME
+        driver.test_mode = args.TEST_MODE
 
-    if args.IPV4:
-        driver.ipv6_run = False
-    elif args.IPV6:
-        driver.ipv4_run = False
+        if args.OUTPUT:
+            driver.file_name_setting = args.OUTPUT
+        if args.IPV4:
+            driver.ipv6_run = False
+        elif args.IPV6:
+            driver.ipv4_run = False
+        if args.SINGLE_RULE:
+            driver.single_rule_compile_on = True
+            driver.single_rule_id = args.SINGLE_RULE
+        if args.DEBUG_POLICY_RULE is not None:
+            driver.debug_rule_policy = args.DEBUG_POLICY_RULE
+        if args.DEBUG_NAT_RULE is not None:
+            driver.debug_rule_nat = args.DEBUG_NAT_RULE
+        if args.DEBUG_ROUTING_RULE is not None:
+            driver.debug_rule_routing = args.DEBUG_ROUTING_RULE
 
-    if args.SINGLE_RULE:
-        driver.single_rule_compile_on = True
-        driver.single_rule_id = args.SINGLE_RULE
+        result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id=args.SINGLE_RULE)
 
-    if args.DEBUG_POLICY_RULE is not None:
-        driver.debug_rule_policy = args.DEBUG_POLICY_RULE
-    if args.DEBUG_NAT_RULE is not None:
-        driver.debug_rule_nat = args.DEBUG_NAT_RULE
-    if args.DEBUG_ROUTING_RULE is not None:
-        driver.debug_rule_routing = args.DEBUG_ROUTING_RULE
+        if result:
+            print(f'Compiler returned: {result}', file=sys.stderr)
 
-    print('Compiling ...', file=sys.stderr)
-    result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id=args.SINGLE_RULE)
-
-    if result:
-        print(f'Compiler returned: {result}', file=sys.stderr)
-
-    if driver.all_errors:
-        for err in driver.all_errors:
-            print(f'Error: {err}', file=sys.stderr)
+        if driver.all_errors:
+            compiled_err += 1
+            for err in driver.all_errors:
+                print(f'Error: {err}', file=sys.stderr)
+        else:
+            compiled_ok += 1
 
     elapsed = time.monotonic() - t_start
     hours, remainder = divmod(int(elapsed), 3600)
@@ -308,10 +347,14 @@ def main(argv=None):
         f'Compile time: {hours:02d}:{minutes:02d}:{seconds:02d}.{int(frac * 1000):03d}',
         file=sys.stderr,
     )
+    if len(fw_list) > 1:
+        print(
+            f'Result: {compiled_ok} succeeded, {compiled_err} failed '
+            f'(out of {len(fw_list)})',
+            file=sys.stderr,
+        )
 
-    if driver.all_errors:
-        return 1
-    return 0
+    return 1 if compiled_err else 0
 
 
 if __name__ == '__main__':

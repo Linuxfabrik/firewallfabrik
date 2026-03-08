@@ -180,5 +180,8 @@ Desktop integration
 nftables support
    FirewallFabrik adds native nftables compilation, which Firewall Builder never had.
 
+Parallel compilation
+   FirewallFabrik compiles multiple firewalls concurrently (up to the number of CPU cores). Firewall Builder compiled firewalls one at a time. The CLI compilers (``fwf-ipt``, ``fwf-nft``) also accept multiple firewall names and an ``--all`` flag, loading the database only once.
+
 IPv4 packet forwarding default
    Firewall Builder defaulted to enabling IPv4 packet forwarding. FirewallFabrik defaults to "No change" (does not modify the kernel setting).

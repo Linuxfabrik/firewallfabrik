@@ -12,6 +12,7 @@
 
 """Compile/install dialog — 2-page wizard using compileinstalldialog_q.ui."""
 
+import os
 import shutil
 import uuid
 from datetime import UTC, datetime
@@ -111,16 +112,21 @@ class CompileDialog(QDialog):
         self._install_mode = install_mode
         self._preselect_names = set(preselect_names) if preselect_names else None
 
-        # Compile state
-        self._process = None
+        # Compile state — parallel compilation with ordered output
         self._compile_queue = []
         self._compiled_fw_ids = []
-        self._current_fw_name = ''
-        self._current_fw_id = None
         self._compiling = False
         self._work_items = {}  # fw_id -> QTreeWidgetItem in fwWorkList
+        self._active_jobs = {}  # fw_id -> QProcess
+        self._output_buffers = {}  # fw_id -> list of output lines
+        self._completed_jobs = {}  # fw_id -> (fw_name, exit_code, exit_status, lines)
+        self._display_order = []  # fw_ids in original compile queue order
+        self._display_pos = 0  # next position to flush to log
+        self._max_workers = min(os.cpu_count() or 4, 8)
 
-        # Install state
+        # Install state (sequential — requires user dialogs)
+        self._current_fw_name = ''
+        self._current_fw_id = None
         self._installing = False
         self._install_queue = []
         self._installed_fw_ids = []
@@ -417,9 +423,16 @@ class CompileDialog(QDialog):
         self.compProgress.setValue(0)
         self.procLogDisplay.clear()
 
+        # Store display order for ordered log output during parallel compilation.
+        self._display_order = [entry[0] for entry in self._compile_queue]
+        self._display_pos = 0
+        self._output_buffers.clear()
+        self._completed_jobs.clear()
+        self._active_jobs.clear()
+
         if self._compile_queue:
             self._compiling = True
-            self._compile_next()
+            self._fill_compile_slots()
         elif self._install_queue:
             self._start_install_phase()
 
@@ -465,120 +478,179 @@ class CompileDialog(QDialog):
             self._stop_installation()
 
     def _stop_compilation(self):
-        """Kill the running process and clear the queue."""
+        """Kill all running processes and clear the queue."""
         self._compile_queue.clear()
-        if (
-            self._process is not None
-            and self._process.state() != QProcess.ProcessState.NotRunning
-        ):
-            self._process.kill()
-            self._process.waitForFinished(3000)
+        for process in list(self._active_jobs.values()):
+            if process.state() != QProcess.ProcessState.NotRunning:
+                process.kill()
+                process.waitForFinished(3000)
+        self._active_jobs.clear()
         self._compiling = False
+        self._flush_display_queue()
         self.procLogDisplay.append(
             '<p style="color: orange;"><b>Compilation stopped by user.</b></p>'
         )
         self.backButton.setEnabled(True)
         self.finishButton.setEnabled(True)
 
-    def _compile_next(self):
-        if not self._compile_queue:
-            self._finish_compilation()
-            return
+    def _fill_compile_slots(self):
+        """Start up to ``_max_workers`` concurrent compilation processes."""
+        while self._compile_queue and len(self._active_jobs) < self._max_workers:
+            fw_id, fw_name, platform, output_file, cmdline, compiler_path = (
+                self._compile_queue.pop(0)
+            )
 
-        fw_id, fw_name, platform, output_file, cmdline, compiler_path = (
-            self._compile_queue.pop(0)
-        )
-        self._current_fw_name = fw_name
-        self._current_fw_id = fw_id
+            # Update sidebar
+            work_item = self._work_items.get(fw_id)
+            if work_item is not None:
+                work_item.setText(1, 'Compiling...')
 
-        # Update sidebar
-        work_item = self._work_items.get(fw_id)
-        if work_item is not None:
-            work_item.setText(1, 'Compiling...')
+            # Resolve compiler binary
+            cli_tool = _PLATFORM_CLI[platform]
+            program = compiler_path or shutil.which(cli_tool) or cli_tool
 
-        self.fwMCLabel.setText(fw_name)
-        self.infoMCLabel.setText('Compiling...')
+            args = []
+            if cmdline:
+                args.extend(cmdline.split())
+            args.extend(
+                [
+                    fw_id,
+                    '-p',
+                    '-f',
+                    str(self._current_file),
+                    '-d',
+                    str(self._dest_dir),
+                    '-v',
+                ]
+            )
+            if output_file:
+                args.extend(['-o', output_file])
 
-        # Add anchor for this firewall in the log
-        self.procLogDisplay.append(
-            f'<a name="{escape(fw_id)}"></a>'
-            f'<p><b>Compiling {escape(fw_name)} ...</b></p>'
-        )
+            process = QProcess(self)
+            process.setProperty('fw_id', fw_id)
+            process.setProperty('fw_name', fw_name)
+            process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
+            process.readyReadStandardOutput.connect(self._on_job_output)
+            process.finished.connect(self._on_job_finished)
 
-        # Resolve compiler binary: custom path from settings, else PATH lookup.
-        cli_tool = _PLATFORM_CLI[platform]
-        program = compiler_path or shutil.which(cli_tool) or cli_tool
+            self._active_jobs[fw_id] = process
+            self._output_buffers[fw_id] = []
+            process.start(program, args)
 
-        # Build CLI args matching legacy C++ instDialog_compile behaviour:
-        # custom cmdline args first, then standard flags.
-        args = []
-        if cmdline:
-            args.extend(cmdline.split())
-
-        args.extend(
-            [
-                fw_id,
-                '-p',
-                '-f',
-                str(self._current_file),
-                '-d',
-                str(self._dest_dir),
-                '-v',
-            ]
-        )
-        if output_file:
-            args.extend(['-o', output_file])
-
-        self._process = QProcess(self)
-        self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self._process.readyReadStandardOutput.connect(self._on_process_output)
-        self._process.finished.connect(self._on_process_finished)
-        self._process.start(program, args)
+        # Update status labels
+        active = len(self._active_jobs)
+        total = len(self._display_order)
+        done = self.compFirewallProgress.value()
+        if active == 1:
+            fw_id = next(iter(self._active_jobs))
+            self.fwMCLabel.setText(self._active_jobs[fw_id].property('fw_name'))
+            self.infoMCLabel.setText(f'Compiling... ({done}/{total})')
+        elif active > 1:
+            self.fwMCLabel.setText(f'{active} firewalls')
+            self.infoMCLabel.setText(
+                f'Compiling {active} in parallel... ({done}/{total})'
+            )
 
     @Slot()
-    def _on_process_output(self):
-        if self._process is None:
+    def _on_job_output(self):
+        """Buffer output for a specific compilation job."""
+        process = self.sender()
+        if process is None:
             return
-        data = self._process.readAllStandardOutput().data()
+        fw_id = process.property('fw_id')
+        data = process.readAllStandardOutput().data()
         text = data.decode('utf-8', errors='replace')
-        for line in text.splitlines():
-            if line.lower().startswith('error'):
-                self.procLogDisplay.append(
-                    f'<span style="color: red;">{escape(line)}</span>'
-                )
-            else:
-                self.procLogDisplay.append(line)
+        buf = self._output_buffers.get(fw_id)
+        if buf is not None:
+            buf.extend(text.splitlines())
 
     @Slot(int, QProcess.ExitStatus)
-    def _on_process_finished(self, exit_code, exit_status):
-        work_item = self._work_items.get(self._current_fw_id)
+    def _on_job_finished(self, exit_code, exit_status):
+        """Handle completion of one compilation job."""
+        process = self.sender()
+        if process is None:
+            return
+        fw_id = process.property('fw_id')
+        fw_name = process.property('fw_name')
 
+        # Drain remaining output
+        data = process.readAllStandardOutput().data()
+        if data:
+            text = data.decode('utf-8', errors='replace')
+            buf = self._output_buffers.get(fw_id)
+            if buf is not None:
+                buf.extend(text.splitlines())
+
+        # Remove from active jobs
+        self._active_jobs.pop(fw_id, None)
+
+        # Update sidebar and track result
+        work_item = self._work_items.get(fw_id)
         if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
-            self.procLogDisplay.append(
-                f'<p style="color: green;"><b>{escape(self._current_fw_name)}: '
-                f'compiled successfully.</b></p>'
-            )
-            self._compiled_fw_ids.append(self._current_fw_id)
+            self._compiled_fw_ids.append(fw_id)
             if work_item is not None:
                 work_item.setText(1, 'Compiled')
         else:
-            self.procLogDisplay.append(
-                f'<p style="color: red;"><b>{escape(self._current_fw_name)}: '
-                f'compilation failed (exit code {exit_code}).</b></p>'
-            )
             if work_item is not None:
                 work_item.setText(1, 'Compile Error')
-            # Block install for this firewall on compile failure.
             if self._install_mode:
                 self._install_queue = [
-                    entry
-                    for entry in self._install_queue
-                    if entry[0] != self._current_fw_id
+                    entry for entry in self._install_queue if entry[0] != fw_id
                 ]
 
-        self._process = None
+        # Store completed job for ordered log flushing
+        self._completed_jobs[fw_id] = (
+            fw_name,
+            exit_code,
+            exit_status,
+            self._output_buffers.pop(fw_id, []),
+        )
+
         self.compFirewallProgress.setValue(self.compFirewallProgress.value() + 1)
-        self._compile_next()
+        self._flush_display_queue()
+
+        # Fill more slots or finish
+        if self._compile_queue:
+            self._fill_compile_slots()
+        elif not self._active_jobs:
+            self._finish_compilation()
+        else:
+            # Update labels while waiting for remaining active jobs
+            self._fill_compile_slots()
+
+    def _flush_display_queue(self):
+        """Write completed job outputs to the log in the original queue order."""
+        while self._display_pos < len(self._display_order):
+            fw_id = self._display_order[self._display_pos]
+            info = self._completed_jobs.get(fw_id)
+            if info is None:
+                break  # This firewall hasn't finished yet
+            fw_name, exit_code, exit_status, output_lines = info
+
+            self.procLogDisplay.append(
+                f'<a name="{escape(fw_id)}"></a>'
+                f'<p><b>Compiling {escape(fw_name)} ...</b></p>'
+            )
+            for line in output_lines:
+                if line.lower().startswith('error'):
+                    self.procLogDisplay.append(
+                        f'<span style="color: red;">{escape(line)}</span>'
+                    )
+                else:
+                    self.procLogDisplay.append(line)
+
+            if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
+                self.procLogDisplay.append(
+                    f'<p style="color: green;"><b>{escape(fw_name)}: '
+                    f'compiled successfully.</b></p>'
+                )
+            else:
+                self.procLogDisplay.append(
+                    f'<p style="color: red;"><b>{escape(fw_name)}: '
+                    f'compilation failed (exit code {exit_code}).</b></p>'
+                )
+
+            self._display_pos += 1
 
     def _finish_compilation(self):
         self._compiling = False
@@ -881,14 +953,12 @@ class CompileDialog(QDialog):
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._dest_dir)))
 
     def closeEvent(self, event):
-        if (
-            self._process is not None
-            and self._process.state() != QProcess.ProcessState.NotRunning
-        ):
+        if self._active_jobs:
             result = QMessageBox.question(
                 self,
-                'Process in Progress',
-                'A process is still running. Do you want to stop it?',
+                'Compilation in Progress',
+                f'{len(self._active_jobs)} compilation(s) still running. '
+                'Do you want to stop them?',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if result == QMessageBox.StandardButton.No:
