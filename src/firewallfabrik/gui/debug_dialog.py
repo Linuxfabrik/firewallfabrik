@@ -35,7 +35,6 @@ class DebugDialog(QDialog):
         loader.load(str(ui_path))
 
         self._populate()
-        self.resize(700, 400)
 
         if parent is not None:
             parent_center = parent.geometry().center()

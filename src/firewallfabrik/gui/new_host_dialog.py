@@ -64,11 +64,6 @@ class NewHostDialog(QDialog):
         # Tab widgets and their data.
         self._iface_widgets = []  # list of QWidget (one per tab)
 
-        # Initial button states.
-        self.backButton.setEnabled(False)
-        self.nextButton.setEnabled(False)
-        self.finishButton.setEnabled(False)
-
         # Connections.
         self.backButton.clicked.connect(self._on_back)
         self.nextButton.clicked.connect(self._on_next)
@@ -88,7 +83,6 @@ class NewHostDialog(QDialog):
         self._remove_btn.setFixedSize(24, 24)
         self._remove_btn.clicked.connect(self._remove_current_tab)
 
-        self.obj_name.setText('New Host')
         self.obj_name.selectAll()
 
         # Start with one blank interface tab.

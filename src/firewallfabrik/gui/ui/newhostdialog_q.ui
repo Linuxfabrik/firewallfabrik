@@ -102,6 +102,9 @@
            <property name="toolTip">
             <string>Enter the name for the new host. The name must be unique within the library.</string>
            </property>
+           <property name="text">
+            <string>New Host</string>
+           </property>
            <property name="placeholderText">
             <string>Enter host name</string>
            </property>
@@ -203,6 +206,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="backButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&lt; &amp;Back</string>
         </property>
@@ -213,6 +219,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="nextButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&amp;Next &gt;</string>
         </property>
@@ -223,6 +232,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="finishButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&amp;Finish</string>
         </property>

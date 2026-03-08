@@ -613,6 +613,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="backButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&lt; &amp;Back</string>
         </property>
@@ -639,6 +642,9 @@
       </item>
       <item>
        <widget class="QPushButton" name="finishButton">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>&amp;Finish</string>
         </property>

@@ -64,11 +64,6 @@ class NewClusterDialog(QDialog):
         self._master_group = QButtonGroup(self)
         self._master_group.setExclusive(True)
 
-        # Initial button states.
-        self.backButton.setEnabled(False)
-        self.nextButton.setEnabled(False)
-        self.finishButton.setEnabled(False)
-
         # Connections.
         self.backButton.clicked.connect(self._on_back)
         self.nextButton.clicked.connect(self._on_next)
@@ -76,7 +71,6 @@ class NewClusterDialog(QDialog):
         self.cancelButton.clicked.connect(self.reject)
         self.obj_name.textChanged.connect(self._validate)
 
-        self.obj_name.setText('New Cluster')
         self.obj_name.selectAll()
 
         self._populate_firewall_table()

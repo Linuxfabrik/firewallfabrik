@@ -156,9 +156,6 @@ class CompileDialog(QDialog):
 
         # Wizard navigation
         self.stackedWidget.setCurrentIndex(0)
-        self.backButton.setEnabled(False)
-        self.finishButton.setEnabled(False)
-        self.nextButton.setEnabled(True)
 
         self.nextButton.clicked.connect(self._next_clicked)
         self.backButton.clicked.connect(self._back_clicked)
