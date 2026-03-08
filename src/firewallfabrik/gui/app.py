@@ -70,9 +70,17 @@ def main():
     args, remaining = parser.parse_known_args()
     filename = args.file or args.file_positional
 
+    # PySide6 on Wayland has a bug where double-clicking the title bar
+    # does not maximize/restore the window.  Fall back to XCB (XWayland)
+    # unless the user has explicitly chosen a platform.
+    if (
+        os.environ.get('XDG_SESSION_TYPE') == 'wayland'
+        and 'QT_QPA_PLATFORM' not in os.environ
+    ):
+        os.environ['QT_QPA_PLATFORM'] = 'xcb'
+
     # Set desktop file name before QApplication construction so the Wayland
     # platform plugin picks it up during init and doesn't try to register twice.
-    os.environ.setdefault('XDG_ACTIVATION_TOKEN', '')
     QApplication.setDesktopFileName('ch.linuxfabrik.firewallfabrik')
 
     app = QApplication(remaining)

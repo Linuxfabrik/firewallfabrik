@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+
+  <mime-type type="application/x-firewallfabrik">
+    <comment>FirewallFabrik configuration file</comment>
+    <glob pattern="*.fwf"/>
+    <icon name="ch.linuxfabrik.firewallfabrik"/>
+  </mime-type>
+
+  <mime-type type="application/x-fwbuilder">
+    <comment>Firewall Builder configuration file</comment>
+    <glob pattern="*.fwb"/>
+    <icon name="ch.linuxfabrik.firewallfabrik"/>
+  </mime-type>
+
+</mime-info>

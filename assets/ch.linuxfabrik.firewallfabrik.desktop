@@ -12,5 +12,5 @@ Terminal=false
 Type=Application
 Categories=System;Security;Network;
 Keywords=network;security;firewalld;iptables;netfilter;nftables;linuxfabrik;firewallfabrik;fwf;
-MimeType=application/x-firewallfabrik;
+MimeType=application/x-firewallfabrik;application/x-fwbuilder;
 StartupWMClass=FirewallFabrik

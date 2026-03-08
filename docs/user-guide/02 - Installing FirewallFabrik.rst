@@ -137,6 +137,16 @@ Then re-run:
 
    gtk-update-icon-cache $HOME/.local/share/icons/hicolor/
 
+To register ``.fwf`` and ``.fwb`` as known file types so your file manager (Nautilus, Nemo, Thunar, etc.) shows them with the FirewallFabrik icon and offers "Open with > FirewallFabrik":
+
+.. code-block:: bash
+
+   mkdir -p $HOME/.local/share/mime/packages/
+   cp assets/ch.linuxfabrik.firewallfabrik.xml $HOME/.local/share/mime/packages/
+   update-mime-database $HOME/.local/share/mime/
+
+This teaches the system that ``.fwf`` and ``.fwb`` are FirewallFabrik files. You may need to log out and back in (or restart the file manager) for the changes to take effect.
+
 If ``fwf`` is installed inside a virtual environment and is not on your system ``PATH``, update the desktop file to use the full path:
 
 .. code-block:: bash
