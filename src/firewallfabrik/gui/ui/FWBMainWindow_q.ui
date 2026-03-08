@@ -1180,9 +1180,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="fileCompareAction"/>
     <addaction name="ImportAddressesFromFileAction"/>
-    <addaction name="SNMPDiscoveryAction"/>
     <addaction name="UpdateStandardLibraryAction"/>
    </widget>
    <widget class="QMenu" name="helpMenu">
@@ -1218,13 +1216,6 @@
     <addaction name="fileSaveAsAction"/>
     <addaction name="fileReloadAction"/>
     <addaction name="fileCloseAction"/>
-    <addaction name="separator"/>
-    <addaction name="policyImportAction"/>
-    <addaction name="separator"/>
-    <addaction name="libImportAction"/>
-    <addaction name="libExportAction"/>
-    <addaction name="separator"/>
-    <addaction name="filePrintAction"/>
     <addaction name="separator"/>
     <addaction name="fileExitAction"/>
    </widget>
@@ -1354,23 +1345,6 @@
     <string>Discard all unsaved changes and reload the file from disk</string>
    </property>
   </action>
-  <action name="filePrintAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Print...</string>
-   </property>
-   <property name="iconText">
-    <string>Print</string>
-   </property>
-   <property name="toolTip">
-    <string>Print</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+P</string>
-   </property>
-  </action>
   <action name="fileExitAction">
    <property name="text">
     <string>E&amp;xit</string>
@@ -1430,34 +1404,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
-   </property>
-  </action>
-  <action name="helpContentsAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Contents...</string>
-   </property>
-   <property name="iconText">
-    <string>Contents</string>
-   </property>
-   <property name="shortcut">
-    <string/>
-   </property>
-  </action>
-  <action name="helpIndexAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Index...</string>
-   </property>
-   <property name="iconText">
-    <string>Index</string>
-   </property>
-   <property name="shortcut">
-    <string/>
    </property>
   </action>
   <action name="helpAboutAction">
@@ -1642,34 +1588,6 @@
     <string>Delete</string>
    </property>
   </action>
-  <action name="libExportAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Export Library</string>
-   </property>
-   <property name="iconText">
-    <string>Export Library To a File</string>
-   </property>
-   <property name="toolTip">
-    <string>Export Library</string>
-   </property>
-  </action>
-  <action name="libImportAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Import &amp;Library</string>
-   </property>
-   <property name="iconText">
-    <string>Import Library From a File</string>
-   </property>
-   <property name="toolTip">
-    <string>Import Library</string>
-   </property>
-  </action>
   <action name="debugAction">
    <property name="text">
     <string>&amp;Debugging Info</string>
@@ -1737,34 +1655,6 @@
    </property>
    <property name="iconText">
     <string>new item</string>
-   </property>
-  </action>
-  <action name="fileCompareAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Find Conflicting Objects in Two Files</string>
-   </property>
-   <property name="iconText">
-    <string>Find Conflicting Objects in Two Files</string>
-   </property>
-   <property name="toolTip">
-    <string>Find Conflicting Objects in Two Files</string>
-   </property>
-  </action>
-  <action name="policyImportAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Import &amp;Firewall</string>
-   </property>
-   <property name="iconText">
-    <string>Import Policy</string>
-   </property>
-   <property name="toolTip">
-    <string>Import Firewall</string>
    </property>
   </action>
   <action name="helpAction">
@@ -1850,17 +1740,6 @@
    </property>
    <property name="toolTip">
     <string>Import Addresses From File</string>
-   </property>
-  </action>
-  <action name="SNMPDiscoveryAction">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Discover networks and hosts using SNMP</string>
-   </property>
-   <property name="toolTip">
-    <string>Discover networks and hosts using SNMP</string>
    </property>
   </action>
   <action name="UpdateStandardLibraryAction">
@@ -2233,22 +2112,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>fileCompareAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileCompare()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>fileExitAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2285,22 +2148,6 @@
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
    <slot>fileOpen()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>filePrintAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>filePrint()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2361,74 +2208,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>helpContentsAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>helpContents()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>helpIndexAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>helpIndex()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>installAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
    <slot>install()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>libExportAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileExport()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>libImportAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>fileImport()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2525,22 +2308,6 @@
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
    <slot>fileSave()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>policyImportAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>importPolicy()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -2681,22 +2448,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>SNMPDiscoveryAction</sender>
-   <signal>triggered()</signal>
-   <receiver>FWBMainWindow_q</receiver>
-   <slot>toolsSNMPDiscovery()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>571</x>
-     <y>422</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>UpdateStandardLibraryAction</sender>
    <signal>triggered()</signal>
    <receiver>FWBMainWindow_q</receiver>
@@ -2726,7 +2477,6 @@
   <slot>showTutorial()</slot>
   <slot>inspect()</slot>
   <slot>toolsImportAddressesFromFile()</slot>
-  <slot>toolsSNMPDiscovery()</slot>
   <slot>toolsUpdateStandardLibrary()</slot>
   <slot>back()</slot>
   <slot>fileReload()</slot>

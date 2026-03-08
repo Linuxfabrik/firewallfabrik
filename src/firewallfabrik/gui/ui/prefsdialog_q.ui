@@ -1862,22 +1862,6 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>rb25</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeIconSize25()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>119</x>
-     <y>101</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>browseForSCP</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
@@ -1934,22 +1918,6 @@ and the unmodified version of the file you loaded.</string>
     <hint type="sourcelabel">
      <x>149</x>
      <y>94</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>rb16</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeIconSize16()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>119</x>
-     <y>101</y>
     </hint>
     <hint type="destinationlabel">
      <x>20</x>

@@ -113,18 +113,6 @@ class PreferencesDialog(QDialog):
         table.horizontalHeader().setStretchLastSection(True)
 
     # ------------------------------------------------------------------
-    # Icon size slots (connected via .ui signal/slot)
-    # ------------------------------------------------------------------
-
-    @Slot()
-    def changeIconSize16(self):
-        pass
-
-    @Slot()
-    def changeIconSize25(self):
-        pass
-
-    # ------------------------------------------------------------------
     # Label color picker slots (connected via .ui signal/slot)
     # ------------------------------------------------------------------
 

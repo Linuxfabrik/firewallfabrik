@@ -2926,48 +2926,23 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def editFind(self):
-        # TODO
-        pass
+        self._show_find_panel()
 
     @Slot(int)
-    def editorPanelTabChanged(self, _index):
-        # TODO
-        pass
-
-    @Slot()
-    def fileCompare(self):
-        # TODO
-        pass
-
-    @Slot()
-    def fileExport(self):
-        # TODO
-        pass
-
-    @Slot()
-    def fileImport(self):
-        # TODO
-        pass
-
-    @Slot()
-    def filePrint(self):
-        # TODO
-        pass
-
-    @Slot()
-    def helpContents(self):
-        # TODO
-        pass
-
-    @Slot()
-    def helpIndex(self):
-        # TODO
-        pass
-
-    @Slot()
-    def importPolicy(self):
-        # TODO
-        pass
+    def editorPanelTabChanged(self, index):
+        if index != 0:
+            return
+        # Guard: fires during __init__ before _object_tree exists.
+        if not hasattr(self, '_object_tree'):
+            return
+        items = self._object_tree._tree.selectedItems()
+        if not items:
+            return
+        item = items[0]
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if obj_id and obj_type:
+            self._editor_mgr.open_object(obj_id, obj_type)
 
     @Slot()
     def lockObject(self):
@@ -2975,11 +2950,6 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def toolsImportAddressesFromFile(self):
-        # TODO
-        pass
-
-    @Slot()
-    def toolsSNMPDiscovery(self):
         # TODO
         pass
 

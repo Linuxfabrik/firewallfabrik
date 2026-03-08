@@ -14,13 +14,29 @@
 
 import ipaddress
 import logging
+import socket
 
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QCursor, Qt
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_name(hostname, af_type):
+    """Resolve *hostname* to an IP address string using *af_type*.
+
+    Returns the first matching address or an empty string on failure.
+    """
+    try:
+        results = socket.getaddrinfo(hostname, None, af_type, socket.SOCK_STREAM)
+        if results:
+            return results[0][4][0]
+    except (socket.gaierror, OSError):
+        pass
+    return ''
 
 
 def _validate_ipv4(address_text):
@@ -120,10 +136,27 @@ class IPv4Dialog(_BaseAddressDialog):
         except ValueError:
             pass
 
+    def _set_read_only(self, read_only):
+        super()._set_read_only(read_only)
+        self.dnsLookup.setEnabled(not read_only)
+
     @Slot()
     def DNSlookup(self):
-        # TODO
-        pass
+        name = self.obj_name.text().strip()
+        if not name:
+            return
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+        addr = _resolve_name(name, socket.AF_INET)
+        QApplication.restoreOverrideCursor()
+        if addr:
+            self.address.setText(addr)
+            self._on_changed()
+            return
+        QMessageBox.warning(
+            self,
+            self.tr('DNS Lookup Failed'),
+            self.tr("DNS lookup failed for '%1'.").replace('%1', name),
+        )
 
 
 class IPv6Dialog(_BaseAddressDialog):
@@ -167,15 +200,31 @@ class IPv6Dialog(_BaseAddressDialog):
         except ValueError:
             pass
 
+    def _set_read_only(self, read_only):
+        super()._set_read_only(read_only)
+        self.dnsLookup.setEnabled(not read_only)
+
     @Slot()
     def changed(self):
-        # TODO
-        pass
+        self._on_changed()
 
     @Slot()
     def DNSlookup(self):
-        # TODO
-        pass
+        name = self.obj_name.text().strip()
+        if not name:
+            return
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+        addr = _resolve_name(name, socket.AF_INET6)
+        QApplication.restoreOverrideCursor()
+        if addr:
+            self.address.setText(addr)
+            self._on_changed()
+            return
+        QMessageBox.warning(
+            self,
+            self.tr('DNS Lookup Failed'),
+            self.tr("DNS lookup failed for '%1'.").replace('%1', name),
+        )
 
 
 class NetworkDialog(_BaseAddressDialog):

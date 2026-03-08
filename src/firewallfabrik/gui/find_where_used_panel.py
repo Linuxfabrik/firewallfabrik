@@ -68,6 +68,8 @@ def find_group_references(session, obj_id):
     Returns a list of ``(group_id, group_name, group_type)`` tuples for
     every group that contains *obj_id* as a member.
     """
+    if isinstance(obj_id, str):
+        obj_id = uuid.UUID(obj_id)
     rows = session.execute(
         sqlalchemy.select(
             group_membership.c.group_id,
@@ -90,6 +92,8 @@ def find_rule_references(session, obj_id):
     ``(rule_id, slot, rule_set_id, rs_type, rs_name, fw_name, fw_type, position)``
     tuples for every rule element that references *obj_id*.
     """
+    if isinstance(obj_id, str):
+        obj_id = uuid.UUID(obj_id)
     rows = session.execute(
         sqlalchemy.select(
             rule_elements.c.rule_id,

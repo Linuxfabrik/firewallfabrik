@@ -10621,6 +10621,11 @@ libraries:
                 inet_addr_mask:
                   address: '1.1.1.1'
                   netmask: '255.255.255.255'
+              - type: 'IPv4'
+                name: 'linuxfabrik.ch'
+                inet_addr_mask:
+                  address: '195.15.242.254'
+                  netmask: ''
           - type: 'ObjectGroup'
             name: 'DNS Names'
           - type: 'ObjectGroup'
