@@ -10622,7 +10622,7 @@ libraries:
                   address: '1.1.1.1'
                   netmask: '255.255.255.255'
               - type: 'IPv4'
-                name: 'linuxfabrik.ch'
+                name: 'linuxfabrik.ch 195.15.242.254'
                 inet_addr_mask:
                   address: '195.15.242.254'
                   netmask: ''

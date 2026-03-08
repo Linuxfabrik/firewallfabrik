@@ -15,4 +15,4 @@ Network Discovery
    To populate your object tree, you can:
 
    * Create objects manually using the GUI (see :doc:`05 - Working with Objects`).
-   * Open an existing Firewall Builder file (.fwb) -- FirewallFabrik will import all objects from it.
+   * Open an existing Firewall Builder file (.fwb) -- FirewallFabrik will import all objects from it. See :doc:`17 - Migrating from Firewall Builder` for details.

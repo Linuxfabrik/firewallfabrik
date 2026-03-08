@@ -20,3 +20,4 @@ User Guide
    14 - FirewallFabrik Cookbook
    15 - Troubleshooting
    16 - Appendix
+   17 - Migrating from Firewall Builder

@@ -62,7 +62,7 @@ File Formats
 
 FirewallFabrik uses its own YAML-based file format (``.fwf``) for storing firewall configurations. This format is human-readable, diff-friendly, and works well with version control systems like Git.
 
-For users migrating from Firewall Builder, FirewallFabrik can import existing Firewall Builder XML files (``.fwb``) directly. When saving, the data is always written in the new ``.fwf`` format.
+For users migrating from Firewall Builder, FirewallFabrik can import existing Firewall Builder XML files (``.fwb``) directly. When saving, the data is always written in the new ``.fwf`` format. See :doc:`17 - Migrating from Firewall Builder` for details.
 
 Internally, FirewallFabrik loads all data into an in-memory SQLite database (via SQLAlchemy) for fast querying and editing, with full undo/redo support through database snapshots.
 
@@ -272,69 +272,6 @@ Both backends produce deployment-ready output: shell scripts with individual ``i
 Platforms from Firewall Builder Not Carried Forward
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Firewall Builder, the predecessor of FirewallFabrik, supported compilation to nine firewall platforms. FirewallFabrik currently ships with iptables and nftables backends. The following platforms from Firewall Builder have not been carried forward. If you are migrating from Firewall Builder, this overview explains the current status of each.
+Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik currently ships with iptables and nftables backends and adds native nftables support, which Firewall Builder never had. Several legacy platforms (Cisco PIX, FWSM, ipfw, ipfilter) have been dropped entirely, while others (Cisco ASA/IOS/NX-OS, JunOS, PF) are candidates for future backends.
 
-**Discontinued platforms:**
-
-.. list-table::
-   :header-rows: 1
-   :widths: 20 25 55
-
-   * - Platform
-     - Target
-     - Status
-   * - Cisco FWSM
-     - Firewall Services Module
-     - Discontinued by Cisco. No longer deployed.
-   * - Cisco PIX
-     - PIX 6.x appliances
-     - Hardware end-of-life since ~2008. Fully replaced by Cisco ASA.
-   * - ipfilter (ipf)
-     - Solaris, FreeBSD
-     - Oracle Solaris has virtually no market share left. FreeBSD users have moved to PF.
-   * - ipfw
-     - FreeBSD, macOS
-     - Superseded by PF on FreeBSD. macOS also switched to PF.
-
-**Platforms that are still in use but not yet supported:**
-
-.. list-table::
-   :header-rows: 1
-   :widths: 20 25 55
-
-   * - Platform
-     - Target
-     - Notes
-   * - Cisco ASA
-     - ASA 7.x--8.3
-     - Cisco ASA is still widely deployed. However, the Firewall Builder compiler targeted ASA up to version 8.3, which introduced a major NAT syntax overhaul. Modern ASA versions (9.x and later) would require a substantially new compiler. Cisco is also transitioning customers to Firepower Threat Defense (FTD).
-   * - Cisco IOS ACL
-     - IOS 12.1--12.4 routers
-     - Cisco IOS routers remain common (modern versions run IOS-XE 16.x/17.x). No compiler backend has been implemented yet, but the architecture would allow adding one.
-   * - Cisco NX-OS ACL
-     - Nexus 4.2--6.1
-     - Cisco Nexus switches are used in data centers (current NX-OS is 10.x). Same situation as IOS -- not currently supported but architecturally possible.
-   * - HP ProCurve ACL
-     - ProCurve K.13 switches
-     - Rebranded to HPE Aruba. A niche switch ACL platform.
-   * - Juniper JunOS
-     - JunOS 11.2+
-     - Juniper is a major player in enterprise networking. No compiler backend has been implemented yet.
-   * - PF
-     - OpenBSD, FreeBSD
-     - PF is actively developed and powers both pfSense and OPNsense. Among the platforms not yet supported, PF would be the most natural candidate for a future compiler backend.
-
-**Added in FirewallFabrik:**
-
-.. list-table::
-   :header-rows: 1
-   :widths: 20 25 55
-
-   * - Platform
-     - Target
-     - Notes
-   * - nftables
-     - Linux (kernel 3.13+)
-     - The successor to iptables and the default firewall framework on all major Linux distributions. Firewall Builder never supported nftables. This is a key advantage of FirewallFabrik for modern Linux environments.
-
-**In summary:** FirewallFabrik currently ships with iptables and nftables compiler backends. Its architecture is open by design -- additional backends can be added as demand arises. The discontinued platforms (PIX, FWSM, ipfw, ipfilter) have no remaining audience. The still-active platforms (Cisco ASA/IOS/NX-OS, JunOS, PF) are candidates for future backends, with PF being the most natural fit. The addition of nftables support -- which Firewall Builder never had -- already makes FirewallFabrik more relevant for modern Linux environments than its predecessor.
+For a detailed platform compatibility matrix and migration instructions, see :doc:`17 - Migrating from Firewall Builder`.
