@@ -168,6 +168,12 @@ No SNMP discovery
 No policy import
    Importing firewall configurations from running devices (e.g. parsing ``iptables-save`` output) is not available.
 
+ULOG removed
+   The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG). If your ``.fwb`` file had ``use_ULOG`` enabled, it is silently migrated to the standard LOG target during import. NFLOG support is planned but not yet implemented in the compiler — LOG and NFLOG are shown as radio buttons in the platform settings, with NFLOG currently disabled.
+
+Legacy logging and bridge options
+   Several advanced iptables logging options (log TCP sequence numbers, log TCP/IP options, numeric syslog levels, kernel timezone, unconditional rule logging) and bridge interface configuration are legacy features with no remaining audience and are not supported. The corresponding checkboxes in the platform settings dialogs are disabled. If your ``.fwb`` file had any of these options enabled, you will see a compiler warning.
+
 Desktop integration
    FirewallFabrik registers ``.fwf`` and ``.fwb`` MIME types for file manager integration. See :doc:`02 - Installing FirewallFabrik` for setup instructions.
 

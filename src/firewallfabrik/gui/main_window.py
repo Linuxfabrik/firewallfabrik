@@ -2952,8 +2952,7 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def toolsImportAddressesFromFile(self):
-        # TODO
-        pass
+        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/12
 
     @Slot()
     def unlockObject(self):

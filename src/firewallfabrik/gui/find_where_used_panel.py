@@ -138,7 +138,6 @@ class FindWhereUsedPanel(QWidget):
 
     @Slot(QTreeWidgetItem, int)
     def itemClicked(self, item, column):
-        # TODO
         self._on_item_clicked(item, column)
 
     def set_tree(self, tree: QTreeWidget):

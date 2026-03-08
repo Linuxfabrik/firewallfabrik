@@ -13,15 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
 - Compile time intervals and clean up time dialog.
 - Confirm-delete dialog when deleting objects that are still in use.
 - DNS "Resolve Name" button implemented for IPv4 and IPv6 address dialogs.
-- MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
 - DynamicGroup editor with criteria table and matched-objects preview.
 - Example files shipped with the distribution.
 - File > Reload action to re-read the current file from disk.
 - FreeIPA service group added to the standard library.
-- Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
+- MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
 - NAT and Routing rule display support with title bar dirty-state indicator.
 - Platform and OS option defaults defined in YAML as single source of truth, replacing scattered hardcoded dicts.
 - Settings dialogs now show tooltips and placeholder defaults from the YAML schema.
@@ -33,21 +33,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Compiler option lookup (`get_option`) now raises `KeyError` on unknown keys, catching typos at the earliest possible moment; all inline Python fallbacks removed in favour of YAML defaults.
+- `.fwb` imports allowed to compile and install without requiring a prior save.
 - Clipboard router now correctly routes Ctrl+C/X/V to focused text widgets.
+- Compiler option lookup (`get_option`) now raises `KeyError` on unknown keys, catching typos at the earliest possible moment; all inline Python fallbacks removed in favour of YAML defaults.
 - Context menus and sub-interfaces aligned with fwbuilder behavior.
+- Dead menu entries removed (File Compare, SNMP Discovery, Policy Import, Library Import/Export, Print, Help Contents/Index).
 - DynamicGroup, AddressTable and DNSName now allowed in rule src/dst cells.
 - Find & Replace scope, tree filter, element display, and MDI refresh.
 - Focus moves to next element in a rule cell after deleting an object.
 - ICMP type/code now read from the codes field instead of data.
 - Keywords renamed to Tags in context menus.
 - Last-active rule set persisted by name instead of UUID for stability across imports.
+- Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
 - Linux host settings now save under canonical `linux24_conntrack_*` keys matching the compiler.
 - Lock/Unlock menu actions wired up to tree selection.
 - MDI views refresh on object rename; undo descriptions are now human-readable.
 - Model class name used instead of `.type` in `duplicate_object`.
 - Netmask shown in tree when editing an address under an interface.
 - New objects created via the toolbar menu now land in the selected custom folder.
+- Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
+- Object deletion fixed: str-vs-UUID type mismatch in where-used reference queries.
 - Object tree auto-selects the Policy item when opening a file.
 - ORM objects flushed before raw `rule_elements` INSERT to avoid integrity errors.
 - Output pane context menu shows Ctrl+C and Ctrl+A shortcuts.
@@ -55,12 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Readonly flag passed to tree items with updated lock icons.
 - Rule shadowing detection enabled by default; error messages include rule position numbers.
 - Time dialog uses YYYY-MM-DD date format and sensible defaults.
-- Dead menu entries removed (File Compare, SNMP Discovery, Policy Import, Library Import/Export, Print, Help Contents/Index).
-- Object deletion fixed: str-vs-UUID type mismatch in where-used reference queries.
 - Title bar double-click on Wayland now works (XCB fallback).
-- `.fwb` imports allowed to compile and install without requiring a prior save.
-- Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
-- Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
 
 ### Changed
 

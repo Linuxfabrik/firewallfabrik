@@ -166,5 +166,4 @@ class InterfaceDialog(BaseObjectDialog):
 
     @Slot()
     def openIfaceDialog(self):
-        # TODO
-        pass
+        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/13

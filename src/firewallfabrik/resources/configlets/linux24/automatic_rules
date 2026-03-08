@@ -22,10 +22,10 @@
 ## $end_rule
 ## $ssh_management_address    address of the management address used for backup ssh access
 ## $management_interface      the name of the management interface
-## $cprange                   (ULOG --cprange)
-## $nlgroup                   (ULOG --ulog-nlgroup)
-## $qthreshold                (ULOG --ulog-qthreshold)
-## $invalid_match_log_prefix  (ULOG --ulog-prefix  or LOG --log-prefix)
+## $cprange                   (NFLOG --nflog-range)
+## $nlgroup                   (NFLOG --nflog-group)
+## $qthreshold                (NFLOG --nflog-threshold)
+## $invalid_match_log_prefix  (LOG --log-prefix)
 ##
 ## Conditional statements use the following variables:
 ##
@@ -37,11 +37,11 @@
 ## add_rules_for_ipv6_neighbor_discovery   should add rules to permit IPv6 Neighbor discovery
 ## drop_invalid               should add rules to drop packets that match state INVALID
 ## drop_invalid_and_log       drop and log packets that match state INVALID
-## not_use_ulog               use LOG for logging
-## use_ulog                   use ULOG for logging
-## use_nlgroup                for --ulog-nlgroup
-## use_cprange                for --ulog-cprange
-## use_qthreshold             for --ulog-qthreshold
+## not_use_ulog               use LOG for logging (always true; ULOG is deprecated)
+## use_ulog                   use ULOG for logging (always false; ULOG is deprecated)
+## use_nlgroup                for --nflog-group
+## use_cprange                for --nflog-range
+## use_qthreshold             for --nflog-threshold
 
 
 ## bug #1092141: "irritating FORWARD rule for established connections"

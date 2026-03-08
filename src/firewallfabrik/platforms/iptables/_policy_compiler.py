@@ -939,7 +939,7 @@ class SrcNegation(PolicyRuleProcessor):
         self.tmp_queue.append(r_return)
 
         # Action rule: clear everything
-        # TODO: C++ preserves "any TCP" service when action_on_reject is TCP RST
+        # https://github.com/Linuxfabrik/firewallfabrik/issues/16
         r_action = rule.clone()
         r_action.src = []
         r_action.dst = []
@@ -1013,7 +1013,7 @@ class DstNegation(PolicyRuleProcessor):
         self.tmp_queue.append(r_return)
 
         # Action rule: clear everything
-        # TODO: C++ preserves "any TCP" service when action_on_reject is TCP RST
+        # https://github.com/Linuxfabrik/firewallfabrik/issues/16
         r_action = rule.clone()
         r_action.src = []
         r_action.dst = []

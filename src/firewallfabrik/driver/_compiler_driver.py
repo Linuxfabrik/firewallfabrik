@@ -89,20 +89,23 @@ class CompilerDriver(BaseCompiler):
     # generated script may not match the user's intent.  We emit a warning
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
-        ('use_ULOG', 'ULOG/NFLOG logging is not yet supported; falling back to LOG'),
-        (
-            'log_tcp_seq',
-            'logging TCP sequence numbers (--log-tcp-sequence) is not yet supported',
-        ),
-        ('log_tcp_opt', 'logging TCP options (--log-tcp-options) is not yet supported'),
-        ('log_ip_opt', 'logging IP options (--log-ip-options) is not yet supported'),
-        ('use_numeric_log_levels', 'numeric syslog log levels are not yet supported'),
-        ('log_all', 'unconditional logging of all rules is not yet supported'),
-        ('use_kerneltz', 'kernel timezone for log timestamps is not yet supported'),
         (
             'configure_bridge_interfaces',
-            'bridge interface configuration is not yet supported',
+            'bridge interface configuration is not supported',
         ),
+        ('log_all', 'unconditional logging of all rules is not supported'),
+        ('log_ip_opt', 'logging IP options (--log-ip-options) is not supported'),
+        ('log_tcp_opt', 'logging TCP options (--log-tcp-options) is not supported'),
+        (
+            'log_tcp_seq',
+            'logging TCP sequence numbers (--log-tcp-sequence) is not supported',
+        ),
+        (
+            'use_ULOG',
+            'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
+        ),
+        ('use_kerneltz', 'kernel timezone for log timestamps is not supported'),
+        ('use_numeric_log_levels', 'numeric syslog log levels are not supported'),
     ]
 
     def _warn_unsupported_options(self, options: dict) -> None:
@@ -111,16 +114,16 @@ class CompilerDriver(BaseCompiler):
             if options.get(opt, False):
                 self.warning(msg)
 
-        # Non-boolean ULOG parameters — only relevant when use_ULOG is set,
+        # NFLOG parameters — only relevant when use_NFLOG is set,
         # but warn individually so the user sees exactly what is ignored.
         for opt, flag in [
-            ('ulog_nlgroup', '--ulog-nlgroup / --nflog-group'),
-            ('ulog_cprange', '--ulog-cprange / --nflog-range'),
-            ('ulog_qthreshold', '--ulog-qthreshold / --nflog-threshold'),
+            ('ulog_cprange', '--nflog-range'),
+            ('ulog_nlgroup', '--nflog-group'),
+            ('ulog_qthreshold', '--nflog-threshold'),
         ]:
             val = options.get(opt)
             if val is not None and val != '' and val != 0 and val != -1:
-                self.warning(f'{flag} is not yet supported (option {opt!r} ignored)')
+                self.warning(f'{flag} is not supported (option {opt!r} ignored)')
 
     # -- Script assembly --
 

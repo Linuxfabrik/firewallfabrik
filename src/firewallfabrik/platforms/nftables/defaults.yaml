@@ -513,10 +513,13 @@ options:
   use_NFLOG:
     type: 'bool'
     default: false
-    supported: true
+    supported: false
     widget: 'useNFLOG'
     description: >-
       Use the NFLOG target for logging instead of LOG.
+      NFLOG sends packets via netlink to a userspace daemon
+      (ulogd2, rsyslog, syslog-ng) for flexible log routing.
+      Not yet implemented in the compiler.
 
   use_numeric_log_levels:
     type: 'bool'
@@ -530,10 +533,10 @@ options:
   use_ULOG:
     type: 'bool'
     default: false
-    supported: true
-    widget: 'useULOG'
+    supported: false
     description: >-
-      Use the ULOG target for logging instead of LOG.
+      Deprecated. ULOG has been removed from modern Linux kernels.
+      Imported .fwb files with this option are silently migrated to LOG.
 
   ulog_cprange:
     type: 'int'
@@ -541,7 +544,7 @@ options:
     supported: false
     widget: 'cprange'
     description: >-
-      ULOG copy range. Not applicable to nftables.
+      NFLOG copy range. Not applicable to nftables.
 
   ulog_nlgroup:
     type: 'int'
@@ -549,7 +552,7 @@ options:
     supported: false
     widget: 'nlgroup'
     description: >-
-      ULOG netlink group. Not applicable to nftables.
+      NFLOG netlink group. Not applicable to nftables.
 
   ulog_qthreshold:
     type: 'int'
@@ -557,7 +560,7 @@ options:
     supported: false
     widget: 'qthreshold'
     description: >-
-      ULOG queue threshold. Not applicable to nftables.
+      NFLOG queue threshold. Not applicable to nftables.
 
   verify_interfaces:
     type: 'bool'

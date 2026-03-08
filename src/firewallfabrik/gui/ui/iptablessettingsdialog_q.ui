@@ -1022,25 +1022,21 @@ packets to IPv6 policies</string>
          <layout class="QGridLayout" name="gridLayout_11">
           <item row="0" column="0">
            <widget class="QRadioButton" name="useLOG">
+            <property name="toolTip">
+             <string>Use the kernel LOG target. Log messages go directly to syslog/journald. Works out of the box, no additional setup required.</string>
+            </property>
             <property name="text">
              <string>use LOG</string>
             </property>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QRadioButton" name="useULOG">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>use ULOG</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
            <widget class="QRadioButton" name="useNFLOG">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Use the NFLOG target. Sends packets via netlink to a userspace daemon (ulogd2, rsyslog, syslog-ng). More flexible (log to files, databases, pcap) but requires additional setup on the target host. Not yet implemented in the compiler (see github.com/Linuxfabrik/firewallfabrik/issues/18).</string>
             </property>
             <property name="text">
              <string>use NFLOG</string>
@@ -1642,7 +1638,7 @@ packets to IPv6 policies</string>
   <tabstop>prologPlace</tabstop>
   <tabstop>epilog_script</tabstop>
   <tabstop>useLOG</tabstop>
-  <tabstop>useULOG</tabstop>
+  <tabstop>useNFLOG</tabstop>
   <tabstop>logTCPseq</tabstop>
   <tabstop>logTCPopt</tabstop>
   <tabstop>logIPopt</tabstop>
@@ -1708,7 +1704,7 @@ packets to IPv6 policies</string>
    <sender>useLOG</sender>
    <signal>toggled(bool)</signal>
    <receiver>iptAdvancedDialog_q</receiver>
-   <slot>switchLOG_ULOG()</slot>
+   <slot>switchLogTarget()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>45</x>
@@ -1738,7 +1734,7 @@ packets to IPv6 policies</string>
   </connection>
  </connections>
  <slots>
-  <slot>switchLOG_ULOG()</slot>
+  <slot>switchLogTarget()</slot>
   <slot>editProlog()</slot>
   <slot>editEpilog()</slot>
   <slot>help()</slot>

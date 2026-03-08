@@ -874,7 +874,7 @@ class CompileDialog(QDialog):
 
     @Slot(QUrl)
     def logItemClicked(self, url):
-        pass  # Reserved for future rule-error navigation
+        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/15
 
     @Slot()
     def inspectFiles(self):

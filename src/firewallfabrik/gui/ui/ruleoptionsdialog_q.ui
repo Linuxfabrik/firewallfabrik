@@ -202,7 +202,7 @@
        <item row="1" column="2">
         <widget class="QLabel" name="ulogLabel">
          <property name="text">
-          <string>Netlink group (if using ULOG):</string>
+          <string>Netlink group (if using NFLOG):</string>
          </property>
         </widget>
        </item>
@@ -215,7 +215,7 @@
           <number>32</number>
          </property>
          <property name="toolTip">
-          <string>ULOG netlink multicast group number (1-32). Only used when the logging target is ULOG instead of LOG.</string>
+          <string>NFLOG netlink multicast group number (1-32). Only used when the logging target is NFLOG instead of LOG.</string>
          </property>
         </widget>
        </item>

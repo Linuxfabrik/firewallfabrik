@@ -123,6 +123,9 @@ def _parse_options_children(elem):
 
     String booleans are coerced to Python bools so downstream code
     does not need to handle the conversion.
+
+    Legacy migration: ``use_ULOG`` is silently reset to ``False``
+    because the ULOG target has been removed from modern Linux kernels.
     """
     result = {}
     for child in elem:
@@ -130,6 +133,10 @@ def _parse_options_children(elem):
             name = child.get('name', '')
             if name:
                 result[name] = _coerce_bool(child.text or '')
+    # ULOG is deprecated; fall back to LOG.
+    if result.get('use_ULOG') is True:
+        result['use_ULOG'] = False
+        logger.info('Migrated use_ULOG=true to LOG (ULOG is deprecated)')
     return result
 
 

@@ -155,10 +155,8 @@ class IptablesSettingsDialog(QDialog):
             idx = 0
         self.prologPlace.setCurrentIndex(idx)
 
-        # LOG, ULOG, and NFLOG radio buttons
-        if str(opts.get('use_ULOG', '')).lower() == 'true':
-            self.useULOG.setChecked(True)
-        elif str(opts.get('use_NFLOG', '')).lower() == 'true':
+        # LOG / NFLOG radio buttons (legacy use_ULOG falls back to LOG)
+        if str(opts.get('use_NFLOG', '')).lower() == 'true':
             self.useNFLOG.setChecked(True)
         else:
             self.useLOG.setChecked(True)
@@ -187,7 +185,7 @@ class IptablesSettingsDialog(QDialog):
         idx = self.actionOnReject.findText(action)
         self.actionOnReject.setCurrentIndex(max(idx, 0))
 
-        # ULOG spin boxes
+        # NFLOG spin boxes
         self.cprange.setValue(
             int(opts.get('ulog_cprange', _SCHEMA['ulog_cprange']['default'])),
         )
@@ -244,8 +242,8 @@ class IptablesSettingsDialog(QDialog):
         idx = self.prologPlace.currentIndex()
         opts['prolog_place'] = prolog_values[idx] if idx < len(prolog_values) else 'top'
 
-        # LOG / ULOG / NFLOG
-        opts['use_ULOG'] = self.useULOG.isChecked()
+        # LOG / NFLOG
+        opts['use_ULOG'] = False
         opts['use_NFLOG'] = self.useNFLOG.isChecked()
 
         # Log options
@@ -254,7 +252,7 @@ class IptablesSettingsDialog(QDialog):
         opts['limit_suffix'] = self.logLimitSuffix.currentText()
         opts['action_on_reject'] = self.actionOnReject.currentText()
 
-        # ULOG options
+        # NFLOG options
         opts['ulog_cprange'] = str(self.cprange.value())
         opts['ulog_qthreshold'] = str(self.qthreshold.value())
         opts['ulog_nlgroup'] = str(self.nlgroup.value())
@@ -273,7 +271,7 @@ class IptablesSettingsDialog(QDialog):
     # -- Slots declared in the .ui file --
 
     @Slot()
-    def switchLOG_ULOG(self):
+    def switchLogTarget(self):
         self._update_log_stack()
 
     @Slot()
