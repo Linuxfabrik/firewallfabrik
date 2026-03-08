@@ -8,16 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- CLI compilers (`fwf-ipt`, `fwf-nft`) accept multiple firewall names and `--all` flag; database is loaded once for all firewalls.
-- Parallel compilation in the GUI: multiple firewalls compile concurrently using up to N CPU cores, with ordered log output.
-
 
 ## [v1.0.0] - 2026-03-08
 
 ### Added
 
+- CLI compilers (`fwf-ipt`, `fwf-nft`) accept multiple firewall names and `--all` flag; database is loaded once for all firewalls.
 - Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
 - Compile time intervals and clean up time dialog.
 - Confirm-delete dialog when deleting objects that are still in use.
@@ -28,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FreeIPA service group added to the standard library.
 - MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
 - NAT and Routing rule display support with title bar dirty-state indicator.
+- Parallel compilation in the GUI: multiple firewalls compile concurrently using up to N CPU cores, with ordered log output.
 - Platform and OS option defaults defined in YAML as single source of truth, replacing scattered hardcoded dicts.
 - Settings dialogs now show tooltips and placeholder defaults from the YAML schema.
 - Subfolder paste, drag & drop, and nested object creation in the object tree.
