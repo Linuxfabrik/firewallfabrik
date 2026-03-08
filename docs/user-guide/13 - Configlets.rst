@@ -63,9 +63,9 @@ First, we copy the bundled ``resources/configlets/linux24/automatic_rules`` to `
 
 .. code-block:: bash
 
-   mkdir -p $HOME/fwbuilder/configlets/linux24
+   mkdir -p $HOME/firewallfabrik/configlets/linux24
    cp <firewallfabrik-package>/resources/configlets/linux24/automatic_rules \
-       $HOME/fwbuilder/configlets/linux24/automatic_rules
+       $HOME/firewallfabrik/configlets/linux24/automatic_rules
 
 Then, open the copy in a text editor and find this section:
 

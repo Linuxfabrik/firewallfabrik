@@ -9,7 +9,7 @@ Firewall Policies
    :depth: 2
 
 
-This chapter describes working with policies. :doc:`10 - Compiling and Installing` describes compiling and installing a policy.
+This chapter describes working with policies. :doc:`10 - Compiling and Installing a Policy` describes compiling and installing a policy.
 
 Policies and Rules
 ------------------
@@ -187,6 +187,8 @@ Figure 7.7 shows the Tag tab of the Options dialog for the **iptables** platform
 If the options of a particular rule have been changed from their default values, an icon appears in the Option field for that rule. Keep in mind that not all rules have the same default options. For example, by default a Deny rule is stateless, because there is no reason to keep state on a connection that won't be allowed. So, if you turn on state for a Deny rule, you'll see the icon. An Accept rule, on the other hand, has the opposite behavior. By default, state is kept for Accept rules, so no icon appears when state is on. In other words, if you turn state keeping off, then if you change the default behavior for that rule, the icon is displayed.
 
 You can set multiple options and combine them with the policy's action so that the firewall performs multiple operations within a single policy rule. For example, where supported, you can tag, classify, and accept a packet within a single rule by configuring the Tag and Classify options and setting the action to Accept. For more information on configuring policies to perform multiple operations, see `Configuring Multiple Operations per Rule`_.
+
+.. _section-7-2-8:
 
 Working with Multiple Policy Rule Sets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -870,7 +872,7 @@ Notice that the Classify icon and classify string value are now displayed in the
 
    Rule with Classify option set
 
-Using the :doc:`10 - Compiling and Installing` feature you can see that this rule will result in the following iptables commands being generated.
+Using the :doc:`10 - Compiling and Installing a Policy` feature you can see that this rule will result in the following iptables commands being generated.
 
 .. code-block:: text
 
@@ -1016,4 +1018,4 @@ Certain fields in the rules are only available if the target firewall platform s
 Compiling and Installing Your Policy
 -------------------------------------
 
-See :doc:`10 - Compiling and Installing` for full details on compiling and installing your firewall policy.
+See :doc:`10 - Compiling and Installing a Policy` for full details on compiling and installing your firewall policy.

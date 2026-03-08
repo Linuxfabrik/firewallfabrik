@@ -461,7 +461,7 @@ I do not include the generated iptables code because it should be clear by now h
 
 Policy rules demonstrated in these examples are good at restricting access to the firewall while making it possible to manage it remotely via SSH. The problem with these rules is that administrator has to be careful to not break them in any way. One would think it should be hard to make an error in a policy fragment consisting of two rules, but this happens. These two rules are just a small part of a much larger rule set and may not be located in a prominent place right on top of it. As new rules are added to the policy, at some point some rule located above may block access to the whole network or range of addresses that accidentally includes management address of the firewall. This means even though the rules are there, the access to the firewall gets blocked as soon as updated policy is uploaded and activated. This is really bad news if the firewall machine is located far away in a remote office or data center.
 
-To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Firewall Settings" button. This is described in more details in :doc:`05 - FirewallFabrik GUI`. In the dialog that appears, locate controls shown on Figure 14.27.
+To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Firewall Settings" button. This is described in more details in :doc:`04 - FirewallFabrik GUI`. In the dialog that appears, locate controls shown on Figure 14.27.
 
 .. figure:: img/cookbook-027.png
    :alt: Option Enabling an Automatic Rule to Permit SSH Access from a Management Workstation
@@ -722,7 +722,7 @@ Tagging Packets
 
 Tagging packets (or packet marking) can be a very useful option that allows you to match a packet at one point in the rule set but act on it later on. This option can be combined with rule actions or rule branching for even more flexibility. Tagging can also be used to interact with packet processing not intended to enforce security policies, such as traffic shaping or QoS. Packet tags assigned by iptables can later be used for traffic shaping with the Linux utility "tc".
 
-Not every target platform supports packet tagging; see :doc:`07 - Firewall Object` for details on platform support for tagging.
+Not every target platform supports packet tagging; see :doc:`07 - Firewall Policies` for details on platform support for tagging.
 
 In FirewallFabrik, packet tagging is accomplished using a special service object type called TagService. First, you create a TagService object, specifying a tag number or a string. To use this object to match tagged packets, just drop the object into the Service rule element in a policy rule. To mark a packet with the tag, select the Tag option from the Options context menu and drop the TagService object into the well in the Options dialog. Let's use an example given in the "A Practical Guide to Linux Traffic Control" (http://blog.edseek.com/~jasonb/articles/traffic_shaping/index.html) to illustrate this. They show how packets can be tagged using iptables target "MARK" so that they can be placed in the right queue for traffic shaping later on. The iptables rule we will create looks like this:
 
@@ -1657,7 +1657,7 @@ As shown in Figure 14.88, machines linux-test-1 and linux-test-2 run heartbeat d
 
 In this example I am using heartbeat in multicast mode where it sends UDP datagram to the multicast address 225.0.0.1 every second or so to declare that it is up and running and owns the address.
 
-If you are interested in more detailed explanation of the "old" style heartbeat configuration files used to set up example similar to this one, see :ref:`linux_cluster_using_heartbeat`.
+If you are interested in more detailed explanation of the "old" style heartbeat configuration files used to set up example similar to this one, see :ref:`linux-cluster-using-heartbeat`.
 
 Once heartbeat daemon is configured and started on both servers, their IP address configuration looks like shown in Figure 14.89 and Figure 14.90. Virtual addresses were highlighted to illustrate that the heartbeat is running in active/active configuration, that is, two virtual addresses are active on one machine and the third is active on another. If either machine dies, all three virtual addresses will move over to the one that is left working.
 
@@ -2386,7 +2386,7 @@ Here calls to the update_addresses_of_interface shell function try to bring ip a
 
 When the script adds and removes ip addresses of the firewall interfaces, it should skip those managed by VRRPd. VRRPd (and probably other HA software as well) does not seem to monitor the state of the virtual addresses it adds to interfaces, assuming that it is the only agent that does so. If FirewallFabrik script were to remove virtual addresses while VRRPd is still working, the cluster operation would break until vrrpd would add them back, which only happens when it restarts or failover occurs. So the FirewallFabrik script has to know to avoid these addresses and not remove them. The second argument in the call to the shell function update_addresses_of_interface serves this purpose, it tells the function which addresses it should ignore. The function uses "ip addr show" command to discover addresses that already configured on the interfaces and for the address to match, it should have exactly the same netmask as the one that appears in the output of "ip addr show" command.
 
-.. _linux_cluster_using_heartbeat:
+.. _linux-cluster-using-heartbeat:
 
 Linux Cluster Using Heartbeat
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3129,12 +3129,16 @@ Policy and NAT rule configuration in this setup is also the same as in :ref:`Sec
 Linux Cluster Using Heartbeat Running Over Dedicated Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Documentation coming soon...
+.. note::
+
+   This section is not yet available. The configuration follows the same principles as :ref:`Section 14.4.3 <linux-cluster-using-heartbeat>`, with the heartbeat interface on a dedicated network segment.
 
 State Synchronization with conntrackd in Linux Cluster
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Documentation coming soon...
+.. note::
+
+   This section is not yet available. Conntrackd state synchronization support is planned for a future release.
 
 Examples of Traffic Shaping
 -----------------------------
