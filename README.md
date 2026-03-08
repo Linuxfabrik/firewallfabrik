@@ -48,7 +48,11 @@ For the full installation guide (pipx, pip, development setup, native themes, de
 ## Documentation
 
 * [User Guide](docs/user-guide/) -- installation, GUI overview, working with objects, firewall policies, cookbook, and more.
+* [Migrating from Firewall Builder](docs/user-guide/17%20-%20Migrating%20from%20Firewall%20Builder.rst) -- import .fwb files and differences.
 * [Developer Guide](docs/developer-guide/) -- database manager, debugging, rule processors, testing, and design decisions.
+* [Changelog](CHANGELOG.md) -- release history.
+* [Contributing](CONTRIBUTING.md) -- how to contribute.
+* [Issue Tracker](https://github.com/Linuxfabrik/firewallfabrik/issues) -- bug reports and feature requests.
 
 
 ### Building the Documentation
