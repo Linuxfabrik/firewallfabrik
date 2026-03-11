@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.0.1] - 2026-03-11
+
 ### Fixed
 
 - Platform YAML defaults not included in pip-installed packages (missing `MANIFEST.in` entry).
@@ -151,7 +156,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.1...HEAD
+[v1.0.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0rc1...v1.0.0
 [v0.5.0rc1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0b1...v0.5.0rc1
 [v0.5.0b1]: https://github.com/Linuxfabrik/firewallfabrik/releases/tag/v0.5.0b1
