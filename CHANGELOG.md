@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+- Platform YAML defaults not included in pip-installed packages (missing `MANIFEST.in` entry).
 
 
 ## [v1.0.0] - 2026-03-08
