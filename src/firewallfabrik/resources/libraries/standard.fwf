@@ -1412,6 +1412,63 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: Bareos Director 9101
+        comment: Bareos Director daemon. Controls backup/restore operations and communicates with Storage and File Daemons.
+        dst_range_start: 9101
+        dst_range_end: 9101
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Bareos File Daemon 9102
+        comment: Bareos File Daemon (client agent). Runs on each machine to be backed up and sends data to the Storage Daemon.
+        dst_range_start: 9102
+        dst_range_end: 9102
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Bareos Storage Daemon 9103
+        comment: Bareos Storage Daemon. Receives backup data from File Daemons and writes it to the configured storage media.
+        dst_range_start: 9103
+        dst_range_end: 9103
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: Battle.net 6112
         comment: Blizzard's Battle.net gaming service and some games, ArenaNet gaming service, Relic gaming service
         dst_range_start: 6112
@@ -3902,6 +3959,44 @@ libraries:
           rst: false
           syn: false
           fin: false
+      - type: TCPService
+        name: Keycloak 8443
+        comment: Keycloak identity and access management server (HTTPS). Used for SSO, OAuth2, OpenID Connect and SAML authentication.
+        dst_range_start: 8443
+        dst_range_end: 8443
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Kibana 5601
+        comment: Kibana web interface for Elasticsearch/OpenSearch data visualization and dashboards.
+        dst_range_start: 5601
+        dst_range_end: 5601
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
       - type: 'TCPService'
         name: 'klogin 543'
         dst_range_start: 543
@@ -4112,10 +4207,67 @@ libraries:
           syn: false
           fin: false
       - type: TCPService
+        name: Libvirt 16509
+        comment: libvirt remote management daemon (libvirtd). Used by KVM/QEMU, oVirt and virt-manager for hypervisor management over TCP/TLS.
+        dst_range_start: 16509
+        dst_range_end: 16509
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
         name: LLMNR 5355
         comment: 'Link-Local Multicast Name Resolution. WARNING: can be exploited for NTLM relay attacks; consider disabling.'
         dst_range_start: 5355
         dst_range_end: 5355
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Logstash Beats Input 5044
+        comment: Logstash Beats input plugin. Receives data from Elastic Beats agents (Filebeat, Metricbeat, etc.).
+        dst_range_start: 5044
+        dst_range_end: 5044
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: Logstash API 9600
+        comment: Logstash monitoring API for pipeline stats and health checks.
+        dst_range_start: 9600
+        dst_range_end: 9600
         tcp_flags:
           urg: false
           ack: false
@@ -4878,6 +5030,44 @@ libraries:
         comment: OpenOCD (Telnet)
         dst_range_start: 4444
         dst_range_end: 4444
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenSearch 9200
+        comment: OpenSearch REST API (AWS fork of Elasticsearch). Used for search, analytics and observability.
+        dst_range_start: 9200
+        dst_range_end: 9200
+        tcp_flags:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+        tcp_flags_masks:
+          urg: false
+          ack: false
+          psh: false
+          rst: false
+          syn: false
+          fin: false
+      - type: TCPService
+        name: OpenSearch Transport 9300
+        comment: OpenSearch inter-node transport protocol for cluster communication and shard replication.
+        dst_range_start: 9300
+        dst_range_end: 9300
         tcp_flags:
           urg: false
           ack: false
