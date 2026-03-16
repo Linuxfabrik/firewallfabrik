@@ -439,11 +439,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
         if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
-            self.add(
-                ConvertAnyToNotFWForShadowing('convert any to not-fw for shadowing')
-            )
-            self.add(SplitIfSrcAnyForShadowing('split src any for shadowing'))
-            self.add(SplitIfDstAnyForShadowing('split dst any for shadowing'))
+            # Note: fwbuilder runs ConvertAnyToNotFWForShadowing,
+            # SplitIfSrcAnyForShadowing, SplitIfDstAnyForShadowing in a
+            # SEPARATE compilation pass. Running them inline would inject
+            # extra rules into the main pipeline causing false positives.
+            # The inline DetectShadowing is sufficient for most cases.
             self.add(DetectShadowing('detect rule shadowing'))
 
         self.add(CountChainUsage('count chain usage'))
