@@ -167,7 +167,9 @@ class NATCompiler_nft(NATCompiler):
         self.add(SplitNATBranchRule('Split Branch rules to use all chains'))
         self.add(LocalNATRule('local NAT rule'))
         self.add(DecideOnChain('decide on chain'))
+        self.add(DecideOnTarget('decide on target'))
 
+        self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
         self.add(ReplaceFirewallObjectsTSrc('replace firewall in TSrc'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
@@ -1027,6 +1029,77 @@ class DecideOnChain(NATRuleProcessor):
                     rule,
                     f'No chain assignment for NAT rule type: {rule.nat_rule_type}',
                 )
+
+        return True
+
+
+class DecideOnTarget(NATRuleProcessor):
+    """Assign nftables NAT target based on rule type.
+
+    Maps NAT rule types to nftables verdicts/statements:
+    snat, dnat, masquerade, redirect, accept (for NONAT), return.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.ipt_target:
+            return True
+
+        target_map = {
+            NATRuleType.NONAT: 'accept',
+            NATRuleType.SNAT: 'snat',
+            NATRuleType.SNetnat: 'snat',
+            NATRuleType.DNAT: 'dnat',
+            NATRuleType.DNetnat: 'dnat',
+            NATRuleType.Masq: 'masquerade',
+            NATRuleType.Redirect: 'redirect',
+            NATRuleType.Return: 'return',
+        }
+
+        rt = rule.nat_rule_type
+        if rt is not None:
+            target = target_map.get(rt, '')
+            if target:
+                rule.ipt_target = target
+
+        return True
+
+
+class ReplaceFirewallObjectsODst(NATRuleProcessor):
+    """Replace Firewall object in ODst with its non-loopback interfaces.
+
+    For NAT rules where ODst is the firewall itself, replaces it with
+    the firewall's Interface objects so that address expansion can
+    produce the actual addresses. Skips Masquerade rule types.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type == NATRuleType.Masq:
+            return True
+
+        if not rule.odst:
+            return True
+
+        odst = rule.odst[0]
+        if isinstance(odst, Firewall) and odst.id == self.compiler.fw.id:
+            interfaces = [
+                iface
+                for iface in self.compiler.fw.interfaces
+                if not iface.is_loopback()
+            ]
+            if interfaces:
+                rule.odst = interfaces
 
         return True
 
