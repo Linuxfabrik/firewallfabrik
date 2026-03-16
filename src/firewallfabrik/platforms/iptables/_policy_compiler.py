@@ -2655,7 +2655,6 @@ class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
         if (
             rule.direction != Direction.Inbound
             and src is not None
-            and not src.is_any()
             and isinstance(src, AddressRange)
             and ipt_comp.complex_match(src, ipt_comp.fw)
         ):
@@ -2688,7 +2687,6 @@ class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
         if (
             rule.direction != Direction.Outbound
             and dst is not None
-            and not dst.is_any()
             and isinstance(dst, AddressRange)
             and ipt_comp.complex_match(dst, ipt_comp.fw)
         ):
@@ -2721,8 +2719,8 @@ class SpecialCaseWithFW1(PolicyRuleProcessor):
         if (
             src is not None
             and dst is not None
-            and not src.is_any()
-            and not dst.is_any()
+            and not (isinstance(src, Address) and src.is_any())
+            and not (isinstance(dst, Address) and dst.is_any())
             and self.compiler.complex_match(src, self.compiler.fw)
             and self.compiler.complex_match(dst, self.compiler.fw)
             and rule.direction == Direction.Both
