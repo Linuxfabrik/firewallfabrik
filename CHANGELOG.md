@@ -23,8 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cluster failover interface replacement**: `ReplaceClusterInterfaceInItfRE` replaces cluster interfaces with member firewall interfaces (shared processor).
 - **Runtime MultiAddress processing**: `ProcessMultiAddressObjectsInSrc/Dst` handles runtime AddressTable/DNSName objects by splitting them into separate rules and registering with the OS configurator.
 - **nftables validation processors**: Added `CheckForTCPEstablished`, `CheckForObjectsWithErrors`, `CheckForStatefulICMP6Rules`, `CheckForZeroAddr`, `CheckForUnnumbered`, `ExpandLoopbackInterfaceAddress`, `CheckForDynamicInterfacesOfOtherObjects` to the nftables policy pipeline.
+- **Full fwbuilder parity**: Interface group expansion (`ExpandGroupsInItf`, `ExpandGroupsInSrv`), cluster interface replacement (`ReplaceClusterInterfaceInItfRE`), interface negation (`SingleObjectNegationItf`, `ItfNegation`, `ItfInbNegation`, `ItfOutbNegation`), time negation (`TimeNegation`), interval splitting (`ConvertToAtomicForIntervals`), `SpecialCasesWithCustomServices` (ESTABLISHED/RELATED in CustomService code), and `InterfacePolicyRulesWithOptimization` (chain-optimized interface splitting). NAT additions: `ExpandGroupsInItfInb/Outb`, `NATSpecialCaseWithUnnumberedInterface`, `NATCheckForDynamicInterfacesOfOtherObjects`, `VerifyRuleWithMAC`, `NATExpandAddressRanges`, `NATProcessMultiAddressObjectsInRE` (4 slots), `CheckForObjectsWithErrors`. nftables additions: `SpecialCaseWithFW1`, `TimeNegation`, `ConvertToAtomicForIntervals`, `ExpandGroupsInItf`.
 
 ### Fixed
+
+- **Multiport rules broken** (fixes #21): `SeparateTCPWithFlags` incorrectly separated ALL TCP services because the standard library stores `tcp_flags: {urg: false, ...}` — a non-empty dict. Now checks `tcp_flags_masks` for actual flag inspection (matching fwbuilder's `inspectFlags()`). Also hardened `_print_dst_service_from_rule` to only emit `--dports` when `ipt_multiport` flag is set, preventing `--dports` without `-m multiport`.
+- **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.
+- **`Firewall` object has no attribute `is_any`**: `SplitIfSrcMatchingAddressRange`, `SplitIfDstMatchingAddressRange`, and `SpecialCaseWithFW1` called `is_any()` on src/dst objects that could be `Firewall` instances. `Firewall` inherits from `Host`, not `Address`.
+- **False-positive shadowing errors**: Shadowing enhancement processors (`ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing`) injected extra rules into the main pipeline causing "Rule X shadows Rule Y" false positives. Removed from inline pipeline (require a separate compilation pass like in fwbuilder).
+
+### Changed
+
+- **Timestamp format** in generated scripts: `Mon Mar 16 20:06:24 2026` → `2026-03-16 20:06:24 (Mon)` (all platforms).
+- **`nft flush ruleset` in iptables scripts**: On RHEL8+ and modern distros, `iptables` uses the nftables backend (`iptables-nft`). The generated `reset_all()` function now runs `nft flush ruleset` (if `nft` is available) before `reset_iptables_v4/v6` to clear any pre-existing nftables rules that `iptables -F` would not remove.
 
 - **Multiport rules broken** (fixes #21): `SeparateTCPWithFlags` incorrectly separated ALL TCP services because the standard library stores `tcp_flags: {urg: false, ...}` — a non-empty dict. Now checks `tcp_flags_masks` for actual flag inspection (matching fwbuilder's `inspectFlags()`). Also hardened `_print_dst_service_from_rule` to only emit `--dports` when `ipt_multiport` flag is set, preventing `--dports` without `-m multiport`.
 - **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.

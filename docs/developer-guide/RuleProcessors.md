@@ -1794,21 +1794,21 @@ The Python policy `compile()` pipeline uses **~77 processors** matching the C++ 
 
 ### Implementation priority
 
-The iptables compiler is now at near-parity with fwbuilder. All Tiers 1–7 from the original plan have been implemented. Remaining work:
+All items from the original migration plan have been implemented. The iptables and nftables compilers are at **full feature parity** with fwbuilder.
 
-#### Remaining items
+#### Final processor counts
 
-All items from the original migration plan have been implemented:
+| Compiler | Classes | Pipeline steps |
+|----------|---------|---------------|
+| iptables policy | 89 | ~110 |
+| iptables NAT | 60 | ~71 |
+| nftables policy | 36 | ~45 |
+| nftables NAT | 22 | ~30 |
 
-| # | Area | Status |
-|---|------|--------|
-| ~~1~~ | ~~`recursiveGroupsInRE`~~ | ✅ Done — shared processor in `_generic.py`, wired into all 4 pipelines |
-| ~~2~~ | ~~Shadowing detection enhancements~~ | ✅ Done — `ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing` |
-| ~~3~~ | ~~Cluster failover interface replacement~~ | ✅ Done — `ReplaceClusterInterfaceInItfRE` in `_generic.py` |
-| ~~4~~ | ~~`processMultiAddressObjects`~~ | ✅ Done — `ProcessMultiAddressObjectsInSrc/Dst` in iptables policy |
-| ~~5~~ | ~~nftables analogs~~ | ✅ Done — 7 validation processors added to nftables policy pipeline |
+#### Architectural notes
 
-The iptables and nftables compilers are at **full feature parity** with fwbuilder.
+- **Shadowing detection**: fwbuilder runs a separate compilation pass for enhanced shadowing analysis (`ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing`). These processors exist in the Python codebase but are **not wired inline** because they inject extra rules that cause false positives in the main pipeline. The inline `DetectShadowing` processor is sufficient for most cases. A future improvement could implement the separate-pass architecture.
+- **`nft flush ruleset`**: Generated iptables scripts run `nft flush ruleset` in `reset_all()` (if `nft` is available) before `reset_iptables_v4/v6`. This handles RHEL8+ where `iptables` uses the nftables backend and pre-existing nftables rules would not be cleared by `iptables -F`.
 
 ---
 

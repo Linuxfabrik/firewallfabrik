@@ -191,3 +191,9 @@ DiffServ default
 
 IPv4 packet forwarding default
    Firewall Builder defaulted to enabling IPv4 packet forwarding. FirewallFabrik defaults to "No change" (does not modify the kernel setting).
+
+nftables-aware reset
+   On RHEL 8+ and modern distributions, ``iptables`` uses the nftables backend (``iptables-nft``). FirewallFabrik's generated scripts run ``nft flush ruleset`` before the iptables reset to clear any pre-existing nftables rules that ``iptables -F`` alone would not remove. This is conditional — on systems where ``nft`` is not installed, the command is skipped.
+
+Timestamp format
+   Generated scripts use ISO 8601 timestamps (``2026-03-16 20:06:24 (Mon)``) instead of Firewall Builder's locale-dependent format (``Mon Mar 16 20:06:24 2026``).

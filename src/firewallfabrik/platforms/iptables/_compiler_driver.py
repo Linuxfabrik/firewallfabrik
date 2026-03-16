@@ -517,6 +517,10 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 reset_buf = ''
+                # On RHEL8+ / modern distros, iptables uses the nftables
+                # backend (iptables-nft). Flush any pre-existing nftables
+                # rules first — iptables -F does not clear them.
+                reset_buf += '    command -v nft >/dev/null 2>&1 && nft flush ruleset\n'
                 if have_ipv4:
                     reset_buf += '    reset_iptables_v4\n'
                 if have_ipv6:
