@@ -166,7 +166,7 @@ No SNMP discovery
    The SNMP-based network discovery feature has been removed. Create objects manually or import from a ``.fwb`` file.
 
 No policy import
-   Importing firewall configurations from running devices (e.g. parsing ``iptables-save`` output) is not available.
+   Firewall Builder could parse the output of ``iptables-save`` and create firewall objects and rule sets from it. This feature required a complex ANTLR parser (~47,000 lines of code) and produced a flat, unsorted rule list that needed extensive manual cleanup to be usable. In practice, building a firewall from scratch in the GUI is faster than cleaning up an imported configuration. FirewallFabrik does not include this feature.
 
 ULOG removed
    The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG). If your ``.fwb`` file had ``use_ULOG`` enabled, it is silently migrated to the standard LOG target during import. NFLOG support is planned but not yet implemented in the compiler — LOG and NFLOG are shown as radio buttons in the platform settings, with NFLOG currently disabled.
