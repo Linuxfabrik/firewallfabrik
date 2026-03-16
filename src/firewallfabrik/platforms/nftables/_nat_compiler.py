@@ -115,6 +115,9 @@ class NATCompiler_nft(NATCompiler):
         self.add(RecursiveGroupsInRE('check for recursive groups in OSRC', 'osrc'))
         self.add(RecursiveGroupsInRE('check for recursive groups in ODST', 'odst'))
         self.add(RecursiveGroupsInRE('check for recursive groups in OSRV', 'osrv'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TSRC', 'tsrc'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TDST', 'tdst'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TSRV', 'tsrv'))
         self.add(EmptyGroupsInRE('check for empty groups in OSRC', 'osrc'))
         self.add(EmptyGroupsInRE('check for empty groups in ODST', 'odst'))
         self.add(EmptyGroupsInRE('check for empty groups in OSRV', 'osrv'))
@@ -162,6 +165,8 @@ class NATCompiler_nft(NATCompiler):
         self.add(GroupServicesByProtocol('group services by protocol'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AssignInterface('assign rules to interfaces'))
+
+        self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
         # Print rule
         from firewallfabrik.platforms.nftables._nat_print_rule import NATPrintRule_nft
@@ -275,6 +280,23 @@ class _PassthroughNAT(NATRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForObjectsWithErrors(NATRuleProcessor):
+    """Check for objects with compilation errors in NAT rules."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('osrc', 'odst', 'osrv', 'tsrc', 'tdst', 'tsrv'):
+            for obj in getattr(rule, slot):
+                data = getattr(obj, 'data', None) or {}
+                if data.get('rule_error', False):
+                    name = getattr(obj, 'name', str(obj))
+                    self.compiler.abort(rule, f"Object '{name}' has errors")
         self.tmp_queue.append(rule)
         return True
 

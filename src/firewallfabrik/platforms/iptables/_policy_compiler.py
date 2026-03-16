@@ -29,7 +29,6 @@ from firewallfabrik.compiler.processors._generic import (
     Begin,
     CheckForTCPEstablished,
     ConvertToAtomicForAddresses,
-    ConvertToAtomicForInterfaces,
     DetectShadowing,
     DropIPv4Rules,
     DropIPv6Rules,
@@ -40,8 +39,16 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     RecursiveGroupsInRE,
+    ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
     SimplePrintProgress,
+    SingleRuleFilter,
+)
+from firewallfabrik.compiler.processors._policy import (
+    ItfNegation,
+)
+from firewallfabrik.compiler.processors._policy import (
+    TimeNegation as BaseTimeNegation,
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
@@ -52,6 +59,7 @@ from firewallfabrik.compiler.processors._service import (
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    CustomService,
     Direction,
     Firewall,
     Host,
@@ -198,6 +206,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         # -- Full processor pipeline --
         self.add(Begin('Begin compilation'))
+        self.add(SingleRuleFilter('single rule filter'))
 
         self.add_rule_filter()
 
@@ -222,6 +231,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(StoreAction('store action'))
 
         self.add(Logging1('check global logging override option'))
+
+        self.add(ExpandGroupsInItf('expand groups in Itf'))
+        self.add(ReplaceClusterInterfaceInItfRE('replace cluster interfaces', 'itf'))
+        self.add(SingleObjectNegationItf('single object negation in Itf'))
+        self.add(ItfNegation('process negation in Itf'))
 
         self.add(DecideOnChainForClassify('set chain for action is Classify'))
 
@@ -256,6 +270,8 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         self.add(SrvNegation('process negation in Srv'))
 
+        self.add(ExpandGroupsInSrv('expand groups in Srv'))
+
         self.add(CheckForTCPEstablished('check for TCP established flag'))
 
         self.add(FillActionOnReject('fill action_on_reject'))
@@ -276,6 +292,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
         self.add(SrcNegation('process negation in Src'))
         self.add(DstNegation('process negation in Dst'))
+
+        self.add(
+            BaseTimeNegation(allow_negation=False, name='process negation in Time')
+        )
 
         self.add(Logging2('process logging'))
 
@@ -385,7 +405,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             )
         )
 
-        self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
+        self.add(InterfacePolicyRulesWithOptimization('process interface policy rules'))
 
         self.add(Optimize1('optimization 1, pass 1'))
         self.add(Optimize1('optimization 1, pass 2'))
@@ -394,6 +414,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(GroupServicesByProtocol('split on services'))
         self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
+        self.add(SpecialCasesWithCustomServices('special cases with custom services'))
         self.add(SeparatePortRanges('separate port ranges'))
         self.add(SeparateUserServices('separate user services'))
         self.add(SeparateSrcPort('split on TCP and UDP with source ports'))
@@ -408,6 +429,8 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(CheckForZeroAddr('check for zero addresses'))
         self.add(CheckMACInOUTPUTChain('check for MAC in OUTPUT chain'))
         self.add(CheckUserServiceInWrongChains('check for UserService in wrong chains'))
+
+        self.add(ConvertToAtomicForIntervals('convert to atomic by intervals'))
 
         self.add(Optimize3('optimization 3'))
 
@@ -751,6 +774,134 @@ class PolicyCompiler_ipt(PolicyCompiler):
 # ═══════════════════════════════════════════════════════════════════
 # Rule Processors
 # ═══════════════════════════════════════════════════════════════════
+
+
+class ConvertToAtomicForIntervals(PolicyRuleProcessor):
+    """Split rules with multiple time intervals into separate rules.
+
+    Corresponds to C++ PolicyCompiler::ConvertToAtomicForIntervals.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.when or len(rule.when) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for interval in rule.when:
+            r = rule.clone()
+            r.when = [interval]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class ExpandGroupsInItf(PolicyRuleProcessor):
+    """Expand groups in the interface rule element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandGroupsInSrv(PolicyRuleProcessor):
+    """Expand groups in the service rule element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'srv')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class InterfacePolicyRulesWithOptimization(PolicyRuleProcessor):
+    """Split rules with multiple interfaces, setting subrule suffix.
+
+    Like ConvertToAtomicForInterfaces but sets subrule_suffix for
+    chain tracking. Matches C++ InterfacePolicyRulesWithOptimization.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.is_itf_any() or len(rule.itf) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for itf_obj in rule.itf:
+            r = rule.clone()
+            r.itf = [itf_obj]
+            r.subrule_suffix = 'i1'
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class SingleObjectNegationItf(PolicyRuleProcessor):
+    """Handle single-object interface negation."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('itf') and len(rule.itf) == 1:
+            rule.itf_single_object_negation = True
+            rule.set_neg('itf', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCasesWithCustomServices(PolicyRuleProcessor):
+    """Handle CustomService objects with ESTABLISHED/RELATED in their code.
+
+    If a CustomService's platform code contains 'ESTABLISHED' or 'RELATED',
+    it must be separated and made stateless (it handles state matching itself).
+
+    Corresponds to C++ PolicyCompiler_ipt::specialCasesWithCustomServices.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.srv:
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        platform = ipt_comp.my_platform_name()
+
+        to_separate = []
+        for srv in rule.srv:
+            if isinstance(srv, CustomService):
+                code = (srv.data or {}).get(platform, '')
+                if code and ('ESTABLISHED' in code or 'RELATED' in code):
+                    to_separate.append(srv)
+
+        for srv in to_separate:
+            r = rule.clone()
+            r.srv = [srv]
+            r.set_option('stateless', True)
+            self.tmp_queue.append(r)
+
+        remaining = [s for s in rule.srv if s not in to_separate]
+        if remaining:
+            rule.srv = remaining
+            self.tmp_queue.append(rule)
+
+        return True
 
 
 class _Passthrough(PolicyRuleProcessor):

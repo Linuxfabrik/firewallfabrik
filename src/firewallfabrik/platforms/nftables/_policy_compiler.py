@@ -41,6 +41,7 @@ from firewallfabrik.compiler.processors._generic import (
     RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
+    SingleRuleFilter,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -123,11 +124,13 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         # -- Processor pipeline --
         self.add(Begin('Begin compilation'))
+        self.add(SingleRuleFilter('single rule filter'))
 
         # Store original action
         self.add(StoreAction('store action'))
 
         # Interface and direction
+        self.add(ExpandGroupsInItf('expand groups in Itf'))
         self.add(InterfaceAndDirection('interface+dir'))
         self.add(
             SplitIfIfaceAndDirectionBoth('split interface rule with direction both')
@@ -163,12 +166,14 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SplitIfSrcNegAndFw('split if src negated and fw'))
         self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
         self.add(NftNegation('process negation'))
+        self.add(TimeNegation('process time negation'))
 
         # Chain assignment
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
         self.add(SplitIfSrcMatchesFw('split if src matches FW'))
         self.add(SplitIfDstMatchesFw('split if dst matches FW'))
+        self.add(SpecialCaseWithFW1('split fw-to-fw rules'))
         self.add(DecideOnChainIfDstFW('decide chain if dst is fw'))
         self.add(SplitIfSrcFWNetwork('split rule if src has a net fw has interface on'))
         self.add(DecideOnChainIfSrcFW('decide chain if src is fw'))
@@ -196,6 +201,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         # Convert to atomic
         self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
+        self.add(ConvertToAtomicForIntervals('convert to atomic by intervals'))
         self.add(GroupServicesByProtocol('split on services'))
 
         self.add(CheckForStatefulICMP6Rules('check for stateful ICMPv6 rules'))
@@ -243,6 +249,63 @@ class _Passthrough(PolicyRuleProcessor):
         if rule is None:
             return False
         self.tmp_queue.append(rule)
+        return True
+
+
+class ConvertToAtomicForIntervals(PolicyRuleProcessor):
+    """Split rules with multiple time intervals."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.when or len(rule.when) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+        for interval in rule.when:
+            r = rule.clone()
+            r.when = [interval]
+            self.tmp_queue.append(r)
+        return True
+
+
+class ExpandGroupsInItf(PolicyRuleProcessor):
+    """Expand groups in the interface rule element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseWithFW1(PolicyRuleProcessor):
+    """Split fw-to-fw rules into Inbound + Outbound."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+        if (
+            src is not None
+            and dst is not None
+            and nft_comp.complex_match(src, nft_comp.fw)
+            and nft_comp.complex_match(dst, nft_comp.fw)
+            and rule.direction == Direction.Both
+        ):
+            r1 = rule.clone()
+            r1.direction = Direction.Inbound
+            self.tmp_queue.append(r1)
+            r2 = rule.clone()
+            r2.direction = Direction.Outbound
+            self.tmp_queue.append(r2)
+        else:
+            self.tmp_queue.append(rule)
         return True
 
 
@@ -398,6 +461,18 @@ class NftNegation(PolicyRuleProcessor):
         if rule.get_neg('srv'):
             rule.srv_single_object_negation = True
             rule.set_neg('srv', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class TimeNegation(PolicyRuleProcessor):
+    """Process negation in time rule element for nftables."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        # nftables handles time negation natively, just pass through
         self.tmp_queue.append(rule)
         return True
 

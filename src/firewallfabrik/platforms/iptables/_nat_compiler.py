@@ -32,6 +32,7 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     RecursiveGroupsInRE,
+    ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
     SimplePrintProgress,
 )
@@ -197,20 +198,37 @@ class NATCompiler_ipt(NATCompiler):
 
         self.add(Begin())
 
+        self.add(ExpandGroupsInItfInb('expand groups in inbound Interface'))
+        self.add(
+            ReplaceClusterInterfaceInItfRE(
+                'replace cluster interfaces inbound', 'itf_inb'
+            )
+        )
         self.add(
             SingleObjectNegationItfInb('process single object negation in inbound Itf')
+        )
+        self.add(ItfInbNegation('process negation in inbound Itf'))
+        self.add(ExpandGroupsInItfOutb('expand groups in outbound Interface'))
+        self.add(
+            ReplaceClusterInterfaceInItfRE(
+                'replace cluster interfaces outbound', 'itf_outb'
+            )
         )
         self.add(
             SingleObjectNegationItfOutb(
                 'process single object negation in outbound Itf'
             )
         )
+        self.add(ItfOutbNegation('process negation in outbound Itf'))
 
         self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
         self.add(RecursiveGroupsInRE('check for recursive groups in OSRC', 'osrc'))
         self.add(RecursiveGroupsInRE('check for recursive groups in ODST', 'odst'))
         self.add(RecursiveGroupsInRE('check for recursive groups in OSRV', 'osrv'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TSRC', 'tsrc'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TDST', 'tdst'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in TSRV', 'tsrv'))
 
         self.add(EmptyGroupsInRE('check for empty groups in OSRC', 'osrc'))
         self.add(EmptyGroupsInRE('check for empty groups in ODST', 'odst'))
@@ -230,6 +248,19 @@ class NATCompiler_ipt(NATCompiler):
         self.add(EliminateDuplicatesInOSRC('eliminate duplicates in OSRC'))
         self.add(EliminateDuplicatesInODST('eliminate duplicates in ODST'))
         self.add(EliminateDuplicatesInOSRV('eliminate duplicates in OSRV'))
+
+        self.add(
+            NATProcessMultiAddressObjectsInRE('process MultiAddress in OSrc', 'osrc')
+        )
+        self.add(
+            NATProcessMultiAddressObjectsInRE('process MultiAddress in ODst', 'odst')
+        )
+        self.add(
+            NATProcessMultiAddressObjectsInRE('process MultiAddress in TSrc', 'tsrc')
+        )
+        self.add(
+            NATProcessMultiAddressObjectsInRE('process MultiAddress in TDst', 'tdst')
+        )
 
         self.add(DoOSrvNegation('process negation in OSrv'))
 
@@ -293,6 +324,19 @@ class NATCompiler_ipt(NATCompiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         self.add(
+            NATSpecialCaseWithUnnumberedInterface(
+                'handle unnumbered interfaces in NAT rules'
+            )
+        )
+        self.add(
+            NATCheckForDynamicInterfacesOfOtherObjects(
+                'check for dynamic interfaces of other objects'
+            )
+        )
+        self.add(VerifyRuleWithMAC('verify MAC address usage in NAT rules'))
+        self.add(NATExpandAddressRanges('expand address ranges in NAT rules'))
+
+        self.add(
             SplitMultiSrcAndDst('split rules where multiple srcs and dsts are present')
         )
 
@@ -319,6 +363,7 @@ class NATCompiler_ipt(NATCompiler):
         self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
         self.add(ConvertToAtomicForItfOutb('convert to atomic for outbound interface'))
 
+        self.add(CheckForObjectsWithErrors('check for objects with errors'))
         self.add(CountChainUsage('Count chain usage'))
 
         # Print rule
@@ -387,6 +432,30 @@ class _PassthroughNAT(NATRuleProcessor):
         return True
 
 
+class ExpandGroupsInItfInb(NATRuleProcessor):
+    """Expand groups in the inbound interface element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf_inb')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandGroupsInItfOutb(NATRuleProcessor):
+    """Expand groups in the outbound interface element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf_outb')
+        self.tmp_queue.append(rule)
+        return True
+
+
 class SingleObjectNegationItfInb(NATRuleProcessor):
     """Handle single-object negation for inbound interface in NAT rules.
 
@@ -423,6 +492,50 @@ class SingleObjectNegationItfOutb(NATRuleProcessor):
         if rule.get_neg('itf_outb') and len(rule.itf_outb) == 1:
             rule.set_neg('itf_outb', False)
             rule.itf_outb_single_object_negation = True
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ItfInbNegation(NATRuleProcessor):
+    """Replace negated inbound interface with all other interfaces."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.get_neg('itf_inb'):
+            self.tmp_queue.append(rule)
+            return True
+        negated_ids = {obj.id for obj in rule.itf_inb if isinstance(obj, Interface)}
+        all_ifaces = self.compiler.fw.interfaces
+        rule.set_neg('itf_inb', False)
+        rule.itf_inb = [
+            iface
+            for iface in all_ifaces
+            if iface.id not in negated_ids and not iface.is_loopback()
+        ]
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ItfOutbNegation(NATRuleProcessor):
+    """Replace negated outbound interface with all other interfaces."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.get_neg('itf_outb'):
+            self.tmp_queue.append(rule)
+            return True
+        negated_ids = {obj.id for obj in rule.itf_outb if isinstance(obj, Interface)}
+        all_ifaces = self.compiler.fw.interfaces
+        rule.set_neg('itf_outb', False)
+        rule.itf_outb = [
+            iface
+            for iface in all_ifaces
+            if iface.id not in negated_ids and not iface.is_loopback()
+        ]
         self.tmp_queue.append(rule)
         return True
 
@@ -549,6 +662,41 @@ class EliminateDuplicatesInOSRV(NATRuleProcessor):
                 unique.append(obj)
         rule.osrv = unique
         self.tmp_queue.append(rule)
+        return True
+
+
+class NATProcessMultiAddressObjectsInRE(NATRuleProcessor):
+    """Process runtime MultiAddress objects in NAT rules."""
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        from firewallfabrik.core.objects import MultiAddressRunTime
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+        runtime_objs = [o for o in elements if isinstance(o, MultiAddressRunTime)]
+        if not runtime_objs:
+            self.tmp_queue.append(rule)
+            return True
+        if len(elements) == 1 and len(runtime_objs) == 1:
+            self.tmp_queue.append(rule)
+            return True
+        for mart in runtime_objs:
+            r = rule.clone()
+            setattr(r, self._slot, [mart])
+            self.tmp_queue.append(r)
+        remaining = [o for o in elements if o not in runtime_objs]
+        if remaining:
+            setattr(rule, self._slot, remaining)
+            self.tmp_queue.append(rule)
         return True
 
 
@@ -1402,6 +1550,148 @@ class LocalNATRule(NATRuleProcessor):
                 if isinstance(osrc, Firewall) and osrc.id == nat_comp.fw.id:
                     rule.osrc = []
 
+        self.tmp_queue.append(rule)
+        return True
+
+
+class NATSpecialCaseWithUnnumberedInterface(NATRuleProcessor):
+    """Handle unnumbered interfaces in NAT rules.
+
+    - SNAT/Masquerade: remove unnumbered from OSrc
+    - DNAT: remove unnumbered from ODst
+    """
+
+    @staticmethod
+    def _drop_unnumbered(rule, slot):
+        elements = getattr(rule, slot)
+        if not elements:
+            return True
+        new_elements = [
+            obj
+            for obj in elements
+            if not (
+                isinstance(obj, Interface)
+                and (obj.is_unnumbered() or obj.is_bridge_port())
+            )
+        ]
+        setattr(rule, slot, new_elements)
+        return bool(new_elements)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        keep = True
+        rt = rule.nat_rule_type
+        if rt in (NATRuleType.Masq, NATRuleType.SNAT):
+            keep = self._drop_unnumbered(rule, 'osrc')
+        elif rt == NATRuleType.DNAT:
+            keep = self._drop_unnumbered(rule, 'odst')
+        if keep:
+            self.tmp_queue.append(rule)
+        return True
+
+
+class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
+    """Abort if dynamic interfaces of other hosts/firewalls are used in NAT."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('osrc', 'odst'):
+            for obj in getattr(rule, slot):
+                if isinstance(obj, Interface) and obj.is_dynamic():
+                    fw = self.compiler.fw
+                    if not any(iface.id == obj.id for iface in fw.interfaces):
+                        self.compiler.abort(
+                            rule,
+                            f"Can not build rule using dynamic interface '{obj.name}' "
+                            f'of another object',
+                        )
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyRuleWithMAC(NATRuleProcessor):
+    """Verify MAC address usage in NAT rules.
+
+    MAC addresses can only be matched in PREROUTING/FORWARD/INPUT chains.
+    In POSTROUTING (SNAT), remove PhysAddress objects and warn.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.osrc:
+            self.tmp_queue.append(rule)
+            return True
+
+        chain = rule.ipt_chain or ''
+        if chain in ('PREROUTING', 'FORWARD', 'INPUT'):
+            self.tmp_queue.append(rule)
+            return True
+
+        from firewallfabrik.core.objects import PhysAddress
+
+        mac_objs = [obj for obj in rule.osrc if isinstance(obj, PhysAddress)]
+        if mac_objs:
+            remaining = [obj for obj in rule.osrc if not isinstance(obj, PhysAddress)]
+            rule.osrc = remaining
+            mac_name = mac_objs[0].name if mac_objs else ''
+            if not remaining:
+                self.compiler.abort(
+                    rule,
+                    f'SNAT rule can not match MAC address, and after removing '
+                    f"object '{mac_name}' from OSrc it becomes 'Any'",
+                )
+                return True
+            else:
+                self.compiler.warning(
+                    rule,
+                    f"SNAT rule can not match MAC address. Object '{mac_name}' "
+                    f'removed from the rule',
+                )
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class NATExpandAddressRanges(NATRuleProcessor):
+    """Expand AddressRange objects in OSrc and ODst to networks.
+
+    Corresponds to C++ NATCompiler_ipt::ExpandAddressRanges.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if hasattr(self.compiler, 'expand_address_ranges'):
+            self.compiler.expand_address_ranges(rule, 'osrc')
+            self.compiler.expand_address_ranges(rule, 'odst')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForObjectsWithErrors(NATRuleProcessor):
+    """Check for objects marked with compilation errors in NAT rules."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('osrc', 'odst', 'osrv', 'tsrc', 'tdst', 'tsrv'):
+            for obj in getattr(rule, slot):
+                data = getattr(obj, 'data', None) or {}
+                if data.get('rule_error', False):
+                    error_msg = data.get('error_msg', 'Object has errors')
+                    name = getattr(obj, 'name', str(obj))
+                    self.compiler.abort(
+                        rule, f"Object '{name}' has errors: {error_msg}"
+                    )
         self.tmp_queue.append(rule)
         return True
 
