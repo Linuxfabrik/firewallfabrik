@@ -710,7 +710,14 @@ class PrintRule(PolicyRuleProcessor):
         return f'--reject-with {reject_with}'
 
     def _print_log_parameters(self, rule: CompRule) -> str:
-        """Print logging parameters."""
+        """Print logging parameters for LOG or NFLOG target."""
+        target = rule.ipt_target
+        if target == 'NFLOG':
+            return self._print_nflog_parameters(rule)
+        return self._print_log_parameters_standard(rule)
+
+    def _print_log_parameters_standard(self, rule: CompRule) -> str:
+        """Print standard LOG target parameters."""
         parts = []
 
         log_level = rule.get_option('log_level', '')
@@ -726,6 +733,51 @@ class PrintRule(PolicyRuleProcessor):
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]
             parts.append(f'--log-prefix "{log_prefix}"')
+
+        return ' '.join(parts)
+
+    def _print_nflog_parameters(self, rule: CompRule) -> str:
+        """Print NFLOG target parameters.
+
+        NFLOG sends packets via netlink to a userspace logging daemon.
+        Parameters:
+        - --nflog-group N: netlink multicast group (default 1)
+        - --nflog-prefix "...": log prefix string
+        - --nflog-range N: bytes of packet to copy (0 = entire packet)
+        - --nflog-threshold N: packets to queue before sending to userspace
+        """
+        parts = []
+
+        nlgroup = self.compiler.fw.get_option('ulog_nlgroup')
+        try:
+            nlgroup = int(nlgroup)
+        except (TypeError, ValueError):
+            nlgroup = 1
+        parts.append(f'--nflog-group {nlgroup}')
+
+        log_prefix = rule.get_option('log_prefix', '')
+        if not log_prefix:
+            log_prefix = self.compiler.fw.get_option('log_prefix')
+        if log_prefix:
+            log_prefix = self._expand_log_prefix(rule, str(log_prefix))
+            log_prefix = log_prefix[:63]  # NFLOG supports up to 64 chars
+            parts.append(f'--nflog-prefix "{log_prefix}"')
+
+        cprange = self.compiler.fw.get_option('ulog_cprange')
+        try:
+            cprange = int(cprange)
+        except (TypeError, ValueError):
+            cprange = 0
+        if cprange > 0:
+            parts.append(f'--nflog-range {cprange}')
+
+        qthreshold = self.compiler.fw.get_option('ulog_qthreshold')
+        try:
+            qthreshold = int(qthreshold)
+        except (TypeError, ValueError):
+            qthreshold = 1
+        if qthreshold > 1:
+            parts.append(f'--nflog-threshold {qthreshold}')
 
         return ' '.join(parts)
 

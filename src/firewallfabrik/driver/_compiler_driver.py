@@ -114,17 +114,6 @@ class CompilerDriver(BaseCompiler):
             if options.get(opt, False):
                 self.warning(msg)
 
-        # NFLOG parameters — only relevant when use_NFLOG is set,
-        # but warn individually so the user sees exactly what is ignored.
-        for opt, flag in [
-            ('ulog_cprange', '--nflog-range'),
-            ('ulog_nlgroup', '--nflog-group'),
-            ('ulog_qthreshold', '--nflog-threshold'),
-        ]:
-            val = options.get(opt)
-            if val is not None and val != '' and val != 0 and val != -1:
-                self.warning(f'{flag} is not supported (option {opt!r} ignored)')
-
     # -- Script assembly --
 
     def assemble_script(

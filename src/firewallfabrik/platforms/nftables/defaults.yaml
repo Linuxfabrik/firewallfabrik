@@ -513,13 +513,13 @@ options:
   use_NFLOG:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'useNFLOG'
     description: >-
       Use the NFLOG target for logging instead of LOG.
       NFLOG sends packets via netlink to a userspace daemon
       (ulogd2, rsyslog, syslog-ng) for flexible log routing.
-      Not yet implemented in the compiler.
+      In nftables, generates 'log group N' instead of plain 'log'.
 
   use_numeric_log_levels:
     type: 'bool'
@@ -549,10 +549,11 @@ options:
   ulog_nlgroup:
     type: 'int'
     default: 1
-    supported: false
+    supported: true
     widget: 'nlgroup'
     description: >-
-      NFLOG netlink group. Not applicable to nftables.
+      NFLOG netlink multicast group number (1-65535).
+      Used when use_NFLOG is enabled.
 
   ulog_qthreshold:
     type: 'int'

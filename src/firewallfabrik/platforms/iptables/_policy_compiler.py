@@ -755,11 +755,37 @@ class PolicyCompiler_ipt(PolicyCompiler):
             'drop_invalid_and_log', 1 if (drop_invalid and log_invalid) else 0
         )
 
+        use_nflog = self.fw.get_option('use_NFLOG')
+        conf.set_variable('use_nflog', 1 if use_nflog else 0)
+        conf.set_variable('not_use_nflog', 0 if use_nflog else 1)
+
+        # Legacy ULOG is always disabled (deprecated)
         conf.set_variable('not_use_ulog', 1)
         conf.set_variable('use_ulog', 0)
-        conf.set_variable('use_nlgroup', 0)
-        conf.set_variable('use_cprange', 0)
-        conf.set_variable('use_qthreshold', 0)
+
+        nlgroup = 1
+        cprange = 0
+        qthreshold = 1
+        if use_nflog:
+            try:
+                nlgroup = int(self.fw.get_option('ulog_nlgroup') or 1)
+            except (TypeError, ValueError):
+                nlgroup = 1
+            try:
+                cprange = int(self.fw.get_option('ulog_cprange') or 0)
+            except (TypeError, ValueError):
+                cprange = 0
+            try:
+                qthreshold = int(self.fw.get_option('ulog_qthreshold') or 1)
+            except (TypeError, ValueError):
+                qthreshold = 1
+
+        conf.set_variable('nlgroup', nlgroup)
+        conf.set_variable('cprange', cprange)
+        conf.set_variable('qthreshold', qthreshold)
+        conf.set_variable('use_nlgroup', 1 if nlgroup else 0)
+        conf.set_variable('use_cprange', 1 if cprange > 0 else 0)
+        conf.set_variable('use_qthreshold', 1 if qthreshold > 1 else 0)
         conf.set_variable('invalid_match_log_prefix', '"INVALID "')
 
         return conf.expand()
@@ -1154,7 +1180,13 @@ class StoreAction(PolicyRuleProcessor):
 
 
 class Logging2(PolicyRuleProcessor):
-    """Process logging — create log chain with LOG + action rules."""
+    """Process logging — create log chain with LOG/NFLOG + action rules."""
+
+    def _log_target(self) -> str:
+        """Return 'NFLOG' when the firewall option is set, otherwise 'LOG'."""
+        if self.compiler.fw.get_option('use_NFLOG'):
+            return 'NFLOG'
+        return 'LOG'
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1166,6 +1198,7 @@ class Logging2(PolicyRuleProcessor):
             return True
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        log_target = self._log_target()
 
         # Special case: Continue action without tagging/classification/routing
         if (
@@ -1174,7 +1207,7 @@ class Logging2(PolicyRuleProcessor):
             and not rule.get_option('classification', False)
             and not rule.get_option('routing', False)
         ):
-            rule.ipt_target = 'LOG'
+            rule.ipt_target = log_target
             self.tmp_queue.append(rule)
             return True
 
@@ -1191,7 +1224,7 @@ class Logging2(PolicyRuleProcessor):
         r.action = PolicyAction.Continue
         self.tmp_queue.append(r)
 
-        # 2) LOG rule in new_chain: all elements reset to any
+        # 2) LOG/NFLOG rule in new_chain: all elements reset to any
         r2 = rule.clone()
         r2.src = []
         r2.dst = []
@@ -1202,7 +1235,7 @@ class Logging2(PolicyRuleProcessor):
         r2.upstream_rule_chain = this_chain
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
-        r2.ipt_target = 'LOG'
+        r2.ipt_target = log_target
         r2.action = PolicyAction.Continue
         r2.direction = Direction.Both
         r2.set_option('log', False)

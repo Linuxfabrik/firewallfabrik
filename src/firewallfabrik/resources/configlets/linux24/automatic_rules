@@ -39,6 +39,8 @@
 ## drop_invalid_and_log       drop and log packets that match state INVALID
 ## not_use_ulog               use LOG for logging (always true; ULOG is deprecated)
 ## use_ulog                   use ULOG for logging (always false; ULOG is deprecated)
+## use_nflog                  use NFLOG for logging (when enabled in firewall options)
+## not_use_nflog              use LOG for logging (when NFLOG is not enabled)
 ## use_nlgroup                for --nflog-group
 ## use_cprange                for --nflog-range
 ## use_qthreshold             for --nflog-threshold
@@ -116,12 +118,20 @@
 {{$begin_rule}} FORWARD  -m {{$state_module_option}} INVALID  -j drop_invalid {{$end_rule}}
 {{endif}}
 
+{{if use_nflog}}
+{{$begin_rule}} drop_invalid -j NFLOG --nflog-group {{$nlgroup}} --nflog-prefix {{$invalid_match_log_prefix}} {{if use_cprange}}--nflog-range {{$cprange}}{{endif}} {{if use_qthreshold}}--nflog-threshold {{$qthreshold}}{{endif}}{{$end_rule}}
+{{endif}}
+
+{{if not_use_nflog}}
+
 {{if use_ulog}}
 {{$begin_rule}} drop_invalid -j ULOG {{if use_nlgroup}}--ulog-nlgroup {{$nlgroup}}{{endif}} {{if use_cprange}}--ulog-cprange {{$cprange}}{{endif}} {{if use_qthreshold}}--ulog-qthreshold {{$qthreshold}}{{endif}} --ulog-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
 {{endif}}
 
 {{if not_use_ulog}}
 {{$begin_rule}} drop_invalid -j LOG --log-level debug --log-prefix {{$invalid_match_log_prefix}}{{$end_rule}}
+{{endif}}
+
 {{endif}}
 
 {{$begin_rule}} drop_invalid -j DROP {{$end_rule}}

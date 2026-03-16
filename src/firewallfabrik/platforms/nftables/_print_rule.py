@@ -583,19 +583,37 @@ class PrintRule_nft(PolicyRuleProcessor):
         Handles two cases:
         - ipt_target == 'LOG': standalone log rule (Continue action)
         - nft_log flag: inline log before verdict (e.g. `log prefix "..." accept`)
+
+        When ``use_NFLOG`` is enabled, generates ``log group N`` instead of
+        plain ``log``, which routes packets via netlink to a userspace
+        logging daemon (ulogd2, rsyslog, syslog-ng).
         """
         if rule.ipt_target != 'LOG' and not rule.nft_log:
             return ''
 
+        use_nflog = self.compiler.fw.get_option('use_NFLOG')
+
         parts = ['log']
+
+        if use_nflog:
+            nlgroup = self.compiler.fw.get_option('ulog_nlgroup')
+            try:
+                nlgroup = int(nlgroup)
+            except (TypeError, ValueError):
+                nlgroup = 1
+            parts.append(f'group {nlgroup}')
+
         log_prefix = self._get_log_prefix(rule)
         if log_prefix:
             parts.append(f'prefix "{log_prefix}"')
-        log_level = rule.get_option('log_level', '')
-        if not log_level:
-            log_level = self.compiler.fw.get_option('log_level')
-        if log_level:
-            parts.append(f'level {log_level}')
+
+        if not use_nflog:
+            log_level = rule.get_option('log_level', '')
+            if not log_level:
+                log_level = self.compiler.fw.get_option('log_level')
+            if log_level:
+                parts.append(f'level {log_level}')
+
         return ' '.join(parts)
 
     def _get_log_prefix(self, rule: CompRule) -> str:
