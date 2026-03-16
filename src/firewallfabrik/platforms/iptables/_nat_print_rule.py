@@ -47,6 +47,11 @@ if TYPE_CHECKING:
     from firewallfabrik.platforms.iptables._nat_compiler import NATCompiler_ipt
 
 
+def _is_true(val) -> bool:
+    """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
+    return str(val) == 'True'
+
+
 def _version_compare(v1: str, v2: str) -> int:
     """Compare two version strings. Returns -1, 0, or 1."""
 
@@ -480,32 +485,59 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_icmp(self, srv) -> str:
-        data = srv.data or {}
-        icmp_type = int(data.get('type', -1) or -1)
+        codes = getattr(srv, 'codes', None) or srv.data or {}
+        raw_type = codes.get('type', -1)
+        raw_code = codes.get('code', -1)
+        icmp_type = -1 if raw_type is None else int(raw_type)
+        icmp_code = -1 if raw_code is None else int(raw_code)
         if icmp_type < 0:
             return ''
-        icmp_code = int(data.get('code', -1) or -1)
         if icmp_code >= 0:
             return f'{icmp_type}/{icmp_code}'
         return str(icmp_type)
 
     def _print_ip(self, srv) -> str:
+        """Print IPService fragment and IP option matching for NAT rules.
+
+        Matches fwbuilder PolicyCompiler_PrintRule::_printIP().
+        """
         data = srv.data or {}
         parts = []
-        if data.get('fragm') or data.get('short_fragm'):
+        if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
             parts.append('-f')
-        options = []
-        if data.get('lsrr'):
-            options.append('--lsrr')
-        if data.get('ssrr'):
-            options.append('--ssrr')
-        if data.get('rr'):
-            options.append('--rr')
-        if data.get('ts'):
-            options.append('--ts')
-        if options:
-            parts.append('-m ipv4options')
-            parts.extend(options)
+        if _is_true(data.get('any_opt')):
+            if _version_compare(self.version, '1.4.3') >= 0:
+                parts.append('-m ipv4options --any')
+            else:
+                parts.append('-m ipv4options --any-opt')
+        elif _version_compare(self.version, '1.4.3') >= 0:
+            options = []
+            if _is_true(data.get('lsrr')):
+                options.append('lsrr')
+            if _is_true(data.get('ssrr')):
+                options.append('ssrr')
+            if _is_true(data.get('rr')):
+                options.append('record-route')
+            if _is_true(data.get('ts')):
+                options.append('timestamp')
+            if _is_true(data.get('rtralt')):
+                options.append('router-alert')
+            if options:
+                parts.append(f'-m ipv4options --flags {",".join(options)}')
+        else:
+            options = []
+            if _is_true(data.get('lsrr')):
+                options.append('--lsrr')
+            if _is_true(data.get('ssrr')):
+                options.append('--ssrr')
+            if _is_true(data.get('rr')):
+                options.append('--rr')
+            if _is_true(data.get('ts')):
+                options.append('--ts')
+            if _is_true(data.get('rtralt')):
+                options.append('--ra')
+            if options:
+                parts.append('-m ipv4options ' + ' '.join(options))
         return ' '.join(parts)
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:

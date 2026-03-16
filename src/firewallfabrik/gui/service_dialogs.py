@@ -75,7 +75,7 @@ class TCPServiceDialog(BaseObjectDialog):
         self._obj.dst_range_start = self.ds.value()
         self._obj.dst_range_end = self.de.value()
         data = dict(self._obj.data or {})
-        data['established'] = str(self.established.isChecked())
+        data['established'] = self.established.isChecked()
         self._obj.data = data
         flags = {}
         masks = {}
@@ -152,6 +152,14 @@ _IP_OPTION_CHECKBOXES = ('lsrr', 'router_alert', 'rr', 'ssrr', 'timestamp')
 class IPServiceDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('ipservicedialog_q.ui', parent)
+        self._update_code_field()
+
+    def _set_read_only(self, read_only):
+        super()._set_read_only(read_only)
+        if not read_only:
+            # Re-apply conditional enablement after the base class
+            # blanket-enables all widgets.
+            self._update_code_field()
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
@@ -159,14 +167,18 @@ class IPServiceDialog(BaseObjectDialog):
         self.protocolNum.setValue(int(protocols.get('protocol_num', 0)))
         data = self._obj.data or {}
         dscp = data.get('dscp')
+        tos = data.get('tos')
         if dscp:
             self.use_dscp.setChecked(True)
             self.code.setText(dscp)
+        elif tos:
+            self.use_tos.setChecked(True)
+            self.code.setText(tos)
         else:
-            tos = data.get('tos')
-            if tos:
-                self.use_tos.setChecked(True)
-                self.code.setText(tos)
+            # Neither set — both radios unchecked, code field disabled
+            self.use_dscp.setChecked(False)
+            self.use_tos.setChecked(False)
+        self._update_code_field()
         self.any_opt.setChecked(_is_true(data.get('any_opt')))
         self.lsrr.setChecked(_is_true(data.get('lsrr')))
         self.ssrr.setChecked(_is_true(data.get('ssrr')))
@@ -186,18 +198,41 @@ class IPServiceDialog(BaseObjectDialog):
         if self.use_dscp.isChecked():
             data['dscp'] = self.code.text()
             data.pop('tos', None)
-        else:
+        elif self.use_tos.isChecked():
             data['tos'] = self.code.text()
             data.pop('dscp', None)
-        data['any_opt'] = str(self.any_opt.isChecked())
-        data['lsrr'] = str(self.lsrr.isChecked())
-        data['ssrr'] = str(self.ssrr.isChecked())
-        data['rr'] = str(self.rr.isChecked())
-        data['ts'] = str(self.timestamp.isChecked())
-        data['rtralt'] = str(self.router_alert.isChecked())
-        data['fragm'] = str(self.all_fragments.isChecked())
-        data['short_fragm'] = str(self.short_fragments.isChecked())
+        else:
+            # Neither selected — clear both
+            data.pop('dscp', None)
+            data.pop('tos', None)
+        data['any_opt'] = self.any_opt.isChecked()
+        data['lsrr'] = self.lsrr.isChecked()
+        data['ssrr'] = self.ssrr.isChecked()
+        data['rr'] = self.rr.isChecked()
+        data['ts'] = self.timestamp.isChecked()
+        data['rtralt'] = self.router_alert.isChecked()
+        data['fragm'] = self.all_fragments.isChecked()
+        data['short_fragm'] = self.short_fragments.isChecked()
         self._obj.data = data
+
+    def _update_code_field(self):
+        """Enable the code field only when a DiffServ radio is selected."""
+        enabled = self.use_dscp.isChecked() or self.use_tos.isChecked()
+        self.code.setEnabled(enabled)
+        if not enabled:
+            self.code.clear()
+
+    @Slot()
+    def diffServToggled(self):
+        """Ensure mutual exclusivity and enable/disable the code field."""
+        sender = self.sender()
+        if sender and sender.isChecked():
+            # Uncheck the other radio
+            if sender is self.use_dscp:
+                self.use_tos.setChecked(False)
+            else:
+                self.use_dscp.setChecked(False)
+        self._update_code_field()
 
     @Slot()
     def anyOptionsStateChanged(self):

@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 tbd
 
 
+## [v1.1.0] - 2026-03-16
+
+### Added
+
+- DiffServ (DSCP/TOS) matching for the nftables compiler (`ip dscp` / `ip tos`).
+- DSCP symbolic class names (`AF11`, `EF`, `CS3`, etc.) now generate `--dscp-class` in iptables output, matching Firewall Builder behavior.
+- Fragment matching (`-f` / `-m frag --fragmore`) and IPv4 option matching (`-m ipv4options`) in the iptables filter compiler (previously only present in the NAT compiler).
+- Router-alert IP option (`--ra` / `--flags router-alert`) support in both iptables filter and NAT compilers.
+- Tooltips for all IPService dialog fields (protocol number, DSCP, TOS, IP options, fragments).
+- Version-aware `ipv4options` module formatting: old module (`--lsrr`, `--ra`) for iptables < 1.4.3, new module (`--flags lsrr,router-alert,...`) for >= 1.4.3.
+
+### Fixed
+
+- **Boolean string truthiness**: GUI stored boolean flags (IP options, fragments, etc.) as string `'False'` which is truthy in Python. The GUI now stores native booleans; compilers use a defensive `_is_true()` guard for backward compatibility.
+- **DiffServ data key mismatch**: Compilers and shadow detection read `tos_code`/`dscp_code` but data was stored under `tos`/`dscp`. Keys now match across all components.
+- **ICMP type/code in NAT compiler**: Was reading from `srv.data` instead of `srv.codes`, causing ICMP NAT rules to ignore type/code matching.
+- **Rule shadowing false positives**: IPService objects (e.g. VRRP) were treated as "any" service because `get_protocol_number()` and `is_any()` did not fall back to `named_protocols.protocol_num`. This caused incorrect "Rule X shadows Rule Y" errors during compilation.
+- **TagService key mismatch**: Dialog wrote `data['code']` but group display and tooltips read `data['tagcode']`. Now consistent (`tagcode`).
+- **TCP flags in iptables compiler**: Was reading pre-formatted strings from `srv.data` instead of ORM attributes `srv.tcp_flags`/`srv.tcp_flags_masks`. Now reads the ORM attributes and formats for iptables like Firewall Builder.
+
+### Changed
+
+- DiffServ default changed from TOS to DSCP (the modern standard).
+- DiffServ radio buttons are now unselected by default when no code is set. The code input field is disabled until the user selects DSCP or TOS, making it clear that the choice has no effect without a code value.
+- Input widget borders use `palette(dark)` instead of `palette(mid)` for better visibility.
+
+
 ## [v1.0.1] - 2026-03-11
 
 ### Fixed
@@ -156,7 +183,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...HEAD
+[v1.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0rc1...v1.0.0
 [v0.5.0rc1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0b1...v0.5.0rc1

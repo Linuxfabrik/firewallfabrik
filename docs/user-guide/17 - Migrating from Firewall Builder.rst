@@ -183,5 +183,8 @@ nftables support
 Parallel compilation
    FirewallFabrik compiles multiple firewalls concurrently (up to the number of CPU cores). Firewall Builder compiled firewalls one at a time. The CLI compilers (``fwf-ipt``, ``fwf-nft``) also accept multiple firewall names and an ``--all`` flag, loading the database only once.
 
+DiffServ default
+   Firewall Builder defaulted to "Use TOS" in the IPService dialog when neither TOS nor DSCP was set. FirewallFabrik defaults to neither selected — the DSCP/TOS code field is disabled until the user explicitly chooses DSCP or TOS, making it clear that the setting has no effect without a code value. When a selection is needed, DSCP is recommended as the modern standard.
+
 IPv4 packet forwarding default
    Firewall Builder defaulted to enabling IPv4 packet forwarding. FirewallFabrik defaults to "No change" (does not modify the kernel setting).

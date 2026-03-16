@@ -27,7 +27,7 @@ QLineEdit,
 QPlainTextEdit,
 QSpinBox,
 QTextEdit {
-    border: 1px solid palette(mid);
+    border: 1px solid palette(dark);
     border-radius: 4px;
     padding: 2px 4px;
 }

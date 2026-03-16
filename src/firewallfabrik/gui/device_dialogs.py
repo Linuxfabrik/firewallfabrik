@@ -28,6 +28,16 @@ from firewallfabrik.gui.platform_settings import (
     get_enabled_platforms,
 )
 
+
+def _is_true(val):
+    """Return True for bool True or string 'True'/'true'."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() == 'true'
+    return False
+
+
 # Reverse mapping: display name → internal key for host OS.
 _HOST_OS_INTERNAL = {v: k for k, v in HOST_OS.items()}
 
@@ -45,12 +55,12 @@ class HostDialog(BaseObjectDialog):
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
-        self.MACmatching.setChecked(data.get('mac_filter_enabled') == 'True')
+        self.MACmatching.setChecked(_is_true(data.get('mac_filter_enabled')))
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
         data = dict(self._obj.data or {})
-        data['mac_filter_enabled'] = str(self.MACmatching.isChecked())
+        data['mac_filter_enabled'] = self.MACmatching.isChecked()
         self._obj.data = data
 
 

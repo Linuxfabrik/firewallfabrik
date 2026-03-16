@@ -50,6 +50,11 @@ if TYPE_CHECKING:
     from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 
 
+def _is_true(val) -> bool:
+    """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
+    return str(val) == 'True'
+
+
 def _version_compare(v1: str, v2: str) -> int:
     """Compare two version strings. Returns -1, 0, or 1."""
 
@@ -476,30 +481,103 @@ class PrintRule(PolicyRuleProcessor):
         return f' {flag} {icmp_type}/{icmp_code}  '
 
     def _print_ip_service_options(self, rule: CompRule, srv) -> str:
+        """Print IPService options (fragments, TOS/DSCP, IP options, TCP flags).
+
+        Matches fwbuilder PolicyCompiler_PrintRule::_printIP().
+        """
         if srv is None:
             return ''
         parts = []
         if isinstance(srv, IPService):
             data = srv.data or {}
-            tos = data.get('tos_code', '')
-            dscp = data.get('dscp_code', '')
+            # Fragments
+            if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
+                if self.compiler.ipv6_policy:
+                    parts.append('-m frag --fragmore')
+                else:
+                    parts.append('-f')
+            # TOS / DSCP
+            tos = data.get('tos', '')
+            dscp = data.get('dscp', '')
             if tos:
                 parts.append(f'-m tos --tos {tos}')
-            if dscp:
-                parts.append(f'-m dscp --dscp {dscp}')
+            elif dscp:
+                # Symbolic DiffServ class names use --dscp-class
+                # (matches fwbuilder PolicyCompiler_PrintRule::_printIP)
+                if dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
+                    parts.append(f'-m dscp --dscp-class {dscp}')
+                else:
+                    parts.append(f'-m dscp --dscp {dscp}')
+            # IP options (IPv4 only)
+            if not self.compiler.ipv6_policy:
+                ip_opts = self._print_ipv4_options(data)
+                if ip_opts:
+                    parts.append(ip_opts)
         if isinstance(srv, TCPService):
             flags = self._print_tcp_flags(srv)
             if flags:
                 parts.append(flags)
         return ' '.join(parts)
 
-    def _print_tcp_flags(self, srv) -> str:
-        data = srv.data or {}
-        flags_mask = data.get('tcp_flags_mask', '')
-        flags_comp = data.get('tcp_flags_comp', '')
-        if flags_mask and flags_comp:
-            return f'--tcp-flags {flags_mask} {flags_comp}'
+    def _print_ipv4_options(self, data: dict) -> str:
+        """Print ``-m ipv4options`` matching.
+
+        Matches fwbuilder: old module (<1.4.3) uses individual flags,
+        new module (>=1.4.3) uses ``--flags`` with comma-separated list.
+        """
+        if _is_true(data.get('any_opt')):
+            if _version_compare(self.version, '1.4.3') >= 0:
+                return '-m ipv4options --any'
+            return '-m ipv4options --any-opt'
+        if _version_compare(self.version, '1.4.3') >= 0:
+            # New ipv4options module: --flags opt1,opt2,...
+            options = []
+            if _is_true(data.get('lsrr')):
+                options.append('lsrr')
+            if _is_true(data.get('ssrr')):
+                options.append('ssrr')
+            if _is_true(data.get('rr')):
+                options.append('record-route')
+            if _is_true(data.get('ts')):
+                options.append('timestamp')
+            if _is_true(data.get('rtralt')):
+                options.append('router-alert')
+            if options:
+                return f'-m ipv4options --flags {",".join(options)}'
+        else:
+            # Old ipv4options module: individual flags
+            options = []
+            if _is_true(data.get('lsrr')):
+                options.append('--lsrr')
+            if _is_true(data.get('ssrr')):
+                options.append('--ssrr')
+            if _is_true(data.get('rr')):
+                options.append('--rr')
+            if _is_true(data.get('ts')):
+                options.append('--ts')
+            if _is_true(data.get('rtralt')):
+                options.append('--ra')
+            if options:
+                return '-m ipv4options ' + ' '.join(options)
         return ''
+
+    def _print_tcp_flags(self, srv) -> str:
+        """Format TCP flags for iptables ``--tcp-flags MASK COMP``.
+
+        Reads from the ORM attributes ``tcp_flags_masks`` (which flags to
+        inspect) and ``tcp_flags`` (which of those must be set).
+        Matches fwbuilder PolicyCompiler_PrintRule::_printTCPFlags().
+        """
+        masks = srv.tcp_flags_masks or {}
+        flags = srv.tcp_flags or {}
+        _FLAG_ORDER = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
+        mask_names = [f.upper() for f in _FLAG_ORDER if masks.get(f)]
+        if not mask_names:
+            return ''
+        mask_str = ','.join(mask_names) if len(mask_names) < 6 else 'ALL'
+        comp_names = [f.upper() for f in _FLAG_ORDER if flags.get(f)]
+        comp_str = ','.join(comp_names) if comp_names else 'NONE'
+        return f'--tcp-flags {mask_str} {comp_str}'
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
         """Print module matching (state, conntrack, etc.)."""

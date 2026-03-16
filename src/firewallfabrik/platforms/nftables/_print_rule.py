@@ -352,9 +352,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         elif isinstance(srv, (ICMPService, ICMP6Service)):
             return self._print_icmp_service(srv)
         elif isinstance(srv, IPService):
+            parts = []
             proto = srv.get_protocol_number()
             if proto >= 0:
-                return f'meta l4proto {proto}'
+                parts.append(f'meta l4proto {proto}')
+            data = srv.data or {}
+            tos = data.get('tos', '')
+            dscp = data.get('dscp', '')
+            if dscp:
+                parts.append(f'ip dscp {dscp}')
+            elif tos:
+                parts.append(f'ip tos {tos}')
+            if parts:
+                return ' '.join(parts)
 
         self.compiler.error(
             rule,

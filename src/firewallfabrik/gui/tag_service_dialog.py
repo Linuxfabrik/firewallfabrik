@@ -24,10 +24,10 @@ class TagServiceDialog(BaseObjectDialog):
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
-        self.tagcode.setText(data.get('code', ''))
+        self.tagcode.setText(data.get('tagcode', ''))
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
         data = dict(self._obj.data or {})
-        data['code'] = self.tagcode.text()
+        data['tagcode'] = self.tagcode.text()
         self._obj.data = data

@@ -146,20 +146,40 @@ class Service(Base):
 
     def get_protocol_name(self) -> str:
         """Return the protocol name string for this service type."""
-        if isinstance(self, IPService) and self.protocol:
-            return self.protocol
+        if isinstance(self, IPService):
+            proto = self._ipservice_protocol_str()
+            if proto:
+                return proto
         entry = self.PROTOCOL_MAP.get(self.type)
         if entry:
             return entry[0]
         return ''
 
+    def _ipservice_protocol_str(self) -> str:
+        """Return the protocol string for an IPService.
+
+        Checks ``self.protocol`` first (set for CustomService and explicit
+        YAML ``protocol:`` fields), then falls back to
+        ``named_protocols['protocol_num']`` which is the standard storage
+        for IPService objects imported from both .fwb and .fwf files.
+        """
+        if self.protocol:
+            return self.protocol
+        if self.named_protocols:
+            pnum = self.named_protocols.get('protocol_num')
+            if pnum is not None:
+                return str(pnum)
+        return ''
+
     def get_protocol_number(self) -> int:
         """Return the IP protocol number for this service type."""
-        if isinstance(self, IPService) and self.protocol:
-            try:
-                return int(self.protocol)
-            except ValueError:
-                pass
+        if isinstance(self, IPService):
+            proto = self._ipservice_protocol_str()
+            if proto:
+                try:
+                    return int(proto)
+                except ValueError:
+                    pass
         entry = self.PROTOCOL_MAP.get(self.type)
         if entry:
             return entry[1]
@@ -168,7 +188,8 @@ class Service(Base):
     def is_any(self) -> bool:
         """True if this service matches any protocol/port."""
         if isinstance(self, IPService):
-            return not self.protocol or self.protocol == '0'
+            proto = self._ipservice_protocol_str()
+            return not proto or proto == '0'
         if isinstance(self, (TCPService, UDPService)):
             return (
                 (self.src_range_start or 0) == 0

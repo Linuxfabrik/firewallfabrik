@@ -782,9 +782,9 @@ def _srv_contains(s1, s2) -> bool:
             if _srv_data_val(s1, flag) != _srv_data_val(s2, flag):
                 return False
         # TOS and DSCP codes must match
-        if _srv_data_val(s1, 'tos_code') != _srv_data_val(s2, 'tos_code'):
+        if _srv_data_val(s1, 'tos') != _srv_data_val(s2, 'tos'):
             return False
-        if _srv_data_val(s1, 'dscp_code') != _srv_data_val(s2, 'dscp_code'):
+        if _srv_data_val(s1, 'dscp') != _srv_data_val(s2, 'dscp'):
             return False
         p1 = s1.get_protocol_number()
         p2 = s2.get_protocol_number()
