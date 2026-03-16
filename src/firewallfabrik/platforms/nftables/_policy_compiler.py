@@ -238,6 +238,14 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.run_rule_processors()
 
+        # Post-processing: merge consecutive rules that differ only in
+        # source or destination address into nftables anonymous sets.
+        from firewallfabrik.platforms.nftables._print_rule import (
+            optimize_chain_rules,
+        )
+
+        optimize_chain_rules(self.chain_rules)
+
     def create_print_rule_processor(self):
         """Create the nftables PrintRule processor."""
         from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft

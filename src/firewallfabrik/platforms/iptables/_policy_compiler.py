@@ -28,6 +28,7 @@ from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
     Begin,
     CheckForTCPEstablished,
+    ConvertToAtomic,
     ConvertToAtomicForAddresses,
     DetectShadowing,
     DropIPv4Rules,
@@ -193,6 +194,37 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         return n
 
+    def run_shadowing_pass(self) -> None:
+        """Run a separate shadowing detection pass before the main compilation.
+
+        Corresponds to fwbuilder's separate shadowing detection pass
+        (PolicyCompiler_ipt.cpp lines 4302-4386).  This builds its own
+        processor pipeline that only produces warnings/errors via
+        ``self.warning()`` / ``self.abort()`` without affecting the main
+        compilation output.
+
+        The pipeline is: Begin -> ConvertAnyToNotFWForShadowing ->
+        SplitIfSrcAnyForShadowing -> SplitIfDstAnyForShadowing ->
+        ConvertToAtomic (full Cartesian product) -> DetectShadowing.
+        """
+        # Save the main processor chain
+        saved_processors = self.rule_processors
+        self.rule_processors = []
+
+        # Build the shadowing detection pipeline
+        self.add(Begin('Detecting rule shadowing'))
+        self.add(ConvertAnyToNotFWForShadowing("convert 'any' to '!fw'"))
+        self.add(SplitIfSrcAnyForShadowing('split rule if src is any'))
+        self.add(SplitIfDstAnyForShadowing('split rule if dst is any'))
+        self.add(ConvertToAtomic('convert to atomic rules'))
+        self.add(DetectShadowing('Detect shadowing'))
+
+        # Run the shadowing pipeline (only produces warnings/errors)
+        self.run_rule_processors()
+
+        # Restore the main processor chain
+        self.rule_processors = saved_processors
+
     def compile(self) -> None:
         """Main compilation: sets up the full rule processor pipeline."""
         banner = (
@@ -203,6 +235,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.info(banner)
 
         super().compile()
+
+        # Run separate shadowing detection pass before the main pipeline
+        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
+            self.run_shadowing_pass()
 
         # -- Full processor pipeline --
         self.add(Begin('Begin compilation'))
@@ -437,14 +473,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(OptimizeForMinusIOPlus("optimize for '-i +' / '-o +'"))
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
-
-        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
-            # Note: fwbuilder runs ConvertAnyToNotFWForShadowing,
-            # SplitIfSrcAnyForShadowing, SplitIfDstAnyForShadowing in a
-            # SEPARATE compilation pass. Running them inline would inject
-            # extra rules into the main pipeline causing false positives.
-            # The inline DetectShadowing is sufficient for most cases.
-            self.add(DetectShadowing('detect rule shadowing'))
 
         self.add(CountChainUsage('count chain usage'))
 

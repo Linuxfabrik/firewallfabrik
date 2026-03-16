@@ -24,6 +24,7 @@ separately in _nat_print_rule.py.
 from __future__ import annotations
 
 import ipaddress
+import re
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._interval_helpers import (
@@ -731,3 +732,179 @@ class PrintRule_nft(PolicyRuleProcessor):
             f'Unknown reject type "{action_on_reject}", falling back to generic reject',
         )
         return 'reject'
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Post-processing optimization: merge consecutive rules into sets
+# ═══════════════════════════════════════════════════════════════════
+
+# Matches "ip saddr <addr>" or "ip6 saddr <addr>" anywhere in a rule line.
+# The pattern uses search(), so it finds the first occurrence in the line.
+# Group 1: "ip saddr " or "ip6 saddr " (with optional "!= ")
+# Group 2: address family ("ip" or "ip6")
+# Group 3: optional negation ("!= " or empty)
+# Group 4: the address value (single addr, CIDR, range, or { set })
+# Group 5: the rest of the rule after the address
+_SADDR_RE = re.compile(
+    r'((ip6?) saddr (!= )?)'  # af + saddr + optional negation
+    r'(\{[^}]+\}|[^\s]+)'  # address: set or single value
+    r'(.*)$',  # suffix: rest of the rule
+)
+
+# Same pattern for daddr.
+_DADDR_RE = re.compile(
+    r'((ip6?) daddr (!= )?)'
+    r'(\{[^}]+\}|[^\s]+)'
+    r'(.*)$',
+)
+
+
+def _split_entry(entry: str) -> tuple[str, str]:
+    """Split a chain_rules entry into (comments, rule_line).
+
+    Each entry may contain comment lines (starting with ``#``) followed
+    by exactly one rule line, or may contain only a rule line.  Error
+    comment lines (``# Error: ...``) immediately preceding a rule are
+    kept attached to the rule via the comments portion.
+
+    Returns ``('', '')`` if the entry contains no rule line.
+    """
+    lines = entry.split('\n')
+    # Find the last non-empty, non-comment line — that is the rule.
+    rule_idx = -1
+    for i in range(len(lines) - 1, -1, -1):
+        stripped = lines[i].strip()
+        if stripped and not stripped.startswith('#'):
+            rule_idx = i
+            break
+
+    if rule_idx < 0:
+        return ('', '')
+
+    comment_lines = lines[:rule_idx]
+    rule_line = lines[rule_idx]
+    # Trailing lines after the rule (usually just an empty string from
+    # the final newline) are discarded — we reconstruct the newline on
+    # output.
+    comments = '\n'.join(comment_lines) + '\n' if comment_lines else ''
+    return (comments, rule_line)
+
+
+def _parse_addr(
+    rule_line: str,
+) -> tuple[str, str, str, str] | None:
+    """Try to extract an address field from a rule line.
+
+    Returns ``(prefix, addr, suffix, field)`` where *field* is
+    ``'saddr'`` or ``'daddr'``, or ``None`` if no address field is
+    found.
+
+    *prefix* and *suffix* together form the "signature" of the rule —
+    everything except the varying address.  Two rules can be merged if
+    their prefix, suffix, and field are identical.
+    """
+    for pattern, field in ((_SADDR_RE, 'saddr'), (_DADDR_RE, 'daddr')):
+        m = pattern.search(rule_line)
+        if m:
+            before_match = rule_line[: m.start()]
+            prefix = before_match + m.group(1)
+            addr = m.group(4)
+            suffix = m.group(5)
+            return (prefix, addr, suffix, field)
+    return None
+
+
+def _addrs_from_value(value: str) -> list[str]:
+    """Extract individual addresses from a value that may be a set.
+
+    ``"10.0.0.1"`` -> ``["10.0.0.1"]``
+    ``"{ 10.0.0.1, 10.0.0.2 }"`` -> ``["10.0.0.1", "10.0.0.2"]``
+    """
+    value = value.strip()
+    if value.startswith('{') and value.endswith('}'):
+        inner = value[1:-1]
+        return [a.strip() for a in inner.split(',') if a.strip()]
+    return [value]
+
+
+def _build_addr_value(addrs: list[str]) -> str:
+    """Build an address value, using set syntax if multiple."""
+    if len(addrs) == 1:
+        return addrs[0]
+    return '{ ' + ', '.join(addrs) + ' }'
+
+
+def optimize_chain_rules(chain_rules: dict[str, list[str]]) -> None:
+    """Merge consecutive rules that differ only in source or destination address.
+
+    Operates in-place on the per-chain rule lists produced by
+    :class:`PrintRule_nft`.  Two adjacent entries are merged when their
+    rule lines are structurally identical except for the ``ip saddr`` or
+    ``ip daddr`` value.  The merged rule uses nftables anonymous set
+    syntax: ``ip saddr { addr1, addr2 } ...``.
+
+    Rules are never merged across different comment blocks (i.e. across
+    different original firewall rules).  Only entries whose rule lines
+    share the same "signature" (everything except the address value) are
+    candidates.
+    """
+    for chain, entries in chain_rules.items():
+        chain_rules[chain] = _optimize_entries(entries)
+
+
+def _optimize_entries(entries: list[str]) -> list[str]:
+    """Merge consecutive entries that differ only in one address field."""
+    if len(entries) <= 1:
+        return entries
+
+    result: list[str] = []
+    i = 0
+
+    while i < len(entries):
+        comments_i, rule_i = _split_entry(entries[i])
+        parsed_i = _parse_addr(rule_i) if rule_i else None
+
+        if parsed_i is None:
+            # Not a mergeable rule — emit as-is.
+            result.append(entries[i])
+            i += 1
+            continue
+
+        prefix_i, addr_i, suffix_i, field_i = parsed_i
+        signature = (prefix_i, suffix_i, field_i)
+        merged_addrs = list(_addrs_from_value(addr_i))
+        merged_comments = comments_i
+
+        # Look ahead for consecutive entries with the same signature.
+        # Stop at comment boundaries — a non-empty comment block marks
+        # a new original firewall rule and must not be merged.
+        j = i + 1
+        while j < len(entries):
+            comments_j, rule_j = _split_entry(entries[j])
+            if not rule_j:
+                break
+
+            # A comment block signals a different original rule.
+            if comments_j:
+                break
+
+            parsed_j = _parse_addr(rule_j)
+            if parsed_j is None:
+                break
+
+            prefix_j, addr_j, suffix_j, field_j = parsed_j
+            if (prefix_j, suffix_j, field_j) != signature:
+                break
+
+            # Same signature, same original rule — collect addresses.
+            merged_addrs.extend(_addrs_from_value(addr_j))
+            j += 1
+
+        # Build the merged entry.
+        addr_value = _build_addr_value(merged_addrs)
+        merged_rule = f'{prefix_i}{addr_value}{suffix_i}'
+        merged_text = merged_comments + merged_rule + '\n'
+        result.append(merged_text)
+        i = j
+
+    return result

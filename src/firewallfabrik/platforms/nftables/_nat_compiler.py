@@ -146,6 +146,7 @@ class NATCompiler_nft(NATCompiler):
         self.add(ClassifyNATRule('classify NAT rule'))
         self.add(SplitSDNATRule('split SDNAT rules'))
         self.add(ClassifyNATRule('reclassify rules'))
+        self.add(ConvertLoadBalancingRules('convert load balancing rules'))
         self.add(VerifyRules('verify rules'))
 
         self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
@@ -573,6 +574,57 @@ class ClassifyNATRule(NATRuleProcessor):
             return True
 
         self.compiler.abort('Unsupported NAT rule')
+        return True
+
+
+class ConvertLoadBalancingRules(NATRuleProcessor):
+    """Convert DNAT rules with multiple TDst into load-balanced rules.
+
+    Unlike iptables (which uses the nth module to create N separate rules),
+    nftables uses native ``numgen inc mod N map { ... }`` for round-robin
+    load balancing.
+
+    If a DNAT rule has multiple TDst addresses, this processor:
+    - Stores the list of backend addresses in rule options
+    - Keeps a single TDst entry so downstream processors treat it as atomic
+    - Sets the ``nft_load_balance`` flag so NATPrintRule_nft emits the
+      ``numgen inc mod`` map syntax
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type not in (NATRuleType.DNAT, NATRuleType.LB):
+            return True
+
+        if len(rule.tdst) <= 1:
+            return True
+
+        # Collect backend addresses
+        backends: list[str] = []
+        for obj in rule.tdst:
+            addr_str = getattr(obj, 'get_address', lambda: None)()
+            if addr_str:
+                backends.append(addr_str)
+
+        if len(backends) <= 1:
+            return True
+
+        # Store backends and flag the rule for numgen map output
+        rule.set_option('nft_load_balance', True)
+        rule.set_option('nft_lb_backends', backends)
+
+        # Reclassify as DNAT (in case it was LB)
+        rule.nat_rule_type = NATRuleType.DNAT
+
+        # Keep only the first TDst so ConvertToAtomicForAddresses
+        # does not split this into N separate rules
+        rule.tdst = [rule.tdst[0]]
+
         return True
 
 

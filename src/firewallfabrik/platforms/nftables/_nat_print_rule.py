@@ -312,6 +312,8 @@ class NATPrintRule_nft(NATRuleProcessor):
             return 'masquerade'
 
         if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
+            if rule.get_option('nft_load_balance'):
+                return self._print_load_balance_action(rule, tsrv)
             if tdst:
                 addr = self._print_addr(tdst, rule)
                 if addr:
@@ -339,6 +341,35 @@ class NATPrintRule_nft(NATRuleProcessor):
             return 'return'
 
         return 'accept'
+
+    def _print_load_balance_action(self, rule: CompRule, tsrv) -> str:
+        """Print a load-balanced DNAT action using ``numgen inc mod``.
+
+        Generates nftables syntax like::
+
+            dnat to numgen inc mod 3 map { 0 : 10.0.0.1, 1 : 10.0.0.2, 2 : 10.0.0.3 }
+
+        When a translated service port is specified::
+
+            dnat to numgen inc mod 2 map { 0 : 10.0.0.1 . 8080, 1 : 10.0.0.2 . 8080 }
+        """
+        backends: list[str] = rule.get_option('nft_lb_backends', [])
+        if not backends:
+            self.compiler.error(rule, 'Load balancing rule has no backend addresses')
+            return ''
+
+        count = len(backends)
+        ports = self._print_translated_ports(tsrv, src=False)
+
+        entries = []
+        for idx, addr in enumerate(backends):
+            if ports:
+                entries.append(f'{idx} : {addr} . {ports}')
+            else:
+                entries.append(f'{idx} : {addr}')
+
+        mapping = ', '.join(entries)
+        return f'dnat to numgen inc mod {count} map {{ {mapping} }}'
 
     def _print_translated_ports(self, tsrv, src: bool = False) -> str:
         """Print translated ports for NAT."""
