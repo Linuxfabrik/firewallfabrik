@@ -38,6 +38,17 @@ def _is_true(val):
     return False
 
 
+def _set_data_key(data: dict, key: str, value, default=None) -> None:
+    """Set *key* in *data* only if it already exists or *value* differs from *default*.
+
+    This avoids injecting new keys with default values into the data
+    dict, which would cause the ORM to detect a change and bump
+    ``lastModified`` even when the user didn't change anything.
+    """
+    if key in data or value != default:
+        data[key] = value
+
+
 # Reverse mapping: display name → internal key for host OS.
 _HOST_OS_INTERNAL = {v: k for k, v in HOST_OS.items()}
 
@@ -58,10 +69,14 @@ class HostDialog(BaseObjectDialog):
         self.MACmatching.setChecked(_is_true(data.get('mac_filter_enabled')))
 
     def _apply_changes(self):
-        self._obj.name = self.obj_name.text()
-        data = dict(self._obj.data or {})
-        data['mac_filter_enabled'] = self.MACmatching.isChecked()
-        self._obj.data = data
+        new_name = self.obj_name.text()
+        if self._obj.name != new_name:
+            self._obj.name = new_name
+        old_data = self._obj.data or {}
+        data = dict(old_data)
+        _set_data_key(data, 'mac_filter_enabled', self.MACmatching.isChecked(), False)
+        if data != old_data:
+            self._obj.data = data
 
 
 class FirewallDialog(BaseObjectDialog):
@@ -103,14 +118,18 @@ class FirewallDialog(BaseObjectDialog):
         self._update_settings_buttons()
 
     def _apply_changes(self):
-        self._obj.name = self.obj_name.text()
-        data = dict(self._obj.data or {})
+        new_name = self.obj_name.text()
+        if self._obj.name != new_name:
+            self._obj.name = new_name
+        old_data = self._obj.data or {}
+        data = dict(old_data)
         data['platform'] = self.platform.currentText()
         data['version'] = self.version.currentText()
         host_os_text = self.hostOS.currentText()
         data['host_OS'] = _HOST_OS_INTERNAL.get(host_os_text, host_os_text)
-        data['inactive'] = self.inactive.isChecked()
-        self._obj.data = data
+        _set_data_key(data, 'inactive', self.inactive.isChecked(), False)
+        if data != old_data:
+            self._obj.data = data
 
     def _update_settings_buttons(self):
         self.fwAdvanced.setEnabled(self.platform.currentText() in PLATFORMS.values())
@@ -163,16 +182,22 @@ class InterfaceDialog(BaseObjectDialog):
             self.regular.setChecked(True)
 
     def _apply_changes(self):
-        self._obj.name = self.obj_name.text()
-        data = dict(self._obj.data or {})
-        data['label'] = self.label.text()
-        data['security_level'] = str(self.seclevel.value())
-        data['management'] = self.management.isChecked()
-        data['unprotected'] = self.unprotected.isChecked()
-        data['dedicated_failover'] = self.dedicated_failover.isChecked()
-        data['dyn'] = self.dynamic.isChecked()
-        data['unnum'] = self.unnumbered.isChecked()
-        self._obj.data = data
+        new_name = self.obj_name.text()
+        if self._obj.name != new_name:
+            self._obj.name = new_name
+        old_data = self._obj.data or {}
+        data = dict(old_data)
+        _set_data_key(data, 'label', self.label.text(), '')
+        _set_data_key(data, 'security_level', str(self.seclevel.value()), '0')
+        _set_data_key(data, 'management', self.management.isChecked(), False)
+        _set_data_key(data, 'unprotected', self.unprotected.isChecked(), False)
+        _set_data_key(
+            data, 'dedicated_failover', self.dedicated_failover.isChecked(), False
+        )
+        _set_data_key(data, 'dyn', self.dynamic.isChecked(), False)
+        _set_data_key(data, 'unnum', self.unnumbered.isChecked(), False)
+        if data != old_data:
+            self._obj.data = data
 
     @Slot()
     def openIfaceDialog(self):

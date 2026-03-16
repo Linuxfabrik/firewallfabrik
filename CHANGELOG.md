@@ -32,18 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.
 - **`Firewall` object has no attribute `is_any`**: `SplitIfSrcMatchingAddressRange`, `SplitIfDstMatchingAddressRange`, and `SpecialCaseWithFW1` called `is_any()` on src/dst objects that could be `Firewall` instances. `Firewall` inherits from `Host`, not `Address`.
 - **False-positive shadowing errors**: Shadowing enhancement processors (`ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing`) injected extra rules into the main pipeline causing "Rule X shadows Rule Y" false positives. Removed from inline pipeline (require a separate compilation pass like in fwbuilder).
+- **Opening objects marks file as modified without user changes** (fixes #25): Three root causes fixed. (1) `apply_all()` unconditionally wrote `comment` and `keywords` back — now compares before writing. (2) `_apply_changes()` in device/ruleset dialogs injected new default keys (e.g. `management: false`, `mangle_only_rule_set: false`) into data dicts that didn't have them — new `_set_data_key()` helper only writes keys that already exist or have non-default values. (3) `_set_read_only()` ran after `_loading = False`, causing `setEnabled()` to fire widget signals that triggered spurious `apply_all()` calls — now runs inside the loading guard. (4) `RuleSetDialog` wrote `ipv4: true` to rule sets where `ipv4` was `False` (SQLAlchemy default) but the combo showed IPv4 — now compares combo index against the index that `_populate()` would compute.
 
 ### Changed
 
 - **Timestamp format** in generated scripts: `Mon Mar 16 20:06:24 2026` → `2026-03-16 20:06:24 (Mon)` (all platforms).
 - **`nft flush ruleset` in iptables scripts**: On RHEL8+ and modern distros, `iptables` uses the nftables backend (`iptables-nft`). The generated `reset_all()` function now runs `nft flush ruleset` (if `nft` is available) before `reset_iptables_v4/v6` to clear any pre-existing nftables rules that `iptables -F` would not remove.
-
-- **Multiport rules broken** (fixes #21): `SeparateTCPWithFlags` incorrectly separated ALL TCP services because the standard library stores `tcp_flags: {urg: false, ...}` — a non-empty dict. Now checks `tcp_flags_masks` for actual flag inspection (matching fwbuilder's `inspectFlags()`). Also hardened `_print_dst_service_from_rule` to only emit `--dports` when `ipt_multiport` flag is set, preventing `--dports` without `-m multiport`.
-- **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.
-
-### Changed
-
-- **Timestamp format** in generated scripts: `Mon Mar 16 20:06:24 2026` → `2026-03-16 20:06:24 (Mon)` (all platforms).
 
 
 ## [v1.1.0] - 2026-03-16

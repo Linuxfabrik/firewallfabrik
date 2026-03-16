@@ -50,24 +50,36 @@ class RuleSetDialog(BaseObjectDialog):
 
     def _apply_changes(self):
         rs = self._obj
-        rs.name = self.obj_name.text()
 
-        idx = self.ipv4_6_rule_set.currentIndex()
-        if idx == 2:
-            rs.ipv4 = True
-            rs.ipv6 = True
-        elif idx == 1:
-            rs.ipv4 = False
-            rs.ipv6 = True
+        new_name = self.obj_name.text()
+        if rs.name != new_name:
+            rs.name = new_name
+
+        # Compute the combo index that _populate() would choose for the
+        # current ORM values so we can detect whether the user actually
+        # changed the selection.
+        if rs.ipv4 and rs.ipv6:
+            old_idx = 2
+        elif rs.ipv6:
+            old_idx = 1
         else:
-            rs.ipv4 = True
-            rs.ipv6 = False
+            old_idx = 0
+        new_idx = self.ipv4_6_rule_set.currentIndex()
+        if new_idx != old_idx:
+            rs.ipv4 = new_idx != 1
+            rs.ipv6 = new_idx >= 1
 
-        rs.top = self.top_rule_set.isChecked()
+        new_top = self.top_rule_set.isChecked()
+        if rs.top != new_top:
+            rs.top = new_top
 
         device = rs.device
         platform = device.platform if device else ''
         if platform == 'iptables' and rs.type == 'Policy':
-            opts = dict(rs.options or {})
-            opts['mangle_only_rule_set'] = self.ipt_mangle_table.isChecked()
-            rs.options = opts
+            opts = rs.options or {}
+            val = self.ipt_mangle_table.isChecked()
+            old_val = opts.get('mangle_only_rule_set')
+            if (old_val is not None or val is not False) and old_val != val:
+                opts = dict(opts)
+                opts['mangle_only_rule_set'] = val
+                rs.options = opts
