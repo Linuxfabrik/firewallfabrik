@@ -39,6 +39,8 @@ from firewallfabrik.compiler.processors._generic import (
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
+    ICMP6Service,
+    ICMPService,
     Interface,
     NATAction,
     NATRuleType,
@@ -101,14 +103,18 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(Begin())
 
+        self.add(ExpandGroupsInItfInb('expand groups in inbound Interface'))
         self.add(
             SingleObjectNegationItfInb('process single object negation in inbound Itf')
         )
+        self.add(ItfInbNegation('process negation in inbound Itf'))
+        self.add(ExpandGroupsInItfOutb('expand groups in outbound Interface'))
         self.add(
             SingleObjectNegationItfOutb(
                 'process single object negation in outbound Itf'
             )
         )
+        self.add(ItfOutbNegation('process negation in outbound Itf'))
 
         self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
@@ -138,16 +144,27 @@ class NATCompiler_nft(NATCompiler):
         self.add(EliminateDuplicatesInOSRV('eliminate duplicates in OSRV'))
 
         self.add(ClassifyNATRule('classify NAT rule'))
+        self.add(SplitSDNATRule('split SDNAT rules'))
+        self.add(ClassifyNATRule('reclassify rules'))
         self.add(VerifyRules('verify rules'))
 
         self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
         self.add(SingleObjectNegationODst('negation in ODst if it holds single object'))
+
+        self.add(NftNegationOSrc('process negation in OSrc'))
+        self.add(NftNegationODst('process negation in ODst'))
+        self.add(NftNegationOSrv('process negation in OSrv'))
+
+        self.add(SplitOnODst('split on ODst'))
+        self.add(PortTranslationRules('port translation rules'))
 
         if self.fw.get_option('local_nat'):
             if self.fw.get_option('firewall_is_part_of_any_and_networks'):
                 self.add(SplitIfOSrcAny('split rule if OSrc is any'))
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 
+        self.add(SplitNONATRule('NAT rules that request no translation'))
+        self.add(SplitNATBranchRule('Split Branch rules to use all chains'))
         self.add(LocalNATRule('local NAT rule'))
         self.add(DecideOnChain('decide on chain'))
 
@@ -163,8 +180,15 @@ class NATCompiler_nft(NATCompiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         self.add(GroupServicesByProtocol('group services by protocol'))
+        self.add(VerifyRules2('check correctness of TSrv'))
+        self.add(SeparatePortRanges('separate port ranges'))
+
+        self.add(SplitMultipleICMP('split rule with multiple ICMP services'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AssignInterface('assign rules to interfaces'))
+
+        self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
+        self.add(ConvertToAtomicForItfOutb('convert to atomic for outbound interface'))
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
@@ -284,6 +308,52 @@ class _PassthroughNAT(NATRuleProcessor):
         return True
 
 
+class ConvertToAtomicForItfInb(NATRuleProcessor):
+    """Split rules with multiple inbound interfaces into separate rules.
+
+    Corresponds to C++ NATCompiler::ConvertToAtomicForItfInb.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.itf_inb) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for itf_obj in rule.itf_inb:
+            r = rule.clone()
+            r.itf_inb = [itf_obj]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class ConvertToAtomicForItfOutb(NATRuleProcessor):
+    """Split rules with multiple outbound interfaces into separate rules.
+
+    Corresponds to C++ NATCompiler::ConvertToAtomicForItfOutb.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.itf_outb) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for itf_obj in rule.itf_outb:
+            r = rule.clone()
+            r.itf_outb = [itf_obj]
+            self.tmp_queue.append(r)
+
+        return True
+
+
 class CheckForObjectsWithErrors(NATRuleProcessor):
     """Check for objects with compilation errors in NAT rules."""
 
@@ -373,6 +443,84 @@ class EliminateDuplicatesInOSRV(NATRuleProcessor):
         return True
 
 
+class ExpandGroupsInItfInb(NATRuleProcessor):
+    """Expand groups in the inbound interface element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf_inb')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandGroupsInItfOutb(NATRuleProcessor):
+    """Expand groups in the outbound interface element."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.compiler.expand_groups_in_element(rule, 'itf_outb')
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ItfInbNegation(NATRuleProcessor):
+    """Replace negated inbound interface with all other interfaces.
+
+    When the inbound interface element has multi-object negation
+    (not handled by SingleObjectNegationItfInb), replace the negated
+    set with all non-loopback interfaces not in the negated set.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.get_neg('itf_inb'):
+            self.tmp_queue.append(rule)
+            return True
+        negated_ids = {obj.id for obj in rule.itf_inb if isinstance(obj, Interface)}
+        all_ifaces = self.compiler.fw.interfaces
+        rule.set_neg('itf_inb', False)
+        rule.itf_inb = [
+            iface
+            for iface in all_ifaces
+            if iface.id not in negated_ids and not iface.is_loopback()
+        ]
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ItfOutbNegation(NATRuleProcessor):
+    """Replace negated outbound interface with all other interfaces.
+
+    When the outbound interface element has multi-object negation
+    (not handled by SingleObjectNegationItfOutb), replace the negated
+    set with all non-loopback interfaces not in the negated set.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.get_neg('itf_outb'):
+            self.tmp_queue.append(rule)
+            return True
+        negated_ids = {obj.id for obj in rule.itf_outb if isinstance(obj, Interface)}
+        all_ifaces = self.compiler.fw.interfaces
+        rule.set_neg('itf_outb', False)
+        rule.itf_outb = [
+            iface
+            for iface in all_ifaces
+            if iface.id not in negated_ids and not iface.is_loopback()
+        ]
+        self.tmp_queue.append(rule)
+        return True
+
+
 class ClassifyNATRule(NATRuleProcessor):
     """Classify NAT rule type based on TSrc/TDst/TSrv contents."""
 
@@ -445,6 +593,296 @@ class VerifyRules(NATRuleProcessor):
         if rule.get_neg('tsrv'):
             self.compiler.abort('Can not use negation in translated service')
             return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class NftNegationODst(NATRuleProcessor):
+    """Convert ODst negation to single_object_negation (nftables native !=).
+
+    nftables supports native '!=' matching, so multi-object negation in
+    ODst can be converted to inline negation without temporary chains.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('odst'):
+            rule.odst_single_object_negation = True
+            rule.set_neg('odst', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class NftNegationOSrc(NATRuleProcessor):
+    """Convert OSrc negation to single_object_negation (nftables native !=).
+
+    nftables supports native '!=' matching, so multi-object negation in
+    OSrc can be converted to inline negation without temporary chains.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('osrc'):
+            rule.osrc_single_object_negation = True
+            rule.set_neg('osrc', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class NftNegationOSrv(NATRuleProcessor):
+    """Convert OSrv negation to single_object_negation (nftables native !=).
+
+    nftables supports native '!=' matching, so multi-object negation in
+    OSrv can be converted to inline negation without temporary chains.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('osrv'):
+            rule.osrv_single_object_negation = True
+            rule.set_neg('osrv', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class PortTranslationRules(NATRuleProcessor):
+    """Copy ODst into TDst for port-only translation rules.
+
+    When a DNAT rule has TSrc=Any, TDst=Any, TSrv!=Any, and ODst is
+    set, copy ODst into TDst so the port translation targets the
+    original destination address.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        # If TSrv is set but TDst is empty, copy ODst to TDst
+        if rule.tsrv and not rule.tdst:
+            rule.tdst = list(rule.odst)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SeparatePortRanges(_PassthroughNAT):
+    """Separate port range services in NAT.
+
+    nftables handles port ranges natively, so this is a pass-through.
+    """
+
+    pass
+
+
+class SplitMultipleICMP(NATRuleProcessor):
+    """Split rules with multiple ICMP services into individual rules.
+
+    ICMP services cannot be combined in a single match expression,
+    so each ICMP service gets its own rule.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.osrv) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        first_srv = rule.osrv[0]
+        if not isinstance(first_srv, ICMPService | ICMP6Service):
+            self.tmp_queue.append(rule)
+            return True
+
+        for srv in rule.osrv:
+            r = rule.clone()
+            r.osrv = [srv]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class SplitNATBranchRule(NATRuleProcessor):
+    """Split NATBranch rules into separate copies for each chain.
+
+    Branch rules need to go into both prerouting and postrouting
+    chains since the branch may contain both DNAT and SNAT rules.
+    Uses nftables lowercase chain names.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.NATBranch:
+            self.tmp_queue.append(rule)
+            return True
+
+        branch_name = rule.get_option('branch_name', '')
+
+        if not branch_name:
+            self.compiler.abort(rule, 'NAT branching rule misses branch rule set.')
+            rule.ipt_chain = 'prerouting'
+            self.tmp_queue.append(rule)
+            return True
+
+        # Fallback: split into both prerouting and postrouting
+        self.compiler.warning(
+            rule,
+            'NAT branching rule: splitting into prerouting and postrouting chains',
+        )
+
+        for chain in ('prerouting', 'postrouting'):
+            r = rule.clone()
+            r.ipt_chain = chain
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class SplitNONATRule(NATRuleProcessor):
+    """Split NONAT rules into postrouting + prerouting/output.
+
+    NONAT rules need accept in both chains to prevent accidental
+    translation by other rules. Uses nftables lowercase chain names.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.ipt_chain and rule.nat_rule_type == NATRuleType.NONAT:
+            osrc = rule.osrc[0] if rule.osrc else None
+            osrc_is_fw = isinstance(osrc, Firewall) and osrc.id == self.compiler.fw.id
+
+            # First copy: postrouting
+            r = rule.clone()
+            r.ipt_chain = 'postrouting'
+            self.tmp_queue.append(r)
+
+            # Second copy: output (if OSrc is fw) or prerouting
+            if osrc_is_fw:
+                rule.ipt_chain = 'output'
+                rule.osrc = []
+            else:
+                rule.ipt_chain = 'prerouting'
+            self.tmp_queue.append(rule)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitOnODst(NATRuleProcessor):
+    """Split DNAT/DNetnat rules with multiple ODst into separate rules.
+
+    Called after negation processing to ensure each DNAT rule has
+    at most one object in ODst.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.odst) > 1 and rule.nat_rule_type in (
+            NATRuleType.DNAT,
+            NATRuleType.DNetnat,
+        ):
+            for obj in rule.odst:
+                r = rule.clone()
+                r.odst = [obj]
+                self.tmp_queue.append(r)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitSDNATRule(NATRuleProcessor):
+    """Split SDNAT rules into separate DNAT + SNAT rules.
+
+    The first rule translates destination (clears TSrc), the second
+    rule translates source (clears TDst). Both get type Unknown
+    for reclassification.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.SDNAT:
+            self.tmp_queue.append(rule)
+            return True
+
+        # DNAT part: keep odst/tdst, clear tsrc
+        r1 = rule.clone()
+        r1.tsrc = []
+        r1.nat_rule_type = NATRuleType.Unknown
+        self.tmp_queue.append(r1)
+
+        # SNAT part: keep osrc/tsrc, clear tdst
+        r2 = rule.clone()
+        r2.tdst = []
+        r2.nat_rule_type = NATRuleType.Unknown
+        # ODst = original TDst (translated destination becomes match for SNAT)
+        r2.odst = list(rule.tdst)
+        r2.set_neg('odst', False)
+        self.tmp_queue.append(r2)
+
+        return True
+
+
+class VerifyRules2(NATRuleProcessor):
+    """Verify OSrv/TSrv consistency after groupServicesByProtocol.
+
+    Checks that TSrv is not set when OSrv is 'Any', and that
+    TSrv protocol matches OSrv protocol.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.Return:
+            osrv_any = not rule.osrv
+            tsrv_any = not rule.tsrv
+
+            if osrv_any and not tsrv_any:
+                self.compiler.abort(
+                    rule,
+                    'Can not use service object in Translated Service '
+                    "if Original Service is 'Any'.",
+                )
+                return True
+
+            if not tsrv_any:
+                s1 = rule.osrv[0] if rule.osrv else None
+                s2 = rule.tsrv[0] if rule.tsrv else None
+                if s1 is not None and s2 is not None:
+                    p1 = getattr(s1, 'get_protocol_name', lambda: '')()
+                    p2 = getattr(s2, 'get_protocol_name', lambda: '')()
+                    if p1 and p2 and p1 != p2:
+                        self.compiler.abort(
+                            rule,
+                            'Translated Service should be either '
+                            "'Original' or should contain object of the "
+                            'same type as Original Service.',
+                        )
+                        return True
 
         self.tmp_queue.append(rule)
         return True

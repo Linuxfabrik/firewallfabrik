@@ -39,12 +39,14 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     RecursiveGroupsInRE,
+    ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
     SimplePrintProgress,
     SingleRuleFilter,
 )
 from firewallfabrik.core.objects import (
     Address,
+    CustomService,
     Direction,
     Firewall,
     Host,
@@ -54,6 +56,7 @@ from firewallfabrik.core.objects import (
     IPv6,
     Network,
     NetworkIPv6,
+    PhysAddress,
     PolicyAction,
 )
 
@@ -128,9 +131,11 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         # Store original action
         self.add(StoreAction('store action'))
+        self.add(Logging1('apply global log_all'))
 
         # Interface and direction
         self.add(ExpandGroupsInItf('expand groups in Itf'))
+        self.add(ReplaceClusterInterfaceInItfRE('replace cluster interfaces', 'itf'))
         self.add(InterfaceAndDirection('interface+dir'))
         self.add(
             SplitIfIfaceAndDirectionBoth('split interface rule with direction both')
@@ -161,6 +166,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         # Logging — inline in nftables, no temp chain needed
         self.add(Logging_nft('process logging'))
+        self.add(Accounting('handle accounting rules'))
 
         # Negation processors
         self.add(SplitIfSrcNegAndFw('split if src negated and fw'))
@@ -171,6 +177,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Chain assignment
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
+        self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Src', 'src'))
+        self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Dst', 'dst'))
         self.add(SplitIfSrcMatchesFw('split if src matches FW'))
         self.add(SplitIfDstMatchesFw('split if dst matches FW'))
         self.add(SpecialCaseWithFW1('split fw-to-fw rules'))
@@ -181,6 +189,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SpecialCaseWithFW2('replace fw with its interfaces if src==dst==fw'))
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
+        self.add(SpecialCaseWithFWInDstAndOutbound('drop impossible outbound fw dst'))
         self.add(DecideOnTarget('set target'))
 
         # Clean up firewall object in src/dst
@@ -199,14 +208,23 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(CheckForUnnumbered('check for unnumbered interfaces'))
         self.add(CheckForDynamicInterfacesOfOtherObjects('check dynamic interfaces'))
 
+        # Bridging firewall support
+        if self.fw.get_option('bridging_fw'):
+            self.add(BridgingFw('bridging firewall broadcast/multicast'))
+
         # Convert to atomic
         self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
         self.add(ConvertToAtomicForIntervals('convert to atomic by intervals'))
         self.add(GroupServicesByProtocol('split on services'))
+        self.add(VerifyCustomServices('verify custom services'))
+        self.add(
+            SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
+        )
 
         self.add(CheckForStatefulICMP6Rules('check for stateful ICMPv6 rules'))
 
         self.add(Optimize3('optimization 3'))
+        self.add(CheckMACInOUTPUTChain('check MAC in output chain'))
 
         self.add(CheckForZeroAddr('check for zero addresses'))
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
@@ -1259,4 +1277,189 @@ class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
             if changed:
                 setattr(rule, slot, new_elements)
         self.tmp_queue.append(rule)
+        return True
+
+
+class Accounting(PolicyRuleProcessor):
+    """Handle accounting rules with user-defined chains."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.action == PolicyAction.Accounting:
+            # nftables uses named counters natively.
+            # For now, pass through — nftables handles counters differently.
+            pass
+        self.tmp_queue.append(rule)
+        return True
+
+
+class BridgingFw(PolicyRuleProcessor):
+    """Handle bridging firewall broadcast/multicast forwarding."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        # nftables bridge family handles this natively.
+        # For ip family with bridging, forward broadcast/multicast.
+        dst = rule.dst[0] if rule.dst else None
+        if rule.ipt_chain == 'input' and dst is not None and isinstance(dst, Address):
+            addr_s = dst.get_address()
+            if addr_s and (addr_s == '255.255.255.255' or addr_s.startswith('224.')):
+                r = rule.clone()
+                r.ipt_chain = 'forward'
+                self.tmp_queue.append(r)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckMACInOUTPUTChain(PolicyRuleProcessor):
+    """Abort if MAC/PhysAddress is used in src in output chain."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if (
+            rule.ipt_chain == 'output'
+            and rule.src
+            and isinstance(rule.src[0], PhysAddress)
+        ):
+            self.compiler.abort(rule, 'Can not match MAC address of the firewall')
+            return True
+        self.tmp_queue.append(rule)
+        return True
+
+
+class Logging1(PolicyRuleProcessor):
+    """Apply global log_all option."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if self.compiler.fw.get_option('log_all'):
+            rule.set_option('log', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
+    """Process runtime MultiAddress objects by splitting into separate rules."""
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        from firewallfabrik.core.objects import MultiAddressRunTime
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        runtime_objs = [o for o in elements if isinstance(o, MultiAddressRunTime)]
+        if not runtime_objs:
+            self.tmp_queue.append(rule)
+            return True
+
+        if len(elements) == 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for mart in runtime_objs:
+            r = rule.clone()
+            setattr(r, self._slot, [mart])
+            self.tmp_queue.append(r)
+
+        remaining = [o for o in elements if o not in runtime_objs]
+        if remaining:
+            setattr(rule, self._slot, remaining)
+            self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
+    """Drop outbound rules where dst matches fw in non-output chain."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        itf = rule.itf[0] if rule.itf else None
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+        if (
+            rule.direction == Direction.Outbound
+            and isinstance(itf, Interface)
+            and rule.ipt_chain != 'output'
+        ):
+            src_matches = src is not None and nft_comp.complex_match(src, nft_comp.fw)
+            dst_matches = dst is not None and nft_comp.complex_match(dst, nft_comp.fw)
+            if not src_matches and dst_matches:
+                return True  # drop
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCasesWithCustomServices(PolicyRuleProcessor):
+    """Handle CustomService with ESTABLISHED/RELATED -- make stateless."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if not rule.srv:
+            self.tmp_queue.append(rule)
+            return True
+
+        platform = self.compiler.my_platform_name()
+        to_separate: list = []
+        for srv in rule.srv:
+            if isinstance(srv, CustomService):
+                code = (srv.data or {}).get(platform, '')
+                if code and (
+                    'established' in code.lower() or 'related' in code.lower()
+                ):
+                    to_separate.append(srv)
+
+        for srv in to_separate:
+            r = rule.clone()
+            r.srv = [srv]
+            r.set_option('stateless', True)
+            self.tmp_queue.append(r)
+
+        remaining = [s for s in rule.srv if s not in to_separate]
+        if remaining:
+            rule.srv = remaining
+            self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyCustomServices(PolicyRuleProcessor):
+    """Verify CustomService has code for nftables platform."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.tmp_queue.append(rule)
+        platform = self.compiler.my_platform_name()
+        for srv in rule.srv:
+            if isinstance(srv, CustomService):
+                code = (srv.data or {}).get(platform, '')
+                if not code:
+                    self.compiler.abort(
+                        rule,
+                        f"Custom service '{srv.name}' is not configured"
+                        f" for '{platform}'",
+                    )
         return True
