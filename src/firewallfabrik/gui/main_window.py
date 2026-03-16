@@ -82,6 +82,7 @@ from firewallfabrik.gui.find_where_used_panel import (
     find_rule_references,
 )
 from firewallfabrik.gui.inspect_dialog import InspectDialog
+from firewallfabrik.gui.library_export import export_libraries
 from firewallfabrik.gui.object_tree import (
     ICON_MAP,
     ObjectTree,
@@ -590,6 +591,7 @@ class FWWindow(QMainWindow):
             'CustomService': self.w_CustomServiceDialog,
             'DNSName': self.w_DNSNameDialog,
             'DynamicGroup': self.w_DynamicGroupDialog,
+            'FailoverClusterGroup': self.w_FailoverClusterGroupDialog,
             'Firewall': self.w_FirewallDialog,
             'Host': self.w_HostDialog,
             'ICMP6Service': self.w_ICMP6ServiceDialog,
@@ -609,6 +611,7 @@ class FWWindow(QMainWindow):
             'Policy': self.w_PolicyDialog,
             'Routing': self.w_RoutingDialog,
             'ServiceGroup': self.w_ServiceGroupDialog,
+            'StateSyncClusterGroup': self.w_StateSyncClusterGroupDialog,
             'TCPService': self.w_TCPServiceDialog,
             'TagService': self.w_TagServiceDialog,
             'UDPService': self.w_UDPServiceDialog,
@@ -894,6 +897,7 @@ class FWWindow(QMainWindow):
         self.ImportAddressesFromFileAction.setEnabled(False)
         self.inspectAction.setEnabled(False)
         self.installAction.setEnabled(False)
+        self.libExportAction.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
         self.UpdateStandardLibraryAction.setEnabled(False)
 
@@ -920,6 +924,7 @@ class FWWindow(QMainWindow):
         self.ImportAddressesFromFileAction.setEnabled(True)
         self.inspectAction.setEnabled(True)
         self.installAction.setEnabled(True)
+        self.libExportAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
         self.UpdateStandardLibraryAction.setEnabled(True)
         undo_visible = settings.value('View/UndoStack', False, type=bool)
@@ -1250,6 +1255,11 @@ class FWWindow(QMainWindow):
         self._apply_no_file_state()
         self.editorDockWidget.blockSignals(False)
         self.undoDockWidget.blockSignals(False)
+
+    @Slot()
+    def fileExport(self):
+        """Export one or more libraries to a standalone .fwf file."""
+        export_libraries(self, self._db_manager)
 
     @Slot()
     def fileReload(self):

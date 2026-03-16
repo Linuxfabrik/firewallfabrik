@@ -216,6 +216,12 @@ def _register_service_type_dialogs():
     CUSTOM_WIDGET_MAP['UserDialog'] = UserServiceDialog
 
 
+def _register_cluster_group_dialog():
+    from firewallfabrik.gui.cluster_group_dialog import ClusterGroupDialog
+
+    CUSTOM_WIDGET_MAP['ClusterGroupDialog'] = ClusterGroupDialog
+
+
 def _register_ruleset_dialog():
     from firewallfabrik.gui.ruleset_dialog import RuleSetDialog
 
@@ -223,6 +229,7 @@ def _register_ruleset_dialog():
 
 
 _register_actions_dialog()
+_register_cluster_group_dialog()
 _register_address_dialogs()
 _register_comment_editor_panel()
 _register_comment_tags()

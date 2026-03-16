@@ -379,9 +379,12 @@ class EditorManager(QObject):
 
     def _propagate_db_manager(self):
         """Forward the current db_manager to dialogs that need it."""
+        from firewallfabrik.gui.cluster_group_dialog import ClusterGroupDialog
         from firewallfabrik.gui.dynamic_group_dialog import DynamicGroupDialog
 
         for widget in set(self._editor_map.values()):
+            if isinstance(widget, ClusterGroupDialog):
+                widget.set_db_manager(self._db_manager)
             if isinstance(widget, DynamicGroupDialog):
                 widget.set_db_manager(self._db_manager)
 
