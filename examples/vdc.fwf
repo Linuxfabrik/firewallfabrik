@@ -9013,7 +9013,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771949009
+              lastModified: 1773692990
               lastCompiled: 1771356919
             interfaces:
               - name: 'eth0'
@@ -9125,6 +9125,9 @@ libraries:
                 ipv4: true
                 rules:
                   - type: 'PolicyRule'
+                    comment: 'Anti-Spoofing Rule: Packets with "internal" addresses
+                      cannot normally come from outside, and if they do, they must
+                      be spoofed and should be dropped.'
                     label: 'color3'
                     options:
                       stateless: true
