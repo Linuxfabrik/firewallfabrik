@@ -74,12 +74,14 @@ from firewallfabrik.gui.about_dialog import AboutDialog
 from firewallfabrik.gui.clipboard_router import ClipboardRouter
 from firewallfabrik.gui.debug_dialog import DebugDialog
 from firewallfabrik.gui.editor_manager import EditorManager, EditorManagerUI
+from firewallfabrik.gui.file_properties_dialog import FilePropertiesDialog
 from firewallfabrik.gui.find_panel import FindPanel
 from firewallfabrik.gui.find_where_used_panel import (
     FindWhereUsedPanel,
     find_group_references,
     find_rule_references,
 )
+from firewallfabrik.gui.inspect_dialog import InspectDialog
 from firewallfabrik.gui.object_tree import (
     ICON_MAP,
     ObjectTree,
@@ -884,10 +886,13 @@ class FWWindow(QMainWindow):
         self.editDeleteAction.setEnabled(False)
         self.editPasteAction.setEnabled(False)
         self.fileCloseAction.setEnabled(False)
+        self.filePropAction.setEnabled(False)
         self.fileReloadAction.setEnabled(False)
         self.fileSaveAction.setEnabled(False)
         self.fileSaveAsAction.setEnabled(False)
         self.findAction.setEnabled(False)
+        self.ImportAddressesFromFileAction.setEnabled(False)
+        self.inspectAction.setEnabled(False)
         self.installAction.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
         self.UpdateStandardLibraryAction.setEnabled(False)
@@ -907,10 +912,13 @@ class FWWindow(QMainWindow):
         self.editDeleteAction.setEnabled(True)
         self.editPasteAction.setEnabled(True)
         self.fileCloseAction.setEnabled(True)
+        self.filePropAction.setEnabled(True)
         self.fileReloadAction.setEnabled(self._current_file is not None)
         self.fileSaveAction.setEnabled(True)
         self.fileSaveAsAction.setEnabled(True)
         self.findAction.setEnabled(True)
+        self.ImportAddressesFromFileAction.setEnabled(True)
+        self.inspectAction.setEnabled(True)
         self.installAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
         self.UpdateStandardLibraryAction.setEnabled(True)
@@ -1429,6 +1437,34 @@ class FWWindow(QMainWindow):
         )
         with self._db_manager.session() as session:
             self._object_tree.populate(session, file_key=file_key)
+
+    @Slot()
+    def inspect(self):
+        """Show a dialog listing all rules that reference the currently selected object."""
+        if not getattr(self, '_display_file', None):
+            return
+        items = self._object_tree._tree.selectedItems()
+        if not items:
+            QMessageBox.information(
+                self,
+                'Inspect',
+                self.tr('Select an object in the tree first.'),
+            )
+            return
+        item = items[0]
+        obj_id = item.data(0, Qt.ItemDataRole.UserRole)
+        obj_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        obj_name = item.text(0)
+        if not obj_id or not obj_type:
+            return
+        dlg = InspectDialog(
+            self._db_manager,
+            obj_id,
+            obj_name,
+            obj_type,
+            parent=self,
+        )
+        dlg.exec()
 
     @Slot()
     def toolsUpdateStandardLibrary(self):
@@ -2105,6 +2141,12 @@ class FWWindow(QMainWindow):
     @Slot()
     def debug(self):
         dlg = DebugDialog(self)
+        dlg.exec()
+
+    @Slot()
+    def fileProp(self):
+        display = getattr(self, '_display_file', None) or self._current_file
+        dlg = FilePropertiesDialog(self._db_manager, display, parent=self)
         dlg.exec()
 
     @Slot()
@@ -2952,7 +2994,105 @@ class FWWindow(QMainWindow):
 
     @Slot()
     def toolsImportAddressesFromFile(self):
-        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/12
+        """Import address/network objects from a text file.
+
+        Opens a file dialog, parses the selected file, creates the
+        objects in the first writable library and shows a summary.
+        Mirrors fwbuilder's *Import Addresses From File* wizard but
+        uses a streamlined single-step flow.
+        """
+        from firewallfabrik.gui.import_addresses import (
+            ImportResult,
+            import_entries,
+            parse_address_file,
+        )
+
+        if self._db_manager is None:
+            return
+
+        # Determine target library.
+        lib_id, _folder = self._get_target_library_and_folder()
+        if lib_id is None:
+            QMessageBox.warning(
+                self,
+                'Import Addresses',
+                'No writable library available. Please open or create a '
+                'project file first.',
+            )
+            return
+
+        # Ask the user to pick a text file.
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            'Import Addresses From File',
+            '',
+            'Text files (*.txt *.csv *.hosts);;All files (*)',
+        )
+        if not file_path:
+            return
+
+        # Parse.
+        entries, parse_errors = parse_address_file(file_path)
+        if not entries and not parse_errors:
+            QMessageBox.information(
+                self,
+                'Import Addresses',
+                'The selected file does not contain any valid address entries.',
+            )
+            return
+        if not entries and parse_errors:
+            QMessageBox.warning(
+                self,
+                'Import Addresses',
+                'No valid entries found.\n\nErrors:\n' + '\n'.join(parse_errors[:20]),
+            )
+            return
+
+        # Resolve target groups per object type.
+        group_cache: dict[str, uuid.UUID | None] = {}
+        with self._db_manager.session(
+            description='Import addresses from file'
+        ) as session:
+            for entry in entries:
+                if entry.obj_type not in group_cache:
+                    path = SYSTEM_GROUP_PATHS.get(entry.obj_type, '')
+                    grp = find_group_by_path(session, lib_id, path)
+                    group_cache[entry.obj_type] = grp.id if grp else None
+
+            # Assign the correct group to each entry and import.
+            result = ImportResult()
+            for obj_type, grp_id in group_cache.items():
+                type_entries = [e for e in entries if e.obj_type == obj_type]
+                if type_entries:
+                    partial = import_entries(session, lib_id, grp_id, type_entries)
+                    result.created += partial.created
+                    result.skipped += partial.skipped
+                    result.errors.extend(partial.errors)
+
+        # Combine parse errors with import errors for the summary.
+        all_errors = parse_errors + (result.errors or [])
+
+        # Refresh the object tree.
+        self._object_tree.reload()
+
+        # Show summary.
+        lines = [f'Successfully imported: {result.created}']
+        if result.skipped:
+            lines.append(f'Skipped (duplicates/errors): {result.skipped}')
+        if all_errors:
+            lines.append('')
+            lines.append('Details:')
+            # Limit the number of error lines shown.
+            for err in all_errors[:30]:
+                lines.append(f'  - {err}')
+            if len(all_errors) > 30:
+                lines.append(f'  ... and {len(all_errors) - 30} more')
+
+        QMessageBox.information(
+            self,
+            'Import Addresses',
+            '\n'.join(lines),
+        )
 
     @Slot()
     def unlockObject(self):

@@ -1143,6 +1143,7 @@
    <addaction name="separator"/>
    <addaction name="compileAction"/>
    <addaction name="installAction"/>
+   <addaction name="inspectAction"/>
   </widget>
   <widget class="QMenuBar" name="MenuBar">
    <property name="geometry">
@@ -1198,6 +1199,7 @@
     </property>
     <addaction name="compileAction"/>
     <addaction name="installAction"/>
+    <addaction name="inspectAction"/>
    </widget>
    <widget class="QMenu" name="fileMenu">
     <property name="title">
@@ -1729,6 +1731,9 @@
    </property>
    <property name="text">
     <string>Inspect</string>
+   </property>
+   <property name="toolTip">
+    <string>Show all policy and NAT rules that reference the selected object</string>
    </property>
   </action>
   <action name="ImportAddressesFromFileAction">
@@ -2463,9 +2468,42 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>filePropAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileProp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>inspectAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>inspect()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>370</x>
+     <y>359</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clearRecentFilesMenu()</slot>
+  <slot>fileProp()</slot>
   <slot>showChangelog()</slot>
   <slot>toggleViewObjectTree()</slot>
   <slot>toggleViewRules()</slot>
