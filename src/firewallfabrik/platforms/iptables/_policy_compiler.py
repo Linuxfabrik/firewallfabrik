@@ -50,17 +50,21 @@ from firewallfabrik.compiler.processors._service import (
 )
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
     Direction,
     Firewall,
+    Host,
     ICMP6Service,
     Interface,
     IPv4,
     IPv6,
     Network,
     NetworkIPv6,
+    PhysAddress,
     PolicyAction,
     TCPService,
     UDPService,
+    UserService,
 )
 
 if TYPE_CHECKING:
@@ -196,7 +200,29 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add_rule_filter()
 
+        self.add(DeprecateOptionRoute('deprecate option Route'))
+
+        self.add(
+            CheckForUnsupportedCombinationsInMangle(
+                'check for unsupported Tag+Route and Classify+Route combinations'
+            )
+        )
+
+        self.add(
+            ClearTagClassifyInFilter('clear Tag and Classify options in filter table')
+        )
+        self.add(ClearLogInMangle('clear logging in rules in mangle table'))
+        self.add(
+            ClearActionInTagClassifyIfMangle(
+                'clear action in rules with Tag and Classify in mangle'
+            )
+        )
+
         self.add(StoreAction('store action'))
+
+        self.add(Logging1('check global logging override option'))
+
+        self.add(DecideOnChainForClassify('set chain for action is Classify'))
 
         self.add(InterfaceAndDirection('interface+dir'))
         self.add(
@@ -248,10 +274,44 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add(Logging2('process logging'))
 
+        # -- Mangle table split processors (after Logging2, per fwbuilder) --
+        self.add(
+            SplitIfTagClassifyOrRoute(
+                'split rule if tagging, classification or routing options'
+            )
+        )
+        self.add(SplitIfTagAndConnmark('Tag+CONNMARK combo'))
+        self.add(RouteProcessor('process route rules'))
+
+        self.add(Accounting('accounting'))
+
         self.add(SplitIfSrcAny('split rule if src is any'))
+
+        if self.my_table == 'mangle':
+            self.add(CheckActionInMangleTable('check allowed actions in mangle table'))
+
+        self.add(SetChainForMangle('set chain for mangle rules'))
+        self.add(SetChainPreroutingForTag('chain PREROUTING for Tag'))
+
         self.add(SplitIfDstAny('split rule if dst is any'))
+
+        self.add(SetChainPostroutingForTag('chain POSTROUTING for Tag'))
+
+        # Address range handling (iptables >= 1.2.11)
+        self.add(SpecialCaseAddressRangeInSrc('replace single address range in Src'))
+        self.add(SpecialCaseAddressRangeInDst('replace single address range in Dst'))
+        self.add(
+            SplitIfSrcMatchingAddressRange('split if Src has matching address range')
+        )
+        self.add(
+            SplitIfDstMatchingAddressRange('split if Dst has matching address range')
+        )
+        self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
+
         self.add(SplitIfSrcMatchesFw('split if src matches FW'))
         self.add(SplitIfDstMatchesFw('split if dst matches FW'))
+
+        self.add(SpecialCaseWithFW1('special case with firewall'))
 
         self.add(DecideOnChainIfDstFW('decide chain if Dst has fw'))
         self.add(SplitIfSrcFWNetwork('split rule if src has a net fw has interface on'))
@@ -260,10 +320,29 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SpecialCaseWithFW2('replace fw with its interfaces if src==dst==fw'))
         self.add(DecideOnChainIfLoopback('any-any rule on loopback'))
         self.add(FinalizeChain('assign chain'))
+
+        self.add(SpecialCaseWithFWInDstAndOutbound('drop outbound with fw in dst'))
+
         self.add(DecideOnTarget('set target'))
 
+        self.add(CheckForRestoreMarkInOutput('check for CONNMARK restore in OUTPUT'))
+
         self.add(RemoveFW('remove fw'))
-        self.add(ExpandMultipleAddresses('expand multiple addresses'))
+        self.add(
+            ExpandMultipleAddressesIfNotFWInSrc(
+                'expand multiple addresses if not FW in Src'
+            )
+        )
+        self.add(
+            ExpandMultipleAddressesIfNotFWInDst(
+                'expand multiple addresses if not FW in Dst'
+            )
+        )
+        self.add(
+            ExpandLoopbackInterfaceAddress(
+                'check for loopback interface in rule objects'
+            )
+        )
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
         self.add(
@@ -281,6 +360,16 @@ class PolicyCompiler_ipt(PolicyCompiler):
                 'drop rules with empty elements after address family filter'
             )
         )
+
+        self.add(CheckForUnnumbered('check for unnumbered interfaces'))
+        self.add(
+            CheckForDynamicInterfacesOfOtherObjects(
+                'check for dynamic interfaces of other objects'
+            )
+        )
+
+        if self.fw.get_option('bridging_fw'):
+            self.add(BridgingFw('handle bridging firewall cases'))
 
         self.add(
             SpecialCaseWithUnnumberedInterface(
@@ -308,7 +397,13 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add(ConvertToAtomicForAddresses('convert to atomic by addresses'))
 
+        self.add(CheckForZeroAddr('check for zero addresses'))
+        self.add(CheckMACInOUTPUTChain('check for MAC in OUTPUT chain'))
+        self.add(CheckUserServiceInWrongChains('check for UserService in wrong chains'))
+
         self.add(Optimize3('optimization 3'))
+
+        self.add(OptimizeForMinusIOPlus("optimize for '-i +' / '-o +'"))
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
@@ -656,6 +751,189 @@ class _Passthrough(PolicyRuleProcessor):
         return True
 
 
+class Accounting(PolicyRuleProcessor):
+    """Handle rules with Accounting action.
+
+    iptables does not have a target that does nothing without terminating
+    packet processing (like NOP), so we create a new user chain with
+    target RETURN.
+
+    If the rule has an explicit ``rule_name_accounting`` option, that is
+    used as the chain name; otherwise a new chain name is generated.
+
+    When the generated chain name matches the current chain (shouldn't
+    happen normally), the rule is turned into a Continue with RETURN
+    target in-place.  Otherwise, a jump rule is created in the current
+    chain and a RETURN rule is placed in the new chain.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::accounting``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if rule.action != PolicyAction.Accounting or rule.ipt_target:
+            self.tmp_queue.append(rule)
+            return True
+
+        rule_iface = rule.itf[0] if rule.itf else None
+
+        this_chain = rule.ipt_chain
+        new_chain = ipt_comp.get_new_chain_name(rule, rule_iface)
+
+        # Use explicit accounting chain name if provided
+        rule_name_accounting = rule.get_option('rule_name_accounting', '')
+        if rule_name_accounting:
+            new_chain = rule_name_accounting
+
+        if new_chain == this_chain:
+            # Same chain: just set RETURN target and Continue action
+            rule.ipt_target = 'RETURN'
+            rule.action = PolicyAction.Continue
+        else:
+            # Create RETURN rule in the new chain (all elements cleared)
+            r = rule.clone()
+            r.src = []
+            r.dst = []
+            r.srv = []
+            r.ipt_chain = new_chain
+            r.upstream_rule_chain = this_chain
+            ipt_comp.register_chain(new_chain)
+            ipt_comp.insert_upstream_chain(this_chain, new_chain)
+            r.ipt_target = 'RETURN'
+            r.set_option('log', False)
+            r.action = PolicyAction.Continue
+            self.tmp_queue.append(r)
+
+            # Modify original rule: jump to new chain
+            rule.ipt_target = new_chain
+            rule.set_option('log', False)
+            rule.set_option('limit_value', -1)
+            rule.set_option('connlimit_value', -1)
+            rule.set_option('hashlimit_value', -1)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class BridgingFw(PolicyRuleProcessor):
+    """Handle bridging firewall cases.
+
+    For rules in the INPUT chain whose destination is a broadcast or
+    multicast address, split the rule so that a copy goes into the
+    FORWARD chain as well.  This handles broadcasts forwarded by a
+    bridge that must also be accepted by the firewall itself.
+
+    If the rule's interface is unnumbered or a bridge port, the rule is
+    simply moved to FORWARD (no split needed -- the original is kept
+    as-is in FORWARD).
+
+    Corresponds to C++ ``PolicyCompiler_ipt::bridgingFw``.
+    """
+
+    @staticmethod
+    def _is_broadcast_or_multicast(addr: Address) -> bool:
+        """Check if an address is broadcast or multicast.
+
+        Matches C++ ``bridgingFw::checkForMatchingBroadcastAndMulticast``
+        simplified for our model: checks the address itself for broadcast
+        (255.255.255.255) or multicast (224.0.0.0/4).
+        """
+        import ipaddress as _ipa
+
+        if not isinstance(addr, Address):
+            return False
+        addr_str = addr.get_address()
+        if not addr_str:
+            return False
+        try:
+            ip = _ipa.ip_address(addr_str)
+        except ValueError:
+            return False
+        if ip == _ipa.ip_address('0.0.0.0'):
+            return False  # "any" is not broadcast/multicast
+        return ip == _ipa.ip_address('255.255.255.255') or ip.is_multicast
+
+    @staticmethod
+    def _matches_interface_broadcast(
+        addr: Address,
+        fw,
+    ) -> bool:
+        """Check if address matches a broadcast address of any firewall interface.
+
+        Matches C++ ``bridgingFw::checkForMatchingBroadcastAndMulticast``
+        interface iteration logic.
+        """
+        import ipaddress as _ipa
+
+        addr_str = addr.get_address()
+        if not addr_str:
+            return False
+        try:
+            obj_addr = _ipa.ip_address(addr_str)
+        except ValueError:
+            return False
+
+        for iface in fw.interfaces:
+            if not iface.is_regular():
+                continue
+            for iface_addr in iface.addresses:
+                if not isinstance(iface_addr, IPv4):
+                    continue
+                ip_str = iface_addr.get_address()
+                mask_str = iface_addr.get_netmask()
+                if not ip_str or not mask_str:
+                    continue
+                try:
+                    mask = _ipa.ip_address(mask_str)
+                    # Skip host masks (255.255.255.255) -- bug #780345
+                    if int(mask) == 0xFFFFFFFF:
+                        continue
+                    net = _ipa.ip_network(f'{ip_str}/{mask_str}', strict=False)
+                    if obj_addr == net.network_address:
+                        return True
+                    if obj_addr == net.broadcast_address:
+                        return True
+                except ValueError:
+                    continue
+        return False
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        dst = rule.dst[0] if rule.dst else None
+
+        if rule.ipt_chain == 'INPUT' and dst is not None:
+            is_bcast_mcast = self._is_broadcast_or_multicast(
+                dst,
+            ) or self._matches_interface_broadcast(dst, ipt_comp.fw)
+
+            if is_bcast_mcast:
+                rule_iface = rule.itf[0] if rule.itf else None
+
+                if isinstance(rule_iface, Interface) and (
+                    rule_iface.is_unnumbered() or rule_iface.is_bridge_port()
+                ):
+                    # Unnumbered or bridge port: just move to FORWARD
+                    ipt_comp.set_chain(rule, 'FORWARD')
+                else:
+                    # Regular interface: split into INPUT + FORWARD copy
+                    r = rule.clone()
+                    ipt_comp.set_chain(r, 'FORWARD')
+                    self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
 class DropMangleTableRules(PolicyRuleProcessor):
     """Drop rules that belong in the mangle table."""
 
@@ -792,6 +1070,24 @@ class Logging2(PolicyRuleProcessor):
         r3.force_state_check = False
         self.tmp_queue.append(r3)
 
+        return True
+
+
+class Logging1(PolicyRuleProcessor):
+    """Force logging on all rules if fw has log_all option set.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::Logging1``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if self.compiler.fw.get_option('log_all'):
+            rule.set_option('log', True)
+
+        self.tmp_queue.append(rule)
         return True
 
 
@@ -1802,6 +2098,569 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
         return True
 
 
+class ExpandMultipleAddressesIfNotFWInSrc(PolicyRuleProcessor):
+    """Expand hosts/firewalls with multiple addresses if first src is not Firewall.
+
+    Unlike ``ExpandMultipleAddresses``, this skips expansion when the
+    first object in src is a Firewall object itself, which is handled
+    specially by later processors.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::expandMultipleAddressesIfNotFWinSrc``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        src = rule.src[0] if rule.src else None
+        if not isinstance(src, Firewall):
+            self.compiler.expand_addr(rule, 'src')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandMultipleAddressesIfNotFWInDst(PolicyRuleProcessor):
+    """Expand hosts/firewalls with multiple addresses if first dst is not Firewall.
+
+    Unlike ``ExpandMultipleAddresses``, this skips expansion when the
+    first object in dst is a Firewall object itself.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::expandMultipleAddressesIfNotFWinDst``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        dst = rule.dst[0] if rule.dst else None
+        if not isinstance(dst, Firewall):
+            self.compiler.expand_addr(rule, 'dst')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
+    """Replace loopback interface objects in src/dst with their actual addresses.
+
+    When a loopback interface (e.g., ``lo``) appears in src or dst,
+    replace it with the first matching address (IPv4 or IPv6 depending
+    on the compiler's address family). Aborts if the loopback interface
+    has no addresses.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::expandLoopbackInterfaceAddress``.
+    """
+
+    def _replace_loopback(self, rule: CompRule, slot: str) -> None:
+        """Replace loopback interfaces with their addresses in the given slot."""
+        elements = getattr(rule, slot)
+        if not elements:
+            return
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        new_elements: list = []
+        for obj in elements:
+            if isinstance(obj, Interface) and obj.is_loopback():
+                addr = None
+                for a in obj.addresses:
+                    if ipt_comp.ipv6_policy and isinstance(a, IPv6):
+                        addr = a
+                        break
+                    if not ipt_comp.ipv6_policy and isinstance(a, IPv4):
+                        addr = a
+                        break
+                if addr is None:
+                    self.compiler.abort(
+                        rule,
+                        'Loopback interface of the firewall object does not '
+                        'have IP address but is used in the rule',
+                    )
+                    new_elements.append(obj)
+                else:
+                    new_elements.append(addr)
+            else:
+                new_elements.append(obj)
+
+        setattr(rule, slot, new_elements)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self._replace_loopback(rule, 'src')
+        self._replace_loopback(rule, 'dst')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseAddressRangeInRE(PolicyRuleProcessor):
+    """Replace AddressRange with dimension==1 (start==end) by an Address object.
+
+    When an AddressRange has the same start and end address (a single
+    address), replace it with an IPv4 or IPv6 address object. This is
+    done before ``splitIfSrcMatchingAddressRange`` to simplify matching.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseAddressRangeInRE``.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        import uuid
+
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        new_elements: list = []
+        for obj in elements:
+            if (
+                isinstance(obj, AddressRange)
+                and not obj.is_any()
+                and obj.get_start_address() == obj.get_end_address()
+                and obj.get_start_address()
+            ):
+                # Single address -- replace with IPv4 or IPv6
+                start_addr = obj.get_start_address()
+                if obj.is_v4():
+                    new_addr = IPv4(
+                        id=uuid.uuid4(),
+                        name=f'{obj.name}_addr',
+                    )
+                    new_addr.inet_addr_mask = {
+                        'address': start_addr,
+                        'netmask': '255.255.255.255',
+                    }
+                else:
+                    new_addr = IPv6(
+                        id=uuid.uuid4(),
+                        name=f'{obj.name}_addr',
+                    )
+                    new_addr.inet_addr_mask = {
+                        'address': start_addr,
+                        'netmask': 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+                    }
+                new_elements.append(new_addr)
+            else:
+                new_elements.append(obj)
+
+        setattr(rule, self._slot, new_elements)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseAddressRangeInSrc(SpecialCaseAddressRangeInRE):
+    """Replace single-address AddressRange in Src with an IPv4/IPv6 object."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'src')
+
+
+class SpecialCaseAddressRangeInDst(SpecialCaseAddressRangeInRE):
+    """Replace single-address AddressRange in Dst with an IPv4/IPv6 object."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'dst')
+
+
+class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
+    """Split rule if src has AddressRange matching the firewall.
+
+    If src contains an AddressRange that matches the firewall (via
+    ``complex_match``), create a copy in the OUTPUT chain. This ensures
+    the rule covers both FORWARD and OUTPUT paths.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitIfSrcMatchingAddressRange``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        src = rule.src[0] if rule.src else None
+
+        if (
+            rule.direction != Direction.Inbound
+            and src is not None
+            and not src.is_any()
+            and isinstance(src, AddressRange)
+            and ipt_comp.complex_match(src, ipt_comp.fw)
+        ):
+            r = rule.clone()
+            ipt_comp.set_chain(r, 'OUTPUT')
+            r.direction = Direction.Outbound
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
+    """Split rule if dst has AddressRange matching the firewall.
+
+    If dst contains an AddressRange that matches the firewall, create
+    a copy in the INPUT chain for the Inbound direction.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitIfDstMatchingAddressRange``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        dst = rule.dst[0] if rule.dst else None
+
+        if (
+            rule.direction != Direction.Outbound
+            and dst is not None
+            and not dst.is_any()
+            and isinstance(dst, AddressRange)
+            and ipt_comp.complex_match(dst, ipt_comp.fw)
+        ):
+            r = rule.clone()
+            ipt_comp.set_chain(r, 'INPUT')
+            r.direction = Direction.Inbound
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseWithFW1(PolicyRuleProcessor):
+    """Split rule when both src AND dst match the firewall and direction is Both.
+
+    Creates two rules: one Inbound and one Outbound, so the traffic
+    from/to the firewall itself is properly handled.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseWithFW1``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+
+        if (
+            src is not None
+            and dst is not None
+            and not src.is_any()
+            and not dst.is_any()
+            and self.compiler.complex_match(src, self.compiler.fw)
+            and self.compiler.complex_match(dst, self.compiler.fw)
+            and rule.direction == Direction.Both
+        ):
+            r1 = rule.clone()
+            r1.direction = Direction.Inbound
+            self.tmp_queue.append(r1)
+
+            r2 = rule.clone()
+            r2.direction = Direction.Outbound
+            self.tmp_queue.append(r2)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
+    """Abort if src/dst contains dynamic interfaces not belonging to this firewall.
+
+    Dynamic interfaces get their addresses at runtime, so they can only
+    be used if they belong to the firewall being compiled.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkForDynamicInterfacesOfOtherObjects``.
+    """
+
+    def _find_dynamic_interfaces(self, rule: CompRule, slot: str) -> bool:
+        """Check for dynamic interfaces of other objects in a rule element.
+
+        Returns True if the check passes (no foreign dynamic interfaces found).
+        """
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        for obj in getattr(rule, slot):
+            if (
+                isinstance(obj, Interface)
+                and obj.is_dynamic()
+                and obj.device_id != ipt_comp.fw.id
+            ):
+                parent_name = ''
+                if obj.device:
+                    parent_name = obj.device.name
+                self.compiler.abort(
+                    rule,
+                    f'Can not build rule using dynamic interface '
+                    f"'{obj.name}' of the object '{parent_name}' "
+                    f'because its address in unknown.',
+                )
+                return False
+        return True
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if self._find_dynamic_interfaces(rule, 'src') and self._find_dynamic_interfaces(
+            rule, 'dst'
+        ):
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class CheckForUnnumbered(PolicyRuleProcessor):
+    """Abort if src/dst contains unnumbered or bridge-port interfaces.
+
+    Unnumbered and bridge-port interfaces have no IP address and cannot
+    be used as address objects in rules.
+
+    Corresponds to C++ ``PolicyCompiler::checkForUnnumbered``.
+    """
+
+    @staticmethod
+    def _catch_unnumbered(rule: CompRule, slot: str) -> bool:
+        """Return True if an unnumbered/bridge-port interface is found."""
+        for obj in getattr(rule, slot):
+            if isinstance(obj, Interface) and (
+                obj.is_unnumbered() or obj.is_bridge_port()
+            ):
+                return True
+        return False
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if self._catch_unnumbered(rule, 'src') or self._catch_unnumbered(rule, 'dst'):
+            self.compiler.abort(rule, 'Can not use unnumbered interfaces in rules.')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForZeroAddr(PolicyRuleProcessor):
+    """Check src/dst for zero addresses and hosts without interfaces.
+
+    Aborts compilation if:
+    - A Host object has no interfaces (no address).
+    - An Address object has address 0.0.0.0 with netmask 0.0.0.0
+      (equivalent to 'any', likely a mistake).
+    - A Network object has non-zero address but /0 netmask (likely typo).
+
+    Corresponds to C++ ``PolicyCompiler::checkForZeroAddr``.
+    """
+
+    @staticmethod
+    def _find_host_with_no_interfaces(elements: list) -> Host | None:
+        """Find a Host object with no interfaces."""
+        for obj in elements:
+            if (
+                isinstance(obj, Host)
+                and not isinstance(obj, Firewall)
+                and not obj.interfaces
+            ):
+                return obj
+        return None
+
+    @staticmethod
+    def _find_zero_address(elements: list) -> Address | None:
+        """Find an address with 0.0.0.0 or netmask /0."""
+        import ipaddress as _ipaddress
+
+        for obj in elements:
+            if not isinstance(obj, Address):
+                continue
+
+            # Skip dynamic/unnumbered/bridge-port interfaces
+            if isinstance(obj, Interface) and (
+                obj.is_dynamic() or obj.is_unnumbered() or obj.is_bridge_port()
+            ):
+                continue
+
+            # Skip AddressRange -- 0.0.0.0 is acceptable for ranges
+            if isinstance(obj, AddressRange):
+                continue
+
+            if obj.is_any():
+                continue
+
+            addr_str = obj.get_address()
+            mask_str = obj.get_netmask()
+
+            if not addr_str:
+                continue
+
+            try:
+                ip = _ipaddress.ip_address(addr_str)
+            except ValueError:
+                continue
+
+            # Address 0.0.0.0 with netmask 0.0.0.0 -- equivalent to 'any'
+            if int(ip) == 0 and mask_str:
+                try:
+                    nm = _ipaddress.ip_address(mask_str)
+                    if int(nm) == 0:
+                        return obj
+                except ValueError:
+                    pass
+
+            # Network with non-zero address but /0 netmask -- likely typo
+            if isinstance(obj, (Network, NetworkIPv6)) and int(ip) != 0 and mask_str:
+                try:
+                    nm = _ipaddress.ip_address(mask_str)
+                    if int(nm) == 0:
+                        return obj
+                except ValueError:
+                    pass
+
+        return None
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        # Check for hosts with no interfaces
+        a = self._find_host_with_no_interfaces(rule.src)
+        if a is None:
+            a = self._find_host_with_no_interfaces(rule.dst)
+        if a is not None:
+            self.compiler.abort(
+                rule,
+                f"Object '{a.name}' has no interfaces, therefore it does "
+                f'not have address and can not be used in the rule.',
+            )
+
+        # Check for zero addresses
+        a2 = self._find_zero_address(rule.src)
+        if a2 is None:
+            a2 = self._find_zero_address(rule.dst)
+        if a2 is not None:
+            err = f"Object '{a2.name}'"
+            if isinstance(a2, IPv4):
+                iface = getattr(a2, 'interface', None)
+                if iface is not None:
+                    iface_label = iface.name
+                    err += f' (an address of interface {iface_label} )'
+            err += (
+                ' has address or netmask 0.0.0.0, which is equivalent '
+                "to 'any'. This is likely an error."
+            )
+            self.compiler.abort(rule, err)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class OptimizeForMinusIOPlus(PolicyRuleProcessor):
+    """Remove redundant wildcard interface ('*') in INPUT/OUTPUT chains.
+
+    In INPUT/OUTPUT chains, iptables matches all interfaces by default,
+    so specifying ``-i +`` or ``-o +`` (wildcard) is redundant. This
+    processor clears the interface element to avoid generating the
+    unnecessary match.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::optimizeForMinusIOPlus``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        iface = rule.itf[0] if rule.itf else None
+        if iface is not None:
+            iface_name = getattr(iface, 'name', '')
+            if not iface_name or iface_name == 'nil':
+                self.tmp_queue.append(rule)
+                return True
+
+            chain = rule.ipt_chain
+            if iface_name == '*' and chain in ('INPUT', 'OUTPUT'):
+                rule.itf = []
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckMACInOUTPUTChain(PolicyRuleProcessor):
+    """Abort if MAC address (PhysAddress) is used in src in OUTPUT chain.
+
+    iptables cannot match the MAC address of the firewall itself in
+    the OUTPUT chain.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkMACinOUTPUTChain``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.ipt_chain == 'OUTPUT':
+            src = rule.src[0] if rule.src else None
+            if isinstance(src, PhysAddress):
+                self.compiler.abort(rule, 'Can not match MAC address of the firewall')
+                return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckUserServiceInWrongChains(PolicyRuleProcessor):
+    """Warn and drop if UserService is used in chain other than OUTPUT.
+
+    iptables ``-m owner`` (UserService) only works in the OUTPUT chain.
+    Rules using UserService in other chains are warned about and dropped.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkUserServiceInWrongChains``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        srv = rule.srv[0] if rule.srv else None
+        chain = rule.ipt_chain
+
+        if (
+            isinstance(srv, UserService)
+            and chain != 'OUTPUT'
+            and not ipt_comp.is_chain_descendant_of_output(chain)
+        ):
+            self.compiler.warning(
+                rule,
+                "Iptables does not support module 'owner' in a chain other than OUTPUT",
+            )
+            return True  # drop rule
+
+        self.tmp_queue.append(rule)
+        return True
+
+
 class CheckInterfaceAgainstAddressFamily(PolicyRuleProcessor):
     """Drop rules where the interface has no addresses matching the address family.
 
@@ -2338,4 +3197,658 @@ class CountChainUsage(PolicyRuleProcessor):
                 ipt_comp.chain_usage_counter.get(chain, 0) + 1
             )
         self.tmp_queue.append(rule)
+        return True
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Mangle Table Rule Processors
+# ═══════════════════════════════════════════════════════════════════
+
+
+class CheckActionInMangleTable(PolicyRuleProcessor):
+    """Abort if action is Reject in mangle table.
+
+    Only called when compiling for the mangle table. The Reject action
+    has no valid target in the mangle table.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkActionInMangleTable``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.action == PolicyAction.Reject:
+            self.compiler.abort(
+                rule,
+                'Action Reject is not allowed in mangle table',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForRestoreMarkInOutput(PolicyRuleProcessor):
+    """Set have_connmark_in_output if tagging rule with CONNMARK in OUTPUT chain.
+
+    If a tagging rule (or one that originated from a tagging rule) has
+    the ipt_mark_connections option and is in the OUTPUT chain, sets the
+    compiler flag so that a CONNMARK --restore-mark rule is generated
+    in the OUTPUT chain during epilog.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkForRestoreMarkInOutput``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and rule.get_option('ipt_mark_connections', False)
+            and rule.ipt_chain == 'OUTPUT'
+        ):
+            ipt_comp.have_connmark_in_output = True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForUnsupportedCombinationsInMangle(PolicyRuleProcessor):
+    """Abort if rule has routing AND (tagging or classification) with non-Continue action.
+
+    In the mangle table, options Tag/Classify and Route can conflict
+    because they require different chains (PREROUTING vs POSTROUTING).
+    This combination is only allowed when the action is Continue.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkForUnsupportedCombinationsInMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            ipt_comp.my_table == 'mangle'
+            and rule.action != PolicyAction.Continue
+            and rule.get_option('routing', False)
+            and (
+                rule.get_option('tagging', False)
+                or rule.get_option('classification', False)
+            )
+        ):
+            action_str = rule.action.name if rule.action else 'unknown'
+            self.compiler.abort(
+                rule,
+                'Can not process option Route in combination with '
+                f'options Tag or Classify and action {action_str}',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClearActionInTagClassifyIfMangle(PolicyRuleProcessor):
+    """Set action to Continue for tagging/classification rules in mangle table.
+
+    In the mangle table, rules with tagging or classification options
+    use targets MARK/CLASSIFY which are non-terminating. The action is
+    forced to Continue so the packet continues through the chain.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearActionInTagClassifyIfMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if ipt_comp.my_table == 'mangle' and (
+            rule.get_option('tagging', False)
+            or rule.get_option('classification', False)
+        ):
+            rule.action = PolicyAction.Continue
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClearLogInMangle(PolicyRuleProcessor):
+    """Turn off logging for rules compiled in the mangle table.
+
+    When a rule generates code in both filter and mangle tables,
+    logging should only happen once (in filter). However, if the rule
+    belongs to a mangle-only rule set, logging is preserved.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearLogInMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        rs = ipt_comp.source_ruleset
+        if rs is not None:
+            mangle_only = (
+                rs.options.get('mangle_only_rule_set', False) if rs.options else False
+            )
+            if isinstance(mangle_only, str):
+                mangle_only = mangle_only.lower() == 'true'
+            if mangle_only:
+                self.tmp_queue.append(rule)
+                return True
+
+        if ipt_comp.my_table == 'mangle':
+            rule.set_option('log', False)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClearTagClassifyInFilter(PolicyRuleProcessor):
+    """Clear classification/routing/tagging options when not in mangle table.
+
+    These options only make sense in the mangle table. When compiling
+    for the filter table, they are cleared to prevent interference
+    with normal filter rule processing.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearTagClassifyInFilter``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if ipt_comp.my_table != 'mangle':
+            rule.set_option('classification', False)
+            rule.set_option('routing', False)
+            rule.set_option('tagging', False)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class DecideOnChainForClassify(PolicyRuleProcessor):
+    """Set chain to POSTROUTING for classification rules.
+
+    Target CLASSIFY is only valid in mangle table, chain POSTROUTING.
+    If the rule also has tagging, split it: tagging goes to a separate
+    rule (to be placed in PREROUTING by later processors), while
+    classification stays in POSTROUTING.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::decideOnChainForClassify``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_option('classification', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if not rule.ipt_chain:
+            if rule.get_option('tagging', False):
+                # Split: tagging rule without classification
+                r = rule.clone()
+                r.set_option('classification', False)
+                r.set_option('routing', False)
+                r.action = PolicyAction.Continue
+                self.tmp_queue.append(r)
+
+                # Original keeps classification, loses tagging
+                rule.set_option('tagging', False)
+
+            ipt_comp.set_chain(rule, 'POSTROUTING')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class DeprecateOptionRoute(PolicyRuleProcessor):
+    """Abort if rule has routing option set (Route target is deprecated).
+
+    The ROUTE target was removed from modern iptables. Users should
+    use Custom Action to generate the command manually if needed.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::deprecateOptionRoute``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_option('routing', False):
+            self.compiler.abort(
+                rule,
+                'Option Route is deprecated. You can use Custom Action '
+                "to generate iptables command using '-j ROUTE' target "
+                'if it is supported by your firewall OS',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class DropTerminatingTargets(PolicyRuleProcessor):
+    """Only keep rules with targets CLASSIFY or MARK, drop all others.
+
+    Used in special mangle passes where only non-terminating mark/classify
+    rules should survive.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::dropTerminatingTargets``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        tgt = rule.ipt_target
+        if tgt in ('CLASSIFY', 'MARK'):
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class RouteProcessor(PolicyRuleProcessor):
+    """Set chain to PREROUTING/POSTROUTING for routing rules.
+
+    Based on the ipt_iif, ipt_oif, and ipt_gw options, assigns the
+    appropriate mangle chain. If ipt_tee is set, creates copies in
+    both PREROUTING and POSTROUTING.
+
+    Named RouteProcessor to avoid conflict with Python keyword.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::Route``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_option('routing', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        iif = rule.get_option('ipt_iif', '') or ''
+        oif = rule.get_option('ipt_oif', '') or ''
+        gw = rule.get_option('ipt_gw', '') or ''
+
+        if iif:
+            ipt_comp.set_chain(rule, 'PREROUTING')
+
+        if oif or gw:
+            ipt_comp.set_chain(rule, 'POSTROUTING')
+
+        if rule.get_option('ipt_tee', False):
+            r1 = rule.clone()
+            ipt_comp.set_chain(r1, 'PREROUTING')
+            self.tmp_queue.append(r1)
+
+            r2 = rule.clone()
+            ipt_comp.set_chain(r2, 'POSTROUTING')
+            self.tmp_queue.append(r2)
+
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainForMangle(PolicyRuleProcessor):
+    """Set chains based on direction and src matching fw in mangle table.
+
+    In the mangle table, assigns chains based on direction:
+    - Inbound -> PREROUTING
+    - Outbound -> POSTROUTING
+    - If src matches fw (and direction is not Inbound) -> OUTPUT
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainForMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if ipt_comp.my_table == 'mangle' and not rule.ipt_chain:
+            if rule.direction == Direction.Inbound:
+                ipt_comp.set_chain(rule, 'PREROUTING')
+
+            if rule.direction == Direction.Outbound:
+                ipt_comp.set_chain(rule, 'POSTROUTING')
+
+            # If src matches fw and direction is not Inbound -> OUTPUT
+            src = rule.src[0] if rule.src else None
+            if (
+                rule.direction != Direction.Inbound
+                and not rule.is_src_any()
+                and src is not None
+                and ipt_comp.complex_match(src, ipt_comp.fw)
+            ):
+                ipt_comp.set_chain(rule, 'OUTPUT')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainPostroutingForTag(PolicyRuleProcessor):
+    """Set chain POSTROUTING for tagging rules with direction Outbound/Both.
+
+    For tagging rules (or rules that originated from tagging rules)
+    without a chain assigned, direction Both/Outbound, and no interface:
+    set chain to POSTROUTING.
+
+    Must be called after splitIfDstAny.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainPostroutingForTag``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and not rule.ipt_chain
+            and rule.direction in (Direction.Both, Direction.Outbound)
+            and rule.is_itf_any()
+        ):
+            ipt_comp.set_chain(rule, 'POSTROUTING')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainPreroutingForTag(PolicyRuleProcessor):
+    """Set chain PREROUTING for tagging rules with direction Both/Inbound.
+
+    For tagging rules (or rules that originated from tagging rules)
+    without a chain assigned, direction Both/Inbound, and no interface:
+    set chain to PREROUTING.
+
+    Must be called after splitIfSrcAny but before splitIfDstAny.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainPreroutingForTag``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and not rule.ipt_chain
+            and rule.direction in (Direction.Both, Direction.Inbound)
+            and rule.is_itf_any()
+        ):
+            ipt_comp.set_chain(rule, 'PREROUTING')
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
+    """Drop outbound FORWARD rules where dst matches fw.
+
+    In outbound direction with a non-OUTPUT chain and an interface
+    belonging to the firewall: if src does not match fw but dst does,
+    the packet would go to INPUT (not be forwarded), so the rule is
+    dropped. Preserves rules with negated src or bridging fw with
+    broadcast/multicast dst.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseWithFWInDstAndOutbound``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        itf = rule.itf[0] if rule.itf else None
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+        chain = rule.ipt_chain
+
+        if (
+            rule.direction == Direction.Outbound
+            and isinstance(itf, Interface)
+            and itf.device_id == ipt_comp.fw.id
+            and chain != 'OUTPUT'
+        ):
+            # Bridging fw with broadcast/multicast dst: keep rule
+            if (
+                dst is not None
+                and hasattr(dst, 'is_broadcast')
+                and (dst.is_broadcast() or dst.is_multicast())
+                and ipt_comp.fw.get_option('bridging_fw')
+            ):
+                self.tmp_queue.append(rule)
+                return True
+
+            # Negated src: keep rule
+            if rule.get_neg('src') or rule.src_single_object_negation:
+                self.tmp_queue.append(rule)
+                return True
+
+            rule_afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+
+            src_matches = (
+                ipt_comp.complex_match(src, ipt_comp.fw) if src is not None else False
+            )
+            dst_matches = (
+                ipt_comp.complex_match(dst, ipt_comp.fw) if dst is not None else False
+            )
+
+            # If afpa is off, network objects don't match unless host mask
+            if (
+                not rule_afpa
+                and src is not None
+                and (rule.is_src_any() or isinstance(src, (Network, NetworkIPv6)))
+                and not (hasattr(src, 'is_host_mask') and src.is_host_mask())
+            ):
+                src_matches = False
+            if (
+                not rule_afpa
+                and dst is not None
+                and (rule.is_dst_any() or isinstance(dst, (Network, NetworkIPv6)))
+                and not (hasattr(dst, 'is_host_mask') and dst.is_host_mask())
+            ):
+                dst_matches = False
+
+            if not src_matches and dst_matches:
+                # src does not match, dst matches: drop the rule
+                return True
+
+            self.tmp_queue.append(rule)
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfTagAndConnmark(PolicyRuleProcessor):
+    """Create additional CONNMARK --save-mark rule for tagging with ipt_mark_connections.
+
+    If a rule has tagging and ipt_mark_connections option, appends the
+    original rule and creates an additional rule with target CONNMARK
+    and --save-mark argument to persist the mark to the connection.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitIfTagAndConnmark``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_option('tagging', False) and rule.get_option(
+            'ipt_mark_connections', False
+        ):
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+            # Append original rule first
+            self.tmp_queue.append(rule)
+
+            # Create CONNMARK rule
+            r = rule.clone()
+            r.ipt_target = 'CONNMARK'
+            r.action = PolicyAction.Continue
+            r.set_option('classification', False)
+            r.set_option('routing', False)
+            r.set_option('tagging', False)
+            r.set_option('log', False)
+            r.set_option('CONNMARK_arg', '--save-mark')
+            self.tmp_queue.append(r)
+
+            ipt_comp.have_connmark = True
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
+    """Split rule if it uses tagging, classification, or routing options.
+
+    In the mangle table, if a rule uses more than one of
+    (tagging, classification, routing) and has non-any elements, creates
+    a jump rule to a temp chain and then separate rules for each option.
+    This ensures each option can be placed in its correct chain.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitIfTagClassifyOrRoute``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        number_of_options = 0
+        if rule.get_option('tagging', False):
+            number_of_options += 1
+        if rule.get_option('classification', False):
+            number_of_options += 1
+        if rule.get_option('routing', False):
+            number_of_options += 1
+
+        if ipt_comp.my_table == 'mangle' and number_of_options > 0:
+            this_chain = rule.ipt_chain
+            new_chain = this_chain
+
+            has_non_any = (
+                not rule.is_src_any()
+                or not rule.is_dst_any()
+                or not rule.is_srv_any()
+                or not rule.is_itf_any()
+            )
+
+            if has_non_any and number_of_options > 1:
+                # Create jump rule to temp chain
+                new_chain = ipt_comp.get_new_tmp_chain_name(rule)
+
+                r = rule.clone()
+                r.subrule_suffix = 'ntt'
+                r.ipt_target = new_chain
+                r.set_option('classification', False)
+                r.set_option('routing', False)
+                r.set_option('tagging', False)
+                r.set_option('log', False)
+                r.action = PolicyAction.Continue
+                self.tmp_queue.append(r)
+
+                # Clear elements in original, make stateless
+                rule.src = []
+                rule.dst = []
+                rule.srv = []
+                rule.itf = []
+                rule.set_option('limit_value', -1)
+                rule.set_option('connlimit_value', -1)
+                rule.set_option('hashlimit_value', -1)
+                rule.set_option('stateless', True)
+                rule.set_option('log', False)
+
+            # Create separate rule for tagging
+            if rule.get_option('tagging', False):
+                r = rule.clone()
+                r.set_option('classification', False)
+                r.set_option('routing', False)
+                rule.set_option('tagging', False)
+                r.ipt_chain = new_chain
+                r.upstream_rule_chain = this_chain
+                r.action = PolicyAction.Continue
+                self.tmp_queue.append(r)
+
+            # Create separate rule for classification
+            if rule.get_option('classification', False):
+                r = rule.clone()
+                rule.set_option('classification', False)
+                r.set_option('routing', False)
+                r.set_option('tagging', False)
+                r.ipt_chain = new_chain
+                r.upstream_rule_chain = this_chain
+                r.action = PolicyAction.Continue
+                self.tmp_queue.append(r)
+
+            # Keep original for routing or if action is not Continue
+            if (
+                rule.get_option('routing', False)
+                or rule.action != PolicyAction.Continue
+            ):
+                rule.set_option('classification', False)
+                rule.set_option('tagging', False)
+                rule.ipt_chain = new_chain
+                rule.upstream_rule_chain = this_chain
+                self.tmp_queue.append(rule)
+
+        else:
+            self.tmp_queue.append(rule)
+
         return True

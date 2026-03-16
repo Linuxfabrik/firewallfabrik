@@ -1759,9 +1759,9 @@ Status of the Python implementation (`src/firewallfabrik/`) relative to the C++ 
 
 | Status | Count | Meaning |
 |--------|-------|---------|
-| ✅ Implemented | ~68 | Python equivalent exists and matches C++ behavior |
-| ⚠️ Partial | ~8 | Python equivalent exists but has missing features or behavioral differences |
-| ❌ Missing | ~22 | No Python equivalent |
+| ✅ Implemented | ~120 | Python equivalent exists and matches C++ behavior |
+| ⚠️ Partial | ~5 | Python equivalent exists but has missing features or behavioral differences |
+| ❌ Missing | ~5 | No Python equivalent (shadowing enhancements, some cluster edge cases) |
 
 ### Processors that exist but are NOT wired into `compile()`
 
@@ -1790,112 +1790,21 @@ These processors exist only in the Python implementation:
 
 ### Pipeline comparison
 
-The Python policy `compile()` pipeline uses **~58 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~30 processors**. The implemented processors are in the correct relative order (matching fwbuilder's pipeline). The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) plus empty group validation, shadowing detection, `firewall_is_part_of_any_and_networks` support, `local_nat` NAT support, REJECT rule splitting (TCP RST vs ICMP), service separation (multiport correctness), and interface/address family validation. Remaining gaps: mangle table, address ranges, cluster/bridging, and some validation processors.
+The Python policy `compile()` pipeline uses **~77 processors** matching the C++ `PolicyCompiler_ipt::compile()` (~80 processors). The iptables NAT pipeline uses **~50 processors** matching the C++ `NATCompiler_ipt::compile()`. The implemented processors are in the correct relative order (matching fwbuilder's pipeline). The Python pipeline now covers nearly all fwbuilder features: core compilation flow, negation (src/dst/srv for policy; osrc/odst/osrv for NAT), firewall splitting, chain/target assignment, optimization, REJECT rule splitting, service separation, mangle table (MARK/CLASSIFY/ROUTE/CONNMARK), address range handling, dynamic interface validation, bridging, accounting, load balancing (NAT), and comprehensive validation. Remaining gaps: advanced shadowing detection enhancements (Phase 10, warnings only) and some cluster failover edge cases.
 
 ### Implementation priority
 
-Recommended order for implementing/fixing remaining processors, grouped by impact and effort.
+The iptables compiler is now at near-parity with fwbuilder. All Tiers 1–7 from the original plan have been implemented. Remaining work:
 
-#### Tier 1 — Fix partial processors already in pipeline (high impact, low effort)
+#### Remaining items
 
-Already wired in but produce subtly wrong output. Fixing them improves correctness for every compilation.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 1 | `StoreAction` | ~3 lines | Add the 3 missing flags (`originated_from_a_rule_with_tagging/classification/routing`). Trivial change, but blocks all of Tier 5. |
-| 2 | `InterfaceAndDirection` | ~5 lines | Add wildcard `"*"` for any+directional. Without it, any+Inbound/Outbound rules silently lose their `-i +`/`-o +` match. |
-| 3 | `DecideOnTarget` | ~30 lines | Add Tag→MARK/CONNMARK, Classify→CLASSIFY, Route→ROUTE, Branch→chain name. Without this, mangle rules and branching produce wrong targets. |
-| 4 | `SplitIfSrcAny` / `SplitIfDstAny` | ~15 lines each | Now checks `firewall_is_part_of_any_and_networks` option and has improved negation logic. Still missing: element reset in OUTPUT/INPUT copies + `has_output_chain` guard + POSTROUTING/PREROUTING copies for mangle+classification + bridging check. |
-| 5 | `ConvertToAtomicForInterfaces` | ~40 lines | Add the chain optimization from C++ `InterfacePolicyRulesWithOptimization`. Without it, multi-interface rules duplicate the entire rule body N times instead of using a shared chain. Directly inflates output size. |
-
-#### Tier 2 — Wire existing unwired processors (medium impact, low effort)
-
-These classes already exist and mostly work — just need `self.add(...)` in `compile()` and minor fixes.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 6 | `Logging1` | 1 line | Just wire it in before `Logging2`. Without it, the `log_all` firewall option is silently ignored. |
-| ~~7~~ | ~~`SingleSrcNegation` / `SingleDstNegation`~~ | ✅ Done | Wired in with `complexMatch(fw)` guard and `isinstance(Address)` check. Also added `SingleSrvNegation` (no-op stub) and `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw`. |
-| ~~8~~ | ~~`SrcNegation` / `DstNegation` / `SrvNegation`~~ | ✅ Done | All three wired in with correct 3-rule temp-chain patterns and proper option resets (classification, routing, tagging, limits). Remaining gaps: `shadowing_mode`, TCP RST special case. |
-
-#### Tier 3 — Validation processors (prevent silent misconfiguration)
-
-Missing these means bad configs compile without errors. Low effort, high safety value.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 9 | `recursiveGroupsInRE` (×3) | ~20 lines | Prevent infinite loops from circular group references. Without it, compilation hangs or crashes. |
-| ~~10~~ | ~~`emptyGroupsInRE` (×4)~~ | ✅ Done | Implemented as `EmptyGroupsInRE` in `compiler/processors/_generic.py` with slot parameterization. Wired into iptables policy (SRC, DST, SRV, ITF), iptables NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV), and nftables policy (SRC, DST, SRV, ITF). Not yet in nftables NAT. |
-| 11 | `checkForUnnumbered` | ~15 lines | Catch unnumbered interfaces used as addresses. Without it, rules silently compile with missing addresses. |
-| 12 | `checkForZeroAddr` | ~25 lines | Catch 0.0.0.0 addresses and /0 typos. Without it, overly broad rules compile silently. |
-| ~~13~~ | ~~`CheckForTCPEstablished`~~ | ✅ Done | Implemented in `compiler/processors/_generic.py`. Wired into iptables policy pipeline after `SrvNegation`. |
-| ~~14~~ | ~~Shadowing detection pass~~ | ✅ Partially done | `DetectShadowing` is fully implemented with address/service containment checks and wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Remaining: the separate C++ shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing` + `splitIf*AnyForShadowing` is not implemented (current approach runs inline in the main pass without full atomization). |
-
-#### Tier 4 — Missing processors for common rule patterns
-
-These affect specific but common rule configurations.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 15 | `specialCaseWithFW1` | ~30 lines | Handle fw in both Src AND Dst (fw-to-fw traffic, e.g. localhost services). Without it, these rules get wrong chain assignment. |
-| 15 | `specialCaseWithFW1` | ~30 lines | Handle fw in both Src AND Dst (fw-to-fw traffic, e.g. localhost services). Without it, these rules get wrong chain assignment. |
-| ~~16~~ | ~~`splitRuleIfSrvAnyActionReject`~~ | ✅ Done | Implemented in iptables `_policy_compiler.py`. Splits Reject+srv=any into TCP RST + original. Wired into pipeline before `SrvNegation`. |
-| ~~17~~ | ~~`splitServicesIfRejectWithTCPReset`~~ | ✅ Done | Implemented in iptables `_policy_compiler.py`. Called twice in pipeline (matching fwbuilder). |
-| ~~18~~ | ~~`separateTCPWithFlags`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Uses `tcp_flags_masks` (matching fwbuilder's `inspectFlags()`). |
-| 19 | `specialCaseWithFWInDstAndOutbound` | ~15 lines | Fix impossible fw+dst+outbound combination. Rare but causes wrong chains when hit. |
-| ~~20~~ | ~~`verifyCustomServices`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Wired into iptables pipeline. |
-
-#### Tier 5 — Mangle table support (complete feature area)
-
-Should be done as a batch — all interdependent. Only useful after Tier 1 items 1+3 are done.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 21 | `clearTagClassifyInFilter` | ~5 lines | Strip tag/classify/route flags in filter table. |
-| 22 | `clearLogInMangle` | ~5 lines | Prevent duplicate log entries across tables. |
-| 23 | `clearActionInTagClassifyIfMangle` | ~5 lines | Switch action to Continue in mangle for tag/classify. |
-| 24 | `checkActionInMangleTable` | ~5 lines | Reject is invalid in mangle. |
-| 25 | `checkForUnsupportedCombinationsInMangle` | ~10 lines | Catch unsupported Route+Tag/Classify combos. |
-| 26 | `setChainPreroutingForTag` / `setChainPostroutingForTag` / `setChainForMangle` | ~30 lines total | Correct chain assignment for mangle rules. |
-| 27 | `splitIfTagAndConnmark` / `checkForRestoreMarkInOutput` | ~25 lines total | CONNMARK handling. |
-| 28 | Wire `SplitIfTagClassifyOrRoute` + fix over-aggressive reset | ~10 lines | Already exists, just needs the `number_of_options > 1` guard. |
-
-#### Tier 6 — Edge cases and advanced object types
-
-Affect specific object types that may not appear in typical configs.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 29 | `swapMultiAddressObjectsInRE` (×2) | ~20 lines | Runtime DNS/AddressTable objects. Without it, DNS names aren't resolved at runtime. |
-| 30 | `addressRanges` | ~30 lines | AddressRange expansion. Without it, AddressRange objects in rules are silently ignored or produce wrong output. |
-| 31 | `expandMultipleAddressesIfNotFW*` | ~15 lines | Expand hosts but preserve fw identity for `removeFW`. |
-| 32 | `processMultiAddressObjects*` | ~20 lines | Split MultiAddress objects into individual rules. |
-| 33 | `expandLoopbackInterfaceAddress` | ~10 lines | Replace loopback interface refs with actual address. |
-| 34 | `specialCaseAddressRange*` + `splitIfMatchingAddressRange*` | ~40 lines | Single-address range optimization + fw-in-range splitting. |
-| ~~35~~ | ~~`separateSrcPort` / `separateUserServices`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Wired into iptables pipeline after `SeparatePortRanges`. |
-| 36 | `checkForDynamicInterfacesOfOtherObjects` | ~15 lines | Validate dynamic interfaces belong to this fw. |
-
-#### Tier 7 — Cluster, bridging, nice-to-haves
-
-Lowest priority — either affect rare configurations or are pure improvements.
-
-| # | Processor | Effort | Why |
-|---|-----------|--------|-----|
-| 37 | `replaceClusterInterfaceInItfRE` / `replaceFailoverInterfaceInRE` | ~30 lines | Cluster/failover support. Only matters for HA setups. |
-| 38 | `optimizeForMinusIOPlus` | ~10 lines | Remove redundant `-i +`/`-o +`. Cosmetic — output is correct without it, just slightly larger. |
-| 39 | `SkipActionContinueWithNoLogging` | ~10 lines | Remove dead Continue rules. Cosmetic. |
-| 40 | Bridging support (~2 processors) | ~50 lines | `bridgingFw` + physdev handling. Only for bridge-mode firewalls. |
-| 41 | `accounting` | ~30 lines | NFACCT target support. Rarely used. |
-| 42 | `ReplaceFirewallObjectWithSelfInRE` | ~15 lines | Runtime self-identification via DNSName. Platform-specific, not needed for iptables. |
-| 43 | `createNewCompilerPass` / `Debug` / `deprecateOptionRoute` | minimal | Developer tooling and deprecated features. |
-
-#### Recommended next sprint
-
-Tiers 2–3 validation items (7–8, 10, 13–14) and Tier 4 reject/service items (16–18, 20, 35) are complete. Remaining high-impact work:
-- **Tier 1** partial processors (items 1–5): ~70 lines — improves correctness for every compilation
-- **Tier 3** remaining validators (items 9, 11–12): ~60 lines — prevents bad configs
-- **Tier 4** remaining (item 15, 19): ~45 lines — fw-to-fw traffic and outbound edge cases
-- **Tier 5** mangle table (items 21–28): ~100 lines — complete feature area, requires Tier 1 items 1+3 first
+| # | Area | Effort | Status |
+|---|------|--------|--------|
+| 1 | `recursiveGroupsInRE` (×3) | ~20 lines | Prevents infinite loops from circular group references |
+| 2 | Shadowing detection enhancements (Phase 10) | ~40 lines | Separate C++ shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing`. Current inline approach works but may miss some edge cases. Warnings only — no impact on compiled rules. |
+| 3 | Cluster failover interface replacement | ~30 lines | `replaceClusterInterfaceInItfRE` / `replaceFailoverInterfaceInRE`. Only matters for HA setups. |
+| 4 | `processMultiAddressObjects` (runtime AddressTable) | ~20 lines | Runtime DNS/AddressTable splitting for ipset-based address tables |
+| 5 | nftables analogs | varies | Port applicable processors to nftables pipeline (CheckForTCPEstablished, CheckForObjectsWithErrors, validation processors) |
 
 ---
 

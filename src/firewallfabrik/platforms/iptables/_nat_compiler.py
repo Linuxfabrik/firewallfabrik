@@ -34,10 +34,17 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
 )
+from firewallfabrik.compiler.processors._service import (
+    SeparateSrcAndDstPort,
+    SeparateSrcPort,
+)
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
     Firewall,
     Host,
+    ICMP6Service,
+    ICMPService,
     Interface,
     NATAction,
     NATRuleType,
@@ -114,6 +121,11 @@ class NATCompiler_ipt(NATCompiler):
 
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
+        self.upstream_chains: dict[str, list[str]] = defaultdict(list)
+        self.registered_chains: set[str] = set()
+
+        # Branch ruleset chain mapping (set by the driver)
+        self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
 
         # Print rule processor reference
         self.print_rule_processor: NATRuleProcessor | None = None
@@ -144,7 +156,14 @@ class NATCompiler_ipt(NATCompiler):
         return name
 
     def register_rule_set_chain(self, chain_name: str) -> None:
+        self.register_chain(chain_name)
         self.chain_usage_counter[chain_name] = 1
+
+    def register_chain(self, chain: str) -> None:
+        self.registered_chains.add(chain)
+
+    def insert_upstream_chain(self, parent: str, child: str) -> None:
+        self.upstream_chains[parent].append(child)
 
     def get_rule_set_name(self) -> str:
         if self.source_ruleset:
@@ -207,11 +226,24 @@ class NATCompiler_ipt(NATCompiler):
         self.add(EliminateDuplicatesInODST('eliminate duplicates in ODST'))
         self.add(EliminateDuplicatesInOSRV('eliminate duplicates in OSRV'))
 
+        self.add(DoOSrvNegation('process negation in OSrv'))
+
+        self.add(ConvertToAtomicForOSrv('convert to atomic rules in OSrv'))
+
         self.add(ClassifyNATRule('classify NAT rule'))
+        self.add(SplitSDNATRule('split SDNAT rules'))
+        self.add(ClassifyNATRule('reclassify rules'))
+        self.add(ConvertLoadBalancingRules('convert load balancing rules'))
         self.add(VerifyRules('verify rules'))
 
         self.add(SingleObjectNegationOSrc('negation in OSrc if it holds single object'))
         self.add(SingleObjectNegationODst('negation in ODst if it holds single object'))
+
+        self.add(DoOSrcNegation('process negation in OSrc'))
+        self.add(DoODstNegation('process negation in ODst'))
+
+        # Call splitOnODst after processing negation
+        self.add(SplitOnODst('split on ODst'))
 
         self.add(PortTranslationRules('port translation rules'))
         self.add(
@@ -226,12 +258,25 @@ class NATCompiler_ipt(NATCompiler):
             self.add(SplitIfOSrcMatchesFw('split rule if OSrc matches FW'))
 
         self.add(SplitNONATRule('NAT rules that request no translation'))
+        self.add(SplitNATBranchRule('Split Branch rules to use all chains'))
         self.add(LocalNATRule('local NAT rule'))
         self.add(DecideOnChain('decide on chain'))
         self.add(DecideOnTarget('decide on target'))
 
+        self.add(
+            SplitODstForSNAT(
+                'split rule if objects in ODst belong to different subnets'
+            )
+        )
         self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
         self.add(ReplaceFirewallObjectsTSrc('replace firewall in TSrc'))
+        self.add(
+            SplitOnDynamicInterfaceInODst('split rule if ODst is dynamic interface')
+        )
+        self.add(
+            SplitOnDynamicInterfaceInTSrc('split rule if TSrc is dynamic interface')
+        )
+
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
@@ -242,11 +287,32 @@ class NATCompiler_ipt(NATCompiler):
 
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
+        self.add(
+            SplitMultiSrcAndDst('split rules where multiple srcs and dsts are present')
+        )
+
         self.add(GroupServicesByProtocol('group services by protocol'))
+        self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
+
+        self.add(SeparateSrcPort('separate objects with src ports'))
+        self.add(SeparateSrcAndDstPort('separate objects with src and dest ports'))
+
         self.add(PrepareForMultiport('prepare for multiport'))
+        self.add(SplitMultipleICMP('split rule with multiple ICMP services'))
+
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
+
+        self.add(AddVirtualAddress('add virtual addresses'))
+
         self.add(AssignInterface('assign rules to interfaces'))
+        self.add(VerifyRules3('check combination of interface spec and chain'))
+        self.add(DynamicInterfaceInODst('split if dynamic interface in ODst'))
+        self.add(DynamicInterfaceInTSrc('set target if dynamic interface in TSrc'))
+        self.add(AlwaysUseMasquerade('always use masquerading target instead of SNAT'))
+
+        self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
+        self.add(ConvertToAtomicForItfOutb('convert to atomic for outbound interface'))
 
         self.add(CountChainUsage('Count chain usage'))
 
@@ -1349,4 +1415,959 @@ class CountChainUsage(NATRuleProcessor):
                 nat_comp.chain_usage_counter.get(chain, 0) + 1
             )
         self.tmp_queue.append(rule)
+        return True
+
+
+class DoOSrcNegation(NATRuleProcessor):
+    """Handle multi-object negation in OSrc via temp chain with RETURN rules.
+
+    Corresponds to C++ NATCompiler_ipt::doOSrcNegation.
+    Creates a temporary chain: jump rule keeps everything except osrc,
+    return rules match osrc objects, action rule fires if no match.
+
+    Pattern:
+      CHAIN     !A    B    C    TYPE     TARGET
+      -----     any   B    C    (same)   TMP_CHAIN
+      TMP_CHAIN  A   any  any   RETURN   RETURN
+      TMP_CHAIN any  any   C    (same)   (original)
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('osrc'):
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        rule.set_neg('osrc', False)
+
+        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except osrc -> jump to temp chain
+        r_jump = rule.clone()
+        r_jump.osrc = []
+        r_jump.ipt_target = new_chain
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only osrc objects, clear everything else
+        r_return = rule.clone()
+        r_return.odst = []
+        r_return.osrv = []
+        r_return.tsrc = []
+        r_return.tdst = []
+        r_return.tsrv = []
+        r_return.set_neg('odst', False)
+        r_return.set_neg('osrv', False)
+        r_return.nat_rule_type = NATRuleType.Return
+        r_return.ipt_target = 'RETURN'
+        r_return.ipt_chain = new_chain
+        r_return.nat_iface_in = 'nil'
+        r_return.nat_iface_out = 'nil'
+        r_return.set_option('rule_added_for_osrc_neg', True)
+        nat_comp.register_chain(new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear osrc, odst; keep osrv and translated objects
+        r_action = rule.clone()
+        r_action.osrc = []
+        r_action.odst = []
+        r_action.set_neg('odst', False)
+        r_action.set_neg('osrv', False)
+        r_action.ipt_chain = new_chain
+        r_action.nat_iface_in = 'nil'
+        r_action.nat_iface_out = 'nil'
+        r_action.set_option('rule_added_for_osrc_neg', True)
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class DoODstNegation(NATRuleProcessor):
+    """Handle multi-object negation in ODst via temp chain with RETURN rules.
+
+    Corresponds to C++ NATCompiler_ipt::doODstNegation.
+
+    Pattern:
+      CHAIN      A    !B   C    TYPE     TARGET
+      -----      A   any   C    (same)   TMP_CHAIN
+      TMP_CHAIN any    B  any   RETURN   RETURN
+      TMP_CHAIN any  any   C    (same)   (original)
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('odst'):
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        rule.set_neg('odst', False)
+
+        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except odst -> jump to temp chain
+        r_jump = rule.clone()
+        r_jump.odst = []
+        r_jump.ipt_target = new_chain
+        r_jump.set_option('rule_added_for_odst_neg', True)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only odst objects, clear everything else
+        r_return = rule.clone()
+        r_return.osrc = []
+        r_return.osrv = []
+        r_return.tsrc = []
+        r_return.tdst = []
+        r_return.tsrv = []
+        r_return.set_neg('osrc', False)
+        r_return.set_neg('osrv', False)
+        r_return.nat_rule_type = NATRuleType.Return
+        r_return.ipt_target = 'RETURN'
+        r_return.ipt_chain = new_chain
+        r_return.nat_iface_in = 'nil'
+        r_return.nat_iface_out = 'nil'
+        nat_comp.register_chain(new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear osrc, odst; keep osrv
+        r_action = rule.clone()
+        r_action.osrc = []
+        r_action.odst = []
+        r_action.set_neg('osrc', False)
+        r_action.set_neg('osrv', False)
+        r_action.ipt_chain = new_chain
+        r_action.nat_iface_in = 'nil'
+        r_action.nat_iface_out = 'nil'
+        r_action.set_option('rule_added_for_odst_neg', True)
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class DoOSrvNegation(NATRuleProcessor):
+    """Handle multi-object negation in OSrv via temp chain with RETURN rules.
+
+    Corresponds to C++ NATCompiler_ipt::doOSrvNegation.
+
+    Pattern:
+      CHAIN      A    B   !C    TYPE     TARGET
+      -----      A    B   any   (same)   TMP_CHAIN
+      TMP_CHAIN any  any   C    RETURN   RETURN
+      TMP_CHAIN any  any  any   (same)   (original)
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('osrv'):
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        rule.set_neg('osrv', False)
+
+        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+
+        # Jump rule: keep everything except osrv -> jump to temp chain
+        r_jump = rule.clone()
+        r_jump.osrv = []
+        r_jump.ipt_target = new_chain
+        r_jump.set_option('rule_added_for_osrv_neg', True)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only osrv objects, clear everything else
+        r_return = rule.clone()
+        r_return.osrc = []
+        r_return.odst = []
+        r_return.tsrc = []
+        r_return.tdst = []
+        r_return.set_neg('osrc', False)
+        r_return.set_neg('odst', False)
+        r_return.nat_rule_type = NATRuleType.Return
+        r_return.ipt_target = 'RETURN'
+        r_return.ipt_chain = new_chain
+        r_return.nat_iface_in = 'nil'
+        r_return.nat_iface_out = 'nil'
+        r_return.set_option('rule_added_for_osrv_neg', True)
+        nat_comp.register_chain(new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: clear everything except translated objects
+        r_action = rule.clone()
+        r_action.osrc = []
+        r_action.odst = []
+        r_action.osrv = []
+        r_action.set_neg('osrc', False)
+        r_action.set_neg('odst', False)
+        r_action.ipt_chain = new_chain
+        r_action.nat_iface_in = 'nil'
+        r_action.nat_iface_out = 'nil'
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class SplitOnODst(NATRuleProcessor):
+    """Split DNAT rules with multiple ODst objects into separate rules.
+
+    Corresponds to C++ NATCompiler_ipt::splitOnODst.
+    Called after negation processing to ensure each DNAT rule has
+    at most one object in ODst.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type == NATRuleType.DNAT and len(rule.odst) > 1:
+            for obj in rule.odst:
+                r = rule.clone()
+                r.odst = [obj]
+                self.tmp_queue.append(r)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitSDNATRule(NATRuleProcessor):
+    """Split SDNAT rules into separate DNAT + SNAT rules.
+
+    Corresponds to C++ NATCompiler_ipt::splitSDNATRule.
+    The first rule translates destination (clears TSrc), the second
+    rule translates source (uses TDst values in ODst, clears TDst).
+    Both get type Unknown for reclassification.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.SDNAT:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Determine service translation directions
+        tsrv_translates_src_port = False
+        tsrv_translates_dst_port = False
+
+        osrv_obj = rule.osrv[0] if rule.osrv else None
+        tsrv_obj = rule.tsrv[0] if rule.tsrv else None
+
+        if isinstance(osrv_obj, TCPUDPService) and isinstance(tsrv_obj, TCPUDPService):
+            tsrv_translates_src_port = (tsrv_obj.src_range_start or 0) != 0 and (
+                tsrv_obj.dst_range_start or 0
+            ) == 0
+            tsrv_translates_dst_port = (tsrv_obj.src_range_start or 0) == 0 and (
+                tsrv_obj.dst_range_start or 0
+            ) != 0
+
+            if tsrv_translates_dst_port and (
+                (osrv_obj.dst_range_start or 0) == (tsrv_obj.dst_range_start or 0)
+                and (osrv_obj.dst_range_end or 0) == (tsrv_obj.dst_range_end or 0)
+            ):
+                tsrv_translates_dst_port = False
+
+            if tsrv_translates_src_port and (
+                (osrv_obj.src_range_start or 0) == (tsrv_obj.src_range_start or 0)
+                and (osrv_obj.src_range_end or 0) == (tsrv_obj.src_range_end or 0)
+            ):
+                tsrv_translates_src_port = False
+
+        # First rule: translates destination, type Unknown for reclassification
+        r_dnat = rule.clone()
+        r_dnat.nat_rule_type = NATRuleType.Unknown
+        r_dnat.tsrc = []
+        if tsrv_translates_src_port:
+            r_dnat.tsrv = []
+        self.tmp_queue.append(r_dnat)
+
+        # Second rule: translates source, uses TDst in ODst
+        r_snat = rule.clone()
+        r_snat.nat_rule_type = NATRuleType.Unknown
+
+        # Clear ODst negation in second rule (handled by first)
+        r_snat.set_neg('odst', False)
+
+        # ODst = original TDst (translated destination becomes match for SNAT)
+        r_snat.odst = list(rule.tdst)
+
+        # If TSrv translated dst port, match it in OSrv of second rule
+        if (
+            tsrv_obj
+            and not rule.is_tsrv_any()
+            and isinstance(tsrv_obj, TCPUDPService)
+            and (tsrv_obj.dst_range_start or 0) != 0
+        ):
+            r_snat.osrv = [tsrv_obj]
+
+        r_snat.tdst = []
+        if tsrv_translates_dst_port:
+            r_snat.tsrv = []
+        self.tmp_queue.append(r_snat)
+
+        return True
+
+
+class SplitNATBranchRule(NATRuleProcessor):
+    """Split NATBranch rules into separate copies for each chain.
+
+    Corresponds to C++ NATCompiler_ipt::splitNATBranchRule.
+    Branch rules need to go into both PREROUTING and POSTROUTING
+    chains since the branch may contain both DNAT and SNAT rules.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.NATBranch:
+            self.tmp_queue.append(rule)
+            return True
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        branch_name = rule.get_option('branch_name', '')
+
+        if not branch_name:
+            self.compiler.abort(rule, 'NAT branching rule misses branch rule set.')
+            rule.ipt_chain = 'PREROUTING'
+            rule.ipt_target = 'UNDEFINED'
+            self.tmp_queue.append(rule)
+            return True
+
+        # Check if we have branch chain mapping info
+        if nat_comp.branch_ruleset_to_chain_mapping is not None:
+            chains = nat_comp.branch_ruleset_to_chain_mapping.get(branch_name)
+            if chains is not None:
+                for branch_chain in chains:
+                    if branch_chain.startswith(branch_name + '_'):
+                        my_chain = branch_chain[len(branch_name) + 1 :]
+                        r = rule.clone()
+                        r.ipt_chain = my_chain
+                        r.ipt_target = branch_chain
+                        self.tmp_queue.append(r)
+                return True
+
+        # Fallback: split into both PREROUTING and POSTROUTING
+        self.compiler.warning(
+            rule,
+            'NAT branching rule does not have information'
+            ' about targets used in the branch ruleset'
+            ' to choose proper chain in the nat table.'
+            ' Will split the rule and place it in both'
+            ' PREROUTING and POSTROUTING',
+        )
+
+        rs_name = nat_comp.get_rule_set_name()
+        prefix = f'{rs_name}_' if rs_name != 'NAT' else ''
+
+        for prepost in ('PRE', 'POST'):
+            r = rule.clone()
+            new_chain = f'{prefix}{prepost}ROUTING'
+            tgt_chain = f'{branch_name}_{prepost}ROUTING'
+            nat_comp.register_rule_set_chain(new_chain)
+            nat_comp.register_rule_set_chain(tgt_chain)
+            r.ipt_chain = new_chain
+            r.ipt_target = tgt_chain
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class ConvertLoadBalancingRules(NATRuleProcessor):
+    """Convert load balancing NAT rules with multiple TDst to DNAT.
+
+    Corresponds to C++ NATCompiler_ipt::ConvertLoadBalancingRules.
+    If a rule is classified as LB (load balancing), validates that
+    TDst addresses are contiguous and converts to a DNAT rule with
+    an address range.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type != NATRuleType.LB:
+            return True
+
+        if len(rule.tdst) <= 1:
+            return True
+
+        # Sort addresses
+        import contextlib
+        import ipaddress as _ipa
+
+        addr_list = []
+        for obj in rule.tdst:
+            addr_str = getattr(obj, 'get_address', lambda: None)()
+            if addr_str:
+                with contextlib.suppress(ValueError, TypeError):
+                    addr_list.append((_ipa.ip_address(addr_str), obj))
+
+        if not addr_list:
+            return True
+
+        addr_list.sort(key=lambda x: x[0])
+
+        # Verify contiguity
+        for i in range(1, len(addr_list)):
+            prev_ip = addr_list[i - 1][0]
+            curr_ip = addr_list[i][0]
+            if int(curr_ip) - int(prev_ip) != 1:
+                self.compiler.abort(
+                    rule,
+                    'Non-contiguous address range in '
+                    'Translated Destination in load balancing NAT rule',
+                )
+                return True
+
+        # Keep tdst as-is (the range will be handled by the print rule)
+        # and reclassify as DNAT
+        rule.nat_rule_type = NATRuleType.DNAT
+        return True
+
+
+class VerifyRules2(NATRuleProcessor):
+    """Verify OSrv/TSrv consistency after groupServicesByProtocol.
+
+    Corresponds to C++ NATCompiler_ipt::VerifyRules2.
+    Checks that TSrv is not set when OSrv is 'Any', and that
+    TSrv protocol matches OSrv protocol.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.Return:
+            osrv_any = not rule.osrv
+            tsrv_any = not rule.tsrv
+
+            if osrv_any and not tsrv_any:
+                self.compiler.abort(
+                    rule,
+                    'Can not use service object in Translated Service '
+                    "if Original Service is 'Any'.",
+                )
+                return True
+
+            if not tsrv_any:
+                s1 = rule.osrv[0] if rule.osrv else None
+                s2 = rule.tsrv[0] if rule.tsrv else None
+                if s1 is not None and s2 is not None:
+                    p1 = getattr(s1, 'get_protocol_name', lambda: '')()
+                    p2 = getattr(s2, 'get_protocol_name', lambda: '')()
+                    if p1 and p2 and p1 != p2:
+                        self.compiler.abort(
+                            rule,
+                            'Translated Service should be either '
+                            "'Original' or should contain object of the "
+                            'same type as Original Service.',
+                        )
+                        return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyRules3(NATRuleProcessor):
+    """Verify interface specification is compatible with the chosen chain.
+
+    Corresponds to C++ NATCompiler_ipt::VerifyRules3.
+    iptables does not allow -i in POSTROUTING or -o in PREROUTING.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        has_itf_inb = bool(rule.itf_inb)
+        has_itf_outb = bool(rule.itf_outb)
+
+        if rule.nat_rule_type == NATRuleType.SNAT and has_itf_inb:
+            self.compiler.abort(
+                rule,
+                'Can not use inbound interface specification with '
+                'rules that translate source because iptables does not '
+                'allow "-i" in POSTROUTING chain',
+            )
+            return True
+
+        if rule.nat_rule_type == NATRuleType.DNAT and has_itf_outb:
+            self.compiler.abort(
+                rule,
+                'Can not use outbound interface specification with '
+                'rules that translate destination because iptables does not '
+                'allow "-o" in PREROUTING chain',
+            )
+            return True
+
+        if rule.ipt_chain == 'OUTPUT' and has_itf_inb:
+            self.compiler.abort(
+                rule,
+                'Can not use inbound interface specification with '
+                'this rule because iptables does not '
+                'allow "-i" in OUTPUT chain',
+            )
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitODstForSNAT(NATRuleProcessor):
+    """Split SNAT rules where ODst objects belong to different subnets.
+
+    Corresponds to C++ NATCompiler::splitODstForSNAT.
+    Groups ODst objects by the firewall interface they belong to
+    and creates separate rules for each group.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type != NATRuleType.SNAT:
+            self.tmp_queue.append(rule)
+            return True
+
+        if not rule.odst or len(rule.odst) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Group by interface
+        groups: dict[str, list] = {}
+        for obj in rule.odst:
+            iface = ReplaceFirewallObjectsTSrc._find_interface_for(
+                obj, self.compiler.fw
+            )
+            iid = str(iface.id) if iface is not None else ''
+            groups.setdefault(iid, []).append(obj)
+
+        if len(groups) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for obj_list in groups.values():
+            r = rule.clone()
+            r.odst = obj_list
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class SplitOnDynamicInterfaceInODst(NATRuleProcessor):
+    """Split rule if ODst contains dynamic interfaces among other objects.
+
+    Corresponds to C++ NATCompiler_ipt::splitOnDynamicInterfaceInODst
+    (via splitRuleIfRuleElementIsDynamicInterface).
+    Dynamic interfaces are pulled out into separate rules because
+    their addresses are resolved at runtime.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.odst) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        dynamic = []
+        regular = []
+        for obj in rule.odst:
+            if isinstance(obj, Interface) and not obj.is_regular():
+                dynamic.append(obj)
+            else:
+                regular.append(obj)
+
+        if not dynamic:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Create separate rules for each dynamic interface
+        for iface in dynamic:
+            r = rule.clone()
+            r.odst = [iface]
+            self.tmp_queue.append(r)
+
+        # Keep regular objects in the original rule
+        rule.odst = regular
+        self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitOnDynamicInterfaceInTSrc(NATRuleProcessor):
+    """Split rule if TSrc contains dynamic interfaces among other objects.
+
+    Corresponds to C++ NATCompiler_ipt::splitOnDynamicInterfaceInTSrc
+    (via splitRuleIfRuleElementIsDynamicInterface).
+    Dynamic interfaces are pulled out into separate rules because
+    their addresses are resolved at runtime.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.tsrc) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        dynamic = []
+        regular = []
+        for obj in rule.tsrc:
+            if isinstance(obj, Interface) and not obj.is_regular():
+                dynamic.append(obj)
+            else:
+                regular.append(obj)
+
+        if not dynamic:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Create separate rules for each dynamic interface
+        for iface in dynamic:
+            r = rule.clone()
+            r.tsrc = [iface]
+            self.tmp_queue.append(r)
+
+        # Keep regular objects in the original rule
+        rule.tsrc = regular
+        self.tmp_queue.append(rule)
+
+        return True
+
+
+class DynamicInterfaceInODst(NATRuleProcessor):
+    """Handle dynamic interface in ODst after address expansion.
+
+    Corresponds to C++ NATCompiler_ipt::dynamicInterfaceInODst.
+    If ODst contains a dynamic failover interface, replace it with
+    the cluster-corrected address.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if not rule.odst:
+            return True
+
+        odst = rule.odst[0]
+        if isinstance(odst, Interface) and odst.is_dynamic():
+            # For failover interfaces, the interface stays as-is
+            # (address resolved at runtime)
+            pass
+
+        return True
+
+
+class DynamicInterfaceInTSrc(NATRuleProcessor):
+    """Convert SNAT to Masquerade if TSrc is a dynamic interface.
+
+    Corresponds to C++ NATCompiler_ipt::dynamicInterfaceInTSrc.
+    If TSrc is a non-regular (dynamic) interface and the rule option
+    ``ipt_use_snat_instead_of_masq`` is not set, convert the SNAT
+    rule to Masquerade.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if not rule.tsrc:
+            return True
+
+        tsrc = rule.tsrc[0]
+
+        if (
+            rule.nat_rule_type == NATRuleType.SNAT
+            and isinstance(tsrc, Interface)
+            and not tsrc.is_regular()
+        ):
+            use_snat = rule.get_option('ipt_use_snat_instead_of_masq', False)
+            if not use_snat:
+                rule.nat_rule_type = NATRuleType.Masq
+                if not rule.ipt_target or rule.ipt_target == 'SNAT':
+                    rule.ipt_target = 'MASQUERADE'
+
+        return True
+
+
+class AddVirtualAddress(NATRuleProcessor):
+    """Register virtual addresses needed for NAT with the OS configurator.
+
+    Corresponds to C++ NATCompiler_ipt::addVirtualAddress.
+    For SNAT rules, registers TSrc as a virtual address if it is not
+    an address on the firewall. For DNAT rules, registers ODst.
+    For SNetnat/DNetnat, registers the network object.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+
+        if rule.nat_rule_type in (NATRuleType.SNAT, NATRuleType.DNAT):
+            if rule.nat_rule_type == NATRuleType.SNAT:
+                a = rule.tsrc[0] if rule.tsrc else None
+            else:
+                a = rule.odst[0] if rule.odst else None
+
+            if a is None:
+                return True
+
+            # Skip non-regular interfaces
+            if isinstance(a, Interface) and not a.is_regular():
+                return True
+
+            if not nat_comp.complex_match(a, nat_comp.fw):
+                if isinstance(a, AddressRange):
+                    self.compiler.warning(
+                        rule,
+                        'Adding of virtual address for address range '
+                        f'is not implemented (object {getattr(a, "name", "")})',
+                    )
+                elif nat_comp.oscnf is not None:
+                    nat_comp.oscnf.add_virtual_address_for_nat(a)
+
+            return True
+
+        if rule.nat_rule_type in (NATRuleType.SNetnat, NATRuleType.DNetnat):
+            if rule.nat_rule_type == NATRuleType.SNetnat:
+                a = rule.tsrc[0] if rule.tsrc else None
+            else:
+                a = rule.odst[0] if rule.odst else None
+
+            if (
+                a is not None
+                and isinstance(a, Network | NetworkIPv6)
+                and nat_comp.oscnf is not None
+            ):
+                nat_comp.oscnf.add_virtual_address_for_nat(a)
+
+            return True
+
+        return True
+
+
+class AlwaysUseMasquerade(NATRuleProcessor):
+    """Convert SNAT to Masquerade if the rule option requests it.
+
+    Corresponds to C++ NATCompiler_ipt::alwaysUseMasquerading.
+    If the rule option ``ipt_use_masq`` is set and the rule is SNAT,
+    convert to Masquerade target.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        use_masq = rule.get_option('ipt_use_masq', False)
+        if use_masq and rule.nat_rule_type == NATRuleType.SNAT:
+            rule.nat_rule_type = NATRuleType.Masq
+            if not rule.ipt_target or rule.ipt_target == 'SNAT':
+                rule.ipt_target = 'MASQUERADE'
+
+        return True
+
+
+class SplitMultiSrcAndDst(NATRuleProcessor):
+    """Optimize rules with multiple OSrc AND multiple ODst.
+
+    Corresponds to C++ NATCompiler_ipt::splitMultiSrcAndDst.
+    Creates a temp chain: a jump rule matches the smaller dimension
+    (src or dst), and the action rule in the temp chain matches the
+    other dimension.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nosrv = len(rule.osrv)
+        nosrc = len(rule.osrc)
+        nodst = len(rule.odst)
+
+        # Only split if osrv is any, both osrc and odst have objects,
+        # and we have multiple objects to split.
+        if (
+            (nosrv > 1 or rule.osrv)
+            or (nosrc < 1 or not rule.osrc)
+            or (nodst < 1 or not rule.odst)
+            or (nosrc == 1 and nodst == 1)
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.nat_rule_type not in (
+            NATRuleType.NONAT,
+            NATRuleType.SNAT,
+            NATRuleType.DNAT,
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+
+        # Create jump rule pointing to temp chain
+        r_jump = rule.clone()
+
+        # Move the original rule to the temp chain
+        rule.ipt_chain = new_chain
+        rule.nat_iface_in = 'nil'
+        rule.nat_iface_out = 'nil'
+
+        # Decide which dimension to keep in the jump rule
+        if nosrc < nodst:
+            # Jump rule keeps osrc, clears odst
+            r_jump.odst = []
+            # Action rule keeps odst, clears osrc
+            rule.osrc = []
+        else:
+            # Jump rule keeps odst, clears osrc
+            r_jump.osrc = []
+            # Action rule keeps osrc, clears odst
+            rule.odst = []
+
+        r_jump.ipt_target = new_chain
+
+        self.tmp_queue.append(r_jump)
+        self.tmp_queue.append(rule)
+
+        return True
+
+
+class SplitMultipleICMP(NATRuleProcessor):
+    """Split rules with multiple ICMP services into individual rules.
+
+    Corresponds to C++ NATCompiler_ipt::splitMultipleICMP.
+    ICMP services cannot be combined in multiport matching, so
+    each ICMP service gets its own rule.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.osrv) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        first_srv = rule.osrv[0]
+        if not isinstance(first_srv, ICMPService | ICMP6Service):
+            self.tmp_queue.append(rule)
+            return True
+
+        for srv in rule.osrv:
+            r = rule.clone()
+            r.osrv = [srv]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class ConvertToAtomicForOSrv(NATRuleProcessor):
+    """Split rules with multiple OSrv when TSrv is not 'any'.
+
+    Corresponds to C++ NATCompiler_ipt::convertToAtomicportForOSrv.
+    When TSrv specifies a translation and OSrv has multiple services,
+    each service must be in its own rule to pair with TSrv correctly.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.osrv) > 1 and rule.tsrv:
+            for srv in rule.osrv:
+                r = rule.clone()
+                r.osrv = [srv]
+                self.tmp_queue.append(r)
+        else:
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class ConvertToAtomicForItfInb(NATRuleProcessor):
+    """Split rules with multiple inbound interfaces into separate rules.
+
+    Corresponds to C++ NATCompiler::ConvertToAtomicForItfInb.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.itf_inb) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for itf_obj in rule.itf_inb:
+            r = rule.clone()
+            r.itf_inb = [itf_obj]
+            self.tmp_queue.append(r)
+
+        return True
+
+
+class ConvertToAtomicForItfOutb(NATRuleProcessor):
+    """Split rules with multiple outbound interfaces into separate rules.
+
+    Corresponds to C++ NATCompiler::ConvertToAtomicForItfOutb.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if len(rule.itf_outb) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for itf_obj in rule.itf_outb:
+            r = rule.clone()
+            r.itf_outb = [itf_obj]
+            self.tmp_queue.append(r)
+
         return True
