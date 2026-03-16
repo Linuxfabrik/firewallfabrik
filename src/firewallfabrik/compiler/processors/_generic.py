@@ -849,6 +849,38 @@ def _srv_contains(s1, s2) -> bool:
     return False
 
 
+class CheckForTCPEstablished(BasicRuleProcessor):
+    """Check for TCPService with deprecated 'established' flag.
+
+    The 'established' option is not supported by iptables (or nftables).
+    Use stateful rules instead.
+
+    Corresponds to C++ ``Compiler::CheckForTCPEstablished``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        # Check srv for policy rules, osrv for NAT rules
+        srv_slot = rule.srv if rule.type == 'PolicyRule' else getattr(rule, 'osrv', [])
+        for srv in srv_slot:
+            if isinstance(srv, TCPService):
+                established = (srv.data or {}).get('established', False)
+                if established:
+                    self.compiler.abort(
+                        rule,
+                        f'TCPService object with option "established" is not '
+                        f'supported by firewall platform '
+                        f'"{self.compiler.my_platform_name()}". '
+                        f'Use stateful rule instead.',
+                    )
+
+        self.tmp_queue.append(rule)
+        return True
+
+
 class AssignUniqueRuleId(BasicRuleProcessor):
     """Assign sequential abs_rule_number to each rule."""
 

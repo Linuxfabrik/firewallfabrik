@@ -1073,8 +1073,29 @@ class PrepareForMultiport(NATRuleProcessor):
     """Set ipt_multiport flag for rules with multiple same-protocol services.
 
     Corresponds to C++ NATCompiler_ipt::prepareForMultiport.
-    Also splits into chunks of 15 if needed (iptables multiport limit).
+    Also splits into chunks when the multiport entry count exceeds 15
+    (the iptables multiport module limit).
+
+    Port ranges (e.g. 8000:8005) count as **2** entries toward the 15-port
+    limit (start and end), not one.
     """
+
+    @staticmethod
+    def _multiport_entry_count(srv) -> int:
+        """Return the number of multiport entries a single service uses.
+
+        A port range (start != end on src or dst) occupies 2 entries;
+        a single port occupies 1.
+        """
+        srs = srv.src_range_start or 0
+        sre = srv.src_range_end or 0
+        drs = srv.dst_range_start or 0
+        dre = srv.dst_range_end or 0
+        if srs != 0 and sre == 0:
+            sre = srs
+        if drs != 0 and dre == 0:
+            dre = drs
+        return 2 if (srs != sre or drs != dre) else 1
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1093,10 +1114,23 @@ class PrepareForMultiport(NATRuleProcessor):
 
         rule.ipt_multiport = True
 
-        if len(rule.osrv) > 15:
-            # Split into chunks of 15
-            for i in range(0, len(rule.osrv), 15):
-                chunk = rule.osrv[i : i + 15]
+        total_entries = sum(self._multiport_entry_count(s) for s in rule.osrv)
+        if total_entries > 15:
+            # Split into chunks respecting the 15-entry limit
+            chunk: list = []
+            chunk_entries = 0
+            for srv in rule.osrv:
+                entries = self._multiport_entry_count(srv)
+                if chunk and chunk_entries + entries > 15:
+                    r = rule.clone()
+                    r.osrv = chunk
+                    r.ipt_multiport = True
+                    self.tmp_queue.append(r)
+                    chunk = []
+                    chunk_entries = 0
+                chunk.append(srv)
+                chunk_entries += entries
+            if chunk:
                 r = rule.clone()
                 r.osrv = chunk
                 r.ipt_multiport = True

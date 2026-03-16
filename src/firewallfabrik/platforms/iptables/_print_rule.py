@@ -421,8 +421,8 @@ class PrintRule(PolicyRuleProcessor):
         if len(rule.srv) == 1:
             return self._print_dst_ports(srv)
 
-        # Multiple services — use multiport
-        if isinstance(srv, (TCPService, UDPService)):
+        # Multiple services — use multiport (requires ipt_multiport flag)
+        if rule.ipt_multiport and isinstance(srv, (TCPService, UDPService)):
             port_strs = []
             for s in rule.srv:
                 p = self._print_dst_ports_value(s)
@@ -430,7 +430,10 @@ class PrintRule(PolicyRuleProcessor):
                     port_strs.append(p)
             if port_strs:
                 return f' --dports {",".join(port_strs)} '
-        return ''
+
+        # Fallback: print first service only (should not happen if pipeline
+        # is correct, but avoids generating --dports without -m multiport)
+        return self._print_dst_ports(srv)
 
     def _print_src_ports(self, srv) -> str:
         if not isinstance(srv, (TCPService, UDPService)):

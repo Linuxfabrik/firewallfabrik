@@ -27,6 +27,7 @@ from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
     Begin,
+    CheckForTCPEstablished,
     ConvertToAtomicForAddresses,
     ConvertToAtomicForInterfaces,
     DetectShadowing,
@@ -41,10 +42,17 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
 )
+from firewallfabrik.compiler.processors._service import (
+    SeparateSrcPort,
+    SeparateTCPWithFlags,
+    SeparateUserServices,
+    VerifyCustomServices,
+)
 from firewallfabrik.core.objects import (
     Address,
     Direction,
     Firewall,
+    ICMP6Service,
     Interface,
     IPv4,
     IPv6,
@@ -208,19 +216,37 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
 
-        self.add(FillActionOnReject('fill action_on_reject'))
-
-        self.add(Logging2('process logging'))
-
-        # -- Negation processors --
+        # -- Srv negation & reject processors (matching fwbuilder order) --
         self.add(SingleSrvNegation('single srv negation'))
+        self.add(
+            SplitRuleIfSrvAnyActionReject(
+                'split rule if action is reject and srv is any'
+            )
+        )
         self.add(SrvNegation('process negation in Srv'))
+
+        self.add(CheckForTCPEstablished('check for TCP established flag'))
+
+        self.add(FillActionOnReject('fill action_on_reject'))
+        self.add(
+            SplitServicesIfRejectWithTCPReset('split if action on reject is TCP reset')
+        )
+        self.add(FillActionOnReject('fill action_on_reject 2'))
+        self.add(
+            SplitServicesIfRejectWithTCPReset(
+                'split if action on reject is TCP reset 2'
+            )
+        )
+
+        # -- Address negation processors --
         self.add(SingleSrcNegation('single src negation'))
         self.add(SingleDstNegation('single dst negation'))
         self.add(SplitIfSrcNegAndFw('split if src negated and fw'))
         self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
         self.add(SrcNegation('process negation in Src'))
         self.add(DstNegation('process negation in Dst'))
+
+        self.add(Logging2('process logging'))
 
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
@@ -269,7 +295,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(Optimize1('optimization 1, pass 3'))
 
         self.add(GroupServicesByProtocol('split on services'))
+        self.add(SeparateTCPWithFlags('split on TCP services with flags'))
+        self.add(VerifyCustomServices('verify custom services'))
         self.add(SeparatePortRanges('separate port ranges'))
+        self.add(SeparateUserServices('separate user services'))
+        self.add(SeparateSrcPort('split on TCP and UDP with source ports'))
         self.add(CheckForStatefulICMP6Rules('check for stateful ICMPv6 rules'))
 
         self.add(Optimize2('optimization 2'))
@@ -500,6 +530,26 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def get_action_on_reject(self, rule: CompRule) -> str:
         return rule.get_option('action_on_reject', '') or ''
+
+    def is_action_on_reject_tcp_rst(self, rule: CompRule) -> bool:
+        """Return True if action_on_reject is TCP RST."""
+        s = self.get_action_on_reject(rule)
+        return bool(s and 'TCP ' in s)
+
+    def reset_action_on_reject(self, rule: CompRule) -> None:
+        """Reset action_on_reject to a non-TCP value.
+
+        Uses the global option as fallback; if that is also TCP RST,
+        sets to 'NOP' as a safe fallback (matching fwbuilder behavior).
+        """
+        go = self.fw.get_option('action_on_reject') or ''
+        if go:
+            if 'TCP ' in go:
+                rule.set_option('action_on_reject', 'NOP')
+            else:
+                rule.set_option('action_on_reject', go)
+        else:
+            rule.set_option('action_on_reject', 'none')
 
     # -- Output generation --
 
@@ -1172,6 +1222,123 @@ class FillActionOnReject(PolicyRuleProcessor):
         return True
 
 
+class SplitRuleIfSrvAnyActionReject(PolicyRuleProcessor):
+    """Split Reject rules with srv=any into TCP RST + original.
+
+    When a Reject rule has no specific action_on_reject and srv is "any",
+    creates an additional rule for "Any TCP" with action_on_reject="TCP RST"
+    so TCP connections get RST while others get ICMP unreachable.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitRuleIfSrvAnyActionReject``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        aor = ipt_comp.get_action_on_reject(rule)
+
+        if rule.action == PolicyAction.Reject and not aor and rule.is_srv_any():
+            # Create TCP-only reject rule with TCP RST
+            import uuid
+
+            any_tcp = TCPService(id=uuid.uuid4(), name='Any TCP')
+            any_tcp.src_range_start = 0
+            any_tcp.src_range_end = 0
+            any_tcp.dst_range_start = 0
+            any_tcp.dst_range_end = 0
+
+            r = rule.clone()
+            r.srv = [any_tcp]
+            r.set_option('action_on_reject', 'TCP RST')
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
+    """Split rules with Reject + TCP RST that have mixed TCP/non-TCP services.
+
+    When action is Reject and action_on_reject contains "TCP ":
+    - Only non-TCP services: warn and reset action_on_reject
+    - Only TCP services: pass through unchanged
+    - Both: create two rules (non-TCP without TCP RST, TCP with TCP RST)
+
+    Called twice in the pipeline (matching fwbuilder behavior).
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitServicesIfRejectWithTCPReset``.
+    """
+
+    def __init__(self, name: str = '') -> None:
+        super().__init__(name)
+        self._seen_rules: set[int] = set()
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            rule.action != PolicyAction.Reject
+            or not ipt_comp.is_action_on_reject_tcp_rst(rule)
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        if not rule.srv:
+            # srv is "any" — can't split services, pass through
+            self.tmp_queue.append(rule)
+            return True
+
+        tcp_services: list = []
+        other_services: list = []
+        for srv in rule.srv:
+            # Use protocol name (more reliable — CustomService can set protocol)
+            if srv.get_protocol_name() == 'tcp':
+                tcp_services.append(srv)
+            else:
+                other_services.append(srv)
+
+        if other_services and not tcp_services:
+            # Only non-TCP services with TCP RST reject — warn and reset
+            if rule.position not in self._seen_rules:
+                self.compiler.warning(
+                    rule,
+                    "Rule action 'Reject' with TCP RST can be used "
+                    'only with TCP services.',
+                )
+            ipt_comp.reset_action_on_reject(rule)
+            self.tmp_queue.append(rule)
+            self._seen_rules.add(rule.position)
+            return True
+
+        if not other_services and tcp_services:
+            # Only TCP services — pass through unchanged
+            self.tmp_queue.append(rule)
+            return True
+
+        # Both TCP and non-TCP — split into two rules
+        # Rule 1: non-TCP services, clear action_on_reject
+        r1 = rule.clone()
+        r1.srv = other_services
+        r1.set_option('action_on_reject', '')
+        r1.subrule_suffix = '1'
+        self.tmp_queue.append(r1)
+
+        # Rule 2: TCP services, keep TCP RST
+        r2 = rule.clone()
+        r2.srv = tcp_services
+        r2.subrule_suffix = '2'
+        self.tmp_queue.append(r2)
+
+        return True
+
+
 class SplitIfSrcAny(PolicyRuleProcessor):
     """Split rule if src is 'any' and firewall is part of any."""
 
@@ -1635,16 +1802,106 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
         return True
 
 
-class CheckInterfaceAgainstAddressFamily(_Passthrough):
-    """Check if interface matches address family."""
+class CheckInterfaceAgainstAddressFamily(PolicyRuleProcessor):
+    """Drop rules where the interface has no addresses matching the address family.
 
-    pass
+    If the interface is "regular" (not dynamic, unnumbered, or bridge port),
+    the compiler requires it to have addresses matching the current address
+    family (IPv4 or IPv6). Rules with non-matching interfaces are dropped.
+
+    Dynamic/unnumbered/bridge port interfaces are assumed to acquire
+    appropriate addresses at runtime, so their rules are kept.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkInterfaceAgainstAddressFamily``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        rule_iface = rule.itf[0] if rule.itf else None
+        if not isinstance(rule_iface, Interface):
+            self.tmp_queue.append(rule)
+            return True
+
+        # Non-regular interfaces (dynamic, unnumbered, bridge port) may get
+        # addresses at runtime — keep the rule
+        if not rule_iface.is_regular():
+            self.tmp_queue.append(rule)
+            return True
+
+        # Check if the interface has addresses matching the address family
+        has_matching = False
+        for addr in rule_iface.addresses:
+            if ipt_comp.ipv6_policy and isinstance(addr, IPv6):
+                has_matching = True
+                break
+            if not ipt_comp.ipv6_policy and isinstance(addr, IPv4):
+                has_matching = True
+                break
+
+        if has_matching:
+            self.tmp_queue.append(rule)
+        # else: drop rule (interface has no matching addresses)
+        return True
 
 
-class SpecialCaseWithUnnumberedInterface(_Passthrough):
-    """Check for special cases with unnumbered interface."""
+class SpecialCaseWithUnnumberedInterface(PolicyRuleProcessor):
+    """Drop unnumbered/bridge port interface addresses from rules.
 
-    pass
+    Handles special cases where unnumbered or bridge port interfaces
+    appear in src/dst:
+    - Inbound: remove from src (source address is undetermined)
+    - Outbound + OUTPUT chain: remove from dst
+    - Outbound + other chain: remove from src
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseWithUnnumberedInterface``.
+    """
+
+    @staticmethod
+    def _drop_unnumbered(rule: CompRule, slot: str) -> bool:
+        """Remove unnumbered/bridge port interfaces from a rule element.
+
+        Returns True if the element still has objects after filtering
+        (or was "any" to begin with).
+        """
+        elements = getattr(rule, slot)
+        if not elements:
+            return True  # "any" — keep rule
+
+        new_elements = [
+            obj
+            for obj in elements
+            if not (
+                isinstance(obj, Interface)
+                and (obj.is_unnumbered() or obj.is_bridge_port())
+            )
+        ]
+        setattr(rule, slot, new_elements)
+        return bool(new_elements)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        keep_rule = True
+        direction = rule.direction
+
+        if direction == Direction.Inbound:
+            keep_rule = self._drop_unnumbered(rule, 'src')
+        elif direction == Direction.Outbound:
+            if rule.ipt_chain == 'OUTPUT':
+                keep_rule = self._drop_unnumbered(rule, 'dst')
+            else:
+                keep_rule = self._drop_unnumbered(rule, 'src')
+
+        if keep_rule:
+            self.tmp_queue.append(rule)
+        return True
 
 
 class Optimize1(PolicyRuleProcessor):
@@ -1851,44 +2108,158 @@ class SeparatePortRanges(PolicyRuleProcessor):
         return True
 
 
-class CheckForStatefulICMP6Rules(_Passthrough):
-    """Check for stateful ICMPv6 rules."""
+class CheckForStatefulICMP6Rules(PolicyRuleProcessor):
+    """Force ICMPv6 rules to be stateless.
 
-    pass
+    Stateful inspection of ICMPv6 is complex and unreliable.
+    Any rule matching ICMPv6 services is forced to stateless mode.
 
-
-class Optimize2(_Passthrough):
-    """Optimization pass 2."""
-
-    pass
-
-
-class PrepareForMultiport(PolicyRuleProcessor):
-    """Prepare rules for multiport matching."""
+    Corresponds to C++ ``PolicyCompiler_ipt::checkForStatefulICMP6Rules``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        from firewallfabrik.core.objects import TCPService, UDPService
-
-        if len(rule.srv) > 1:
-            all_same_proto = True
-            first_proto = type(rule.srv[0])
-            for s in rule.srv[1:]:
-                if type(s) is not first_proto:
-                    all_same_proto = False
-                    break
-
-            if (
-                all_same_proto
-                and isinstance(rule.srv[0], (TCPService, UDPService))
-                and len(rule.srv) <= 15
+        if rule.srv:
+            srv = rule.srv[0]
+            if isinstance(srv, ICMP6Service) and not rule.get_option(
+                'stateless', False
             ):
-                rule.ipt_multiport = True
+                self.compiler.warning(
+                    rule,
+                    'Making rule stateless because it matches ICMPv6',
+                )
+                rule.set_option('stateless', True)
 
         self.tmp_queue.append(rule)
+        return True
+
+
+class Optimize2(PolicyRuleProcessor):
+    """Clear service element on final/fallback rules for optimization.
+
+    For rules marked as ``final``, clears the service element to "any"
+    since the action applies regardless of service. Exception: Reject
+    rules with TCP RST preserve service info (TCP RST needs a TCP match).
+
+    Corresponds to C++ ``PolicyCompiler_ipt::optimize2``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.final:
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+            if (
+                rule.action == PolicyAction.Reject
+                and ipt_comp.is_action_on_reject_tcp_rst(rule)
+            ):
+                pass  # preserve service — TCP RST requires TCP match
+            else:
+                rule.srv = []  # clear to "any"
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class PrepareForMultiport(PolicyRuleProcessor):
+    """Prepare rules for multiport matching.
+
+    Corresponds to C++ PolicyCompiler_ipt::prepareForMultiport.
+    Sets the ``ipt_multiport`` flag for rules with multiple same-protocol
+    TCP/UDP services and splits into chunks when the multiport entry count
+    exceeds 15 (the iptables multiport module limit).
+
+    Port ranges (e.g. 8000:8005) count as **2** entries toward the 15-port
+    limit (start and end), not one.
+    """
+
+    @staticmethod
+    def _multiport_entry_count(srv) -> int:
+        """Return the number of multiport entries a single service uses.
+
+        A port range (start != end on src or dst) occupies 2 entries;
+        a single port occupies 1.
+        """
+        srs = srv.src_range_start or 0
+        sre = srv.src_range_end or 0
+        drs = srv.dst_range_start or 0
+        dre = srv.dst_range_end or 0
+        if srs != 0 and sre == 0:
+            sre = srs
+        if drs != 0 and dre == 0:
+            dre = drs
+        return 2 if (srs != sre or drs != dre) else 1
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        from firewallfabrik.core.objects import (
+            CustomService,
+            ICMPService,
+            IPService,
+            TagService,
+            TCPService,
+            UDPService,
+        )
+
+        if len(rule.srv) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        first_srv = rule.srv[0]
+
+        # Non-multiport service types: split into one rule per service
+        if isinstance(first_srv, (ICMPService, IPService, CustomService, TagService)):
+            for srv in rule.srv:
+                r = rule.clone()
+                r.srv = [srv]
+                self.tmp_queue.append(r)
+            return True
+
+        # Only TCP/UDP can use multiport
+        if not isinstance(first_srv, (TCPService, UDPService)):
+            self.tmp_queue.append(rule)
+            return True
+
+        # Verify all services share the same protocol
+        first_proto = type(first_srv)
+        if not all(type(s) is first_proto for s in rule.srv[1:]):
+            self.tmp_queue.append(rule)
+            return True
+
+        rule.ipt_multiport = True
+
+        total_entries = sum(self._multiport_entry_count(s) for s in rule.srv)
+        if total_entries > 15:
+            # Split into chunks respecting the 15-entry limit
+            chunk: list = []
+            chunk_entries = 0
+            for srv in rule.srv:
+                entries = self._multiport_entry_count(srv)
+                if chunk and chunk_entries + entries > 15:
+                    r = rule.clone()
+                    r.srv = chunk
+                    r.ipt_multiport = True
+                    self.tmp_queue.append(r)
+                    chunk = []
+                    chunk_entries = 0
+                chunk.append(srv)
+                chunk_entries += entries
+            if chunk:
+                r = rule.clone()
+                r.srv = chunk
+                r.ipt_multiport = True
+                self.tmp_queue.append(r)
+        else:
+            self.tmp_queue.append(rule)
+
         return True
 
 
@@ -1918,10 +2289,39 @@ class Optimize3(PolicyRuleProcessor):
         return True
 
 
-class CheckForObjectsWithErrors(_Passthrough):
-    """Check for objects with errors in rule elements."""
+class CheckForObjectsWithErrors(PolicyRuleProcessor):
+    """Check for objects marked with compilation errors.
 
-    pass
+    Iterates all rule elements and checks each object for the
+    ``rule_error`` flag. If set, aborts compilation with the stored
+    error message.
+
+    In our CompRule model, objects generally don't carry error flags
+    directly — instead, errors are recorded via ``compiler.abort()``.
+    This processor catches any objects that were flagged with errors
+    by earlier processors (e.g., via ``obj.data['rule_error']``).
+
+    Corresponds to C++ ``Compiler::checkForObjectsWithErrors``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        for slot in ('src', 'dst', 'srv', 'itf'):
+            for obj in getattr(rule, slot):
+                data = getattr(obj, 'data', None) or {}
+                if data.get('rule_error', False):
+                    error_msg = data.get('error_msg', 'Object has errors')
+                    name = getattr(obj, 'name', str(obj))
+                    self.compiler.abort(
+                        rule,
+                        f"Object '{name}' has errors: {error_msg}",
+                    )
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class CountChainUsage(PolicyRuleProcessor):

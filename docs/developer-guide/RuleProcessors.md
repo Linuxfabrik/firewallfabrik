@@ -12,8 +12,9 @@ The compilation pipeline is a chain of `BasicRuleProcessor` objects. Each proces
 
 - `src/firewallfabrik/compiler/_rule_processor.py` — `BasicRuleProcessor` base class
 - `src/firewallfabrik/compiler/_compiler.py` — `Compiler.add()`, `run_rule_processors()`
-- `src/firewallfabrik/compiler/processors/_generic.py` — generic/shared processors (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `DetectShadowing`, etc.)
+- `src/firewallfabrik/compiler/processors/_generic.py` — generic/shared processors (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `DetectShadowing`, `CheckForTCPEstablished`, etc.)
 - `src/firewallfabrik/compiler/processors/_policy.py` — policy-specific base processors (`InterfacePolicyRules`, `ExpandMultipleAddresses`, `MACFiltering`, etc.)
+- `src/firewallfabrik/compiler/processors/_service.py` — service separation processors (`SeparateServiceObject` base, `SeparateTCPWithFlags`, `SeparateSrcPort`, `VerifyCustomServices`, etc.)
 - `src/firewallfabrik/platforms/iptables/_policy_compiler.py` — iptables policy processors
 - `src/firewallfabrik/platforms/iptables/_nat_compiler.py` — iptables NAT processors
 - `src/firewallfabrik/platforms/iptables/_print_rule.py` — iptables output generation
@@ -1758,9 +1759,9 @@ Status of the Python implementation (`src/firewallfabrik/`) relative to the C++ 
 
 | Status | Count | Meaning |
 |--------|-------|---------|
-| ✅ Implemented | ~52 | Python equivalent exists and matches C++ behavior |
-| ⚠️ Partial | ~12 | Python equivalent exists but has missing features or behavioral differences |
-| ❌ Missing | ~34 | No Python equivalent |
+| ✅ Implemented | ~68 | Python equivalent exists and matches C++ behavior |
+| ⚠️ Partial | ~8 | Python equivalent exists but has missing features or behavioral differences |
+| ❌ Missing | ~22 | No Python equivalent |
 
 ### Processors that exist but are NOT wired into `compile()`
 
@@ -1789,7 +1790,7 @@ These processors exist only in the Python implementation:
 
 ### Pipeline comparison
 
-The Python policy `compile()` pipeline uses **~48 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~30 processors**. The implemented processors are in the correct relative order. The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) plus empty group validation, shadowing detection, `firewall_is_part_of_any_and_networks` support, and `local_nat` NAT support, but omits many validation, edge-case, and mangle-table processors.
+The Python policy `compile()` pipeline uses **~58 processors** vs. **~80** in the C++ `PolicyCompiler_ipt::compile()`. The iptables NAT pipeline adds **~30 processors**. The implemented processors are in the correct relative order (matching fwbuilder's pipeline). The Python pipeline covers the core compilation flow (group expansion, negation, firewall splitting, chain/target assignment, optimization, output generation) plus empty group validation, shadowing detection, `firewall_is_part_of_any_and_networks` support, `local_nat` NAT support, REJECT rule splitting (TCP RST vs ICMP), service separation (multiport correctness), and interface/address family validation. Remaining gaps: mangle table, address ranges, cluster/bridging, and some validation processors.
 
 ### Implementation priority
 
@@ -1827,7 +1828,7 @@ Missing these means bad configs compile without errors. Low effort, high safety 
 | ~~10~~ | ~~`emptyGroupsInRE` (×4)~~ | ✅ Done | Implemented as `EmptyGroupsInRE` in `compiler/processors/_generic.py` with slot parameterization. Wired into iptables policy (SRC, DST, SRV, ITF), iptables NAT (OSRC, ODST, OSRV, TSRC, TDST, TSRV), and nftables policy (SRC, DST, SRV, ITF). Not yet in nftables NAT. |
 | 11 | `checkForUnnumbered` | ~15 lines | Catch unnumbered interfaces used as addresses. Without it, rules silently compile with missing addresses. |
 | 12 | `checkForZeroAddr` | ~25 lines | Catch 0.0.0.0 addresses and /0 typos. Without it, overly broad rules compile silently. |
-| 13 | `CheckForTCPEstablished` | ~10 lines | Abort if the unsupported "established" flag is used. Without it, the flag is silently ignored. |
+| ~~13~~ | ~~`CheckForTCPEstablished`~~ | ✅ Done | Implemented in `compiler/processors/_generic.py`. Wired into iptables policy pipeline after `SrvNegation`. |
 | ~~14~~ | ~~Shadowing detection pass~~ | ✅ Partially done | `DetectShadowing` is fully implemented with address/service containment checks and wired into both iptables and nftables policy pipelines (conditional on `check_shading` option). Remaining: the separate C++ shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing` + `splitIf*AnyForShadowing` is not implemented (current approach runs inline in the main pass without full atomization). |
 
 #### Tier 4 — Missing processors for common rule patterns
@@ -1837,11 +1838,12 @@ These affect specific but common rule configurations.
 | # | Processor | Effort | Why |
 |---|-----------|--------|-----|
 | 15 | `specialCaseWithFW1` | ~30 lines | Handle fw in both Src AND Dst (fw-to-fw traffic, e.g. localhost services). Without it, these rules get wrong chain assignment. |
-| 16 | `splitRuleIfSrvAnyActionReject` | ~25 lines | Split Reject+tcp-reset when Srv includes non-TCP. Without it, `--reject-with tcp-reset` is applied to UDP/ICMP traffic → iptables error at runtime. |
-| 17 | `splitServicesIfRejectWithTCPReset` | ~20 lines | Finer-grained version of above. |
-| 18 | `separateTCPWithFlags` | ~15 lines | TCP flag rules (SYN, ACK, etc.) need individual rules. Without it, multi-service rules with TCP flags produce wrong output. |
+| 15 | `specialCaseWithFW1` | ~30 lines | Handle fw in both Src AND Dst (fw-to-fw traffic, e.g. localhost services). Without it, these rules get wrong chain assignment. |
+| ~~16~~ | ~~`splitRuleIfSrvAnyActionReject`~~ | ✅ Done | Implemented in iptables `_policy_compiler.py`. Splits Reject+srv=any into TCP RST + original. Wired into pipeline before `SrvNegation`. |
+| ~~17~~ | ~~`splitServicesIfRejectWithTCPReset`~~ | ✅ Done | Implemented in iptables `_policy_compiler.py`. Called twice in pipeline (matching fwbuilder). |
+| ~~18~~ | ~~`separateTCPWithFlags`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Uses `tcp_flags_masks` (matching fwbuilder's `inspectFlags()`). |
 | 19 | `specialCaseWithFWInDstAndOutbound` | ~15 lines | Fix impossible fw+dst+outbound combination. Rare but causes wrong chains when hit. |
-| 20 | `verifyCustomServices` | ~10 lines | Catch CustomService with no code for iptables platform. |
+| ~~20~~ | ~~`verifyCustomServices`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Wired into iptables pipeline. |
 
 #### Tier 5 — Mangle table support (complete feature area)
 
@@ -1870,7 +1872,7 @@ Affect specific object types that may not appear in typical configs.
 | 32 | `processMultiAddressObjects*` | ~20 lines | Split MultiAddress objects into individual rules. |
 | 33 | `expandLoopbackInterfaceAddress` | ~10 lines | Replace loopback interface refs with actual address. |
 | 34 | `specialCaseAddressRange*` + `splitIfMatchingAddressRange*` | ~40 lines | Single-address range optimization + fw-in-range splitting. |
-| 35 | `separateSrcPort` / `separateUserServices` | ~15 lines each | Source port and UserService splitting. |
+| ~~35~~ | ~~`separateSrcPort` / `separateUserServices`~~ | ✅ Done | Implemented in `compiler/processors/_service.py`. Wired into iptables pipeline after `SeparatePortRanges`. |
 | 36 | `checkForDynamicInterfacesOfOtherObjects` | ~15 lines | Validate dynamic interfaces belong to this fw. |
 
 #### Tier 7 — Cluster, bridging, nice-to-haves
@@ -1887,13 +1889,13 @@ Lowest priority — either affect rare configurations or are pure improvements.
 | 42 | `ReplaceFirewallObjectWithSelfInRE` | ~15 lines | Runtime self-identification via DNSName. Platform-specific, not needed for iptables. |
 | 43 | `createNewCompilerPass` / `Debug` / `deprecateOptionRoute` | minimal | Developer tooling and deprecated features. |
 
-#### Recommended first sprint
+#### Recommended next sprint
 
-For maximum correctness improvement per effort, do **Tiers 1+2** first (items 1–8). Tier 2 items 7–8 (negation) are complete. Tier 3 items 10 (empty groups) and 14 (shadowing) are now done. Remaining work is roughly **~70 lines of changes**:
-- Partial processors in the active pipeline (items 1–5)
-- Global logging override (item 6)
-
-After that, **Tier 3** remaining items (9, 11–13, ~70 lines) closes the safety gap — validation processors that prevent bad configs. Together, Tiers 1–3 cover the most impactful ~210 lines of work.
+Tiers 2–3 validation items (7–8, 10, 13–14) and Tier 4 reject/service items (16–18, 20, 35) are complete. Remaining high-impact work:
+- **Tier 1** partial processors (items 1–5): ~70 lines — improves correctness for every compilation
+- **Tier 3** remaining validators (items 9, 11–12): ~60 lines — prevents bad configs
+- **Tier 4** remaining (item 15, 19): ~45 lines — fw-to-fw traffic and outbound edge cases
+- **Tier 5** mangle table (items 21–28): ~100 lines — complete feature area, requires Tier 1 items 1+3 first
 
 ---
 

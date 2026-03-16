@@ -8,7 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+- **iptables REJECT rule correctness** (Phase 1): `SplitRuleIfSrvAnyActionReject` splits Reject rules with srv=any into TCP RST + ICMP unreachable. `SplitServicesIfRejectWithTCPReset` separates mixed TCP/non-TCP services when TCP RST is configured. `CheckForTCPEstablished` aborts compilation if the deprecated "established" TCP flag is used. Pipeline reordered to match fwbuilder's processor sequence.
+- **Service separation framework** (Phase 2): New `compiler/processors/_service.py` with `SeparateServiceObject` base class and concrete separators (`SeparateTCPWithFlags`, `SeparateSrcPort`, `SeparateSrcAndDstPort`, `SeparateUserServices`, `SeparateCustom`, `SeparateTagged`). `VerifyCustomServices` aborts if a CustomService has no code for the target platform. Inserted into the iptables pipeline after `GroupServicesByProtocol`.
+- **Stub processor implementations** (Phase 3): `CheckInterfaceAgainstAddressFamily` drops rules where the interface has no matching addresses. `SpecialCaseWithUnnumberedInterface` removes unnumbered/bridge-port interfaces from src/dst. `CheckForStatefulICMP6Rules` forces ICMPv6 rules to stateless mode. `Optimize2` clears service on final rules (except Reject+TCP RST). `CheckForObjectsWithErrors` checks for objects flagged with errors.
+
+### Fixed
+
+- **Multiport rules broken** (fixes #21): `SeparateTCPWithFlags` incorrectly separated ALL TCP services because the standard library stores `tcp_flags: {urg: false, ...}` — a non-empty dict. Now checks `tcp_flags_masks` for actual flag inspection (matching fwbuilder's `inspectFlags()`). Also hardened `_print_dst_service_from_rule` to only emit `--dports` when `ipt_multiport` flag is set, preventing `--dports` without `-m multiport`.
+- **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.
+
+### Changed
+
+- **Timestamp format** in generated scripts: `Mon Mar 16 20:06:24 2026` → `2026-03-16 20:06:24 (Mon)` (all platforms).
 
 
 ## [v1.1.0] - 2026-03-16

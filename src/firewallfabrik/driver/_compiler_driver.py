@@ -148,7 +148,7 @@ class CompilerDriver(BaseCompiler):
         # Set variables
         skeleton.set_variable('shell_debug', '')
         skeleton.set_variable('firewall_dir', '/etc/fw')
-        skeleton.set_variable('timestamp', time.strftime('%c'))
+        skeleton.set_variable('timestamp', time.strftime('%Y-%m-%d %H:%M:%S (%a)'))
         skeleton.set_variable('user', os.environ.get('USER', 'unknown'))
         skeleton.set_variable('platform', fw.platform)
         skeleton.set_variable('fw_version', fw.version)

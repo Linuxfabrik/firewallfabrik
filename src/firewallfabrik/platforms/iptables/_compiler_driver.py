@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 
+import firewallfabrik
 from firewallfabrik.compiler._base import CompilerStatus
 from firewallfabrik.core.objects import (
     NAT,
@@ -402,7 +403,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     return errors_str + generated_script + routing_output
 
                 # --- Script assembly ---
-                timestr = time.strftime('%c')
+                timestr = time.strftime('%Y-%m-%d %H:%M:%S (%a)')
                 tz = time.strftime('%Z')
                 user_name = os.environ.get('USER', 'unknown')
 
@@ -551,7 +552,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Top comment configlet
                 top_comment = Configlet('linux24', 'top_comment')
-                top_comment.set_variable('version', '0.1.0')
+                top_comment.set_variable('version', firewallfabrik.__version__)
                 top_comment.set_variable('timestamp', timestr)
                 top_comment.set_variable('tz', tz)
                 top_comment.set_variable('user', user_name)
