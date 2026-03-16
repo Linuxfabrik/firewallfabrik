@@ -27,6 +27,7 @@ from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
     Begin,
+    CheckForTCPEstablished,
     ConvertToAtomicForInterfaces,
     DetectShadowing,
     DropIPv4Rules,
@@ -37,12 +38,16 @@ from firewallfabrik.compiler.processors._generic import (
     EliminateDuplicatesInSRV,
     EmptyGroupsInRE,
     ExpandGroups,
+    RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
 )
 from firewallfabrik.core.objects import (
+    Address,
     Direction,
     Firewall,
+    Host,
+    ICMP6Service,
     Interface,
     IPv4,
     IPv6,
@@ -130,7 +135,10 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
-        # Check for empty groups before expansion
+        # Check for recursive and empty groups before expansion
+        self.add(RecursiveGroupsInRE('check for recursive groups in SRC', 'src'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in DST', 'dst'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in SRV', 'srv'))
         self.add(EmptyGroupsInRE('check for empty groups in SRC', 'src'))
         self.add(EmptyGroupsInRE('check for empty groups in DST', 'dst'))
         self.add(EmptyGroupsInRE('check for empty groups in SRV', 'srv'))
@@ -142,6 +150,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
         self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
         self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
+
+        self.add(CheckForTCPEstablished('check for TCP established flag'))
 
         # Reject settings
         self.add(FillActionOnReject('fill action_on_reject'))
@@ -171,6 +181,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Clean up firewall object in src/dst
         self.add(RemoveFW('remove fw'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
+        self.add(ExpandLoopbackInterfaceAddress('replace loopback with address'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
         # Address family filtering
@@ -180,11 +191,19 @@ class PolicyCompiler_nft(PolicyCompiler):
             self.add(DropIPv6Rules('drop ipv6 rules'))
         self.add(DropRuleWithEmptyRE('drop rules after AF filter'))
 
+        self.add(CheckForUnnumbered('check for unnumbered interfaces'))
+        self.add(CheckForDynamicInterfacesOfOtherObjects('check dynamic interfaces'))
+
         # Convert to atomic
         self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
         self.add(GroupServicesByProtocol('split on services'))
 
+        self.add(CheckForStatefulICMP6Rules('check for stateful ICMPv6 rules'))
+
         self.add(Optimize3('optimization 3'))
+
+        self.add(CheckForZeroAddr('check for zero addresses'))
+        self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
         if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
             self.add(DetectShadowing('detect rule shadowing'))
@@ -1022,3 +1041,147 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         udp_src = {(s.src_range_start or 0, s.src_range_end or 0) for s in udp_srvs}
 
         return tcp_dst == udp_dst and tcp_src == udp_src
+
+
+class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
+    """Abort if dynamic interfaces of other hosts/firewalls are used."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('src', 'dst'):
+            for obj in getattr(rule, slot):
+                if isinstance(obj, Interface) and obj.is_dynamic():
+                    fw = self.compiler.fw
+                    if not any(iface.id == obj.id for iface in fw.interfaces):
+                        parent_name = getattr(obj, 'parent_name', '') or getattr(
+                            getattr(obj, 'parent', None), 'name', 'unknown'
+                        )
+                        self.compiler.abort(
+                            rule,
+                            f'Can not build rule using dynamic interface'
+                            f" '{obj.name}' of object '{parent_name}'",
+                        )
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForObjectsWithErrors(PolicyRuleProcessor):
+    """Check for objects marked with compilation errors."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('src', 'dst', 'srv', 'itf'):
+            for obj in getattr(rule, slot):
+                data = getattr(obj, 'data', None) or {}
+                if data.get('rule_error', False):
+                    error_msg = data.get('error_msg', 'Object has errors')
+                    name = getattr(obj, 'name', str(obj))
+                    self.compiler.abort(
+                        rule,
+                        f"Object '{name}' has errors: {error_msg}",
+                    )
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForStatefulICMP6Rules(PolicyRuleProcessor):
+    """Force ICMPv6 rules to be stateless."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.srv:
+            srv = rule.srv[0]
+            if isinstance(srv, ICMP6Service) and not rule.get_option(
+                'stateless', False
+            ):
+                self.compiler.warning(
+                    rule, 'Making rule stateless because it matches ICMPv6'
+                )
+                rule.set_option('stateless', True)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForUnnumbered(PolicyRuleProcessor):
+    """Check for unnumbered interfaces in src/dst."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('src', 'dst'):
+            for obj in getattr(rule, slot):
+                if isinstance(obj, Interface) and (
+                    obj.is_unnumbered() or obj.is_bridge_port()
+                ):
+                    self.compiler.abort(
+                        rule, 'Can not use unnumbered interfaces in rules.'
+                    )
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckForZeroAddr(PolicyRuleProcessor):
+    """Check for zero addresses and hosts without interfaces."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('src', 'dst'):
+            for obj in getattr(rule, slot):
+                if isinstance(obj, Host) and not obj.interfaces:
+                    self.compiler.abort(rule, f"Object '{obj.name}' has no interfaces")
+                if isinstance(obj, Address):
+                    addr_s = obj.get_address()
+                    mask_s = obj.get_netmask()
+                    if addr_s == '0.0.0.0' and mask_s == '0.0.0.0':
+                        self.compiler.abort(
+                            rule,
+                            f"Object '{obj.name}' has address 0.0.0.0/0.0.0.0",
+                        )
+                    if (
+                        isinstance(obj, (Network, NetworkIPv6))
+                        and addr_s
+                        and addr_s != '0.0.0.0'
+                        and mask_s == '0.0.0.0'
+                    ):
+                        self.compiler.abort(
+                            rule,
+                            f"Object '{obj.name}' has netmask 0.0.0.0"
+                            f" (equivalent to 'any')",
+                        )
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
+    """Replace loopback interface objects with their actual addresses."""
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        for slot in ('src', 'dst'):
+            elements = getattr(rule, slot)
+            if not elements:
+                continue
+            new_elements = []
+            changed = False
+            for obj in elements:
+                if isinstance(obj, Interface) and obj.is_loopback():
+                    for addr in obj.addresses:
+                        new_elements.append(addr)
+                    changed = True
+                else:
+                    new_elements.append(obj)
+            if changed:
+                setattr(rule, slot, new_elements)
+        self.tmp_queue.append(rule)
+        return True

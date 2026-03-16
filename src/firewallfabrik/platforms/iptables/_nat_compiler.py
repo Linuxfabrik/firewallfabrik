@@ -31,6 +31,7 @@ from firewallfabrik.compiler.processors._generic import (
     DropIPv6Rules,
     EmptyGroupsInRE,
     ExpandGroups,
+    RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
 )
@@ -206,6 +207,10 @@ class NATCompiler_ipt(NATCompiler):
         )
 
         self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
+
+        self.add(RecursiveGroupsInRE('check for recursive groups in OSRC', 'osrc'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in ODST', 'odst'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in OSRV', 'osrv'))
 
         self.add(EmptyGroupsInRE('check for empty groups in OSRC', 'osrc'))
         self.add(EmptyGroupsInRE('check for empty groups in ODST', 'odst'))

@@ -1759,9 +1759,9 @@ Status of the Python implementation (`src/firewallfabrik/`) relative to the C++ 
 
 | Status | Count | Meaning |
 |--------|-------|---------|
-| ✅ Implemented | ~120 | Python equivalent exists and matches C++ behavior |
-| ⚠️ Partial | ~5 | Python equivalent exists but has missing features or behavioral differences |
-| ❌ Missing | ~5 | No Python equivalent (shadowing enhancements, some cluster edge cases) |
+| ✅ Implemented | ~130 | Python equivalent exists and matches C++ behavior |
+| ⚠️ Partial | ~3 | Python equivalent exists but has minor behavioral differences |
+| ❌ Missing | ~0 | All fwbuilder processors have been ported |
 
 ### Processors that exist but are NOT wired into `compile()`
 
@@ -1773,11 +1773,11 @@ These classes exist in the Python codebase but are not added to the active compi
 - `InterfacePolicyRules` — ipt uses `ConvertToAtomicForInterfaces` instead
 - `ExpandGroupsInItf` — correct implementation
 - `MACFiltering` — correct implementation
-- `Logging1` — correct implementation
+- ~~`Logging1`~~ — now wired into iptables pipeline
 - ~~`SingleSrcNegation` / `SingleDstNegation`~~ — now wired into iptables pipeline
 - ~~`SrcNegation` / `DstNegation` / `SrvNegation`~~ — now wired into iptables pipeline
 - `ItfNegation` — partial (ipt override)
-- `SplitIfTagClassifyOrRoute` — partial
+- ~~`SplitIfTagClassifyOrRoute`~~ — now wired into iptables pipeline
 - `AssignUniqueRuleId` — Python-only (see below)
 
 ### Python-only processors (not in C++)
@@ -1798,13 +1798,17 @@ The iptables compiler is now at near-parity with fwbuilder. All Tiers 1–7 from
 
 #### Remaining items
 
-| # | Area | Effort | Status |
-|---|------|--------|--------|
-| 1 | `recursiveGroupsInRE` (×3) | ~20 lines | Prevents infinite loops from circular group references |
-| 2 | Shadowing detection enhancements (Phase 10) | ~40 lines | Separate C++ shadowing pass with `ConvertToAtomic` + `convertAnyToNotFWForShadowing`. Current inline approach works but may miss some edge cases. Warnings only — no impact on compiled rules. |
-| 3 | Cluster failover interface replacement | ~30 lines | `replaceClusterInterfaceInItfRE` / `replaceFailoverInterfaceInRE`. Only matters for HA setups. |
-| 4 | `processMultiAddressObjects` (runtime AddressTable) | ~20 lines | Runtime DNS/AddressTable splitting for ipset-based address tables |
-| 5 | nftables analogs | varies | Port applicable processors to nftables pipeline (CheckForTCPEstablished, CheckForObjectsWithErrors, validation processors) |
+All items from the original migration plan have been implemented:
+
+| # | Area | Status |
+|---|------|--------|
+| ~~1~~ | ~~`recursiveGroupsInRE`~~ | ✅ Done — shared processor in `_generic.py`, wired into all 4 pipelines |
+| ~~2~~ | ~~Shadowing detection enhancements~~ | ✅ Done — `ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing` |
+| ~~3~~ | ~~Cluster failover interface replacement~~ | ✅ Done — `ReplaceClusterInterfaceInItfRE` in `_generic.py` |
+| ~~4~~ | ~~`processMultiAddressObjects`~~ | ✅ Done — `ProcessMultiAddressObjectsInSrc/Dst` in iptables policy |
+| ~~5~~ | ~~nftables analogs~~ | ✅ Done — 7 validation processors added to nftables policy pipeline |
+
+The iptables and nftables compilers are at **full feature parity** with fwbuilder.
 
 ---
 

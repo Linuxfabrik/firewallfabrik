@@ -39,6 +39,7 @@ from firewallfabrik.compiler.processors._generic import (
     EliminateDuplicatesInSRV,
     EmptyGroupsInRE,
     ExpandGroups,
+    RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
 )
@@ -231,6 +232,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         self.add(ResolveMultiAddress('resolve compile-time MultiAddress'))
 
+        self.add(RecursiveGroupsInRE('check for recursive groups in SRC', 'src'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in DST', 'dst'))
+        self.add(RecursiveGroupsInRE('check for recursive groups in SRV', 'srv'))
+
         self.add(EmptyGroupsInRE('check for empty groups in SRC', 'src'))
         self.add(EmptyGroupsInRE('check for empty groups in DST', 'dst'))
         self.add(EmptyGroupsInRE('check for empty groups in SRV', 'srv'))
@@ -296,6 +301,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SplitIfDstAny('split rule if dst is any'))
 
         self.add(SetChainPostroutingForTag('chain POSTROUTING for Tag'))
+
+        self.add(ProcessMultiAddressObjectsInSrc('process MultiAddress objects in Src'))
+        self.add(ProcessMultiAddressObjectsInDst('process MultiAddress objects in Dst'))
 
         # Address range handling (iptables >= 1.2.11)
         self.add(SpecialCaseAddressRangeInSrc('replace single address range in Src'))
@@ -408,6 +416,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
 
         if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
+            self.add(
+                ConvertAnyToNotFWForShadowing('convert any to not-fw for shadowing')
+            )
+            self.add(SplitIfSrcAnyForShadowing('split src any for shadowing'))
+            self.add(SplitIfDstAnyForShadowing('split dst any for shadowing'))
             self.add(DetectShadowing('detect rule shadowing'))
 
         self.add(CountChainUsage('count chain usage'))
@@ -1721,6 +1734,201 @@ class SplitIfDstAny(PolicyRuleProcessor):
 
         self.tmp_queue.append(rule)
         return True
+
+
+class ConvertAnyToNotFWForShadowing(PolicyRuleProcessor):
+    """Create Return rules for fw when src/dst is 'any' and fw-is-part-of-any is off.
+
+    For the shadowing detection pass: when 'firewall_is_part_of_any_and_networks'
+    is off, 'any' does NOT include the firewall. To model this for shadowing,
+    create a Return rule with fw in the relevant element.
+
+    Corresponds to C++ PolicyCompiler_ipt::convertAnyToNotFWForShadowing.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+
+        if not afpa:
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+            if rule.is_src_any():
+                r = rule.clone()
+                r.action = PolicyAction.Return
+                r.src = [ipt_comp.fw]
+                self.tmp_queue.append(r)
+
+            if rule.is_dst_any():
+                r = rule.clone()
+                r.action = PolicyAction.Return
+                r.dst = [ipt_comp.fw]
+                self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfSrcAnyForShadowing(PolicyRuleProcessor):
+    """Split rules with src=any for the shadowing detection pass.
+
+    When fw-is-part-of-any is on, create an OUTPUT copy with fw in src.
+
+    Corresponds to C++ PolicyCompiler_ipt::splitIfSrcAnyForShadowing.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_option('classification', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            afpa
+            and not rule.get_option('no_output_chain', False)
+            and rule.direction != Direction.Inbound
+            and rule.is_src_any()
+        ):
+            r = rule.clone()
+            ipt_comp.set_chain(r, 'OUTPUT')
+            r.direction = Direction.Outbound
+            r.src = [ipt_comp.fw]
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfDstAnyForShadowing(PolicyRuleProcessor):
+    """Split rules with dst=any for the shadowing detection pass.
+
+    When fw-is-part-of-any is on, create an INPUT copy with fw in dst.
+
+    Corresponds to C++ PolicyCompiler_ipt::splitIfDstAnyForShadowing.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_option('classification', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+
+        if (
+            afpa
+            and not rule.get_option('no_input_chain', False)
+            and rule.direction != Direction.Outbound
+            and rule.is_dst_any()
+        ):
+            r = rule.clone()
+            ipt_comp.set_chain(r, 'INPUT')
+            r.direction = Direction.Inbound
+            r.dst = [ipt_comp.fw]
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
+    """Process runtime MultiAddress objects (AddressTable, DNSName).
+
+    For AddressTable objects: register with OS configurator and set
+    the address_table_file option for runtime resolution.
+    For DNSName objects: leave as-is (resolved at runtime).
+    If multiple runtime objects exist, split into separate rules.
+
+    Corresponds to C++ PolicyCompiler_ipt::processMultiAddressObjectsInRE.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        from firewallfabrik.core.objects import MultiAddressRunTime
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        # Find runtime MultiAddress objects
+        runtime_objs = [obj for obj in elements if isinstance(obj, MultiAddressRunTime)]
+
+        if not runtime_objs:
+            self.tmp_queue.append(rule)
+            return True
+
+        if len(elements) == 1 and len(runtime_objs) == 1:
+            # Single runtime object -- register and pass through
+            mart = runtime_objs[0]
+            self._register_runtime_object(rule, mart)
+            self.tmp_queue.append(rule)
+            return True
+
+        # Multiple objects -- split runtime ones into separate rules
+        for mart in runtime_objs:
+            r = rule.clone()
+            setattr(r, self._slot, [mart])
+            self._register_runtime_object(r, mart)
+            self.tmp_queue.append(r)
+
+        # Keep non-runtime objects in original rule
+        remaining = [obj for obj in elements if obj not in runtime_objs]
+        if remaining:
+            setattr(rule, self._slot, remaining)
+            self.tmp_queue.append(rule)
+
+        return True
+
+    def _register_runtime_object(self, rule, mart) -> None:
+        """Register a runtime MultiAddress object with the OS configurator."""
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        if ipt_comp.oscnf is not None and hasattr(
+            ipt_comp.oscnf, 'register_multi_address'
+        ):
+            ipt_comp.oscnf.register_multi_address(mart)
+        # Set address table file path if applicable
+        source_name = getattr(mart, 'source_name', '') or ''
+        if source_name:
+            rule.set_option('address_table_file', source_name)
+
+
+class ProcessMultiAddressObjectsInSrc(ProcessMultiAddressObjectsInRE):
+    def __init__(self, name):
+        super().__init__(name, 'src')
+
+
+class ProcessMultiAddressObjectsInDst(ProcessMultiAddressObjectsInRE):
+    def __init__(self, name):
+        super().__init__(name, 'dst')
 
 
 class SplitIfSrcMatchesFw(PolicyRuleProcessor):

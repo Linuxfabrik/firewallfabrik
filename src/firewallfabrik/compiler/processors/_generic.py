@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import ipaddress as _ipa
 
+import sqlalchemy
+
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
 from firewallfabrik.core._util import SLOT_VALUES
@@ -30,6 +32,7 @@ from firewallfabrik.core.objects import (
     Group,
     ICMP6Service,
     ICMPService,
+    Interface,
     IPService,
     MultiAddress,
     Network,
@@ -38,12 +41,38 @@ from firewallfabrik.core.objects import (
     Service,
     TCPService,
     TCPUDPService,
+    group_membership,
 )
 
 
 def _is_runtime(obj: MultiAddress) -> bool:
     """Return True if the MultiAddress is marked for run-time resolution."""
     return bool((obj.data or {}).get('run_time', False))
+
+
+def _get_group_members(session, group: Group) -> list:
+    """Return the direct members of a group (without recursive expansion).
+
+    Uses the ``group_membership`` association table to look up member IDs,
+    then resolves them to model objects.  Needed by
+    :class:`RecursiveGroupsInRE` to walk the group tree.
+    """
+    member_ids = (
+        session.execute(
+            sqlalchemy.select(group_membership.c.member_id).where(
+                group_membership.c.group_id == group.id,
+            ),
+        )
+        .scalars()
+        .all()
+    )
+    if not member_ids:
+        return []
+
+    from firewallfabrik.compiler._comp_rule import _resolve_objects
+
+    obj_map = _resolve_objects(session, set(member_ids))
+    return [obj_map[mid] for mid in member_ids if mid in obj_map]
 
 
 class Begin(BasicRuleProcessor):
@@ -265,6 +294,62 @@ class EmptyGroupsInRE(BasicRuleProcessor):
                 f" 'Ignore rules with empty groups' is off",
             )
             return True  # abort was set
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class RecursiveGroupsInRE(BasicRuleProcessor):
+    """Check for recursive (self-referencing) groups in a rule element slot.
+
+    Corresponds to C++ ``Compiler::recursiveGroupsInRE``.  Runs **before**
+    ``EmptyGroupsInRE`` and ``ExpandGroups``.  For each Group in the slot,
+    recursively checks whether any nested group references itself or an
+    ancestor, aborting compilation if it does.
+
+    Each platform compiler adds one instance per slot it cares about
+    (e.g. src, dst, srv for policy; osrc, odst, osrv for NAT).
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def _is_recursive_group(self, grid, obj) -> None:
+        """Recursively check whether *obj* contains a reference back to *grid*.
+
+        Matches C++ ``Compiler::recursiveGroupsInRE::isRecursiveGroup``.
+        """
+        if not isinstance(obj, Group):
+            return
+
+        members = _get_group_members(self.compiler.session, obj)
+        for member in members:
+            if not isinstance(member, Group):
+                continue
+            if member.id == grid or obj.id == member.id:
+                name = getattr(member, 'name', str(member))
+                self.compiler.abort(
+                    None,
+                    f"Group '{name}' references itself recursively",
+                )
+                return
+            self._is_recursive_group(grid, member)
+            self._is_recursive_group(member.id, member)
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        for obj in elements:
+            if isinstance(obj, Group):
+                self._is_recursive_group(obj.id, obj)
 
         self.tmp_queue.append(rule)
         return True
@@ -879,6 +964,63 @@ class CheckForTCPEstablished(BasicRuleProcessor):
 
         self.tmp_queue.append(rule)
         return True
+
+
+class ReplaceClusterInterfaceInItfRE(BasicRuleProcessor):
+    """Replace cluster failover interfaces with member firewall interfaces.
+
+    If a rule references a cluster interface (failover interface), replace
+    it with the corresponding interface of the member firewall being compiled.
+
+    Corresponds to C++ Compiler::replaceClusterInterfaceInItfRE.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.prev_processor.get_next_rule()
+        if rule is None:
+            return False
+
+        from firewallfabrik.core.objects import FailoverClusterGroup, Interface
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        new_elements = []
+        for obj in elements:
+            if not isinstance(obj, Interface):
+                new_elements.append(obj)
+                continue
+
+            # Check if this is a failover interface
+            member_iface = None
+            if hasattr(obj, 'subinterfaces'):
+                for sub in obj.subinterfaces or []:
+                    if isinstance(sub, FailoverClusterGroup):
+                        member_iface = self._get_member_interface(sub)
+                        break
+
+            if member_iface is not None:
+                new_elements.append(member_iface)
+            else:
+                new_elements.append(obj)
+
+        setattr(rule, self._slot, new_elements)
+        self.tmp_queue.append(rule)
+        return True
+
+    def _get_member_interface(self, fg) -> Interface | None:
+        """Find the interface for the member firewall in a failover group."""
+        # The FailoverClusterGroup maps cluster interfaces to member interfaces
+        fw = self.compiler.fw
+        if hasattr(fg, 'get_interface_for_member'):
+            return fg.get_interface_for_member(fw)
+        return None
 
 
 class AssignUniqueRuleId(BasicRuleProcessor):

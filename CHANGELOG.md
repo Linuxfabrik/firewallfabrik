@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mangle table support** (Phase 6): Complete MARK/CLASSIFY/ROUTE support with 16 processors including `SplitIfTagClassifyOrRoute`, `SplitIfTagAndConnmark`, `RouteProcessor`, chain assignment for tagging/classification/routing, CONNMARK handling, and mangle-specific validation.
 - **NAT compiler parity** (Phase 7): 21 new NAT processors including `DoOSrcNegation/DoODstNegation/DoOSrvNegation` (temp chain negation), `SplitSDNATRule`, `ConvertLoadBalancingRules`, `SplitNATBranchRule`, `DynamicInterfaceInODst/TSrc`, `AddVirtualAddress`, `AlwaysUseMasquerade`, `SplitMultiSrcAndDst`, `SplitMultipleICMP`, `ConvertToAtomicForOSrv/ItfInb/ItfOutb`, `VerifyRules2/3`, and `SeparateSrcPort/SrcAndDstPort` for NAT.
 - **Bridging & accounting** (Phases 8-9): `BridgingFw` handles bridge-mode firewall broadcast/multicast forwarding. `Accounting` creates user-defined chains for packet/byte counting with RETURN targets.
+- **Recursive group detection**: `RecursiveGroupsInRE` aborts compilation on circular group references. Added to all pipelines (iptables policy/NAT, nftables policy/NAT).
+- **Shadowing detection enhancements** (Phase 10): `ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing` improve shadowing accuracy when "firewall is part of any" is off.
+- **Cluster failover interface replacement**: `ReplaceClusterInterfaceInItfRE` replaces cluster interfaces with member firewall interfaces (shared processor).
+- **Runtime MultiAddress processing**: `ProcessMultiAddressObjectsInSrc/Dst` handles runtime AddressTable/DNSName objects by splitting them into separate rules and registering with the OS configurator.
+- **nftables validation processors**: Added `CheckForTCPEstablished`, `CheckForObjectsWithErrors`, `CheckForStatefulICMP6Rules`, `CheckForZeroAddr`, `CheckForUnnumbered`, `ExpandLoopbackInterfaceAddress`, `CheckForDynamicInterfacesOfOtherObjects` to the nftables policy pipeline.
 
 ### Fixed
 

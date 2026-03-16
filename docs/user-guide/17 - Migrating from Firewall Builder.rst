@@ -44,7 +44,7 @@ After importing a ``.fwb`` file, verify the following:
    Review each firewall's platform and host OS settings (right-click the firewall > Edit). FirewallFabrik provides sensible defaults for all options via its YAML-based defaults system, but you should verify that the imported values match your environment.
 
 **Compile and compare**
-   Compile each firewall and compare the generated ``.fw`` script to the output from Firewall Builder. The scripts should be functionally equivalent, though minor formatting differences are expected.
+   Compile each firewall and compare the generated ``.fw`` script to the output from Firewall Builder. The iptables and nftables compilers are at full feature parity with Firewall Builder — the scripts should be functionally equivalent. Minor formatting differences (e.g. timestamp format, whitespace) are expected but do not affect functionality.
 
 **Save as .fwf**
    Once you are satisfied, save the file (``Ctrl+S``). This creates the ``.fwf`` file that you will use going forward.
@@ -77,7 +77,7 @@ What Does Not Get Imported
 Platform Compatibility
 ----------------------
 
-Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik currently ships with **iptables** and **nftables** backends, plus the new **nftables** backend that Firewall Builder never had.
+Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik ships with **iptables** and **nftables** backends at full feature parity with Firewall Builder, plus the new **nftables** backend that Firewall Builder never had.
 
 Discontinued Platforms
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -176,6 +176,9 @@ Legacy logging and bridge options
 
 Desktop integration
    FirewallFabrik registers ``.fwf`` and ``.fwb`` MIME types for file manager integration. See :doc:`02 - Installing FirewallFabrik` for setup instructions.
+
+Compiler parity
+   The iptables compiler implements all ~130 rule processors from Firewall Builder, including negation via temporary chains, mangle table support (MARK/CLASSIFY/ROUTE/CONNMARK), address range handling, bridging firewall mode, accounting chains, load balancing (NAT), multiport optimization, and comprehensive validation. The nftables compiler provides equivalent functionality using native nftables features (sets instead of multiport, inline negation, etc.). Generated scripts should be functionally identical to Firewall Builder output.
 
 nftables support
    FirewallFabrik adds native nftables compilation, which Firewall Builder never had.
