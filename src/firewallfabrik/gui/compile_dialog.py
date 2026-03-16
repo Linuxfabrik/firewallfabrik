@@ -13,6 +13,7 @@
 """Compile/install dialog — 2-page wizard using compileinstalldialog_q.ui."""
 
 import os
+import re
 import shutil
 import uuid
 from datetime import UTC, datetime
@@ -52,6 +53,9 @@ _R_COMPILER = _R + 6
 _R_NEEDS_COMPILE = _R + 7
 _R_NEEDS_INSTALL = _R + 8
 _R_MGMT_ADDRESS = _R + 9
+
+# Match "Rule N" in compiler error messages for clickable navigation.
+_RULE_ERROR_RE = re.compile(r'Rule\s+(\d+)')
 
 
 def _format_epoch(value):
@@ -633,9 +637,18 @@ class CompileDialog(QDialog):
             )
             for line in output_lines:
                 if line.lower().startswith('error'):
-                    self.procLogDisplay.append(
-                        f'<span style="color: red;">{escape(line)}</span>'
-                    )
+                    # Make error lines clickable for rule navigation
+                    rule_match = _RULE_ERROR_RE.search(line)
+                    if rule_match:
+                        rule_num = rule_match.group(1)
+                        self.procLogDisplay.append(
+                            f'<a href="rule:{escape(fw_id)}:{rule_num}" '
+                            f'style="color: red;">{escape(line)}</a>'
+                        )
+                    else:
+                        self.procLogDisplay.append(
+                            f'<span style="color: red;">{escape(line)}</span>'
+                        )
                 else:
                     self.procLogDisplay.append(line)
 
@@ -946,7 +959,17 @@ class CompileDialog(QDialog):
 
     @Slot(QUrl)
     def logItemClicked(self, url):
-        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/15
+        """Handle clicks on error links in the compile log.
+
+        Error links have the format ``rule:<fw_id>:<rule_number>``.
+        Scrolls the log to the firewall's section for context.
+        Full rule-level navigation in the policy view requires
+        additional main-window infrastructure (future work).
+        """
+        parts = url.toString().split(':')
+        if len(parts) >= 2 and parts[0] == 'rule':
+            fw_id = parts[1]
+            self.procLogDisplay.scrollToAnchor(fw_id)
 
     @Slot()
     def inspectFiles(self):

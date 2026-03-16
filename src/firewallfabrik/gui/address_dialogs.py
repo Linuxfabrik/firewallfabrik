@@ -424,4 +424,11 @@ class PhysAddressDialog(BaseObjectDialog):
 
     @Slot()
     def changed(self):
-        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/14
+        """Forward .ui signal connections to the base class change handler.
+
+        The .ui file connects obj_name.editingFinished and
+        pAddress.editingFinished to this slot. Delegate to _on_changed()
+        which emits the BaseObjectDialog.changed signal and triggers
+        apply_all() → commit.
+        """
+        self._on_changed()

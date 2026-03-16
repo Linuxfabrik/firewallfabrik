@@ -201,4 +201,10 @@ class InterfaceDialog(BaseObjectDialog):
 
     @Slot()
     def openIfaceDialog(self):
-        pass  # https://github.com/Linuxfabrik/firewallfabrik/issues/13
+        """Open the platform-specific advanced interface settings dialog.
+
+        In fwbuilder, this opened a per-platform interface options dialog
+        (e.g. BSD, Cisco PIX). For iptables/nftables there are no
+        interface-specific options, so the button remains disabled.
+        The slot exists to satisfy the .ui file's signal connection.
+        """
