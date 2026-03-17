@@ -330,14 +330,40 @@ tags are matched.</string>
           </attribute>
           <layout class="QVBoxLayout" name="policyRulesLayout">
            <item>
-            <widget class="QLabel" name="label_19">
-             <property name="text">
-              <string>Default settings for newly created policy rules. "Any" means the rule matches all objects immediately. "Dummy" inserts a placeholder that forces you to drag a real object into the rule before it can be compiled — this helps prevent accidental "allow all" rules.</string>
-             </property>
-             <property name="wordWrap">
-              <bool>true</bool>
-             </property>
-            </widget>
+            <layout class="QHBoxLayout" name="policyRulesHeaderLayout">
+             <item>
+              <widget class="QLabel" name="label_16">
+               <property name="minimumSize">
+                <size>
+                 <width>64</width>
+                 <height>64</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>64</width>
+                 <height>64</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="pixmap">
+                <pixmap resource="MainRes.qrc">:/Icons/Policy/icon-big</pixmap>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_19">
+               <property name="text">
+                <string>Default settings for newly created policy rules. "Any" means the rule matches all objects immediately. "Dummy" inserts a placeholder that forces you to drag a real object into the rule before it can be compiled — this helps prevent accidental "allow all" rules.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QCheckBox" name="rulesLoggingOn">
