@@ -487,13 +487,6 @@ class ObjectTree(QWidget):
             header = self._tree.header()
             header.setStretchLastSection(True)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
-            # Make the column border visible so users know it is draggable.
-            header.setStyleSheet(
-                'QHeaderView::section {'
-                '  border-right: 1px solid #999;'
-                '  padding: 2px 4px;'
-                '}'
-            )
             saved = QSettings().value('UI/ObjectTreeCol0Width', 0, type=int)
             if saved > 0:
                 self._applying_saved_width = True

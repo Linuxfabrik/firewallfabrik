@@ -45,8 +45,13 @@ QTextEdit:focus {
 
 QHeaderView::section {
     border: none;
-    border-bottom: 1px solid palette(mid);
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
     padding: 4px 8px;
+}
+
+QHeaderView::section:last {
+    border-right: none;
 }
 
 
