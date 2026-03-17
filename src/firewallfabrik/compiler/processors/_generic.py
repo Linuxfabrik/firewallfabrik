@@ -779,10 +779,10 @@ def _addr_contains(a1, a2) -> bool:
     if a1 is a2 or a1.id == a2.id:
         return True
 
-    # "any" address contains everything
-    if isinstance(a1, Address) and a1.is_any():
+    # "any" address contains everything (AddressRange has no is_any)
+    if isinstance(a1, Address) and not isinstance(a1, AddressRange) and a1.is_any():
         return True
-    if isinstance(a2, Address) and a2.is_any():
+    if isinstance(a2, Address) and not isinstance(a2, AddressRange) and a2.is_any():
         return False
 
     try:

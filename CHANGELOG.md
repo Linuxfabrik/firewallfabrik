@@ -32,7 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- All compiler test expected outputs updated for script_skeleton and compiler changes (136 passed).
+- Address containment bug: AddressRange objects were incorrectly treated as "any" address by the shadowing detector.
+- All compiler test expected outputs updated for script_skeleton and compiler changes.
+- New unit tests for address containment logic and interface autoconfigure (38 tests).
 - Shadowing detection now produces warnings instead of aborting the compilation.
 
 
