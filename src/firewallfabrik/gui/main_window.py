@@ -82,7 +82,7 @@ from firewallfabrik.gui.find_where_used_panel import (
     find_rule_references,
 )
 from firewallfabrik.gui.inspect_dialog import InspectDialog
-from firewallfabrik.gui.library_export import export_libraries
+from firewallfabrik.gui.library_export import export_libraries, import_library
 from firewallfabrik.gui.object_tree import (
     ICON_MAP,
     ObjectTree,
@@ -897,6 +897,7 @@ class FWWindow(QMainWindow):
         self.ImportAddressesFromFileAction.setEnabled(False)
         self.inspectAction.setEnabled(False)
         self.installAction.setEnabled(False)
+        self.libImportAction.setEnabled(False)
         self.libExportAction.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
         self.UpdateStandardLibraryAction.setEnabled(False)
@@ -924,6 +925,7 @@ class FWWindow(QMainWindow):
         self.ImportAddressesFromFileAction.setEnabled(True)
         self.inspectAction.setEnabled(True)
         self.installAction.setEnabled(True)
+        self.libImportAction.setEnabled(True)
         self.libExportAction.setEnabled(True)
         self.toolbarFileSave.setEnabled(True)
         self.UpdateStandardLibraryAction.setEnabled(True)
@@ -1255,6 +1257,11 @@ class FWWindow(QMainWindow):
         self._apply_no_file_state()
         self.editorDockWidget.blockSignals(False)
         self.undoDockWidget.blockSignals(False)
+
+    @Slot()
+    def fileImport(self):
+        """Import libraries from a .fwf or .fwb file into the current project."""
+        import_library(self, self._db_manager, self._object_tree.reload)
 
     @Slot()
     def fileExport(self):

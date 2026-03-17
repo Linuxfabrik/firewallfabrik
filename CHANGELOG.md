@@ -42,6 +42,7 @@ Compiler — full Firewall Builder parity:
 GUI:
 
 - Cluster Member Management dialog: add/remove firewalls from a cluster and view interface mappings (closes #26).
+- Library Import: import libraries from `.fwf` or `.fwb` files into the current project via File > Import Library. Skips the Standard library and libraries that already exist.
 - Library Export: export selected user libraries to a separate `.fwf` file via File > Export Library (closes #27).
 - Inspect Rules: show all rules referencing the selected object via Rules > Inspect or the toolbar icon (closes #28).
 - File Properties: show file path, size, and object counts via File > Properties (closes #29).

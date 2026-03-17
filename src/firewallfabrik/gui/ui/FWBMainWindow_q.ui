@@ -1219,7 +1219,9 @@
     <addaction name="fileReloadAction"/>
     <addaction name="fileCloseAction"/>
     <addaction name="separator"/>
+    <addaction name="libImportAction"/>
     <addaction name="libExportAction"/>
+    <addaction name="separator"/>
     <addaction name="filePropAction"/>
     <addaction name="separator"/>
     <addaction name="fileExitAction"/>
@@ -1737,6 +1739,20 @@
    </property>
    <property name="toolTip">
     <string>Show all policy and NAT rules that reference the selected object</string>
+   </property>
+  </action>
+  <action name="libImportAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Import Library</string>
+   </property>
+   <property name="iconText">
+    <string>Import Library From a File</string>
+   </property>
+   <property name="toolTip">
+    <string>Import libraries from a .fwf or .fwb file into the current project</string>
    </property>
   </action>
   <action name="libExportAction">
@@ -2533,10 +2549,27 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>libImportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>fileImport()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clearRecentFilesMenu()</slot>
   <slot>fileExport()</slot>
+  <slot>fileImport()</slot>
   <slot>fileProp()</slot>
   <slot>showChangelog()</slot>
   <slot>toggleViewObjectTree()</slot>

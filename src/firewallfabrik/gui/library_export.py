@@ -86,11 +86,7 @@ class LibExportDialog(QDialog):
             QListWidget.SelectionMode.ExtendedSelection,
         )
         self._libs_list.setToolTip(
-            self.tr(
-                'Select one or more libraries to include in the exported '
-                'file. The "Standard" library is excluded because it ships '
-                'with every FirewallFabrik installation.'
-            ),
+            self.tr('Select one or more libraries to include in the exported file.'),
         )
         list_layout.addWidget(self._libs_list)
         layout.addLayout(list_layout)
@@ -297,3 +293,129 @@ def _write_library_export(session, db, library_ids, make_ro, output_path):
         len(libraries),
         output_path,
     )
+
+
+def import_library(parent_widget, db_manager, reload_callback):
+    """Run the library-import workflow.
+
+    Opens a file dialog, reads the selected ``.fwf`` file, and merges
+    its libraries into the current database.  Mirrors fwbuilder's
+    ``ProjectPanel::fileImport()`` / ``loadLibrary()``.
+
+    Parameters
+    ----------
+    parent_widget : QWidget
+        Parent widget for centering dialogs.
+    db_manager : DatabaseManager
+        The active database manager instance.
+    reload_callback : callable
+        Called after a successful import to refresh the object tree.
+    """
+    file_path, _ = QFileDialog.getOpenFileName(
+        parent_widget,
+        parent_widget.tr('Import Library'),
+        '',
+        parent_widget.tr(
+            'FirewallFabrik files (*.fwf);;'
+            'Firewall Builder files (*.fwb);;'
+            'All Files (*)'
+        ),
+    )
+    if not file_path:
+        return
+
+    file_path = Path(file_path)
+    if not file_path.is_file():
+        QMessageBox.warning(
+            parent_widget,
+            parent_widget.tr('Import Library'),
+            parent_widget.tr(f'File not found: {file_path}'),
+        )
+        return
+
+    QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+    try:
+        count = _do_import_library(db_manager, file_path)
+    except Exception:
+        QApplication.restoreOverrideCursor()
+        logger.exception('Library import failed')
+        QMessageBox.critical(
+            parent_widget,
+            parent_widget.tr('Import Library'),
+            parent_widget.tr(f'Failed to import library from:\n{file_path}'),
+        )
+        return
+    finally:
+        QApplication.restoreOverrideCursor()
+
+    if count == 0:
+        QMessageBox.information(
+            parent_widget,
+            parent_widget.tr('Import Library'),
+            parent_widget.tr('No new libraries found in the file.'),
+        )
+        return
+
+    reload_callback()
+
+    QMessageBox.information(
+        parent_widget,
+        parent_widget.tr('Import Library'),
+        parent_widget.tr(
+            f'Successfully imported {count} library/libraries from:\n{file_path}'
+        ),
+    )
+
+
+def _do_import_library(db_manager, file_path):
+    """Read *file_path* and merge its libraries into the current database.
+
+    Returns the number of libraries imported.
+    """
+    from firewallfabrik.core._database import DatabaseManager
+
+    # Open the import file in a temporary in-memory database
+    import_mgr = DatabaseManager(':memory:')
+    import_mgr.open_file(file_path)
+
+    imported = 0
+    with import_mgr.session() as imp_session, db_manager.session() as cur_session:
+        cur_db = cur_session.scalars(sqlalchemy.select(FWObjectDatabase)).first()
+        if cur_db is None:
+            return 0
+
+        existing_names = {
+            lib.name
+            for lib in cur_session.scalars(
+                sqlalchemy.select(Library).where(
+                    Library.database_id == cur_db.id,
+                ),
+            ).all()
+        }
+
+        imp_libs = imp_session.scalars(sqlalchemy.select(Library)).all()
+
+        for lib in imp_libs:
+            if lib.name == 'Standard':
+                continue
+            if lib.name in existing_names:
+                logger.info('Skipping library %r (already exists)', lib.name)
+                continue
+
+            # Use the YAML writer/reader round-trip to copy the library
+            # into the current database. This handles all nested objects.
+            from firewallfabrik.core._yaml_writer import YamlWriter
+
+            writer = YamlWriter()
+            writer._build_ref_index(imp_session, [lib])
+            lib_dict = writer._serialize_library(imp_session, lib)
+
+            from firewallfabrik.core._yaml_reader import YamlReader
+
+            reader = YamlReader()
+            reader._load_library(cur_session, cur_db, lib_dict)
+            cur_session.commit()
+            imported += 1
+
+    import_mgr.close()
+    return imported
