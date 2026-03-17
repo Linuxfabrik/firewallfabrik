@@ -831,10 +831,18 @@ class PolicyTreeModel(QAbstractItemModel):
             empty_text = _EMPTY_ELEMENT_TEXT.get(desc.slot, 'Any')
             return _format_elements(getattr(row_data, desc.slot, []), empty_text)
         if desc.col_type == 'action':
+            if not QSettings().value(
+                'UI/Icons/ShowDirectionTextInRules', True, type=bool
+            ):
+                return ''
             if self._rule_set_type == 'NAT':
                 return row_data.nat_action or ''
             return _action_label(row_data.action)
         if desc.col_type == 'direction':
+            if not QSettings().value(
+                'UI/Icons/ShowDirectionTextInRules', True, type=bool
+            ):
+                return ''
             return row_data.direction
         if desc.col_type == 'metric':
             return str(row_data.metric)
@@ -845,7 +853,14 @@ class PolicyTreeModel(QAbstractItemModel):
                 else ''
             )
         if desc.col_type == 'comment':
-            return row_data.comment
+            text = row_data.comment
+            if text and QSettings().value('UI/ClipComment', False, type=bool):
+                # Show only the first line when clipping is enabled.
+                first_line = text.split('\n', 1)[0]
+                if len(first_line) > 60:
+                    return first_line[:60] + '...'
+                return first_line
+            return text
         return ''
 
     def _tooltip_value(self, row_data, col):
@@ -940,21 +955,26 @@ class PolicyTreeModel(QAbstractItemModel):
                     return sorted(elems, key=lambda t: t[1].casefold())
                 return elems
         if col == self._action_col:
+            show_text = QSettings().value(
+                'UI/Icons/ShowDirectionTextInRules', True, type=bool
+            )
             if self._rule_set_type == 'NAT' and row_data.nat_action:
+                label = row_data.nat_action if show_text else ''
                 return [
-                    ('__action__', row_data.nat_action, row_data.nat_action),
+                    ('__action__', label, row_data.nat_action),
                 ]
             if row_data.action:
+                label = _action_label(row_data.action) if show_text else ''
                 return [
-                    (
-                        '__action__',
-                        _action_label(row_data.action),
-                        row_data.action,
-                    ),
+                    ('__action__', label, row_data.action),
                 ]
         if col == self._direction_col and row_data.direction:
+            show_text = QSettings().value(
+                'UI/Icons/ShowDirectionTextInRules', True, type=bool
+            )
+            label = row_data.direction if show_text else ''
             return [
-                ('__direction__', row_data.direction, row_data.direction),
+                ('__direction__', label, row_data.direction),
             ]
         if col == self._options_col:
             return row_data.options_display or None

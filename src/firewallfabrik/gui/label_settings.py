@@ -21,8 +21,8 @@ LABEL_DEFAULTS = {
     'color3': {'color': '#dc322f', 'text': 'Block'},
     'color4': {'color': '#93a1a1', 'text': 'DNAT/Forward'},
     'color5': {'color': '#839496', 'text': 'SNAT/Forward'},
-    'color6': {'color': '#A37EC0', 'text': 'Purple'},
-    'color7': {'color': '#C0C0C0', 'text': 'Gray'},
+    'color6': {'color': '#6c71c4', 'text': 'Cluster'},
+    'color7': {'color': '#586e75', 'text': 'Maintenance'},
 }
 
 LABEL_KEYS = sorted(LABEL_DEFAULTS)

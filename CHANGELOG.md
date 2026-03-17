@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GUI: Advanced Interface Settings dialog — configure device type (ethernet, VLAN 802.1Q, bridge, bonding), VLAN ID, STP, and bonding parameters.
 - GUI: VLAN sub-interface validation — warns when a VLAN-style name (e.g. `eth0.100`) does not match the parent interface name, or when it is created as a top-level interface instead of a sub-interface.
 - GUI: Bridge port interfaces are now detected automatically from the parent interface type and display a "Bridge Port Interface" label instead of the regular interface options.
+- GUI: Interface autoconfigure now runs on load (like fwbuilder), not only on save.
+- GUI: Appearance tab in Preferences now fully functional — font selection for rules, tree, and compiler output; show/hide direction and action text; clip comments; show text under toolbar icons. All settings are applied at runtime.
 - Compiler: Bridge interface configuration support for iptables and nftables. The `update_bridge` configlet now uses iproute2 (`ip link`) instead of the deprecated `brctl`.
 
 ### Changed
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GUI: Platform settings dialogs — Script tab redesigned with inline descriptions for each option. Help buttons removed from all platform settings dialogs.
 - GUI: Platform settings dialog size reduced (removed oversized minimum widths, checkbox indicators top-aligned).
 - GUI: Removed "Unprotected interface" checkbox from the interface editor (not supported by iptables/nftables).
+- GUI: Default label colors now use the full Solarized palette. Renamed "Purple" to "Cluster" (violet `#6c71c4`) and "Gray" to "Maintenance" (base01 `#586e75`).
 
 ### Fixed
 

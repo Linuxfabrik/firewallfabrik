@@ -17,8 +17,14 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, Slot
-from PySide6.QtGui import QColor, QIcon, QPixmap
-from PySide6.QtWidgets import QColorDialog, QDialog, QFileDialog, QTableWidgetItem
+from PySide6.QtGui import QColor, QFont, QIcon, QPixmap
+from PySide6.QtWidgets import (
+    QColorDialog,
+    QDialog,
+    QFileDialog,
+    QFontDialog,
+    QTableWidgetItem,
+)
 
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
@@ -43,6 +49,22 @@ def _color_icon(hex_color, size=24):
     pixmap = QPixmap(size, size)
     pixmap.fill(QColor(hex_color))
     return QIcon(pixmap)
+
+
+def _load_font(settings, key):
+    """Load a QFont from QSettings, returning the app default if unset."""
+    s = settings.value(key, '', type=str)
+    if s:
+        font = QFont()
+        font.fromString(s)
+        return font
+    return QFont()
+
+
+def _font_description(font):
+    """Return a human-readable description of a QFont."""
+    style = font.styleName() or ('Bold' if font.bold() else 'Regular')
+    return f'{font.family()}, {font.pointSize()}pt, {style}'
 
 
 class PreferencesDialog(QDialog):
@@ -120,6 +142,32 @@ class PreferencesDialog(QDialog):
             settings.value('Environment/RememberSshPassEnabled', False, type=bool),
         )
 
+        # Appearance tab.
+        self._rules_font = _load_font(settings, 'UI/Fonts/RulesFont')
+        self._tree_font = _load_font(settings, 'UI/Fonts/TreeFont')
+        self._compiler_font = _load_font(settings, 'UI/Fonts/CompilerOutputFont')
+        self.rulesFontDescr.setText(_font_description(self._rules_font))
+        self.treeFontDescr.setText(_font_description(self._tree_font))
+        self.compilerOutputFontDescr.setText(_font_description(self._compiler_font))
+
+        self.chShowIcons.setChecked(
+            settings.value('UI/Icons/ShowIconsInRules', True, type=bool),
+        )
+        self.showDirectionText.setChecked(
+            settings.value('UI/Icons/ShowDirectionTextInRules', True, type=bool),
+        )
+        self.chClipComment.setChecked(
+            settings.value('UI/ClipComment', False, type=bool),
+        )
+        self.toolbarIconsText.setChecked(
+            settings.value('UI/IconWithText', False, type=bool),
+        )
+
+        # Enable/disable icon size radio buttons based on show-icons state.
+        icons_shown = self.chShowIcons.isChecked()
+        self.rb16.setEnabled(icons_shown)
+        self.rb25.setEnabled(icons_shown)
+
         # Label colors: store current hex values so we can save on accept.
         self._label_colors = {}
         for key in LABEL_KEYS:
@@ -169,6 +217,20 @@ class PreferencesDialog(QDialog):
         self.scpPath.setText(shutil.which('scp') or 'scp')
         self.sshTimeout.setValue(10)
         self.rememberSshPass.setChecked(False)
+
+        # Reset appearance defaults.
+        self._rules_font = QFont()
+        self._tree_font = QFont()
+        self._compiler_font = QFont()
+        self.rulesFontDescr.setText(_font_description(self._rules_font))
+        self.treeFontDescr.setText(_font_description(self._tree_font))
+        self.compilerOutputFontDescr.setText(_font_description(self._compiler_font))
+        self.chShowIcons.setChecked(True)
+        self.showDirectionText.setChecked(True)
+        self.chClipComment.setChecked(False)
+        self.toolbarIconsText.setChecked(False)
+        self.rb16.setEnabled(True)
+        self.rb25.setEnabled(True)
 
         # Reset label colors and texts to defaults.
         from firewallfabrik.gui.label_settings import LABEL_DEFAULTS
@@ -251,6 +313,37 @@ class PreferencesDialog(QDialog):
             self.scpPath.setText(fp)
 
     # ------------------------------------------------------------------
+    # Appearance tab: Font and icon slots (connected via .ui signal/slot)
+    # ------------------------------------------------------------------
+
+    @Slot()
+    def changeRulesFont(self):
+        ok, font = QFontDialog.getFont(self._rules_font, self)
+        if ok:
+            self._rules_font = font
+            self.rulesFontDescr.setText(_font_description(font))
+
+    @Slot()
+    def changeTreeFont(self):
+        ok, font = QFontDialog.getFont(self._tree_font, self)
+        if ok:
+            self._tree_font = font
+            self.treeFontDescr.setText(_font_description(font))
+
+    @Slot()
+    def changeCompilerOutputFont(self):
+        ok, font = QFontDialog.getFont(self._compiler_font, self)
+        if ok:
+            self._compiler_font = font
+            self.compilerOutputFontDescr.setText(_font_description(font))
+
+    @Slot()
+    def changeShowIcons(self):
+        shown = self.chShowIcons.isChecked()
+        self.rb16.setEnabled(shown)
+        self.rb25.setEnabled(shown)
+
+    # ------------------------------------------------------------------
     # Label color picker slots (connected via .ui signal/slot)
     # ------------------------------------------------------------------
 
@@ -311,6 +404,20 @@ class PreferencesDialog(QDialog):
             'UI/IconSizeInRules',
             16 if self.rb16.isChecked() else 25,
         )
+
+        # Appearance: fonts
+        settings.setValue('UI/Fonts/RulesFont', self._rules_font.toString())
+        settings.setValue('UI/Fonts/TreeFont', self._tree_font.toString())
+        settings.setValue('UI/Fonts/CompilerOutputFont', self._compiler_font.toString())
+
+        # Appearance: checkboxes
+        settings.setValue('UI/Icons/ShowIconsInRules', self.chShowIcons.isChecked())
+        settings.setValue(
+            'UI/Icons/ShowDirectionTextInRules',
+            self.showDirectionText.isChecked(),
+        )
+        settings.setValue('UI/ClipComment', self.chClipComment.isChecked())
+        settings.setValue('UI/IconWithText', self.toolbarIconsText.isChecked())
 
         # Installer
         settings.setValue('SSH/SSHPath', self.sshPath.text())

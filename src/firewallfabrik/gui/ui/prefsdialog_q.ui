@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>prefsDialog_q</class>
  <widget class="QDialog" name="prefsDialog_q">
@@ -54,7 +54,7 @@
         <string>&amp;OK</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>true</bool>
@@ -70,7 +70,7 @@
         <string>&amp;Cancel</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>true</bool>
@@ -184,7 +184,7 @@ tags are matched.</string>
            <item row="0" column="0">
             <widget class="QLabel" name="label_10">
              <property name="text">
-              <string/>
+              <string />
              </property>
              <property name="pixmap">
               <pixmap resource="MainRes.qrc">:/Icons/DNSName/icon-big</pixmap>
@@ -215,7 +215,7 @@ tags are matched.</string>
               <item row="0" column="0">
                <widget class="QRadioButton" name="new_dns_name_compile_tm">
                 <property name="text">
-                 <string>Create new objects in &quot;Compile Time&quot; mode by default</string>
+                 <string>Create new objects in "Compile Time" mode by default</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
@@ -225,7 +225,7 @@ tags are matched.</string>
               <item row="1" column="0">
                <widget class="QRadioButton" name="new_dns_name_run_tm">
                 <property name="text">
-                 <string>Create new objects in &quot;Run Time&quot; mode by default</string>
+                 <string>Create new objects in "Run Time" mode by default</string>
                 </property>
                </widget>
               </item>
@@ -261,7 +261,7 @@ tags are matched.</string>
            <item row="0" column="0">
             <widget class="QLabel" name="label_11">
              <property name="text">
-              <string/>
+              <string />
              </property>
              <property name="pixmap">
               <pixmap resource="MainRes.qrc">:/Icons/AddressTable/icon-big</pixmap>
@@ -292,7 +292,7 @@ tags are matched.</string>
               <item row="0" column="0">
                <widget class="QRadioButton" name="new_addr_tbl_compile_tm">
                 <property name="text">
-                 <string>Create new objects in &quot;Compile Time&quot; mode by default</string>
+                 <string>Create new objects in "Compile Time" mode by default</string>
                 </property>
                 <property name="checked">
                  <bool>true</bool>
@@ -302,7 +302,7 @@ tags are matched.</string>
               <item row="1" column="0">
                <widget class="QRadioButton" name="new_addr_tbl_run_tm">
                 <property name="text">
-                 <string>Create new objects in &quot;Run Time&quot; mode by default</string>
+                 <string>Create new objects in "Run Time" mode by default</string>
                 </property>
                </widget>
               </item>
@@ -346,7 +346,7 @@ tags are matched.</string>
                 </size>
                </property>
                <property name="text">
-                <string/>
+                <string />
                </property>
                <property name="pixmap">
                 <pixmap resource="MainRes.qrc">:/Icons/Policy/icon-big</pixmap>
@@ -381,138 +381,138 @@ tags are matched.</string>
            </item>
            <item>
             <layout class="QGridLayout" name="prefs_gridLayout_16" columnstretch="1,0">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_20">
-              <property name="text">
-               <string>Default action</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="rulesDefaultAction">
-              <item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_20">
                <property name="text">
-                <string>Deny</string>
+                <string>Default action</string>
                </property>
-              </item>
-              <item>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="rulesDefaultAction">
+               <item>
+                <property name="text">
+                 <string>Deny</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Accept</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_21">
                <property name="text">
-                <string>Accept</string>
+                <string>Default direction</string>
                </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_21">
-              <property name="text">
-               <string>Default direction</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="rulesDefaultDirection">
-              <item>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QComboBox" name="rulesDefaultDirection">
+               <item>
+                <property name="text">
+                 <string>Both</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Inbound</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Outbound</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_23">
                <property name="text">
-                <string>Both</string>
+                <string>Default source</string>
                </property>
-              </item>
-              <item>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="rulesDefaultSource">
+               <item>
+                <property name="text">
+                 <string>Any</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Dummy</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_24">
                <property name="text">
-                <string>Inbound</string>
+                <string>Default destination</string>
                </property>
-              </item>
-              <item>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QComboBox" name="rulesDefaultDestination">
+               <item>
+                <property name="text">
+                 <string>Any</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Dummy</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="label_25">
                <property name="text">
-                <string>Outbound</string>
+                <string>Set policy rules default service </string>
                </property>
-              </item>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_23">
-              <property name="text">
-               <string>Default source</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QComboBox" name="rulesDefaultSource">
-              <item>
+              </widget>
+             </item>
+             <item row="4" column="1">
+              <widget class="QComboBox" name="rulesDefaultService">
+               <item>
+                <property name="text">
+                 <string>Any</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Dummy</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="label_26">
                <property name="text">
-                <string>Any</string>
+                <string>Set policy rules default interface </string>
                </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Dummy</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_24">
-              <property name="text">
-               <string>Default destination</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QComboBox" name="rulesDefaultDestination">
-              <item>
-               <property name="text">
-                <string>Any</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Dummy</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_25">
-              <property name="text">
-               <string>Set policy rules default service </string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QComboBox" name="rulesDefaultService">
-              <item>
-               <property name="text">
-                <string>Any</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Dummy</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_26">
-              <property name="text">
-               <string>Set policy rules default interface </string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QComboBox" name="rulesDefaultInterface">
-              <item>
-               <property name="text">
-                <string>Any</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Dummy</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-           </layout>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QComboBox" name="rulesDefaultInterface">
+               <item>
+                <property name="text">
+                 <string>Any</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Dummy</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <spacer name="policyRulesSpacer">
@@ -546,7 +546,7 @@ tags are matched.</string>
               </sizepolicy>
              </property>
              <property name="text">
-              <string/>
+              <string />
              </property>
              <property name="pixmap">
               <pixmap resource="MainRes.qrc">:/Icons/Interface/icon-big</pixmap>
@@ -559,7 +559,7 @@ tags are matched.</string>
            <item row="0" column="1">
             <widget class="QLabel" name="label_18">
              <property name="text">
-              <string>When an interface object is created as a child object of another interface, FirewallFabrik can verify that the name and type of the child and parent objects match and form valid configuration. It can also automatically guess some interface types and parameters using their names. For example, it can set the interface type to &quot;vlan&quot; and assign a VLAN ID if the name looks like a valid VLAN interface for the given OS. In some situations the desired configuration might be more complex than these checks allow, so this may need to be turned off.</string>
+              <string>When an interface object is created as a child object of another interface, FirewallFabrik can verify that the name and type of the child and parent objects match and form valid configuration. It can also automatically guess some interface types and parameters using their names. For example, it can set the interface type to "vlan" and assign a VLAN ID if the name looks like a valid VLAN interface for the given OS. In some situations the desired configuration might be more complex than these checks allow, so this may need to be turned off.</string>
              </property>
              <property name="wordWrap">
               <bool>true</bool>
@@ -872,7 +872,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -892,7 +892,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -912,7 +912,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -932,7 +932,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -952,7 +952,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -972,7 +972,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -992,7 +992,7 @@ keepalive messages (not recommended). Default: 10.</string>
             <string>Click to choose a color for this label</string>
            </property>
            <property name="text">
-            <string/>
+            <string />
            </property>
           </widget>
          </item>
@@ -1041,7 +1041,7 @@ keepalive messages (not recommended). Default: 10.</string>
      </widget>
      <widget class="QWidget" name="tabAppearance">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <attribute name="title">
        <string>Appearance</string>
@@ -1186,7 +1186,7 @@ keepalive messages (not recommended). Default: 10.</string>
        <item row="4" column="0" colspan="3">
         <widget class="QCheckBox" name="showDirectionText">
          <property name="text">
-          <string>Show text descriptions in columns &quot;Direction&quot;, &quot;Action&quot;</string>
+          <string>Show text descriptions in columns "Direction", "Action"</string>
          </property>
         </widget>
        </item>
@@ -1199,7 +1199,7 @@ keepalive messages (not recommended). Default: 10.</string>
           </size>
          </property>
          <property name="title">
-          <string/>
+          <string />
          </property>
          <property name="flat">
           <bool>true</bool>
@@ -1270,6 +1270,9 @@ Easier to distinguish object types at a glance.</string>
         <widget class="QCheckBox" name="chClipComment">
          <property name="text">
           <string>Clip comments in rules</string>
+         </property>
+         <property name="toolTip">
+          <string>When enabled, long comments in policy rules are truncated to the first line (max 60 characters) followed by "...".</string>
          </property>
         </widget>
        </item>
@@ -1391,7 +1394,7 @@ Easier to distinguish object types at a glance.</string>
   <tabstop>color7Text</tabstop>
  </tabstops>
  <resources>
-  <include location="MainRes.qrc"/>
+  <include location="MainRes.qrc" />
  </resources>
  <connections>
   <connection>
@@ -1618,7 +1621,7 @@ Easier to distinguish object types at a glance.</string>
     </hint>
    </hints>
   </connection>
- <connection>
+  <connection>
    <sender>browseForSSH</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>

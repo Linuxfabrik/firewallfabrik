@@ -181,7 +181,51 @@ class InterfaceDialog(BaseObjectDialog):
             return (parent.options or {}).get('type') == 'bridge'
         return False
 
+    def _run_autoconfigure(self):
+        """Auto-detect interface type from name and parent context.
+
+        Called both on load (``_populate``) and on save
+        (``_apply_changes``).  Silently applies guessed options on
+        load; shows warnings on save.
+        """
+        from firewallfabrik.gui.interface_autoconfigure import guess_interface_type
+
+        parent = getattr(self._obj, 'parent_interface', None)
+        guessed = guess_interface_type(self._obj.name or '', parent)
+
+        # Skip warning flags on load — only relevant during save.
+        if '_vlan_name_mismatch' in guessed or '_vlan_needs_parent' in guessed:
+            return
+
+        if guessed:
+            options = dict(self._obj.options or {})
+            changed = False
+
+            if guessed.pop('_set_unnumbered', False):
+                old_data = self._obj.data or {}
+                if not old_data.get('unnum', False):
+                    new_data = dict(old_data)
+                    new_data['unnum'] = True
+                    self._obj.data = new_data
+
+            for key, val in guessed.items():
+                if key not in options or not options[key]:
+                    options[key] = val
+                    changed = True
+            if changed:
+                self._obj.options = options
+
     def _populate(self):
+        # Autoconfigure interface type on load (like fwbuilder's loadFWObject).
+        # Runs before populating the dialog so auto-detected values don't
+        # trigger a false "changed" state.
+        from PySide6.QtCore import QSettings
+
+        if QSettings().value(
+            'Objects/Interface/autoconfigureInterfaces', True, type=bool
+        ):
+            self._run_autoconfigure()
+
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
         self.label.setText(data.get('label', ''))
@@ -268,25 +312,7 @@ class InterfaceDialog(BaseObjectDialog):
                 )
                 return
 
-            if guessed:
-                options = dict(self._obj.options or {})
-                changed = False
-
-                # Handle special _set_unnumbered flag (bonding slaves).
-                if guessed.pop('_set_unnumbered', False):
-                    old_data = self._obj.data or {}
-                    if not old_data.get('unnum', False):
-                        new_data = dict(old_data)
-                        new_data['unnum'] = True
-                        self._obj.data = new_data
-                        self.unnumbered.setChecked(True)
-
-                for key, val in guessed.items():
-                    if key not in options or not options[key]:
-                        options[key] = val
-                        changed = True
-                if changed:
-                    self._obj.options = options
+            self._run_autoconfigure()
 
     @Slot()
     def openIfaceDialog(self):

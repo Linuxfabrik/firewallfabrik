@@ -752,6 +752,9 @@ class FWWindow(QMainWindow):
 
         WindowRegistry.instance().register(self)
 
+        # Apply saved appearance preferences (fonts, toolbar style).
+        self._apply_appearance_settings()
+
     def showEvent(self, event):
         super().showEvent(event)
         if self._start_maximized:
@@ -1348,11 +1351,39 @@ class FWWindow(QMainWindow):
     def editPrefs(self):
         dlg = PreferencesDialog(self)
         dlg.exec()
+        self._apply_appearance_settings()
+
+    def _apply_appearance_settings(self):
+        """Apply appearance preferences to the running GUI."""
         settings = QSettings()
+
+        # Object tree: attributes column and tooltips.
         show = settings.value('UI/ShowObjectsAttributesInTree', True, type=bool)
         self._object_tree.set_show_attrs(show)
         tooltips = settings.value('UI/ObjTooltips', True, type=bool)
         self._object_tree.set_tooltips_enabled(tooltips)
+
+        # Tree font.
+        tree_font_str = settings.value('UI/Fonts/TreeFont', '', type=str)
+        if tree_font_str:
+            from PySide6.QtGui import QFont
+
+            font = QFont()
+            font.fromString(tree_font_str)
+            self._object_tree._tree.setFont(font)
+
+        # Toolbar icon text.
+        style = (
+            Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+            if settings.value('UI/IconWithText', False, type=bool)
+            else Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
+        self.toolBar.setToolButtonStyle(style)
+
+        # Refresh open policy views so direction/action text and
+        # comment clipping changes take effect immediately.
+        if hasattr(self, '_rs_mgr'):
+            self._rs_mgr.reload_views()
 
     @Slot()
     def help(self):
