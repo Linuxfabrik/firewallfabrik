@@ -67,7 +67,9 @@ class LibExportDialog(QDialog):
         desc_label = QLabel(
             self.tr(
                 'This will export one or more libraries to a file which '
-                'can later be imported back into FirewallFabrik.'
+                'can later be imported back into FirewallFabrik.\n\n'
+                'The Standard library is excluded because it ships with '
+                'every FirewallFabrik installation.'
             ),
         )
         desc_label.setWordWrap(True)
