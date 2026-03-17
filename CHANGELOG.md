@@ -22,10 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - About dialog: Linuxfabrik credit visually separated with homepage link (https://www.linuxfabrik.ch).
+- Application icon uses PNG at multiple sizes for Wayland compatibility; window icon set via .ui file.
 - Default label colors use the Solarized palette throughout; "Purple" renamed to "Cluster", "Gray" renamed to "Maintenance".
-- Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
 - Interface autoconfigure now also runs when opening the editor, not only on save.
 - Platform settings dialogs: Script tab shows inline descriptions for each option; Help buttons removed; dialog size reduced.
+- Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
+- Removed XCB/XWayland fallback; fwf runs natively on Wayland.
 - "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
 
 ### Fixed

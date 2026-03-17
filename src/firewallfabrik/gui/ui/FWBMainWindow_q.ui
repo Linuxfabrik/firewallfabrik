@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>FWBMainWindow_q</class>
  <widget class="QMainWindow" name="FWBMainWindow_q">
@@ -29,8 +29,8 @@
    <string>FirewallFabrik</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="MainRes.qrc">
-    <normaloff>:/Icons/FirewallFabrik/scalable</normaloff>:/Icons/FirewallFabrik/scalable</iconset>
+   <iconset resource="MainRes.qrc">:/Icons/FirewallFabrik/32<normaloff>:/Icons/FirewallFabrik/32</normaloff>
+   </iconset>
   </property>
   <widget class="QWidget" name="widget">
    <layout class="QGridLayout" name="gridLayout_4">
@@ -47,7 +47,7 @@
      <number>2</number>
     </property>
     <item row="0" column="0">
-     <widget class="QMdiArea" name="m_space"/>
+     <widget class="QMdiArea" name="m_space" />
     </item>
    </layout>
   </widget>
@@ -159,7 +159,7 @@
               </size>
              </property>
              <property name="text">
-              <string/>
+              <string />
              </property>
              <property name="pixmap">
               <pixmap resource="MainRes.qrc">:/Icons/Cluster/icon</pixmap>
@@ -257,7 +257,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="UserDialog" name="w_UserDialog" native="true"/>
+              <widget class="UserDialog" name="w_UserDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -314,7 +314,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="RuleSetDialog" name="w_PolicyDialog" native="true"/>
+              <widget class="RuleSetDialog" name="w_PolicyDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -333,7 +333,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="RuleSetDialog" name="w_NATDialog" native="true"/>
+              <widget class="RuleSetDialog" name="w_NATDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -352,7 +352,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="RuleSetDialog" name="w_RoutingDialog" native="true"/>
+              <widget class="RuleSetDialog" name="w_RoutingDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -371,7 +371,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="LibraryDialog" name="w_LibraryDialog" native="true"/>
+              <widget class="LibraryDialog" name="w_LibraryDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -390,7 +390,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="IPv4Dialog" name="w_IPv4Dialog" native="true"/>
+              <widget class="IPv4Dialog" name="w_IPv4Dialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -409,7 +409,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="IPv6Dialog" name="w_IPv6Dialog" native="true"/>
+              <widget class="IPv6Dialog" name="w_IPv6Dialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -428,7 +428,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="PhysicalAddressDialog" name="w_PhysicalAddressDialog" native="true"/>
+              <widget class="PhysicalAddressDialog" name="w_PhysicalAddressDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -447,7 +447,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="AddressRangeDialog" name="w_AddressRangeDialog" native="true"/>
+              <widget class="AddressRangeDialog" name="w_AddressRangeDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -466,7 +466,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ClusterDialog" name="w_ClusterDialog" native="true"/>
+              <widget class="ClusterDialog" name="w_ClusterDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -485,7 +485,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ClusterGroupDialog" name="w_FailoverClusterGroupDialog" native="true"/>
+              <widget class="ClusterGroupDialog" name="w_FailoverClusterGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -504,7 +504,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ClusterGroupDialog" name="w_StateSyncClusterGroupDialog" native="true"/>
+              <widget class="ClusterGroupDialog" name="w_StateSyncClusterGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -523,7 +523,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="HostDialog" name="w_HostDialog" native="true"/>
+              <widget class="HostDialog" name="w_HostDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -542,7 +542,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="NetworkDialog" name="w_NetworkDialog" native="true"/>
+              <widget class="NetworkDialog" name="w_NetworkDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -561,7 +561,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="NetworkDialogIPv6" name="w_NetworkDialogIPv6" native="true"/>
+              <widget class="NetworkDialogIPv6" name="w_NetworkDialogIPv6" native="true" />
              </item>
             </layout>
            </widget>
@@ -580,7 +580,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="CustomServiceDialog" name="w_CustomServiceDialog" native="true"/>
+              <widget class="CustomServiceDialog" name="w_CustomServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -599,7 +599,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="IPServiceDialog" name="w_IPServiceDialog" native="true"/>
+              <widget class="IPServiceDialog" name="w_IPServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -618,7 +618,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ICMPServiceDialog" name="w_ICMPServiceDialog" native="true"/>
+              <widget class="ICMPServiceDialog" name="w_ICMPServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -637,7 +637,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ICMPServiceDialog" name="w_ICMP6ServiceDialog" native="true"/>
+              <widget class="ICMPServiceDialog" name="w_ICMP6ServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -656,7 +656,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="TCPServiceDialog" name="w_TCPServiceDialog" native="true"/>
+              <widget class="TCPServiceDialog" name="w_TCPServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -675,7 +675,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="UDPServiceDialog" name="w_UDPServiceDialog" native="true"/>
+              <widget class="UDPServiceDialog" name="w_UDPServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -694,7 +694,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="TagServiceDialog" name="w_TagServiceDialog" native="true"/>
+              <widget class="TagServiceDialog" name="w_TagServiceDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -713,7 +713,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="GroupObjectDialog" name="w_ServiceGroupDialog" native="true"/>
+              <widget class="GroupObjectDialog" name="w_ServiceGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -732,7 +732,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="GroupObjectDialog" name="w_ObjectGroupDialog" native="true"/>
+              <widget class="GroupObjectDialog" name="w_ObjectGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -751,7 +751,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="GroupObjectDialog" name="w_IntervalGroupDialog" native="true"/>
+              <widget class="GroupObjectDialog" name="w_IntervalGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -770,7 +770,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="TimeDialog" name="w_TimeDialog" native="true"/>
+              <widget class="TimeDialog" name="w_TimeDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -789,7 +789,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="RoutingRuleOptionsDialog" name="w_RoutingRuleOptionsDialog" native="true"/>
+              <widget class="RoutingRuleOptionsDialog" name="w_RoutingRuleOptionsDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -808,7 +808,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="RuleOptionsDialog" name="w_RuleOptionsDialog" native="true"/>
+              <widget class="RuleOptionsDialog" name="w_RuleOptionsDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -827,7 +827,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="NATRuleOptionsDialog" name="w_NATRuleOptionsDialog" native="true"/>
+              <widget class="NATRuleOptionsDialog" name="w_NATRuleOptionsDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -846,7 +846,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="DNSNameDialog" name="w_DNSNameDialog" native="true"/>
+              <widget class="DNSNameDialog" name="w_DNSNameDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -865,7 +865,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="AddressTableDialog" name="w_AddressTableDialog" native="true"/>
+              <widget class="AddressTableDialog" name="w_AddressTableDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -884,7 +884,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="ActionsDialog" name="w_ActionsDialog" native="true"/>
+              <widget class="ActionsDialog" name="w_ActionsDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -903,7 +903,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="CommentEditorPanel" name="w_CommentEditorPanel" native="true"/>
+              <widget class="CommentEditorPanel" name="w_CommentEditorPanel" native="true" />
              </item>
             </layout>
            </widget>
@@ -925,7 +925,7 @@
               <number>6</number>
              </property>
              <item row="0" column="0">
-              <widget class="MetricEditorPanel" name="w_MetricEditorPanel" native="true"/>
+              <widget class="MetricEditorPanel" name="w_MetricEditorPanel" native="true" />
              </item>
             </layout>
            </widget>
@@ -944,7 +944,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="CompilerOutputPanel" name="w_CompilerOutputPanel" native="true"/>
+              <widget class="CompilerOutputPanel" name="w_CompilerOutputPanel" native="true" />
              </item>
             </layout>
            </widget>
@@ -963,21 +963,21 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="BlankDialog" name="w_BlankDialog" native="true"/>
+              <widget class="BlankDialog" name="w_BlankDialog" native="true" />
              </item>
             </layout>
            </widget>
            <widget class="QWidget" name="page_38">
             <layout class="QGridLayout" name="gridLayout_45">
              <item row="0" column="0">
-              <widget class="AttachedNetworksDialog" name="w_AttachedNetworksDialog" native="true"/>
+              <widget class="AttachedNetworksDialog" name="w_AttachedNetworksDialog" native="true" />
              </item>
             </layout>
            </widget>
            <widget class="QWidget" name="page_39">
             <layout class="QGridLayout" name="gridLayout_46">
              <item row="0" column="0">
-              <widget class="DynamicGroupDialog" name="w_DynamicGroupDialog" native="true"/>
+              <widget class="DynamicGroupDialog" name="w_DynamicGroupDialog" native="true" />
              </item>
             </layout>
            </widget>
@@ -1110,7 +1110,7 @@
           <number>0</number>
          </property>
          <item row="0" column="0">
-          <widget class="CompilerOutputPanel" name="output_box" native="true"/>
+          <widget class="CompilerOutputPanel" name="output_box" native="true" />
          </item>
         </layout>
        </widget>
@@ -1135,15 +1135,15 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="toolbarFileOpen"/>
-   <addaction name="toolbarFileSave"/>
-   <addaction name="separator"/>
-   <addaction name="newObjectAction"/>
-   <addaction name="findAction"/>
-   <addaction name="separator"/>
-   <addaction name="compileAction"/>
-   <addaction name="installAction"/>
-   <addaction name="inspectAction"/>
+   <addaction name="toolbarFileOpen" />
+   <addaction name="toolbarFileSave" />
+   <addaction name="separator" />
+   <addaction name="newObjectAction" />
+   <addaction name="findAction" />
+   <addaction name="separator" />
+   <addaction name="compileAction" />
+   <addaction name="installAction" />
+   <addaction name="inspectAction" />
   </widget>
   <widget class="QMenuBar" name="MenuBar">
    <property name="geometry">
@@ -1158,48 +1158,48 @@
     <property name="title">
      <string>&amp;Edit</string>
     </property>
-    <addaction name="separator"/>
-    <addaction name="editCutAction"/>
-    <addaction name="editCopyAction"/>
-    <addaction name="editPasteAction"/>
-    <addaction name="separator"/>
-    <addaction name="editDeleteAction"/>
-    <addaction name="separator"/>
-    <addaction name="editPrefsAction"/>
+    <addaction name="separator" />
+    <addaction name="editCutAction" />
+    <addaction name="editCopyAction" />
+    <addaction name="editPasteAction" />
+    <addaction name="separator" />
+    <addaction name="editDeleteAction" />
+    <addaction name="separator" />
+    <addaction name="editPrefsAction" />
    </widget>
    <widget class="QMenu" name="ObjectMenu">
     <property name="title">
      <string>Object</string>
     </property>
-    <addaction name="newObjectAction"/>
-    <addaction name="findAction"/>
-    <addaction name="separator"/>
-    <addaction name="ObjectLockAction"/>
-    <addaction name="ObjectUnlockAction"/>
+    <addaction name="newObjectAction" />
+    <addaction name="findAction" />
+    <addaction name="separator" />
+    <addaction name="ObjectLockAction" />
+    <addaction name="ObjectUnlockAction" />
    </widget>
    <widget class="QMenu" name="toolsMenu">
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="ImportAddressesFromFileAction"/>
-    <addaction name="UpdateStandardLibraryAction"/>
+    <addaction name="ImportAddressesFromFileAction" />
+    <addaction name="UpdateStandardLibraryAction" />
    </widget>
    <widget class="QMenu" name="helpMenu">
     <property name="title">
      <string>&amp;Help</string>
     </property>
-    <addaction name="helpAboutAction"/>
-    <addaction name="helpAction"/>
-    <addaction name="ChangelogAction"/>
-    <addaction name="debugAction"/>
+    <addaction name="helpAboutAction" />
+    <addaction name="helpAction" />
+    <addaction name="ChangelogAction" />
+    <addaction name="debugAction" />
    </widget>
    <widget class="QMenu" name="RulesMenu">
     <property name="title">
      <string>Rules</string>
     </property>
-    <addaction name="compileAction"/>
-    <addaction name="installAction"/>
-    <addaction name="inspectAction"/>
+    <addaction name="compileAction" />
+    <addaction name="installAction" />
+    <addaction name="inspectAction" />
    </widget>
    <widget class="QMenu" name="fileMenu">
     <property name="title">
@@ -1210,21 +1210,21 @@
       <string>Open Recent</string>
      </property>
     </widget>
-    <addaction name="fileNewAction"/>
-    <addaction name="fileOpenAction"/>
-    <addaction name="menuOpen_Recent"/>
-    <addaction name="separator"/>
-    <addaction name="fileSaveAction"/>
-    <addaction name="fileSaveAsAction"/>
-    <addaction name="fileReloadAction"/>
-    <addaction name="fileCloseAction"/>
-    <addaction name="separator"/>
-    <addaction name="libImportAction"/>
-    <addaction name="libExportAction"/>
-    <addaction name="separator"/>
-    <addaction name="filePropAction"/>
-    <addaction name="separator"/>
-    <addaction name="fileExitAction"/>
+    <addaction name="fileNewAction" />
+    <addaction name="fileOpenAction" />
+    <addaction name="menuOpen_Recent" />
+    <addaction name="separator" />
+    <addaction name="fileSaveAction" />
+    <addaction name="fileSaveAsAction" />
+    <addaction name="fileReloadAction" />
+    <addaction name="fileCloseAction" />
+    <addaction name="separator" />
+    <addaction name="libImportAction" />
+    <addaction name="libExportAction" />
+    <addaction name="separator" />
+    <addaction name="filePropAction" />
+    <addaction name="separator" />
+    <addaction name="fileExitAction" />
    </widget>
    <widget class="QMenu" name="menuWindow">
     <property name="title">
@@ -1235,18 +1235,18 @@
     <property name="title">
      <string>View</string>
     </property>
-    <addaction name="actionObject_Tree"/>
-    <addaction name="actionEditor_panel"/>
-    <addaction name="actionUndo_view"/>
+    <addaction name="actionObject_Tree" />
+    <addaction name="actionEditor_panel" />
+    <addaction name="actionUndo_view" />
    </widget>
-   <addaction name="fileMenu"/>
-   <addaction name="editMenu"/>
-   <addaction name="viewMenu"/>
-   <addaction name="ObjectMenu"/>
-   <addaction name="RulesMenu"/>
-   <addaction name="toolsMenu"/>
-   <addaction name="menuWindow"/>
-   <addaction name="helpMenu"/>
+   <addaction name="fileMenu" />
+   <addaction name="editMenu" />
+   <addaction name="viewMenu" />
+   <addaction name="ObjectMenu" />
+   <addaction name="RulesMenu" />
+   <addaction name="toolsMenu" />
+   <addaction name="menuWindow" />
+   <addaction name="helpMenu" />
   </widget>
   <widget class="QDockWidget" name="undoDockWidget">
    <property name="windowTitle">
@@ -1404,10 +1404,10 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string/>
+    <string />
    </property>
    <property name="iconText">
-    <string/>
+    <string />
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
@@ -1421,7 +1421,7 @@
     <string>About</string>
    </property>
    <property name="shortcut">
-    <string/>
+    <string />
    </property>
   </action>
   <action name="toolbarFileNew">
@@ -1617,7 +1617,7 @@
     <string>Show File Properties</string>
    </property>
    <property name="shortcut">
-    <string/>
+    <string />
    </property>
   </action>
   <action name="ObjectLockAction">
@@ -1807,7 +1807,7 @@
    </property>
   </action>
  </widget>
- <layoutdefault spacing="0" margin="11"/>
+ <layoutdefault spacing="0" margin="11" />
  <customwidgets>
   <customwidget>
    <class>ActionsDialog</class>
@@ -1986,7 +1986,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="MainRes.qrc"/>
+  <include location="MainRes.qrc" />
  </resources>
  <connections>
   <connection>
