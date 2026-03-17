@@ -440,7 +440,8 @@
    <item row="5" column="0" colspan="2">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Ported to Python/Qt6 by Linuxfabrik GmbH, Zurich, Switzerland</string>
+      <string>Copyright 2026 Linuxfabrik GmbH, Zurich, Switzerland
+Ported to Python/Qt6 by Linuxfabrik GmbH</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignmentFlag::AlignCenter</set>
