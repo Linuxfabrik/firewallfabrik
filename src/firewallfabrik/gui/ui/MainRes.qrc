@@ -216,5 +216,9 @@
 
     <!-- Window icon (multiple sizes for taskbar / window manager) -->
     <file alias="Icons/FirewallFabrik/scalable">Icons/firewallfabrik.svg</file>
+    <file alias="Icons/FirewallFabrik/16">Icons/firewallfabrik_16.png</file>
+    <file alias="Icons/FirewallFabrik/24">Icons/firewallfabrik_24.png</file>
+    <file alias="Icons/FirewallFabrik/32">Icons/firewallfabrik_32.png</file>
+    <file alias="Icons/FirewallFabrik/48">Icons/firewallfabrik_48.png</file>
   </qresource>
 </RCC>
