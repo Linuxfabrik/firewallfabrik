@@ -12,6 +12,8 @@
 
 """Editor panel dialog for DNSName objects."""
 
+from PySide6.QtCore import QSettings
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 
 
@@ -24,16 +26,38 @@ class DNSNameDialog(BaseObjectDialog):
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
-        self.dnsrec.setText(data.get('source_name', ''))
-        run_time = data.get('run_time', True)
+
+        # Use name as DNS record if the preference is set and
+        # the object has no source_name yet.
+        source_name = data.get('source_name', '')
+        if not source_name:
+            settings = QSettings()
+            if settings.value('Objects/DNSName/useNameForDNSRecord', False, type=bool):
+                source_name = self._obj.name or ''
+        self.dnsrec.setText(source_name)
+
+        # Resolve mode: honour the preference for new objects (no
+        # run_time key yet), otherwise use the stored value.
+        if 'run_time' in data:
+            run_time = data['run_time']
+        else:
+            settings = QSettings()
+            use_compile = settings.value(
+                'Objects/DNSName/useCompileTimeForNewObjects', True, type=bool
+            )
+            run_time = not use_compile
         if run_time:
             self.r_runtime.setChecked(True)
         else:
             self.r_compiletime.setChecked(True)
 
     def _apply_changes(self):
-        self._obj.name = self.obj_name.text()
-        data = dict(self._obj.data or {})
+        new_name = self.obj_name.text()
+        if self._obj.name != new_name:
+            self._obj.name = new_name
+        old_data = self._obj.data or {}
+        data = dict(old_data)
         data['source_name'] = self.dnsrec.text().strip()
         data['run_time'] = self.r_runtime.isChecked()
-        self._obj.data = data
+        if data != old_data:
+            self._obj.data = data
