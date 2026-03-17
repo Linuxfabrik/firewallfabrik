@@ -52,6 +52,7 @@ GUI:
 - DNS Name and Address Table dialogs now honour the Preferences default for compile-time vs run-time resolution when creating new objects.
 - New policy rules now use Preferences defaults for logging, stateful inspection, action, and direction instead of hardcoded values.
 - Preferences dialog: "Restore Defaults" button resets all settings (objects, labels, platforms) to application defaults. Policy Rules defaults for source/destination/service/interface ("Any" vs "Dummy" placeholder) now take effect when creating new rules. Description text explains the "Dummy" concept.
+- Interface name autoconfiguration: when enabled in Preferences > Interface, the interface type and VLAN ID are guessed from the name (e.g. `eth0.100` → VLAN 802.1q with ID 100, `bond0` → bonding, `br0` → bridge). Supports Linux naming conventions including systemd predictable names (`enp0s3`, `wlp2s0`).
 
 ### Fixed
 

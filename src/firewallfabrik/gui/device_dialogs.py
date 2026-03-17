@@ -199,6 +199,25 @@ class InterfaceDialog(BaseObjectDialog):
         if data != old_data:
             self._obj.data = data
 
+        # Autoconfigure interface type from name if enabled in Preferences.
+        from PySide6.QtCore import QSettings
+
+        if QSettings().value(
+            'Objects/Interface/autoconfigureInterfaces', True, type=bool
+        ):
+            from firewallfabrik.gui.interface_autoconfigure import guess_interface_type
+
+            guessed = guess_interface_type(self._obj.name or '')
+            if guessed:
+                options = dict(self._obj.options or {})
+                changed = False
+                for key, val in guessed.items():
+                    if key not in options or not options[key]:
+                        options[key] = val
+                        changed = True
+                if changed:
+                    self._obj.options = options
+
     @Slot()
     def openIfaceDialog(self):
         """Open the platform-specific advanced interface settings dialog.
