@@ -6,9 +6,10 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall81.fw /etc/fw/firewall81.fw
+# files: * firewall27.fw /etc/fw/firewall27.fw
 #
-#  This firewall has no "top" rule set objects.
+#  this firewall uses iptables-restore format
+#  all interfaces have static addresses, script pipes iptables commands straight to iptables-restore
 #
 
 FWBDEBUG=""
@@ -196,6 +197,17 @@ check_nft() {
     fi
 }
 
+verify_interfaces() {
+    :
+    echo "Verifying interfaces: eth0 eth2 ppp"
+    for i in eth0 eth2 ppp ; do
+        $IP link show "$i" > /dev/null 2>&1 || {
+            log "Interface $i does not exist"
+            exit 1
+        }
+    done
+}
+
 prolog_commands() {
     echo "Running prolog script"
 
@@ -215,9 +227,9 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 192.0.2.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.100/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth2 192.168.2.1/24" ""
+    update_addresses_of_interface "ppp 192.0.2.1/24" ""
 }
 
 script_body() {
@@ -228,28 +240,192 @@ table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
+        ct state invalid drop
+        tcp flags != syn ct state new drop
         #
-        # Rule 0 (global)
+        # Rule 0 (ppp)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        # ppp clients get addresses on 10.1.1.0
+        iifname "ppp" ip saddr != 10.1.1.0/24 log drop
+        #
+        # Rule 1 (ppp)
+        #
+        # ppp clients can not connect to the firewall
+        iifname "ppp" ip daddr 192.0.2.1 log drop
+        #
+        # Rule 2 (ppp)
+        #
+        iifname "ppp" log drop
+        #
+        # Rule 4 (ppp)
+        #
+        # ppp clients can not connect to
+        # anything else on DMZ and
+        # internal net
+        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } log drop
+        #
+        # Rule 5 (eth2)
+        #
+        iifname "eth2" ip saddr != 192.168.2.0/24 log drop
+        #
+        # Rule 7 (global)
+        #
+        tcp dport 22 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr 192.0.2.1 tcp dport 22 ct state new accept
+        #
+        # Rule 14 (global)
+        #
+        # firewall is part of Any, compiler should
+        # generate code for both FORWARD and
+        # INPUT chains
+        ip saddr 200.200.200.200 ct state new accept
+        #
+        # Rule 15 (global)
+        #
+        # because firewall has interface on network
+        # internal_net, compiler should generate code
+        # for both FORWARD and INPUT chains
+        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
+        ct state invalid drop
+        tcp flags != syn ct state new drop
         #
-        # Rule 0 (global)
+        # Rule 0 (ppp)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        # ppp clients get addresses on 10.1.1.0
+        iifname "ppp" ip saddr != 10.1.1.0/24 log drop
+        #
+        # Rule 3 (ppp)
+        #
+        # ppp clients can only connect to the mail
+        # server and web proxy on DMZ
+        iifname "ppp" ip daddr 192.168.2.10 tcp dport { 25, 3128 } ct state new accept
+        #
+        # Rule 4 (ppp)
+        #
+        # ppp clients can not connect to
+        # anything else on DMZ and
+        # internal net
+        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } log drop
+        #
+        # Rule 5 (eth2)
+        #
+        iifname "eth2" ip saddr != 192.168.2.0/24 log drop
+        #
+        # Rule 6 (global)
+        #
+        # hostF has the same IP address as firewal.
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new log accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr 192.168.1.1 tcp dport 22 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new log accept
+        #
+        # Rule 13 (global)
+        #
+        # firewall is part of Any, so compiler should
+        # generate code in both FORWARD and
+        # OUTPUT chains
+        ip daddr 200.200.200.200 ct state new accept
+        #
+        # Rule 14 (global)
+        #
+        # firewall is part of Any, compiler should
+        # generate code for both FORWARD and
+        # INPUT chains
+        ip saddr 200.200.200.200 ct state new accept
+        #
+        # Rule 15 (global)
+        #
+        # because firewall has interface on network
+        # internal_net, compiler should generate code
+        # for both FORWARD and INPUT chains
+        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
+        ct state invalid drop
+        tcp flags != syn ct state new drop
         #
-        # Rule 0 (global)
+        # Rule 6 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        # hostF has the same IP address as firewal.
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new log accept
+        #
+        # Rule 7 (global)
+        #
+        ip daddr { 192.0.2.1, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr 192.0.2.1 tcp dport 22 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        ip daddr 192.168.1.1 tcp dport 22 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new log accept
+        #
+        # Rule 13 (global)
+        #
+        # firewall is part of Any, so compiler should
+        # generate code in both FORWARD and
+        # OUTPUT chains
+        ip daddr 200.200.200.200 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log drop
     }
 }
 
@@ -257,31 +433,31 @@ table ip nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
-        # Rule NAT_1 0 (NAT)
+        # Rule 2 (NAT)
         #
-        # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        ip daddr 192.0.2.1 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 192.168.1.1 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 192.168.2.1 tcp dport 22 dnat to 192.168.1.10:22
         #
-        # Rule NAT_2 0 (NAT)
+        # Rule 3 (NAT)
         #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
+        ip saddr 192.168.1.0/24 ip daddr ! 200.200.200.200 dnat to 192.168.2.10
     }
 
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
-        # Rule NAT_1 1 (NAT)
+        # Rule 0 (NAT)
         #
-        # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "ppp" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 192.168.2.1
         #
-        # Rule NAT_2 1 (NAT)
+        # Rule 1 (NAT)
         #
-        # DNAT Rule
-        accept
+        oifname "ppp" ip saddr 192.168.1.0/24 snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 192.168.2.10 snat to 192.168.2.1
     }
 }
 
@@ -338,6 +514,7 @@ case "$cmd" in
         check_nft
         prolog_commands
         configure_interfaces
+        verify_interfaces
         stop_action
         script_body || run_epilog_and_exit 1
         ip_forward

@@ -227,6 +227,92 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
+
+    missing_port() {
+        intf=$1
+        cmd=$2
+
+        oldIFS=$IFS
+        IFS="@"
+        set $intf
+        port=$1
+        bridge_interface=$2
+        IFS=$oldIFS
+
+        if test "$cmd" = "add"; then
+            echo "# Adding port $port to bridge $bridge_interface"
+            $FWBDEBUG $IP link set $port master $bridge_interface
+            $FWBDEBUG $IP link set $port up
+        else
+            echo "# Removing port $port from bridge $bridge_interface"
+            $FWBDEBUG $IP link set $port nomaster
+        fi
+    }
+
+    # update_bridge br0 "eth2 eth3"
+    update_bridge() {
+        bridge_interface=$1
+        shift
+
+        FWB_PORTS=""
+        CURRENT_PORTS=""
+
+        FWB_PORTS=$(
+            for subint in $*; do
+              echo "${subint}@$bridge_interface"
+            done | sort
+        )
+
+        # Create bridge if it does not exist yet.  This is redundant when
+        # sync_bridge_interfaces has been called first but keeps
+        # update_bridge usable on its own.
+        $IP link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
+            echo "# Creating bridge interface $bridge_interface"
+            $FWBDEBUG $IP link add name $bridge_interface type bridge
+            $FWBDEBUG $IP link set $bridge_interface up
+        }
+
+        CURRENT_PORTS=$(
+            $IP link show master "$bridge_interface" 2>/dev/null | \
+                awk -F'[ :]+' '/^[0-9]/ {print $2}' | \
+                while read port; do
+                    echo "${port}@$bridge_interface"
+                done | sort
+        )
+
+        # First delete bridge ports, then add.  This way, if an interface
+        # moves from one bridge to another, we remove it first and then
+        # add.  The kernel refuses to enslave a port that is already a
+        # member of another bridge.
+        diff_intf missing_port "$CURRENT_PORTS" "$FWB_PORTS" del
+        diff_intf missing_port "$FWB_PORTS" "$CURRENT_PORTS" add
+    }
+
+    sync_bridge_interfaces() {
+        $IP -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
+            awk -v IGNORED="$*" \
+            'BEGIN {
+               split(IGNORED,ignored_arr);
+               for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+             }
+             (!($1 in ignored_dict)) {print $1;}' | \
+             while read brintf; do
+                echo "# Deleting bridge interface $brintf"
+                 $FWBDEBUG $IP link set $brintf down
+                 $FWBDEBUG $IP link delete $brintf type bridge
+             done
+
+        for brint in $*; do
+            $IP link show "$brint" type bridge >/dev/null 2>&1 || {
+                echo "# Creating bridge interface $brint"
+                $FWBDEBUG $IP link add name $brint type bridge
+                $FWBDEBUG $IP link set $brint up
+            }
+        done
+    }
+    sync_bridge_interfaces br1
+    update_bridge br1 "eth2 eth3"
+    $IP link set br1 type bridge stp_state 1
     update_addresses_of_interface "br1 192.168.1.2/24" ""
     update_addresses_of_interface "eth0 172.24.0.2/16" ""
     update_addresses_of_interface "eth0.100" ""

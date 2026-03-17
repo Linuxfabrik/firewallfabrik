@@ -6,9 +6,9 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall81.fw /etc/fw/firewall81.fw
+# files: * firewall3.fw /etc/fw/firewall3.fw
 #
-#  This firewall has no "top" rule set objects.
+#  this object is used to test negation in policy rules with "Assume firewall is part of 'Any'" turned OFF
 #
 
 FWBDEBUG=""
@@ -215,8 +215,9 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 192.0.2.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.100/24" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 22.22.22.22/24" ""
+    update_addresses_of_interface "eth2 192.168.2.1/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -227,61 +228,190 @@ flush ruleset
 table ip filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (lo)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        iif "lo" ct state new accept
+        #
+        # Rule 13 (global)
+        #
+        tcp dport 22 ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        ip daddr != { 192.168.1.1, 192.168.2.1 } ct state new accept
+        #
+        # Rule 21 (global)
+        #
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 22 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 1 (eth1)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        iifname "eth1" meta l4proto 0 log level debug drop
+        #
+        # Rule 2 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log level debug drop
+        #
+        # Rule 3 (eth0,eth2)
+        #
+        iifname "eth2" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log level debug drop
+        #
+        # Rule 4 (eth0)
+        #
+        # testing choice of chains in case when several interfaces
+        # are used and rule matches on any or broadcast
+        iifname "eth0" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth0" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 5 (eth0,eth2)
+        #
+        # testing choice of chains in case when several interfaces
+        # are used and rule matches on any or broadcast
+        iifname "eth2" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth2" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 6 (eth0)
+        #
+        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 7 (eth0,eth2)
+        #
+        iifname "eth2" ip saddr 0.0.0.0 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 8 (eth0)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 9 (eth0,eth2)
+        #
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 10 (eth1)
+        #
+        # Anti-spoofing rule
+        iifname "eth1" ip saddr { 22.22.22.22, 192.168.1.1, 192.168.2.1, 192.168.1.0/24 } log level debug drop
+        #
+        # Rule 11 (eth1)
+        #
+        # Anti-spoofing rule
+        oifname "eth1" ip saddr != 192.168.1.0/24 log level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # hostF has the same IP address as firewal.
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new log level debug accept
+        #
+        # Rule 14 (global)
+        #
+        # testing negation in the policy rule
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable log level debug drop
+        #
+        # Rule 15 (global)
+        #
+        ip daddr != 33.33.33.0/24 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        ip daddr != { 33.33.33.0/24, 222.222.222.0/24 } ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        # testing negation in service field
+        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } log level debug drop
+        #
+        # Rule 19 (global)
+        #
+        # 'masquerading' rule
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 20 (global)
+        #
+        # 'catch all' rule
+        log level debug drop
+        #
+        # Rule 21 (global)
+        #
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 22 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 23 (eth0,eth1,eth2)
+        #
+        # this rule should go only to the FORWARD
+        # chain but should have "-i eth" clause
+        iifname "eth0" ct state new accept
+        iifname "eth1" ct state new accept
+        iifname "eth2" ct state new accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 0 (lo)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        oif "lo" ct state new accept
+        #
+        # Rule 8 (eth0)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 9 (eth0,eth2)
+        #
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 11 (eth1)
+        #
+        # Anti-spoofing rule
+        oifname "eth1" ip saddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1, 192.168.1.0/24 } log level debug drop
+        #
+        # Rule 19 (global)
+        #
+        # 'masquerading' rule
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 21 (global)
+        #
+        ip saddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 22 (global)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
     }
 }
 
 table ip nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        #
-        # Rule NAT_1 0 (NAT)
-        #
-        # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        #
-        # Rule NAT_2 0 (NAT)
-        #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
     }
 
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
-        # Rule NAT_1 1 (NAT)
+        # Rule 0 (NAT)
         #
-        # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 22.22.22.22
+        oifname "eth2" ip saddr 192.168.1.0/24 snat to 192.168.2.1
         #
-        # Rule NAT_2 1 (NAT)
+        # Rule 1 (NAT)
         #
-        # DNAT Rule
-        accept
+        oifname "eth0" ip saddr 192.168.1.10 snat to 22.22.22.23
+        oifname "eth1" ip saddr 192.168.1.10 snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.10 snat to 22.22.22.23
     }
 }
 

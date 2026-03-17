@@ -255,6 +255,7 @@ table ip filter {
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #
@@ -288,6 +289,7 @@ table ip filter {
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #
@@ -321,6 +323,7 @@ table ip filter {
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #

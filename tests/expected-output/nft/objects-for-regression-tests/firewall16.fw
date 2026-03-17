@@ -273,12 +273,19 @@ table ip nat {
         # and OUTPUT chain because option "local NAT"
         # is enabled
         ip daddr 192.168.1.22 tcp dport 80 dnat to 192.168.2.10:80
+        ip daddr 22.22.23.22 tcp dport 80 dnat to 192.168.2.10:80
+        ip daddr 192.168.2.1 tcp dport 80 dnat to 192.168.2.10:80
         ip saddr 192.168.1.0/24 tcp dport 8080 dnat to 192.168.1.10:3128
+        ip saddr 192.168.1.0/24 accept
+        ip saddr 192.168.2.1 accept
+        ip saddr 192.168.2.1 accept
     }
 
     chain output {
         type nat hook output priority dstnat;
         ip daddr 192.168.1.22 tcp dport 80 dnat to 192.168.2.10:80
+        ip daddr 22.22.23.22 tcp dport 80 dnat to 192.168.2.10:80
+        ip daddr 192.168.2.1 tcp dport 80 dnat to 192.168.2.10:80
         #
         # Rule 2 (NAT)
         #
@@ -295,6 +302,8 @@ table ip nat {
         # Rule 5 (NAT)
         #
         ip saddr 192.168.2.1 tcp dport 8080 dnat to 192.168.1.10:3128
+        accept
+        accept
     }
 
     chain postrouting {

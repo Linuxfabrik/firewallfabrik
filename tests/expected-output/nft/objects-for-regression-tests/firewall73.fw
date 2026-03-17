@@ -267,10 +267,6 @@ table ip filter {
         #
         drop
         #
-        # Rule 9 (eth0)
-        #
-        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } drop
-        #
         # Rule 14 (global)
         #
         ip daddr { 33.33.33.33, 172.16.1.1 } drop

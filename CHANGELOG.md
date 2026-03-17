@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Iptables expected test outputs updated for script_skeleton and compiler changes.
+- All compiler test expected outputs updated for script_skeleton and compiler changes (136 passed).
 - Shadowing detection now produces warnings instead of aborting the compilation.
 
 

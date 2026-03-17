@@ -10,6 +10,11 @@
 #
 #  this object is used to test a configuration where firewall has dynamic address
 #
+# Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+# Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+# Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+# Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
+# Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 
 FWBDEBUG=""
 
@@ -236,7 +241,9 @@ table ip filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
+        # # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         iifname "eth1" ip saddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } log level debug drop
+        # # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         iifname "eth1" ip saddr 192.168.1.0/24 log level debug drop
         #
         # Rule 2 (eth1)
@@ -270,6 +277,7 @@ table ip filter {
         # that are used in NAT rules
         # and are added as virtual
         # addresses
+        # # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         tcp dport 25 ct state new accept
         #
         # Rule 17 (global)
@@ -279,6 +287,7 @@ table ip filter {
         #
         # Rule 18 (global)
         #
+        # # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip saddr 192.168.1.0/24 ip daddr != { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } ct state new accept
         #
         # Rule 19 (global)
@@ -293,12 +302,15 @@ table ip filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
+        # # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         iifname "eth1" ip saddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } log level debug drop
+        # # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         iifname "eth1" ip saddr 192.168.1.0/24 log level debug drop
         #
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
+        # # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         oifname "eth1" ip saddr != 192.168.1.0/24 log level debug drop
         #
         # Rule 2 (eth1)
@@ -340,6 +352,11 @@ table ip filter {
         # 'masquerading' rule
         ip saddr 192.168.1.0/24 ct state new accept
         #
+        # Rule 18 (global)
+        #
+        # # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
         # Rule 19 (global)
         #
         # 'catch all' rule
@@ -352,7 +369,9 @@ table ip filter {
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
+        # # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         oifname "eth1" ip saddr != { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } log level debug drop
+        # # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         oifname "eth1" ip saddr != 192.168.1.0/24 log level debug drop
         #
         # Rule 2 (eth1)
@@ -385,11 +404,17 @@ table ip filter {
         # that are used in NAT rules
         # and are added as virtual
         # addresses
+        # # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } tcp dport 25 ct state new accept
         #
         # Rule 17 (global)
         #
         # 'masquerading' rule
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        # # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip saddr 192.168.1.0/24 ct state new accept
         #
         # Rule 19 (global)
@@ -406,6 +431,9 @@ table ip nat {
         # Rule 5 (NAT)
         #
         ip daddr 192.168.1.1 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 0.0.0.0 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 192.168.2.1 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 222.222.222.222 tcp dport 22 dnat to 192.168.1.10:22
         #
         # Rule 6 (NAT)
         #

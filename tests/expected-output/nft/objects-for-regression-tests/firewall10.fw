@@ -6,9 +6,11 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall81.fw /etc/fw/firewall81.fw
+# files: * firewall10.fw /etc/fw/firewall10.fw
 #
-#  This firewall has no "top" rule set objects.
+#  testing rules with  action-on-reject "TCP reset"
+#  in this firewall, unlike in firewall9, this option is set globally instead of setting it
+#  in the rule options
 #
 
 FWBDEBUG=""
@@ -215,8 +217,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 192.0.2.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.100/24" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 22.22.22.22/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -231,16 +233,51 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        tcp dport 6667 log level debug reject with icmp admin-prohibited
+        #
+        # Rule 1 (global)
+        #
+        udp dport 53 log level debug reject with icmp host-unreachable
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto 1 log level debug reject with icmp host-unreachable
+        meta l4proto 50 log level debug reject with icmp host-unreachable
+        #
+        # Rule 3 (global)
+        #
+        tcp dport { 113, 10000-11000 } log level debug reject with icmp host-unreachable
+        udp dport { 53, 161 } log level debug reject with icmp host-unreachable
+        #
+        # Rule 4 (global)
+        #
+        tcp dport { 113, 10000-11000 } reject with icmp host-unreachable
+        udp dport { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 5 (global)
+        #
+        ip daddr != { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } reject with icmp host-unreachable
+        ip daddr != { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 6 (global)
+        #
+        tcp dport != { 113, 10000-11000 } reject with icmp host-unreachable
+        udp dport != { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 7 (global)
+        #
+        tcp dport != { 113, 10000-11000 } log level debug reject with icmp host-unreachable
+        udp dport != { 53, 161 } log level debug reject with icmp host-unreachable
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
+        # Rule 5 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        tcp dport { 113, 10000-11000 } reject with icmp host-unreachable
+        udp dport { 53, 161 } reject with icmp host-unreachable
     }
 
     chain output {
@@ -249,39 +286,41 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
-    }
-}
-
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
+        ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport 6667 log level debug reject with icmp admin-prohibited
         #
-        # Rule NAT_1 0 (NAT)
+        # Rule 1 (global)
         #
-        # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport 53 log level debug reject with icmp host-unreachable
         #
-        # Rule NAT_2 0 (NAT)
+        # Rule 2 (global)
         #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
+        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 1 log level debug reject with icmp host-unreachable
+        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 50 log level debug reject with icmp host-unreachable
         #
-        # Rule NAT_1 1 (NAT)
+        # Rule 3 (global)
         #
-        # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } log level debug reject with icmp host-unreachable
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } log level debug reject with icmp host-unreachable
         #
-        # Rule NAT_2 1 (NAT)
+        # Rule 4 (global)
         #
-        # DNAT Rule
-        accept
+        ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } reject with icmp host-unreachable
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 5 (global)
+        #
+        tcp dport { 113, 10000-11000 } reject with icmp host-unreachable
+        udp dport { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 6 (global)
+        #
+        ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport != { 113, 10000-11000 } reject with icmp host-unreachable
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } reject with icmp host-unreachable
+        #
+        # Rule 7 (global)
+        #
+        ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport != { 113, 10000-11000 } log level debug reject with icmp host-unreachable
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } log level debug reject with icmp host-unreachable
     }
 }
 

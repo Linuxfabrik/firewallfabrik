@@ -6,9 +6,9 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall81.fw /etc/fw/firewall81.fw
+# files: * firewall63.fw /etc/firewall63.fw
 #
-#  This firewall has no "top" rule set objects.
+#  testing TOS and DSCP matching
 #
 
 FWBDEBUG=""
@@ -196,6 +196,17 @@ check_nft() {
     fi
 }
 
+verify_interfaces() {
+    :
+    echo "Verifying interfaces: eth0 eth1"
+    for i in eth0 eth1 ; do
+        $IP link show "$i" > /dev/null 2>&1 || {
+            log "Interface $i does not exist"
+            exit 1
+        }
+    done
+}
+
 prolog_commands() {
     echo "Running prolog script"
 
@@ -215,9 +226,8 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 192.0.2.1/24" ""
-    update_addresses_of_interface "eth1 192.168.1.100/24" ""
-    update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 222.222.222.222/24" ""
 }
 
 script_body() {
@@ -231,7 +241,15 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        meta l4proto 0 ip tos 0x20 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        meta l4proto 0 ip dscp 0x20 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto 0 ip dscp BE ct state new accept
     }
 
     chain forward {
@@ -240,7 +258,15 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        meta l4proto 0 ip tos 0x20 ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        meta l4proto 0 ip dscp 0x20 ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto 0 ip dscp BE ct state new accept
     }
 
     chain output {
@@ -249,39 +275,15 @@ table ip filter {
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
-    }
-}
-
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
+        meta l4proto 0 ip tos 0x20 ct state new accept
         #
-        # Rule NAT_1 0 (NAT)
+        # Rule 1 (global)
         #
-        # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        meta l4proto 0 ip dscp 0x20 ct state new accept
         #
-        # Rule NAT_2 0 (NAT)
+        # Rule 2 (global)
         #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
-        #
-        # Rule NAT_1 1 (NAT)
-        #
-        # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
-        #
-        # Rule NAT_2 1 (NAT)
-        #
-        # DNAT Rule
-        accept
+        meta l4proto 0 ip dscp BE ct state new accept
     }
 }
 
@@ -290,7 +292,7 @@ NFT_RULES
 
 ip_forward() {
     :
-
+    echo 1 > /proc/sys/net/ipv4/ip_forward
 }
 
 block_action() {
@@ -338,6 +340,7 @@ case "$cmd" in
         check_nft
         prolog_commands
         configure_interfaces
+        verify_interfaces
         stop_action
         script_body || run_epilog_and_exit 1
         ip_forward
