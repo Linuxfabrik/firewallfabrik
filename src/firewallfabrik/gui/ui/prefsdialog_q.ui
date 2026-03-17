@@ -332,7 +332,7 @@ tags are matched.</string>
            <item>
             <widget class="QLabel" name="label_19">
              <property name="text">
-              <string>Default settings for newly created policy rules:</string>
+              <string>Default settings for newly created policy rules. "Any" means the rule matches all objects immediately. "Dummy" inserts a placeholder that forces you to drag a real object into the rule before it can be compiled — this helps prevent accidental "allow all" rules.</string>
              </property>
              <property name="wordWrap">
               <bool>true</bool>

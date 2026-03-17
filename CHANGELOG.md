@@ -51,7 +51,7 @@ GUI:
 - Preferences dialog: enabled DNS Name, Address Table, Policy Rules, and Interface sub-tabs with working settings. Removed obsolete items (deleted objects, advanced user mode, custom templates), unused tabs (Data File, Installer, Diff), and the marginal "Use name for DNS record" option. Fixed truncated text in Policy Rules tab. Replaced all "fwbuilder"/"Firewall Builder" references with "FirewallFabrik" in user-visible UI strings.
 - DNS Name and Address Table dialogs now honour the Preferences default for compile-time vs run-time resolution when creating new objects.
 - New policy rules now use Preferences defaults for logging, stateful inspection, action, and direction instead of hardcoded values.
-- Preferences dialog: "Restore Defaults" button resets all settings (objects, labels, platforms) to application defaults.
+- Preferences dialog: "Restore Defaults" button resets all settings (objects, labels, platforms) to application defaults. Policy Rules defaults for source/destination/service/interface ("Any" vs "Dummy" placeholder) now take effect when creating new rules. Description text explains the "Dummy" concept.
 
 ### Fixed
 

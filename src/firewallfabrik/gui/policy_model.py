@@ -1092,9 +1092,66 @@ class PolicyTreeModel(QAbstractItemModel):
                 **kwargs,
             )
             session.add(new_rule)
+            session.flush()
+
+            # Insert Dummy objects for slots where the Preference says "Dummy"
+            # (index 1) instead of "Any" (index 0).
+            if self._rule_set_type == 'Policy':
+                dummy_slots = []
+                if settings.value('Objects/PolicyRule/defaultSource', 0, type=int) == 1:
+                    dummy_slots.append(('src', 'Network'))
+                if (
+                    settings.value('Objects/PolicyRule/defaultDestination', 0, type=int)
+                    == 1
+                ):
+                    dummy_slots.append(('dst', 'Network'))
+                if (
+                    settings.value('Objects/PolicyRule/defaultService', 0, type=int)
+                    == 1
+                ):
+                    dummy_slots.append(('srv', 'IPService'))
+                if (
+                    settings.value('Objects/PolicyRule/defaultInterface', 0, type=int)
+                    == 1
+                ):
+                    dummy_slots.append(('itf', 'Interface'))
+                if dummy_slots:
+                    self._insert_dummy_objects(session, new_id, dummy_slots)
 
         self.reload()
         return new_id
+
+    @staticmethod
+    def _insert_dummy_objects(session, rule_id, slot_type_pairs):
+        """Insert references to 'Dummy' objects in rule_elements."""
+        from firewallfabrik.core.objects import (
+            Interface,
+            Network,
+            Service,
+        )
+
+        type_model_map = {
+            'Network': Network,
+            'IPService': Service,
+            'Interface': Interface,
+        }
+        for slot, obj_type in slot_type_pairs:
+            model = type_model_map.get(obj_type)
+            if model is None:
+                continue
+            dummy = session.scalars(
+                sqlalchemy.select(model).where(model.name == 'Dummy')
+            ).first()
+            if dummy is None:
+                continue
+            session.execute(
+                rule_elements.insert().values(
+                    rule_id=rule_id,
+                    slot=slot,
+                    target_id=dummy.id,
+                    position=0,
+                )
+            )
 
     def delete_rules(self, indices):
         """Delete rules at the given QModelIndex list."""
