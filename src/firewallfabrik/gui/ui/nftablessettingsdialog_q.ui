@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>nftAdvancedDialog_q</class>
  <widget class="QDialog" name="nftAdvancedDialog_q">
@@ -12,15 +12,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1054</width>
-    <height>636</height>
+    <width>800</width>
+    <height>600</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
+  <property name="maximumSize">
+   <size>
+    <width>800</width>
+    <height>16777215</height>
+   </size>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QCheckBox::indicator { subcontrol-position: top left; margin-top: 4px; }</string>
   </property>
   <property name="windowTitle">
    <string>nftables: Settings</string>
@@ -31,13 +34,6 @@
   <layout class="QGridLayout" name="gridLayout_6">
    <item row="1" column="0">
     <layout class="QHBoxLayout">
-     <item>
-      <widget class="QPushButton" name="buttonHelp">
-       <property name="text">
-        <string>Help</string>
-       </property>
-      </widget>
-     </item>
      <item>
       <spacer>
        <property name="orientation">
@@ -60,7 +56,7 @@
         <string>&amp;OK</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -76,7 +72,7 @@
         <string>&amp;Cancel</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -102,10 +98,10 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_10">
        <item row="0" column="0">
-        <layout class="QGridLayout" name="gridLayout_7"/>
+        <layout class="QGridLayout" name="gridLayout_7" />
        </item>
        <item row="1" column="0" colspan="2">
-        <layout class="QGridLayout" name="gridLayout_9" columnstretch="5,5,5">
+        <layout class="QGridLayout" name="gridLayout_9">
          <item row="1" column="0">
           <widget class="QLabel" name="compilerLabel">
            <property name="text">
@@ -121,17 +117,14 @@
          </item>
          <item row="1" column="1">
           <widget class="QLineEdit" name="compiler">
-           <property name="minimumSize">
-            <size>
-             <width>300</width>
-             <height>25</height>
-            </size>
-           </property>
            <property name="maximumSize">
             <size>
              <width>32767</width>
              <height>22</height>
             </size>
+           </property>
+           <property name="toolTip">
+            <string>Path to an alternative compiler binary. Leave empty to use the built-in compiler.</string>
            </property>
           </widget>
          </item>
@@ -168,6 +161,9 @@
              <height>22</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Additional command-line arguments passed to the compiler.</string>
+           </property>
           </widget>
          </item>
          <item row="3" column="0">
@@ -191,39 +187,23 @@
          </item>
          <item row="3" column="1">
           <widget class="QLineEdit" name="outputFileName">
-           <property name="minimumSize">
-            <size>
-             <width>300</width>
-             <height>25</height>
-            </size>
-           </property>
            <property name="maximumSize">
             <size>
              <width>32767</width>
              <height>22</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Name of the generated output file. Leave empty to use the default name derived from the firewall object name.</string>
+           </property>
           </widget>
-         </item>
-         <item row="1" column="2">
-          <spacer name="horizontalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </item>
        <item row="2" column="0" colspan="2">
         <widget class="QLabel" name="label_7">
          <property name="text">
-          <string>If output file name is left blank, the file name is constructed of the firewall object name and extension &quot;.fw&quot;</string>
+          <string>If output file name is left blank, the file name is constructed of the firewall object name and extension ".fw"</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
@@ -231,7 +211,7 @@
         </widget>
        </item>
        <item row="3" column="0" colspan="2">
-        <layout class="QGridLayout" name="gridLayout_8" columnstretch="5,5,5">
+        <layout class="QGridLayout" name="gridLayout_8">
          <item row="0" column="0">
           <widget class="QLabel" name="label_2">
            <property name="text">
@@ -244,32 +224,16 @@
          </item>
          <item row="0" column="1">
           <widget class="QLineEdit" name="fileNameOnFw">
-           <property name="minimumSize">
-            <size>
-             <width>300</width>
-             <height>25</height>
-            </size>
-           </property>
            <property name="maximumSize">
             <size>
              <width>32767</width>
              <height>22</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Name of the script file on the firewall. Leave empty to use the same name as the output file.</string>
+           </property>
           </widget>
-         </item>
-         <item row="0" column="2">
-          <spacer name="horizontalSpacer">
-           <property name="orientation">
-            <enum>Qt::Orientation::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </item>
@@ -309,6 +273,9 @@
            <property name="text">
             <string>Assume firewall is part of 'any'</string>
            </property>
+           <property name="toolTip">
+            <string>Assume the firewall machine is part of "any" and matching network objects. When enabled, the compiler generates rules for traffic to/from the firewall itself.</string>
+           </property>
           </widget>
          </item>
          <item row="0" column="1">
@@ -321,6 +288,9 @@
            </property>
            <property name="text">
             <string>Detect shadowing in policy rules</string>
+           </property>
+           <property name="toolTip">
+            <string>Detect rules that are completely shadowed by earlier rules in the same access list and report a warning.</string>
            </property>
           </widget>
          </item>
@@ -335,6 +305,9 @@
            <property name="text">
             <string>Accept TCP sessions opened prior to firewall restart</string>
            </property>
+           <property name="toolTip">
+            <string>Accept TCP sessions opened prior to firewall restart. The checkbox label shows inverted semantics ("Drop new TCP sessions that do not begin with SYN flag").</string>
+           </property>
           </widget>
          </item>
          <item row="1" column="1">
@@ -347,6 +320,9 @@
            </property>
            <property name="text">
             <string>Ignore empty groups in rules</string>
+           </property>
+           <property name="toolTip">
+            <string>Silently ignore empty groups referenced in rules instead of reporting a compiler error.</string>
            </property>
           </widget>
          </item>
@@ -361,6 +337,9 @@
            <property name="text">
             <string>Accept ESTABLISHED and RELATED packets before the first rule</string>
            </property>
+           <property name="toolTip">
+            <string>Accept packets belonging to connections already established or related to established connections. Adds automatic rules at the top of each access list.</string>
+           </property>
           </widget>
          </item>
          <item row="2" column="1">
@@ -374,6 +353,9 @@
            <property name="text">
             <string>Enable support for NAT of locally originated connections</string>
            </property>
+           <property name="toolTip">
+            <string>Enable support for NAT of locally originated connections (OUTPUT chain DNAT rules).</string>
+           </property>
           </widget>
          </item>
          <item row="3" column="0">
@@ -384,12 +366,18 @@
               <string>Drop packets that are associated with
 no known connection</string>
              </property>
+             <property name="toolTip">
+              <string>Drop packets that are associated with no known connection (conntrack state INVALID).</string>
+             </property>
             </widget>
            </item>
            <item>
             <widget class="QCheckBox" name="logInvalid">
              <property name="text">
               <string>and log them</string>
+             </property>
+             <property name="toolTip">
+              <string>Log packets in INVALID conntrack state before dropping them. Only effective when "Drop packets associated with no known connection" is also enabled.</string>
              </property>
             </widget>
            </item>
@@ -426,6 +414,9 @@ in host settings dialog.
            <property name="text">
             <string>Bridging firewall</string>
            </property>
+           <property name="toolTip">
+            <string>Generate rules for a bridging (transparent) firewall. Adds FORWARD chain physdev match rules.</string>
+           </property>
           </widget>
          </item>
          <item row="5" column="0">
@@ -441,7 +432,11 @@ in host settings dialog.
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="actionOnReject"/>
+            <widget class="QComboBox" name="actionOnReject">
+             <property name="toolTip">
+              <string>ICMP message type or TCP RST sent back to the sender when a packet is rejected. Leave empty to use the system default.</string>
+             </property>
+            </widget>
            </item>
            <item>
             <spacer>
@@ -477,7 +472,10 @@ packets to IPv6 policies</string>
          <item row="6" column="0" colspan="2">
           <widget class="QCheckBox" name="useModuleSet">
            <property name="text">
-            <string>Use module &quot;set&quot; for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later)</string>
+            <string>Use module "set" for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later)</string>
+           </property>
+           <property name="toolTip">
+            <string>Use the ipset kernel module ("set" match) for run-time address table objects. Only available in iptables v1.4.1.1 and later.</string>
            </property>
           </widget>
          </item>
@@ -485,6 +483,9 @@ packets to IPv6 policies</string>
           <widget class="QCheckBox" name="useKernelTz">
            <property name="text">
             <string>Use kernel timezone instead of UTC</string>
+           </property>
+           <property name="toolTip">
+            <string>Use the kernel timezone instead of UTC for time-based rules. Only available in iptables v1.4.11 and later.</string>
            </property>
           </widget>
          </item>
@@ -510,6 +511,9 @@ packets to IPv6 policies</string>
            <property name="text">
             <string>Always permit ssh access from the management workstation with this address:</string>
            </property>
+           <property name="toolTip">
+            <string>Always permit SSH access from the management workstation with the address specified below.</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -525,6 +529,9 @@ packets to IPv6 policies</string>
              <width>32767</width>
              <height>32767</height>
             </size>
+           </property>
+           <property name="toolTip">
+            <string>IP address of the management workstation allowed permanent SSH access.</string>
            </property>
           </widget>
          </item>
@@ -546,7 +553,10 @@ packets to IPv6 policies</string>
        <item row="9" column="0" colspan="2">
         <widget class="QCheckBox" name="add_mgmt_ssh_rule_when_stoped">
          <property name="text">
-          <string>Install the rule for ssh access from the management workstation when the firewall script is run with the &quot;block&quot; command</string>
+          <string>Install the rule for ssh access from the management workstation when the firewall script is run with the "block" command</string>
+         </property>
+         <property name="toolTip">
+          <string>Install the rule for SSH access from the management workstation even when the firewall script is run with the "block" command.</string>
          </property>
         </widget>
        </item>
@@ -606,11 +616,8 @@ packets to IPv6 policies</string>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize">
-             <size>
-              <width>250</width>
-              <height>0</height>
-             </size>
+            <property name="toolTip">
+             <string>Directory on the firewall where the generated script will be stored.</string>
             </property>
            </widget>
           </item>
@@ -635,11 +642,8 @@ packets to IPv6 policies</string>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize">
-             <size>
-              <width>250</width>
-              <height>0</height>
-             </size>
+            <property name="toolTip">
+             <string>SSH user name for uploading the generated script to the firewall. Leave empty to use the current system user.</string>
             </property>
            </widget>
           </item>
@@ -664,11 +668,8 @@ packets to IPv6 policies</string>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize">
-             <size>
-              <width>250</width>
-              <height>0</height>
-             </size>
+            <property name="toolTip">
+             <string>Alternative address used for SCP/SSH if the primary management address is unreachable.</string>
             </property>
            </widget>
           </item>
@@ -693,11 +694,8 @@ packets to IPv6 policies</string>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="minimumSize">
-             <size>
-              <width>250</width>
-              <height>0</height>
-             </size>
+            <property name="toolTip">
+             <string>Custom command executed on the firewall after the script has been copied. Leave empty to use the built-in activation.</string>
             </property>
            </widget>
           </item>
@@ -721,11 +719,8 @@ packets to IPv6 policies</string>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>0</height>
-               </size>
+              <property name="toolTip">
+               <string>Additional arguments passed to ssh when connecting to the firewall for installation.</string>
               </property>
              </widget>
             </item>
@@ -751,11 +746,8 @@ packets to IPv6 policies</string>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>0</height>
-               </size>
+              <property name="toolTip">
+               <string>Additional arguments passed to scp when copying the script to the firewall.</string>
               </property>
              </widget>
             </item>
@@ -799,11 +791,8 @@ packets to IPv6 policies</string>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>0</height>
-               </size>
+              <property name="toolTip">
+               <string>Path to a custom installation script executed instead of the default SCP/SSH mechanism.</string>
               </property>
              </widget>
             </item>
@@ -838,11 +827,8 @@ packets to IPv6 policies</string>
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
-              <property name="minimumSize">
-               <size>
-                <width>300</width>
-                <height>0</height>
-               </size>
+              <property name="toolTip">
+               <string>Arguments passed to the custom installation script.</string>
               </property>
              </widget>
             </item>
@@ -892,7 +878,7 @@ packets to IPv6 policies</string>
        <item row="1" column="0">
         <widget class="QGroupBox" name="frame147">
          <property name="title">
-          <string/>
+          <string />
          </property>
          <layout class="QGridLayout">
           <item row="0" column="0" colspan="2">
@@ -909,7 +895,11 @@ packets to IPv6 policies</string>
            </widget>
           </item>
           <item row="1" column="0" colspan="2">
-           <widget class="QTextEdit" name="epilog_script"/>
+           <widget class="QTextEdit" name="epilog_script">
+            <property name="toolTip">
+             <string>Shell commands appended after all firewall rules. Use for custom cleanup or final actions.</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -917,7 +907,7 @@ packets to IPv6 policies</string>
        <item row="0" column="0">
         <widget class="QGroupBox" name="frame146">
          <property name="title">
-          <string/>
+          <string />
          </property>
          <layout class="QGridLayout">
           <property name="leftMargin">
@@ -933,7 +923,11 @@ packets to IPv6 policies</string>
            <number>6</number>
           </property>
           <item row="1" column="0" colspan="3">
-           <widget class="QTextEdit" name="prolog_script"/>
+           <widget class="QTextEdit" name="prolog_script">
+            <property name="toolTip">
+             <string>Shell commands inserted before the firewall rules. Use for custom initialization.</string>
+            </property>
+           </widget>
           </item>
           <item row="0" column="0" colspan="3">
            <widget class="QLabel" name="textLabel2_2">
@@ -981,6 +975,9 @@ packets to IPv6 policies</string>
               <string>after policy reset</string>
              </property>
             </item>
+            <property name="toolTip">
+             <string>Where in the generated script the prolog commands are inserted.</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -1011,7 +1008,7 @@ packets to IPv6 policies</string>
        <item row="0" column="0" rowspan="5">
         <widget class="QGroupBox" name="buttonGroup1">
          <property name="title">
-          <string/>
+          <string />
          </property>
          <property name="flat">
           <bool>true</bool>
@@ -1067,6 +1064,9 @@ packets to IPv6 policies</string>
                 <property name="text">
                  <string>log TCP seq. numbers</string>
                 </property>
+                <property name="toolTip">
+                 <string>Include TCP sequence numbers in log messages.</string>
+                </property>
                </widget>
               </item>
               <item row="2" column="0" colspan="2">
@@ -1074,12 +1074,18 @@ packets to IPv6 policies</string>
                 <property name="text">
                  <string>log IP options</string>
                 </property>
+                <property name="toolTip">
+                 <string>Include IP options in log messages.</string>
+                </property>
                </widget>
               </item>
               <item row="3" column="0" colspan="2">
                <widget class="QCheckBox" name="logNumsyslog">
                 <property name="text">
                  <string>use numeric syslog levels</string>
+                </property>
+                <property name="toolTip">
+                 <string>Use numeric syslog levels instead of symbolic names in log rules.</string>
                 </property>
                </widget>
               </item>
@@ -1094,12 +1100,19 @@ packets to IPv6 policies</string>
                </widget>
               </item>
               <item row="4" column="1">
-               <widget class="QComboBox" name="logLevel"/>
+               <widget class="QComboBox" name="logLevel">
+                <property name="toolTip">
+                 <string>Syslog severity level for packets matched by logging rules. Leave empty to use the system default.</string>
+                </property>
+               </widget>
               </item>
               <item row="1" column="0" colspan="2">
                <widget class="QCheckBox" name="logTCPopt">
                 <property name="text">
                  <string>log TCP options</string>
+                </property>
+                <property name="toolTip">
+                 <string>Include TCP options in log messages.</string>
                 </property>
                </widget>
               </item>
@@ -1124,6 +1137,9 @@ packets to IPv6 policies</string>
                 <property name="maximum">
                  <number>1500</number>
                 </property>
+                <property name="toolTip">
+                 <string>Number of bytes of each packet to copy to userspace via NFLOG. 0 copies the entire packet.</string>
+                </property>
                </widget>
               </item>
               <item row="0" column="0">
@@ -1140,6 +1156,9 @@ packets to IPv6 policies</string>
                <widget class="QSpinBox" name="qthreshold">
                 <property name="minimum">
                  <number>1</number>
+                </property>
+                <property name="toolTip">
+                 <string>Number of packets to queue inside the kernel before sending them to userspace via NFLOG.</string>
                 </property>
                </widget>
               </item>
@@ -1170,6 +1189,9 @@ packets to IPv6 policies</string>
                 </property>
                 <property name="maximum">
                  <number>32</number>
+                </property>
+                <property name="toolTip">
+                 <string>NFLOG netlink multicast group number (1-32).</string>
                 </property>
                </widget>
               </item>
@@ -1236,6 +1258,9 @@ packets to IPv6 policies</string>
          <property name="maxLength">
           <number>32</number>
          </property>
+         <property name="toolTip">
+          <string>Prefix string for log messages. Supported macros: %N = rule number, %A = action, %I = interface name, %C = chain name, %R = rule set name.</string>
+         </property>
         </widget>
        </item>
        <item row="2" column="2" colspan="2">
@@ -1253,6 +1278,9 @@ packets to IPv6 policies</string>
          <property name="maximum">
           <number>10000</number>
          </property>
+         <property name="toolTip">
+          <string>Maximum number of log messages per time unit. Set to 0 to disable rate limiting.</string>
+         </property>
         </widget>
        </item>
        <item row="2" column="5">
@@ -1263,6 +1291,9 @@ packets to IPv6 policies</string>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="toolTip">
+          <string>Time unit for the logging rate limit.</string>
+         </property>
         </widget>
        </item>
        <item row="3" column="2" colspan="4">
@@ -1270,6 +1301,9 @@ packets to IPv6 policies</string>
          <property name="text">
           <string>Activate logging in all rules
 (overrides rule options, use for debugging)</string>
+         </property>
+         <property name="toolTip">
+          <string>Activate logging in all rules, overriding individual rule logging options. Use for debugging only.</string>
          </property>
         </widget>
        </item>
@@ -1311,237 +1345,306 @@ packets to IPv6 policies</string>
       <attribute name="title">
        <string>Script</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_4">
+      <layout class="QGridLayout" name="scriptTabLayout">
        <item row="0" column="0">
-        <spacer>
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>30</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="0" column="1">
         <widget class="QCheckBox" name="loadModules">
+         <property name="text">
+          <string />
+         </property>
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="loadModules_label">
          <property name="text">
-          <string>Load iptables modules</string>
+          <string>Load iptables modules: Uses modprobe to load required netfilter kernel modules (connection tracking, NAT). Already loaded modules are skipped automatically.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>loadModules</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="iptDebug">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
         </widget>
        </item>
        <item row="1" column="1">
-        <spacer name="verticalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>556</width>
-           <height>18</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="QLabel" name="label_6">
+        <widget class="QLabel" name="iptDebug_label">
          <property name="text">
-          <string>If debugging is turned on, the script will run with shell option &quot;-x&quot; that makes it print every command it executes. Warning: this produces a lot of debugging output.</string>
+          <string>Turn debugging on: The generated script runs with “set -x”, causing every shell command to be printed to stderr. Warning: produces a lot of output.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>iptDebug</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="verifyInterfaces">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLabel" name="verifyInterfaces_label">
+         <property name="text">
+          <string>Verify interfaces: Checks at runtime that all interfaces defined in the firewall object exist on the target machine before loading rules. The script aborts if any interface is missing.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>verifyInterfaces</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="configureInterfaces">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
         </widget>
        </item>
        <item row="3" column="1">
-        <widget class="QCheckBox" name="iptDebug">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
+        <widget class="QLabel" name="configureInterfaces_label">
          <property name="text">
-          <string>Turn debugging on in generated script</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <spacer name="verticalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>556</width>
-           <height>18</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="5" column="0" colspan="2">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Managing interfaces and addresses</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QCheckBox" name="verifyInterfaces">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Verify interfaces before loading firewall policy</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="1">
-        <widget class="QCheckBox" name="configureInterfaces">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Configure Interfaces of the firewall machine</string>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="1">
-        <widget class="QCheckBox" name="clearUnknownInterfaces">
-         <property name="text">
-          <string>Clear ip addresses and bring down interfaces not configured in FirewallFabrik</string>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="1">
-        <widget class="QCheckBox" name="configure_vlan_interfaces">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Configure VLAN Interfaces</string>
-         </property>
-        </widget>
-       </item>
-       <item row="10" column="1">
-        <widget class="QCheckBox" name="configure_bridge_interfaces">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Configure bridge Interfaces</string>
-         </property>
-        </widget>
-       </item>
-       <item row="11" column="1">
-        <widget class="QCheckBox" name="configure_bonding_interfaces">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Configure bonding Interfaces</string>
-         </property>
-        </widget>
-       </item>
-       <item row="12" column="1">
-        <widget class="QCheckBox" name="addVirtualsforNAT">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Add virtual addresses for NAT</string>
-         </property>
-        </widget>
-       </item>
-       <item row="13" column="1">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>556</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="14" column="0" colspan="2">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Generated script can load rules one by one by calling iptables command line utility, or activate them all at once using iptables-restore. In both cases you just run the script with command line parameter &quot;start&quot; to activate the policy, the script will use iptables-restore automatically if this checkbox is on</string>
+          <string>Configure interfaces: Uses “ip addr add” and “ip addr del” to configure IP addresses on firewall interfaces exactly as defined in the firewall object.</string>
          </property>
          <property name="wordWrap">
           <bool>true</bool>
          </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>configureInterfaces</cstring>
+         </property>
         </widget>
        </item>
-       <item row="15" column="1">
-        <widget class="QCheckBox" name="iptablesRestoreActivation">
+       <item row="4" column="0">
+        <widget class="QCheckBox" name="clearUnknownInterfaces">
+         <property name="text">
+          <string />
+         </property>
          <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="toolTip">
-          <string>iptables-restore replaces firewall policy in one atomic transaction</string>
-         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLabel" name="clearUnknownInterfaces_label">
          <property name="text">
-          <string>Use iptables-restore to activate policy</string>
+          <string>Clear unknown interfaces: Uses “ip addr flush” and “ip link set down” to remove IP addresses and shut down interfaces not defined in the firewall configuration.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>clearUnknownInterfaces</cstring>
          </property>
         </widget>
        </item>
-       <item row="16" column="1">
-        <spacer>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="configure_vlan_interfaces">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLabel" name="configure_vlan_interfaces_label">
+         <property name="text">
+          <string>Configure VLAN interfaces: Creates and configures VLAN sub-interfaces using “ip link add link &lt;parent&gt; type vlan id &lt;id&gt;”.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>configure_vlan_interfaces</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QCheckBox" name="configure_bridge_interfaces">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLabel" name="configure_bridge_interfaces_label">
+         <property name="text">
+          <string>Configure bridge interfaces: Creates bridge interfaces using “ip link add type bridge” and assigns member interfaces with “ip link set master”.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>configure_bridge_interfaces</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QCheckBox" name="configure_bonding_interfaces">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLabel" name="configure_bonding_interfaces_label">
+         <property name="text">
+          <string>Configure bonding interfaces: Loads the bonding kernel module via modprobe and assigns slave interfaces using ifenslave.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>configure_bonding_interfaces</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QCheckBox" name="addVirtualsforNAT">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLabel" name="addVirtualsforNAT_label">
+         <property name="text">
+          <string>Add virtual addresses for NAT: Automatically adds virtual IP addresses via “ip addr add” for NAT target addresses not already assigned to a firewall interface. Requires “Configure interfaces” to be enabled.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>addVirtualsforNAT</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QCheckBox" name="iptablesRestoreActivation">
+         <property name="text">
+          <string />
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QLabel" name="iptablesRestoreActivation_label">
+         <property name="text">
+          <string>Use iptables-restore: Loads all rules in one atomic transaction instead of calling iptables for each rule individually.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+         <property name="buddy">
+          <cstring>iptablesRestoreActivation</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0" colspan="2">
+        <spacer name="scriptTabSpacer">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Expanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>200</height>
+           <height>40</height>
           </size>
          </property>
         </spacer>
@@ -1575,6 +1678,9 @@ packets to IPv6 policies</string>
            <string>IPv6 before IPv4</string>
           </property>
          </item>
+         <property name="toolTip">
+          <string>Order in which IPv4 and IPv6 rules are generated in the output script.</string>
+         </property>
         </widget>
        </item>
        <item row="3" column="0">
@@ -1648,25 +1754,14 @@ packets to IPv6 policies</string>
   <tabstop>logLimitVal</tabstop>
   <tabstop>logLimitSuffix</tabstop>
   <tabstop>logAll</tabstop>
-  <tabstop>loadModules</tabstop>
-  <tabstop>iptDebug</tabstop>
-  <tabstop>verifyInterfaces</tabstop>
-  <tabstop>configureInterfaces</tabstop>
-  <tabstop>clearUnknownInterfaces</tabstop>
-  <tabstop>configure_vlan_interfaces</tabstop>
-  <tabstop>configure_bridge_interfaces</tabstop>
-  <tabstop>configure_bonding_interfaces</tabstop>
-  <tabstop>addVirtualsforNAT</tabstop>
-  <tabstop>iptablesRestoreActivation</tabstop>
   <tabstop>ipv4before</tabstop>
-  <tabstop>buttonHelp</tabstop>
   <tabstop>buttonOk</tabstop>
   <tabstop>buttonCancel</tabstop>
   <tabstop>cprange</tabstop>
   <tabstop>qthreshold</tabstop>
   <tabstop>nlgroup</tabstop>
  </tabstops>
- <resources/>
+ <resources />
  <connections>
   <connection>
    <sender>buttonOk</sender>
@@ -1716,27 +1811,10 @@ packets to IPv6 policies</string>
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>buttonHelp</sender>
-   <signal>clicked()</signal>
-   <receiver>nftAdvancedDialog_q</receiver>
-   <slot>help()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>30</x>
-     <y>700</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>switchLogTarget()</slot>
   <slot>editProlog()</slot>
   <slot>editEpilog()</slot>
-  <slot>help()</slot>
  </slots>
 </ui>

@@ -728,6 +728,9 @@ Keyboard Shortcuts
     * - ``F1``
       - Menu "Help"
       - User Guide
+    * - ``Alt+Return``
+      - Object tree
+      - Open properties/editor for selected object (same as double-click)
     * - ``Ctrl+F``
       - Object tree
       - Focus the filter field

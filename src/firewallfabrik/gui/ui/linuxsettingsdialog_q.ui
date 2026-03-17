@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>linux24AdvancedDialog_q</class>
  <widget class="QDialog" name="linux24AdvancedDialog_q">
@@ -842,7 +842,7 @@
         </widget>
        </item>
        <item row="3" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_ip6tables"/>
+        <widget class="QLineEdit" name="linux24_path_ip6tables" />
        </item>
        <item row="4" column="0">
         <widget class="QLabel" name="label454">
@@ -858,7 +858,7 @@
         </widget>
        </item>
        <item row="4" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_ip"/>
+        <widget class="QLineEdit" name="linux24_path_ip" />
        </item>
        <item row="5" column="0">
         <widget class="QLabel" name="label455_2">
@@ -874,7 +874,7 @@
         </widget>
        </item>
        <item row="5" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_logger"/>
+        <widget class="QLineEdit" name="linux24_path_logger" />
        </item>
        <item row="6" column="0">
         <widget class="QLabel" name="label455_3">
@@ -890,7 +890,7 @@
         </widget>
        </item>
        <item row="6" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_vconfig"/>
+        <widget class="QLineEdit" name="linux24_path_vconfig" />
        </item>
        <item row="7" column="0">
         <widget class="QLabel" name="label455_4">
@@ -906,7 +906,7 @@
         </widget>
        </item>
        <item row="7" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_brctl"/>
+        <widget class="QLineEdit" name="linux24_path_brctl" />
        </item>
        <item row="8" column="0">
         <widget class="QLabel" name="label455">
@@ -922,7 +922,7 @@
         </widget>
        </item>
        <item row="8" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_ifenslave"/>
+        <widget class="QLineEdit" name="linux24_path_ifenslave" />
        </item>
        <item row="9" column="0">
         <widget class="QLabel" name="label458">
@@ -938,7 +938,7 @@
         </widget>
        </item>
        <item row="9" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_modprobe"/>
+        <widget class="QLineEdit" name="linux24_path_modprobe" />
        </item>
        <item row="10" column="0">
         <widget class="QLabel" name="label459">
@@ -954,7 +954,7 @@
         </widget>
        </item>
        <item row="10" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_lsmod"/>
+        <widget class="QLineEdit" name="linux24_path_lsmod" />
        </item>
        <item row="11" column="0">
         <widget class="QLabel" name="label_8">
@@ -967,7 +967,7 @@
         </widget>
        </item>
        <item row="11" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_ipset"/>
+        <widget class="QLineEdit" name="linux24_path_ipset" />
        </item>
        <item row="12" column="0">
         <widget class="QLabel" name="label453_2">
@@ -983,7 +983,7 @@
         </widget>
        </item>
        <item row="12" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_iptables_restore"/>
+        <widget class="QLineEdit" name="linux24_path_iptables_restore" />
        </item>
        <item row="13" column="0">
         <widget class="QLabel" name="label_2">
@@ -999,7 +999,7 @@
         </widget>
        </item>
        <item row="13" column="1" colspan="2">
-        <widget class="QLineEdit" name="linux24_path_ip6tables_restore"/>
+        <widget class="QLineEdit" name="linux24_path_ip6tables_restore" />
        </item>
        <item row="14" column="2">
         <spacer>
@@ -1049,7 +1049,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>CONNTRACK_MAX is the maximum number of &quot;sessions&quot; (connection tracking entries)
+             <string>CONNTRACK_MAX is the maximum number of "sessions" (connection tracking entries)
 that can be handled simultaneously by netfilter in kernel memory.</string>
             </property>
             <property name="maximum">
@@ -1114,12 +1114,12 @@ that can be handled simultaneously by netfilter in kernel memory.</string>
              <string notr="true">background:#fff</string>
             </property>
             <property name="text">
-             <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+             <string>&lt;!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd"&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name="qrichtext" content="1" /&gt;&lt;style type="text/css"&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;These parameters allow you to tune performance of&lt;br /&gt;conntrack module (netfilter state tracking). This&lt;br /&gt;should only be necessary for large firewalls with a lot&lt;br /&gt;of traffic and many stateful rules.&lt;br /&gt;Explanation of these parameters can be found on&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;the Internet if you search for &amp;quot;netfilter conntrack performance&amp;quot;&lt;br /&gt;&lt;br /&gt;Set both to zero to use default values&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"&gt;These parameters allow you to tune performance of&lt;br /&gt;conntrack module (netfilter state tracking). This&lt;br /&gt;should only be necessary for large firewalls with a lot&lt;br /&gt;of traffic and many stateful rules.&lt;br /&gt;Explanation of these parameters can be found on&lt;/p&gt;
+&lt;p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"&gt;the Internet if you search for &amp;quot;netfilter conntrack performance&amp;quot;&lt;br /&gt;&lt;br /&gt;Set both to zero to use default values&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
            </widget>
           </item>
@@ -1151,7 +1151,7 @@ p, li { white-space: pre-wrap; }
 synchronization mode for a firewall cluster and have&lt;br&gt;
 kernel &amp;lt;2.6.22&lt;br&gt;
 Explanation of this parameter can be found at&lt;br&gt;
-&lt;a href=&quot;http://conntrack-tools.netfilter.org/manual.html&quot;&gt;http://conntrack-tools.netfilter.org/manual.html&lt;/a&gt;
+&lt;a href="http://conntrack-tools.netfilter.org/manual.html"&gt;http://conntrack-tools.netfilter.org/manual.html&lt;/a&gt;
 </string>
             </property>
            </widget>
@@ -1161,7 +1161,7 @@ Explanation of this parameter can be found at&lt;br&gt;
             <item>
              <widget class="QLabel" name="label_3">
               <property name="text">
-               <string>Disable TCP window tracking  (&quot;ip_conntrack_tcp_be_liberal&quot;)</string>
+               <string>Disable TCP window tracking  ("ip_conntrack_tcp_be_liberal")</string>
               </property>
               <property name="wordWrap">
                <bool>true</bool>
@@ -1310,13 +1310,6 @@ Explanation of this parameter can be found at&lt;br&gt;
    <item row="1" column="0">
     <layout class="QHBoxLayout">
      <item>
-      <widget class="QPushButton" name="buttonHelp">
-       <property name="text">
-        <string>Help</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer>
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
@@ -1338,7 +1331,7 @@ Explanation of this parameter can be found at&lt;br&gt;
         <string>&amp;OK</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -1354,7 +1347,7 @@ Explanation of this parameter can be found at&lt;br&gt;
         <string>&amp;Cancel</string>
        </property>
        <property name="shortcut">
-        <string/>
+        <string />
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -1365,7 +1358,7 @@ Explanation of this parameter can be found at&lt;br&gt;
    </item>
   </layout>
  </widget>
- <layoutdefault spacing="6" margin="11"/>
+ <layoutdefault spacing="6" margin="11" />
  <tabstops>
   <tabstop>linux24_ip_forward</tabstop>
   <tabstop>linux24_ipv6_forward</tabstop>
@@ -1399,9 +1392,8 @@ Explanation of this parameter can be found at&lt;br&gt;
   <tabstop>linux24_path_iptables_restore</tabstop>
   <tabstop>linux24_path_ip6tables_restore</tabstop>
   <tabstop>tabWidget</tabstop>
-  <tabstop>buttonHelp</tabstop>
  </tabstops>
- <resources/>
+ <resources />
  <connections>
   <connection>
    <sender>buttonOk</sender>
@@ -1435,24 +1427,7 @@ Explanation of this parameter can be found at&lt;br&gt;
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>buttonHelp</sender>
-   <signal>clicked()</signal>
-   <receiver>linux24AdvancedDialog_q</receiver>
-   <slot>help()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>68</x>
-     <y>464</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>231</x>
-     <y>245</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
-  <slot>help()</slot>
- </slots>
+  </slots>
 </ui>

@@ -1,22 +1,16 @@
 ## -*- mode: shell-script; -*-
 ##
-## To be able to make changes to the part of configuration created
-## from this configlet you need to copy this file to the directory
-## fwbuilder/configlets/linux24/ in your home directory and modify it.
+## Bridge interface management using iproute2 ("ip link").
+## The deprecated brctl (bridge-utils) is no longer required.
+##
 ## Double "##" comments are removed during processing but single "#"
-## comments are be retained and appear in the generated script. Empty
-## lines are removed as well.
+## comments are retained and appear in the generated script.
 ##
 ## Configlets support simple macro language with these constructs:
 ## {{$var}} is variable expansion
 ## {{if var}} is conditional operator.
 ##
 ############ bridge ############################################
-## brctl  show
-## bridge name   bridge id               STP enabled     interfaces
-## br0           8000.000c29f6bebe       no              eth4.102
-##                                                       eth5
-##
 
 missing_port() {
     intf=$1
@@ -29,9 +23,14 @@ missing_port() {
     bridge_interface=$2
     IFS=$oldIFS
 
-    echo "# Updating bridge configuration: $cmd $bridge_interface $port"
-    $FWBDEBUG $BRCTL $cmd $bridge_interface $port
-    test "$cmd" = "addif" && $FWBDEBUG $IP link set $port up
+    if test "$cmd" = "add"; then
+        echo "# Adding port $port to bridge $bridge_interface"
+        $FWBDEBUG $IP link set $port master $bridge_interface
+        $FWBDEBUG $IP link set $port up
+    else
+        echo "# Removing port $port from bridge $bridge_interface"
+        $FWBDEBUG $IP link set $port nomaster
+    fi
 }
 
 # update_bridge br0 "eth2 eth3"
@@ -48,76 +47,59 @@ update_bridge() {
         done | sort
     )
 
-    # this is really redundant because we create missing bridge
-    # interfaces in sync_bridge_interfaces. However will leave this
-    # here so that function update_bridge can be used without prior
-    # call to sync_bridge_interfaces The difference is that
-    # sync_bridge_interfaces also deletes bridge interfaces that exist
-    # on the machine but are missing in fwbuilder confgiuration. The
-    # update_bridge function can only add bridge interfaces.
-    $BRCTL showmacs $bridge_interface >/dev/null 2>&1 || {
+    # Create bridge if it does not exist yet.  This is redundant when
+    # sync_bridge_interfaces has been called first but keeps
+    # update_bridge usable on its own.
+    $IP link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
         echo "# Creating bridge interface $bridge_interface"
-        $FWBDEBUG $BRCTL addbr $bridge_interface
+        $FWBDEBUG $IP link add name $bridge_interface type bridge
         $FWBDEBUG $IP link set $bridge_interface up
     }
 
-    PORTS=$(
-        $BRCTL show | \
-            awk '($1~/^br/) { printf "\n"; }
-                 (!/bridge name/ && NF>3) {printf "%s %s ", $1,$NF;}
-                 (NF==1) {printf "%s ",$1;}' | grep $bridge_interface
+    CURRENT_PORTS=$(
+        $IP link show master "$bridge_interface" 2>/dev/null | \
+            awk -F'[ :]+' '/^[0-9]/ {print $2}' | \
+            while read port; do
+                echo "${port}@$bridge_interface"
+            done | sort
     )
 
-    test -n "$PORTS" && {
-        set $PORTS
-        shift
-        CURRENT_PORTS=$(
-            for subint in $*; do
-                echo "${subint}@$bridge_interface"
-            done | sort
-        )
-    }
-
-    # first delete bridge ports, then add. This way, if an interface
+    # First delete bridge ports, then add.  This way, if an interface
     # moves from one bridge to another, we remove it first and then
-    # add. It would not work if we tried to add it first, brctl issues
-    # an error:
-    # device eth2 is already a member of a bridge; can't enslave it to bridge br1.
-    #
-    diff_intf missing_port "$CURRENT_PORTS" "$FWB_PORTS" delif
-    diff_intf missing_port "$FWB_PORTS" "$CURRENT_PORTS" addif
+    # add.  The kernel refuses to enslave a port that is already a
+    # member of another bridge.
+    diff_intf missing_port "$CURRENT_PORTS" "$FWB_PORTS" del
+    diff_intf missing_port "$FWB_PORTS" "$CURRENT_PORTS" add
 }
 
-## This function synchronizes bridge interfaces between fwbuilder objects
-## and actual configuration of the firewall machine. Birgde interfaces not
-## listed as arguments will be deleted and those in the arguments will be
-## created if missing.
+## Synchronize bridge interfaces between FirewallFabrik configuration
+## and the running system.  Bridge interfaces not listed as arguments
+## will be deleted; those in the arguments will be created if missing.
 ##
-## NOTE: we have to delete and create bridge interfaces before we add
-## bridge ports to them because if a bridge interface that was not
-## configured in fwbuilder existed before this script ran, its bridge
-## ports could not be added to other bridges. This bridge interface
-## should be deleted first.
+## NOTE: we must delete and create bridge interfaces before adding
+## ports because a pre-existing unconfigured bridge might hold ports
+## that need to move to a different bridge.
 ##
 ## sync_bridge_interfaces br0 br1
 
 sync_bridge_interfaces() {
-    $BRCTL show | awk -v IGNORED="$*" \
+    $IP -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
+        awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
-         ($1 ~ /^br[0-9]/ && !($1 in ignored_dict)) {print $1;}' | \
+         (!($1 in ignored_dict)) {print $1;}' | \
          while read brintf; do
             echo "# Deleting bridge interface $brintf"
              $FWBDEBUG $IP link set $brintf down
-             $FWBDEBUG $BRCTL delbr $brintf
+             $FWBDEBUG $IP link delete $brintf type bridge
          done
 
     for brint in $*; do
-        $BRCTL showmacs $brint >/dev/null 2>&1 || {
-            echo "# Creating bridge interface $brintf"
-            $FWBDEBUG $BRCTL addbr $brint
+        $IP link show "$brint" type bridge >/dev/null 2>&1 || {
+            echo "# Creating bridge interface $brint"
+            $FWBDEBUG $IP link add name $brint type bridge
             $FWBDEBUG $IP link set $brint up
         }
     done

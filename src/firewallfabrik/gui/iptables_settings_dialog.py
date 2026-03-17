@@ -14,8 +14,7 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl, Slot
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog, QLineEdit
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -70,21 +69,10 @@ class IptablesSettingsDialog(QDialog):
             _SCHEMA['limit_suffix'].get('values', []),
         )
 
-        self._apply_tooltips()
         self._apply_placeholders()
         self._populate()
         self._disable_unsupported()
         self.accepted.connect(self._save_settings)
-
-    def _apply_tooltips(self):
-        """Set tooltip text on every widget from the YAML descriptions."""
-        for entry in _SCHEMA.values():
-            widget_name = entry.get('widget')
-            if not widget_name:
-                continue
-            widget = getattr(self, widget_name, None)
-            if widget is not None:
-                widget.setToolTip(entry.get('description', ''))
 
     def _apply_placeholders(self):
         """Set placeholder text on QLineEdits showing the YAML default."""
@@ -281,11 +269,3 @@ class IptablesSettingsDialog(QDialog):
     @Slot()
     def editEpilog(self):
         self.epilog_script.setFocus()
-
-    @Slot()
-    def help(self):
-        QDesktopServices.openUrl(
-            QUrl(
-                'https://github.com/Linuxfabrik/firewallfabrik/tree/main/docs/user-guide'
-            ),
-        )

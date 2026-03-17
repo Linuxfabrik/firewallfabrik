@@ -613,6 +613,7 @@ class CompilerDriver_nft(CompilerDriver):
             need_shell_functions = (
                 configure_interfaces
                 or verify_interfaces_opt
+                or options.get('configure_bridge_interfaces', False)
                 or any(iface.is_dynamic() for iface in fw.interfaces)
             )
             if need_shell_functions:
@@ -621,6 +622,10 @@ class CompilerDriver_nft(CompilerDriver):
             if configure_interfaces:
                 buf = io.StringIO()
                 buf.write(oscnf.print_interface_configuration_commands())
+
+                if options.get('configure_bridge_interfaces', False):
+                    buf.write(oscnf.print_bridge_interface_configuration_commands())
+
                 buf.write(oscnf.print_commands_to_clear_known_interfaces())
                 buf.write(oscnf.print_dynamic_addresses_configuration_commands())
                 raw = textwrap.dedent(buf.getvalue()).strip()

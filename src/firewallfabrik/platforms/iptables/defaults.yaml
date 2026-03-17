@@ -120,7 +120,8 @@ options:
     widget: 'clearUnknownInterfaces'
     description: >-
       Clear IP addresses and bring down interfaces that are not
-      configured in FirewallFabrik.
+      configured in FirewallFabrik. Uses "ip addr flush" and
+      "ip link set down" on unknown interfaces.
 
   cmdline:
     type: 'str'
@@ -146,16 +147,17 @@ options:
     widget: 'configure_bonding_interfaces'
     description: >-
       Configure bonding (link aggregation) interfaces in the
-      generated script. Requires ifenslave.
+      generated script. Uses modprobe to load the bonding module
+      and ifenslave to add/remove slave interfaces.
 
   configure_bridge_interfaces:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'configure_bridge_interfaces'
     description: >-
-      Configure bridge interfaces in the generated script.
-      Requires brctl.
+      Configure bridge interfaces in the generated script
+      using iproute2 (ip link).
 
   configure_interfaces:
     type: 'bool'

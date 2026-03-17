@@ -410,6 +410,48 @@ class OSConfigurator_linux24(OSConfigurator):
 
         return rt.expand()
 
+    def print_bridge_interface_configuration_commands(self) -> str:
+        """Generate bridge interface configuration commands.
+
+        Iterates all interfaces with ``type == "bridge"`` in their
+        options, generates ``sync_bridge_interfaces`` to
+        create/delete bridges, then ``update_bridge`` for each bridge
+        to synchronise ports, and finally configures STP.
+
+        Mirrors fwbuilder's
+        ``OSConfigurator_linux24::printBridgeInterfaceConfigurationCommands``.
+        """
+        bridges: list[Interface] = []
+        for iface in self.fw.interfaces:
+            if iface.get_option('type') == 'bridge':
+                bridges.append(iface)
+
+        if not bridges:
+            return ''
+
+        # Include the update_bridge configlet (shell helper functions).
+        bridge_configlet = Configlet('linux24', 'update_bridge')
+        gencmd: list[str] = []
+
+        # 1. Sync: create missing / delete extraneous bridge interfaces.
+        bridge_names = [b.name for b in bridges]
+        gencmd.append(f'sync_bridge_interfaces {" ".join(bridge_names)}')
+
+        # 2. For each bridge, update its ports and configure STP.
+        for bridge in bridges:
+            port_names = [
+                sub.name
+                for sub in bridge.sub_interfaces
+                if sub.get_option('type', '') not in ('vlan',)
+            ]
+            gencmd.append(f'update_bridge {bridge.name} "{" ".join(port_names)}"')
+
+            enable_stp = bridge.get_option('enable_stp', False)
+            stp_val = 1 if enable_stp else 0
+            gencmd.append(f'$IP link set {bridge.name} type bridge stp_state {stp_val}')
+
+        return bridge_configlet.expand() + '\n' + '\n'.join(gencmd) + '\n'
+
     def add_virtual_address_for_nat(self, addr) -> None:
         """Register a virtual address needed for NAT."""
         if not self.fw.get_option('manage_virtual_addr'):

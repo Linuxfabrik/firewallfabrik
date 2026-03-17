@@ -446,6 +446,11 @@ class CompilerDriver_ipt(CompilerDriver):
                 if options.get('configure_interfaces', False):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
 
+                if options.get('configure_bridge_interfaces', False):
+                    iface_buf.write(
+                        oscnf.print_bridge_interface_configuration_commands()
+                    )
+
                 iface_buf.write(oscnf.print_commands_to_clear_known_interfaces())
                 iface_buf.write(oscnf.print_dynamic_addresses_configuration_commands())
 

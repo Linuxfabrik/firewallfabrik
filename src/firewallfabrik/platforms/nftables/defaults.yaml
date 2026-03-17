@@ -152,11 +152,11 @@ options:
   configure_bridge_interfaces:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'configure_bridge_interfaces'
     description: >-
-      Configure bridge interfaces.
-      Not supported by the nftables compiler.
+      Configure bridge interfaces in the generated script
+      using iproute2 (ip link).
 
   configure_interfaces:
     type: 'bool'

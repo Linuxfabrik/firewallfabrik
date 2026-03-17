@@ -12,12 +12,13 @@
 
 """Firewall installer engine — deploys compiled scripts via SSH/SCP."""
 
+import shutil
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path
 from typing import NamedTuple
 
-from PySide6.QtCore import QObject, QProcess, Signal
+from PySide6.QtCore import QObject, QProcess, QSettings, Signal
 
 from firewallfabrik.driver._configlet import Configlet
 
@@ -252,11 +253,22 @@ class FirewallInstaller(QObject):
             self.job_failed.emit(f'Process exited with code {exit_code}')
 
     def _pack_ssh_args(self, cmd: str) -> list[str]:
-        """Build SSH command line arguments."""
+        """Build SSH command line arguments.
+
+        Reads the SSH path and timeout from global preferences
+        (``Preferences > Installer`` tab).
+        """
+        settings = QSettings()
+        ssh_path = settings.value(
+            'SSH/SSHPath',
+            shutil.which('ssh') or 'ssh',
+            type=str,
+        )
+        timeout = settings.value('SSH/SSHTimeout', 10, type=int)
         args = [
-            'ssh',
+            ssh_path,
             '-o',
-            'ServerAliveInterval=30',
+            f'ServerAliveInterval={timeout}',
             '-t',
             '-t',
         ]
@@ -266,11 +278,25 @@ class FirewallInstaller(QObject):
         return args
 
     def _pack_scp_args(self, local: str, remote: str) -> list[str]:
-        """Build SCP command line arguments."""
+        """Build SCP command line arguments.
+
+        Reads the SCP path and timeout from global preferences
+        (``Preferences > Installer`` tab).  The ConnectTimeout for SCP
+        is derived from the SSH timeout multiplied by 3 (matching
+        fwbuilder behaviour with ``ServerAliveCountMax=3``).
+        """
+        settings = QSettings()
+        scp_path = settings.value(
+            'SSH/SCPPath',
+            shutil.which('scp') or 'scp',
+            type=str,
+        )
+        timeout = settings.value('SSH/SSHTimeout', 10, type=int)
+        connect_timeout = timeout * 3 if timeout > 0 else 90
         args = [
-            'scp',
+            scp_path,
             '-o',
-            'ConnectTimeout=90',
+            f'ConnectTimeout={connect_timeout}',
         ]
         if self._config.scp_args:
             args.extend(self._config.scp_args.split())

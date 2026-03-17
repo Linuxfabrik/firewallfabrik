@@ -12,11 +12,13 @@
 
 """Preferences dialog for global application settings."""
 
+import shutil
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, Slot
 from PySide6.QtGui import QColor, QIcon, QPixmap
-from PySide6.QtWidgets import QColorDialog, QDialog, QTableWidgetItem
+from PySide6.QtWidgets import QColorDialog, QDialog, QFileDialog, QTableWidgetItem
 
 from firewallfabrik.gui.label_settings import (
     LABEL_KEYS,
@@ -63,6 +65,10 @@ class PreferencesDialog(QDialog):
         self._populate_platform_table()
         self._populate_os_table()
 
+        # Hide Windows SSH hint on non-Windows platforms.
+        if sys.platform != 'win32':
+            self.windowsSshHint.hide()
+
         self.accepted.connect(self._save_settings)
         self.buttonRestoreDefaults.clicked.connect(self._restore_defaults)
 
@@ -96,6 +102,22 @@ class PreferencesDialog(QDialog):
             autoconfigure_iface=settings.value(
                 'Objects/Interface/autoconfigureInterfaces', True, type=bool
             ),
+        )
+
+        # Installer tab.
+        default_ssh = shutil.which('ssh') or 'ssh'
+        default_scp = shutil.which('scp') or 'scp'
+        self.sshPath.setText(
+            settings.value('SSH/SSHPath', default_ssh, type=str),
+        )
+        self.scpPath.setText(
+            settings.value('SSH/SCPPath', default_scp, type=str),
+        )
+        self.sshTimeout.setValue(
+            settings.value('SSH/SSHTimeout', 10, type=int),
+        )
+        self.rememberSshPass.setChecked(
+            settings.value('Environment/RememberSshPassEnabled', False, type=bool),
         )
 
         # Label colors: store current hex values so we can save on accept.
@@ -142,6 +164,12 @@ class PreferencesDialog(QDialog):
         """Reset all widgets to application default values."""
         self._apply_values()  # all keyword defaults are the app defaults
 
+        # Reset installer defaults.
+        self.sshPath.setText(shutil.which('ssh') or 'ssh')
+        self.scpPath.setText(shutil.which('scp') or 'scp')
+        self.sshTimeout.setValue(10)
+        self.rememberSshPass.setChecked(False)
+
         # Reset label colors and texts to defaults.
         from firewallfabrik.gui.label_settings import LABEL_DEFAULTS
 
@@ -185,6 +213,42 @@ class PreferencesDialog(QDialog):
             )
             table.setItem(row, 0, item)
         table.horizontalHeader().setStretchLastSection(True)
+
+    # ------------------------------------------------------------------
+    # Installer tab: Browse slots (connected via .ui signal/slot)
+    # ------------------------------------------------------------------
+
+    @Slot()
+    def findSSH(self):
+        """Open a file dialog to locate the SSH utility."""
+        start_dir = self.sshPath.text() or ''
+        if start_dir and not Path(start_dir).is_file():
+            start_dir = (
+                str(Path(start_dir).parent) if Path(start_dir).parent.is_dir() else ''
+            )
+        fp, _ = QFileDialog.getOpenFileName(
+            self,
+            'Find Secure Shell utility',
+            start_dir,
+        )
+        if fp:
+            self.sshPath.setText(fp)
+
+    @Slot()
+    def findSCP(self):
+        """Open a file dialog to locate the SCP utility."""
+        start_dir = self.scpPath.text() or ''
+        if start_dir and not Path(start_dir).is_file():
+            start_dir = (
+                str(Path(start_dir).parent) if Path(start_dir).parent.is_dir() else ''
+            )
+        fp, _ = QFileDialog.getOpenFileName(
+            self,
+            'Find SCP utility',
+            start_dir,
+        )
+        if fp:
+            self.scpPath.setText(fp)
 
     # ------------------------------------------------------------------
     # Label color picker slots (connected via .ui signal/slot)
@@ -246,6 +310,15 @@ class PreferencesDialog(QDialog):
         settings.setValue(
             'UI/IconSizeInRules',
             16 if self.rb16.isChecked() else 25,
+        )
+
+        # Installer
+        settings.setValue('SSH/SSHPath', self.sshPath.text())
+        settings.setValue('SSH/SCPPath', self.scpPath.text())
+        settings.setValue('SSH/SSHTimeout', self.sshTimeout.value())
+        settings.setValue(
+            'Environment/RememberSshPassEnabled',
+            self.rememberSshPass.isChecked(),
         )
 
         # Persist label colors and texts.

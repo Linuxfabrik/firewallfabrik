@@ -14,8 +14,6 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QUrl, Slot
-from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog, QLineEdit
 
 from firewallfabrik.gui.ui_loader import FWFUiLoader
@@ -204,11 +202,3 @@ class LinuxSettingsDialog(QDialog):
 
         # Reassign to trigger SQLAlchemy JSON mutation detection.
         self._fw.options = opts
-
-    @Slot()
-    def help(self):
-        QDesktopServices.openUrl(
-            QUrl(
-                'https://github.com/Linuxfabrik/firewallfabrik/tree/main/docs/user-guide'
-            ),
-        )

@@ -273,6 +273,10 @@ class ObjectTree(QWidget):
         self._tree.header().sectionResized.connect(self._on_section_resized)
         self._tree.itemDoubleClicked.connect(self._on_double_click)
         self._tree.items_dropped.connect(self._on_items_dropped)
+
+        # Alt+Return opens the editor for the selected object (same as double-click).
+        props_shortcut = QShortcut(QKeySequence('Alt+Return'), self._tree)
+        props_shortcut.activated.connect(self._activate_selected)
         self._filter.textChanged.connect(self._apply_filter)
 
     def populate(self, session, file_key=''):
@@ -894,6 +898,16 @@ class ObjectTree(QWidget):
     # ------------------------------------------------------------------
 
     def _on_double_click(self, item, _column):
+        self._activate_item(item)
+
+    def _activate_selected(self):
+        """Open the editor for the currently selected tree item (Alt+Return)."""
+        item = self._tree.currentItem()
+        if item is not None:
+            self._activate_item(item)
+
+    def _activate_item(self, item):
+        """Emit activation signals for the given tree item."""
         obj_id = item.data(0, Qt.ItemDataRole.UserRole)
         type_str = item.data(0, Qt.ItemDataRole.UserRole + 1)
         if not obj_id or not type_str:

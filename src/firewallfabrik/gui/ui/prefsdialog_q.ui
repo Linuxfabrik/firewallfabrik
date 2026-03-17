@@ -614,6 +614,210 @@ tags are matched.</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabInstaller">
+      <attribute name="title">
+       <string>Installer</string>
+      </attribute>
+      <attribute name="icon">
+       <iconset resource="MainRes.qrc">
+        <normaloff>:/Icons/Install/icon</normaloff>:/Icons/Install/icon</iconset>
+      </attribute>
+      <layout class="QVBoxLayout" name="installerLayout">
+       <item>
+        <widget class="QLabel" name="labelSshPath">
+         <property name="text">
+          <string>Full path to the Secure Shell utility (remote command execution):</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="sshPathLayout">
+         <item>
+          <widget class="QLineEdit" name="sshPath">
+           <property name="toolTip">
+            <string>Path to the SSH executable used for remote command
+execution during policy installation (e.g. /usr/bin/ssh
+on Linux, ssh.exe on Windows).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="browseForSSH">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+           <property name="toolTip">
+            <string>Browse for the SSH utility on the local file system.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelScpPath">
+         <property name="text">
+          <string>Full path to the SCP utility (file copy over SSH):</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="scpPathLayout">
+         <item>
+          <widget class="QLineEdit" name="scpPath">
+           <property name="toolTip">
+            <string>Path to the SCP executable used for copying firewall
+policy files to the target device (e.g. /usr/bin/scp
+on Linux, scp.exe on Windows).</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="browseForSCP">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+           <property name="toolTip">
+            <string>Browse for the SCP utility on the local file system.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelSshTimeoutDesc">
+         <property name="text">
+          <string>SSH ServerAliveInterval: timeout in seconds after which, if no data has been received from the server, the SSH client sends a keepalive message through the encrypted channel. This helps detect disconnects between the policy installer and the firewall. If set to 0, keepalive messages are disabled and a loss of connectivity will cause the installer session to hang. SCP uses ConnectTimeout, which is calculated automatically from the same value.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="sshTimeoutLayout">
+         <item>
+          <widget class="QSpinBox" name="sshTimeout">
+           <property name="toolTip">
+            <string>SSH keepalive interval in seconds. Set to 0 to disable
+keepalive messages (not recommended). Default: 10.</string>
+           </property>
+           <property name="maximum">
+            <number>999999</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelSshTimeoutUnit">
+           <property name="text">
+            <string>sec</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="sshTimeoutSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="windowsSshHint">
+         <property name="text">
+          <string>On Windows 10 (version 1809) and later, OpenSSH is available as an optional feature. Enable it via Settings &gt; Apps &gt; Optional Features &gt; OpenSSH Client.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="installerSpacer1">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Policy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelPassCacheDesc">
+         <property name="text">
+          <string>The built-in policy installer can remember passwords for the duration of the session. Passwords are never stored permanently, they are only kept in memory. In order to use this feature, you also need to configure the user name used to authenticate to the firewall in the "advanced" settings dialog of the firewall object.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelPassCacheWarning">
+         <property name="text">
+          <string>Warning: using this feature creates a security risk if the FirewallFabrik GUI is left unattended on an unlocked workstation. Someone could make changes to the firewall using cached credentials from a previous session. Always lock the screen or exit the application when leaving the computer.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="rememberSshPass">
+         <property name="toolTip">
+          <string>Enable password caching for the duration of the session
+(passwords are never stored permanently).</string>
+         </property>
+         <property name="text">
+          <string>Enable password caching</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="installerSpacer2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tabLabels">
       <property name="enabled">
        <bool>true</bool>
@@ -1163,6 +1367,12 @@ Easier to distinguish object types at a glance.</string>
  </widget>
  <tabstops>
   <tabstop>tabWidget</tabstop>
+  <tabstop>sshPath</tabstop>
+  <tabstop>browseForSSH</tabstop>
+  <tabstop>scpPath</tabstop>
+  <tabstop>browseForSCP</tabstop>
+  <tabstop>sshTimeout</tabstop>
+  <tabstop>rememberSshPass</tabstop>
   <tabstop>buttonOk</tabstop>
   <tabstop>buttonCancel</tabstop>
   <tabstop>color1Btn</tabstop>
@@ -1408,11 +1618,45 @@ Easier to distinguish object types at a glance.</string>
     </hint>
    </hints>
   </connection>
+ <connection>
+   <sender>browseForSSH</sender>
+   <signal>clicked()</signal>
+   <receiver>prefsDialog_q</receiver>
+   <slot>findSSH()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>700</x>
+     <y>60</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>browseForSCP</sender>
+   <signal>clicked()</signal>
+   <receiver>prefsDialog_q</receiver>
+   <slot>findSCP()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>700</x>
+     <y>120</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>changeRulesFont()</slot>
   <slot>changeTreeFont()</slot>
   <slot>changeCompilerOutputFont()</slot>
+  <slot>findSCP()</slot>
+  <slot>findSSH()</slot>
   <slot>objTooltipsEnabled(bool)</slot>
  </slots>
 </ui>

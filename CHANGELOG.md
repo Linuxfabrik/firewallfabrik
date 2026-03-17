@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+- GUI: Installer tab in Preferences dialog — configure SSH/SCP paths, timeout and password caching. Settings are used by the firewall installer engine.
+- GUI: `Alt+Return` keyboard shortcut opens the editor for the selected object in the tree (same as double-click).
+- GUI: Tooltips added to all widgets in iptables, nftables, and Linux platform settings dialogs.
+- Compiler: Bridge interface configuration support for iptables and nftables. The `update_bridge` configlet now uses iproute2 (`ip link`) instead of the deprecated `brctl`.
+
+### Changed
+
+- GUI: Platform settings dialogs — Script tab redesigned with inline descriptions for each option. Help buttons removed from all platform settings dialogs.
+- GUI: Platform settings dialog size reduced (removed oversized minimum widths, checkbox indicators top-aligned).
 
 
 ## [v1.2.0] - 2026-03-17
