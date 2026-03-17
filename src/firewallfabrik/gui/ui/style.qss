@@ -50,9 +50,7 @@ QHeaderView::section {
     padding: 4px 8px;
 }
 
-QHeaderView::section:last {
-    border-right: none;
-}
+/* Keep border-right on last section too for visual consistency */
 
 
 /* --- Menu bar --- */
