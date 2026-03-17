@@ -11,11 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Advanced Interface Settings dialog to configure device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
+- `Alt+Return` keyboard shortcut opens the editor for the selected object (same as double-click).
 - Appearance tab in Preferences — customize fonts for rules, tree and compiler output; toggle direction/action text, comment clipping and toolbar labels.
 - Bridge interface configuration support for iptables and nftables using iproute2 (`ip link`).
 - Bridge port interfaces are detected automatically from the parent interface type.
 - Installer tab in Preferences — configure SSH/SCP paths, timeout and password caching for the built-in policy installer.
-- `Alt+Return` keyboard shortcut opens the editor for the selected object (same as double-click).
+- Rules menu: insert, move, copy, cut, paste, remove, disable and enable rules directly from the menu bar.
 - Tooltips on all widgets in the platform settings dialogs and the interface editor.
 - VLAN sub-interface name validation — warns when the name does not match the parent interface.
 
@@ -40,58 +41,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-Compiler — full Firewall Builder parity:
-
-- The iptables and nftables compilers now implement all ~130 rule processors from Firewall Builder. Generated scripts should be functionally identical to Firewall Builder output. Major areas that were completed:
-  - Correct handling of REJECT rules with TCP RST and mixed TCP/non-TCP services.
-  - Service separation for multiport, TCP flags, source ports, UserService, and CustomService.
-  - Address range handling, dynamic interface validation, zero-address detection.
-  - Mangle table support (MARK, CLASSIFY, ROUTE, CONNMARK) for iptables.
-  - NAT: negation via temporary chains, SDNAT splitting, load balancing, masquerade conversion, virtual addresses, branch rules, and comprehensive validation.
-  - Bridge-mode firewall broadcast/multicast forwarding.
-  - Accounting chains with user-defined packet/byte counters.
-  - Cluster failover interface replacement.
-  - Runtime AddressTable and DNSName object handling.
-  - Circular group reference detection (aborts compilation).
-  - Shadowing detection now runs as a separate compilation pass for more accurate results.
-  - Interface group expansion, interface negation, time interval splitting.
-  - Loopback interface address expansion, unnumbered interface handling.
-- NFLOG logging target support (closes #18). When enabled in firewall settings, the compiler generates `-j NFLOG` (iptables) or `log group N` (nftables) instead of `-j LOG`. Parameters for netlink group, copy range, and queue threshold are supported.
-- nftables-specific optimizations:
-  - Native load balancing using `numgen inc mod N map { ... }` for DNAT rules with multiple backends, instead of one rule per backend (closes #22).
-  - Address set merging: consecutive rules differing only in source or destination address are combined into `ip saddr { addr1, addr2, ... } accept` (closes #23).
-  - Separate shadowing detection pass for improved accuracy (closes #24).
-  - Validation processors (TCP established flag, zero addresses, unnumbered interfaces, ICMPv6 statelessness, dynamic interfaces, loopback expansion) added to the nftables policy pipeline.
-- Standard service library: added Bareos Director/File Daemon/Storage Daemon (9101-9103), Keycloak (8443), Kibana (5601), Libvirt (16509), Logstash Beats Input (5044), Logstash API (9600), OpenSearch (9200), OpenSearch Transport (9300).
-
-GUI:
-
-- Cluster Member Management dialog: add/remove firewalls from a cluster and view interface mappings (closes #26).
-- Library Import: import libraries from `.fwf` or `.fwb` files into the current project via File > Import Library. Skips the Standard library and libraries that already exist.
-- Library Export: export selected user libraries to a separate `.fwf` file via File > Export Library (closes #27).
-- Inspect Rules: show all rules referencing the selected object via Rules > Inspect or the toolbar icon (closes #28).
-- File Properties: show file path, size, and object counts via File > Properties (closes #29).
-- Import Addresses from File: import IPv4/IPv6 addresses and networks from a text file via Tools > Import Addresses (closes #12).
-- Compile log errors matching "Rule N" are now clickable and scroll to the relevant firewall section (closes #15).
-- Preferences dialog: enabled DNS Name, Address Table, Policy Rules, and Interface sub-tabs with working settings. Removed obsolete items (deleted objects, advanced user mode, custom templates), unused tabs (Data File, Installer, Diff), and the marginal "Use name for DNS record" option. Fixed truncated text in Policy Rules tab. Replaced all "fwbuilder"/"Firewall Builder" references with "FirewallFabrik" in user-visible UI strings.
-- DNS Name and Address Table dialogs now honour the Preferences default for compile-time vs run-time resolution when creating new objects.
-- New policy rules now use Preferences defaults for logging, stateful inspection, action, and direction instead of hardcoded values.
-- Preferences dialog: "Restore Defaults" button resets all settings (objects, labels, platforms) to application defaults. Policy Rules defaults for source/destination/service/interface ("Any" vs "Dummy" placeholder) now take effect when creating new rules. Description text explains the "Dummy" concept.
-- Interface name autoconfiguration: when enabled in Preferences > Interface, the interface type and VLAN ID are guessed from the name (e.g. `eth0.100` → VLAN 802.1q with ID 100, `bond0` → bonding, `br0` → bridge). Supports Linux naming conventions including systemd predictable names (`enp0s3`, `wlp2s0`).
-
-### Fixed
-
-- Multiport rules were broken (fixes #21): rules with multiple TCP ports were split into individual `--dport` rules instead of using `-m multiport --dports`. Root cause: the TCP flag check incorrectly matched all TCP services.
-- Opening a firewall, interface, or rule set for editing marked the file as modified even when nothing was changed (fixes #25). Multiple causes: editor wrote back default values for missing keys, read-only toggling fired spurious change signals, and IPv4/IPv6 combo state was compared incorrectly.
-- MAC address edits in PhysAddressDialog were silently ignored because a slot stub shadowed the change signal (fixes #14).
-- False-positive "Rule X shadows Rule Y" errors caused by shadowing analysis injecting rules into the main pipeline.
-- Hardcoded version `0.1.0` in generated iptables scripts replaced with the actual package version.
-- "Open Interface" button documented as intentionally disabled for iptables/nftables — no platform-specific interface options exist (closes #13).
+- Clickable compile log errors scroll to the relevant firewall section (closes #15).
+- Cluster Member Management dialog to add/remove firewalls and view interface mappings (closes #26).
+- File Properties dialog showing file path, size, and object counts (closes #29).
+- Full Firewall Builder compiler parity for iptables and nftables (~130 rule processors ported).
+- Import Addresses from File via Tools menu (closes #12).
+- Inspect Rules showing all rules referencing the selected object (closes #28).
+- Interface name autoconfiguration guesses type and VLAN ID from name patterns.
+- Library Export to a separate `.fwf` file (closes #27).
+- Library Import from `.fwf` or `.fwb` files.
+- NFLOG logging target support for iptables and nftables (closes #18).
+- nftables load balancing, address set merging, and separate shadowing pass (closes #22, #23, #24).
+- Policy rules now use Preferences defaults for logging, stateful inspection, action, and direction.
+- Preferences dialog with Restore Defaults, DNS Name, Address Table, Policy Rules, and Interface tabs.
+- Standard service library: Bareos, Keycloak, Kibana, Libvirt, Logstash, OpenSearch.
 
 ### Changed
 
-- Timestamp format in generated scripts changed from `Mon Mar 16 20:06:24 2026` to `2026-03-16 20:06:24 (Mon)` (ISO 8601, all platforms).
-- Generated iptables scripts now run `nft flush ruleset` before `reset_iptables_v4/v6` on systems where `nft` is available. On RHEL 8+ and modern distros, `iptables` uses the nftables backend, and pre-existing nftables rules would not be cleared by `iptables -F` alone.
+- Generated iptables scripts now run `nft flush ruleset` on systems where `nft` is available.
+- Timestamp format in generated scripts changed to ISO 8601.
+
+### Fixed
+
+- "Advanced Interface Settings" button documented as intentionally disabled for iptables/nftables (closes #13).
+- False-positive shadowing errors caused by analysis injecting rules into the main pipeline.
+- Hardcoded version in generated iptables scripts replaced with the actual package version.
+- MAC address edits were silently ignored (fixes #14).
+- Multiport rules were broken: TCP flag check incorrectly matched all TCP services (fixes #21).
+- Opening objects for editing no longer marks the file as modified when nothing changed (fixes #25).
 
 
 ## [v1.1.0] - 2026-03-16
@@ -105,20 +82,20 @@ GUI:
 - Tooltips for all IPService dialog fields (protocol number, DSCP, TOS, IP options, fragments).
 - Version-aware `ipv4options` module formatting: old module (`--lsrr`, `--ra`) for iptables < 1.4.3, new module (`--flags lsrr,router-alert,...`) for >= 1.4.3.
 
-### Fixed
-
-- **Boolean string truthiness**: GUI stored boolean flags (IP options, fragments, etc.) as string `'False'` which is truthy in Python. The GUI now stores native booleans; compilers use a defensive `_is_true()` guard for backward compatibility.
-- **DiffServ data key mismatch**: Compilers and shadow detection read `tos_code`/`dscp_code` but data was stored under `tos`/`dscp`. Keys now match across all components.
-- **ICMP type/code in NAT compiler**: Was reading from `srv.data` instead of `srv.codes`, causing ICMP NAT rules to ignore type/code matching.
-- **Rule shadowing false positives**: IPService objects (e.g. VRRP) were treated as "any" service because `get_protocol_number()` and `is_any()` did not fall back to `named_protocols.protocol_num`. This caused incorrect "Rule X shadows Rule Y" errors during compilation.
-- **TagService key mismatch**: Dialog wrote `data['code']` but group display and tooltips read `data['tagcode']`. Now consistent (`tagcode`).
-- **TCP flags in iptables compiler**: Was reading pre-formatted strings from `srv.data` instead of ORM attributes `srv.tcp_flags`/`srv.tcp_flags_masks`. Now reads the ORM attributes and formats for iptables like Firewall Builder.
-
 ### Changed
 
 - DiffServ default changed from TOS to DSCP (the modern standard).
-- DiffServ radio buttons are now unselected by default when no code is set. The code input field is disabled until the user selects DSCP or TOS, making it clear that the choice has no effect without a code value.
+- DiffServ radio buttons unselected by default when no code is set; input field disabled until DSCP or TOS is chosen.
 - Input widget borders use `palette(dark)` instead of `palette(mid)` for better visibility.
+
+### Fixed
+
+- Boolean flags stored as string `'False'` (truthy in Python) now stored as native booleans.
+- DiffServ data keys now consistent across compilers and shadow detection.
+- ICMP type/code matching in NAT rules now reads from the correct attribute.
+- Rule shadowing false positives for IPService objects (e.g. VRRP) fixed.
+- TagService data key inconsistency between dialog and display fixed.
+- TCP flags in iptables compiler now read from ORM attributes instead of pre-formatted strings.
 
 
 ## [v1.0.1] - 2026-03-11

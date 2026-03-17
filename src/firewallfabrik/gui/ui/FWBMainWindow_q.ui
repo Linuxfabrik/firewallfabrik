@@ -1197,6 +1197,29 @@
     <property name="title">
      <string>Rules</string>
     </property>
+    <widget class="QMenu" name="ruleColorMenu">
+     <property name="title">
+      <string>Change Color</string>
+     </property>
+    </widget>
+    <addaction name="ruleNewGroupAction" />
+    <addaction name="ruleColorMenu" />
+    <addaction name="separator" />
+    <addaction name="ruleInsertAboveAction" />
+    <addaction name="ruleInsertBelowAction" />
+    <addaction name="ruleRemoveAction" />
+    <addaction name="separator" />
+    <addaction name="ruleMoveUpAction" />
+    <addaction name="ruleMoveDownAction" />
+    <addaction name="separator" />
+    <addaction name="ruleCopyAction" />
+    <addaction name="ruleCutAction" />
+    <addaction name="rulePasteAboveAction" />
+    <addaction name="rulePasteBelowAction" />
+    <addaction name="separator" />
+    <addaction name="ruleDisableAction" />
+    <addaction name="ruleEnableAction" />
+    <addaction name="separator" />
     <addaction name="compileAction" />
     <addaction name="installAction" />
     <addaction name="inspectAction" />
@@ -1804,6 +1827,150 @@
    </property>
    <property name="toolTip">
     <string>Move forward to the next object</string>
+   </property>
+  </action>
+  <action name="ruleInsertAboveAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Insert Rule &amp;Above</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert a new rule above the selected rule</string>
+   </property>
+  </action>
+  <action name="ruleInsertBelowAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Insert Rule &amp;Below</string>
+   </property>
+   <property name="toolTip">
+    <string>Insert a new rule below the selected rule</string>
+   </property>
+   <property name="shortcut">
+    <string>Ins</string>
+   </property>
+  </action>
+  <action name="ruleMoveUpAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Move Rule &amp;Up</string>
+   </property>
+   <property name="toolTip">
+    <string>Move the selected rule one position up</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+PgUp</string>
+   </property>
+  </action>
+  <action name="ruleMoveDownAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Move Rule &amp;Down</string>
+   </property>
+   <property name="toolTip">
+    <string>Move the selected rule one position down</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+PgDown</string>
+   </property>
+  </action>
+  <action name="ruleCopyAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Copy Rule</string>
+   </property>
+   <property name="toolTip">
+    <string>Copy the selected rule to the clipboard</string>
+   </property>
+  </action>
+  <action name="ruleCutAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Cu&amp;t Rule</string>
+   </property>
+   <property name="toolTip">
+    <string>Cut the selected rule to the clipboard</string>
+   </property>
+  </action>
+  <action name="rulePasteAboveAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Paste Rule A&amp;bove</string>
+   </property>
+   <property name="toolTip">
+    <string>Paste rule(s) above the selected rule</string>
+   </property>
+  </action>
+  <action name="rulePasteBelowAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Paste Rule Below</string>
+   </property>
+   <property name="toolTip">
+    <string>Paste rule(s) below the selected rule</string>
+   </property>
+  </action>
+  <action name="ruleRemoveAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Remove Rule</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove the selected rule</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="ruleDisableAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>D&amp;isable Rule</string>
+   </property>
+   <property name="toolTip">
+    <string>Disable the selected rule so it is ignored during compilation</string>
+   </property>
+  </action>
+  <action name="ruleEnableAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Enable Rule</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable a previously disabled rule</string>
+   </property>
+  </action>
+  <action name="ruleNewGroupAction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>New &amp;Group</string>
+   </property>
+   <property name="toolTip">
+    <string>Create a new rule group from the selected rules</string>
    </property>
   </action>
  </widget>
@@ -2565,6 +2732,198 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>ruleInsertAboveAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleInsertAbove()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleInsertBelowAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleInsertBelow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleMoveUpAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleMoveUp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleMoveDownAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleMoveDown()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleCopyAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleCopy()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleCutAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleCut()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rulePasteAboveAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>rulePasteAbove()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>rulePasteBelowAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>rulePasteBelow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleRemoveAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleRemove()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleDisableAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleDisable()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleEnableAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleEnable()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ruleNewGroupAction</sender>
+   <signal>triggered()</signal>
+   <receiver>FWBMainWindow_q</receiver>
+   <slot>ruleNewGroup()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>clearRecentFilesMenu()</slot>
@@ -2586,5 +2945,17 @@
   <slot>back()</slot>
   <slot>fileReload()</slot>
   <slot>forward()</slot>
+  <slot>ruleInsertAbove()</slot>
+  <slot>ruleInsertBelow()</slot>
+  <slot>ruleMoveUp()</slot>
+  <slot>ruleMoveDown()</slot>
+  <slot>ruleCopy()</slot>
+  <slot>ruleCut()</slot>
+  <slot>rulePasteAbove()</slot>
+  <slot>rulePasteBelow()</slot>
+  <slot>ruleRemove()</slot>
+  <slot>ruleDisable()</slot>
+  <slot>ruleEnable()</slot>
+  <slot>ruleNewGroup()</slot>
  </slots>
 </ui>

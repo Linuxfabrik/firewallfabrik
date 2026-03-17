@@ -33,11 +33,13 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QAction,
+    QColor,
     QCursor,
     QDesktopServices,
     QGuiApplication,
     QIcon,
     QKeySequence,
+    QPixmap,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -901,11 +903,59 @@ class FWWindow(QMainWindow):
         self.installAction.setEnabled(False)
         self.libImportAction.setEnabled(False)
         self.libExportAction.setEnabled(False)
+        self.ruleColorMenu.setEnabled(False)
         self.toolbarFileSave.setEnabled(False)
         self.UpdateStandardLibraryAction.setEnabled(False)
 
+    _RULE_ACTIONS = (
+        'ruleInsertAboveAction',
+        'ruleInsertBelowAction',
+        'ruleMoveUpAction',
+        'ruleMoveDownAction',
+        'ruleCopyAction',
+        'ruleCutAction',
+        'rulePasteAboveAction',
+        'rulePasteBelowAction',
+        'ruleRemoveAction',
+        'ruleDisableAction',
+        'ruleEnableAction',
+        'ruleNewGroupAction',
+    )
+
+    def _populate_color_menu(self):
+        """Populate the Rules > Change Color submenu from label settings."""
+        from firewallfabrik.gui.label_settings import (
+            LABEL_KEYS,
+            get_label_color,
+            get_label_text,
+        )
+
+        self.ruleColorMenu.clear()
+        self.ruleColorMenu.addAction('No Color', lambda: self._set_rule_color(''))
+        self.ruleColorMenu.addSeparator()
+        for key in LABEL_KEYS:
+            hex_color = get_label_color(key)
+            text = get_label_text(key)
+            pixmap = QPixmap(16, 16)
+            pixmap.fill(QColor(hex_color))
+            self.ruleColorMenu.addAction(
+                QIcon(pixmap), text, lambda c=hex_color: self._set_rule_color(c)
+            )
+
+    def _set_rule_color(self, hex_color):
+        """Set the color label on the selected rule(s)."""
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            for idx in view._selected_rule_indices() or [index]:
+                model.set_color(idx, hex_color)
+
     def _apply_file_loaded_state(self):
         """Restore panel visibility from QSettings after loading a file."""
+        for name in self._RULE_ACTIONS:
+            getattr(self, name).setEnabled(True)
+        self.ruleColorMenu.setEnabled(True)
+        self._populate_color_menu()
         settings = QSettings()
         tree_visible = settings.value('View/ObjectTree', True, type=bool)
         self._object_tree.setVisible(tree_visible)
@@ -1399,6 +1449,110 @@ class FWWindow(QMainWindow):
                 'https://github.com/Linuxfabrik/firewallfabrik/blob/main/CHANGELOG.md'
             ),
         )
+
+    # ------------------------------------------------------------------
+    # Rules menu slots — delegate to the active PolicyView
+    # ------------------------------------------------------------------
+
+    def _active_view_and_model(self):
+        """Return (view, model, index) for the active policy view, or None."""
+        view = self._rs_mgr.active_policy_view()
+        if view is None:
+            return None
+        model = view.model()
+        if model is None:
+            return None
+        index = view.currentIndex()
+        return view, model, index
+
+    @Slot()
+    def ruleInsertAbove(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._insert_and_scroll(model, index=index, before=True)
+
+    @Slot()
+    def ruleInsertBelow(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._insert_and_scroll(model, index=index)
+
+    @Slot()
+    def ruleMoveUp(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._move_and_select(model.move_rule_up(index))
+
+    @Slot()
+    def ruleMoveDown(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._move_and_select(model.move_rule_down(index))
+
+    @Slot()
+    def ruleCopy(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            model.copy_rules(view._selected_rule_indices() or [index])
+
+    @Slot()
+    def ruleCut(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            model.cut_rules(view._selected_rule_indices() or [index])
+
+    @Slot()
+    def rulePasteAbove(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._paste_and_scroll(model, index, before=True)
+
+    @Slot()
+    def rulePasteBelow(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            view._paste_and_scroll(model, index)
+
+    @Slot()
+    def ruleRemove(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            model.delete_rules(view._selected_rule_indices() or [index])
+
+    @Slot()
+    def ruleDisable(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            _view, model, index = ctx
+            model.set_disabled(index, True)
+
+    @Slot()
+    def ruleEnable(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            _view, model, index = ctx
+            model.set_disabled(index, False)
+
+    @Slot()
+    def ruleNewGroup(self):
+        ctx = self._active_view_and_model()
+        if ctx:
+            view, model, index = ctx
+            from PySide6.QtWidgets import QInputDialog
+
+            name, ok = QInputDialog.getText(self, 'New Group', 'Group name:')
+            if ok and name:
+                selected = view._selected_rule_indices() or [index]
+                model.create_group(name, selected)
 
     @Slot()
     @Slot(list)
