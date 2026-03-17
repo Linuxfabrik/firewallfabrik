@@ -26,7 +26,6 @@ import io
 import os
 import socket
 import textwrap
-import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -570,8 +569,6 @@ class CompilerDriver_nft(CompilerDriver):
         """Assemble the complete shell script using the Jinja2 template."""
         options = fw.options or {}
 
-        timestr = time.strftime('%Y-%m-%d %H:%M:%S (%a)')
-        tz = time.strftime('%Z')
         user_name = os.environ.get('USER', 'unknown')
 
         debug = options.get('debug', False)
@@ -645,8 +642,6 @@ class CompilerDriver_nft(CompilerDriver):
 
         context = {
             'version': firewallfabrik.__version__,
-            'timestamp': timestr,
-            'tz': tz,
             'user': user_name,
             'comment': comment,
             'errors_and_warnings': errors_and_warnings,

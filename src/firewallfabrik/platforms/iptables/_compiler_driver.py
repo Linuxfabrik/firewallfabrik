@@ -24,7 +24,6 @@ from __future__ import annotations
 import io
 import os
 import socket
-import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -403,8 +402,6 @@ class CompilerDriver_ipt(CompilerDriver):
                     return errors_str + generated_script + routing_output
 
                 # --- Script assembly ---
-                timestr = time.strftime('%Y-%m-%d %H:%M:%S (%a)')
-                tz = time.strftime('%Z')
                 user_name = os.environ.get('USER', 'unknown')
 
                 script_skeleton = Configlet('linux24', 'script_skeleton')
@@ -510,8 +507,6 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 # Metadata
-                script_skeleton.set_variable('timestamp', timestr)
-                script_skeleton.set_variable('tz', tz)
                 script_skeleton.set_variable('user', user_name)
                 script_skeleton.set_variable('database', '')
 
@@ -562,8 +557,6 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Top comment configlet
                 top_comment = Configlet('linux24', 'top_comment')
                 top_comment.set_variable('version', firewallfabrik.__version__)
-                top_comment.set_variable('timestamp', timestr)
-                top_comment.set_variable('tz', tz)
                 top_comment.set_variable('user', user_name)
                 top_comment.set_variable('database', '')
 

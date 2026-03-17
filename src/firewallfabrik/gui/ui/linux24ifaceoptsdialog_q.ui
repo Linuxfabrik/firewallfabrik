@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>linux24IfaceOptsDialog_q</class>
+ <widget class="QDialog" name="linux24IfaceOptsDialog_q">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>420</width>
+    <height>280</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Advanced Interface Settings</string>
+  </property>
+  <property name="windowModality">
+   <enum>Qt::WindowModality::WindowModal</enum>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <item>
+    <layout class="QHBoxLayout" name="typeLayout">
+     <item>
+      <widget class="QLabel" name="iface_type_label">
+       <property name="text">
+        <string>Device Type:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="iface_type">
+       <property name="toolTip">
+        <string>The device type determines how this interface is configured in the generated script. Select "ethernet" for regular interfaces, "VLAN (802.1Q)" for tagged VLAN sub-interfaces, "bridge" for bridge interfaces, or "bonding" for link aggregation.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="typeSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QStackedWidget" name="options_stack">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="page_ethernet"/>
+     <widget class="QWidget" name="page_vlan">
+      <layout class="QHBoxLayout" name="vlanLayout">
+       <item>
+        <widget class="QLabel" name="vlan_label">
+         <property name="text">
+          <string>VLAN ID:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="vlan_id">
+         <property name="toolTip">
+          <string>IEEE 802.1Q VLAN tag identifier (1-4094). Must match the numeric suffix in the interface name (e.g. 100 for eth0.100).</string>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>4094</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="vlanSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_bridge">
+      <layout class="QVBoxLayout" name="bridgeLayout">
+       <item>
+        <widget class="QCheckBox" name="enable_stp">
+         <property name="toolTip">
+          <string>Enable Spanning Tree Protocol (STP) on this bridge interface. STP prevents network loops by automatically disabling redundant paths. Configured via "ip link set type bridge stp_state 1".</string>
+         </property>
+         <property name="text">
+          <string>Enable STP</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="bridgeSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="page_bonding">
+      <layout class="QGridLayout" name="bondingLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="bondingPolicyLabel">
+         <property name="text">
+          <string>Bonding policy:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="bonding_policy">
+         <property name="toolTip">
+          <string>Linux bonding mode passed to modprobe as the "mode" parameter. "802.3ad" requires switch support for LACP. "balance-rr" distributes packets round-robin across slaves.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string/>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>balance-rr</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>active-backup</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>balance-xor</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>broadcast</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>802.3ad</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>balance-tlb</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>balance-alb</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="xmitHashLabel">
+         <property name="text">
+          <string>Xmit hash policy:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="xmit_hash_policy">
+         <property name="toolTip">
+          <string>Transmit hash policy for load balancing across bonding slaves. Only applicable for "802.3ad" and "balance-xor" bonding modes. "layer3+4" uses IP addresses and ports for better distribution.</string>
+         </property>
+         <item>
+          <property name="text">
+           <string/>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>layer2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>layer3+4</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="driverOptsLabel">
+         <property name="text">
+          <string>Other parameters:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="bondng_driver_options">
+         <property name="toolTip">
+          <string>Additional bonding module parameters passed directly to modprobe (e.g. "miimon=100 downdelay=200"). See the Linux bonding documentation for available parameters.</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <spacer name="bondingSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
+     <item>
+      <spacer name="buttonSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonOk">
+       <property name="text">
+        <string>&amp;OK</string>
+       </property>
+       <property name="default">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="buttonCancel">
+       <property name="text">
+        <string>&amp;Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="MainRes.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonOk</sender>
+   <signal>clicked()</signal>
+   <receiver>linux24IfaceOptsDialog_q</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonCancel</sender>
+   <signal>clicked()</signal>
+   <receiver>linux24IfaceOptsDialog_q</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>397</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

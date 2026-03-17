@@ -44,7 +44,7 @@ After importing a ``.fwb`` file, verify the following:
    Review each firewall's platform and host OS settings (right-click the firewall > Edit). FirewallFabrik provides sensible defaults for all options via its YAML-based defaults system, but you should verify that the imported values match your environment.
 
 **Compile and compare**
-   Compile each firewall and compare the generated ``.fw`` script to the output from Firewall Builder. The iptables and nftables compilers are at full feature parity with Firewall Builder — the scripts should be functionally equivalent. Minor formatting differences (e.g. timestamp format, whitespace) are expected but do not affect functionality.
+   Compile each firewall and compare the generated ``.fw`` script to the output from Firewall Builder. The iptables and nftables compilers are at full feature parity with Firewall Builder — the scripts should be functionally equivalent. Minor formatting differences (e.g. whitespace) are expected but do not affect functionality. Note that FirewallFabrik no longer embeds a generation timestamp in the script header (see `Key Differences from Firewall Builder`_).
 
 **Save as .fwf**
    Once you are satisfied, save the file (``Ctrl+S``). This creates the ``.fwf`` file that you will use going forward.
@@ -195,5 +195,5 @@ IPv4 packet forwarding default
 nftables-aware reset
    On RHEL 8+ and modern distributions, ``iptables`` uses the nftables backend (``iptables-nft``). FirewallFabrik's generated scripts run ``nft flush ruleset`` before the iptables reset to clear any pre-existing nftables rules that ``iptables -F`` alone would not remove. This is conditional — on systems where ``nft`` is not installed, the command is skipped.
 
-Timestamp format
-   Generated scripts use ISO 8601 timestamps (``2026-03-16 20:06:24 (Mon)``) instead of Firewall Builder's locale-dependent format (``Mon Mar 16 20:06:24 2026``).
+No generation timestamp
+   Firewall Builder embedded a generation timestamp in every compiled script, which meant that recompiling an unchanged policy always produced a different output file. This broke deterministic builds: checksums changed on every run, ``diff`` always showed at least one modified line, and CI/CD pipelines could not reliably detect whether the policy had actually changed. FirewallFabrik deliberately omits the generation timestamp so that the same ``.fwf`` input always produces byte-identical output. If you need to record when a script was deployed, handle this in your deployment process (e.g. Ansible, CI/CD pipeline, or a wrapper script that writes a timestamp to ``/etc/fw/deployed-at`` on the target host).

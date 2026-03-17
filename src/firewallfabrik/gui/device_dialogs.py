@@ -166,13 +166,27 @@ class InterfaceDialog(BaseObjectDialog):
     def __init__(self, parent=None):
         super().__init__('interfacedialog_q.ui', parent)
 
+    def _is_bridge_port(self):
+        """Check if this interface is a bridge port.
+
+        Mirrors fwbuilder's ``Interface::isBridgePort()``: a
+        sub-interface whose parent has ``type == "bridge"`` in its
+        options is a bridge port, regardless of an explicit
+        ``bridge_port`` option.
+        """
+        if self._obj.is_bridge_port():
+            return True
+        parent = getattr(self._obj, 'parent_interface', None)
+        if parent is not None:
+            return (parent.options or {}).get('type') == 'bridge'
+        return False
+
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
         self.label.setText(data.get('label', ''))
         self.seclevel.setValue(int(data.get('security_level', 0)))
         self.management.setChecked(bool(data.get('management', False)))
-        self.unprotected.setChecked(bool(data.get('unprotected', False)))
         self.dedicated_failover.setChecked(bool(data.get('dedicated_failover', False)))
         if data.get('dyn', False):
             self.dynamic.setChecked(True)
@@ -180,6 +194,22 @@ class InterfaceDialog(BaseObjectDialog):
             self.unnumbered.setChecked(True)
         else:
             self.regular.setChecked(True)
+
+        # Bridge port interfaces: hide regular options, show label.
+        if self._is_bridge_port():
+            self.regular.hide()
+            self.dynamic.hide()
+            self.unnumbered.hide()
+            self.management.hide()
+            self.dedicated_failover.hide()
+            self.bridge_port_label.show()
+        else:
+            self.regular.show()
+            self.dynamic.show()
+            self.unnumbered.show()
+            self.management.show()
+            self.dedicated_failover.show()
+            self.bridge_port_label.hide()
 
     def _apply_changes(self):
         new_name = self.obj_name.text()
@@ -190,7 +220,6 @@ class InterfaceDialog(BaseObjectDialog):
         _set_data_key(data, 'label', self.label.text(), '')
         _set_data_key(data, 'security_level', str(self.seclevel.value()), '0')
         _set_data_key(data, 'management', self.management.isChecked(), False)
-        _set_data_key(data, 'unprotected', self.unprotected.isChecked(), False)
         _set_data_key(
             data, 'dedicated_failover', self.dedicated_failover.isChecked(), False
         )
@@ -207,10 +236,51 @@ class InterfaceDialog(BaseObjectDialog):
         ):
             from firewallfabrik.gui.interface_autoconfigure import guess_interface_type
 
-            guessed = guess_interface_type(self._obj.name or '')
+            parent = getattr(self._obj, 'parent_interface', None)
+            guessed = guess_interface_type(self._obj.name or '', parent)
+
+            # Handle VLAN name mismatch warning.
+            if '_vlan_name_mismatch' in guessed:
+                from PySide6.QtWidgets import QMessageBox
+
+                parent_name = guessed['_vlan_name_mismatch']
+                QMessageBox.warning(
+                    self.window(),
+                    'FirewallFabrik',
+                    f"'{self._obj.name}' looks like a name of a VLAN "
+                    f'interface but it does not match the name of the '
+                    f"parent interface '{parent_name}'",
+                )
+                return
+
+            # Handle top-level VLAN that needs a parent interface.
+            if '_vlan_needs_parent' in guessed:
+                from PySide6.QtWidgets import QMessageBox
+
+                base_name = guessed['_vlan_needs_parent']
+                QMessageBox.warning(
+                    self.window(),
+                    'FirewallFabrik',
+                    f"'{self._obj.name}' looks like a name of a VLAN "
+                    f'interface but it is not a sub-interface of '
+                    f"'{base_name}'. Create it as a sub-interface of "
+                    f"'{base_name}' instead.",
+                )
+                return
+
             if guessed:
                 options = dict(self._obj.options or {})
                 changed = False
+
+                # Handle special _set_unnumbered flag (bonding slaves).
+                if guessed.pop('_set_unnumbered', False):
+                    old_data = self._obj.data or {}
+                    if not old_data.get('unnum', False):
+                        new_data = dict(old_data)
+                        new_data['unnum'] = True
+                        self._obj.data = new_data
+                        self.unnumbered.setChecked(True)
+
                 for key, val in guessed.items():
                     if key not in options or not options[key]:
                         options[key] = val
@@ -220,10 +290,9 @@ class InterfaceDialog(BaseObjectDialog):
 
     @Slot()
     def openIfaceDialog(self):
-        """Open the platform-specific advanced interface settings dialog.
+        """Open the advanced interface settings dialog (device type, VLAN, bridge, bonding)."""
+        from firewallfabrik.gui.iface_opts_dialog import IfaceOptsDialog
 
-        In fwbuilder, this opened a per-platform interface options dialog
-        (e.g. BSD, Cisco PIX). For iptables/nftables there are no
-        interface-specific options, so the button remains disabled.
-        The slot exists to satisfy the .ui file's signal connection.
-        """
+        dlg = IfaceOptsDialog(self._obj, parent=self.window())
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self.changed.emit()

@@ -52,7 +52,7 @@ FirewallFabrik uses a human-readable YAML file format (``.fwf``) that works well
 * **Version control**: Store your ``.fwf`` files in a Git repository to maintain a full history of every policy change, including who changed what and when.
 * **Peer review**: Use merge/pull requests to have policy changes reviewed by a colleague before they are deployed.
 * **Automated deployment**: Integrate the compiled firewall scripts into your existing automation -- whether that is an Ansible playbook, a CI/CD pipeline (GitLab CI, GitHub Actions, Jenkins), or a simple shell script.
-* **Reproducibility**: Because the generated ``.fw`` script is deterministic, you can rebuild the exact same firewall state from the source ``.fwf`` file at any time.
+* **Reproducibility**: The generated ``.fw`` script is fully deterministic -- the same ``.fwf`` input always produces byte-identical output. You can rebuild the exact same firewall state at any time, verify integrity via checksums, and rely on ``diff`` or ``git diff`` to confirm that only intentional changes are present. Unlike Firewall Builder, FirewallFabrik does not embed a generation timestamp in the script. Deployment timestamps should be managed by your deployment process (e.g. Ansible, CI/CD pipeline, or a wrapper script that records the deployment time on the target host).
 
 Even if you start with a simple manual workflow (edit, compile, scp, activate), the YAML-based format makes it easy to evolve toward a fully automated deployment pipeline as your environment grows.
 
@@ -245,7 +245,7 @@ Strengths of FirewallFabrik
 - **Dual-stack IPv4/IPv6** -- separate compilation passes with automatic version filtering.
 - **Cluster support** -- model failover groups and state synchronization.
 - **Idempotent output** -- the generated shell scripts can be re-applied safely. They flush and rebuild the entire rule set on each run, so the result is always the same regardless of the firewall's previous state.
-- **Reproducibility** -- generated shell scripts are deterministic and human-readable. Store the ``.fwf`` source file in version control to maintain a complete history of every policy change.
+- **Reproducibility** -- generated shell scripts are fully deterministic (no embedded timestamps) and human-readable. The same input always produces byte-identical output. Store the ``.fwf`` source file in version control to maintain a complete history of every policy change.
 
 
 Limitations of FirewallFabrik

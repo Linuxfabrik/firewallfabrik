@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <ui version="4.0">
  <class>InterfaceDialog_q</class>
  <widget class="QWidget" name="InterfaceDialog_q">
@@ -112,6 +112,9 @@
                <height>23</height>
               </size>
              </property>
+             <property name="toolTip">
+              <string>Interface name as it appears on the firewall (e.g. eth0, ens192, br0, bond0). For VLAN sub-interfaces use the "parent.vlanid" convention (e.g. eth0.100).</string>
+             </property>
             </widget>
            </item>
            <item row="1" column="0">
@@ -143,6 +146,9 @@
                <width>200</width>
                <height>23</height>
               </size>
+             </property>
+             <property name="toolTip">
+              <string>Optional descriptive label for this interface (e.g. "DMZ", "WAN"). Not used by the compiler — purely for documentation.</string>
              </property>
             </widget>
            </item>
@@ -186,9 +192,6 @@
                <height>0</height>
               </size>
              </property>
-             <property name="toolTip">
-              <string>&lt;p&gt;Each interface of the firewall must have security level associated with it.&lt;br&gt;Security level can be any number between 0 and 100, 0 being least secure and 100 being most secure levels. Interface with security level 0 ususally serves Internet connection.&lt;/p&gt;</string>
-             </property>
              <property name="whatsThis">
               <string>&lt;p&gt;Each interface of the firewall must have security level associated with it.&lt;br&gt;
 Security level can be any number between 0 and 100, 0 being least secure and 100 being most secure levels. Interface with security level 0 ususally serves Internet connection.&lt;/p&gt;</string>
@@ -198,6 +201,9 @@ Security level can be any number between 0 and 100, 0 being least secure and 100
              </property>
              <property name="maximum">
               <number>100</number>
+             </property>
+             <property name="toolTip">
+              <string>Security level (0-100). Not used by the iptables/nftables compiler. Relevant only for Cisco PIX/ASA platforms where 0 = least secure (Internet) and 100 = most secure (inside).</string>
              </property>
             </widget>
            </item>
@@ -276,7 +282,7 @@ If network zone for this interface consists of only one subnet, you can simply c
          </size>
         </property>
         <property name="title">
-         <string/>
+         <string />
         </property>
         <property name="flat">
          <bool>false</bool>
@@ -284,21 +290,11 @@ If network zone for this interface consists of only one subnet, you can simply c
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QCheckBox" name="management">
-           <property name="toolTip">
-            <string>&lt;p&gt;Check if this interface is used for management (SNMP queries, remote policy install etc.)&lt;p&gt;</string>
-           </property>
            <property name="text">
             <string>Management interface</string>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="unprotected">
            <property name="toolTip">
-            <string>Skip this interface while assigning policy rules</string>
-           </property>
-           <property name="text">
-            <string>Unprotected interface</string>
+            <string>Mark this as the management interface used for remote administration (SSH, SNMP). The compiler uses this to identify where management access rules should be applied, and the installer connects to this address by default.</string>
            </property>
           </widget>
          </item>
@@ -307,12 +303,18 @@ If network zone for this interface consists of only one subnet, you can simply c
            <property name="text">
             <string>Dedicated failover interface</string>
            </property>
+           <property name="toolTip">
+            <string>Mark this interface as dedicated to cluster failover traffic (VRRP, heartbeat, openais). The compiler automatically generates rules to permit the failover protocol on this interface and excludes it from normal policy processing.</string>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QRadioButton" name="regular">
            <property name="text">
             <string>Static IP address</string>
+           </property>
+           <property name="toolTip">
+            <string>This interface has one or more static IP addresses configured in FirewallFabrik. The generated script will use "ip addr add/del" to manage these addresses if "Configure interfaces" is enabled in the platform settings.</string>
            </property>
           </widget>
          </item>
@@ -321,12 +323,18 @@ If network zone for this interface consists of only one subnet, you can simply c
            <property name="text">
             <string>Address is assigned dynamically</string>
            </property>
+           <property name="toolTip">
+            <string>This interface gets its IP address dynamically (DHCP, PPP, etc.). The generated script uses shell functions to discover the address at runtime. IP address configuration is skipped for this interface.</string>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QRadioButton" name="unnumbered">
            <property name="text">
             <string>Unnumbered interface</string>
+           </property>
+           <property name="toolTip">
+            <string>This interface has no IP address (e.g. a bonding slave, a point-to-point tunnel endpoint). IP address configuration and verification are skipped for this interface.</string>
            </property>
           </widget>
          </item>
@@ -344,15 +352,21 @@ If network zone for this interface consists of only one subnet, you can simply c
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
+           <property name="toolTip">
+            <string>This interface is a port of a bridge interface. Its IP and protocol settings are managed by the parent bridge.</string>
+           </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="advancedconfig">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="text">
             <string>Advanced Interface Settings ...</string>
+           </property>
+           <property name="toolTip">
+            <string>Open the advanced interface settings dialog to configure the device type (ethernet, VLAN 802.1Q, bridge, bonding), VLAN ID, STP, and bonding parameters.</string>
            </property>
           </widget>
          </item>
@@ -391,7 +405,6 @@ If network zone for this interface consists of only one subnet, you can simply c
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   
    <container>1</container>
   </customwidget>
  </customwidgets>
@@ -405,7 +418,7 @@ If network zone for this interface consists of only one subnet, you can simply c
   <tabstop>unnumbered</tabstop>
  </tabstops>
  <resources>
-  <include location="MainRes.qrc"/>
+  <include location="MainRes.qrc" />
  </resources>
  <connections>
   <connection>
