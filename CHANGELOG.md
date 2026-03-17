@@ -43,7 +43,7 @@ GUI:
 
 - Cluster Member Management dialog: add/remove firewalls from a cluster and view interface mappings (closes #26).
 - Library Export: export selected user libraries to a separate `.fwf` file via File > Export Library (closes #27).
-- Inspect Rules: show all rules referencing the selected object via Tools > Inspect (closes #28).
+- Inspect Rules: show all rules referencing the selected object via Rules > Inspect or the toolbar icon (closes #28).
 - File Properties: show file path, size, and object counts via File > Properties (closes #29).
 - Import Addresses from File: import IPv4/IPv6 addresses and networks from a text file via Tools > Import Addresses (closes #12).
 - Compile log errors matching "Rule N" are now clickable and scroll to the relevant firewall section (closes #15).
