@@ -1617,7 +1617,7 @@
     <string>Show File Properties</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+I</string>
+    <string>Alt+Return</string>
    </property>
   </action>
   <action name="ObjectLockAction">
