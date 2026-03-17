@@ -44,13 +44,12 @@ QTextEdit:focus {
 /* --- Header view (tree/table column headers) --- */
 
 QHeaderView::section {
+    background: palette(button);
     border: none;
     border-right: 1px solid #999;
     border-bottom: 1px solid #999;
     padding: 4px 8px;
 }
-
-/* Keep border-right on last section too for visual consistency */
 
 
 /* --- Menu bar --- */
@@ -224,7 +223,7 @@ QSplitter::handle:vertical {
 
 QListView,
 QTreeView {
-    alternate-background-color: rgba(0, 0, 0, 0.02);
+    background: palette(base);
 }
 
 QListView::item,

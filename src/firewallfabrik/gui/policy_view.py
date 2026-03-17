@@ -151,10 +151,13 @@ class _CellBorderDelegate(QStyledItemDelegate):
         else:
             self._paint_cell(painter, option, index)
 
-        # Cell border.
+        # Cell borders: bottom and right lines only (top/left come from
+        # the adjacent cell above/to the left).
         painter.save()
         painter.setPen(self._BORDER_COLOR)
-        painter.drawRect(option.rect.adjusted(0, 0, -1, -1))
+        r = option.rect
+        painter.drawLine(r.left(), r.bottom(), r.right(), r.bottom())
+        painter.drawLine(r.right(), r.top(), r.right(), r.bottom())
         painter.restore()
 
     def _paint_cell(self, painter, option, index):
