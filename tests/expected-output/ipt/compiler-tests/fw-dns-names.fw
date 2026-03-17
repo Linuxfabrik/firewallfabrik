@@ -344,6 +344,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

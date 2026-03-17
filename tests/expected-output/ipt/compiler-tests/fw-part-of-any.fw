@@ -326,10 +326,7 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 198.51.100.1 -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 198.51.100.1 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
@@ -359,6 +356,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 
