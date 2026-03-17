@@ -58,69 +58,105 @@ class PreferencesDialog(QDialog):
                 parent_center.y() - self.height() // 2,
             )
 
-        settings = QSettings()
-        self.attributesInTree.setChecked(
-            settings.value('UI/ShowObjectsAttributesInTree', True, type=bool)
-        )
-        self.objTooltips.setChecked(settings.value('UI/ObjTooltips', True, type=bool))
+        self._load_from_settings()
 
-        # Icon size in rules: 25 (default) or 16.
-        icon_size = settings.value('UI/IconSizeInRules', 25, type=int)
-        if icon_size == 16:
-            self.rb16.setChecked(True)
-        else:
-            self.rb25.setChecked(True)
+        self._populate_platform_table()
+        self._populate_os_table()
+
+        self.accepted.connect(self._save_settings)
+        self.buttonRestoreDefaults.clicked.connect(self._restore_defaults)
+
+    def _load_from_settings(self):
+        """Load current values from QSettings into all widgets."""
+        settings = QSettings()
+        self._apply_values(
+            obj_tooltips=settings.value('UI/ObjTooltips', True, type=bool),
+            attrs_in_tree=settings.value(
+                'UI/ShowObjectsAttributesInTree', True, type=bool
+            ),
+            icon_size=settings.value('UI/IconSizeInRules', 25, type=int),
+            dns_compile=settings.value(
+                'Objects/DNSName/useCompileTimeForNewObjects', True, type=bool
+            ),
+            at_compile=settings.value(
+                'Objects/AddressTable/useCompileTimeForNewObjects', True, type=bool
+            ),
+            rules_logging=settings.value(
+                'Objects/PolicyRule/defaultLoggingState', True, type=bool
+            ),
+            rules_stateful=settings.value(
+                'Objects/PolicyRule/defaultStateful', True, type=bool
+            ),
+            rules_action=settings.value(
+                'Objects/PolicyRule/defaultAction', 0, type=int
+            ),
+            rules_direction=settings.value(
+                'Objects/PolicyRule/defaultDirection', 0, type=int
+            ),
+            autoconfigure_iface=settings.value(
+                'Objects/Interface/autoconfigureInterfaces', True, type=bool
+            ),
+        )
 
         # Label colors: store current hex values so we can save on accept.
         self._label_colors = {}
         for key in LABEL_KEYS:
             hex_color = get_label_color(key)
             self._label_colors[key] = hex_color
-            btn = getattr(self, f'{key}Btn')
-            btn.setIcon(_color_icon(hex_color))
-            text_field = getattr(self, f'{key}Text')
-            text_field.setText(get_label_text(key))
+            getattr(self, f'{key}Btn').setIcon(_color_icon(hex_color))
+            getattr(self, f'{key}Text').setText(get_label_text(key))
 
-        # DNS Name defaults
-        settings_dns_compile = settings.value(
-            'Objects/DNSName/useCompileTimeForNewObjects', True, type=bool
-        )
-        if settings_dns_compile:
-            self.new_dns_name_compile_tm.setChecked(True)
+    def _apply_values(
+        self,
+        *,
+        obj_tooltips=True,
+        attrs_in_tree=True,
+        icon_size=25,
+        dns_compile=True,
+        at_compile=True,
+        rules_logging=True,
+        rules_stateful=True,
+        rules_action=0,
+        rules_direction=0,
+        autoconfigure_iface=True,
+    ):
+        """Set widget values. Parameter defaults are the application defaults."""
+        self.objTooltips.setChecked(obj_tooltips)
+        self.attributesInTree.setChecked(attrs_in_tree)
+        if icon_size == 16:
+            self.rb16.setChecked(True)
         else:
-            self.new_dns_name_run_tm.setChecked(True)
-        # Address Table defaults
-        settings_at_compile = settings.value(
-            'Objects/AddressTable/useCompileTimeForNewObjects', True, type=bool
-        )
-        if settings_at_compile:
-            self.new_addr_tbl_compile_tm.setChecked(True)
-        else:
-            self.new_addr_tbl_run_tm.setChecked(True)
+            self.rb25.setChecked(True)
+        self.new_dns_name_compile_tm.setChecked(dns_compile)
+        self.new_dns_name_run_tm.setChecked(not dns_compile)
+        self.new_addr_tbl_compile_tm.setChecked(at_compile)
+        self.new_addr_tbl_run_tm.setChecked(not at_compile)
+        self.rulesLoggingOn.setChecked(rules_logging)
+        self.rulesDefaultStateful.setChecked(rules_stateful)
+        self.rulesDefaultAction.setCurrentIndex(rules_action)
+        self.rulesDefaultDirection.setCurrentIndex(rules_direction)
+        self.autoconfigure_interfaces.setChecked(autoconfigure_iface)
 
-        # Policy Rules defaults
-        self.rulesLoggingOn.setChecked(
-            settings.value('Objects/PolicyRule/defaultLoggingState', True, type=bool)
-        )
-        self.rulesDefaultStateful.setChecked(
-            settings.value('Objects/PolicyRule/defaultStateful', True, type=bool)
-        )
-        self.rulesDefaultAction.setCurrentIndex(
-            settings.value('Objects/PolicyRule/defaultAction', 0, type=int)
-        )
-        self.rulesDefaultDirection.setCurrentIndex(
-            settings.value('Objects/PolicyRule/defaultDirection', 0, type=int)
-        )
+    @Slot()
+    def _restore_defaults(self):
+        """Reset all widgets to application default values."""
+        self._apply_values()  # all keyword defaults are the app defaults
 
-        # Interface defaults
-        self.autoconfigure_interfaces.setChecked(
-            settings.value('Objects/Interface/autoconfigureInterfaces', True, type=bool)
-        )
+        # Reset label colors and texts to defaults.
+        from firewallfabrik.gui.label_settings import LABEL_DEFAULTS
 
-        self._populate_platform_table()
-        self._populate_os_table()
+        for key in LABEL_KEYS:
+            defaults = LABEL_DEFAULTS.get(key, {})
+            hex_color = defaults.get('color', '#ffffff')
+            self._label_colors[key] = hex_color
+            getattr(self, f'{key}Btn').setIcon(_color_icon(hex_color))
+            getattr(self, f'{key}Text').setText(defaults.get('text', ''))
 
-        self.accepted.connect(self._save_settings)
+        # Reset platform/OS to all enabled.
+        for row in range(self.enabled_platforms.rowCount()):
+            self.enabled_platforms.item(row, 0).setCheckState(Qt.CheckState.Checked)
+        for row in range(self.enabled_os.rowCount()):
+            self.enabled_os.item(row, 0).setCheckState(Qt.CheckState.Checked)
 
     def _populate_platform_table(self):
         table = self.enabled_platforms

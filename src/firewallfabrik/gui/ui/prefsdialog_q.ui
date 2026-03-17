@@ -23,6 +23,16 @@
    <item row="1" column="0">
     <layout class="QHBoxLayout">
      <item>
+      <widget class="QPushButton" name="buttonRestoreDefaults">
+       <property name="text">
+        <string>Restore &amp;Defaults</string>
+       </property>
+       <property name="toolTip">
+        <string>Reset all preferences to their default values</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer>
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
