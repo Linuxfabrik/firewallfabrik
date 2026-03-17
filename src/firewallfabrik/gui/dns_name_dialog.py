@@ -27,14 +27,7 @@ class DNSNameDialog(BaseObjectDialog):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
 
-        # Use name as DNS record if the preference is set and
-        # the object has no source_name yet.
-        source_name = data.get('source_name', '')
-        if not source_name:
-            settings = QSettings()
-            if settings.value('Objects/DNSName/useNameForDNSRecord', False, type=bool):
-                source_name = self._obj.name or ''
-        self.dnsrec.setText(source_name)
+        self.dnsrec.setText(data.get('source_name', ''))
 
         # Resolve mode: honour the preference for new objects (no
         # run_time key yet), otherwise use the stored value.

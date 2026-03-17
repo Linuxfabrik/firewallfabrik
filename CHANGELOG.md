@@ -48,8 +48,9 @@ GUI:
 - File Properties: show file path, size, and object counts via File > Properties (closes #29).
 - Import Addresses from File: import IPv4/IPv6 addresses and networks from a text file via Tools > Import Addresses (closes #12).
 - Compile log errors matching "Rule N" are now clickable and scroll to the relevant firewall section (closes #15).
-- Preferences dialog: enabled DNS Name, Address Table, Policy Rules, and Interface sub-tabs with working settings. Removed obsolete items (deleted objects, advanced user mode, custom templates) and unused tabs (Data File, Installer, Diff).
-- DNS Name and Address Table dialogs now honour the Preferences default for compile-time vs run-time resolution when creating new objects. The "Use name for DNS record" preference auto-fills the DNS record field.
+- Preferences dialog: enabled DNS Name, Address Table, Policy Rules, and Interface sub-tabs with working settings. Removed obsolete items (deleted objects, advanced user mode, custom templates), unused tabs (Data File, Installer, Diff), and the marginal "Use name for DNS record" option. Fixed truncated text in Policy Rules tab. Replaced all "fwbuilder"/"Firewall Builder" references with "FirewallFabrik" in user-visible UI strings.
+- DNS Name and Address Table dialogs now honour the Preferences default for compile-time vs run-time resolution when creating new objects.
+- New policy rules now use Preferences defaults for logging, stateful inspection, action, and direction instead of hardcoded values.
 
 ### Fixed
 

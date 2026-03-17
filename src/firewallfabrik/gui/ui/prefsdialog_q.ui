@@ -145,7 +145,7 @@ tags are matched.</string>
           <string>Properties of specific object types:</string>
          </property>
          <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignCenter</set>
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
          </property>
         </widget>
        </item>
@@ -223,13 +223,6 @@ tags are matched.</string>
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QCheckBox" name="use_name_for_dns_record">
-             <property name="text">
-              <string>Use object name for the DNS record in all objects of this type</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
             <spacer name="verticalSpacer">
              <property name="orientation">
               <enum>Qt::Orientation::Vertical</enum>
@@ -322,114 +315,40 @@ tags are matched.</string>
           </layout>
          </widget>
          <widget class="QWidget" name="tab">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
           <attribute name="title">
            <string>Policy Rules</string>
           </attribute>
-          <widget class="QLabel" name="label_16">
-           <property name="geometry">
-            <rect>
-             <x>4</x>
-             <y>7</y>
-             <width>64</width>
-             <height>64</height>
-            </rect>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>64</width>
-             <height>64</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>64</width>
-             <height>64</height>
-            </size>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-           <property name="pixmap">
-            <pixmap resource="MainRes.qrc">:/Icons/Policy/icon-big</pixmap>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_19">
-           <property name="geometry">
-            <rect>
-             <x>72</x>
-             <y>4</y>
-             <width>623</width>
-             <height>45</height>
-            </rect>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>This setting allows you to change whether new rules created in fwbuilder have action, logging and stateful inspection turned on or off by default.</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-          </widget>
-          <widget class="QCheckBox" name="rulesLoggingOn">
-           <property name="geometry">
-            <rect>
-             <x>72</x>
-             <y>53</y>
-             <width>290</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Create new policy rules with logging turned on</string>
-           </property>
-          </widget>
-          <widget class="QCheckBox" name="rulesDefaultStateful">
-           <property name="geometry">
-            <rect>
-             <x>72</x>
-             <y>78</y>
-             <width>354</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Create new policy rules with stateful inspection turned on</string>
-           </property>
-          </widget>
-          <widget class="QWidget" name="layoutWidget">
-           <property name="geometry">
-            <rect>
-             <x>73</x>
-             <y>104</y>
-             <width>352</width>
-             <height>182</height>
-            </rect>
-           </property>
-           <layout class="QGridLayout" name="prefs_gridLayout_16" columnstretch="1,0">
+          <layout class="QVBoxLayout" name="policyRulesLayout">
+           <item>
+            <widget class="QLabel" name="label_19">
+             <property name="text">
+              <string>Default settings for newly created policy rules:</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="rulesLoggingOn">
+             <property name="text">
+              <string>Create new policy rules with logging turned on</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="rulesDefaultStateful">
+             <property name="text">
+              <string>Create new policy rules with stateful inspection turned on</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="prefs_gridLayout_16" columnstretch="1,0">
             <item row="0" column="0">
              <widget class="QLabel" name="label_20">
               <property name="text">
-               <string>Create new policy rules with action </string>
+               <string>Default action</string>
               </property>
              </widget>
             </item>
@@ -450,7 +369,7 @@ tags are matched.</string>
             <item row="1" column="0">
              <widget class="QLabel" name="label_21">
               <property name="text">
-               <string>Create new policy rules with direction</string>
+               <string>Default direction</string>
               </property>
              </widget>
             </item>
@@ -476,7 +395,7 @@ tags are matched.</string>
             <item row="2" column="0">
              <widget class="QLabel" name="label_23">
               <property name="text">
-               <string>Set policy rules default source </string>
+               <string>Default source</string>
               </property>
              </widget>
             </item>
@@ -497,7 +416,7 @@ tags are matched.</string>
             <item row="3" column="0">
              <widget class="QLabel" name="label_24">
               <property name="text">
-               <string>Set policy rules default destination </string>
+               <string>Default destination</string>
               </property>
              </widget>
             </item>
@@ -558,7 +477,21 @@ tags are matched.</string>
              </widget>
             </item>
            </layout>
-          </widget>
+           </item>
+           <item>
+            <spacer name="policyRulesSpacer">
+             <property name="orientation">
+              <enum>Qt::Orientation::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
          </widget>
          <widget class="QWidget" name="tab_2">
           <property name="enabled">
@@ -587,7 +520,7 @@ tags are matched.</string>
            <item row="0" column="1">
             <widget class="QLabel" name="label_18">
              <property name="text">
-              <string>When an interface object is created as a child object of another interface, fwbuilder can verify that the name and type of the child and the parent objects match and form valid configuration. FWbuilder can also automatically guess some interface types and their parameters using their names. For example, it can automatically set interface type to &quot;vlan&quot; and assign vlan ID if object name looks like a valid vlan interface for the given OS. However in some situations desired configuration might be more complex than our checks allow so this may need to be turned off.</string>
+              <string>When an interface object is created as a child object of another interface, FirewallFabrik can verify that the name and type of the child and parent objects match and form valid configuration. It can also automatically guess some interface types and parameters using their names. For example, it can set the interface type to &quot;vlan&quot; and assign a VLAN ID if the name looks like a valid VLAN interface for the given OS. In some situations the desired configuration might be more complex than these checks allow, so this may need to be turned off.</string>
              </property>
              <property name="wordWrap">
               <bool>true</bool>

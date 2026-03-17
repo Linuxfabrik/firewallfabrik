@@ -1046,13 +1046,39 @@ class PolicyTreeModel(QAbstractItemModel):
                 )
                 .values(position=self._rule_cls.position + 1),
             )
-            # Defaults per type.
+            # Defaults per type — honour Preferences settings.
+            from PySide6.QtCore import QSettings
+
+            settings = QSettings()
             opts = {}
             kwargs = {}
             if self._rule_set_type == 'Policy':
-                opts['stateless'] = True
-                kwargs['policy_action'] = PolicyAction.Deny.value
-                kwargs['policy_direction'] = Direction.Both.value
+                default_stateful = settings.value(
+                    'Objects/PolicyRule/defaultStateful', True, type=bool
+                )
+                opts['stateless'] = not default_stateful
+                default_logging = settings.value(
+                    'Objects/PolicyRule/defaultLoggingState', True, type=bool
+                )
+                if default_logging:
+                    opts['log'] = True
+                action_idx = settings.value(
+                    'Objects/PolicyRule/defaultAction', 0, type=int
+                )
+                kwargs['policy_action'] = (
+                    PolicyAction.Accept.value
+                    if action_idx == 1
+                    else PolicyAction.Deny.value
+                )
+                dir_idx = settings.value(
+                    'Objects/PolicyRule/defaultDirection', 0, type=int
+                )
+                dir_map = {
+                    0: Direction.Both,
+                    1: Direction.Inbound,
+                    2: Direction.Outbound,
+                }
+                kwargs['policy_direction'] = dir_map.get(dir_idx, Direction.Both).value
             elif self._rule_set_type == 'NAT':
                 kwargs['nat_action'] = NATAction.Translate.value
             if group_name:

@@ -89,10 +89,6 @@ class PreferencesDialog(QDialog):
             self.new_dns_name_compile_tm.setChecked(True)
         else:
             self.new_dns_name_run_tm.setChecked(True)
-        self.use_name_for_dns_record.setChecked(
-            settings.value('Objects/DNSName/useNameForDNSRecord', False, type=bool)
-        )
-
         # Address Table defaults
         settings_at_compile = settings.value(
             'Objects/AddressTable/useCompileTimeForNewObjects', True, type=bool
@@ -226,11 +222,6 @@ class PreferencesDialog(QDialog):
             'Objects/DNSName/useCompileTimeForNewObjects',
             self.new_dns_name_compile_tm.isChecked(),
         )
-        settings.setValue(
-            'Objects/DNSName/useNameForDNSRecord',
-            self.use_name_for_dns_record.isChecked(),
-        )
-
         # Address Table
         settings.setValue(
             'Objects/AddressTable/useCompileTimeForNewObjects',

@@ -1432,7 +1432,7 @@ packets to IPv6 policies</string>
        <item row="8" column="1">
         <widget class="QCheckBox" name="clearUnknownInterfaces">
          <property name="text">
-          <string>Clear ip addresses and bring down interfaces not configured in fwbuilder</string>
+          <string>Clear ip addresses and bring down interfaces not configured in FirewallFabrik</string>
          </property>
         </widget>
        </item>
