@@ -1220,6 +1220,7 @@
     <addaction name="fileCloseAction"/>
     <addaction name="separator"/>
     <addaction name="libExportAction"/>
+    <addaction name="filePropAction"/>
     <addaction name="separator"/>
     <addaction name="fileExitAction"/>
    </widget>
