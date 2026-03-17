@@ -71,7 +71,7 @@ class _CellBorderDelegate(QStyledItemDelegate):
     Matches fwbuilder's ``RuleSetViewDelegate`` look.
     """
 
-    _BORDER_COLOR = QColor('#999')
+    _BORDER_COLOR = QColor('#ccc')
     _H_PAD = 2
     _HIGHLIGHT_COLOR = QColor(255, 255, 150, 100)
     _ICON_TEXT_GAP = 2

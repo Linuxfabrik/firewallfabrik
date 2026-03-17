@@ -42,14 +42,7 @@ QTextEdit:focus {
 
 
 /* --- Header view (tree/table column headers) --- */
-
-QHeaderView::section {
-    background: palette(button);
-    border: none;
-    border-right: 1px solid #999;
-    border-bottom: 1px solid #999;
-    padding: 4px 8px;
-}
+/* Use the native platform look (raised 3D borders, matching fwbuilder). */
 
 
 /* --- Menu bar --- */
