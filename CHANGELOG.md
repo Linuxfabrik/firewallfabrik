@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.2.0] - 2026-03-17
+
 ### Added
 
 - **iptables REJECT rule correctness** (Phase 1): `SplitRuleIfSrvAnyActionReject` splits Reject rules with srv=any into TCP RST + ICMP unreachable. `SplitServicesIfRejectWithTCPReset` separates mixed TCP/non-TCP services when TCP RST is configured. `CheckForTCPEstablished` aborts compilation if the deprecated "established" TCP flag is used. Pipeline reordered to match fwbuilder's processor sequence.
@@ -224,7 +229,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.2.0...HEAD
+[v1.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...v1.2.0
 [v1.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.1...v1.1.0
 [v1.0.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.0...v1.0.1
 [v1.0.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v0.5.0rc1...v1.0.0
