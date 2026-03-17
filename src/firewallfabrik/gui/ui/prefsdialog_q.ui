@@ -79,36 +79,6 @@
        <string>Objects</string>
       </attribute>
       <layout class="QGridLayout" name="prefs_gridLayout_2">
-       <item row="2" column="0">
-        <widget class="QCheckBox" name="deletedObj">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>When enabled, objects that have been marked as deleted
-are still shown in the object tree. This can be useful
-for reviewing or restoring recently removed items.</string>
-         </property>
-         <property name="text">
-          <string>Show deleted objects</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QCheckBox" name="advTooltipMode">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>When enabled, tooltips show only essential information
-such as name and type, omitting detailed attributes
-like addresses, ports and flags.</string>
-         </property>
-         <property name="text">
-          <string>Advanced User Mode, only show minimal tooltips</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="0">
         <widget class="QCheckBox" name="objTooltips">
          <property name="minimumSize">
@@ -126,20 +96,7 @@ in the tree and rule set views.</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
-        <spacer name="verticalSpacer_5">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>618</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="3" column="0">
+       <item row="1" column="0">
         <widget class="QCheckBox" name="attributesInTree">
          <property name="toolTip">
           <string>Display a second column in the object tree showing brief
@@ -169,7 +126,20 @@ tags are matched.</string>
          </property>
         </spacer>
        </item>
-       <item row="6" column="0">
+       <item row="2" column="0" colspan="2">
+        <spacer name="verticalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>618</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="3" column="0">
         <widget class="QLabel" name="label_9">
          <property name="text">
           <string>Properties of specific object types:</string>
@@ -180,21 +150,6 @@ tags are matched.</string>
         </widget>
        </item>
        <item row="4" column="0" colspan="2">
-        <widget class="QCheckBox" name="enableCustomTemplates">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="toolTip">
-          <string>The program comes with a library of template objects that can
-be used to create new firewalls, however you can create your
-own library of templates and use it in addition to the one we provide</string>
-         </property>
-         <property name="text">
-          <string>Enable use of custom firewall template libraries</string>
-         </property>
-        </widget>
-       </item>
-       <item row="7" column="0" colspan="2">
         <widget class="QTabWidget" name="tabWidget_2">
          <property name="minimumSize">
           <size>
@@ -207,7 +162,7 @@ own library of templates and use it in addition to the one we provide</string>
          </property>
          <widget class="QWidget" name="DNSName">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <attribute name="title">
            <string>DNS Name</string>
@@ -291,7 +246,7 @@ own library of templates and use it in addition to the one we provide</string>
          </widget>
          <widget class="QWidget" name="AddressTable">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <attribute name="title">
            <string>Address Table</string>
@@ -368,7 +323,7 @@ own library of templates and use it in addition to the one we provide</string>
          </widget>
          <widget class="QWidget" name="tab">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <attribute name="title">
            <string>Policy Rules</string>
@@ -607,7 +562,7 @@ own library of templates and use it in addition to the one we provide</string>
          </widget>
          <widget class="QWidget" name="tab_2">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <attribute name="title">
            <string>Interface</string>
@@ -669,7 +624,7 @@ own library of templates and use it in addition to the one we provide</string>
          </widget>
         </widget>
        </item>
-       <item row="8" column="0" colspan="2">
+       <item row="5" column="0" colspan="2">
         <spacer name="verticalSpacer_7">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -681,372 +636,6 @@ own library of templates and use it in addition to the one we provide</string>
           <size>
            <width>618</width>
            <height>46</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabData">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <attribute name="title">
-       <string>Data File</string>
-      </attribute>
-      <layout class="QGridLayout" name="prefs_gridLayout_5">
-       <property name="topMargin">
-        <number>20</number>
-       </property>
-       <property name="verticalSpacing">
-        <number>20</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="autosaveFile">
-         <property name="text">
-          <string>Periodically save data to file every </string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="autosaveInterval">
-         <property name="minimumSize">
-          <size>
-           <width>50</width>
-           <height>0</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>120</number>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLabel" name="textLabel1_3">
-         <property name="text">
-          <string>minutes</string>
-         </property>
-         <property name="wordWrap">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>225</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0" colspan="4">
-        <widget class="QCheckBox" name="emptyRCSLog">
-         <property name="text">
-          <string>Do not ask for the log record when checking in new file revision.</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="4">
-        <widget class="QCheckBox" name="dataFileCompression">
-         <property name="text">
-          <string>Enable compression of the data file</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="4">
-        <spacer name="verticalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>97</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabSSH">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <attribute name="title">
-       <string>Installer</string>
-      </attribute>
-      <layout class="QGridLayout" name="prefs_gridLayout_15">
-       <item row="0" column="0" colspan="3">
-        <widget class="QLabel" name="textLabel1_5_2">
-         <property name="text">
-          <string>A full path to the Secure Shell utility (remote command execution; for example ssh on Unix or plink.exe  on Windows):</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="3">
-        <layout class="QHBoxLayout" name="horizontalLayout_6">
-         <item>
-          <widget class="QLineEdit" name="sshPath">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="browseForSSH">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="2" column="0" colspan="3">
-        <widget class="QLabel" name="textLabel1_5_3">
-         <property name="text">
-          <string>A full path to the SCP utility (file copy over ssh; for example scp on Unix or pscp.exe on Windows):</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0" colspan="3">
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <item>
-          <widget class="QLineEdit" name="scpPath">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="browseForSCP">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="text">
-            <string>Browse...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="4" column="0" colspan="3">
-        <widget class="QLabel" name="label_14">
-         <property name="text">
-          <string>Value for the ServerAliveInterval ssh configuration parameter. This parameter sets timeout interval in seconds after which if no data has been received from the server, ssh client will send a message through the encrypted channel to request a response from the server. This helps detect disconnects between fwbuilder policy installer and the firewall. If set to 0, these messages will not be sent to the server and loss of connectivity with the firewall will lead to hanging of the installer session. Scp uses different parameter for this, ConnectTimeout. Fwbuilder automatically calculates the value for this parameter using the same timeout value. Note that this only works with ssh protocol v2.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QSpinBox" name="sshTimeout">
-         <property name="maximum">
-          <number>999999</number>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLabel" name="label_15">
-         <property name="text">
-          <string>sec</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="2">
-        <spacer name="horizontalSpacer_7">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>528</width>
-           <height>23</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="6" column="0" colspan="3">
-        <widget class="QFrame" name="plink_hint">
-         <property name="frameShape">
-          <enum>QFrame::Shape::NoFrame</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Shadow::Plain</enum>
-         </property>
-         <layout class="QGridLayout" name="prefs_gridLayout_14">
-          <property name="leftMargin">
-           <number>0</number>
-          </property>
-          <property name="topMargin">
-           <number>0</number>
-          </property>
-          <property name="rightMargin">
-           <number>0</number>
-          </property>
-          <property name="bottomMargin">
-           <number>0</number>
-          </property>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_13">
-            <property name="text">
-             <string>Download plink.exe and pscp.exe from the web site at</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QTextBrowser" name="plink_hint_url">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>30</height>
-             </size>
-            </property>
-            <property name="autoFillBackground">
-             <bool>true</bool>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::Shape::NoFrame</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Shadow::Plain</enum>
-            </property>
-            <property name="html">
-             <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Liberation Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;http://www.chiark.greenend.org.uk/~sgtatham/putty/&quot;&gt;&lt;span style=&quot; font-family:'Lucida Grande'; font-size:8pt; text-decoration: underline; color:#0000ff;&quot;&gt;http://www.chiark.greenend.org.uk/~sgtatham/putty/&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="acceptRichText">
-             <bool>true</bool>
-            </property>
-            <property name="openExternalLinks">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="7" column="0" colspan="3">
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="8" column="0" colspan="3">
-        <widget class="QLabel" name="label_8">
-         <property name="text">
-          <string>Built-in policy installer can remember passwords for the duration of the session. Passwords are never stored permanently, they are only kept in memory. In order to use this feature, you also need to configure user name used to authenticate to the firewall in the &quot;advanced&quot; settings dialog of the firewall object. </string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="0" colspan="3">
-        <widget class="QLabel" name="label_12">
-         <property name="mouseTracking">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Warning: using this feature creates certain risk if working Firewall Builder GUI is left unattended on the unlocked workstation. Someone may walk up to the machine and make changes to the firewall using cached password of the administrator who used the same GUI session before. Always lock the screen or exit Firewall Builder GUI when leaving computer.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="10" column="0" colspan="3">
-        <widget class="QCheckBox" name="rememberSshPass">
-         <property name="toolTip">
-          <string>Enable password caching for the duration of the session (passwords
-are never stored permanently)</string>
-         </property>
-         <property name="text">
-          <string>Enable password caching</string>
-         </property>
-        </widget>
-       </item>
-       <item row="11" column="0" colspan="3">
-        <spacer>
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Policy::Expanding</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>505</width>
-           <height>61</height>
           </size>
          </property>
         </spacer>
@@ -1517,209 +1106,6 @@ Easier to distinguish object types at a glance.</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_3">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <attribute name="title">
-       <string>Diff</string>
-      </attribute>
-      <layout class="QHBoxLayout" name="horizontalLayout_8">
-       <item>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="title">
-            <string>Rule Set Diff Viewer</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout">
-            <item>
-             <widget class="QLabel" name="textLabel1_5">
-              <property name="text">
-               <string>Use these colors to mark rules in the diff viewer</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
-              </property>
-              <property name="wordWrap">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QGridLayout" name="diffColorLayout">
-              <property name="verticalSpacing">
-               <number>20</number>
-              </property>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="addColorBtn">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="removeColorText">
-                <property name="text">
-                 <string>Remove</string>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="addColorText">
-                <property name="text">
-                 <string>Add</string>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="editColorBtn">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="editColorText">
-                <property name="text">
-                 <string>Edit</string>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="moveColorText">
-                <property name="text">
-                 <string>Move</string>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QPushButton" name="removeColorBtn">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QPushButton" name="moveColorBtn">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="displayUnmodifiedRulesChk">
-              <property name="text">
-               <string>Display unmodified rules</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_4">
-           <property name="title">
-            <string>Generated Output Diff Viewer</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <item>
-             <widget class="QLabel" name="label_22">
-              <property name="text">
-               <string>Firewall Builder may compile your firewalls automaticly
-when you load a file. The generated files will be stored
-in a temporary directory and are deleted when you quit
-the application. This will enable you to compare the
-output of the generated files between the current version
-and the unmodified version of the file you loaded.</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="autoCompileChk">
-              <property name="text">
-               <string>Enable auto compiling when loading file</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_3">
-              <item>
-               <widget class="QLabel" name="textLabel1_5_4">
-                <property name="text">
-                 <string>A full path to the graphical diff utility:</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignmentFlag::AlignVCenter</set>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_9">
-                <item>
-                 <widget class="QLineEdit" name="diffPath">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="browseForDiff">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
-                  <property name="text">
-                   <string>Browse...</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <spacer name="horizontalSpacer_6">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>339</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
      <widget class="QWidget" name="tabPlatforms">
       <attribute name="title">
        <string>Platforms and OS</string>
@@ -1807,9 +1193,6 @@ and the unmodified version of the file you loaded.</string>
   <tabstop>tabWidget</tabstop>
   <tabstop>buttonOk</tabstop>
   <tabstop>buttonCancel</tabstop>
-  <tabstop>emptyRCSLog</tabstop>
-  <tabstop>browseForSSH</tabstop>
-  <tabstop>sshPath</tabstop>
   <tabstop>color1Btn</tabstop>
   <tabstop>color1Text</tabstop>
   <tabstop>color2Btn</tabstop>
@@ -1858,22 +1241,6 @@ and the unmodified version of the file you loaded.</string>
     <hint type="destinationlabel">
      <x>20</x>
      <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>browseForSCP</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>findSCP()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>119</x>
-     <y>78</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>334</x>
-     <y>214</y>
     </hint>
    </hints>
   </connection>
@@ -2006,22 +1373,6 @@ and the unmodified version of the file you loaded.</string>
    </hints>
   </connection>
   <connection>
-   <sender>browseForSSH</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>findSSH()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>119</x>
-     <y>74</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>20</x>
-     <y>20</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>color4Btn</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
@@ -2085,95 +1436,11 @@ and the unmodified version of the file you loaded.</string>
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>addColorBtn</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeAddColor()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>61</x>
-     <y>113</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>165</x>
-     <y>540</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>editColorBtn</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeEditColor()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>69</x>
-     <y>155</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>141</x>
-     <y>547</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>moveColorBtn</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeMoveColor()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>64</x>
-     <y>196</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>126</x>
-     <y>554</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>removeColorBtn</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>changeRemoveColor()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>56</x>
-     <y>237</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>117</x>
-     <y>535</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>browseForDiff</sender>
-   <signal>clicked()</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>findDiff()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>327</x>
-     <y>452</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>411</x>
-     <y>540</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
-  <slot>findSSH()</slot>
-  <slot>findSCP()</slot>
-
   <slot>changeRulesFont()</slot>
   <slot>changeTreeFont()</slot>
   <slot>changeCompilerOutputFont()</slot>
   <slot>objTooltipsEnabled(bool)</slot>
-  <slot>findDiff()</slot>
  </slots>
 </ui>

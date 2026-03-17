@@ -81,6 +81,46 @@ class PreferencesDialog(QDialog):
             text_field = getattr(self, f'{key}Text')
             text_field.setText(get_label_text(key))
 
+        # DNS Name defaults
+        settings_dns_compile = settings.value(
+            'Objects/DNSName/useCompileTimeForNewObjects', True, type=bool
+        )
+        if settings_dns_compile:
+            self.new_dns_name_compile_tm.setChecked(True)
+        else:
+            self.new_dns_name_run_tm.setChecked(True)
+        self.use_name_for_dns_record.setChecked(
+            settings.value('Objects/DNSName/useNameForDNSRecord', False, type=bool)
+        )
+
+        # Address Table defaults
+        settings_at_compile = settings.value(
+            'Objects/AddressTable/useCompileTimeForNewObjects', True, type=bool
+        )
+        if settings_at_compile:
+            self.new_addr_tbl_compile_tm.setChecked(True)
+        else:
+            self.new_addr_tbl_run_tm.setChecked(True)
+
+        # Policy Rules defaults
+        self.rulesLoggingOn.setChecked(
+            settings.value('Objects/PolicyRule/defaultLoggingState', True, type=bool)
+        )
+        self.rulesDefaultStateful.setChecked(
+            settings.value('Objects/PolicyRule/defaultStateful', True, type=bool)
+        )
+        self.rulesDefaultAction.setCurrentIndex(
+            settings.value('Objects/PolicyRule/defaultAction', 0, type=int)
+        )
+        self.rulesDefaultDirection.setCurrentIndex(
+            settings.value('Objects/PolicyRule/defaultDirection', 0, type=int)
+        )
+
+        # Interface defaults
+        self.autoconfigure_interfaces.setChecked(
+            settings.value('Objects/Interface/autoconfigureInterfaces', True, type=bool)
+        )
+
         self._populate_platform_table()
         self._populate_os_table()
 
@@ -180,6 +220,46 @@ class PreferencesDialog(QDialog):
         for key in LABEL_KEYS:
             set_label_color(key, self._label_colors[key])
             set_label_text(key, getattr(self, f'{key}Text').text())
+
+        # DNS Name
+        settings.setValue(
+            'Objects/DNSName/useCompileTimeForNewObjects',
+            self.new_dns_name_compile_tm.isChecked(),
+        )
+        settings.setValue(
+            'Objects/DNSName/useNameForDNSRecord',
+            self.use_name_for_dns_record.isChecked(),
+        )
+
+        # Address Table
+        settings.setValue(
+            'Objects/AddressTable/useCompileTimeForNewObjects',
+            self.new_addr_tbl_compile_tm.isChecked(),
+        )
+
+        # Policy Rules
+        settings.setValue(
+            'Objects/PolicyRule/defaultLoggingState',
+            self.rulesLoggingOn.isChecked(),
+        )
+        settings.setValue(
+            'Objects/PolicyRule/defaultStateful',
+            self.rulesDefaultStateful.isChecked(),
+        )
+        settings.setValue(
+            'Objects/PolicyRule/defaultAction',
+            self.rulesDefaultAction.currentIndex(),
+        )
+        settings.setValue(
+            'Objects/PolicyRule/defaultDirection',
+            self.rulesDefaultDirection.currentIndex(),
+        )
+
+        # Interface
+        settings.setValue(
+            'Objects/Interface/autoconfigureInterfaces',
+            self.autoconfigure_interfaces.isChecked(),
+        )
 
         # Persist platform / OS enabled states.
         for row in range(self.enabled_platforms.rowCount()):
