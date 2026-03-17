@@ -24,6 +24,12 @@ tests/
 ├── conftest.py                          # Shared fixtures (compile helpers, test case discovery)
 ├── normalize.py                         # Output normalization (strip timestamps, chain hashes, etc.)
 ├── update_expected_output.py            # Script to regenerate expected output files
+├── test_addr_contains.py                # Address containment / shadowing detection unit tests
+├── test_compiler_ipt.py                 # iptables expected output tests
+├── test_compiler_nft.py                 # nftables expected output tests
+├── test_interface_autoconfigure.py      # Interface name pattern recognition unit tests
+├── test_load_save.py                    # Database load/save round-trip tests
+├── test_store_action_processor.py       # Rule processor unit tests
 ├── fixtures/                            # Test data (one per feature or test suite)
 │   ├── basic_accept_deny.fwf            # Hand-crafted YAML fixture
 │   ├── cluster-tests.fwb               # C++ cluster regression suite (XML)
@@ -42,9 +48,15 @@ tests/
 │   └── nft/                             # Expected nftables output (normalized)
 │       └── basic_accept_deny/
 │           └── fw-test.fw
-├── test_compiler_ipt.py                 # iptables expected output tests
-└── test_compiler_nft.py                 # nftables expected output tests
 ```
+
+## Unit Tests
+
+In addition to compiler output regression tests, FirewallFabrik includes unit tests for core logic:
+
+- **`test_addr_contains.py`** — Tests the `_addr_contains()` and `_addr_range()` functions used by the shadowing detector to determine whether one address object is a superset of another. Covers IPv4/IPv6 hosts, networks, and address ranges.
+- **`test_interface_autoconfigure.py`** — Tests `guess_interface_type()` which detects interface types (ethernet, VLAN, bridge, bonding) from names and parent context. Covers top-level and sub-interface patterns, VLAN name validation, and bridge/bonding slave detection.
+- **`test_store_action_processor.py`** — Tests the StoreAction rule processor for iptables and nftables.
 
 ## How It Works
 

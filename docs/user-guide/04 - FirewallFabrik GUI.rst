@@ -634,11 +634,11 @@ To open the Preferences dialog, select Edit > Preferences (Ctrl+,). The dialog h
    * - Show icons in rules
      - If deselected, suppresses icon display for objects in rules, showing only text. By default, objects such as interfaces, hosts, and networks are displayed as both an icon and text.
    * - Show text descriptions in columns "Direction", "Action"
-     - If selected, displays text descriptions in addition to icons in the Direction and Action columns. By default, only icons are shown.
+     - If deselected, the Direction and Action columns show only icons without text labels. By default, both icons and text are shown.
    * - Show toolbar text
      - If selected, displays text labels below toolbar buttons.
    * - Clip comments in rules
-     - Comments in a rule can sometimes make the rule line taller, reducing the number of rules visible on a screen. Select this if you want comments to be truncated in the view if they take up more than one line.
+     - When enabled, long comments in policy rules are truncated to the first line (max 60 characters) followed by "...". This keeps rule rows compact so more rules are visible on screen.
    * - Icon size
      - By default, icons are 25x25 pixels. Select 16x16 to make them smaller. (The larger icons are easier to see, but the smaller ones are useful for smaller displays, such as laptop screens.)
 
