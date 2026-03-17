@@ -551,6 +551,9 @@ tags are matched.</string>
              <property name="pixmap">
               <pixmap resource="MainRes.qrc">:/Icons/Interface/icon-big</pixmap>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+             </property>
             </widget>
            </item>
            <item row="0" column="1">
