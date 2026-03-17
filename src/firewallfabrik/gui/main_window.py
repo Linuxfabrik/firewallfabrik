@@ -510,16 +510,18 @@ class FWWindow(QMainWindow):
         self._db_manager = DatabaseManager()
 
         self.setWindowTitle(f'FirewallFabrik {__version__}')
-        # Set the app-level icon so the window manager shows the fwf icon
-        # everywhere (title bar, taskbar, Alt+Tab).  Use PNG icons at
-        # multiple sizes because SVG-only icons produce empty
-        # availableSizes() on some Wayland compositors (Fedora 42+).
+        # Set the app-level icon using file paths (not Qt resources) so
+        # the Wayland compositor and XWayland both pick it up correctly.
         from PySide6.QtCore import QSize
         from PySide6.QtWidgets import QApplication
 
+        icon_dir = Path(__file__).resolve().parent / 'ui' / 'Icons'
         app_icon = QIcon()
         for size in (16, 24, 32, 48):
-            app_icon.addFile(f':/Icons/FirewallFabrik/{size}', QSize(size, size))
+            app_icon.addFile(
+                str(icon_dir / f'firewallfabrik_{size}.png'), QSize(size, size)
+            )
+        app_icon.addFile(str(icon_dir / 'firewallfabrik.svg'))
         QApplication.instance().setWindowIcon(app_icon)
         self.setWindowIcon(app_icon)
         self.newObjectAction.setEnabled(False)
