@@ -15,46 +15,52 @@ tbd
 
 ### Added
 
-- **iptables REJECT rule correctness** (Phase 1): `SplitRuleIfSrvAnyActionReject` splits Reject rules with srv=any into TCP RST + ICMP unreachable. `SplitServicesIfRejectWithTCPReset` separates mixed TCP/non-TCP services when TCP RST is configured. `CheckForTCPEstablished` aborts compilation if the deprecated "established" TCP flag is used. Pipeline reordered to match fwbuilder's processor sequence.
-- **Service separation framework** (Phase 2): New `compiler/processors/_service.py` with `SeparateServiceObject` base class and concrete separators (`SeparateTCPWithFlags`, `SeparateSrcPort`, `SeparateSrcAndDstPort`, `SeparateUserServices`, `SeparateCustom`, `SeparateTagged`). `VerifyCustomServices` aborts if a CustomService has no code for the target platform. Inserted into the iptables pipeline after `GroupServicesByProtocol`.
-- **Stub processor implementations** (Phase 3): `CheckInterfaceAgainstAddressFamily` drops rules where the interface has no matching addresses. `SpecialCaseWithUnnumberedInterface` removes unnumbered/bridge-port interfaces from src/dst. `CheckForStatefulICMP6Rules` forces ICMPv6 rules to stateless mode. `Optimize2` clears service on final rules (except Reject+TCP RST). `CheckForObjectsWithErrors` checks for objects flagged with errors.
-- **Address range & dynamic interface handling** (Phase 4): `SpecialCaseAddressRangeInSrc/Dst` replaces single-address ranges with proper address objects. `SplitIfSrcMatchingAddressRange/Dst` splits rules when an address range matches the firewall. `CheckForDynamicInterfacesOfOtherObjects` aborts if dynamic interfaces of other hosts/firewalls are used. `CheckForUnnumbered` catches unnumbered interfaces used as addresses. `CheckForZeroAddr` catches 0.0.0.0 addresses and /0 netmask typos.
-- **Logging, FW special cases, validation** (Phase 5): `Logging1` applies the global `log_all` option. `SpecialCaseWithFW1` splits fw-to-fw rules into Inbound + Outbound. `SpecialCaseWithFWInDstAndOutbound` drops impossible outbound rules with fw in dst. `ExpandLoopbackInterfaceAddress` replaces loopback interface refs with actual addresses. `ExpandMultipleAddressesIfNotFWInSrc/Dst` expands addresses while preserving firewall identity. `OptimizeForMinusIOPlus` removes redundant wildcard interface in INPUT/OUTPUT. `CheckMACInOUTPUTChain` and `CheckUserServiceInWrongChains` validate chain compatibility.
-- **Mangle table support** (Phase 6): Complete MARK/CLASSIFY/ROUTE support with 16 processors including `SplitIfTagClassifyOrRoute`, `SplitIfTagAndConnmark`, `RouteProcessor`, chain assignment for tagging/classification/routing, CONNMARK handling, and mangle-specific validation.
-- **NAT compiler parity** (Phase 7): 21 new NAT processors including `DoOSrcNegation/DoODstNegation/DoOSrvNegation` (temp chain negation), `SplitSDNATRule`, `ConvertLoadBalancingRules`, `SplitNATBranchRule`, `DynamicInterfaceInODst/TSrc`, `AddVirtualAddress`, `AlwaysUseMasquerade`, `SplitMultiSrcAndDst`, `SplitMultipleICMP`, `ConvertToAtomicForOSrv/ItfInb/ItfOutb`, `VerifyRules2/3`, and `SeparateSrcPort/SrcAndDstPort` for NAT.
-- **Bridging & accounting** (Phases 8-9): `BridgingFw` handles bridge-mode firewall broadcast/multicast forwarding. `Accounting` creates user-defined chains for packet/byte counting with RETURN targets.
-- **Recursive group detection**: `RecursiveGroupsInRE` aborts compilation on circular group references. Added to all pipelines (iptables policy/NAT, nftables policy/NAT).
-- **Shadowing detection enhancements** (Phase 10): `ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing` improve shadowing accuracy when "firewall is part of any" is off.
-- **Cluster failover interface replacement**: `ReplaceClusterInterfaceInItfRE` replaces cluster interfaces with member firewall interfaces (shared processor).
-- **Runtime MultiAddress processing**: `ProcessMultiAddressObjectsInSrc/Dst` handles runtime AddressTable/DNSName objects by splitting them into separate rules and registering with the OS configurator.
-- **nftables validation processors**: Added `CheckForTCPEstablished`, `CheckForObjectsWithErrors`, `CheckForStatefulICMP6Rules`, `CheckForZeroAddr`, `CheckForUnnumbered`, `ExpandLoopbackInterfaceAddress`, `CheckForDynamicInterfacesOfOtherObjects` to the nftables policy pipeline.
-- **Standard service library**: Added Bareos Director/File Daemon/Storage Daemon (9101-9103), Keycloak (8443), Kibana (5601), Libvirt (16509), Logstash Beats Input (5044), Logstash API (9600), OpenSearch (9200), OpenSearch Transport (9300).
-- **nftables native load balancing** (closes #22): DNAT rules with multiple TDst addresses use `numgen inc mod N map { 0 : addr1, 1 : addr2, ... }` instead of creating N separate rules. Round-robin load balancing with optional port forwarding.
-- **nftables address set merging** (closes #23): Consecutive rules with identical chain/action/interface that differ only in source or destination address are merged into nftables sets: `ip saddr { addr1, addr2, addr3 } accept`. Reduces output size for firewalls with many similar rules.
-- **Separate shadowing detection pass** (closes #24): Shadowing analysis now runs as a separate compilation pass before the main pipeline, matching fwbuilder's architecture. The separate pass uses `ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing`, and `ConvertToAtomic` for precise analysis without injecting extra rules into the main pipeline.
-- **Cluster Member Management dialog** (closes #26): New dialog for managing cluster members — add/remove firewalls from a cluster and view interface mappings. Includes `ClusterMemberDialog` and updated `ClusterGroupDialog` with .ui files.
-- **Library Export dialog** (closes #27): New File > Export Library action to export selected user libraries to a separate `.fwf` file. Shows a dialog with checkboxes to select which libraries to include.
-- **Inspect Rules dialog** (closes #28): New dialog (Tools > Inspect or right-click > Inspect) shows all policy/NAT/routing rules that reference the selected object, listing firewall, rule set, rule position, and action.
-- **File Properties dialog** (closes #29): New dialog (File > Properties) shows file metadata: path, size, and object counts (firewalls, hosts, networks, services, rules, libraries).
-- **Import Addresses from File** (closes #12): New Tools menu action to import addresses from a text file. Supports IPv4/IPv6 hosts, CIDR networks, netmask notation, and comments. Creates Address/Network objects in the selected library.
-- **NFLOG logging target** (closes #18): The compiler now honours the `use_NFLOG` firewall option. iptables generates `-j NFLOG --nflog-group N --nflog-prefix "..." [--nflog-range N] [--nflog-threshold N]` instead of `-j LOG`. nftables generates `log group N prefix "..."`. NFLOG parameters (`ulog_nlgroup`, `ulog_cprange`, `ulog_qthreshold`) are enabled in platform defaults. Automatic rules (drop_invalid_and_log) also support NFLOG. Existing LOG functionality is unchanged when NFLOG is not enabled.
-- **Full fwbuilder parity**: Interface group expansion (`ExpandGroupsInItf`, `ExpandGroupsInSrv`), cluster interface replacement (`ReplaceClusterInterfaceInItfRE`), interface negation (`SingleObjectNegationItf`, `ItfNegation`, `ItfInbNegation`, `ItfOutbNegation`), time negation (`TimeNegation`), interval splitting (`ConvertToAtomicForIntervals`), `SpecialCasesWithCustomServices` (ESTABLISHED/RELATED in CustomService code), and `InterfacePolicyRulesWithOptimization` (chain-optimized interface splitting). NAT additions: `ExpandGroupsInItfInb/Outb`, `NATSpecialCaseWithUnnumberedInterface`, `NATCheckForDynamicInterfacesOfOtherObjects`, `VerifyRuleWithMAC`, `NATExpandAddressRanges`, `NATProcessMultiAddressObjectsInRE` (4 slots), `CheckForObjectsWithErrors`. nftables additions: `SpecialCaseWithFW1`, `TimeNegation`, `ConvertToAtomicForIntervals`, `ExpandGroupsInItf`.
+Compiler — full Firewall Builder parity:
+
+- The iptables and nftables compilers now implement all ~130 rule processors from Firewall Builder. Generated scripts should be functionally identical to Firewall Builder output. Major areas that were completed:
+  - Correct handling of REJECT rules with TCP RST and mixed TCP/non-TCP services.
+  - Service separation for multiport, TCP flags, source ports, UserService, and CustomService.
+  - Address range handling, dynamic interface validation, zero-address detection.
+  - Mangle table support (MARK, CLASSIFY, ROUTE, CONNMARK) for iptables.
+  - NAT: negation via temporary chains, SDNAT splitting, load balancing, masquerade conversion, virtual addresses, branch rules, and comprehensive validation.
+  - Bridge-mode firewall broadcast/multicast forwarding.
+  - Accounting chains with user-defined packet/byte counters.
+  - Cluster failover interface replacement.
+  - Runtime AddressTable and DNSName object handling.
+  - Circular group reference detection (aborts compilation).
+  - Shadowing detection now runs as a separate compilation pass for more accurate results.
+  - Interface group expansion, interface negation, time interval splitting.
+  - Loopback interface address expansion, unnumbered interface handling.
+- NFLOG logging target support (closes #18). When enabled in firewall settings, the compiler generates `-j NFLOG` (iptables) or `log group N` (nftables) instead of `-j LOG`. Parameters for netlink group, copy range, and queue threshold are supported.
+- nftables-specific optimizations:
+  - Native load balancing using `numgen inc mod N map { ... }` for DNAT rules with multiple backends, instead of one rule per backend (closes #22).
+  - Address set merging: consecutive rules differing only in source or destination address are combined into `ip saddr { addr1, addr2, ... } accept` (closes #23).
+  - Separate shadowing detection pass for improved accuracy (closes #24).
+  - Validation processors (TCP established flag, zero addresses, unnumbered interfaces, ICMPv6 statelessness, dynamic interfaces, loopback expansion) added to the nftables policy pipeline.
+- Standard service library: added Bareos Director/File Daemon/Storage Daemon (9101-9103), Keycloak (8443), Kibana (5601), Libvirt (16509), Logstash Beats Input (5044), Logstash API (9600), OpenSearch (9200), OpenSearch Transport (9300).
+
+GUI:
+
+- Cluster Member Management dialog: add/remove firewalls from a cluster and view interface mappings (closes #26).
+- Library Export: export selected user libraries to a separate `.fwf` file via File > Export Library (closes #27).
+- Inspect Rules: show all rules referencing the selected object via Tools > Inspect (closes #28).
+- File Properties: show file path, size, and object counts via File > Properties (closes #29).
+- Import Addresses from File: import IPv4/IPv6 addresses and networks from a text file via Tools > Import Addresses (closes #12).
+- Compile log errors matching "Rule N" are now clickable and scroll to the relevant firewall section (closes #15).
 
 ### Fixed
 
-- **Multiport rules broken** (fixes #21): `SeparateTCPWithFlags` incorrectly separated ALL TCP services because the standard library stores `tcp_flags: {urg: false, ...}` — a non-empty dict. Now checks `tcp_flags_masks` for actual flag inspection (matching fwbuilder's `inspectFlags()`). Also hardened `_print_dst_service_from_rule` to only emit `--dports` when `ipt_multiport` flag is set, preventing `--dports` without `-m multiport`.
-- **Hardcoded version** in iptables top comment: replaced `'0.1.0'` with `firewallfabrik.__version__`.
-- **`Firewall` object has no attribute `is_any`**: `SplitIfSrcMatchingAddressRange`, `SplitIfDstMatchingAddressRange`, and `SpecialCaseWithFW1` called `is_any()` on src/dst objects that could be `Firewall` instances. `Firewall` inherits from `Host`, not `Address`.
-- **False-positive shadowing errors**: Shadowing enhancement processors (`ConvertAnyToNotFWForShadowing`, `SplitIfSrcAnyForShadowing`, `SplitIfDstAnyForShadowing`) injected extra rules into the main pipeline causing "Rule X shadows Rule Y" false positives. Removed from inline pipeline (require a separate compilation pass like in fwbuilder).
-- **Opening objects marks file as modified without user changes** (fixes #25): Three root causes fixed. (1) `apply_all()` unconditionally wrote `comment` and `keywords` back — now compares before writing. (2) `_apply_changes()` in device/ruleset dialogs injected new default keys (e.g. `management: false`, `mangle_only_rule_set: false`) into data dicts that didn't have them — new `_set_data_key()` helper only writes keys that already exist or have non-default values. (3) `_set_read_only()` ran after `_loading = False`, causing `setEnabled()` to fire widget signals that triggered spurious `apply_all()` calls — now runs inside the loading guard. (4) `RuleSetDialog` wrote `ipv4: true` to rule sets where `ipv4` was `False` (SQLAlchemy default) but the combo showed IPv4 — now compares combo index against the index that `_populate()` would compute.
-- **PhysAddressDialog changes silently ignored** (fixes #14): The `@Slot() def changed()` stub shadowed the `BaseObjectDialog.changed` Signal, so edits to MAC address fields never triggered `apply_all()`. Now delegates to `_on_changed()`.
-- **"Open Interface" button stub** (closes #13): Documented as intentionally disabled for iptables/nftables — no platform-specific interface options exist for these platforms.
-- **Compile log error navigation** (closes #15): Error lines matching "Rule N" are now rendered as clickable links. Clicking scrolls to the firewall's compile output section.
+- Multiport rules were broken (fixes #21): rules with multiple TCP ports were split into individual `--dport` rules instead of using `-m multiport --dports`. Root cause: the TCP flag check incorrectly matched all TCP services.
+- Opening a firewall, interface, or rule set for editing marked the file as modified even when nothing was changed (fixes #25). Multiple causes: editor wrote back default values for missing keys, read-only toggling fired spurious change signals, and IPv4/IPv6 combo state was compared incorrectly.
+- MAC address edits in PhysAddressDialog were silently ignored because a slot stub shadowed the change signal (fixes #14).
+- False-positive "Rule X shadows Rule Y" errors caused by shadowing analysis injecting rules into the main pipeline.
+- Hardcoded version `0.1.0` in generated iptables scripts replaced with the actual package version.
+- "Open Interface" button documented as intentionally disabled for iptables/nftables — no platform-specific interface options exist (closes #13).
 
 ### Changed
 
-- **Timestamp format** in generated scripts: `Mon Mar 16 20:06:24 2026` → `2026-03-16 20:06:24 (Mon)` (all platforms).
-- **`nft flush ruleset` in iptables scripts**: On RHEL8+ and modern distros, `iptables` uses the nftables backend (`iptables-nft`). The generated `reset_all()` function now runs `nft flush ruleset` (if `nft` is available) before `reset_iptables_v4/v6` to clear any pre-existing nftables rules that `iptables -F` would not remove.
+- Timestamp format in generated scripts changed from `Mon Mar 16 20:06:24 2026` to `2026-03-16 20:06:24 (Mon)` (ISO 8601, all platforms).
+- Generated iptables scripts now run `nft flush ruleset` before `reset_iptables_v4/v6` on systems where `nft` is available. On RHEL 8+ and modern distros, `iptables` uses the nftables backend, and pre-existing nftables rules would not be cleared by `iptables -F` alone.
 
 
 ## [v1.1.0] - 2026-03-16
