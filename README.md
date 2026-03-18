@@ -14,7 +14,7 @@
 </p>
 <div align="center">
 
-![License](https://img.shields.io/github/license/linuxfabrik/lfops)
+![License](https://img.shields.io/github/license/linuxfabrik/firewallfabrik)
 ![GitHub last commit](https://img.shields.io/github/last-commit/linuxfabrik/firewallfabrik)
 ![Version](https://img.shields.io/github/v/release/linuxfabrik/firewallfabrik?sort=semver)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Linuxfabrik/firewallfabrik/badge)](https://scorecard.dev/viewer/?uri=github.com/Linuxfabrik/firewallfabrik)
