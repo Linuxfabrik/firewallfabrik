@@ -8,13 +8,13 @@
   Linuxfabrik's FirewallFabrik
 </h1>
 <p align="center">
-  <em>FirewallFabrik</em>
+  Modern fwbuilder successor: Qt GUI for managing iptables/nftables policies. Centralized policy DB with reusable objects, scales to hundreds of firewalls, generates deployment-ready shell scripts.
   <span>&#8226;</span>
   <b>made by <a href="https://linuxfabrik.ch/">Linuxfabrik</a></b>
 </p>
 <div align="center">
 
-![GitHub](https://img.shields.io/github/license/linuxfabrik/firewallfabrik)
+![License](https://img.shields.io/github/license/linuxfabrik/lfops)
 ![GitHub last commit](https://img.shields.io/github/last-commit/linuxfabrik/firewallfabrik)
 ![Version](https://img.shields.io/github/v/release/linuxfabrik/firewallfabrik?sort=semver)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Linuxfabrik/firewallfabrik/badge)](https://scorecard.dev/viewer/?uri=github.com/Linuxfabrik/firewallfabrik)
