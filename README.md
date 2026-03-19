@@ -5,7 +5,7 @@
     </picture>
   </a>
   <br />
-  Linuxfabrik's FirewallFabrik
+  Linuxfabrik FirewallFabrik
 </h1>
 <p align="center">
   Modern fwbuilder successor: Qt GUI for managing iptables/nftables policies. Centralized policy DB with reusable objects, scales to hundreds of firewalls, generates deployment-ready shell scripts.
