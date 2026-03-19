@@ -14,7 +14,7 @@
 
 # ============== ROUTING RULES ==============
 
-HAVE_MKTEMP=$(which mktemp)
+HAVE_MKTEMP=$(command -v mktemp)
 
 test -n "$HAVE_MKTEMP" && {
   TMPDIRNAME=$(mktemp -d)

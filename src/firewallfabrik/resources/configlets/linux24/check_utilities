@@ -30,14 +30,14 @@
 
 find_program() {
   PGM=$1
-  which $PGM >/dev/null 2>&1 || {
+  command -v $PGM >/dev/null 2>&1 || {
     echo "\"$PGM\" not found"
     exit 1
   }
 }
 
 check_tools() {
-  find_program which
+  find_program command
   find_program $IPTABLES
 {{if need_iptables_restore}}  find_program $IPTABLES_RESTORE{{endif}}
 {{if need_ip6tables_restore}}  find_program $IP6TABLES_RESTORE{{endif}}
