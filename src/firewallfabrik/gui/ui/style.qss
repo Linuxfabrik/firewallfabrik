@@ -5,6 +5,16 @@
  */
 
 
+/* --- Main window border --- */
+/* On GNOME/Wayland, the compositor's server-side decoration border is very
+   subtle for Qt apps.  A thin application-side border keeps the window edge
+   clearly visible. */
+
+QMainWindow {
+    border: 1px solid palette(dark);
+}
+
+
 /* --- Drop area for drag-and-drop --- */
 
 FWObjectDropArea {
