@@ -14,10 +14,11 @@
 
 import argparse
 import pathlib
+import signal
 import sys
 
 try:
-    from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
+    from PySide6.QtCore import QLibraryInfo, QLocale, QTimer, QTranslator
     from PySide6.QtWidgets import QApplication, QProxyStyle, QStyle, QStyleFactory
 except ImportError:
     print(
@@ -91,6 +92,14 @@ def main():
     qt_translations_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
     if qt_translator.load(f'qt_{locale}', qt_translations_path):
         app.installTranslator(qt_translator)
+
+    # Allow clean shutdown on Ctrl+C from the terminal.  Qt's event loop
+    # blocks Python's signal handling; a periodic no-op timer gives Python a
+    # chance to run the handler between Qt events.
+    signal.signal(signal.SIGINT, lambda *_args: app.quit())
+    _sigint_timer = QTimer()
+    _sigint_timer.start(200)
+    _sigint_timer.timeout.connect(lambda: None)
 
     # Initialise the shared window registry before creating the first window.
     WindowRegistry.instance()
