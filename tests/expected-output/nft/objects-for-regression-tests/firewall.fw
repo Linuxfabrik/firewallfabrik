@@ -1,0 +1,1018 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * firewall.fw /etc/fw/firewall.fw
+#
+#  this is simple firewall with two interfaces. Test regular policy rules, including IP_fragments rule
+#
+# Rule 14 (NAT): Host "host-with-mac-4" has no addresses
+# Rule 14 (NAT): Host "host-with-mac-4" has no addresses
+# Rule 16 (NAT): Host "host-with-mac-4" has no addresses
+# Rule 16 (NAT): Host "host-with-mac-4" has no addresses
+# Unsupported NAT rule
+# Unsupported NAT rule
+# Rule 21 (NAT): No chain assignment for NAT rule type: None
+# Unsupported NAT rule
+# Unsupported NAT rule
+# Rule 22 (NAT): No chain assignment for NAT rule type: None
+# Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+IP="ip"
+LOGGER="logger"
+
+log() {
+    echo "$1"
+    command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+}
+
+getInterfaceVarName() {
+    echo $1 | sed 's/\./_/'
+}
+
+getaddr_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$($IP $af addr show dev $dev |  sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getnet_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$($IP route list proto kernel | grep $dev | grep -v default |  sed 's! .*$!!')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getaddr() {
+    getaddr_internal $1 $2 "-4"
+}
+
+getaddr6() {
+    getaddr_internal $1 $2 "-6"
+}
+
+getnet() {
+    getnet_internal $1 $2 "-4"
+}
+
+getnet6() {
+    getnet_internal $1 $2 "-6"
+}
+
+# function getinterfaces is used to process wildcard interfaces
+getinterfaces() {
+    NAME=$1
+    $IP link show | grep ": $NAME" | while read L; do
+        OIFS=$IFS
+        IFS=" :"
+        set $L
+        IFS=$OIFS
+        echo $2
+    done
+}
+
+diff_intf() {
+    func=$1
+    list1=$2
+    list2=$3
+    cmd=$4
+    for intf in $list1
+    do
+        echo $list2 | grep -q $intf || {
+        # $vlan is absent in list 2
+            $func $intf $cmd
+        }
+    done
+}
+
+P2P_INTERFACE_WARNING=""
+
+missing_address() {
+    address=$1
+    cmd=$2
+
+    oldIFS=$IFS
+    IFS="@"
+    set $address
+    addr=$1
+    interface=$2
+    IFS=$oldIFS
+
+    $IP addr show dev $interface | grep -q POINTOPOINT && {
+        test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+        P2P_INTERFACE_WARNING="yes"
+        return
+    }
+
+    test "$cmd" = "add" && {
+      echo "# Adding ip address: $interface $addr"
+      echo $addr | grep -q ':' && {
+          $FWBDEBUG $IP addr $cmd $addr dev $interface
+      } || {
+          $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
+      }
+    }
+
+    test "$cmd" = "del" && {
+      echo "# Removing ip address: $interface $addr"
+      $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
+    }
+
+    $FWBDEBUG $IP link set $interface up
+}
+
+list_addresses_by_scope() {
+    interface=$1
+    scope=$2
+    ignore_list=$3
+    $IP addr ls dev $interface | \
+      awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+        'BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+         }
+         (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+        while read addr; do
+          echo "${addr}@$interface"
+	done | sort
+}
+
+update_addresses_of_interface() {
+    ignore_list=$2
+    set $1
+    interface=$1
+    shift
+
+    FWB_ADDRS=$(
+      for addr in $*; do
+        echo "${addr}@$interface"
+      done | sort
+    )
+
+    CURRENT_ADDRS_ALL_SCOPES=""
+    CURRENT_ADDRS_GLOBAL_SCOPE=""
+
+    $IP link show dev $interface >/dev/null 2>&1 && {
+      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
+      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
+    } || {
+      echo "# Interface $interface does not exist"
+      # Stop the script if we are not in test mode
+      test -z "$FWBDEBUG" && exit 1
+    }
+
+    diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+    diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+}
+
+clear_addresses_except_known_interfaces() {
+    $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
+        'BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+         }
+         (/state/ && !($2 in ignored_dict)) {print $2;}' | \
+         while read intf; do
+            echo "# Removing addresses not configured in fwbuilder from interface $intf"
+            $FWBDEBUG $IP addr flush dev $intf scope global
+            $FWBDEBUG $IP link set $intf down
+         done
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+verify_interfaces() {
+    :
+    echo "Verifying interfaces: eth0 eth1"
+    for i in eth0 eth1 ; do
+        $IP link show "$i" > /dev/null 2>&1 || {
+            log "Interface $i does not exist"
+            exit 1
+        }
+    done
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+configure_interfaces() {
+    :
+    update_addresses_of_interface "eth0 192.168.1.1/24" ""
+    update_addresses_of_interface "eth1 222.222.222.222/24" ""
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table ip linuxfabrik_filter {}
+delete table ip linuxfabrik_filter
+table ip linuxfabrik_nat {}
+delete table ip linuxfabrik_nat
+
+table ip linuxfabrik_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
+        #
+        # Rule 0 (eth1)
+        #
+        # Automatically generated rule blocking short fragments
+        iifname "eth1" meta l4proto 0 log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 2 (eth1)
+        #
+        # Automatically generated anti-spoofing rule
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 3 (eth1)
+        #
+        iifname "eth1" udp dport 53 ct state new accept
+        #
+        # Rule 4 (eth1)
+        #
+        # rule in FORWARD chain with
+        # -o eth1 and dest address of the firewall
+        # is pretty much impossible
+        iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new accept
+        #
+        # Rule 7 (eth1)
+        #
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        #
+        # Rule 8 (eth1)
+        #
+        # keep FORWARD chain
+        # because it is needed for anti-spoofing rules
+        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        #
+        # Rule 9 (eth1)
+        #
+        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
+        #
+        # Rule 10 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 udp dport 53 ct state new accept
+        #
+        # Rule 12 (eth0)
+        #
+        iifname "eth0" tcp dport 80 ct state new accept
+        #
+        # Rule 13 (eth0,eth1)
+        #
+        # reject using connlimit
+        iifname "eth0" drop
+        iifname "eth1" drop
+        #
+        # Rule 15 (eth0,eth1)
+        #
+        iifname "eth0" ct state new accept
+        iifname "eth1" ct state new accept
+        #
+        # Rule 17 (global)
+        #
+        # INTPUT with "-i +"
+        # "-i +" is redundant if chain is INPUT,
+        # optimization removes it
+        ip saddr 1.1.1.1 accept
+        #
+        # Rule 22 (global)
+        #
+        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 23 (global)
+        #
+        meta l4proto 0 drop
+        #
+        # Rule 25 (global)
+        #
+        meta l4proto 0 ip dscp AF4 drop
+        #
+        # Rule 26 (global)
+        #
+        # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 28 (global)
+        #
+        # both src and dst have multiple interfaces
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        #
+        # Rule 30 (global)
+        #
+        ip saddr 192.168.1.10 ct state new accept
+        #
+        # Rule 32 (global)
+        #
+        ip saddr 00:10:4b:de:e9:70 ct state new accept
+        #
+        # Rule 34 (global)
+        #
+        ip saddr 192.168.1.15 ct state new accept
+        #
+        # Rule 35 (global)
+        #
+        ip saddr aa:bb:cc:dd:ee:ff ct state new accept
+        #
+        # Rule 40 (global)
+        #
+        ip saddr 192.168.1.10 tcp dport 80 ct state new accept
+        #
+        # Rule 46 (global)
+        #
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 ct state new accept
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        #
+        # Rule 49 (global)
+        #
+        # group "special combined srv"
+        # has couple of UDP services,
+        # plus "ALL UDP" service, which has
+        # empty ports specs. This is special
+        # case for multiport.
+        ip saddr 192.168.1.0/24 udp dport { 68, 67 } ct state new accept
+        #
+        # Rule 51 (global)
+        #
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        #
+        # Rule 52 (global)
+        #
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new accept
+        #
+        # Rule 53 (global)
+        #
+        # Automatically generated 'masquerading' rule
+        ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } ct state new accept
+        #
+        # Rule 54 (global)
+        #
+        # similar to a standard 'masquerading'
+        # rule, but not so permissive as it does
+        # not allow access to the firewall
+        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new accept
+        #
+        # Rule 56 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
+        #
+        # Rule 0 (eth1)
+        #
+        # Automatically generated rule blocking short fragments
+        iifname "eth1" meta l4proto 0 log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 2 (eth1)
+        #
+        # Automatically generated anti-spoofing rule
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 5 (eth1)
+        #
+        iifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
+        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
+        #
+        # Rule 7 (eth1)
+        #
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        #
+        # Rule 8 (eth1)
+        #
+        # keep FORWARD chain
+        # because it is needed for anti-spoofing rules
+        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        #
+        # Rule 9 (eth1)
+        #
+        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
+        oifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
+        #
+        # Rule 11 (eth0)
+        #
+        # code should go into INPUT chain with
+        # address in destination for comparison
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 12 (eth0)
+        #
+        iifname "eth0" tcp dport 80 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        # OUTPUT + FORWARD
+        ip daddr 1.1.1.1 accept
+        #
+        # Rule 19 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 accept
+        #
+        # Rule 22 (global)
+        #
+        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 23 (global)
+        #
+        meta l4proto 0 drop
+        #
+        # Rule 25 (global)
+        #
+        meta l4proto 0 ip dscp AF4 drop
+        #
+        # Rule 26 (global)
+        #
+        # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 28 (global)
+        #
+        # both src and dst have multiple interfaces
+        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        #
+        # Rule 29 (global)
+        #
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new accept
+        #
+        # Rule 31 (global)
+        #
+        ip daddr 192.168.1.10 ct state new accept
+        #
+        # Rule 33 (global)
+        #
+        ip saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new accept
+        #
+        # Rule 37 (global)
+        #
+        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.10 ct state new accept
+        #
+        # Rule 38 (global)
+        #
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp sport 53 ct state new accept
+        #
+        # Rule 39 (global)
+        #
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new accept
+        #
+        # Rule 40 (global)
+        #
+        ip saddr 192.168.1.10 tcp dport 80 ct state new accept
+        #
+        # Rule 41 (global)
+        #
+        ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new accept
+        #
+        # Rule 42 (global)
+        #
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "18:00"-"23:59" log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log prefix "CUSTOM LOGGING" level debug accept
+        #
+        # Rule 43 (global)
+        #
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new accept
+        #
+        # Rule 44 (global)
+        #
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new accept
+        #
+        # Rule 45 (global)
+        #
+        # Rule #20 test: from Rock
+        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new accept
+        #
+        # Rule 46 (global)
+        #
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 ct state new accept
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        #
+        # Rule 47 (global)
+        #
+        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.11-192.168.1.15 ct state new accept
+        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        #
+        # Rule 48 (global)
+        #
+        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
+        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        #
+        # Rule 50 (global)
+        #
+        # another test case for multiport: this rule
+        # has 16 TCP services and should be split onto
+        # two rules. If both rules use "-m multiport", then
+        # rule with a single service should use "--dports".
+        # It may be acceptable to not use multiport
+        # in the rule with a single service at all.
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        #
+        # Rule 53 (global)
+        #
+        # Automatically generated 'masquerading' rule
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 55 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new accept
+        #
+        # Rule 56 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        ct state invalid log prefix "INVALID " drop
+        tcp flags != syn ct state new drop
+        #
+        # Rule 3 (eth1)
+        #
+        oifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        #
+        # Rule 4 (eth1)
+        #
+        # rule in FORWARD chain with
+        # -o eth1 and dest address of the firewall
+        # is pretty much impossible
+        oifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new accept
+        #
+        # Rule 5 (eth1)
+        #
+        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
+        #
+        # Rule 7 (eth1)
+        #
+        oifname "eth1" udp dport 53 ct state new accept
+        #
+        # Rule 8 (eth1)
+        #
+        # keep FORWARD chain
+        # because it is needed for anti-spoofing rules
+        oifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        #
+        # Rule 10 (eth0)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        #
+        # Rule 16 (global)
+        #
+        # OUTPUT
+        ip daddr 1.1.1.1 accept
+        #
+        # Rule 22 (global)
+        #
+        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 23 (global)
+        #
+        meta l4proto 0 drop
+        #
+        # Rule 25 (global)
+        #
+        meta l4proto 0 ip dscp AF4 drop
+        #
+        # Rule 26 (global)
+        #
+        # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
+# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
+# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
+        log prefix "CUSTOM LOGGING" level debug drop
+        #
+        # Rule 28 (global)
+        #
+        # both src and dst have multiple interfaces
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        #
+        # Rule 44 (global)
+        #
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new accept
+        #
+        # Rule 45 (global)
+        #
+        # Rule #20 test: from Rock
+        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new accept
+        #
+        # Rule 46 (global)
+        #
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 ct state new accept
+        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        #
+        # Rule 47 (global)
+        #
+        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.11-192.168.1.15 ct state new accept
+        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        #
+        # Rule 48 (global)
+        #
+        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
+        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        #
+        # Rule 50 (global)
+        #
+        # another test case for multiport: this rule
+        # has 16 TCP services and should be split onto
+        # two rules. If both rules use "-m multiport", then
+        # rule with a single service should use "--dports".
+        # It may be acceptable to not use multiport
+        # in the rule with a single service at all.
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        #
+        # Rule 51 (global)
+        #
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        #
+        # Rule 52 (global)
+        #
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new accept
+        ip daddr 200.200.200.200 udp dport 161 ct state new accept
+        #
+        # Rule 53 (global)
+        #
+        # Automatically generated 'masquerading' rule
+        ct state new accept
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 55 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new accept
+        #
+        # Rule 56 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+    }
+}
+
+table ip linuxfabrik_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 6 (NAT)
+        #
+        ip daddr 222.222.222.222 tcp dport 25 dnat to 192.168.1.10:25
+        ip daddr 192.168.1.1 tcp dport 25 dnat to 192.168.1.10:25
+        #
+        # Rule 7 (NAT)
+        #
+        ip daddr 222.222.222.222 meta l4proto icmp dnat to 192.168.1.10
+        ip daddr 192.168.1.1 meta l4proto icmp dnat to 192.168.1.10
+        #
+        # Rule 8 (NAT)
+        #
+        ip daddr 222.222.222.222 meta l4proto icmp dnat to 192.168.1.10
+        ip daddr 192.168.1.1 meta l4proto icmp dnat to 192.168.1.10
+        #
+        # Rule 9 (NAT)
+        #
+        ip daddr 222.222.222.222 tcp sport 1000-1010 dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp sport 1000-1010 dnat to 192.168.1.10
+        #
+        # Rule 12 (NAT)
+        #
+        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.40 tcp dport 25 dnat to 192.168.1.10
+        #
+        # Rule 13 (NAT)
+        #
+        ip saddr 192.168.1.15 ip daddr 222.222.222.40 tcp dport 25 dnat to 192.168.1.10
+        #
+        # Rule 14 (NAT)
+        #
+        # hsould match mac and ip addresses
+        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:71 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:71 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        #
+        # Rule 15 (NAT)
+        #
+        # ensure generated rules match different mac addresses
+        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.15 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.15 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        #
+        # Rule 17 (NAT)
+        #
+        ip daddr 222.222.222.222 tcp sport 1024-65535 tcp dport 80 dnat to 192.168.1.10:80
+        ip daddr 192.168.1.1 tcp sport 1024-65535 tcp dport 80 dnat to 192.168.1.10:80
+        #
+        # Rule 18 (NAT)
+        #
+        ip daddr 222.222.222.222 tcp sport 53 dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp sport 53 dnat to 192.168.1.10
+        #
+        # Rule 19 (NAT)
+        #
+        ip daddr 222.222.222.222 tcp dport 4000-4010 dnat to 192.168.1.10:4000-4010
+        ip daddr 192.168.1.1 tcp dport 4000-4010 dnat to 192.168.1.10:4000-4010
+        #
+        # Rule 23 (NAT)
+        #
+        # should use multiport
+        # and account for
+        # no more than 15 ports
+        # per rule
+        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } dnat to 192.168.1.10
+        #
+        # Rule 24 (NAT)
+        #
+        # should use multiport
+        # and account for
+        # no more than 15 ports
+        # per rule
+        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } dnat to 192.168.1.10
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        #
+        # Rule 1 (NAT)
+        #
+        ip saddr 192.168.1.0/24 snat to 222.222.222.0/24
+        #
+        # Rule 2 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.10-192.168.1.100 snat to 222.222.222.10-222.222.222.100
+        oifname "eth0" ip saddr 192.168.1.10-192.168.1.100 snat to 222.222.222.10-222.222.222.100
+        #
+        # Rule 4 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 snat to 192.168.1.1
+        #
+        # Rule 5 (NAT)
+        #
+        oifname "eth1" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } snat to 192.168.1.10
+        oifname "eth0" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } snat to 192.168.1.10
+        #
+        # Rule 10 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.10 tcp sport 1000-1010 snat to 222.222.222.222:1000-1010
+        oifname "eth0" ip saddr 192.168.1.10 tcp sport 1000-1010 snat to 192.168.1.1:1000-1010
+        #
+        # Rule 11 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 25 snat to 222.222.222.222
+        #
+        # Rule 16 (NAT)
+        #
+        # should match mac and ip addresses
+        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
+        #
+        # Rule 20 (NAT)
+        #
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 4000-4010 snat to 222.222.222.222
+        oifname "eth0" ip saddr 192.168.1.10 tcp dport 4000-4010 snat to 192.168.1.1
+        #
+        # Rule 21 (NAT)
+        #
+        ip saddr 192.168.1.10 tcp dport 3128 accept
+        #
+        # Rule 22 (NAT)
+        #
+        ip saddr 222.222.222.222 tcp dport 3128 accept
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet linuxfabrik_filter 2>/dev/null
+    $NFT delete table ip linuxfabrik_filter 2>/dev/null
+    $NFT delete table inet linuxfabrik_nat 2>/dev/null
+    $NFT delete table ip linuxfabrik_nat 2>/dev/null
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet linuxfabrik_filter
+    $NFT add chain inet linuxfabrik_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'linuxfabrik_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        configure_interfaces
+        verify_interfaces
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    interfaces)
+        configure_interfaces
+        RETVAL=$?
+        ;;
+
+    test_interfaces)
+        FWBDEBUG="echo"
+        configure_interfaces
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        ;;
+
+esac
+
+exit "$RETVAL"

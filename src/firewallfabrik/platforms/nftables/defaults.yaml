@@ -486,6 +486,18 @@ options:
       Additional arguments passed to ssh when connecting to the
       firewall for installation.
 
+  table_name:
+    type: 'str'
+    default: 'linuxfabrik'
+    supported: true
+    widget: 'tableName'
+    description: >-
+      Base name for the nftables tables managed by FirewallFabrik.
+      The compiler creates two tables: {name}_filter for packet
+      filtering and {name}_nat for NAT rules. Only these tables
+      are flushed when the firewall script runs, so rules created
+      by other tools (Docker, CrowdSec, fail2ban) remain untouched.
+
   use_iptables_restore:
     type: 'bool'
     default: false

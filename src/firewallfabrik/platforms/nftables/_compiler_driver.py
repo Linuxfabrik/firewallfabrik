@@ -446,17 +446,22 @@ class CompilerDriver_nft(CompilerDriver):
     ) -> str:
         """Assemble the nft rules body for embedding in a heredoc.
 
-        Returns only the nft-format content (flush ruleset, table/chain
-        declarations and inline rules) without any shebang, header
-        comments, or routing commands.
+        Returns only the nft-format content (table/chain declarations
+        and inline rules) without any shebang, header comments, or
+        routing commands.  Each table is flushed individually so that
+        rules managed by other tools (Docker, CrowdSec, fail2ban)
+        remain untouched.
         """
-        out = io.StringIO()
+        options = fw.options or {}
+        table_name = options.get('table_name', '') or 'linuxfabrik'
+        filter_table = f'{table_name}_filter'
+        nat_table = f'{table_name}_nat'
 
-        out.write('flush ruleset\n')
-        out.write('\n')
+        out = io.StringIO()
 
         # Determine address family
         family = 'inet' if have_ipv6 else 'ip'
+        nat_family = 'ip'
 
         # Default policy from firewall options
         input_policy = 'drop'
@@ -471,8 +476,30 @@ class CompilerDriver_nft(CompilerDriver):
             input_rules.strip() or forward_rules.strip() or output_rules.strip()
         )
 
+        # --- NAT table ---
+        prerouting_rules = ''.join(nat_chains.get('prerouting', []))
+        postrouting_rules = ''.join(nat_chains.get('postrouting', []))
+        output_nat_rules = ''.join(nat_chains.get('output', []))
+        have_nat = bool(
+            prerouting_rules.strip()
+            or postrouting_rules.strip()
+            or output_nat_rules.strip()
+        )
+
+        # Atomically delete our tables before recreating them.
+        # "create + delete" ensures deletion works even on first run
+        # (plain "delete" fails if the table does not exist yet).
         if have_filter:
-            out.write(f'table {family} filter {{\n')
+            out.write(f'table {family} {filter_table} {{}}\n')
+            out.write(f'delete table {family} {filter_table}\n')
+        if have_nat:
+            out.write(f'table {nat_family} {nat_table} {{}}\n')
+            out.write(f'delete table {nat_family} {nat_table}\n')
+        if have_filter or have_nat:
+            out.write('\n')
+
+        if have_filter:
+            out.write(f'table {family} {filter_table} {{\n')
 
             # Automatic rules (established/related, etc.)
             auto_rules = oscnf.generate_automatic_rules()
@@ -515,20 +542,8 @@ class CompilerDriver_nft(CompilerDriver):
             out.write('}\n')
             out.write('\n')
 
-        # --- NAT table ---
-        prerouting_rules = ''.join(nat_chains.get('prerouting', []))
-        postrouting_rules = ''.join(nat_chains.get('postrouting', []))
-        output_nat_rules = ''.join(nat_chains.get('output', []))
-        have_nat = bool(
-            prerouting_rules.strip()
-            or postrouting_rules.strip()
-            or output_nat_rules.strip()
-        )
-
         if have_nat:
-            # NAT uses ip family (not inet) for broader compatibility
-            nat_family = 'ip'
-            out.write(f'table {nat_family} nat {{\n')
+            out.write(f'table {nat_family} {nat_table} {{\n')
 
             # Prerouting chain (DNAT)
             out.write('    chain prerouting {\n')
@@ -640,6 +655,22 @@ class CompilerDriver_nft(CompilerDriver):
         if remote:
             manifest += f' {remote}'
 
+        # Named table support — only flush our own tables
+        table_name = options.get('table_name', '') or 'linuxfabrik'
+        filter_table = f'{table_name}_filter'
+        nat_table = f'{table_name}_nat'
+
+        # Determine filter family (must match _assemble_nft_rules_body)
+        fw_has_ipv6 = False
+        for iface in fw.interfaces:
+            for addr in iface.addresses:
+                if addr.is_v6():
+                    fw_has_ipv6 = True
+                    break
+            if fw_has_ipv6:
+                break
+        filter_family = 'inet' if fw_has_ipv6 else 'ip'
+
         context = {
             'version': firewallfabrik.__version__,
             'user': user_name,
@@ -659,7 +690,10 @@ class CompilerDriver_nft(CompilerDriver):
             'shell_functions': shell_functions,
             'configure_interfaces_code': configure_interfaces_code,
             'verify_interfaces_code': verify_interfaces_code,
+            'filter_family': filter_family,
+            'filter_table': filter_table,
             'ip_path': ip_path,
+            'nat_table': nat_table,
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')

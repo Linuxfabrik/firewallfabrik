@@ -94,27 +94,35 @@ ip_forward() {
     {{ ip_forward_commands }}
 }
 
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet {{ filter_table }} 2>/dev/null
+    $NFT delete table ip {{ filter_table }} 2>/dev/null
+    $NFT delete table inet {{ nat_table }} 2>/dev/null
+    $NFT delete table ip {{ nat_table }} 2>/dev/null
+}
+
 block_action() {
-    $NFT flush ruleset
-    # block all traffic by default
-    $NFT add table inet block
-    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
-    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
-    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet {{ filter_table }}
+    $NFT add chain inet {{ filter_table }} input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet {{ filter_table }} forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet {{ filter_table }} output '{ type filter hook output priority 0; policy drop; }'
 {% if mgmt_access %}
     # backup ssh access
-    $NFT add rule inet block input tcp dport 22 ip saddr {{ ssh_management_address }} ct state new,established accept
-    $NFT add rule inet block output tcp sport 22 ip daddr {{ ssh_management_address }} ct state established accept
+    $NFT add rule inet {{ filter_table }} input tcp dport 22 ip saddr {{ ssh_management_address }} ct state new,established accept
+    $NFT add rule inet {{ filter_table }} output tcp sport 22 ip daddr {{ ssh_management_address }} ct state established accept
 {% endif %}
 }
 
 stop_action() {
-    $NFT flush ruleset
+    flush_own_tables
 }
 
 check_nft_status() {
     tables=$($NFT list tables 2>/dev/null)
-    if [ -n "$tables" ]; then
+    if echo "$tables" | grep -q '{{ filter_table }}'; then
         return 0
     fi
     return 3

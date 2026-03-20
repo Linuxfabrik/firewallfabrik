@@ -22,7 +22,7 @@ LOGGER="logger"
 
 log() {
     echo "$1"
-    which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+    command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -232,9 +232,10 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-flush ruleset
+table ip linuxfabrik_filter {}
+delete table ip linuxfabrik_filter
 
-table ip filter {
+table ip linuxfabrik_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
@@ -295,22 +296,30 @@ ip_forward() {
     echo 1 > /proc/sys/net/ipv4/ip_forward
 }
 
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet linuxfabrik_filter 2>/dev/null
+    $NFT delete table ip linuxfabrik_filter 2>/dev/null
+    $NFT delete table inet linuxfabrik_nat 2>/dev/null
+    $NFT delete table ip linuxfabrik_nat 2>/dev/null
+}
+
 block_action() {
-    $NFT flush ruleset
-    # block all traffic by default
-    $NFT add table inet block
-    $NFT add chain inet block input '{ type filter hook input priority 0; policy drop; }'
-    $NFT add chain inet block forward '{ type filter hook forward priority 0; policy drop; }'
-    $NFT add chain inet block output '{ type filter hook output priority 0; policy drop; }'
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet linuxfabrik_filter
+    $NFT add chain inet linuxfabrik_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter output '{ type filter hook output priority 0; policy drop; }'
 }
 
 stop_action() {
-    $NFT flush ruleset
+    flush_own_tables
 }
 
 check_nft_status() {
     tables=$($NFT list tables 2>/dev/null)
-    if [ -n "$tables" ]; then
+    if echo "$tables" | grep -q 'linuxfabrik_filter'; then
         return 0
     fi
     return 3

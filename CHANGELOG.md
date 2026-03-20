@@ -8,11 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- nftables: Generated scripts now use named tables (`linuxfabrik_filter`, `linuxfabrik_nat`) instead of flushing the entire ruleset. This allows coexistence with Docker, CrowdSec, fail2ban and other tools that manage their own nftables tables. The table name is configurable in the nftables settings dialog (default: `linuxfabrik`).
+
 ### Fixed
 
 - Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
 - Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
 - Main window border is now clearly visible on GNOME/Wayland.
+- Test infrastructure: expected output files are now also regenerated for firewalls with compiler warnings.
 
 
 ## [v1.3.0] - 2026-03-17

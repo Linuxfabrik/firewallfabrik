@@ -1,0 +1,259 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * firewall51.fw /etc/fw/firewall51.fw
+#
+#  testing branching rules that point
+#  at rule sets defined in object
+#  firewall-base-rulesets
+#
+# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 1 (global): Branch action not yet supported by nftables compiler
+# Rule 1 (global): Branch action not yet supported by nftables compiler
+# Rule 2 (global): Branch action not yet supported by nftables compiler
+# Rule 2 (global): Branch action not yet supported by nftables compiler
+# Rule 3 (global): Branch action not yet supported by nftables compiler
+# Rule 3 (global): Branch action not yet supported by nftables compiler
+# Rule 4 (global): Branch action not yet supported by nftables compiler
+# Rule 4 (global): Branch action not yet supported by nftables compiler
+# Rule 4 (global): Branch action not yet supported by nftables compiler
+# Rule 5 (global): Branch action not yet supported by nftables compiler
+# Rule 5 (global): Branch action not yet supported by nftables compiler
+# Rule 5 (global): Branch action not yet supported by nftables compiler
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table ip linuxfabrik_filter {}
+delete table ip linuxfabrik_filter
+
+table ip linuxfabrik_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule rule2_branch 0 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        #
+        # Rule 1 (global)
+        #
+        # # Rule 1 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.10
+        #
+        # Rule 3 (global)
+        #
+        # # Rule 3 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.20
+        #
+        # Rule 4 (global)
+        #
+        #
+        # Rule 5 (global)
+        #
+        # # Rule 5 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.0/24
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule rule2_branch 0 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        #
+        # Rule 0 (global)
+        #
+        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        ip daddr 192.168.1.10
+        #
+        # Rule 1 (global)
+        #
+        # # Rule 1 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.10
+        #
+        # Rule 2 (global)
+        #
+        # # Rule 2 (global): Branch action not yet supported by nftables compiler
+        ip daddr 192.168.1.20
+        #
+        # Rule 3 (global)
+        #
+        # # Rule 3 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.20
+        #
+        # Rule 4 (global)
+        #
+        #
+        # Rule 5 (global)
+        #
+        # # Rule 5 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.0/24
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule rule2_branch 0 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        #
+        # Rule 0 (global)
+        #
+        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        ip daddr 192.168.1.10
+        #
+        # Rule 2 (global)
+        #
+        # # Rule 2 (global): Branch action not yet supported by nftables compiler
+        ip daddr 192.168.1.20
+        #
+        # Rule 4 (global)
+        #
+        #
+        # Rule 5 (global)
+        #
+        # # Rule 5 (global): Branch action not yet supported by nftables compiler
+        ip saddr 192.168.1.0/24
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet linuxfabrik_filter 2>/dev/null
+    $NFT delete table ip linuxfabrik_filter 2>/dev/null
+    $NFT delete table inet linuxfabrik_nat 2>/dev/null
+    $NFT delete table ip linuxfabrik_nat 2>/dev/null
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet linuxfabrik_filter
+    $NFT add chain inet linuxfabrik_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'linuxfabrik_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"

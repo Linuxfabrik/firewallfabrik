@@ -1,0 +1,463 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * optitest.fw /etc/optitest.fw
+#
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table ip linuxfabrik_filter {}
+delete table ip linuxfabrik_filter
+
+table ip linuxfabrik_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 16 (eth0)
+        #
+        # Test 16 : Check INPUT/OUPUT with FW part of rule
+        iifname "eth0" tcp dport 21 log prefix "RULE 16 -- DENY " level info drop
+        #
+        # Rule 35 (global)
+        #
+        # Test 16 : Check INPUT/OUPUT with FW part of rule
+        tcp dport 21 log prefix "RULE 35 -- DENY " level info drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        # Test 1 : Don't Optimize 1 dst
+        iifname "eth0" ip daddr 10.0.0.1 ct state new accept
+        oifname "eth0" ip daddr 10.0.0.1 ct state new accept
+        #
+        # Rule 1 (eth0)
+        #
+        # Test 2 : Don't Optimize 1 service
+        iifname "eth0" tcp dport 80 ct state new accept
+        oifname "eth0" tcp dport 80 ct state new accept
+        #
+        # Rule 2 (eth0)
+        #
+        # Test 3 : Don't Optimize 1 src & 1 dst
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 ct state new accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 ct state new accept
+        #
+        # Rule 3 (eth0)
+        #
+        # Test 4 : Don't Optimize 1 src & 1 service
+        iifname "eth0" ip saddr 10.0.1.1 tcp dport 80 ct state new accept
+        oifname "eth0" ip saddr 10.0.1.1 tcp dport 80 ct state new accept
+        #
+        # Rule 4 (eth0)
+        #
+        # Test 5 : Don't Optimize 1 dst & 1 service
+        iifname "eth0" ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        oifname "eth0" ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        #
+        # Rule 5 (eth0)
+        #
+        # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        #
+        # Rule 6 (eth0)
+        #
+        # Test 7 : Optimize : src, dst, svc
+        # Time should appear on the src rules in the FORWARD table
+        # +Logging
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 6 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 6 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 6 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 6 -- ACCEPT " level info accept
+        #
+        # Rule 7 (eth0)
+        #
+        # Test 7 : Optimize on service - dsts -> user chain
+        iifname "eth0" ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 80 ct state new accept
+        oifname "eth0" ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 80 ct state new accept
+        #
+        # Rule 8 (eth0)
+        #
+        # Test 8 : Optimize on service - srcs -> user chain
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } tcp dport 80 ct state new accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } tcp dport 80 ct state new accept
+        #
+        # Rule 9 (eth0)
+        #
+        # Test 9 : Optimize on service - srcs -> user chain
+        #             Dst to stay on rule in FORWARD table
+        # + options TCP RST Reject Test
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } ip daddr 10.0.0.1 tcp dport 80 reject with tcp reset
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } ip daddr 10.0.0.1 tcp dport 80 reject with tcp reset
+        #
+        # Rule 10 (eth0)
+        #
+        # Test 10 : Optimize on src & dst, services -> user chain
+        # + Logging
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new log prefix "RULE 10 -- ACCEPT " level info accept
+        #
+        # Rule 11 (eth0)
+        #
+        # Test 11 : Special case - with multiport we shouldn't
+        # optimize here as all services are TCP and we have <15
+        # of them
+        # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
+        # SOLUTION ?
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport { 21, 80 } ct state new accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport { 21, 80 } ct state new accept
+        #
+        # Rule 12 (eth0)
+        #
+        # Test 12 : Optimize : src, dst, svc
+        # + options limit test
+        # + logging
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new log prefix "RULE 12 -- ACCEPT " level info accept
+        #
+        # Rule 13 (eth0)
+        #
+        # Test 13 : Optimize : src, dst, svc
+        # Time should appear on the src rules in the FORWARD table
+        # +Logging
+        # NOT OPTIMUM : Time appears in Logging
+        # SOLUTION : Patch logging not to include time?
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" log prefix "RULE 13 -- ACCEPT " level info accept
+        #
+        # Rule 14 (eth0)
+        #
+        # Test 14 : Optimize : src, dst, svc
+        # Time should appear on the service rules
+        # since we there are two of them and we don't optimize
+        # for time (yet!)
+        # + Logging
+        # NOT OPTIMUM : Time appears in Logging
+        # SOLUTION : Patch logging not to include time?
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" accept
+        #
+        # Rule 15 (eth0)
+        #
+        # Test 15 : Don't optimize if we have limit options
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.2 tcp dport 80 reject with tcp reset
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.2 tcp dport 80 reject with tcp reset
+        #
+        # Rule 16 (eth0)
+        #
+        # Test 16 : Check INPUT/OUPUT with FW part of rule
+        iifname "eth0" ip daddr 10.0.0.1 tcp dport 21 log prefix "RULE 16 -- DENY " level info drop
+        oifname "eth0" ip daddr 10.0.0.1 tcp dport 21 log prefix "RULE 16 -- DENY " level info drop
+        #
+        # Rule 17 (eth0)
+        #
+        # Test 0 : Don't Optimize 1 src
+        iifname "eth0" ip saddr 10.0.1.1 ct state new accept
+        oifname "eth0" ip saddr 10.0.1.1 ct state new accept
+        #
+        # Rule 18 (global)
+        #
+        # Test 0 : Don't Optimize 1 src
+        ip saddr 10.0.1.1 ct state new accept
+        #
+        # Rule 19 (global)
+        #
+        # Test 1 : Don't Optimize 1 dst
+        ip daddr 10.0.0.1 ct state new accept
+        #
+        # Rule 20 (global)
+        #
+        # Test 2 : Don't Optimize 1 service
+        tcp dport 80 ct state new accept
+        #
+        # Rule 21 (global)
+        #
+        # Test 3 : Don't Optimize 1 src & 1 dst
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 ct state new accept
+        #
+        # Rule 22 (global)
+        #
+        # Test 4 : Don't Optimize 1 src & 1 service
+        ip saddr 10.0.1.1 tcp dport 80 ct state new accept
+        #
+        # Rule 23 (global)
+        #
+        # Test 5 : Don't Optimize 1 dst & 1 service
+        ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        #
+        # Rule 24 (global)
+        #
+        # Test 6 : Don't Optimize 1 src, 1 dst & 1 service
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new accept
+        #
+        # Rule 25 (global)
+        #
+        # Test 7 : Optimize : src, dst, svc
+        # Time should appear on the src rules in the FORWARD table
+        # +Logging
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 25 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 25 -- ACCEPT " level info accept
+        #
+        # Rule 26 (global)
+        #
+        # Test 7 : Optimize on service - dsts -> user chain
+        ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 80 ct state new accept
+        #
+        # Rule 27 (global)
+        #
+        # Test 8 : Optimize on service - srcs -> user chain
+        ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } tcp dport 80 ct state new accept
+        #
+        # Rule 28 (global)
+        #
+        # Test 9 : Optimize on service - srcs -> user chain
+        #             Dst to stay on rule in FORWARD table
+        # + options TCP RST Reject Test
+        ip saddr { 10.0.1.1, 10.0.1.2, 10.0.1.3 } ip daddr 10.0.0.1 tcp dport 80 reject with tcp reset
+        #
+        # Rule 29 (global)
+        #
+        # Test 10 : Optimize on src & dst, services -> user chain
+        # + Logging
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new log prefix "RULE 29 -- ACCEPT " level info accept
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new log prefix "RULE 29 -- ACCEPT " level info accept
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new log prefix "RULE 29 -- ACCEPT " level info accept
+        #
+        # Rule 30 (global)
+        #
+        # Test 11 : Special case - with multiport we shouldn't
+        # optimize here as all services are TCP and we have <15
+        # of them
+        # NOT OPTIMUM - We've split before multiport which re-merges multiple services of the same type
+        # SOLUTION ?
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport { 21, 80 } ct state new accept
+        #
+        # Rule 31 (global)
+        #
+        # Test 12 : Optimize : src, dst, svc
+        # + options limit test
+        # + logging
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new log prefix "RULE 31 -- ACCEPT " level info accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new log prefix "RULE 31 -- ACCEPT " level info accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new log prefix "RULE 31 -- ACCEPT " level info accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new log prefix "RULE 31 -- ACCEPT " level info accept
+        #
+        # Rule 32 (global)
+        #
+        # Test 13 : Optimize : src, dst, svc
+        # Time should appear on the src rules in the FORWARD table
+        # +Logging
+        # NOT OPTIMUM : Time appears in Logging
+        # SOLUTION : Patch logging not to include time?
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" log prefix "RULE 32 -- ACCEPT " level info accept
+        #
+        # Rule 33 (global)
+        #
+        # Test 14 : Optimize : src, dst, svc
+        # Time should appear on the service rules
+        # since we there are two of them and we don't optimize
+        # for time (yet!)
+        # + Logging
+        # NOT OPTIMUM : Time appears in Logging
+        # SOLUTION : Patch logging not to include time?
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" accept
+        #
+        # Rule 34 (global)
+        #
+        # Test 15 : Don't optimize if we have limit options
+        ip saddr 10.0.1.1 ip daddr 10.0.0.2 tcp dport 80 reject with tcp reset
+        #
+        # Rule 35 (global)
+        #
+        # Test 16 : Check INPUT/OUPUT with FW part of rule
+        ip daddr 10.0.0.1 tcp dport 21 log prefix "RULE 35 -- DENY " level info drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet linuxfabrik_filter 2>/dev/null
+    $NFT delete table ip linuxfabrik_filter 2>/dev/null
+    $NFT delete table inet linuxfabrik_nat 2>/dev/null
+    $NFT delete table ip linuxfabrik_nat 2>/dev/null
+}
+
+block_action() {
+    flush_own_tables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet linuxfabrik_filter
+    $NFT add chain inet linuxfabrik_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet linuxfabrik_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    flush_own_tables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'linuxfabrik_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"
