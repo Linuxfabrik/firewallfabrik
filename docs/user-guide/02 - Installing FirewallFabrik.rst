@@ -181,6 +181,19 @@ To check the installed version:
 
 Both X11 and Wayland display servers are supported.
 
+Running directly from Source
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you have cloned the Git repository and want to run FirewallFabrik without installing it first (e.g. for development or quick testing), you can launch it directly from the source tree. Activate the virtual environment that has the dependencies installed, then use ``PYTHONPATH`` to point Python at the source directory:
+
+.. code-block:: bash
+
+   source $HOME/venvs/firewallfabrik/bin/activate
+   cd /path/to/firewallfabrik
+   PYTHONPATH=src python -m firewallfabrik.gui.app
+
+This bypasses the ``fwf`` entry point and runs the application module directly. It is useful when you want to test local changes immediately without re-installing the package.
+
 
 Available Commands
 -------------------
