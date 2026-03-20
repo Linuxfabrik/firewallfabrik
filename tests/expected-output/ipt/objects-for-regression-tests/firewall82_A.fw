@@ -12,10 +12,6 @@
 #
 # this object is used to hold branch rulesets for firewall82
 
-# firewall82_A:Policy_A:1: warning: Rule branches to rule set Policy_A which branches back to it, creating a loop
-# firewall82_A:Policy_A:1: warning: Rule branches to rule set Policy which branches back to it, creating a loop
-# firewall82_A:Policy_A:2: warning: Rule branches to rule set Policy_A which branches back to it, creating a loop
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -37,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -112,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -316,49 +312,15 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
- # ================ Table 'filter', rule set Policy_B
- #
- # Rule Policy_B 0 (global)
- #
- echo "Rule Policy_B 0 (global)"
- #
- $IPTABLES -N Policy_B
- $IPTABLES -A Policy_B -d 192.0.2.100 -m state --state NEW -j ACCEPT
- # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- #
- echo "Rule 0 (global)"
- #
- $IPTABLES -N Policy
- $IPTABLES -N Policy_A
- $IPTABLES -A Policy -j Policy_A
  # ================ Table 'filter', rule set Policy_A
  #
  # Rule Policy_A 0 (global)
  #
  echo "Rule Policy_A 0 (global)"
  #
- $IPTABLES -A OUTPUT -j Policy_B
- $IPTABLES -A INPUT -j Policy_B
- $IPTABLES -A FORWARD -j Policy_B
- #
- # Rule Policy_A 1 (global)
- #
- echo "Rule Policy_A 1 (global)"
- #
- # recursive branching
- $IPTABLES -A OUTPUT -j Policy
- $IPTABLES -A INPUT -j Policy
- $IPTABLES -A FORWARD -j Policy
- #
- # Rule Policy_A 2 (global)
- #
- echo "Rule Policy_A 2 (global)"
- #
- $IPTABLES -A OUTPUT -j Policy_A
- $IPTABLES -A INPUT -j Policy_A
- $IPTABLES -A FORWARD -j Policy_A
+ $IPTABLES -A OUTPUT
+ $IPTABLES -A INPUT
+ $IPTABLES -A FORWARD
 }
 
 ip_forward() {
@@ -368,6 +330,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

@@ -12,10 +12,14 @@
 #
 # Policy is configured as dual address family. Using iptables-restore. Firewall is NOT part of any
 
-# firewall-ipv6-4-1:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-# firewall-ipv6-4-1:Policy:4: error: Rule '4 (global)' shadows rule '6 (global)' below it
-
-# firewall-ipv6-4-1:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule 2 shadows Rule 3 below it
+# Rule 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 2 shadows Rule 3 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 2 shadows Rule 3 below it
 
 FWBDEBUG=""
 
@@ -38,7 +42,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -113,13 +117,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IPTABLES_RESTORE
  find_program $IP6TABLES_RESTORE
@@ -325,10 +329,13 @@ configure_interfaces() {
  getaddr6 eth1 i_eth1_v6
  getnet eth1 i_eth1_network
  getnet6 eth1 i_eth1_v6_network
- update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
+ update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
 }
 
 script_body() {
+ echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
+ echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+
  # ================ IPv4
 
  (
@@ -339,75 +346,18 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- echo ":drop_invalid - [0:0]"
- echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
- echo "-A INPUT -m state --state INVALID -j drop_invalid "
- echo "-A FORWARD -m state --state INVALID -j drop_invalid "
- echo "-A drop_invalid -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 1 --ulog-prefix \"INVALID state -- DENY \""
- echo "-A drop_invalid -j DROP "
+ {{create_drop_invalid_chain}}
+ OUTPUT -m state --state INVALID -j drop_invalid
+ INPUT -m state --state INVALID -j drop_invalid
+ FORWARD -m state --state INVALID -j drop_invalid
+ drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
+ drop_invalid -j DROP
  # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- echo ":In_RULE_0 - [0:0]"
- echo "-A INPUT -m state --state NEW -j In_RULE_0 "
- echo "-A In_RULE_0 -j ULOG --ulog-nlgroup 1 --ulog-prefix \"RULE 0 -- ACCEPT \" --ulog-qthreshold 1 "
- echo "-A In_RULE_0 -j ACCEPT "
- #
- # Rule 1 (global)
- echo "-A OUTPUT -p icmp -m icmp -s 1.1.1.1 --icmp-type 8/0 -m state --state NEW -j ACCEPT "
- #
- # Rule 2 (global)
- # firewall-ipv6-4-1:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-
- echo "-A FORWARD -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT "
- #
- # Rule 3 (global)
- echo "-A FORWARD -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j ACCEPT "
- #
- # Rule 4 (global)
- # INPUT, OUTPUT, FORWARD
- # firewall-ipv6-4-1:Policy:4: error: Rule '4 (global)' shadows rule '6 (global)' below it
-
- echo "-A FORWARD -s 1.1.1.0/24 -m state --state NEW -j ACCEPT "
- #
- # Rule 5 (global)
- # INPUT, OUTPUT, FORWARD
- echo "-A FORWARD -d 1.1.1.0/24 -m state --state NEW -j ACCEPT "
- #
- # Rule 6 (global)
- # for bug 2047082
- #
- echo "-A OUTPUT -m state --state NEW -j ACCEPT "
- #
- # Rule 7 (global)
- echo "-A FORWARD -d 6bone.net -m state --state NEW -j ACCEPT "
- echo "-A FORWARD -d ny6ix.net -m state --state NEW -j ACCEPT "
- #
- # Rule 8 (global)
- echo ":RULE_8 - [0:0]"
- echo "-A FORWARD -d 157.112.176.24 -j RULE_8 "
- echo "-A FORWARD -d 207.251.84.150 -j RULE_8 "
- echo "-A RULE_8 -j ULOG --ulog-nlgroup 1 --ulog-prefix \"RULE 8 -- DENY \" --ulog-qthreshold 1 "
- echo "-A RULE_8 -j DROP "
- #
- # Rule 9 (global)
- # ipv4 address range for bug 2820152
- echo "-A FORWARD -m iprange --dst-range 192.168.1.1-192.168.1.100 -m state --state NEW -j ACCEPT "
- #
- # Rule 10 (global)
- # ipv4 address range for bug 2820152
- echo "-A INPUT -d 255.255.255.255 -m state --state NEW -j ACCEPT "
- #
- # Rule 11 (global)
- echo ":RULE_11 - [0:0]"
- echo "-A FORWARD -j RULE_11 "
- echo "-A RULE_11 -j ULOG --ulog-nlgroup 1 --ulog-prefix \"RULE 11 -- DENY \" --ulog-qthreshold 1 "
- echo "-A RULE_11 -j DROP "
- #
+ echo "# Rule 0 (global)"echo ":In_RULE_0 - [0:0]"echo "INPUT -m state --state NEW -j In_RULE_0"echo "In_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- ACCEPT ""echo "In_RULE_0 -j ACCEPT"echo "# Rule 1 (global)"echo "OUTPUT -p icmp -m icmp -s 1.1.1.1 --icmp-type 8/0 -m state --state NEW -j ACCEPT"echo "# Rule 2 (global)"echo "FORWARD -p icmp -m icmp -m state --state NEW -j ACCEPT"echo "# Rule 3 (global)"echo "FORWARD -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j ACCEPT"echo "# Rule 4 (global)"echo "OUTPUT -s 1.1.1.0/24 -m state --state NEW -j ACCEPT"echo "FORWARD -s 1.1.1.0/24 -m state --state NEW -j ACCEPT"echo "# Rule 5 (global)"echo "INPUT -d 1.1.1.0/24 -m state --state NEW -j ACCEPT"echo "FORWARD -d 1.1.1.0/24 -m state --state NEW -j ACCEPT"echo "# Rule 6 (global)"echo "OUTPUT -m state --state NEW -j ACCEPT"echo "# Rule 9 (global)"echo "FORWARD -m state --state NEW -j ACCEPT"echo "# Rule 11 (global)"echo ":RULE_11 - [0:0]"echo "FORWARD -j RULE_11"echo "RULE_11 -j LOG --log-level info --log-prefix "RULE 11 -- DENY ""echo "RULE_11 -j DROP"#
  echo COMMIT
 
  echo '*nat'
@@ -415,9 +365,8 @@ script_body() {
  echo :PREROUTING ACCEPT [0:0]
  echo :POSTROUTING ACCEPT [0:0]
  echo :OUTPUT ACCEPT [0:0]
- #
  # Rule 0 (NAT)
- echo "-A POSTROUTING -o eth1 -s 1.1.1.0/24 -j MASQUERADE "
+ echo "-A POSTROUTING -o eth1 -s 1.1.1.0/24 -j MASQUERADE"
  #
  echo COMMIT
 
@@ -434,39 +383,18 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
- echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- echo ":drop_invalid - [0:0]"
- echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
- echo "-A INPUT -m state --state INVALID -j drop_invalid "
- echo "-A FORWARD -m state --state INVALID -j drop_invalid "
- echo "-A drop_invalid -j LOG --log-level debug --log-prefix \"INVALID state -- DENY \""
- echo "-A drop_invalid -j DROP "
+ {{create_drop_invalid_chain}}
+ OUTPUT -m state --state INVALID -j drop_invalid
+ INPUT -m state --state INVALID -j drop_invalid
+ FORWARD -m state --state INVALID -j drop_invalid
+ drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
+ drop_invalid -j DROP
  # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- echo ":In_RULE_0 - [0:0]"
- echo "-A INPUT -m state --state NEW -j In_RULE_0 "
- echo "-A In_RULE_0 -j LOG --log-level info --log-prefix \"RULE 0 -- ACCEPT \""
- echo "-A In_RULE_0 -j ACCEPT "
- #
- # Rule 6 (global)
- # for bug 2047082
- #
- echo "-A OUTPUT -m state --state NEW -j ACCEPT "
- #
- # Rule 7 (global)
- echo "-A FORWARD -d 6bone.net -m state --state NEW -j ACCEPT "
- echo "-A FORWARD -d ny6ix.net -m state --state NEW -j ACCEPT "
- #
- # Rule 11 (global)
- echo ":RULE_11 - [0:0]"
- echo "-A FORWARD -j RULE_11 "
- echo "-A RULE_11 -j LOG --log-level info --log-prefix \"RULE 11 -- DENY \""
- echo "-A RULE_11 -j DROP "
- #
+ echo "# Rule 0 (global)"echo ":In_RULE_0 - [0:0]"echo "INPUT -m state --state NEW -j In_RULE_0"echo "In_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- ACCEPT ""echo "In_RULE_0 -j ACCEPT"echo "# Rule 6 (global)"echo "OUTPUT -m state --state NEW -j ACCEPT"echo "# Rule 9 (global)"echo "FORWARD -m state --state NEW -j ACCEPT"echo "# Rule 11 (global)"echo ":RULE_11 - [0:0]"echo "FORWARD -j RULE_11"echo "RULE_11 -j LOG --log-level info --log-prefix "RULE 11 -- DENY ""echo "RULE_11 -j DROP"#
  echo COMMIT
 
  echo '*nat'
@@ -474,9 +402,8 @@ script_body() {
  echo :PREROUTING ACCEPT [0:0]
  echo :POSTROUTING ACCEPT [0:0]
  echo :OUTPUT ACCEPT [0:0]
- #
  # Rule 0 (NAT)
- echo "-A POSTROUTING -o eth1 -s fe80::/64 -j MASQUERADE "
+ echo "-A POSTROUTING -o eth1 -s fe80::/64 -j MASQUERADE"
  #
  echo COMMIT
 
@@ -492,6 +419,7 @@ echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
  reset_iptables_v6
 }

@@ -14,18 +14,6 @@
 
 # Also the name of the script on the firewall is different
 
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars_0' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars_0' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars_0' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-# firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars_0' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-
-# firewall70:not_quite_long_ruleset_name:0: error: Chain name 'not_quite_long_ruleset_name_0_3' is longer than 30 characters. Rule not_quite_long_ruleset_name 0 (global)
-# firewall70:not_quite_long_ruleset_name:0: error: Chain name 'not_quite_long_ruleset_name_0_3' is longer than 30 characters. Rule not_quite_long_ruleset_name 0 (global)
-# firewall70:not_quite_long_ruleset_name:0: error: Chain name 'not_quite_long_ruleset_name_0_3' is longer than 30 characters. Rule not_quite_long_ruleset_name 0 (global)
-# firewall70:not_quite_long_ruleset_name:0: error: Chain name 'not_quite_long_ruleset_name_0_3' is longer than 30 characters. Rule not_quite_long_ruleset_name 0 (global)
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -47,7 +35,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -122,13 +110,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -338,38 +326,37 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
- # ================ Table 'filter', rule set very_long_ruleset_name_should_be_gt_30_chars
- #
- # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
- #
- echo "Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)"
- #
- # firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
- # firewall70:very_long_ruleset_name_should_be_gt_30_chars:0: error: Chain name 'very_long_ruleset_name_should_be_gt_30_chars_0' is longer than 30 characters. Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
-
- $IPTABLES -N very_long_ruleset_name_should_be_gt_30_chars
- $IPTABLES -N very_long_ruleset_name_should_be_gt_30_chars_0
- $IPTABLES -A very_long_ruleset_name_should_be_gt_30_chars -j very_long_ruleset_name_should_be_gt_30_chars_0
- $IPTABLES -A very_long_ruleset_name_should_be_gt_30_chars_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
- $IPTABLES -A very_long_ruleset_name_should_be_gt_30_chars_0 -j DROP
  # ================ Table 'filter', rule set not_quite_long_ruleset_name
  #
  # Rule not_quite_long_ruleset_name 0 (global)
  #
  echo "Rule not_quite_long_ruleset_name 0 (global)"
  #
- # firewall70:not_quite_long_ruleset_name:0: error: Chain name 'not_quite_long_ruleset_name_0_3' is longer than 30 characters. Rule not_quite_long_ruleset_name 0 (global)
-
- $IPTABLES -N not_quite_long_ruleset_name
  $IPTABLES -N CHAIN
- $IPTABLES -A not_quite_long_ruleset_name -s 22.22.22.0/24 -j CHAIN
- $IPTABLES -A not_quite_long_ruleset_name -s 33.33.33.0/24 -j CHAIN
- $IPTABLES -A CHAIN -d 66.66.66.130 -j RETURN
+ $IPTABLES -A INPUT -s 22.22.22.0/24 -j CHAIN
+ $IPTABLES -A INPUT -s 33.33.33.0/24 -j CHAIN
  $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
- $IPTABLES -N not_quite_long_ruleset_name_0_3
- $IPTABLES -A CHAIN -j not_quite_long_ruleset_name_0_3
- $IPTABLES -A not_quite_long_ruleset_name_0_3 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
- $IPTABLES -A not_quite_long_ruleset_name_0_3 -j DROP
+ $IPTABLES -N In_not_quite_long_ruleset_name_0
+ $IPTABLES -A CHAIN -j In_not_quite_long_ruleset_name_0
+ $IPTABLES -A In_not_quite_long_ruleset_name_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IPTABLES -A In_not_quite_long_ruleset_name_0 -j DROP
+ $IPTABLES -N not_quite_long_ruleset_name_0
+ $IPTABLES -A FORWARD -s 22.22.22.0/24 -j not_quite_long_ruleset_name_0
+ $IPTABLES -A FORWARD -s 33.33.33.0/24 -j not_quite_long_ruleset_name_0
+ $IPTABLES -A not_quite_long_ruleset_name_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IPTABLES -A not_quite_long_ruleset_name_0 -j DROP
+ # ================ Table 'filter', rule set very_long_ruleset_name_should_be_gt_30_chars
+ #
+ # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
+ #
+ echo "Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)"
+ #
+ $IPTABLES -N very_long_ruleset_name_should_be_gt_30_chars_0
+ $IPTABLES -A OUTPUT -j very_long_ruleset_name_should_be_gt_30_chars_0
+ $IPTABLES -A INPUT -j very_long_ruleset_name_should_be_gt_30_chars_0
+ $IPTABLES -A FORWARD -j very_long_ruleset_name_should_be_gt_30_chars_0
+ $IPTABLES -A very_long_ruleset_name_should_be_gt_30_chars_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IPTABLES -A very_long_ruleset_name_should_be_gt_30_chars_0 -j DROP
 }
 
 ip_forward() {
@@ -379,6 +366,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

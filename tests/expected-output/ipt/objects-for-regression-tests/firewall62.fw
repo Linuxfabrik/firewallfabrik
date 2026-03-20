@@ -34,6 +34,10 @@
 # firewall62:Policy:11: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
 # firewall62:Policy:12: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
 # firewall62:Policy:13: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
+# firewall62:Policy:14: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
+# firewall62:Policy:14: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
+# firewall62:Policy:15: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
+# firewall62:Policy:15: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
 # firewall62:Policy:16: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
 # firewall62:Policy:16: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
 # firewall62:Policy:17: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
@@ -60,7 +64,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -135,13 +139,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -347,7 +351,7 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
- $IPTABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'filter', rule set Policy
  #
@@ -355,123 +359,90 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- # firewall62:Policy:0: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- # firewall62:Policy:2: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -N Cid484A599620246.0
- $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j Cid484A599620246.0
- $IPTABLES -A Cid484A599620246.0 -s 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid484A599620246.0 -s 222.222.222.222 -j ACCEPT
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
- #
- # Rule 3 (global)
- #
- echo "Rule 3 (global)"
- #
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j ACCEPT
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
- # firewall62:Policy:4: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -s 192.168.1.1 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.1 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- # firewall62:Policy:5: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
- # firewall62:Policy:6: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -N Cid4848F1BB20246.0
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j Cid4848F1BB20246.0
- $IPTABLES -A Cid4848F1BB20246.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid4848F1BB20246.0 -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j ACCEPT
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- # firewall62:Policy:8: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -s ! 192.168.1.0/24 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
  #
  echo "Rule 9 (global)"
  #
- # firewall62:Policy:9: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
  # bug 2186568
- # firewall62:Policy:10: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -m owner --uid-owner 500 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
  #
  # Rule 11 (global)
  #
  echo "Rule 11 (global)"
  #
  # bug 2186568
- # firewall62:Policy:11: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
  $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -m owner --uid-owner 500 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
  # bug 2186568
- # firewall62:Policy:12: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -m owner ! --uid-owner 2000 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 13 (global)
  #
  echo "Rule 13 (global)"
  #
  # bug 2186568
- # firewall62:Policy:13: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
  $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -m owner ! --uid-owner 2000 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 14 (global)
  #
@@ -480,10 +451,7 @@ script_body() {
  # bug 2186568
  $IPTABLES -N CHAIN
  $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -s 222.222.222.222 -m state --state NEW -j CHAIN
  $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -m owner --uid-owner 2000 -j RETURN
- $IPTABLES -A CHAIN -m owner --uid-owner 500 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 15 (global)
@@ -493,10 +461,7 @@ script_body() {
  # bug 2186568
  $IPTABLES -N CHAIN
  $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -d 222.222.222.222 -m state --state NEW -j CHAIN
  $IPTABLES -A INPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -m owner --uid-owner 2000 -j RETURN
- $IPTABLES -A CHAIN -m owner --uid-owner 500 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 16 (global)
@@ -504,23 +469,17 @@ script_body() {
  echo "Rule 16 (global)"
  #
  # bug 2186568
- # firewall62:Policy:16: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -m owner --uid-owner 500 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
  #
  # Rule 17 (global)
  #
  echo "Rule 17 (global)"
  #
  # bug 2186568
- # firewall62:Policy:17: warning: Iptables does not support module 'owner' in a chain other than OUTPUT
-
  $IPTABLES -N CHAIN
- $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -m owner --uid-owner 500 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 18 (global)
  #
@@ -538,6 +497,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

@@ -12,21 +12,13 @@
 #
 # tests for error conditions in NATCompiler_ipt::VerifyRules
 
-# firewall2-4:NAT:0: error: Can not use negation in translated source
-# firewall2-4:NAT:1: error: Can not use negation in translated destination.
-# firewall2-4:NAT:2: error: Can not use negation in translated service.
-# firewall2-4:NAT:3: error: Translated service should be 'Original' or should contain single object.
-# firewall2-4:NAT:4: error: Translated service should be 'Original' or should contain single object.
-# firewall2-4:NAT:5: error: Non-contiguous address range in Translated Destination in load balancing NAT rule
-# firewall2-4:NAT:7: error: Action 'Branch' needs NAT rule set to point to
-# firewall2-4:NAT:9: error: Can not use unnumbered interface in Translated Source of a Source translation rule.
-# firewall2-4:NAT:10: error: Original and translated source should both be networks of the same size.
-# firewall2-4:NAT:12: error: Can not use service object in Translated Service if Original Service is 'Any'.
-# firewall2-4:NAT:13: error: NAT rule can not change service types: UDPService to TCPService
-# firewall2-4:NAT:13: error: Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# firewall2-4:NAT:14: error: NAT rule can not change service types: UDPService to TCPService
-# firewall2-4:NAT:14: error: Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# firewall2-4:NAT:14: error: Translated Service should be either 'Original' or should contain object of the same type as Original Service.
+# Can not use negation in translated source
+# Can not use negation in translated destination
+# Can not use negation in translated service
+# Rule 12 (NAT): Can not use service object in Translated Service if Original Service is 'Any'.
+# Rule 13 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
+# Rule 14 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
+# Rule 14 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 
 FWBDEBUG=""
 
@@ -49,7 +41,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -124,13 +116,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -311,8 +303,8 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 192.168.1.1/24 192.168.1.10/24 192.168.1.20/24" ""
- update_addresses_of_interface "eth1 22.22.22.22/24 22.22.22.0/32 22.22.22.1/32 22.22.22.2/32 22.22.22.3/32 22.22.22.4/32 22.22.22.5/32 22.22.22.6/32 22.22.22.7/32 22.22.22.8/32 22.22.22.9/32 22.22.22.10/32 22.22.22.11/32 22.22.22.12/32 22.22.22.13/32 22.22.22.14/32 22.22.22.15/32 22.22.22.16/32 22.22.22.17/32 22.22.22.18/32 22.22.22.19/32 22.22.22.20/32 22.22.22.21/32 22.22.22.22/32 22.22.22.23/32 22.22.22.24/32 22.22.22.25/32 22.22.22.26/32 22.22.22.27/32 22.22.22.28/32 22.22.22.29/32 22.22.22.30/32 22.22.22.31/32 22.22.22.32/32 22.22.22.33/32 22.22.22.34/32 22.22.22.35/32 22.22.22.36/32 22.22.22.37/32 22.22.22.38/32 22.22.22.39/32 22.22.22.40/32 22.22.22.41/32 22.22.22.42/32 22.22.22.43/32 22.22.22.44/32 22.22.22.45/32 22.22.22.46/32 22.22.22.47/32 22.22.22.48/32 22.22.22.49/32 22.22.22.50/32 22.22.22.51/32 22.22.22.52/32 22.22.22.53/32 22.22.22.54/32 22.22.22.55/32 22.22.22.56/32 22.22.22.57/32 22.22.22.58/32 22.22.22.59/32 22.22.22.60/32 22.22.22.61/32 22.22.22.62/32 22.22.22.63/32 22.22.22.64/32 22.22.22.65/32 22.22.22.66/32 22.22.22.67/32 22.22.22.68/32 22.22.22.69/32 22.22.22.70/32 22.22.22.71/32 22.22.22.72/32 22.22.22.73/32 22.22.22.74/32 22.22.22.75/32 22.22.22.76/32 22.22.22.77/32 22.22.22.78/32 22.22.22.79/32 22.22.22.80/32 22.22.22.81/32 22.22.22.82/32 22.22.22.83/32 22.22.22.84/32 22.22.22.85/32 22.22.22.86/32 22.22.22.87/32 22.22.22.88/32 22.22.22.89/32 22.22.22.90/32 22.22.22.91/32 22.22.22.92/32 22.22.22.93/32 22.22.22.94/32 22.22.22.95/32 22.22.22.96/32 22.22.22.97/32 22.22.22.98/32 22.22.22.99/32 22.22.22.100/32 22.22.22.101/32 22.22.22.102/32 22.22.22.103/32 22.22.22.104/32 22.22.22.105/32 22.22.22.106/32 22.22.22.107/32 22.22.22.108/32 22.22.22.109/32 22.22.22.110/32 22.22.22.111/32 22.22.22.112/32 22.22.22.113/32 22.22.22.114/32 22.22.22.115/32 22.22.22.116/32 22.22.22.117/32 22.22.22.118/32 22.22.22.119/32 22.22.22.120/32 22.22.22.121/32 22.22.22.122/32 22.22.22.123/32 22.22.22.124/32 22.22.22.125/32 22.22.22.126/32 22.22.22.127/32 22.22.22.128/32 22.22.22.129/32 22.22.22.130/32 22.22.22.131/32 22.22.22.132/32 22.22.22.133/32 22.22.22.134/32 22.22.22.135/32 22.22.22.136/32 22.22.22.137/32 22.22.22.138/32 22.22.22.139/32 22.22.22.140/32 22.22.22.141/32 22.22.22.142/32 22.22.22.143/32 22.22.22.144/32 22.22.22.145/32 22.22.22.146/32 22.22.22.147/32 22.22.22.148/32 22.22.22.149/32 22.22.22.150/32 22.22.22.151/32 22.22.22.152/32 22.22.22.153/32 22.22.22.154/32 22.22.22.155/32 22.22.22.156/32 22.22.22.157/32 22.22.22.158/32 22.22.22.159/32 22.22.22.160/32 22.22.22.161/32 22.22.22.162/32 22.22.22.163/32 22.22.22.164/32 22.22.22.165/32 22.22.22.166/32 22.22.22.167/32 22.22.22.168/32 22.22.22.169/32 22.22.22.170/32 22.22.22.171/32 22.22.22.172/32 22.22.22.173/32 22.22.22.174/32 22.22.22.175/32 22.22.22.176/32 22.22.22.177/32 22.22.22.178/32 22.22.22.179/32 22.22.22.180/32 22.22.22.181/32 22.22.22.182/32 22.22.22.183/32 22.22.22.184/32 22.22.22.185/32 22.22.22.186/32 22.22.22.187/32 22.22.22.188/32 22.22.22.189/32 22.22.22.190/32 22.22.22.191/32 22.22.22.192/32 22.22.22.193/32 22.22.22.194/32 22.22.22.195/32 22.22.22.196/32 22.22.22.197/32 22.22.22.198/32 22.22.22.199/32 22.22.22.200/32 22.22.22.201/32 22.22.22.202/32 22.22.22.203/32 22.22.22.204/32 22.22.22.205/32 22.22.22.206/32 22.22.22.207/32 22.22.22.208/32 22.22.22.209/32 22.22.22.210/32 22.22.22.211/32 22.22.22.212/32 22.22.22.213/32 22.22.22.214/32 22.22.22.215/32 22.22.22.216/32 22.22.22.217/32 22.22.22.218/32 22.22.22.219/32 22.22.22.220/32 22.22.22.221/32 22.22.22.222/32 22.22.22.223/32 22.22.22.224/32 22.22.22.225/32 22.22.22.226/32 22.22.22.227/32 22.22.22.228/32 22.22.22.229/32 22.22.22.230/32 22.22.22.231/32 22.22.22.232/32 22.22.22.233/32 22.22.22.234/32 22.22.22.235/32 22.22.22.236/32 22.22.22.237/32 22.22.22.238/32 22.22.22.239/32 22.22.22.240/32 22.22.22.241/32 22.22.22.242/32 22.22.22.243/32 22.22.22.244/32 22.22.22.245/32 22.22.22.246/32 22.22.22.247/32 22.22.22.248/32 22.22.22.249/32 22.22.22.250/32 22.22.22.251/32 22.22.22.252/32 22.22.22.253/32 22.22.22.254/32" ""
+ update_addresses_of_interface "eth0 192.168.1.1/24" ""
+ update_addresses_of_interface "eth1 22.22.22.22/24" ""
  update_addresses_of_interface "eth2 192.168.2.1/24 192.168.2.40/24" ""
  update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
@@ -330,8 +322,6 @@ script_body() {
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
- $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-
  # accept established sessions
  $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -341,36 +331,75 @@ script_body() {
  $IPTABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IPTABLES -A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  # drop packets that do not match any valid state and log them
- $IPTABLES -N drop_invalid
+ {{create_drop_invalid_chain}}
  $IPTABLES -A OUTPUT -m state --state INVALID -j drop_invalid
  $IPTABLES -A INPUT -m state --state INVALID -j drop_invalid
  $IPTABLES -A FORWARD -m state --state INVALID -j drop_invalid
- $IPTABLES -A drop_invalid -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 1 --ulog-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
  $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'nat', rule set NAT
+ #
+ # Rule 3 (NAT)
+ #
+ echo "Rule 3 (NAT)"
+ #
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10:25
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10:25
+ #
+ # Rule 4 (NAT)
+ #
+ echo "Rule 4 (NAT)"
+ #
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10:113
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10:113
  #
  # Rule 5 (NAT)
  #
  echo "Rule 5 (NAT)"
  #
- # firewall2-4:NAT:5: error: Non-contiguous address range in Translated Destination in load balancing NAT rule
-
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10-192.168.1.20
- $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10-192.168.1.20
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.20
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.20
  #
  # Rule 6 (NAT)
  #
  echo "Rule 6 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.10
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.20
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.10
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.10
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.10
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.10
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.20
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.20
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.20
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 192.168.1.20
+ #
+ # Rule 7 (NAT)
+ #
+ echo "Rule 7 (NAT)"
+ #
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j ACCEPT
  #
  # Rule 8 (NAT)
  #
  echo "Rule 8 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j NETMAP --to 22.22.22.0/24
+ #
+ # Rule 9 (NAT)
+ #
+ echo "Rule 9 (NAT)"
+ #
+ $IPTABLES -t nat -A POSTROUTING -s 192.168.1.0/24 -j SNAT --to-source
+ #
+ # Rule 10 (NAT)
+ #
+ echo "Rule 10 (NAT)"
+ #
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j NETMAP --to 22.22.23.128/25
  #
  # Rule 11 (NAT)
  #
@@ -389,7 +418,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_0
  $IPTABLES -A INPUT -j RULE_0
  $IPTABLES -A FORWARD -j RULE_0
- $IPTABLES -A RULE_0 -m limit --limit 5/second -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 0 - DENY **" --ulog-qthreshold 1
+ $IPTABLES -A RULE_0 -j LOG --log-level debug --log-prefix "RULE 0 - DENY **"
  $IPTABLES -A RULE_0 -j DROP
 }
 
@@ -400,6 +429,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

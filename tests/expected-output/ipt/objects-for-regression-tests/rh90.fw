@@ -33,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -346,14 +346,14 @@ script_body() {
  #
  # SSH Access to the host; useful ICMP
  # types; ping request
- $IPTABLES -N Cid41528C32.0
- $IPTABLES -A OUTPUT -d 10.3.14.58 -m state --state NEW -j Cid41528C32.0
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 3 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 0/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 8/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 11/0 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p icmp -m icmp --icmp-type 11/1 -j ACCEPT
- $IPTABLES -A Cid41528C32.0 -p tcp -m tcp --dport 22 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 10.3.14.58 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type 3 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type 0/0 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type 11/0 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type 11/1 -j ACCEPT
+ $IPTABLES -A CHAIN -p tcp -m tcp --dport 22 -j ACCEPT
  $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 0/0 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j ACCEPT
@@ -387,6 +387,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

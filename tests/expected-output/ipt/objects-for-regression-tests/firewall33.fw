@@ -12,6 +12,11 @@
 #
 # testing DNSName object
 
+# DNSName "buildmaster (ct)" cannot resolve "buildmaster": DNS lookup failed
+# DNSName "buildmaster (ct)" cannot resolve "buildmaster": DNS lookup failed
+# Rule 11 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 12 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -33,7 +38,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +113,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -314,19 +319,13 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- for i_eth0_100 in $i_eth0_100_list
- do
- test -n "$i_eth0_100" && $IPTABLES -t nat -A PREROUTING -d $i_eth0_100 -j DNAT --to-destination 192.168.1.10
- done
+ $IPTABLES -t nat -A PREROUTING -d $i_eth0_100 -j DNAT --to-destination 192.168.1.10
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d 151.101.3.5 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d 151.101.67.5 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d 151.101.131.5 -j MASQUERADE
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d 151.101.195.5 -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d 146.75.119.5 -j MASQUERADE
  #
  # Rule 2 (NAT)
  #
@@ -338,18 +337,18 @@ script_body() {
  #
  echo "Rule 3 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d www.google.com -j MASQUERADE
  $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d www.cnn.com -j MASQUERADE
+ $IPTABLES -t nat -A POSTROUTING -o eth0.100 -d www.google.com -j MASQUERADE
  #
  # Rule 4 (NAT)
  #
  echo "Rule 4 (NAT)"
  #
- $IPTABLES -t nat -N Cid43876E7B18346.0
- $IPTABLES -t nat -A POSTROUTING -o eth0.100 -j Cid43876E7B18346.0
- $IPTABLES -t nat -A Cid43876E7B18346.0 -d www.google.com -j RETURN
- $IPTABLES -t nat -A Cid43876E7B18346.0 -d www.cnn.com -j RETURN
- $IPTABLES -t nat -A Cid43876E7B18346.0 -j MASQUERADE
+ $IPTABLES -t nat -N CHAIN
+ $IPTABLES -t nat -A POSTROUTING -o eth0.100 -j CHAIN
+ $IPTABLES -t nat -A CHAIN -d www.cnn.com -j RETURN
+ $IPTABLES -t nat -A CHAIN -d www.google.com -j RETURN
+ $IPTABLES -t nat -A CHAIN -j MASQUERADE
 
  # ================ Table 'filter', rule set Policy
  #
@@ -357,14 +356,8 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A INPUT -s 151.101.3.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -s 151.101.67.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -s 151.101.131.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -s 151.101.195.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 151.101.3.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 151.101.67.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 151.101.131.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 151.101.195.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -s 146.75.119.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 146.75.119.5 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
@@ -377,8 +370,9 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A INPUT -s 172.30.15.254 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 172.30.15.254 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -m state --state NEW -j ACCEPT
  #
  # Rule 3 (global)
  #
@@ -391,115 +385,85 @@ script_body() {
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -N Cid4386E38318346.0
- $IPTABLES -A OUTPUT -j Cid4386E38318346.0
- $IPTABLES -A INPUT -j Cid4386E38318346.0
- $IPTABLES -A FORWARD -j Cid4386E38318346.0
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -j DROP
+ $IPTABLES -A OUTPUT -d ! 146.75.119.5 -j DROP
+ $IPTABLES -A INPUT -d ! 146.75.119.5 -j DROP
+ $IPTABLES -A FORWARD -d ! 146.75.119.5 -j DROP
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -N Cid4386E37718346.0
- $IPTABLES -A OUTPUT -j Cid4386E37718346.0
- $IPTABLES -A INPUT -j Cid4386E37718346.0
- $IPTABLES -A FORWARD -j Cid4386E37718346.0
- $IPTABLES -A Cid4386E37718346.0 -d www.cnn.com -j RETURN
- $IPTABLES -A Cid4386E37718346.0 -j DROP
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -j CHAIN
+ $IPTABLES -A INPUT -j CHAIN
+ $IPTABLES -A FORWARD -j CHAIN
+ $IPTABLES -A CHAIN -d www.cnn.com -j RETURN
+ $IPTABLES -A CHAIN -j DROP
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
- $IPTABLES -N Cid43867C3018346.0
- $IPTABLES -A OUTPUT -m state --state NEW -j Cid43867C3018346.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid43867C3018346.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid43867C3018346.0
- $IPTABLES -A Cid43867C3018346.0 -d 172.30.15.254 -j RETURN
- $IPTABLES -A Cid43867C3018346.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 7 (global)
  #
  echo "Rule 7 (global)"
  #
- $IPTABLES -N Cid4386C10D18346.0
- $IPTABLES -A OUTPUT -m state --state NEW -j Cid4386C10D18346.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid4386C10D18346.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid4386C10D18346.0
- $IPTABLES -A Cid4386C10D18346.0 -d buildmaster -j RETURN
- $IPTABLES -A Cid4386C10D18346.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d buildmaster -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -N Cid438728A918346.0
- $IPTABLES -A OUTPUT -m state --state NEW -j Cid438728A918346.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid438728A918346.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid438728A918346.0
- $IPTABLES -A Cid438728A918346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.99 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.103 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.104 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.105 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.106 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.147 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 142.251.150.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.151.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.152.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.153.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.154.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.155.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.156.119 -j RETURN
+ $IPTABLES -A CHAIN -d 142.251.157.119 -j RETURN
+ $IPTABLES -A CHAIN -d 146.75.119.5 -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 9 (global)
  #
  echo "Rule 9 (global)"
  #
- $IPTABLES -N Cid438728BA18346.0
- $IPTABLES -A OUTPUT -m state --state NEW -j Cid438728BA18346.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid438728BA18346.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid438728BA18346.0
- $IPTABLES -A Cid438728BA18346.0 -d www.cnn.com -j RETURN
- $IPTABLES -A Cid438728BA18346.0 -d www.google.com -j RETURN
- $IPTABLES -A Cid438728BA18346.0 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d www.cnn.com -j RETURN
+ $IPTABLES -A CHAIN -d www.google.com -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
- $IPTABLES -N Cid438728CD18346.0
- $IPTABLES -A OUTPUT -m state --state NEW -j Cid438728CD18346.0
- $IPTABLES -A INPUT -m state --state NEW -j Cid438728CD18346.0
- $IPTABLES -A FORWARD -m state --state NEW -j Cid438728CD18346.0
- $IPTABLES -A Cid438728CD18346.0 -d www.google.com -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -j ACCEPT
- #
- # Rule 11 (global)
- #
- echo "Rule 11 (global)"
- #
- # test for bug #1905718
- # Group of DNS Name objects considered empty
- $IPTABLES -A OUTPUT -d 6bone.net -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -d ny6ix.net -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 6bone.net -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d ny6ix.net -m state --state NEW -j ACCEPT
- #
- # Rule 12 (global)
- #
- echo "Rule 12 (global)"
- #
- $IPTABLES -A OUTPUT -d 157.112.176.24 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -d 207.251.84.150 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 157.112.176.24 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 207.251.84.150 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A INPUT -m state --state NEW -j CHAIN
+ $IPTABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 146.75.119.5 -j RETURN
+ $IPTABLES -A CHAIN -d www.google.com -j RETURN
+ $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 13 (global)
  #
@@ -520,6 +484,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

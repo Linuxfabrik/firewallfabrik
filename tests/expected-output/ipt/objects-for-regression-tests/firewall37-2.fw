@@ -35,7 +35,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -110,13 +110,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -326,65 +326,36 @@ script_body() {
  #
  echo "Rule classify_2 0 (global)"
  #
- $IPTABLES -N classify_2 -t mangle
- $IPTABLES -t mangle -A classify_2 -s 192.168.1.0/24 -j CLASSIFY --set-class 1:12
+ $IPTABLES -t mangle -A POSTROUTING -s 192.168.1.0/24
  # ================ Table 'mangle', rule set Policy
  #
  # Rule 0 (eth0)
  #
  echo "Rule 0 (eth0)"
  #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24
+ $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24
  #
  # Rule 1 (eth0)
  #
  echo "Rule 1 (eth0)"
  #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CLASSIFY --set-class 1:2
- #
- # Rule 2 (eth0)
- #
- echo "Rule 2 (eth0)"
- #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CLASSIFY --set-class 1:2
- #
- # Rule 3 (eth0)
- #
- echo "Rule 3 (eth0)"
- #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW
+ $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW
  #
  # Rule 4 (eth0)
  #
  echo "Rule 4 (eth0)"
  #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24 -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24
+ $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24
  #
  # Rule 5 (eth0)
  #
  echo "Rule 5 (eth0)"
  #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW -j CLASSIFY --set-class 1:2
- #
- # Rule 6 (eth0)
- #
- echo "Rule 6 (eth0)"
- #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW -j CLASSIFY --set-class 1:2
- #
- # Rule 7 (eth0)
- #
- echo "Rule 7 (eth0)"
- #
- $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24 -j MARK --set-mark 2
- $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A PREROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW
+ $IPTABLES -t mangle -A POSTROUTING -i eth0 -s ! 192.168.1.0/24 -m state --state NEW
  #
  # Rule 8 (eth0)
  #
@@ -394,12 +365,12 @@ script_body() {
  $IPTABLES -t mangle -A PREROUTING -i eth0 -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN
  #
  # Rule 9 (eth0)
  #
@@ -409,12 +380,12 @@ script_body() {
  $IPTABLES -t mangle -A PREROUTING -i eth0 -m state --state NEW -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -m state --state NEW -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN
  #
  # Rule 10 (eth0)
  #
@@ -424,12 +395,12 @@ script_body() {
  $IPTABLES -t mangle -A PREROUTING -i eth0 -m state --state NEW -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -m state --state NEW -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN
  #
  # Rule 11 (eth0)
  #
@@ -439,12 +410,12 @@ script_body() {
  $IPTABLES -t mangle -A PREROUTING -i eth0 -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -j CHAIN
  $IPTABLES -t mangle -A CHAIN -s 192.168.1.0/24 -j RETURN
  $IPTABLES -t mangle -A CHAIN -s 192.168.2.0/24 -j RETURN
- $IPTABLES -t mangle -A CHAIN -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN
  #
  # Rule 12 (eth0)
  #
@@ -452,12 +423,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j MARK --set-mark 2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j CLASSIFY --set-class 1:2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  #
  # Rule 13 (eth0)
  #
@@ -465,12 +436,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j MARK --set-mark 2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j CLASSIFY --set-class 1:2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  #
  # Rule 14 (eth0)
  #
@@ -478,12 +449,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j MARK --set-mark 2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j CLASSIFY --set-class 1:2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j CLASSIFY --set-class 1:2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  #
  # Rule 15 (eth0)
  #
@@ -491,44 +462,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A PREROUTING -i eth0 -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j MARK --set-mark 2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j MARK --set-mark 2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
  $IPTABLES -N CHAIN -t mangle
  $IPTABLES -t mangle -A POSTROUTING -i eth0 -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0 -j CLASSIFY --set-class 1:2
- $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80 -j CLASSIFY --set-class 1:2
- #
- # Rule 16 (global)
- #
- echo "Rule 16 (global)"
- #
- # test for #2405
- # branching in mangle; branch rule set
- # uses CLASSIFY that is ivalid in PREROUTING
- # "Assume fw is part of any" is off for this rule
- $IPTABLES -t mangle -A PREROUTING -j classify_2
- $IPTABLES -t mangle -A POSTROUTING -j classify_2
- $IPTABLES -t mangle -A FORWARD -j classify_2
- #
- # Rule 17 (global)
- #
- echo "Rule 17 (global)"
- #
- # test for #2405
- # branching in mangle; branch rule set
- # uses CLASSIFY that is ivalid in PREROUTING
- # "Assume fw is part of any" is off for this rule
- # Should create branch in OUTPUT instead of
- # enumerating all ip addresses of the fw in PREROUTING
- $IPTABLES -t mangle -A PREROUTING -s 22.22.23.22 -j classify_2
- $IPTABLES -t mangle -A PREROUTING -s 192.168.1.22 -j classify_2
- $IPTABLES -t mangle -A PREROUTING -s 192.168.2.1 -j classify_2
- $IPTABLES -t mangle -A POSTROUTING -s 22.22.23.22 -j classify_2
- $IPTABLES -t mangle -A POSTROUTING -s 192.168.1.22 -j classify_2
- $IPTABLES -t mangle -A POSTROUTING -s 192.168.2.1 -j classify_2
- $IPTABLES -t mangle -A FORWARD -s 22.22.23.22 -j classify_2
- $IPTABLES -t mangle -A FORWARD -s 192.168.1.22 -j classify_2
- $IPTABLES -t mangle -A FORWARD -s 192.168.2.1 -j classify_2
+ $IPTABLES -t mangle -A CHAIN -p icmp -m icmp --icmp-type 8/0
+ $IPTABLES -t mangle -A CHAIN -p tcp -m tcp --dport 80
 
  # ================ Table 'filter', rule set Policy
  #
@@ -616,8 +555,9 @@ script_body() {
  # branching in mangle; branch rule set
  # uses CLASSIFY that is ivalid in PREROUTING
  # "Assume fw is part of any" is off for this rule
- $IPTABLES -N classify_2
- $IPTABLES -A FORWARD -j classify_2
+ $IPTABLES -A OUTPUT
+ $IPTABLES -A INPUT
+ $IPTABLES -A FORWARD
  #
  # Rule 17 (global)
  #
@@ -629,7 +569,7 @@ script_body() {
  # "Assume fw is part of any" is off for this rule
  # Should create branch in OUTPUT instead of
  # enumerating all ip addresses of the fw in PREROUTING
- $IPTABLES -A OUTPUT -j classify_2
+ $IPTABLES -A INPUT -s 192.168.1.22
  #
  # Rule 18 (global)
  #
@@ -650,6 +590,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

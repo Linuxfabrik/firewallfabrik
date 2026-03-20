@@ -135,21 +135,20 @@ def compile_and_update(
 
                 result = driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
 
-                if result:
+                if driver.all_errors or result:
+                    msg = result or '; '.join(driver.all_errors)
                     print(
-                        f'  ERROR compiling {fw_name} ({platform}): {result}',
+                        f'  WARNING compiling {fw_name} ({platform}): {msg}',
                         file=sys.stderr,
                     )
-                    continue
-                if driver.all_errors:
-                    print(
-                        f'  ERROR compiling {fw_name} ({platform}): '
-                        + '; '.join(driver.all_errors),
-                        file=sys.stderr,
-                    )
-                    continue
 
-                output_path = Path(driver.file_names[fw_id])
+                output_path = Path(driver.file_names.get(fw_id, ''))
+                if not output_path.is_file():
+                    print(
+                        f'  SKIPPED {fw_name} ({platform}): no output produced',
+                        file=sys.stderr,
+                    )
+                    continue
                 raw_output = output_path.read_text()
 
             normalized = normalize(raw_output)

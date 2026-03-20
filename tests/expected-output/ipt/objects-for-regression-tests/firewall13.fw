@@ -13,18 +13,13 @@
 # Testing empty groups thing
 
 # firewall13:NAT:0: warning: Empty group or address table object 'empty Ogroup'
-# firewall13:NAT:0: warning: After removal of all empty groups and address table objects rule element OSrc becomes 'any' in the rule 0 (NAT)
-# Dropping rule 0 (NAT) because option 'Ignore rules with empty groups' is in effect
+# firewall13:NAT:0: warning: After removal of all empty groups rule element osrc becomes 'any'; dropping rule 0 (NAT) because option 'Ignore rules with empty groups' is in effect
 # firewall13:NAT:1: warning: Empty group or address table object 'empty Ogroup2'
-# firewall13:NAT:1: warning: After removal of all empty groups and address table objects rule element OSrc becomes 'any' in the rule 1 (NAT)
-# Dropping rule 1 (NAT) because option 'Ignore rules with empty groups' is in effect
-
+# firewall13:NAT:1: warning: After removal of all empty groups rule element osrc becomes 'any'; dropping rule 1 (NAT) because option 'Ignore rules with empty groups' is in effect
 # firewall13:Policy:0: warning: Empty group or address table object 'empty Ogroup2'
-# firewall13:Policy:0: warning: After removal of all empty groups and address table objects rule element Src becomes 'any' in the rule 0 (global)
-# Dropping rule 0 (global) because option 'Ignore rules with empty groups' is in effect
+# firewall13:Policy:0: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule 0 (global) because option 'Ignore rules with empty groups' is in effect
 # firewall13:Policy:1: warning: Empty group or address table object 'empty Sgroup'
-# firewall13:Policy:1: warning: After removal of all empty groups and address table objects rule element Srv becomes 'any' in the rule 1 (global)
-# Dropping rule 1 (global) because option 'Ignore rules with empty groups' is in effect
+# firewall13:Policy:1: warning: After removal of all empty groups rule element srv becomes 'any'; dropping rule 1 (global) because option 'Ignore rules with empty groups' is in effect
 
 FWBDEBUG=""
 
@@ -47,7 +42,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -122,13 +117,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -352,6 +347,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

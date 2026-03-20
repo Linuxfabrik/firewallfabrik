@@ -19,10 +19,9 @@
 # converted to dynamic but address object is still there). Compiler
 # should ignore this address object and issue a warning.
 
-# firewall20::: error: Dynamic interface ppp* should not have an IP address object attached to it. This IP address object will be ignored.
-
-# firewall20::: warning: Can not add virtual address for object address
-# firewall20::: warning: Can not add virtual address for object address
+# Rule 18 (global): Custom service 'ipv6 source route' is not configured for the platform 'iptables'
+# Rule 18 (global): Custom service 'ipv6 source route' is not configured for the platform 'iptables'
+# Rule 18 (global): Custom service 'ipv6 source route' is not configured for the platform 'iptables'
 
 FWBDEBUG=""
 
@@ -45,7 +44,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -120,13 +119,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -329,8 +328,9 @@ script_body() {
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth+ -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.23
  $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.23
  #
  # Rule 2 (NAT)
  #
@@ -348,31 +348,13 @@ script_body() {
  #
  echo "Rule 4 (NAT)"
  #
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 192.168.1.0/24 -j SNAT --to-source $addr
- done
- done
+ $IPTABLES -t nat -A POSTROUTING -o ppp+ -s 192.168.1.0/24 -j SNAT --to-source $i_ppp_
  #
  # Rule 5 (NAT)
  #
  echo "Rule 5 (NAT)"
  #
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $addr --dport 22 -j DNAT --to-destination 192.168.1.10:22
- done
- done
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_ppp_ --dport 22 -j DNAT --to-destination 192.168.1.10:22
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.2.1 --dport 22 -j DNAT --to-destination 192.168.1.10:22
  #
@@ -380,7 +362,10 @@ script_body() {
  #
  echo "Rule 6 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -s 192.168.1.0/24 -d ! 200.200.200.200 -j DNAT --to-destination 192.168.2.10
+ $IPTABLES -t nat -N CHAIN
+ $IPTABLES -t nat -A PREROUTING -s 192.168.1.0/24 -j CHAIN
+ $IPTABLES -t nat -A CHAIN -d 200.200.200.200 -j RETURN
+ $IPTABLES -t nat -A CHAIN -j DNAT --to-destination 192.168.2.10
  $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -d 192.168.2.10 -j SNAT --to-source 192.168.2.1
  #
  # Rule 7 (NAT)
@@ -388,16 +373,7 @@ script_body() {
  echo "Rule 7 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.2.1 --dport 22 -j DNAT --to-destination 192.168.1.10
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $addr --dport 22 -j DNAT --to-destination 192.168.1.10
- done
- done
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d $i_ppp_ --dport 22 -j DNAT --to-destination 192.168.1.10
 
  # ================ Table 'filter', rule set Policy
  #
@@ -418,16 +394,7 @@ script_body() {
  #
  # ppp clients can not connect to the firewall
  $IPTABLES -N In_RULE_1
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -A INPUT -i ppp+ -d $addr -j In_RULE_1
- done
- done
+ $IPTABLES -A INPUT -i ppp+ -d $i_ppp_ -j In_RULE_1
  $IPTABLES -A In_RULE_1 -j LOG
  $IPTABLES -A In_RULE_1 -j DROP
  #
@@ -487,7 +454,7 @@ script_body() {
  # hostF has the same IP address as firewal.
  $IPTABLES -N RULE_7
  $IPTABLES -A OUTPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j RULE_7
- $IPTABLES -A INPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j RULE_7
+ $IPTABLES -A FORWARD -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j RULE_7
  $IPTABLES -A RULE_7 -j LOG
  $IPTABLES -A RULE_7 -j ACCEPT
  #
@@ -495,87 +462,55 @@ script_body() {
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -N Cid3EFBC67F.0
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j Cid3EFBC67F.0
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -A Cid3EFBC67F.0 -d $addr -j ACCEPT
- done
- done
- $IPTABLES -A Cid3EFBC67F.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3EFBC67F.0 -d 192.168.2.1 -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
  #
  echo "Rule 9 (global)"
  #
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -A OUTPUT -p tcp -m tcp -d $addr --dport 22 -m state --state NEW -j ACCEPT
- done
- done
- getinterfaces ppp | while read I; do
- ivar=$(getInterfaceVarName $I)
- getaddr $I $ivar
- cmd="$"${ivar}_list
- eval "addr_list=$cmd"
- for addr in $addr_list
- do
- test -n "$addr" && $IPTABLES -A INPUT -p tcp -m tcp -d $addr --dport 22 -m state --state NEW -j ACCEPT
- done
- done
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d $i_ppp_ --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d $i_ppp_ --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
  #
  echo "Rule 11 (global)"
  #
  $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport -d 192.168.1.1 --dports 22,23 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p tcp -m tcp -m multiport -d 192.168.1.1 --dports 22,23 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p tcp -m tcp -m multiport -d 192.168.1.1 --dports 22,23 -m state --state NEW -j ACCEPT
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
- $IPTABLES -N Cid3EFBC6A8.0
- $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j Cid3EFBC6A8.0
- $IPTABLES -A Cid3EFBC6A8.0 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3EFBC6A8.0 -d 192.168.2.1 -j ACCEPT
- $IPTABLES -N Cid3EFBC6A8.1
- $IPTABLES -A INPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j Cid3EFBC6A8.1
- $IPTABLES -A Cid3EFBC6A8.1 -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A Cid3EFBC6A8.1 -d 192.168.2.1 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j ACCEPT
  #
  # Rule 13 (global)
  #
  echo "Rule 13 (global)"
  #
- $IPTABLES -N Cid3EFBC6B3.0
- $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j Cid3EFBC6B3.0
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j CHAIN
  $IPTABLES -N RULE_13
- $IPTABLES -A Cid3EFBC6B3.0 -d 192.168.1.1 -j RULE_13
- $IPTABLES -A Cid3EFBC6B3.0 -d 192.168.2.1 -j RULE_13
- $IPTABLES -N Cid3EFBC6B3.1
- $IPTABLES -A INPUT -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j Cid3EFBC6B3.1
- $IPTABLES -A Cid3EFBC6B3.1 -d 192.168.1.1 -j RULE_13
- $IPTABLES -A Cid3EFBC6B3.1 -d 192.168.2.1 -j RULE_13
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_13
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RULE_13
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -p tcp -m tcp -m multiport --dports 22,23 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_13
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RULE_13
  $IPTABLES -A RULE_13 -j LOG
  $IPTABLES -A RULE_13 -j ACCEPT
  #
@@ -613,14 +548,25 @@ script_body() {
  #
  echo "Rule 17 (global)"
  #
- $IPTABLES -N Cid3EFBC6DC.0
- $IPTABLES -A OUTPUT -d 200.200.200.200 -m state --state NEW -j Cid3EFBC6DC.0
- $IPTABLES -A Cid3EFBC6DC.0 -s 192.168.1.0/24 -j ACCEPT
- $IPTABLES -A Cid3EFBC6DC.0 -s 192.168.2.0/24 -j ACCEPT
- $IPTABLES -N Cid3EFBC6DC.1
- $IPTABLES -A FORWARD -d 200.200.200.200 -m state --state NEW -j Cid3EFBC6DC.1
- $IPTABLES -A Cid3EFBC6DC.1 -s 192.168.1.0/24 -j ACCEPT
- $IPTABLES -A Cid3EFBC6DC.1 -s 192.168.2.0/24 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -d 200.200.200.200 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.0/24 -j ACCEPT
+ $IPTABLES -A CHAIN -s 192.168.2.0/24 -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A FORWARD -d 200.200.200.200 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.0/24 -j ACCEPT
+ $IPTABLES -A CHAIN -s 192.168.2.0/24 -j ACCEPT
+ #
+ # Rule 18 (global)
+ #
+ echo "Rule 18 (global)"
+ #
+ $IPTABLES -N RULE_18
+ $IPTABLES -A OUTPUT -j RULE_18
+ $IPTABLES -A INPUT -j RULE_18
+ $IPTABLES -A FORWARD -j RULE_18
+ $IPTABLES -A RULE_18 -j LOG
+ $IPTABLES -A RULE_18 -j DROP
  #
  # Rule 19 (global)
  #
@@ -642,6 +588,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

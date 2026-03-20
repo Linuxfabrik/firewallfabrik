@@ -37,7 +37,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -112,13 +112,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -333,37 +333,11 @@ script_body() {
  $IPTABLES -A OUTPUT -o eth0 -j DROP
  $IPTABLES -A FORWARD -o eth0 -j DROP
  #
- # Rule 1 (eth0)
- #
- echo "Rule 1 (eth0)"
- #
- $IPTABLES -A INPUT -i eth0 -j DROP
- $IPTABLES -A FORWARD -i eth0 -j DROP
- #
- # Rule 2 (eth0)
- #
- echo "Rule 2 (eth0)"
- #
- $IPTABLES -A OUTPUT -o eth0 -j DROP
- $IPTABLES -A FORWARD -o eth0 -j DROP
- #
  # Rule 3 (lo)
  #
  echo "Rule 3 (lo)"
  #
  $IPTABLES -A INPUT -i lo -j DROP
- $IPTABLES -A OUTPUT -o lo -j DROP
- #
- # Rule 4 (lo)
- #
- echo "Rule 4 (lo)"
- #
- $IPTABLES -A INPUT -i lo -j DROP
- #
- # Rule 5 (lo)
- #
- echo "Rule 5 (lo)"
- #
  $IPTABLES -A OUTPUT -o lo -j DROP
  #
  # Rule 6 (global)
@@ -378,107 +352,50 @@ script_body() {
  #
  echo "Rule 7 (global)"
  #
- $IPTABLES -A INPUT -j DROP
  $IPTABLES -A FORWARD -i + -j DROP
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -A OUTPUT -j DROP
  $IPTABLES -A FORWARD -o + -j DROP
  #
  # Rule 9 (eth0)
  #
  echo "Rule 9 (eth0)"
  #
- $IPTABLES -A INPUT -i eth0 -j DROP
  $IPTABLES -A OUTPUT -o eth0 -d 33.33.33.33 -j DROP
- $IPTABLES -A OUTPUT -o eth0 -d 172.16.1.1 -j DROP
- #
- # Rule 10 (eth0)
- #
- echo "Rule 10 (eth0)"
- #
- $IPTABLES -A INPUT -i eth0 -j DROP
- #
- # Rule 11 (eth0)
- #
- echo "Rule 11 (eth0)"
- #
- $IPTABLES -A OUTPUT -o eth0 -d 33.33.33.33 -j DROP
- $IPTABLES -A OUTPUT -o eth0 -d 172.16.1.1 -j DROP
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
  $IPTABLES -A OUTPUT -d 33.33.33.33 -j DROP
- $IPTABLES -A OUTPUT -d 172.16.1.1 -j DROP
- $IPTABLES -A INPUT -j DROP
- #
- # Rule 13 (global)
- #
- echo "Rule 13 (global)"
- #
- $IPTABLES -A INPUT -j DROP
  #
  # Rule 14 (global)
  #
  echo "Rule 14 (global)"
  #
- $IPTABLES -A OUTPUT -d 33.33.33.33 -j DROP
- $IPTABLES -A OUTPUT -d 172.16.1.1 -j DROP
  $IPTABLES -A FORWARD -o + -d 33.33.33.33 -j DROP
- $IPTABLES -A FORWARD -o + -d 172.16.1.1 -j DROP
  #
  # Rule 15 (eth0)
  #
  echo "Rule 15 (eth0)"
  #
  $IPTABLES -A INPUT -i eth0 -s 33.33.33.33 -j DROP
- $IPTABLES -A INPUT -i eth0 -s 172.16.1.1 -j DROP
  $IPTABLES -A FORWARD -i eth0 -s 33.33.33.33 -j DROP
- $IPTABLES -A FORWARD -i eth0 -s 172.16.1.1 -j DROP
- $IPTABLES -A OUTPUT -o eth0 -j DROP
- #
- # Rule 16 (eth0)
- #
- echo "Rule 16 (eth0)"
- #
- $IPTABLES -A INPUT -i eth0 -s 33.33.33.33 -j DROP
- $IPTABLES -A INPUT -i eth0 -s 172.16.1.1 -j DROP
- $IPTABLES -A FORWARD -i eth0 -s 33.33.33.33 -j DROP
- $IPTABLES -A FORWARD -i eth0 -s 172.16.1.1 -j DROP
- #
- # Rule 17 (eth0)
- #
- echo "Rule 17 (eth0)"
- #
- $IPTABLES -A OUTPUT -o eth0 -j DROP
  #
  # Rule 18 (global)
  #
  echo "Rule 18 (global)"
  #
  $IPTABLES -A INPUT -s 33.33.33.33 -j DROP
- $IPTABLES -A INPUT -s 172.16.1.1 -j DROP
- $IPTABLES -A OUTPUT -j DROP
  #
  # Rule 19 (global)
  #
  echo "Rule 19 (global)"
  #
- $IPTABLES -A INPUT -s 33.33.33.33 -j DROP
- $IPTABLES -A INPUT -s 172.16.1.1 -j DROP
  $IPTABLES -A FORWARD -i + -s 33.33.33.33 -j DROP
- $IPTABLES -A FORWARD -i + -s 172.16.1.1 -j DROP
- #
- # Rule 20 (global)
- #
- echo "Rule 20 (global)"
- #
- $IPTABLES -A OUTPUT -j DROP
 }
 
 ip_forward() {
@@ -488,6 +405,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

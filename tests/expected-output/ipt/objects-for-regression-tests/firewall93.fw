@@ -33,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -322,7 +322,7 @@ configure_interfaces() {
  getaddr6 ppp-dsl i_ppp_dsl_v6
  getnet ppp-dsl i_ppp_dsl_network
  getnet6 ppp-dsl i_ppp_dsl_v6_network
- update_addresses_of_interface "eth0 fe80::20c:29ff:fe28:c078/64 192.0.2.1/24" ""
+ update_addresses_of_interface "eth0 192.0.2.1/24 fe80::20c:29ff:fe28:c078/64" ""
 }
 
 script_body() {
@@ -340,49 +340,23 @@ script_body() {
  #
  echo "Rule 0 (ppp0)"
  #
- for i_ppp_dsl in $i_ppp_dsl_list
- do
- test -n "$i_ppp_dsl" && $IPTABLES -A INPUT -i ppp0 -s $i_ppp_dsl -m state --state NEW -j ACCEPT
- done
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A INPUT -i ppp0 -s $i_ppp0 -m state --state NEW -j ACCEPT
- done
  $IPTABLES -A INPUT -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
- for i_ppp_dsl in $i_ppp_dsl_list
- do
- test -n "$i_ppp_dsl" && $IPTABLES -A FORWARD -i ppp0 -s $i_ppp_dsl -m state --state NEW -j ACCEPT
- done
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A FORWARD -i ppp0 -s $i_ppp0 -m state --state NEW -j ACCEPT
- done
  $IPTABLES -A FORWARD -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (ppp-dsl)
  #
  echo "Rule 1 (ppp-dsl)"
  #
- for i_ppp_dsl in $i_ppp_dsl_list
- do
- test -n "$i_ppp_dsl" && $IPTABLES -A INPUT -i ppp-dsl -s $i_ppp_dsl -m state --state NEW -j ACCEPT
- done
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A INPUT -i ppp-dsl -s $i_ppp0 -m state --state NEW -j ACCEPT
- done
  $IPTABLES -A INPUT -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
- for i_ppp_dsl in $i_ppp_dsl_list
- do
- test -n "$i_ppp_dsl" && $IPTABLES -A FORWARD -i ppp-dsl -s $i_ppp_dsl -m state --state NEW -j ACCEPT
- done
- for i_ppp0 in $i_ppp0_list
- do
- test -n "$i_ppp0" && $IPTABLES -A FORWARD -i ppp-dsl -s $i_ppp0 -m state --state NEW -j ACCEPT
- done
  $IPTABLES -A FORWARD -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
 
  # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
  # ================ Table 'filter', rule set Policy_v6
  #
@@ -390,30 +364,30 @@ script_body() {
  #
  echo "Rule Policy_v6 0 (ppp-dsl)"
  #
- $IP6TABLES -N Policy_v6
- for i_ppp_dsl_v6 in $i_ppp_dsl_v6_list
- do
- test -n "$i_ppp_dsl_v6" && $IP6TABLES -A Policy_v6 -i ppp-dsl -s $i_ppp_dsl_v6 -m state --state NEW -j ACCEPT
- done
- for i_ppp0_v6 in $i_ppp0_v6_list
- do
- test -n "$i_ppp0_v6" && $IP6TABLES -A Policy_v6 -i ppp-dsl -s $i_ppp0_v6 -m state --state NEW -j ACCEPT
- done
- $IP6TABLES -A Policy_v6 -i ppp-dsl -s fe80::20c:29ff:fe28:c078 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_v6 1 (ppp0)
  #
  echo "Rule Policy_v6 1 (ppp0)"
  #
- for i_ppp_dsl_v6 in $i_ppp_dsl_v6_list
- do
- test -n "$i_ppp_dsl_v6" && $IP6TABLES -A Policy_v6 -i ppp0 -s $i_ppp_dsl_v6 -m state --state NEW -j ACCEPT
- done
- for i_ppp0_v6 in $i_ppp0_v6_list
- do
- test -n "$i_ppp0_v6" && $IP6TABLES -A Policy_v6 -i ppp0 -s $i_ppp0_v6 -m state --state NEW -j ACCEPT
- done
- $IP6TABLES -A Policy_v6 -i ppp0 -s fe80::20c:29ff:fe28:c078 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (ppp0)
+ #
+ echo "Rule 0 (ppp0)"
+ #
+ $IP6TABLES -A INPUT -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -i ppp0 -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (ppp-dsl)
+ #
+ echo "Rule 1 (ppp-dsl)"
+ #
+ $IP6TABLES -A INPUT -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -i ppp-dsl -s 192.0.2.1 -m state --state NEW -j ACCEPT
 }
 
 ip_forward() {
@@ -423,6 +397,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
  reset_iptables_v6
 }

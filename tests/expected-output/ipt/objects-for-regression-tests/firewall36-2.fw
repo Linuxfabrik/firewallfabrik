@@ -33,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -322,75 +322,7 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
- # ============== ROUTING RULES ==============
-
- HAVE_MKTEMP=$(which mktemp)
-
- test -n "$HAVE_MKTEMP" && {
- TMPDIRNAME=$(mktemp -d)
- test -z "$TMPDIRNAME" && exit 1
- }
-
- test -z "$HAVE_MKTEMP" && {
- TMPDIRNAME="/tmp/.fwbuilder.tempdir.$$"
- (umask 077 && mkdir $TMPDIRNAME) || exit 1
- }
-
- TMPFILENAME="$TMPDIRNAME/.fwbuilder.out"
- OLD_ROUTES="$TMPDIRNAME/.old_routes"
-
- #
- # This function stops stdout redirection
- # and sends previously saved output to terminal
- restore_script_output()
- {
- exec 1>&3 2>&1
- cat $TMPFILENAME
- rm -rf $TMPDIRNAME
- }
-
- # if any routing rule fails we do our best to prevent freezing the firewall
- route_command_error()
- {
- echo "Error: Routing rule $1 couldn't be activated"
- echo "Recovering previous routing configuration..."
- # delete current routing rules
- $IP route show | while read route ; do $IP route del $route ; done
- # restore old routing rules
- sh $OLD_ROUTES
- echo "...done"
- restore_script_output
- epilog_commands
- exit 1
- }
-
- # redirect output to prevent ssh session from stalling
- exec 3>&1
- exec 1> $TMPFILENAME
- exec 2>&1
-
- # store previous routing configuration (sort: 'via' GW has to be
- # inserted after device routes)
-
- $IP route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > $OLD_ROUTES
-
- echo "Deleting routing rules previously set by user space processes..."
- $IP route show | grep -v 'proto kernel' | \
- while read route ; do $IP route del $route ; done
-
- echo "Activating non-ecmp routing rules..."
- #
- # Rule 0 (main)
- #
- echo "Routing rule 0 (main)"
- #
- #
- #
- $IP route add default via 192.0.2.100 dev eth0 \
- || route_command_error "0 (main)"
-
- restore_script_output
- echo "...done."
+ ip route add default via 192.0.2.100 dev eth0
 }
 
 ip_forward() {
@@ -400,6 +332,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

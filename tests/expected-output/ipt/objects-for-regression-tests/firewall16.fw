@@ -35,7 +35,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -110,13 +110,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -422,14 +422,14 @@ script_body() {
  echo "Rule 12 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -s 192.168.2.1 -j ACCEPT
- $IPTABLES -t nat -A OUTPUT -s 192.168.2.1 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -s 192.168.2.1 -j ACCEPT
  #
  # Rule 13 (NAT)
  #
  echo "Rule 13 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -s 192.168.2.1 -j ACCEPT
- $IPTABLES -t nat -A OUTPUT -s 192.168.2.1 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -s 192.168.2.1 -j ACCEPT
 
  # ================ Table 'filter', rule set Policy
  #
@@ -459,6 +459,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

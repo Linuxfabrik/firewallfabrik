@@ -12,16 +12,6 @@
 #
 # This firewall has no "top" rule set objects.
 
-# firewall81::: warning: Missing top level NAT ruleset
-# firewall81::: warning: Missing top level Policy ruleset
-
-# firewall81:NAT_2:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
-# firewall81:NAT_2:0: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
-# firewall81:NAT_2:1: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
-
-# firewall81:Policy:: warning: Log prefix has been truncated to 29 characters
-# firewall81:Policy:: warning: Log prefix has been truncated to 29 characters
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -43,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -118,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -309,6 +299,22 @@ script_body() {
 
  # ================ IPv4
 
+ # ================ Table 'nat', rule set NAT_1
+ #
+ # Rule NAT_1 0 (NAT)
+ #
+ echo "Rule NAT_1 0 (NAT)"
+ #
+ # DNAT Rule
+ $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
+ #
+ # Rule NAT_1 1 (NAT)
+ #
+ echo "Rule NAT_1 1 (NAT)"
+ #
+ # SNAT rule
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
+
  # ================ Table 'nat', rule set NAT_2
  #
  # Rule NAT_2 0 (NAT)
@@ -317,57 +323,15 @@ script_body() {
  #
  # Branch rule with actual translation.
  # Translation is ignored and warning should be issued
- # firewall81:NAT_2:0: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
- # firewall81:NAT_2:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
-
- $IPTABLES -t nat -N NAT_2_PREROUTING
- $IPTABLES -t nat -N NAT_1_PREROUTING
- $IPTABLES -t nat -A NAT_2_PREROUTING -d 192.0.2.1 -j NAT_1_PREROUTING
- $IPTABLES -t nat -N NAT_2_POSTROUTING
- $IPTABLES -t nat -N NAT_1_POSTROUTING
- $IPTABLES -t nat -A NAT_2_POSTROUTING -d 192.0.2.1 -j NAT_1_POSTROUTING
+ $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule NAT_2 1 (NAT)
  #
  echo "Rule NAT_2 1 (NAT)"
  #
  # DNAT Rule
- # firewall81:NAT_2:1: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
-
- $IPTABLES -t nat -A NAT_2_PREROUTING -j NAT_1_PREROUTING
- $IPTABLES -t nat -A NAT_2_POSTROUTING -j NAT_1_POSTROUTING
-
- # ================ Table 'nat', rule set NAT_1
- #
- # Rule NAT_1 0 (NAT)
- #
- echo "Rule NAT_1 0 (NAT)"
- #
- # DNAT Rule
- $IPTABLES -t nat -A NAT_1_PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
- #
- # Rule NAT_1 1 (NAT)
- #
- echo "Rule NAT_1 1 (NAT)"
- #
- # SNAT rule
- $IPTABLES -t nat -A NAT_1_POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
-
- # ================ Table 'nat', rule set NAT_1
- #
- # Rule NAT_1 0 (NAT)
- #
- echo "Rule NAT_1 0 (NAT)"
- #
- # DNAT Rule
- $IPTABLES -t nat -A NAT_1_PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
- #
- # Rule NAT_1 1 (NAT)
- #
- echo "Rule NAT_1 1 (NAT)"
- #
- # SNAT rule
- $IPTABLES -t nat -A NAT_1_POSTROUTING -o eth+ -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
+ $IPTABLES -t nat -A POSTROUTING -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -j ACCEPT
 
  # ================ Table 'filter', rule set Policy
  #
@@ -375,9 +339,10 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N Policy
  $IPTABLES -N RULE_0
- $IPTABLES -A Policy -j RULE_0
+ $IPTABLES -A OUTPUT -j RULE_0
+ $IPTABLES -A INPUT -j RULE_0
+ $IPTABLES -A FORWARD -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level debug --log-prefix "RULE 0 -- DENY on interface g"
  $IPTABLES -A RULE_0 -j DROP
 }
@@ -389,6 +354,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

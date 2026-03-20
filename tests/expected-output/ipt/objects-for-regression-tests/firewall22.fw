@@ -33,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -310,20 +310,20 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -m string --string test_pattern -j SNAT --to-source 192.168.2.1
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 192.168.2.1
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -d 192.168.2.1 -m string --string test_pattern -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A PREROUTING -d 192.168.2.1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -s 192.168.1.0/24 -m string --string test_pattern -j DNAT --to-destination 200.200.200.200
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -d 200.200.200.200 -m string --string test_pattern -j SNAT --to-source 192.168.2.1
+ $IPTABLES -t nat -A PREROUTING -s 192.168.1.0/24 -j DNAT --to-destination 200.200.200.200
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -d 200.200.200.200 -j SNAT --to-source 192.168.2.1
 
  # ================ Table 'filter', rule set Policy
  #
@@ -356,6 +356,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

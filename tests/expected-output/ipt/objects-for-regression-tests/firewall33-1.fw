@@ -11,11 +11,6 @@
 # Compiled for iptables (any version)
 #
 
-# firewall33-1:Policy:2: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
-# firewall33-1:Policy:6: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
-# firewall33-1:Policy:2: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
-# firewall33-1:Policy:6: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -37,7 +32,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -112,13 +107,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -330,145 +325,11 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N Policy
- $IPTABLES -A Policy -s 151.101.3.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.67.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.131.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.195.5 -m state --state NEW -j ACCEPT
- #
- # Rule 1 (global)
- #
- echo "Rule 1 (global)"
- #
- $IPTABLES -A Policy -s www.cnn.com -m state --state NEW -j ACCEPT
- #
- # Rule 2 (global)
- #
- echo "Rule 2 (global)"
- #
- $IPTABLES -A Policy -s 172.30.15.254 -m state --state NEW -j ACCEPT
- #
- # Rule 3 (global)
- #
- echo "Rule 3 (global)"
- #
- $IPTABLES -A Policy -s buildmaster -m state --state NEW -j ACCEPT
- #
- # Rule 4 (global)
- #
- echo "Rule 4 (global)"
- #
- $IPTABLES -N Cid4386E38318346.0
- $IPTABLES -A Policy -j Cid4386E38318346.0
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -j DROP
- #
- # Rule 5 (global)
- #
- echo "Rule 5 (global)"
- #
- $IPTABLES -N Cid4386E37718346.0
- $IPTABLES -A Policy -j Cid4386E37718346.0
- $IPTABLES -A Cid4386E37718346.0 -d www.cnn.com -j RETURN
- $IPTABLES -A Cid4386E37718346.0 -j DROP
- #
- # Rule 6 (global)
- #
- echo "Rule 6 (global)"
- #
- $IPTABLES -N Cid43867C3018346.0
- $IPTABLES -A Policy -m state --state NEW -j Cid43867C3018346.0
- $IPTABLES -A Cid43867C3018346.0 -d 172.30.15.254 -j RETURN
- $IPTABLES -A Cid43867C3018346.0 -j ACCEPT
- #
- # Rule 7 (global)
- #
- echo "Rule 7 (global)"
- #
- $IPTABLES -N Cid4386C10D18346.0
- $IPTABLES -A Policy -m state --state NEW -j Cid4386C10D18346.0
- $IPTABLES -A Cid4386C10D18346.0 -d buildmaster -j RETURN
- $IPTABLES -A Cid4386C10D18346.0 -j ACCEPT
- #
- # Rule 8 (global)
- #
- echo "Rule 8 (global)"
- #
- $IPTABLES -N Cid438728A918346.0
- $IPTABLES -A Policy -m state --state NEW -j Cid438728A918346.0
- $IPTABLES -A Cid438728A918346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.99 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.103 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.104 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.105 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.106 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.147 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -j ACCEPT
- #
- # Rule 9 (global)
- #
- echo "Rule 9 (global)"
- #
- $IPTABLES -N Cid438728BA18346.0
- $IPTABLES -A Policy -m state --state NEW -j Cid438728BA18346.0
- $IPTABLES -A Cid438728BA18346.0 -d www.cnn.com -j RETURN
- $IPTABLES -A Cid438728BA18346.0 -d www.google.com -j RETURN
- $IPTABLES -A Cid438728BA18346.0 -j ACCEPT
- #
- # Rule 10 (global)
- #
- echo "Rule 10 (global)"
- #
- $IPTABLES -N Cid438728CD18346.0
- $IPTABLES -A Policy -m state --state NEW -j Cid438728CD18346.0
- $IPTABLES -A Cid438728CD18346.0 -d www.google.com -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -j ACCEPT
- #
- # Rule 11 (global)
- #
- echo "Rule 11 (global)"
- #
- # test for bug #1905718
- # Group of DNS Name objects considered empty
- $IPTABLES -A Policy -d 6bone.net -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -d ny6ix.net -m state --state NEW -j ACCEPT
- #
- # Rule 12 (global)
- #
- echo "Rule 12 (global)"
- #
- $IPTABLES -A Policy -d 157.112.176.24 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -d 207.251.84.150 -m state --state NEW -j ACCEPT
- #
- # Rule 13 (global)
- #
- echo "Rule 13 (global)"
- #
- $IPTABLES -N RULE_13
- $IPTABLES -A Policy -j RULE_13
- $IPTABLES -A RULE_13 -j LOG --log-level info --log-prefix "RULE 13 -- DENY "
- $IPTABLES -A RULE_13 -j DROP
- # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- #
- echo "Rule 0 (global)"
- #
  # branches to firewall33:Policy which uses DNSName objects
  # testing for bug 1485
- $IPTABLES -A OUTPUT -j Policy
- $IPTABLES -A INPUT -j Policy
- $IPTABLES -A FORWARD -j Policy
+ $IPTABLES -A OUTPUT
+ $IPTABLES -A INPUT
+ $IPTABLES -A FORWARD
 }
 
 ip_forward() {
@@ -478,6 +339,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

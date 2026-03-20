@@ -12,6 +12,9 @@
 #
 # more complex and realistic combination of Tag and Route rules
 
+# Rule 3 (global): Option Route is deprecated. You can use Custom Action to generate iptables command using '-j ROUTE' target if it is supported by your firewall OS
+# Rule 4 (global): Option Route is deprecated. You can use Custom Action to generate iptables command using '-j ROUTE' target if it is supported by your firewall OS
+
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -33,7 +36,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +111,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -322,6 +325,7 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
+ $IPTABLES -t mangle -A PREROUTING -j CONNMARK --restore-mark
  $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'nat', rule set NAT
@@ -340,39 +344,24 @@ script_body() {
  #
  echo "Rule 0 (eth0)"
  #
- $IPTABLES -t mangle -A INPUT -i eth0 -m state --state NEW
  $IPTABLES -t mangle -A PREROUTING -i eth0 -m state --state NEW
+ $IPTABLES -t mangle -A PREROUTING -i eth0 -m state --state NEW -j CONNMARK
  #
  # Rule 1 (eth2)
  #
  echo "Rule 1 (eth2)"
  #
- $IPTABLES -t mangle -A INPUT -i eth2 -m state --state NEW
  $IPTABLES -t mangle -A PREROUTING -i eth2 -m state --state NEW
- #
- # Rule 3 (global)
- #
- echo "Rule 3 (global)"
- #
- $IPTABLES -t mangle -A OUTPUT
- $IPTABLES -t mangle -A INPUT
- $IPTABLES -t mangle -A FORWARD
+ $IPTABLES -t mangle -A PREROUTING -i eth2 -m state --state NEW -j CONNMARK
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
  $IPTABLES -N CHAIN -t mangle
- $IPTABLES -t mangle -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -N RULE_6 -t mangle
- $IPTABLES -t mangle -A CHAIN -d 22.22.22.0/24 -j RULE_6
- $IPTABLES -t mangle -A CHAIN -d 33.33.33.0/24 -j RULE_6
- $IPTABLES -N CHAIN -t mangle
- $IPTABLES -t mangle -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -t mangle -A CHAIN -d 22.22.22.0/24 -j RULE_6
- $IPTABLES -t mangle -A CHAIN -d 33.33.33.0/24 -j RULE_6
- $IPTABLES -t mangle -A RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
- $IPTABLES -t mangle -A RULE_6
+ $IPTABLES -t mangle -A PREROUTING -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -t mangle -A CHAIN -d 22.22.22.0/24
+ $IPTABLES -t mangle -A CHAIN -d 33.33.33.0/24
 
  # ================ Table 'filter', rule set Policy
  #
@@ -403,15 +392,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -N RULE_6
- $IPTABLES -A CHAIN -d 22.22.22.0/24 -j RULE_6
- $IPTABLES -A CHAIN -d 33.33.33.0/24 -j RULE_6
+ $IPTABLES -A CHAIN -d 22.22.22.0/24 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
+ $IPTABLES -A CHAIN -d 33.33.33.0/24 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
  $IPTABLES -N CHAIN
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 22.22.22.0/24 -j RULE_6
- $IPTABLES -A CHAIN -d 33.33.33.0/24 -j RULE_6
- $IPTABLES -A RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
- $IPTABLES -A RULE_6
+ $IPTABLES -A CHAIN -d 22.22.22.0/24 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
+ $IPTABLES -A CHAIN -d 33.33.33.0/24 -j LOG --log-level info --log-prefix "RULE 6 -- CONTINUE "
 }
 
 ip_forward() {
@@ -421,6 +407,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

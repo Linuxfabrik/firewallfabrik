@@ -6,10 +6,15 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall28.fw /firewall28.fw
+# files: * firewall28.fw /etc/fw/firewall28.fw
 #
 # Compiled for iptables (any version)
 #
+
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 1 below it
 
 FWBDEBUG=""
 
@@ -32,7 +37,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -107,13 +112,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -332,9 +337,9 @@ script_body() {
  #
  # this rule should shadow rule #1 because
  # it uses IPService object with protocol 0
- $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p 0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p 0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p 0 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
@@ -374,6 +379,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

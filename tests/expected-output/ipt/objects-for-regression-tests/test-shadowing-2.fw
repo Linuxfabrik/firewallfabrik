@@ -14,11 +14,10 @@
 # compiler runs with -xt flag
 # firewall is NOT assumed to be part of any
 
-# test-shadowing-2:Policy:0: error: Rule '0 (eth0)' shadows rule '1 (eth0)' below it
-# test-shadowing-2:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-# test-shadowing-2:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-# test-shadowing-2:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-# test-shadowing-2:Policy:4: error: Rule '4 (global)' shadows rule '5 (global)' below it
+# Rule 2 shadows Rule 3 below it
+# Rule 4 shadows Rule 5 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 4 shadows Rule 5 below it
 
 FWBDEBUG=""
 
@@ -41,7 +40,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -116,13 +115,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -336,8 +335,7 @@ script_body() {
  echo "Rule 0 (eth0)"
  #
  # shades rule below
- # test-shadowing-2:Policy:0: error: Rule '0 (eth0)' shadows rule '1 (eth0)' below it
-
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (eth0)
@@ -352,8 +350,6 @@ script_body() {
  #
  # firewall is part
  # of any for this rule
- # test-shadowing-2:Policy:2: error: Rule '2 (global)' shadows rule '3 (global)' below it
-
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j ACCEPT
@@ -370,14 +366,13 @@ script_body() {
  #
  # this rule should shadow rule below it because
  # it uses IPService object with protocol 0
- # test-shadowing-2:Policy:4: error: Rule '4 (global)' shadows rule '5 (global)' below it
-
- $IPTABLES -A FORWARD -p all -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p 0 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
+ $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 6667 -j DROP
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 6667 -j DROP
  #
  # Rule 6 (global)
@@ -397,6 +392,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

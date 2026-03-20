@@ -33,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -108,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -320,7 +320,7 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
- $IPTABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'filter', rule set Policy
  #
@@ -328,25 +328,25 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A OUTPUT -p all -m tos --tos 0x20 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p all -m tos --tos 0x20 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p all -m tos --tos 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p 0 -m tos --tos 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p 0 -m tos --tos 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p 0 -m tos --tos 0x20 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -A OUTPUT -p all -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p all -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p all -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p 0 -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p 0 -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p 0 -m dscp --dscp 0x20 -m state --state NEW -j ACCEPT
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A OUTPUT -p all -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p all -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p all -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p 0 -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p 0 -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p 0 -m dscp --dscp-class BE -m state --state NEW -j ACCEPT
 }
 
 ip_forward() {
@@ -356,6 +356,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

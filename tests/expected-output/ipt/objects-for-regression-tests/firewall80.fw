@@ -12,8 +12,6 @@
 #
 # Branch rules in NAT
 
-# firewall80:NAT:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -35,7 +33,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -110,13 +108,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $IP
 }
@@ -314,8 +312,7 @@ script_body() {
  echo "Rule NAT_1 0 (NAT)"
  #
  # DNAT Rule
- $IPTABLES -t nat -N NAT_1_PREROUTING
- $IPTABLES -t nat -A NAT_1_PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule NAT_1 1 (NAT)
@@ -323,8 +320,7 @@ script_body() {
  echo "Rule NAT_1 1 (NAT)"
  #
  # SNAT rule
- $IPTABLES -t nat -N NAT_1_POSTROUTING
- $IPTABLES -t nat -A NAT_1_POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
 
  # ================ Table 'nat', rule set NAT
  #
@@ -333,34 +329,33 @@ script_body() {
  echo "Rule 0 (NAT)"
  #
  # Branch rule with actual translation. Translation is ignored and warning should be issued
- # firewall80:NAT:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
-
- $IPTABLES -t nat -A POSTROUTING -d 192.0.2.1 -j NAT_1_POSTROUTING
- $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j NAT_1_PREROUTING
+ $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A OUTPUT -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
  # DNAT Rule
- $IPTABLES -t nat -A POSTROUTING -j NAT_1_POSTROUTING
- $IPTABLES -t nat -A PREROUTING -j NAT_1_PREROUTING
+ $IPTABLES -t nat -A POSTROUTING -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -j ACCEPT
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
  # for #1686
- $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j NAT_1_POSTROUTING
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j NAT_1_PREROUTING
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j ACCEPT
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j ACCEPT
  #
  # Rule 3 (NAT)
  #
  echo "Rule 3 (NAT)"
  #
  # for #1686
- $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j NAT_1_POSTROUTING
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j NAT_1_PREROUTING
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.0.2.1 --dport 10000:11000 -j ACCEPT
+ $IPTABLES -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.100 --dport 10000:11000 -j ACCEPT
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 10000:11000 -j ACCEPT
 }
 
 ip_forward() {
@@ -370,6 +365,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 

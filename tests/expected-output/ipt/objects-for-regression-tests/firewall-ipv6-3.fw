@@ -12,10 +12,30 @@
 #
 # Simple policy that makes sense in ipv4 but translates into a few wide-matching rules in ipv6. Policy is configured as dual address family
 
-# firewall-ipv6-3:fw-ipv6-3:2: error: Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
-# firewall-ipv6-3:fw-ipv6-3:4: error: Rule 'fw-ipv6-3 4 (global)' shadows rule 'fw-ipv6-3 6 (global)' below it
-
-# firewall-ipv6-3:fw-ipv6-3:2: error: Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 2 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 0 shadows Rule 3 below it
+# Rule 2 shadows Rule 3 below it
+# Rule fw-ipv6-3 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 2 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 0 shadows Rule 3 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 2 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 0 shadows Rule 3 below it
+# Rule 2 shadows Rule 3 below it
+# Rule fw-ipv6-3 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 0 shadows Rule 1 below it
+# Rule 0 shadows Rule 2 below it
+# Rule 2 shadows Rule 3 below it
+# Rule 0 shadows Rule 3 below it
+# Rule 2 shadows Rule 3 below it
 
 FWBDEBUG=""
 
@@ -38,7 +58,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -113,13 +133,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -319,11 +339,14 @@ configure_interfaces() {
  # available starting from Linux 2.6.16
  test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
  echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
- update_addresses_of_interface "eth0 fe80::21d:9ff:fe8b:8e94/64 1.1.1.1/24" ""
+ update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
  update_addresses_of_interface "eth1 22.22.22.22/24" ""
 }
 
 script_body() {
+ echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
+ echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -332,11 +355,11 @@ script_body() {
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- $IPTABLES -N drop_invalid
+ {{create_drop_invalid_chain}}
  $IPTABLES -A OUTPUT -m state --state INVALID -j drop_invalid
  $IPTABLES -A INPUT -m state --state INVALID -j drop_invalid
  $IPTABLES -A FORWARD -m state --state INVALID -j drop_invalid
- $IPTABLES -A drop_invalid -j ULOG --ulog-nlgroup 1 --ulog-qthreshold 1 --ulog-prefix "INVALID state -- DENY "
+ $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
  $IPTABLES -A drop_invalid -j DROP
 
  # ================ Table 'nat', rule set NAT
@@ -355,7 +378,7 @@ script_body() {
  #
  $IPTABLES -N In_fw-ipv6-3_0
  $IPTABLES -A INPUT -m state --state NEW -j In_fw-ipv6-3_0
- $IPTABLES -A In_fw-ipv6-3_0 -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 0 -- ACCEPT " --ulog-qthreshold 1
+ $IPTABLES -A In_fw-ipv6-3_0 -j LOG --log-level info --log-prefix "RULE 0 -- ACCEPT "
  $IPTABLES -A In_fw-ipv6-3_0 -j ACCEPT
  #
  # Rule fw-ipv6-3 1 (global)
@@ -369,11 +392,9 @@ script_body() {
  #
  echo "Rule fw-ipv6-3 2 (global)"
  #
- # firewall-ipv6-3:fw-ipv6-3:2: error: Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
-
- $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p icmp -m icmp -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p icmp -m icmp -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p icmp -m icmp -m state --state NEW -j ACCEPT
  #
  # Rule fw-ipv6-3 3 (global)
  #
@@ -388,8 +409,6 @@ script_body() {
  echo "Rule fw-ipv6-3 4 (global)"
  #
  # INPUT, OUTPUT, FORWARD
- # firewall-ipv6-3:fw-ipv6-3:4: error: Rule 'fw-ipv6-3 4 (global)' shadows rule 'fw-ipv6-3 6 (global)' below it
-
  $IPTABLES -A INPUT -s 1.1.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -s 1.1.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -s 1.1.1.0/24 -m state --state NEW -j ACCEPT
@@ -410,52 +429,15 @@ script_body() {
  # for bug 2047082
  $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
  #
- # Rule fw-ipv6-3 7 (global)
- #
- echo "Rule fw-ipv6-3 7 (global)"
- #
- $IPTABLES -A OUTPUT -d 6bone.net -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -d ny6ix.net -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 6bone.net -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d ny6ix.net -m state --state NEW -j ACCEPT
- #
- # Rule fw-ipv6-3 8 (global)
- #
- echo "Rule fw-ipv6-3 8 (global)"
- #
- $IPTABLES -N fw-ipv6-3_8
- $IPTABLES -A OUTPUT -d 157.112.176.24 -j fw-ipv6-3_8
- $IPTABLES -A OUTPUT -d 207.251.84.150 -j fw-ipv6-3_8
- $IPTABLES -A FORWARD -d 157.112.176.24 -j fw-ipv6-3_8
- $IPTABLES -A FORWARD -d 207.251.84.150 -j fw-ipv6-3_8
- $IPTABLES -A fw-ipv6-3_8 -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 8 -- DENY " --ulog-qthreshold 1
- $IPTABLES -A fw-ipv6-3_8 -j DROP
- #
  # Rule fw-ipv6-3 9 (global)
  #
  echo "Rule fw-ipv6-3 9 (global)"
  #
  # ipv4 address range for bug 2820152
  $IPTABLES -N fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.1 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.2/31 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.4/30 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.8/29 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.16/28 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.32/27 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.64/27 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.96/30 -j fw-ipv6-3_9
- $IPTABLES -A OUTPUT -d 192.168.1.100 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.1 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.2/31 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.4/30 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.8/29 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.16/28 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.32/27 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.64/27 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.96/30 -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -d 192.168.1.100 -j fw-ipv6-3_9
- $IPTABLES -A fw-ipv6-3_9 -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 9 -- DENY " --ulog-qthreshold 1
+ $IPTABLES -A OUTPUT -j fw-ipv6-3_9
+ $IPTABLES -A FORWARD -j fw-ipv6-3_9
+ $IPTABLES -A fw-ipv6-3_9 -j LOG --log-level info --log-prefix "RULE 9 -- DENY "
  $IPTABLES -A fw-ipv6-3_9 -j DROP
  #
  # Rule fw-ipv6-3 10 (global)
@@ -464,9 +446,9 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IPTABLES -N fw-ipv6-3_10
- $IPTABLES -A OUTPUT -d 255.255.255.255 -j fw-ipv6-3_10
- $IPTABLES -A INPUT -d 255.255.255.255 -j fw-ipv6-3_10
- $IPTABLES -A fw-ipv6-3_10 -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 10 -- DENY " --ulog-qthreshold 1
+ $IPTABLES -A OUTPUT -j fw-ipv6-3_10
+ $IPTABLES -A FORWARD -j fw-ipv6-3_10
+ $IPTABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
  $IPTABLES -A fw-ipv6-3_10 -j DROP
  #
  # Rule fw-ipv6-3 11 (global)
@@ -477,7 +459,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j fw-ipv6-3_11
  $IPTABLES -A INPUT -j fw-ipv6-3_11
  $IPTABLES -A FORWARD -j fw-ipv6-3_11
- $IPTABLES -A fw-ipv6-3_11 -j ULOG --ulog-nlgroup 1 --ulog-prefix "RULE 11 -- DENY " --ulog-qthreshold 1
+ $IPTABLES -A fw-ipv6-3_11 -j LOG --log-level info --log-prefix "RULE 11 -- DENY "
  $IPTABLES -A fw-ipv6-3_11 -j DROP
 
  # ================ IPv6
@@ -488,11 +470,11 @@ script_body() {
  $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- $IP6TABLES -N drop_invalid
+ {{create_drop_invalid_chain}}
  $IP6TABLES -A OUTPUT -m state --state INVALID -j drop_invalid
  $IP6TABLES -A INPUT -m state --state INVALID -j drop_invalid
  $IP6TABLES -A FORWARD -m state --state INVALID -j drop_invalid
- $IP6TABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID state -- DENY "
+ $IP6TABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
  $IP6TABLES -A drop_invalid -j DROP
 
  # ================ Table 'filter', rule set fw-ipv6-3
@@ -513,14 +495,27 @@ script_body() {
  # for bug 2047082
  $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
  #
- # Rule fw-ipv6-3 7 (global)
+ # Rule fw-ipv6-3 9 (global)
  #
- echo "Rule fw-ipv6-3 7 (global)"
+ echo "Rule fw-ipv6-3 9 (global)"
  #
- $IP6TABLES -A OUTPUT -d 6bone.net -m state --state NEW -j ACCEPT
- $IP6TABLES -A OUTPUT -d ny6ix.net -m state --state NEW -j ACCEPT
- $IP6TABLES -A FORWARD -d 6bone.net -m state --state NEW -j ACCEPT
- $IP6TABLES -A FORWARD -d ny6ix.net -m state --state NEW -j ACCEPT
+ # ipv4 address range for bug 2820152
+ $IP6TABLES -N fw-ipv6-3_9
+ $IP6TABLES -A OUTPUT -j fw-ipv6-3_9
+ $IP6TABLES -A FORWARD -j fw-ipv6-3_9
+ $IP6TABLES -A fw-ipv6-3_9 -j LOG --log-level info --log-prefix "RULE 9 -- DENY "
+ $IP6TABLES -A fw-ipv6-3_9 -j DROP
+ #
+ # Rule fw-ipv6-3 10 (global)
+ #
+ echo "Rule fw-ipv6-3 10 (global)"
+ #
+ # ipv4 address range for bug 2820152
+ $IP6TABLES -N fw-ipv6-3_10
+ $IP6TABLES -A OUTPUT -j fw-ipv6-3_10
+ $IP6TABLES -A FORWARD -j fw-ipv6-3_10
+ $IP6TABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
+ $IP6TABLES -A fw-ipv6-3_10 -j DROP
  #
  # Rule fw-ipv6-3 11 (global)
  #
@@ -542,6 +537,7 @@ echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
  reset_iptables_v6
 }

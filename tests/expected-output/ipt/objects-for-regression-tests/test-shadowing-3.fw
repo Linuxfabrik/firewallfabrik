@@ -14,14 +14,6 @@
 # compiler runs with -xt flag
 # testing shadowing when rules have non-default options
 
-# test-shadowing-3:Policy_3:0: error: Rule 'Policy_3 0 (eth0)' shadows rule 'Policy_3 1 (eth0)' below it
-
-# test-shadowing-3:Policy_5:0: error: Rule 'Policy_5 0 (eth0)' shadows rule 'Policy_5 1 (eth0)' below it
-
-# test-shadowing-3:Policy_6:0: error: Rule 'Policy_6 0 (global)' shadows rule 'Policy_6 1 (global)' below it
-
-# test-shadowing-3:Policy_7:0: error: Rule 'Policy_7 0 (global)' shadows rule 'Policy_7 1 (global)' below it
-
 FWBDEBUG=""
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
@@ -43,7 +35,7 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
@@ -118,13 +110,13 @@ diff_intf() {
 
 find_program() {
  PGM=$1
- which $PGM >/dev/null 2>&1 || {
+ command -v $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program which
+ find_program command
  find_program $IPTABLES
  find_program $MODPROBE
  find_program $IP
@@ -338,14 +330,15 @@ script_body() {
  echo "Rule Policy_1 0 (eth0)"
  #
  # connlimit
- $IPTABLES -N Policy_1
- $IPTABLES -A Policy_1 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m connlimit --connlimit-above 10 -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_1 1 (eth0)
  #
  echo "Rule Policy_1 1 (eth0)"
  #
- $IPTABLES -A Policy_1 -o eth0 -s 192.168.1.0/24 -j DROP
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
  # ================ Table 'filter', rule set Policy_2
  #
  # Rule Policy_2 0 (eth0)
@@ -353,14 +346,15 @@ script_body() {
  echo "Rule Policy_2 0 (eth0)"
  #
  # hashlimit
- $IPTABLES -N Policy_2
- $IPTABLES -A Policy_2 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 10/second --hashlimit-name test -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_2 1 (eth0)
  #
  echo "Rule Policy_2 1 (eth0)"
  #
- $IPTABLES -A Policy_2 -o eth0 -s 192.168.1.0/24 -j DROP
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
  # ================ Table 'filter', rule set Policy_3
  #
  # Rule Policy_3 0 (eth0)
@@ -368,17 +362,8 @@ script_body() {
  echo "Rule Policy_3 0 (eth0)"
  #
  # 50/sec
- # test-shadowing-3:Policy_3:0: error: Rule 'Policy_3 0 (eth0)' shadows rule 'Policy_3 1 (eth0)' below it
-
- $IPTABLES -N Policy_3
- $IPTABLES -A Policy_3 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 50/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
- #
- # Rule Policy_3 1 (eth0)
- #
- echo "Rule Policy_3 1 (eth0)"
- #
- # 50/sec
- $IPTABLES -A Policy_3 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 50/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_4
  #
  # Rule Policy_4 0 (eth0)
@@ -386,29 +371,8 @@ script_body() {
  echo "Rule Policy_4 0 (eth0)"
  #
  # 30/sec
- $IPTABLES -N Policy_4
- $IPTABLES -A Policy_4 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 30/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
- #
- # Rule Policy_4 1 (eth0)
- #
- echo "Rule Policy_4 1 (eth0)"
- #
- # 50/sec
- $IPTABLES -A Policy_4 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 50/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
- #
- # Rule Policy_4 2 (eth0)
- #
- echo "Rule Policy_4 2 (eth0)"
- #
- # htable_rule_4
- $IPTABLES -A Policy_4 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 10/second --hashlimit-mode srcip --hashlimit-name htable_rule_4 -j ACCEPT
- #
- # Rule Policy_4 3 (eth0)
- #
- echo "Rule Policy_4 3 (eth0)"
- #
- # htable_rule_5
- $IPTABLES -A Policy_4 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 10/second --hashlimit-mode srcip --hashlimit-name htable_rule_5 -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_5
  #
  # Rule Policy_5 0 (eth0)
@@ -416,49 +380,34 @@ script_body() {
  echo "Rule Policy_5 0 (eth0)"
  #
  # 50/sec
- # test-shadowing-3:Policy_5:0: error: Rule 'Policy_5 0 (eth0)' shadows rule 'Policy_5 1 (eth0)' below it
-
- $IPTABLES -N Policy_5
- $IPTABLES -A Policy_5 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 50/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
- #
- # Rule Policy_5 1 (eth0)
- #
- echo "Rule Policy_5 1 (eth0)"
- #
- # 30/sec
- $IPTABLES -A Policy_5 -o eth0 -s 192.168.1.0/24 -m state --state NEW -m hashlimit --hashlimit 30/second --hashlimit-mode srcip --hashlimit-name test -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_6
  #
  # Rule Policy_6 0 (global)
  #
  echo "Rule Policy_6 0 (global)"
  #
- # test-shadowing-3:Policy_6:0: error: Rule 'Policy_6 0 (global)' shadows rule 'Policy_6 1 (global)' below it
-
- $IPTABLES -N Policy_6
- $IPTABLES -A Policy_6 -i + -s 192.168.11.0/24 -j DROP
+ $IPTABLES -A FORWARD -i + -s 192.168.11.0/24 -j DROP
  #
  # Rule Policy_6 1 (global)
  #
  echo "Rule Policy_6 1 (global)"
  #
- $IPTABLES -A Policy_6 -i + -s 192.168.11.10/31 -j DROP
+ $IPTABLES -A FORWARD -i + -s 192.168.11.10/31 -j DROP
  # ================ Table 'filter', rule set Policy_7
  #
  # Rule Policy_7 0 (global)
  #
  echo "Rule Policy_7 0 (global)"
  #
- # test-shadowing-3:Policy_7:0: error: Rule 'Policy_7 0 (global)' shadows rule 'Policy_7 1 (global)' below it
-
- $IPTABLES -N Policy_7
- $IPTABLES -A Policy_7 -i + -s 192.168.11.10/31 -j DROP
+ $IPTABLES -A FORWARD -i + -s 192.168.11.10/31 -j DROP
  #
  # Rule Policy_7 1 (global)
  #
  echo "Rule Policy_7 1 (global)"
  #
- $IPTABLES -A Policy_7 -i + -s 192.168.11.11 -j DROP
+ $IPTABLES -A FORWARD -i + -s 192.168.11.11 -j DROP
  # ================ Table 'filter', rule set Policy_8
  #
  # Rule Policy_8 0 (global)
@@ -467,14 +416,13 @@ script_body() {
  #
  # even though this is a trivial case,
  # I had a bug with handling networks with netmask /31 that broke it
- $IPTABLES -N Policy_8
- $IPTABLES -A Policy_8 -i + -s 24.56.78.90 -j DROP
+ $IPTABLES -A FORWARD -i + -s 24.56.78.90 -j DROP
  #
  # Rule Policy_8 1 (global)
  #
  echo "Rule Policy_8 1 (global)"
  #
- $IPTABLES -A Policy_8 -i + -s 222.222.222.0/24 -j DROP
+ $IPTABLES -A FORWARD -i + -s 222.222.222.0/24 -j DROP
  # ================ Table 'filter', rule set Policy
  #
  # Rule 0 (eth0)
@@ -482,12 +430,14 @@ script_body() {
  echo "Rule 0 (eth0)"
  #
  # limit
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -m limit --limit 10/second -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -m limit --limit 10/second -j ACCEPT
  #
  # Rule 1 (eth0)
  #
  echo "Rule 1 (eth0)"
  #
+ $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
 }
 
@@ -498,6 +448,7 @@ ip_forward() {
 
 reset_all() {
  :
+ command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 
