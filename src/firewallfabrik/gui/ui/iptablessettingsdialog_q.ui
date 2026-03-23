@@ -102,6 +102,39 @@
        </item>
        <item row="1" column="0" colspan="2">
         <layout class="QGridLayout" name="gridLayout_9">
+         <item row="0" column="0">
+          <widget class="QLabel" name="tableNameLabel">
+           <property name="text">
+            <string>Table name:</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="tableName">
+           <property name="maximumSize">
+            <size>
+             <width>32767</width>
+             <height>22</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Base name for tables and chains managed by
+FirewallFabrik (e.g. fwf_filter, fwf_nat for
+nftables or fwf_INPUT, fwf_FORWARD for
+iptables). When "Flush entire ruleset" is
+disabled, only tables/chains with this prefix
+are flushed, so rules created by other tools
+(e.g. Docker, CrowdSec, fail2ban) remain
+untouched.</string>
+           </property>
+           <property name="placeholderText">
+            <string>fwf</string>
+           </property>
+          </widget>
+         </item>
          <item row="1" column="0">
           <widget class="QLabel" name="compilerLabel">
            <property name="text">
@@ -124,7 +157,8 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>Path to an alternative compiler binary. Leave empty to use the built-in compiler.</string>
+            <string>Path to an alternative compiler binary.
+Leave empty to use the built-in compiler.</string>
            </property>
           </widget>
          </item>
@@ -162,7 +196,8 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>Additional command-line arguments passed to the compiler.</string>
+            <string>Additional command-line arguments passed
+to the compiler.</string>
            </property>
           </widget>
          </item>
@@ -194,7 +229,9 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>Name of the generated output file. Leave empty to use the default name derived from the firewall object name.</string>
+            <string>Name of the generated output file. Leave
+empty to use the default name derived from the
+firewall object name.</string>
            </property>
           </widget>
          </item>
@@ -231,7 +268,8 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>Name of the script file on the firewall. Leave empty to use the same name as the output file.</string>
+            <string>Name of the script file on the firewall. Leave empty to use the same name as the
+output file.</string>
            </property>
           </widget>
          </item>
@@ -262,7 +300,38 @@
        </item>
        <item row="6" column="0" colspan="2">
         <layout class="QGridLayout" name="gridLayout_5">
-         <item row="0" column="0">
+         <item row="0" column="0" colspan="2">
+          <widget class="QCheckBox" name="flushRuleset">
+           <property name="text">
+            <string>Flush entire ruleset</string>
+           </property>
+           <property name="toolTip">
+            <string>When enabled (default), the generated script
+flushes ALL iptables rules and chains before
+loading new rules. This guarantees a clean,
+deterministic firewall state.
+
+When disabled, the script only manages its own
+prefixed chains (e.g. fwf_INPUT, fwf_FORWARD),
+leaving rules created by other tools (e.g.
+Docker, CrowdSec, fail2ban) untouched. Note:
+disabling this means FirewallFabrik no longer
+controls the entire firewall — other tools may
+add rules that bypass your policy. Only disable
+this if you need coexistence with other tools on
+the same machine.
+
+Not compatible with "Use iptables-restore"
+(automatically disabled). Control startup order
+via systemd unit ordering (e.g.
+Before=fail2ban.service docker.service).</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
           <widget class="QCheckBox" name="assumeFwIsPartOfAny">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -274,11 +343,12 @@
             <string>Assume firewall is part of 'any'</string>
            </property>
            <property name="toolTip">
-            <string>Assume the firewall machine is part of "any" and matching network objects. When enabled, the compiler generates rules for traffic to/from the firewall itself.</string>
+            <string>Assume the firewall machine is part of "any" and matching network objects. When
+enabled, the compiler generates rules for traffic to/from the firewall itself.</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
+         <item row="1" column="1">
           <widget class="QCheckBox" name="shadowing">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -290,11 +360,12 @@
             <string>Detect shadowing in policy rules</string>
            </property>
            <property name="toolTip">
-            <string>Detect rules that are completely shadowed by earlier rules in the same access list and report a warning.</string>
+            <string>Detect rules that are completely shadowed by earlier rules in the same access
+list and report a warning.</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item row="2" column="0">
           <widget class="QCheckBox" name="acceptSessions">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -306,11 +377,12 @@
             <string>Accept TCP sessions opened prior to firewall restart</string>
            </property>
            <property name="toolTip">
-            <string>Accept TCP sessions opened prior to firewall restart. The checkbox label shows inverted semantics ("Drop new TCP sessions that do not begin with SYN flag").</string>
+            <string>Accept TCP sessions opened prior to firewall restart. The checkbox label shows
+inverted semantics ("Drop new TCP sessions that do not begin with SYN flag").</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
+         <item row="2" column="1">
           <widget class="QCheckBox" name="emptyGroups">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -322,11 +394,12 @@
             <string>Ignore empty groups in rules</string>
            </property>
            <property name="toolTip">
-            <string>Silently ignore empty groups referenced in rules instead of reporting a compiler error.</string>
+            <string>Silently ignore empty groups referenced in rules instead of reporting a compiler
+error.</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item row="3" column="0">
           <widget class="QCheckBox" name="acceptESTBeforeFirst">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -338,11 +411,12 @@
             <string>Accept ESTABLISHED and RELATED packets before the first rule</string>
            </property>
            <property name="toolTip">
-            <string>Accept packets belonging to connections already established or related to established connections. Adds automatic rules at the top of each access list.</string>
+            <string>Accept packets belonging to connections already established or related to
+established connections. Adds automatic rules at the top of each access list.</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="3" column="1">
           <widget class="QCheckBox" name="localNAT">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -354,11 +428,12 @@
             <string>Enable support for NAT of locally originated connections</string>
            </property>
            <property name="toolTip">
-            <string>Enable support for NAT of locally originated connections (OUTPUT chain DNAT rules).</string>
+            <string>Enable support for NAT of locally originated connections (OUTPUT chain DNAT
+rules).</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item row="4" column="0">
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
             <widget class="QCheckBox" name="dropInvalid">
@@ -367,7 +442,8 @@
 no known connection</string>
              </property>
              <property name="toolTip">
-              <string>Drop packets that are associated with no known connection (conntrack state INVALID).</string>
+              <string>Drop packets that are associated with no known connection (conntrack state
+INVALID).</string>
              </property>
             </widget>
            </item>
@@ -377,13 +453,14 @@ no known connection</string>
               <string>and log them</string>
              </property>
              <property name="toolTip">
-              <string>Log packets in INVALID conntrack state before dropping them. Only effective when "Drop packets associated with no known connection" is also enabled.</string>
+              <string>Log packets in INVALID conntrack state before dropping them. Only effective when
+"Drop packets associated with no known connection" is also enabled.</string>
              </property>
             </widget>
            </item>
           </layout>
          </item>
-         <item row="3" column="1">
+         <item row="4" column="1">
           <widget class="QCheckBox" name="clampMSStoMTU">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -403,7 +480,7 @@ in host settings dialog.
            </property>
           </widget>
          </item>
-         <item row="4" column="0">
+         <item row="5" column="0">
           <widget class="QCheckBox" name="bridge">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -415,11 +492,12 @@ in host settings dialog.
             <string>Bridging firewall</string>
            </property>
            <property name="toolTip">
-            <string>Generate rules for a bridging (transparent) firewall. Adds FORWARD chain physdev match rules.</string>
+            <string>Generate rules for a bridging (transparent) firewall. Adds FORWARD chain physdev
+match rules.</string>
            </property>
           </widget>
          </item>
-         <item row="5" column="0">
+         <item row="6" column="0">
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
             <widget class="QLabel" name="textLabel9">
@@ -434,7 +512,8 @@ in host settings dialog.
            <item>
             <widget class="QComboBox" name="actionOnReject">
              <property name="toolTip">
-              <string>ICMP message type or TCP RST sent back to the sender when a packet is rejected. Leave empty to use the system default.</string>
+              <string>ICMP message type or TCP RST sent back to the sender when a packet is rejected.
+Leave empty to use the system default.</string>
              </property>
             </widget>
            </item>
@@ -456,7 +535,7 @@ in host settings dialog.
            </item>
           </layout>
          </item>
-         <item row="5" column="1">
+         <item row="6" column="1">
           <widget class="QCheckBox" name="ipv6NeighborDiscovery">
            <property name="toolTip">
             <string>Compiler will automatically generate rules to permit ICMP6 packets used in IPv6
@@ -469,23 +548,25 @@ packets to IPv6 policies</string>
            </property>
           </widget>
          </item>
-         <item row="6" column="0" colspan="2">
+         <item row="7" column="0" colspan="2">
           <widget class="QCheckBox" name="useModuleSet">
            <property name="text">
             <string>Use module "set" for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later)</string>
            </property>
            <property name="toolTip">
-            <string>Use the ipset kernel module ("set" match) for run-time address table objects. Only available in iptables v1.4.1.1 and later.</string>
+            <string>Use the ipset kernel module ("set" match) for run-time address table objects.
+Only available in iptables v1.4.1.1 and later.</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="0" colspan="2">
+         <item row="8" column="0" colspan="2">
           <widget class="QCheckBox" name="useKernelTz">
            <property name="text">
             <string>Use kernel timezone instead of UTC (only available in iptables v 1.4.11 and later)</string>
            </property>
            <property name="toolTip">
-            <string>Use the kernel timezone instead of UTC for time-based rules. Only available in iptables v1.4.11 and later.</string>
+            <string>Use the kernel timezone instead of UTC for time-based rules. Only available in
+iptables v1.4.11 and later.</string>
            </property>
           </widget>
          </item>
@@ -512,7 +593,8 @@ packets to IPv6 policies</string>
             <string>Always permit ssh access from the management workstation with this address:</string>
            </property>
            <property name="toolTip">
-            <string>Always permit SSH access from the management workstation with the address specified below.</string>
+            <string>Always permit SSH access from the management workstation with the address
+specified below.</string>
            </property>
           </widget>
          </item>
@@ -556,7 +638,8 @@ packets to IPv6 policies</string>
           <string>Install the rule for ssh access from the management workstation when the firewall script is run with the "block" command</string>
          </property>
          <property name="toolTip">
-          <string>Install the rule for SSH access from the management workstation even when the firewall script is run with the "block" command.</string>
+          <string>Install the rule for SSH access from the management workstation even when the
+firewall script is run with the "block" command.</string>
          </property>
         </widget>
        </item>
@@ -643,7 +726,8 @@ packets to IPv6 policies</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>SSH user name for uploading the generated script to the firewall. Leave empty to use the current system user.</string>
+             <string>SSH user name for uploading the generated script to the firewall. Leave empty to
+use the current system user.</string>
             </property>
            </widget>
           </item>
@@ -669,7 +753,8 @@ packets to IPv6 policies</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Alternative address used for SCP/SSH if the primary management address is unreachable.</string>
+             <string>Alternative address used for SCP/SSH if the primary management address is
+unreachable.</string>
             </property>
            </widget>
           </item>
@@ -695,7 +780,8 @@ packets to IPv6 policies</string>
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>Custom command executed on the firewall after the script has been copied. Leave empty to use the built-in activation.</string>
+             <string>Custom command executed on the firewall after the script has been copied. Leave
+empty to use the built-in activation.</string>
             </property>
            </widget>
           </item>
@@ -720,7 +806,8 @@ packets to IPv6 policies</string>
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>Additional arguments passed to ssh when connecting to the firewall for installation.</string>
+               <string>Additional arguments passed to ssh when connecting to the firewall for
+installation.</string>
               </property>
              </widget>
             </item>
@@ -792,7 +879,8 @@ packets to IPv6 policies</string>
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>Path to a custom installation script executed instead of the default SCP/SSH mechanism.</string>
+               <string>Path to a custom installation script executed instead of the default SCP/SSH
+mechanism.</string>
               </property>
              </widget>
             </item>
@@ -897,7 +985,8 @@ packets to IPv6 policies</string>
           <item row="1" column="0" colspan="2">
            <widget class="QTextEdit" name="epilog_script">
             <property name="toolTip">
-             <string>Shell commands appended after all firewall rules. Use for custom cleanup or final actions.</string>
+             <string>Shell commands appended after all firewall rules. Use for custom cleanup or
+final actions.</string>
             </property>
            </widget>
           </item>
@@ -925,7 +1014,8 @@ packets to IPv6 policies</string>
           <item row="1" column="0" colspan="3">
            <widget class="QTextEdit" name="prolog_script">
             <property name="toolTip">
-             <string>Shell commands inserted before the firewall rules. Use for custom initialization.</string>
+             <string>Shell commands inserted before the firewall rules. Use for custom
+initialization.</string>
             </property>
            </widget>
           </item>
@@ -1020,7 +1110,8 @@ packets to IPv6 policies</string>
           <item row="0" column="0">
            <widget class="QRadioButton" name="useLOG">
             <property name="toolTip">
-             <string>Use the kernel LOG target. Log messages go directly to syslog/journald. Works out of the box, no additional setup required.</string>
+             <string>Use the kernel LOG target. Log messages go directly to syslog/journald. Works
+out of the box, no additional setup required.</string>
             </property>
             <property name="text">
              <string>use LOG</string>
@@ -1033,7 +1124,10 @@ packets to IPv6 policies</string>
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>Use the NFLOG target. Sends packets via netlink to a userspace daemon (ulogd2, rsyslog, syslog-ng). More flexible (log to files, databases, pcap) but requires additional setup on the target host. Not yet implemented in the compiler (see github.com/Linuxfabrik/firewallfabrik/issues/18).</string>
+             <string>Use the NFLOG target. Sends packets via netlink to a userspace daemon (ulogd2,
+rsyslog, syslog-ng). More flexible (log to files, databases, pcap) but requires
+additional setup on the target host. Not yet implemented in the compiler (see
+github.com/Linuxfabrik/firewallfabrik/issues/18).</string>
             </property>
             <property name="text">
              <string>use NFLOG</string>
@@ -1102,7 +1196,8 @@ packets to IPv6 policies</string>
               <item row="4" column="1">
                <widget class="QComboBox" name="logLevel">
                 <property name="toolTip">
-                 <string>Syslog severity level for packets matched by logging rules. Leave empty to use the system default.</string>
+                 <string>Syslog severity level for packets matched by logging rules. Leave empty to use
+the system default.</string>
                 </property>
                </widget>
               </item>
@@ -1138,7 +1233,8 @@ packets to IPv6 policies</string>
                  <number>1500</number>
                 </property>
                 <property name="toolTip">
-                 <string>Number of bytes of each packet to copy to userspace via NFLOG. 0 copies the entire packet.</string>
+                 <string>Number of bytes of each packet to copy to userspace via NFLOG. 0 copies the
+entire packet.</string>
                 </property>
                </widget>
               </item>
@@ -1158,7 +1254,8 @@ packets to IPv6 policies</string>
                  <number>1</number>
                 </property>
                 <property name="toolTip">
-                 <string>Number of packets to queue inside the kernel before sending them to userspace via NFLOG.</string>
+                 <string>Number of packets to queue inside the kernel before sending them to userspace
+via NFLOG.</string>
                 </property>
                </widget>
               </item>
@@ -1259,7 +1356,8 @@ packets to IPv6 policies</string>
           <number>32</number>
          </property>
          <property name="toolTip">
-          <string>Prefix string for log messages. Supported macros: %N = rule number, %A = action, %I = interface name, %C = chain name, %R = rule set name.</string>
+          <string>Prefix string for log messages. Supported macros: %N = rule number, %A = action,
+%I = interface name, %C = chain name, %R = rule set name.</string>
          </property>
         </widget>
        </item>
@@ -1303,7 +1401,8 @@ packets to IPv6 policies</string>
 (overrides rule options, use for debugging)</string>
          </property>
          <property name="toolTip">
-          <string>Activate logging in all rules, overriding individual rule logging options. Use for debugging only.</string>
+          <string>Activate logging in all rules, overriding individual rule logging options. Use
+for debugging only.</string>
          </property>
         </widget>
        </item>
