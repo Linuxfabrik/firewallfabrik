@@ -1,0 +1,316 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * heartbeat_cluster_2.fw fwf.sh
+#
+#  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
+
+#  same as heartbeat_cluster_1 except using unicast for conntrack and heartbeat
+#
+# Rule 6 (global): Branch action not yet supported by nftables compiler
+# Rule 6 (global): Branch action not yet supported by nftables compiler
+# Rule 7 (global): Branch action not yet supported by nftables compiler
+# Rule 7 (global): Branch action not yet supported by nftables compiler
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 1 (eth0)
+        #
+        # anti spoofing rule
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 2 (lo)
+        #
+        iif "lo" ct state new accept
+        #
+        # Rule 3 (global)
+        #
+        # SSH Access to firewall is permitted
+        # only from internal network
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 6 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        #
+        # Rule 8 (global)
+        #
+        log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ct state new log prefix "RULE 10 -- DENY " level info drop
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        iifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
+        oifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
+        #
+        # Rule 1 (eth0)
+        #
+        # anti spoofing rule
+        iifname "eth0" ip saddr { 172.24.0.1, 192.168.1.1, 192.168.1.0/24 } ct state new log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 4 (global)
+        #
+        # SSH Access to firewall is permitted
+        # only from internal network
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.2, 192.168.1.3 } tcp dport 22 ct state new accept
+        #
+        # Rule 7 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        # # Rule 7 (global): Branch action not yet supported by nftables compiler
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 }
+        #
+        # Rule 9 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ct state new log prefix "RULE 10 -- DENY " level info drop
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        oifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
+        #
+        # Rule 2 (lo)
+        #
+        oif "lo" ct state new accept
+        #
+        # Rule 4 (global)
+        #
+        # SSH Access to firewall is permitted
+        # only from internal network
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.2, 192.168.1.3 } tcp dport 22 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # Firewall uses one of the machines
+        # on internal network for DNS
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new log prefix "RULE 5 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        # # Rule 6 (global): Branch action not yet supported by nftables compiler
+        ip daddr { 172.24.0.1, 192.168.1.1 }
+        #
+        # Rule 7 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        # # Rule 7 (global): Branch action not yet supported by nftables compiler
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 }
+        #
+        # Rule 8 (global)
+        #
+        ip daddr { 172.24.0.1, 192.168.1.1 } log prefix "RULE 8 -- DENY " level info drop
+        #
+        # Rule 9 (global)
+        #
+        ip saddr 192.168.1.0/24 ct state new accept
+        #
+        # Rule 10 (global)
+        #
+        ct state new log prefix "RULE 10 -- DENY " level info drop
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY " level info drop
+    }
+}
+
+table ip fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 172.24.0.1
+        #
+        # Rule 1 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 snat to 172.24.0.1
+    }
+}
+
+NFT_RULES
+}
+
+routing_script() {
+    ip route add 172.24.1.0/24 via 172.24.0.100 dev eth0
+
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+}
+
+block_action() {
+    $NFT flush ruleset 2>/dev/null
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    $NFT flush ruleset 2>/dev/null
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body || run_epilog_and_exit 1
+        routing_script
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"

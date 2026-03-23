@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * fw-test.fw /etc/fw/fw-test.fw
+# files: * fw-test.fw fwf.sh
 #
 
 FWBDEBUG=""
@@ -47,10 +47,10 @@ run_epilog_and_exit() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table ip linuxfabrik_filter {}
-delete table ip linuxfabrik_filter
+table ip fwf_filter {}
+delete table ip fwf_filter
 
-table ip linuxfabrik_filter {
+table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
@@ -101,28 +101,28 @@ ip_forward() {
 
 flush_own_tables() {
     # remove only our own tables, leaving other tools' tables untouched
-    $NFT delete table inet linuxfabrik_filter 2>/dev/null
-    $NFT delete table ip linuxfabrik_filter 2>/dev/null
-    $NFT delete table inet linuxfabrik_nat 2>/dev/null
-    $NFT delete table ip linuxfabrik_nat 2>/dev/null
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
 }
 
 block_action() {
-    flush_own_tables
+    $NFT flush ruleset 2>/dev/null
     # block all traffic by default (always use inet to block both IPv4 and IPv6)
-    $NFT add table inet linuxfabrik_filter
-    $NFT add chain inet linuxfabrik_filter input '{ type filter hook input priority 0; policy drop; }'
-    $NFT add chain inet linuxfabrik_filter forward '{ type filter hook forward priority 0; policy drop; }'
-    $NFT add chain inet linuxfabrik_filter output '{ type filter hook output priority 0; policy drop; }'
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
 }
 
 stop_action() {
-    flush_own_tables
+    $NFT flush ruleset 2>/dev/null
 }
 
 check_nft_status() {
     tables=$($NFT list tables 2>/dev/null)
-    if echo "$tables" | grep -q 'linuxfabrik_filter'; then
+    if echo "$tables" | grep -q 'fwf_filter'; then
         return 0
     fi
     return 3

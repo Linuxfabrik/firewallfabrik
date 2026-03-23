@@ -1,0 +1,350 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * heartbeat_cluster_1_d.fw fwf.sh
+#
+# Rule 0 (NAT): Interface "eth0" has no addresses
+# Rule 1 (NAT): Interface "eth0" has no addresses
+# Rule 2 (NAT): Interface "eth0" has no addresses
+# Rule 3 (NAT): Interface "eth0" has no addresses
+# Rule 4 (NAT): Interface "eth0" has no addresses
+# Rule 5 (global): Interface "eth0" has no addresses
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Interface "eth0" has no addresses
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 6 (global): Interface "eth0" has no addresses
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Interface "eth0" has no addresses
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 4 shadows Rule 5 below it
+# Rule 4 shadows Rule 6 below it
+# Rule 4 shadows Rule 8 below it
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+
+log() {
+    echo "$1"
+    command -v logger > /dev/null 2>&1 && logger -p info "$1"
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        # anti spoofing rule
+        iifname "eth0" ip saddr { 192.168.1.254, 192.168.1.0/24 } ct state new log prefix "RULE 0 -- DENY " level info drop
+        #
+        # Rule 1 (lo)
+        #
+        iif "lo" ct state new accept
+        #
+        # Rule 2 (global)
+        #
+        # SSH Access to firewall is permitted
+        # only from internal network
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 7 (global)
+        #
+        # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        # All other attempts to connect to
+        # the firewall are denied and logged
+        log prefix "RULE 12 -- DENY " level info drop
+        #
+        # Rule 13 (eth0)
+        #
+        iifname "eth0" ct state new accept
+        #
+        # Rule 14 (eth0,eth1)
+        #
+        iifname "eth1" ct state new accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 0 (eth0)
+        #
+        # anti spoofing rule
+        iifname "eth0" ip saddr { 192.168.1.254, 192.168.1.0/24 } ct state new log prefix "RULE 0 -- DENY " level info drop
+        #
+        # Rule 7 (global)
+        #
+        # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 13 (eth0)
+        #
+        iifname "eth0" ct state new accept
+        oifname "eth0" ct state new accept
+        #
+        # Rule 14 (eth0,eth1)
+        #
+        iifname "eth1" ct state new accept
+        oifname "eth1" ct state new accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related accept
+        #
+        # Rule 1 (lo)
+        #
+        oif "lo" ct state new accept
+        #
+        # Rule 3 (global)
+        #
+        # Firewall uses one of the machines
+        # on internal network for DNS
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        #
+        # Rule 4 (global)
+        #
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # fw is part of any and networks
+        # # Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Interface "eth0" has no addresses
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 6 (global)
+        #
+        # fw is NOT part of any and networks
+        # # Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Interface "eth0" has no addresses
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 8 (global)
+        #
+        # fw is part of any
+        ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        #
+        # Rule 12 (global)
+        #
+        # All other attempts to connect to
+        # the firewall are denied and logged
+        ip daddr 192.168.1.254 log prefix "RULE 12 -- DENY " level info drop
+        #
+        # Rule 13 (eth0)
+        #
+        oifname "eth0" ct state new accept
+        #
+        # Rule 14 (eth0,eth1)
+        #
+        oifname "eth1" ct state new accept
+        #
+        # Rule 21 (eth0)
+        #
+        oifname "eth0" ip daddr 192.168.1.254 ct state new accept
+        #
+        # Rule 22 (eth0,eth1)
+        #
+        oifname "eth1" ip daddr 192.168.1.254 ct state new accept
+    }
+}
+
+table ip fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 3 (NAT)
+        #
+        dnat to 192.168.1.100
+        #
+        # Rule 4 (NAT)
+        #
+        dnat to 192.168.1.100
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        #
+        # Rule 1 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        #
+        # Rule 2 (NAT)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+}
+
+block_action() {
+    $NFT flush ruleset 2>/dev/null
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+}
+
+stop_action() {
+    $NFT flush ruleset 2>/dev/null
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload]"
+        ;;
+
+esac
+
+exit "$RETVAL"
