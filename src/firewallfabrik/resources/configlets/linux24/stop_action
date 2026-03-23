@@ -12,22 +12,17 @@
 ## {{if var}} is conditional operator.
 ##
 ## This configlet defines commands executed when iptables script is ran
-## with command line argument "stop". By default it resets iptables
-## tables and chains using function reset_all and sets all chains
-## default policy to ACCEPT
+## with command line argument "stop". Flushes all rules via reset_all
+## (which sets all chain policies to DROP) and optionally adds backup
+## ssh access rules. The server stays protected after stop — no chain
+## policies are set to ACCEPT.
 
 stop_action() {
     reset_all
 
-{{if have_ipv4}}
-    $IPTABLES {{$opt_wait}} -P OUTPUT  ACCEPT
-    $IPTABLES {{$opt_wait}} -P INPUT   ACCEPT
-    $IPTABLES {{$opt_wait}} -P FORWARD ACCEPT
-{{endif}}
-
-{{if have_ipv6}}
-    $IP6TABLES {{$opt_wait}} -P OUTPUT  ACCEPT
-    $IP6TABLES {{$opt_wait}} -P INPUT   ACCEPT
-    $IP6TABLES {{$opt_wait}} -P FORWARD ACCEPT
+{{if mgmt_access}}
+    # backup ssh access
+    $IPTABLES {{$opt_wait}} -A INPUT  -p tcp -m tcp  -s {{$ssh_management_address}}  --dport 22  -m state --state NEW,ESTABLISHED -j  ACCEPT
+    $IPTABLES {{$opt_wait}} -A OUTPUT  -p tcp -m tcp  -d {{$ssh_management_address}}  --sport 22  -m state --state ESTABLISHED,RELATED -j ACCEPT
 {{endif}}
 }

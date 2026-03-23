@@ -605,12 +605,12 @@ class CompilerDriver_ipt(CompilerDriver):
                 block_action.set_variable('mgmt_access', 0)
                 script_skeleton.set_variable('block_action', block_action.expand())
 
-                # Stop action configlet
+                # Stop action configlet — keeps policies at DROP after
+                # flushing (server stays protected, not wide open).
                 stop_action = Configlet('linux24', 'stop_action')
-                stop_action.collapse_empty_strings(True)
-                stop_action.set_variable('have_ipv4', 1 if have_ipv4 else 0)
-                stop_action.set_variable('have_ipv6', 1 if have_ipv6 else 0)
                 stop_action.set_variable('opt_wait', opt_wait)
+                stop_action.collapse_empty_strings(True)
+                stop_action.set_variable('mgmt_access', 0)
                 script_skeleton.set_variable('stop_action', stop_action.expand())
 
                 # Status action configlet
