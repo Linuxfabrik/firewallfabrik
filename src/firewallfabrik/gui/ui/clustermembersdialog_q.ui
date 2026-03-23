@@ -241,7 +241,8 @@
             <bool>true</bool>
            </property>
            <property name="toolTip">
-            <string>Table of already selected member firewalls with their assigned cluster interfaces.</string>
+            <string>Table of already selected member firewalls with their assigned cluster
+interfaces.</string>
            </property>
            <property name="editTriggers">
             <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>

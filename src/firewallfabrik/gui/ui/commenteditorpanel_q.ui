@@ -23,7 +23,8 @@
       </size>
      </property>
      <property name="toolTip">
-      <string>Enter a comment for this policy rule. Comments are for documentation purposes and do not affect rule compilation.</string>
+      <string>Enter a comment for this policy rule. Comments are for documentation purposes
+and do not affect rule compilation.</string>
      </property>
      <property name="placeholderText">
       <string>Enter comment...</string>

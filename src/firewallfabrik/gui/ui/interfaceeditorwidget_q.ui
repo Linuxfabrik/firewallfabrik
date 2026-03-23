@@ -22,14 +22,16 @@
         <string>Name:</string>
        </property>
        <property name="toolTip">
-        <string>Name of the physical interface (e.g. eth0, ens192, bond0). This must match the actual interface name on the host.</string>
+        <string>Name of the physical interface (e.g. eth0, ens192, bond0). This must match the
+actual interface name on the host.</string>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
       <widget class="QLineEdit" name="ifaceName">
        <property name="toolTip">
-        <string>Name of the physical interface (e.g. eth0, ens192, bond0). This must match the actual interface name on the host.</string>
+        <string>Name of the physical interface (e.g. eth0, ens192, bond0). This must match the
+actual interface name on the host.</string>
        </property>
        <property name="placeholderText">
         <string>e.g. eth0</string>
@@ -42,14 +44,16 @@
         <string>Label:</string>
        </property>
        <property name="toolTip">
-        <string>Optional user-friendly label describing the role of this interface (e.g. outside, inside, dmz).</string>
+        <string>Optional user-friendly label describing the role of this interface (e.g.
+outside, inside, dmz).</string>
        </property>
       </widget>
      </item>
      <item row="1" column="1">
       <widget class="QLineEdit" name="ifaceLabel">
        <property name="toolTip">
-        <string>Optional user-friendly label describing the role of this interface (e.g. outside, inside, dmz).</string>
+        <string>Optional user-friendly label describing the role of this interface (e.g.
+outside, inside, dmz).</string>
        </property>
        <property name="placeholderText">
         <string>e.g. outside</string>
@@ -62,14 +66,18 @@
         <string>Type:</string>
        </property>
        <property name="toolTip">
-        <string>Select how this interface obtains its IP address. Static: configure addresses below. Dynamic: gets address via DHCP or PPP. Unnumbered: no IP address (e.g. tunnel endpoint).</string>
+        <string>Select how this interface obtains its IP address. Static: configure addresses
+below. Dynamic: gets address via DHCP or PPP. Unnumbered: no IP address (e.g.
+tunnel endpoint).</string>
        </property>
       </widget>
      </item>
      <item row="2" column="1">
       <widget class="QComboBox" name="ifaceType">
        <property name="toolTip">
-        <string>Select how this interface obtains its IP address. Static: configure addresses below. Dynamic: gets address via DHCP or PPP. Unnumbered: no IP address (e.g. tunnel endpoint).</string>
+        <string>Select how this interface obtains its IP address. Static: configure addresses
+below. Dynamic: gets address via DHCP or PPP. Unnumbered: no IP address (e.g.
+tunnel endpoint).</string>
        </property>
        <item>
         <property name="text">
@@ -93,7 +101,8 @@
    <item>
     <widget class="QTableWidget" name="addressTable">
      <property name="toolTip">
-      <string>IP addresses assigned to this interface. Add rows with the &quot;Add Address&quot; button below.</string>
+      <string>IP addresses assigned to this interface. Add rows with the &quot;Add
+Address&quot; button below.</string>
      </property>
      <property name="selectionMode">
       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>

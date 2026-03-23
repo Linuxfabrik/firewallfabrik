@@ -27,7 +27,9 @@
       <string>Use SNAT target instead of MASQUERADING for NAT rules with dynamic interfaces</string>
      </property>
      <property name="toolTip">
-      <string>When checked, the compiler will use the SNAT target instead of MASQUERADE for NAT rules where the translated source is a dynamic interface. This avoids problems with policy routing that MASQUERADE can cause.</string>
+      <string>When checked, the compiler will use the SNAT target instead of MASQUERADE for
+NAT rules where the translated source is a dynamic interface. This avoids
+problems with policy routing that MASQUERADE can cause.</string>
      </property>
     </widget>
    </item>
@@ -37,7 +39,9 @@
       <string>Always use MASQUERADE target instead of SNAT</string>
      </property>
      <property name="toolTip">
-      <string>When checked, the compiler will always use MASQUERADE instead of SNAT, even when the source address is static. MASQUERADE automatically uses the current IP of the outgoing interface.</string>
+      <string>When checked, the compiler will always use MASQUERADE instead of SNAT, even when
+the source address is static. MASQUERADE automatically uses the current IP of
+the outgoing interface.</string>
      </property>
     </widget>
    </item>
@@ -47,7 +51,9 @@
       <string>Randomize port mapping (translates to --random)</string>
      </property>
      <property name="toolTip">
-      <string>When checked, the compiler adds the --random flag to the iptables NAT rule. This randomizes source port mapping, which can help avoid collisions when multiple connections originate from the same source.</string>
+      <string>When checked, the compiler adds the --random flag to the iptables NAT rule. This
+randomizes source port mapping, which can help avoid collisions when multiple
+connections originate from the same source.</string>
      </property>
     </widget>
    </item>
@@ -57,7 +63,9 @@
       <string>Give a client the same source-/destination-address for each connection (translates to --persistent)</string>
      </property>
      <property name="toolTip">
-      <string>When checked, the compiler adds the --persistent flag to the iptables NAT rule. This ensures that a client always receives the same source or destination address for each connection.</string>
+      <string>When checked, the compiler adds the --persistent flag to the iptables NAT rule.
+This ensures that a client always receives the same source or destination
+address for each connection.</string>
      </property>
     </widget>
    </item>

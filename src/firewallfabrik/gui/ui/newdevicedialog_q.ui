@@ -52,7 +52,8 @@
      <item row="1" column="1">
       <widget class="QComboBox" name="platform">
        <property name="toolTip">
-        <string>Choose the firewall software this device is running. This determines which compiler and rule format will be used.</string>
+        <string>Choose the firewall software this device is running. This determines which
+compiler and rule format will be used.</string>
        </property>
       </widget>
      </item>
@@ -66,7 +67,8 @@
      <item row="2" column="1">
       <widget class="QComboBox" name="hostOS">
        <property name="toolTip">
-        <string>Choose the operating system running on the device. This affects how the firewall script is generated and installed.</string>
+        <string>Choose the operating system running on the device. This affects how the firewall
+script is generated and installed.</string>
        </property>
       </widget>
      </item>

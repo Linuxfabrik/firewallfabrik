@@ -149,7 +149,8 @@
        <item>
         <widget class="QTabWidget" name="interfaceEditor">
          <property name="toolTip">
-          <string>Each tab represents one network interface. Use the + and − buttons to add or remove interfaces.</string>
+          <string>Each tab represents one network interface. Use the + and − buttons to add or
+remove interfaces.</string>
          </property>
         </widget>
        </item>

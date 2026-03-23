@@ -131,7 +131,8 @@
            <string>Master</string>
           </property>
           <property name="toolTip">
-           <string>Select which firewall should be the master. The cluster inherits platform and host OS from the master.</string>
+           <string>Select which firewall should be the master. The cluster inherits platform and
+host OS from the master.</string>
           </property>
          </column>
         </widget>

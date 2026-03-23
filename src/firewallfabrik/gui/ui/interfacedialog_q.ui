@@ -113,7 +113,8 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>Interface name as it appears on the firewall (e.g. eth0, ens192, br0, bond0). For VLAN sub-interfaces use the "parent.vlanid" convention (e.g. eth0.100).</string>
+              <string>Interface name as it appears on the firewall (e.g. eth0, ens192, br0, bond0).
+For VLAN sub-interfaces use the "parent.vlanid" convention (e.g. eth0.100).</string>
              </property>
             </widget>
            </item>
@@ -148,7 +149,8 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>Optional descriptive label for this interface (e.g. "DMZ", "WAN"). Not used by the compiler — purely for documentation.</string>
+              <string>Optional descriptive label for this interface (e.g. "DMZ", "WAN"). Not used by
+the compiler — purely for documentation.</string>
              </property>
             </widget>
            </item>
@@ -203,7 +205,9 @@ Security level can be any number between 0 and 100, 0 being least secure and 100
               <number>100</number>
              </property>
              <property name="toolTip">
-              <string>Security level (0-100). Not used by the iptables/nftables compiler. Relevant only for Cisco PIX/ASA platforms where 0 = least secure (Internet) and 100 = most secure (inside).</string>
+              <string>Security level (0-100). Not used by the iptables/nftables compiler. Relevant
+only for Cisco PIX/ASA platforms where 0 = least secure (Internet) and 100 =
+most secure (inside).</string>
              </property>
             </widget>
            </item>
@@ -238,9 +242,16 @@ Security level can be any number between 0 and 100, 0 being least secure and 100
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;p&gt;Network zone consists of hosts and networks that can be reached through this interface of the firewall. Subnet to which this interface is directly attached must be part of its network zone. Other subnets reachable by means of routing should alse be added to the network zone.
+              <string>&lt;p&gt;Network zone consists of hosts and networks that can be reached through
+this interface of the firewall. Subnet to which this interface is directly
+attached must be part of its network zone. Other subnets reachable by means of
+routing should alse be added to the network zone.
 &lt;br&gt;
-If network zone for this interface consists of only one subnet, you can simply choose that network's object in the pull-down below. If your network zone should include multiple subnets, you need to create an Object Group, then put all hosts and networks which are going to be part of the network zone into that group and finally choose this group in the pull-down below.&lt;/p&gt;</string>
+If network zone for this interface consists of only one subnet, you can simply
+choose that network's object in the pull-down below. If your network zone should
+include multiple subnets, you need to create an Object Group, then put all hosts
+and networks which are going to be part of the network zone into that group and
+finally choose this group in the pull-down below.&lt;/p&gt;</string>
              </property>
              <property name="whatsThis">
               <string>&lt;p&gt;Network zone consists of hosts and networks that can be reached through this interface of the firewall. Subnet to which this interface is directly attached must be part of its network zone. Other subnets reachable by means of routing should alse be added to the network zone.
@@ -294,7 +305,9 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Management interface</string>
            </property>
            <property name="toolTip">
-            <string>Mark this as the management interface used for remote administration (SSH, SNMP). The compiler uses this to identify where management access rules should be applied, and the installer connects to this address by default.</string>
+            <string>Mark this as the management interface used for remote administration (SSH,
+SNMP). The compiler uses this to identify where management access rules should
+be applied, and the installer connects to this address by default.</string>
            </property>
           </widget>
          </item>
@@ -304,7 +317,9 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Dedicated failover interface</string>
            </property>
            <property name="toolTip">
-            <string>Mark this interface as dedicated to cluster failover traffic (VRRP, heartbeat, openais). The compiler automatically generates rules to permit the failover protocol on this interface and excludes it from normal policy processing.</string>
+            <string>Mark this interface as dedicated to cluster failover traffic (VRRP, heartbeat,
+openais). The compiler automatically generates rules to permit the failover
+protocol on this interface and excludes it from normal policy processing.</string>
            </property>
           </widget>
          </item>
@@ -314,7 +329,9 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Static IP address</string>
            </property>
            <property name="toolTip">
-            <string>This interface has one or more static IP addresses configured in FirewallFabrik. The generated script will use "ip addr add/del" to manage these addresses if "Configure interfaces" is enabled in the platform settings.</string>
+            <string>This interface has one or more static IP addresses configured in FirewallFabrik.
+The generated script will use "ip addr add/del" to manage these addresses if
+"Configure interfaces" is enabled in the platform settings.</string>
            </property>
           </widget>
          </item>
@@ -324,7 +341,9 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Address is assigned dynamically</string>
            </property>
            <property name="toolTip">
-            <string>This interface gets its IP address dynamically (DHCP, PPP, etc.). The generated script uses shell functions to discover the address at runtime. IP address configuration is skipped for this interface.</string>
+            <string>This interface gets its IP address dynamically (DHCP, PPP, etc.). The generated
+script uses shell functions to discover the address at runtime. IP address
+configuration is skipped for this interface.</string>
            </property>
           </widget>
          </item>
@@ -334,7 +353,9 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Unnumbered interface</string>
            </property>
            <property name="toolTip">
-            <string>This interface has no IP address (e.g. a bonding slave, a point-to-point tunnel endpoint). IP address configuration and verification are skipped for this interface.</string>
+            <string>This interface has no IP address (e.g. a bonding slave, a point-to-point tunnel
+endpoint). IP address configuration and verification are skipped for this
+interface.</string>
            </property>
           </widget>
          </item>
@@ -353,7 +374,8 @@ If network zone for this interface consists of only one subnet, you can simply c
             <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
            <property name="toolTip">
-            <string>This interface is a port of a bridge interface. Its IP and protocol settings are managed by the parent bridge.</string>
+            <string>This interface is a port of a bridge interface. Its IP and protocol settings are
+managed by the parent bridge.</string>
            </property>
           </widget>
          </item>
@@ -366,7 +388,8 @@ If network zone for this interface consists of only one subnet, you can simply c
             <string>Advanced Interface Settings ...</string>
            </property>
            <property name="toolTip">
-            <string>Open the advanced interface settings dialog to configure the device type (ethernet, VLAN 802.1Q, bridge, bonding), VLAN ID, STP, and bonding parameters.</string>
+            <string>Open the advanced interface settings dialog to configure the device type
+(ethernet, VLAN 802.1Q, bridge, bonding), VLAN ID, STP, and bonding parameters.</string>
            </property>
           </widget>
          </item>

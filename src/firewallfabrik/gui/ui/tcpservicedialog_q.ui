@@ -704,7 +704,7 @@ QGroupBox::title {
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   
+
    <container>1</container>
   </customwidget>
  </customwidgets>

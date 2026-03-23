@@ -35,7 +35,8 @@
         <item>
          <widget class="QLineEdit" name="obj_name">
           <property name="toolTip">
-           <string>Name of this dynamic group. Members are determined automatically by matching object type and keywords.</string>
+           <string>Name of this dynamic group. Members are determined automatically by matching
+object type and keywords.</string>
           </property>
          </widget>
         </item>
@@ -51,7 +52,8 @@
       <item>
        <widget class="QTableView" name="criteriaView">
         <property name="toolTip">
-         <string>Each row defines a filter: objects matching ANY row's type AND keyword are included in this group.</string>
+         <string>Each row defines a filter: objects matching ANY row's type AND keyword are
+included in this group.</string>
         </property>
        </widget>
       </item>
@@ -73,7 +75,8 @@
         <item>
          <widget class="QPushButton" name="addButton">
           <property name="toolTip">
-           <string>Add a new match criterion row. Each row specifies an object type and keyword that objects must match to be included.</string>
+           <string>Add a new match criterion row. Each row specifies an object type and keyword
+that objects must match to be included.</string>
           </property>
           <property name="text">
            <string>Add Match</string>
@@ -110,7 +113,8 @@
      <item>
       <widget class="QTreeWidget" name="matchedView">
        <property name="toolTip">
-        <string>Objects from the current database that match the criteria above. Double-click to open an object in the editor.</string>
+        <string>Objects from the current database that match the criteria above. Double-click to
+open an object in the editor.</string>
        </property>
        <column>
         <property name="text">

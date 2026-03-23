@@ -121,7 +121,8 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>Defines the firewall's response when rejecting a packet. Maps to iptables --reject-with option.</string>
+             <string>Defines the firewall's response when rejecting a packet. Maps to iptables
+--reject-with option.</string>
             </property>
            </widget>
           </item>
@@ -192,7 +193,8 @@
           <item row="2" column="0">
            <widget class="QLineEdit" name="accountingvalue_str">
             <property name="toolTip">
-             <string>Rule name for accounting chain. White spaces and special characters are not allowed.</string>
+             <string>Rule name for accounting chain. White spaces and special characters are not
+allowed.</string>
             </property>
            </widget>
           </item>

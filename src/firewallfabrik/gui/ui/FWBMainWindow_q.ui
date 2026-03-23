@@ -1789,7 +1789,8 @@
     <string>Export Library To a File</string>
    </property>
    <property name="toolTip">
-    <string>Export one or more libraries to a standalone .fwf file that can be imported into another project</string>
+    <string>Export one or more libraries to a standalone .fwf file that can be imported into
+another project</string>
    </property>
   </action>
   <action name="ImportAddressesFromFileAction">
@@ -1811,7 +1812,8 @@
     <string>Update Standard Library</string>
    </property>
    <property name="toolTip">
-    <string>Replace the Standard Library with the latest version shipped with FirewallFabrik. User libraries and firewall rules are preserved.</string>
+    <string>Replace the Standard Library with the latest version shipped with
+FirewallFabrik. User libraries and firewall rules are preserved.</string>
    </property>
   </action>
   <action name="forwardAction">

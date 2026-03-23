@@ -66,7 +66,8 @@
            <item row="1" column="1" colspan="2">
             <widget class="QComboBox" name="platform">
              <property name="toolTip">
-              <string>Custom service object has separate code string for each supported firewall platform.</string>
+              <string>Custom service object has separate code string for each supported firewall
+platform.</string>
              </property>
             </widget>
            </item>
@@ -80,7 +81,8 @@
            <item row="2" column="1" colspan="2">
             <widget class="QLineEdit" name="code">
              <property name="toolTip">
-              <string>Custom service object has separate code string for each supported firewall platform.</string>
+              <string>Custom service object has separate code string for each supported firewall
+platform.</string>
              </property>
             </widget>
            </item>
@@ -94,7 +96,9 @@
            <item row="3" column="1" colspan="2">
             <widget class="QComboBox" name="protocol">
              <property name="toolTip">
-              <string>Choose one of the standard protocols from the menu or enter a custom protocol string. Policy compilers can use this information to add correct protocol-specific parameters to the generated configuration.</string>
+              <string>Choose one of the standard protocols from the menu or enter a custom protocol
+string. Policy compilers can use this information to add correct
+protocol-specific parameters to the generated configuration.</string>
              </property>
              <property name="editable">
               <bool>true</bool>

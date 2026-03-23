@@ -66,7 +66,9 @@
            <item row="1" column="1" colspan="2">
             <widget class="QLineEdit" name="filename">
              <property name="toolTip">
-              <string>Full path to the file on the firewall machine that contains one IP address or network per line. This file is read at compile time or run time depending on the selected mode.</string>
+              <string>Full path to the file on the firewall machine that contains one IP address or
+network per line. This file is read at compile time or run time depending on the
+selected mode.</string>
              </property>
             </widget>
            </item>
@@ -83,7 +85,8 @@
               <string>Compile time</string>
              </property>
              <property name="toolTip">
-              <string>Read the address table file during policy compilation. Addresses are embedded directly in the generated firewall script.</string>
+              <string>Read the address table file during policy compilation. Addresses are embedded
+directly in the generated firewall script.</string>
              </property>
             </widget>
            </item>
@@ -96,7 +99,8 @@
               <bool>true</bool>
              </property>
              <property name="toolTip">
-              <string>Read the address table file on the firewall machine when the script runs. The file must exist on the firewall at activation time.</string>
+              <string>Read the address table file on the firewall machine when the script runs. The
+file must exist on the firewall at activation time.</string>
              </property>
             </widget>
            </item>

@@ -129,7 +129,8 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>Edit advanced protocol parameters such as heartbeat address, port, and other protocol-specific settings.</string>
+              <string>Edit advanced protocol parameters such as heartbeat address, port, and other
+protocol-specific settings.</string>
              </property>
              <property name="text">
               <string>Edit Protocol Parameters...</string>

@@ -79,7 +79,8 @@ It is recommended to clear these paths so that FirewallFabrik uses its built-in 
         <bool>true</bool>
        </property>
        <property name="toolTip">
-        <string>Remove the legacy compiler paths from all listed firewalls so that FirewallFabrik uses its built-in compiler.</string>
+        <string>Remove the legacy compiler paths from all listed firewalls so that
+FirewallFabrik uses its built-in compiler.</string>
        </property>
       </widget>
      </item>
@@ -89,7 +90,9 @@ It is recommended to clear these paths so that FirewallFabrik uses its built-in 
         <string>Keep Paths</string>
        </property>
        <property name="toolTip">
-        <string>Keep the compiler paths as they are. Compilation will attempt to use the configured binary, which may fail if it is incompatible with FirewallFabrik files.</string>
+        <string>Keep the compiler paths as they are. Compilation will attempt to use the
+configured binary, which may fail if it is incompatible with FirewallFabrik
+files.</string>
        </property>
       </widget>
      </item>

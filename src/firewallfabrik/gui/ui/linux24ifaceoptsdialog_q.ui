@@ -29,7 +29,10 @@
      <item>
       <widget class="QComboBox" name="iface_type">
        <property name="toolTip">
-        <string>The device type determines how this interface is configured in the generated script. Select "ethernet" for regular interfaces, "VLAN (802.1Q)" for tagged VLAN sub-interfaces, "bridge" for bridge interfaces, or "bonding" for link aggregation.</string>
+        <string>The device type determines how this interface is configured in the generated
+script. Select "ethernet" for regular interfaces, "VLAN (802.1Q)" for tagged
+VLAN sub-interfaces, "bridge" for bridge interfaces, or "bonding" for link
+aggregation.</string>
        </property>
       </widget>
      </item>
@@ -66,7 +69,8 @@
        <item>
         <widget class="QSpinBox" name="vlan_id">
          <property name="toolTip">
-          <string>IEEE 802.1Q VLAN tag identifier (1-4094). Must match the numeric suffix in the interface name (e.g. 100 for eth0.100).</string>
+          <string>IEEE 802.1Q VLAN tag identifier (1-4094). Must match the numeric suffix in the
+interface name (e.g. 100 for eth0.100).</string>
          </property>
          <property name="minimum">
           <number>1</number>
@@ -96,7 +100,9 @@
        <item>
         <widget class="QCheckBox" name="enable_stp">
          <property name="toolTip">
-          <string>Enable Spanning Tree Protocol (STP) on this bridge interface. STP prevents network loops by automatically disabling redundant paths. Configured via "ip link set type bridge stp_state 1".</string>
+          <string>Enable Spanning Tree Protocol (STP) on this bridge interface. STP prevents
+network loops by automatically disabling redundant paths. Configured via "ip
+link set type bridge stp_state 1".</string>
          </property>
          <property name="text">
           <string>Enable STP</string>
@@ -130,7 +136,9 @@
        <item row="0" column="1">
         <widget class="QComboBox" name="bonding_policy">
          <property name="toolTip">
-          <string>Linux bonding mode passed to modprobe as the "mode" parameter. "802.3ad" requires switch support for LACP. "balance-rr" distributes packets round-robin across slaves.</string>
+          <string>Linux bonding mode passed to modprobe as the "mode" parameter. "802.3ad"
+requires switch support for LACP. "balance-rr" distributes packets round-robin
+across slaves.</string>
          </property>
          <item>
           <property name="text">
@@ -184,7 +192,9 @@
        <item row="1" column="1">
         <widget class="QComboBox" name="xmit_hash_policy">
          <property name="toolTip">
-          <string>Transmit hash policy for load balancing across bonding slaves. Only applicable for "802.3ad" and "balance-xor" bonding modes. "layer3+4" uses IP addresses and ports for better distribution.</string>
+          <string>Transmit hash policy for load balancing across bonding slaves. Only applicable
+for "802.3ad" and "balance-xor" bonding modes. "layer3+4" uses IP addresses and
+ports for better distribution.</string>
          </property>
          <item>
           <property name="text">
@@ -213,7 +223,9 @@
        <item row="2" column="1">
         <widget class="QLineEdit" name="bondng_driver_options">
          <property name="toolTip">
-          <string>Additional bonding module parameters passed directly to modprobe (e.g. "miimon=100 downdelay=200"). See the Linux bonding documentation for available parameters.</string>
+          <string>Additional bonding module parameters passed directly to modprobe (e.g.
+"miimon=100 downdelay=200"). See the Linux bonding documentation for available
+parameters.</string>
          </property>
         </widget>
        </item>

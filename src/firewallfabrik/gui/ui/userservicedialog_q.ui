@@ -66,7 +66,9 @@
            <item row="1" column="1">
             <widget class="QLineEdit" name="userid">
              <property name="toolTip">
-              <string>User ID or user name used for owner-based matching in iptables rules (--uid-owner). This is matched against the user running the process that initiated the connection.</string>
+              <string>User ID or user name used for owner-based matching in iptables rules
+(--uid-owner). This is matched against the user running the process that
+initiated the connection.</string>
              </property>
             </widget>
            </item>

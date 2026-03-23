@@ -66,7 +66,9 @@
            <item row="1" column="1" colspan="2">
             <widget class="QLineEdit" name="dnsrec">
              <property name="toolTip">
-              <string>DNS 'A' record name entered in this field will be converted to an IP address using a DNS query during policy compilation if "Compile time" is selected, or during firewall policy activation if "Run time" is selected.</string>
+              <string>DNS 'A' record name entered in this field will be converted to an IP address
+using a DNS query during policy compilation if "Compile time" is selected, or
+during firewall policy activation if "Run time" is selected.</string>
              </property>
             </widget>
            </item>
@@ -83,7 +85,8 @@
               <string>Compile time</string>
              </property>
              <property name="toolTip">
-              <string>Resolve the DNS name during policy compilation. The resulting IP address is embedded in the generated firewall script.</string>
+              <string>Resolve the DNS name during policy compilation. The resulting IP address is
+embedded in the generated firewall script.</string>
              </property>
             </widget>
            </item>
@@ -96,7 +99,8 @@
               <bool>true</bool>
              </property>
              <property name="toolTip">
-              <string>Resolve the DNS name when the firewall script runs on the target machine. The script will perform the DNS lookup each time it is activated.</string>
+              <string>Resolve the DNS name when the firewall script runs on the target machine. The
+script will perform the DNS lookup each time it is activated.</string>
              </property>
             </widget>
            </item>

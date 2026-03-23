@@ -66,7 +66,8 @@
            <item row="1" column="1">
             <widget class="QLineEdit" name="tagcode">
              <property name="toolTip">
-              <string>Tag code string used for packet marking. This value is used in the generated firewall script.</string>
+              <string>Tag code string used for packet marking. This value is used in the generated
+firewall script.</string>
              </property>
             </widget>
            </item>

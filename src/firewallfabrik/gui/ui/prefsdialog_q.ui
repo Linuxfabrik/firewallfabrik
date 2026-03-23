@@ -1272,7 +1272,8 @@ Easier to distinguish object types at a glance.</string>
           <string>Clip comments in rules</string>
          </property>
          <property name="toolTip">
-          <string>When enabled, long comments in policy rules are truncated to the first line (max 60 characters) followed by "...".</string>
+          <string>When enabled, long comments in policy rules are truncated to the first line (max
+60 characters) followed by "...".</string>
          </property>
         </widget>
        </item>

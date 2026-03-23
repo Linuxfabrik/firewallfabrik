@@ -100,7 +100,8 @@
            <item>
             <widget class="QSpinBox" name="protocolNum">
              <property name="toolTip">
-              <string>IP protocol number (0-255). 0 means any protocol. Common values: 1=ICMP, 6=TCP, 17=UDP, 47=GRE, 50=ESP, 51=AH, 112=VRRP.</string>
+              <string>IP protocol number (0-255). 0 means any protocol. Common values: 1=ICMP, 6=TCP,
+17=UDP, 47=GRE, 50=ESP, 51=AH, 112=VRRP.</string>
              </property>
              <property name="maximum">
               <number>255</number>
@@ -131,7 +132,9 @@
             <item row="0" column="0">
              <widget class="QRadioButton" name="use_dscp">
               <property name="toolTip">
-               <string>Differentiated Services Code Point (DSCP) — a 6-bit field in the IP header used to classify and prioritize network traffic. Replaces the older TOS field. Common values: AF11-AF43, EF, CS0-CS7.</string>
+               <string>Differentiated Services Code Point (DSCP) — a 6-bit field in the IP header used
+to classify and prioritize network traffic. Replaces the older TOS field. Common
+values: AF11-AF43, EF, CS0-CS7.</string>
               </property>
               <property name="text">
                <string>Use DSCP</string>
@@ -144,7 +147,9 @@
             <item row="0" column="1">
              <widget class="QRadioButton" name="use_tos">
               <property name="toolTip">
-               <string>Type of Service (TOS) — the legacy 8-bit field in the IP header used for quality-of-service routing. Largely superseded by DSCP but still used in some configurations.</string>
+               <string>Type of Service (TOS) — the legacy 8-bit field in the IP header used for
+quality-of-service routing. Largely superseded by DSCP but still used in some
+configurations.</string>
               </property>
               <property name="text">
                <string>Use TOS</string>
@@ -165,7 +170,8 @@
             <item row="1" column="1">
              <widget class="QLineEdit" name="code">
               <property name="toolTip">
-               <string>Enter the DSCP or TOS code as a numerical value in decimal or hexadecimal (e.g. 0x10). DSCP also accepts symbolic names like AF11, EF, CS3.</string>
+               <string>Enter the DSCP or TOS code as a numerical value in decimal or hexadecimal (e.g.
+0x10). DSCP also accepts symbolic names like AF11, EF, CS3.</string>
               </property>
               <property name="enabled">
                <bool>false</bool>
@@ -227,7 +233,8 @@
            <item row="1" column="0">
             <widget class="QCheckBox" name="any_opt">
              <property name="toolTip">
-              <string>IP service object that has this attribute turned on matches IP packets with any IP options present.</string>
+              <string>IP service object that has this attribute turned on matches IP packets with any
+IP options present.</string>
              </property>
              <property name="text">
               <string>Any options</string>
@@ -237,7 +244,9 @@
            <item row="2" column="0">
             <widget class="QCheckBox" name="lsrr">
              <property name="toolTip">
-              <string>Match packets with Loose Source and Record Route option. The sender specifies a list of intermediate routers but the packet may also traverse other routers. Generates iptables: -m ipv4options --lsrr</string>
+              <string>Match packets with Loose Source and Record Route option. The sender specifies a
+list of intermediate routers but the packet may also traverse other routers.
+Generates iptables: -m ipv4options --lsrr</string>
              </property>
              <property name="text">
               <string>lsrr (loose source route)</string>
@@ -247,7 +256,9 @@
            <item row="3" column="0">
             <widget class="QCheckBox" name="ssrr">
              <property name="toolTip">
-              <string>Match packets with Strict Source and Record Route option. The packet must follow the exact route specified by the sender with no deviation. Generates iptables: -m ipv4options --ssrr</string>
+              <string>Match packets with Strict Source and Record Route option. The packet must follow
+the exact route specified by the sender with no deviation. Generates iptables:
+-m ipv4options --ssrr</string>
              </property>
              <property name="text">
               <string>ssrr (strict source route)</string>
@@ -257,7 +268,9 @@
            <item row="4" column="0">
             <widget class="QCheckBox" name="rr">
              <property name="toolTip">
-              <string>Match packets with Record Route option. Each router along the path records its address in the packet header. Generates iptables: -m ipv4options --rr (old) or --flags record-route (new)</string>
+              <string>Match packets with Record Route option. Each router along the path records its
+address in the packet header. Generates iptables: -m ipv4options --rr (old) or
+--flags record-route (new)</string>
              </property>
              <property name="text">
               <string>rr (record route)</string>
@@ -267,7 +280,9 @@
            <item row="5" column="0">
             <widget class="QCheckBox" name="timestamp">
              <property name="toolTip">
-              <string>Match packets with Timestamp option. Routers along the path record the time the packet passed through. Generates iptables: -m ipv4options --ts (old) or --flags timestamp (new)</string>
+              <string>Match packets with Timestamp option. Routers along the path record the time the
+packet passed through. Generates iptables: -m ipv4options --ts (old) or --flags
+timestamp (new)</string>
              </property>
              <property name="text">
               <string>timestamp</string>
@@ -277,7 +292,9 @@
            <item row="6" column="0">
             <widget class="QCheckBox" name="router_alert">
              <property name="toolTip">
-              <string>Match packets with Router Alert option (RFC 2113). Tells routers to examine the packet more closely, used by protocols like RSVP and IGMP. Generates iptables: -m ipv4options --ra (old) or --flags router-alert (new)</string>
+              <string>Match packets with Router Alert option (RFC 2113). Tells routers to examine the
+packet more closely, used by protocols like RSVP and IGMP. Generates iptables:
+-m ipv4options --ra (old) or --flags router-alert (new)</string>
              </property>
              <property name="text">
               <string>router-alert option</string>
@@ -318,7 +335,8 @@
            <item row="0" column="1">
             <widget class="QCheckBox" name="all_fragments">
              <property name="toolTip">
-              <string>Match all IP fragments (second and further fragments of a fragmented packet). Generates iptables: -f (IPv4) or -m frag --fragmore (IPv6).</string>
+              <string>Match all IP fragments (second and further fragments of a fragmented packet).
+Generates iptables: -f (IPv4) or -m frag --fragmore (IPv6).</string>
              </property>
              <property name="text">
               <string>all</string>
@@ -328,7 +346,9 @@
            <item row="0" column="2">
             <widget class="QCheckBox" name="short_fragments">
              <property name="toolTip">
-              <string>Match short IP fragments — packets too small to contain a complete header. Often used in fragmentation attacks. Generates the same iptables match as 'all fragments'.</string>
+              <string>Match short IP fragments — packets too small to contain a complete header. Often
+used in fragmentation attacks. Generates the same iptables match as 'all
+fragments'.</string>
              </property>
              <property name="text">
               <string>'short'</string>
@@ -359,7 +379,7 @@
   <customwidget>
    <class>CommentKeywords</class>
    <extends>QWidget</extends>
-   
+
    <container>1</container>
   </customwidget>
  </customwidgets>
