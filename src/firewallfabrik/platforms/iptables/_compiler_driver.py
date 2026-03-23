@@ -598,11 +598,20 @@ class CompilerDriver_ipt(CompilerDriver):
                         '',
                     )
 
+                # Management SSH access for block/stop actions
+                mgmt_ssh = bool(options.get('mgmt_ssh', False))
+                mgmt_addr = options.get('mgmt_addr', '')
+                mgmt_access = 1 if (mgmt_ssh and mgmt_addr) else 0
+
                 # Block action configlet
                 block_action = Configlet('linux24', 'block_action')
                 block_action.set_variable('opt_wait', opt_wait)
                 block_action.collapse_empty_strings(True)
-                block_action.set_variable('mgmt_access', 0)
+                block_action.set_variable('mgmt_access', mgmt_access)
+                block_action.set_variable(
+                    'ssh_management_address',
+                    mgmt_addr,
+                )
                 script_skeleton.set_variable('block_action', block_action.expand())
 
                 # Stop action configlet — keeps policies at DROP after
@@ -610,7 +619,11 @@ class CompilerDriver_ipt(CompilerDriver):
                 stop_action = Configlet('linux24', 'stop_action')
                 stop_action.set_variable('opt_wait', opt_wait)
                 stop_action.collapse_empty_strings(True)
-                stop_action.set_variable('mgmt_access', 0)
+                stop_action.set_variable('mgmt_access', mgmt_access)
+                stop_action.set_variable(
+                    'ssh_management_address',
+                    mgmt_addr,
+                )
                 script_skeleton.set_variable('stop_action', stop_action.expand())
 
                 # Status action configlet

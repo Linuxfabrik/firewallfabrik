@@ -410,7 +410,7 @@ options:
   mgmt_addr:
     type: 'str'
     default: ''
-    supported: false
+    supported: true
     widget: 'mgmt_addr'
     description: >-
       IP address of the management workstation allowed permanent
@@ -419,7 +419,7 @@ options:
   mgmt_ssh:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'mgmt_ssh'
     description: >-
       Always permit SSH access from the management workstation
