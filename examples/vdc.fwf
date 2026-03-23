@@ -10680,7 +10680,7 @@ libraries:
               - type: 'TCPService'
                 name: 'icinga 12345'
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 12345
                 dst_range_end: 12345
                 tcp_flags:
@@ -10700,7 +10700,7 @@ libraries:
               - type: 'TCPService'
                 name: 'ssh 2222'
                 data:
-                  established: 'False'
+                  established: false
                 dst_range_start: 2222
                 dst_range_end: 2222
                 tcp_flags:
