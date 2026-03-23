@@ -15,6 +15,7 @@
 # fw-empty-groups:Policy:0: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule 0 (global) because option 'Ignore rules with empty groups' is in effect
 
 FWBDEBUG=""
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -489,11 +490,10 @@ case "$cmd" in
  reset_all
 
 
- script_body
+ script_body || run_epilog_and_exit 1
  ip_forward
 
  epilog_commands
- RETVAL=$?
  ;;
 
  stop)
@@ -530,6 +530,7 @@ case "$cmd" in
 
  *)
  echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+ RETVAL=1
  ;;
 
 esac
