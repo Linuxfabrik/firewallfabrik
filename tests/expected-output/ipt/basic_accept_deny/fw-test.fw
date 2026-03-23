@@ -442,9 +442,6 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -P OUTPUT ACCEPT
- $IPTABLES -P INPUT ACCEPT
- $IPTABLES -P FORWARD ACCEPT
 }
 
 check_iptables() {
