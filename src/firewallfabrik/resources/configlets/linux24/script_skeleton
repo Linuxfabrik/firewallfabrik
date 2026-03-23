@@ -12,6 +12,7 @@
 
 {{$shell_debug}}
 FWBDEBUG=""
+RETVAL=0
 
 {{$path}}
 
@@ -99,13 +100,12 @@ case "$cmd" in
         {{if not_using_iptables_restore}} reset_all {{endif}}
         {{$setup_fwf_jumps_commands}}
         {{if prolog_after_flush}} prolog_commands {{endif}}
-        script_body
+        script_body || run_epilog_and_exit 1
         ip_forward
         {{if using_ipset}}
         load_run_time_address_table_files
         {{endif}}
         epilog_commands
-        RETVAL=$?
         ;;
 
     stop)
@@ -164,6 +164,7 @@ case "$cmd" in
 
     *)
         echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces{{if using_ipset}}|reload_address_table|add_to_address_table|remove_from_address_table|test_address_table{{endif}}]"
+        RETVAL=1
         ;;
 
 esac
