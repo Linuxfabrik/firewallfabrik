@@ -21,8 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
+- Compiler error and warning messages now show the rule position number instead of the color label.
+- Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
+- Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
+- Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.
 - Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
 - Main window border is now clearly visible on GNOME/Wayland.
+- `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
+- `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
 - Test infrastructure: expected output files are now also regenerated for firewalls with compiler warnings.
 
 
