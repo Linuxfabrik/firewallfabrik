@@ -118,7 +118,7 @@ find_program() {
 check_tools() {
  find_program command
  find_program $IPTABLES
- find_program $MODPROBE
+find_program $MODPROBE
  find_program $IP
 }
 reset_iptables_v4() {
