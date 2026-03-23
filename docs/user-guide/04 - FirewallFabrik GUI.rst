@@ -210,7 +210,7 @@ The Object menu lets you create new objects and search for them.
 Rules Menu
 ~~~~~~~~~~
 
-The Rules menu lets you compile the firewall policy.
+The Rules menu lets you compile and install firewall policies.
 
 .. list-table:: Rules Menu
    :header-rows: 1
@@ -220,6 +220,8 @@ The Rules menu lets you compile the firewall policy.
      - Explanation
    * - Compile
      - Opens the compile dialog for all firewalls in the current object file. See :doc:`10 - Compiling and Installing a Policy` for more detail.
+   * - Install
+     - Opens the compile-and-install dialog for all firewalls in the current object file. Firewalls are compiled first (if needed), then the generated scripts are deployed to the target machines via SSH/SCP. See :doc:`10 - Compiling and Installing a Policy` for more detail.
 
 
 Help Menu
@@ -312,6 +314,8 @@ The Tool Bar has buttons for commonly used functions:
      - Opens the Find panel, which also provides search-and-replace functions. See :doc:`05 - Working with Objects` for details on how to use this panel.
    * - Compile
      - Opens the compile dialog for all firewalls in the current object file. See :doc:`10 - Compiling and Installing a Policy` for more detail.
+   * - Install
+     - Opens the compile-and-install dialog to compile and deploy firewall policies via SSH/SCP. See :doc:`10 - Compiling and Installing a Policy` for more detail.
 
 
 Object Tree
@@ -579,27 +583,16 @@ To open the Preferences dialog, select Edit > Preferences (Ctrl+,). The dialog h
      - Explanation
    * - Enable object tooltips
      - FirewallFabrik can show a summary of an object's properties in a quick pop-up window (a "tooltip") when you hover the mouse cursor over an object icon. If this feature is not enabled, then you must click on an object to get the same information.
-   * - Advanced User Mode
-     - When enabled, tooltips are shown in a shorter, more compact format intended for experienced users.
    * - Show attributes in tree
      - Creates a second column in the object tree. The second column contains information about the object, such as how many objects a folder contains, whether a rule set is the top rule set, IP addresses, and so on. See the `Object Attributes in the Tree`_ section for a description.
-   * - Enable custom templates
-     - When enabled, allows the use of custom template firewall objects when creating new firewalls.
    * - DNS Name settings
      - Set the default behavior for new DNS Name objects: whether they resolve at compile time or at run time. You can also choose whether to use the object name for the DNS record by default. These defaults can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information.
    * - Address Table settings
      - Set the default behavior for new Address Table objects: whether addresses are loaded from the file at compile time or at run time. This default can be overridden for individual objects. See :doc:`05 - Working with Objects` for more information.
 
-.. list-table:: Preferences > Data File Tab
-   :header-rows: 1
-   :widths: 30 70
+.. note::
 
-   * - Data File Preferences
-     - Explanation
-   * - Periodically save data to file every ... minute
-     - If checked, data is automatically saved at the specified interval.
-   * - Enable compression of the data file
-     - If selected, the data file is compressed to save disk space.
+   The **Data File** tab (auto-save interval, file compression) from Firewall Builder is not yet available in FirewallFabrik.
 
 .. list-table:: Preferences > Installer Tab
    :header-rows: 1
@@ -642,20 +635,9 @@ To open the Preferences dialog, select Edit > Preferences (Ctrl+,). The dialog h
    * - Icon size
      - By default, icons are 25x25 pixels. Select 16x16 to make them smaller. (The larger icons are easier to see, but the smaller ones are useful for smaller displays, such as laptop screens.)
 
-.. list-table:: Preferences > Diff Tab
-   :header-rows: 1
-   :widths: 30 70
+.. note::
 
-   * - Diff Preferences
-     - Explanation
-   * - Rule Set Diff Viewer colors
-     - Configure the colors used to highlight added, edited, moved, and removed rules in the diff viewer.
-   * - Display unmodified rules
-     - If checked, shows unmodified rules alongside changed rules for context.
-   * - Generated Output Diff Viewer
-     - Settings for the generated output diff viewer, including an option to auto-compile when viewing diffs.
-   * - Diff utility path
-     - Path to an external diff utility to use for comparisons.
+   The **Diff** tab (diff viewer colors, display options, diff utility path) from Firewall Builder is not yet available in FirewallFabrik.
 
 .. list-table:: Preferences > Platforms and OS Tab
    :header-rows: 1

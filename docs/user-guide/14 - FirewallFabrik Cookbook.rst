@@ -862,7 +862,7 @@ Now compile the policy. Note that in the progress output the compiler shows that
 
 .. code-block:: text
 
-   $ fwb_ipt -v -f policy_rules.fwb fw
+   $ fwf-ipt -v -f policy_rules.fwf fw
    *** Loading data ... done
    Compiling rules for 'nat' table
    processing 1 rules
@@ -1449,7 +1449,7 @@ This command should probably be put in a script which should run from cron once 
 
 .. code-block:: text
 
-   /etc/firewall.sh reload_address_table blocklist /etc/blocklist_file.txt
+   /etc/fwf.sh reload_address_table blocklist /etc/blocklist_file.txt
 
 If the firewall does not support module ipset, you just need to re-run the firewall script to update the rules with new ip addresses.
 

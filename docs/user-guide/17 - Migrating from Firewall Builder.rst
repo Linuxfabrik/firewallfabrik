@@ -168,8 +168,8 @@ No SNMP discovery
 No policy import
    Firewall Builder could parse the output of ``iptables-save`` and create firewall objects and rule sets from it. This feature required a complex ANTLR parser (~47,000 lines of code) and produced a flat, unsorted rule list that needed extensive manual cleanup to be usable. In practice, building a firewall from scratch in the GUI is faster than cleaning up an imported configuration. FirewallFabrik does not include this feature.
 
-ULOG removed
-   The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG). If your ``.fwb`` file had ``use_ULOG`` enabled, it is silently migrated to the standard LOG target during import. NFLOG support is planned but not yet implemented in the compiler — LOG and NFLOG are shown as radio buttons in the platform settings, with NFLOG currently disabled.
+ULOG removed, NFLOG supported
+   The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG). If your ``.fwb`` file had ``use_ULOG`` enabled, it is silently migrated to the standard LOG target during import. Both compilers fully support NFLOG: the iptables compiler generates ``-j NFLOG`` rules with ``--nflog-group``, ``--nflog-prefix``, ``--nflog-range``, and ``--nflog-threshold`` parameters; the nftables compiler generates ``log group N`` statements. Enable NFLOG via the "Use NFLOG" option in the firewall settings dialog.
 
 Legacy logging and bridge options
    Several advanced iptables logging options (log TCP sequence numbers, log TCP/IP options, numeric syslog levels, kernel timezone, unconditional rule logging) and bridge interface configuration are legacy features with no remaining audience and are not supported. The corresponding checkboxes in the platform settings dialogs are disabled. If your ``.fwb`` file had any of these options enabled, you will see a compiler warning.

@@ -9,9 +9,9 @@ Integration with OS Running on the Firewall Machine
    :depth: 2
 
 
-FirewallFabrik generates firewall scripts for iptables and nftables tailored for integration with modern Linux systems running systemd. The generated script supports command-line arguments ``start``, ``stop``, ``status``, ``reload``, ``interfaces``, and ``test_interfaces``. The script can be integrated with systemd using a custom service unit.
+FirewallFabrik generates firewall scripts for iptables and nftables tailored for integration with modern Linux systems running systemd. The generated script supports command-line arguments ``start``, ``stop``, ``status``, ``block``, ``reload``, ``interfaces``, and ``test_interfaces``. The script can be integrated with systemd using a custom service unit.
 
-The generated script is assembled from parts defined in configlets located in the FirewallFabrik package (``firewallfabrik/configlets/linux24/script_skeleton``). You can modify it following instructions in :doc:`13 - Configlets`.
+The iptables script is assembled from configlets located in ``resources/configlets/linux24/`` (starting from ``script_skeleton``). The nftables script is rendered from the Jinja2 template ``resources/templates/nftables/script.sh.j2``. You can modify both following the instructions in :doc:`13 - Configlets`.
 
 
 Activating the Firewall Policy at Boot

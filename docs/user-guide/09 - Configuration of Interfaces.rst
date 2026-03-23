@@ -55,7 +55,7 @@ The most complete implementation is available on Linux where generated script ca
 IP Address Management
 ---------------------
 
-* The generated script includes shell code to manage IP addresses of interfaces if checkbox "Configure interfaces" is turned on in the "Script" tab of the firewall object "advanced" settings dialog. By default, it is turned off.
+* The generated script includes shell code to manage IP addresses of interfaces if checkbox "Configure interfaces" is turned on in the "Script" tab of the firewall object "advanced" settings dialog. By default, it is turned on for iptables firewalls and turned off for nftables firewalls.
 
 * The script uses the *ip* tool on Linux which should be present on the firewall. The script checks if it is available and aborts if it cannot find it.
 
@@ -67,13 +67,13 @@ IP Address Management
 IP Address Management on Linux
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The generated script includes shell code to manage IP addresses if the checkbox "Configure interfaces" is turned on in the "Script" tab of the firewall object "advanced" settings dialog. By default, it is turned off.
+The generated script includes shell code to manage IP addresses if the checkbox "Configure interfaces" is turned on in the "Script" tab of the firewall object "advanced" settings dialog. By default, it is turned on for iptables firewalls and turned off for nftables firewalls.
 
 The script uses *ip* tool which should be present on the firewall. The script checks if it is available and aborts if it can not find it. The path to this tool can be changed in the "Host OS" settings dialog of the firewall object. The script then checks if the IP address of each interface configured in the GUI exists on the firewall and adds it if necessary. If the script finds ip address on the firewall that is not configured in the FirewallFabrik GUI, it removes it.
 
 If the checkbox "Clear ip addresses and bring down interfaces not configured in FirewallFabrik" is turned on in the "Script" tab of firewall settings dialog, the script deletes all ip address of all interfaces that are not configured in FirewallFabrik GUI and brings interfaces that are missing in FirewallFabrik but are found on the firewall down. The goal is to ensure that firewall rules operate in the environment that matches assumptions under which they were generated. If the program generated rules assuming some address does not belong to the firewall, but in reality it does, packets may show up in the wrong chain that will lead to the wrong behavior of the firewall. This feature is off by default.
 
-The generated script recognizes command line parameters "start", "stop", "reload", "interfaces" and "test_interfaces". When the script runs with the parameter "interfaces" it performs only interface configuration as described above. The command-line parameter "start" makes it do that and then load iptables rules. Parameter "test_interfaces" makes the script perform all the checks of IP addresses and print commands that it would use to add and remove addresses but not actually execute them.
+The generated script recognizes command line parameters "start", "stop", "status", "block", "reload", "interfaces" and "test_interfaces". When the script runs with the parameter "interfaces" it performs only interface configuration as described above. The command-line parameter "start" makes it do that and then load firewall rules. Parameter "test_interfaces" makes the script perform all the checks of IP addresses and print commands that it would use to add and remove addresses but not actually execute them.
 
 The generated script can manage both IPv4 and IPv6 addresses.
 
