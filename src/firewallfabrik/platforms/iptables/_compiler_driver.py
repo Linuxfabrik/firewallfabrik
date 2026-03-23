@@ -166,6 +166,12 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 self._warn_unsupported_options(options)
 
+                flush_ruleset = options.get('flush_ruleset', True)
+                table_name = options.get('table_name', '') or 'fwf'
+                # Store for use in sub-compiler methods.
+                self._flush_ruleset = flush_ruleset
+                self._table_name = table_name
+
                 debug = options.get('debug', False)
                 shell_dbg = 'set -x' if debug else ''
 
@@ -512,28 +518,89 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Reset commands
                 use_ipt_restore = options.get('use_iptables_restore', False)
+
+                # When flush_ruleset is off, iptables-restore can't be used
+                # because it replaces entire tables atomically.
+                if not flush_ruleset and use_ipt_restore:
+                    use_ipt_restore = False
+                    self.warning(
+                        '"Flush entire ruleset" is disabled \u2014 only '
+                        "FirewallFabrik's own chains will be flushed so "
+                        'that rules created by other tools (e.g. Docker, '
+                        'CrowdSec, fail2ban) are preserved. '
+                        '"Use iptables-restore" has been ignored because '
+                        'iptables-restore replaces entire tables atomically.'
+                    )
+
                 script_skeleton.set_variable(
                     'not_using_iptables_restore', 0 if use_ipt_restore else 1
                 )
 
                 reset_buf = ''
-                # On RHEL8+ / modern distros, iptables uses the nftables
-                # backend (iptables-nft). Flush any pre-existing nftables
-                # rules first — iptables -F does not clear them.
-                reset_buf += '    command -v nft >/dev/null 2>&1 && nft flush ruleset\n'
-                if have_ipv4:
-                    reset_buf += '    reset_iptables_v4\n'
-                if have_ipv6:
-                    reset_buf += '    reset_iptables_v6\n'
+                if flush_ruleset:
+                    # Default: flush everything for a deterministic state.
+                    # On RHEL8+ / modern distros, iptables uses the nftables
+                    # backend (iptables-nft). Flush any pre-existing nftables
+                    # rules first — iptables -F does not clear them.
+                    reset_buf += (
+                        '    command -v nft >/dev/null 2>&1 && nft flush ruleset\n'
+                    )
+                    if have_ipv4:
+                        reset_buf += '    reset_iptables_v4\n'
+                    if have_ipv6:
+                        reset_buf += '    reset_iptables_v6\n'
+                else:
+                    # Coexistence: only flush FWF's own prefixed chains.
+                    if have_ipv4:
+                        reset_buf += f'    reset_fwf_chains_v4 "{table_name}"\n'
+                    if have_ipv6:
+                        reset_buf += f'    reset_fwf_chains_v6 "{table_name}"\n'
                 script_skeleton.set_variable('reset_all', reset_buf)
 
-                # Block action configlet
+                # Coexistence mode: load configlets for prefixed chain
+                # management and wire setup_fwf_jumps into script_body.
                 real_version = fw.version or ''
-                block_action = Configlet('linux24', 'block_action')
-                if _version_compare(real_version, '1.4.20') >= 0:
-                    block_action.set_variable('opt_wait', '-w')
+                opt_wait = (
+                    '-w'
+                    if _version_compare(
+                        real_version,
+                        '1.4.20',
+                    )
+                    >= 0
+                    else ''
+                )
+
+                # Always include coexistence helper functions so that
+                # switching flush_ruleset on/off produces minimal diffs.
+                reset_fwf = Configlet('linux24', 'reset_fwf_chains')
+                reset_fwf.set_variable('opt_wait', opt_wait)
+                setup_fwf = Configlet('linux24', 'setup_fwf_jumps')
+                setup_fwf.set_variable('opt_wait', opt_wait)
+                script_skeleton.set_variable(
+                    'fwf_chain_functions',
+                    reset_fwf.expand() + '\n\n' + setup_fwf.expand(),
+                )
+
+                if not flush_ruleset:
+                    # Build setup_fwf_jumps calls for v4 and v6.
+                    setup_cmds = ''
+                    if have_ipv4:
+                        setup_cmds += f'        setup_fwf_jumps_v4 "{table_name}"\n'
+                    if have_ipv6:
+                        setup_cmds += f'        setup_fwf_jumps_v6 "{table_name}"\n'
+                    script_skeleton.set_variable(
+                        'setup_fwf_jumps_commands',
+                        setup_cmds,
+                    )
                 else:
-                    block_action.set_variable('opt_wait', '')
+                    script_skeleton.set_variable(
+                        'setup_fwf_jumps_commands',
+                        '',
+                    )
+
+                # Block action configlet
+                block_action = Configlet('linux24', 'block_action')
+                block_action.set_variable('opt_wait', opt_wait)
                 block_action.collapse_empty_strings(True)
                 block_action.set_variable('mgmt_access', 0)
                 script_skeleton.set_variable('block_action', block_action.expand())
@@ -543,10 +610,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 stop_action.collapse_empty_strings(True)
                 stop_action.set_variable('have_ipv4', 1 if have_ipv4 else 0)
                 stop_action.set_variable('have_ipv6', 1 if have_ipv6 else 0)
-                if _version_compare(real_version, '1.4.20') >= 0:
-                    stop_action.set_variable('opt_wait', '-w')
-                else:
-                    stop_action.set_variable('opt_wait', '')
+                stop_action.set_variable('opt_wait', opt_wait)
                 script_skeleton.set_variable('stop_action', stop_action.expand())
 
                 # Status action configlet
@@ -633,6 +697,8 @@ class CompilerDriver_ipt(CompilerDriver):
         nat_compiler = NATCompiler_ipt(
             session, fw, ipv6_policy, oscnf, minus_n_commands_nat
         )
+        if not self._flush_ruleset:
+            nat_compiler.chain_prefix = self._table_name
 
         if not self._is_top_ruleset(nat_rs):
             nat_compiler.register_rule_set_chain(branch_name)
@@ -763,6 +829,8 @@ class CompilerDriver_ipt(CompilerDriver):
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True
             policy_compiler.single_rule_id = single_rule_id
+        if not self._flush_ruleset:
+            policy_compiler.chain_prefix = self._table_name
         policy_compiler.verbose = self.verbose > 0
         policy_compiler.source_dir = self.source_dir
         policy_compiler.have_dynamic_interfaces = self.have_dynamic_interfaces

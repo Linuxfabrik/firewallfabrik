@@ -126,6 +126,9 @@ class NATCompiler_ipt(NATCompiler):
         self.upstream_chains: dict[str, list[str]] = defaultdict(list)
         self.registered_chains: set[str] = set()
 
+        # Chain prefix for coexistence mode (e.g. 'fwf' → fwf_PREROUTING)
+        self.chain_prefix: str = ''
+
         # Branch ruleset chain mapping (set by the driver)
         self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
 

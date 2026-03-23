@@ -1,0 +1,61 @@
+## -*- mode: shell-script; -*-
+##
+## Configlet for coexistence mode: flush only FirewallFabrik's own
+## prefixed chains, leaving other tools' chains untouched.
+##
+## Configlets support simple macro language with these constructs:
+## {{$var}} is variable expansion
+## {{if var}} is conditional operator.
+##
+reset_fwf_chains_v4() {
+  local prefix="$1"
+  local table chain rulenum
+
+  # For each table that exists, remove FWF jump rules from built-in
+  # chains (in reverse order to keep line numbers stable), then flush
+  # and delete FWF's own chains.
+  for table in filter nat mangle; do
+    [ -f /proc/net/ip_tables_names ] && grep -qw "$table" /proc/net/ip_tables_names || continue
+
+    # Remove jump rules targeting our prefixed chains from built-in chains.
+    for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+      $IPTABLES {{$opt_wait}} -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+        | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+        | while read rulenum; do
+            $IPTABLES {{$opt_wait}} -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+          done
+    done
+
+    # Flush and delete our prefixed chains.
+    $IPTABLES {{$opt_wait}} -t "$table" -L -n 2>/dev/null \
+      | grep "^Chain ${prefix}_" | awk '{print $2}' \
+      | while read chain; do
+          $IPTABLES {{$opt_wait}} -t "$table" -F "$chain" 2>/dev/null
+          $IPTABLES {{$opt_wait}} -t "$table" -X "$chain" 2>/dev/null
+        done
+  done
+}
+
+reset_fwf_chains_v6() {
+  local prefix="$1"
+  local table chain rulenum
+
+  for table in filter nat mangle; do
+    [ -f /proc/net/ip6_tables_names ] && grep -qw "$table" /proc/net/ip6_tables_names || continue
+
+    for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+      $IP6TABLES {{$opt_wait}} -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+        | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+        | while read rulenum; do
+            $IP6TABLES {{$opt_wait}} -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+          done
+    done
+
+    $IP6TABLES {{$opt_wait}} -t "$table" -L -n 2>/dev/null \
+      | grep "^Chain ${prefix}_" | awk '{print $2}' \
+      | while read chain; do
+          $IP6TABLES {{$opt_wait}} -t "$table" -F "$chain" 2>/dev/null
+          $IP6TABLES {{$opt_wait}} -t "$table" -X "$chain" 2>/dev/null
+        done
+  done
+}

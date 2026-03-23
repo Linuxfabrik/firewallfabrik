@@ -453,7 +453,7 @@ class CompilerDriver_nft(CompilerDriver):
         remain untouched.
         """
         options = fw.options or {}
-        table_name = options.get('table_name', '') or 'linuxfabrik'
+        table_name = options.get('table_name', '') or 'fwf'
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
 
@@ -656,7 +656,7 @@ class CompilerDriver_nft(CompilerDriver):
             manifest += f' {remote}'
 
         # Named table support — only flush our own tables
-        table_name = options.get('table_name', '') or 'linuxfabrik'
+        table_name = options.get('table_name', '') or 'fwf'
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
 
@@ -692,6 +692,7 @@ class CompilerDriver_nft(CompilerDriver):
             'verify_interfaces_code': verify_interfaces_code,
             'filter_family': filter_family,
             'filter_table': filter_table,
+            'flush_ruleset': options.get('flush_ruleset', True),
             'ip_path': ip_path,
             'nat_table': nat_table,
         }

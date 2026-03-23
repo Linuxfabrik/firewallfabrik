@@ -190,12 +190,19 @@ class PrintRule(PolicyRuleProcessor):
         ):
             for chain in ipt_comp.get_standard_chains():
                 ipt_comp.minus_n_commands[chain] = True
+                # In coexistence mode, the prefixed standard chains
+                # are created by setup_fwf_jumps, so mark them too.
+                prefixed = self._prefix_chain(chain)
+                if prefixed != chain:
+                    ipt_comp.minus_n_commands[prefixed] = True
         self.minus_n_tracker_initialized = True
 
-    def _create_chain(self, chain: str) -> str:
+    def _create_chain(self, chain: str, apply_prefix: bool = True) -> str:
         """Generate chain creation command if needed."""
         if not chain:
             return ''
+        if apply_prefix:
+            chain = self._prefix_chain(chain)
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
@@ -257,11 +264,18 @@ class PrintRule(PolicyRuleProcessor):
             return '\n'.join(res) + '\n'
         return ''
 
+    def _prefix_chain(self, chain: str) -> str:
+        """Apply coexistence chain prefix if configured."""
+        prefix = getattr(self.compiler, 'chain_prefix', '')
+        if prefix and chain:
+            return f'{prefix}_{chain}'
+        return chain
+
     def _print_chain(self, rule: CompRule) -> str:
         chain = rule.ipt_chain
         if not chain:
             chain = 'UNKNOWN'
-        return chain + ' '
+        return self._prefix_chain(chain) + ' '
 
     def _print_direction_and_interface(self, rule: CompRule) -> str:
         """Print -i/-o interface matching."""
@@ -647,6 +661,31 @@ class PrintRule(PolicyRuleProcessor):
             result += f' --limit-burst {burst}'
         return result
 
+    # Standard iptables targets that must never be prefixed.
+    _BUILTIN_TARGETS = frozenset(
+        {
+            'ACCEPT',
+            'DROP',
+            'LOG',
+            'MARK',
+            'NFLOG',
+            'QUEUE',
+            'REDIRECT',
+            'REJECT',
+            'RETURN',
+            'CLASSIFY',
+            'CONNMARK',
+            'DNAT',
+            'MASQUERADE',
+            'NETMAP',
+            'NOTRACK',
+            'ROUTE',
+            'SNAT',
+            'TCPMSS',
+            'ULOG',
+        }
+    )
+
     def _print_target(self, rule: CompRule) -> str:
         target = rule.ipt_target
         if target:
@@ -656,6 +695,9 @@ class PrintRule(PolicyRuleProcessor):
                 reject_opt = self._print_action_on_reject(rule)
                 if reject_opt:
                     return f' -j REJECT {reject_opt}'
+            # Prefix user-chain targets, but not built-in targets.
+            if target not in self._BUILTIN_TARGETS:
+                target = self._prefix_chain(target)
             return f' -j {target}'
 
         action_map = {

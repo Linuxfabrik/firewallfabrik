@@ -206,7 +206,7 @@ options:
 
   firewall_dir:
     type: 'str'
-    default: '/etc/fw'
+    default: '/etc'
     supported: true
     widget: 'ipt_fw_dir'
     description: >-
@@ -222,6 +222,21 @@ options:
       Assume the firewall machine is part of "any" and matching
       network objects. When enabled, the compiler generates rules
       for traffic to/from the firewall itself.
+
+  flush_ruleset:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'flushRuleset'
+    description: >-
+      When enabled (default), the generated script flushes ALL
+      iptables rules and chains before loading new rules. When
+      disabled, the script only manages its own prefixed chains
+      (e.g. fwf_INPUT, fwf_FORWARD), leaving rules created by
+      other tools (e.g. Docker, CrowdSec, fail2ban) untouched.
+      Not compatible with "Use iptables-restore" (automatically
+      disabled). Control startup order via systemd unit ordering
+      (e.g. Before=fail2ban.service docker.service).
 
   ignore_empty_groups:
     type: 'bool'
@@ -412,7 +427,7 @@ options:
 
   output_file:
     type: 'str'
-    default: ''
+    default: 'fwf.sh'
     supported: true
     widget: 'outputFileName'
     description: >-
@@ -452,7 +467,7 @@ options:
 
   script_name_on_firewall:
     type: 'str'
-    default: ''
+    default: 'fwf.sh'
     supported: true
     widget: 'fileNameOnFw'
     description: >-
@@ -467,6 +482,19 @@ options:
     description: >-
       Additional arguments passed to ssh when connecting to the
       firewall for installation.
+
+  table_name:
+    type: 'str'
+    default: 'fwf'
+    supported: true
+    widget: 'tableName'
+    placeholder: 'fwf'
+    description: >-
+      Prefix for iptables chains managed by FirewallFabrik. Only
+      used when "Flush entire ruleset" is disabled. The compiler
+      creates chains like {name}_INPUT, {name}_FORWARD,
+      {name}_OUTPUT, etc. Must contain only alphanumeric
+      characters, hyphens, and underscores.
 
   use_iptables_restore:
     type: 'bool'

@@ -168,6 +168,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # iptables version
         self.version: str = fw.version or ''
 
+        # Chain prefix for coexistence mode (e.g. 'fwf' → fwf_INPUT)
+        self.chain_prefix: str = ''
+
         # ipset usage flag
         self.using_ipset: bool = False
         if _version_compare(self.version, '1.4.1.1') >= 0:

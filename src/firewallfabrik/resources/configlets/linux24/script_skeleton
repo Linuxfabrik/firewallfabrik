@@ -21,6 +21,8 @@ FWBDEBUG=""
 
 {{$shell_functions}}
 
+{{$fwf_chain_functions}}
+
 {{$run_time_address_tables}}
 
 load_modules() {
@@ -95,6 +97,7 @@ case "$cmd" in
         verify_interfaces
         {{if prolog_after_interfaces}} prolog_commands {{endif}}
         {{if not_using_iptables_restore}} reset_all {{endif}}
+        {{$setup_fwf_jumps_commands}}
         {{if prolog_after_flush}} prolog_commands {{endif}}
         script_body
         ip_forward

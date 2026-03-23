@@ -103,7 +103,11 @@ flush_own_tables() {
 }
 
 block_action() {
+{% if flush_ruleset %}
+    $NFT flush ruleset 2>/dev/null
+{% else %}
     flush_own_tables
+{% endif %}
     # block all traffic by default (always use inet to block both IPv4 and IPv6)
     $NFT add table inet {{ filter_table }}
     $NFT add chain inet {{ filter_table }} input '{ type filter hook input priority 0; policy drop; }'
@@ -117,7 +121,11 @@ block_action() {
 }
 
 stop_action() {
+{% if flush_ruleset %}
+    $NFT flush ruleset 2>/dev/null
+{% else %}
     flush_own_tables
+{% endif %}
 }
 
 check_nft_status() {

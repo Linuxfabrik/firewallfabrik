@@ -205,7 +205,7 @@ options:
 
   firewall_dir:
     type: 'str'
-    default: '/etc/fw'
+    default: '/etc'
     supported: true
     widget: 'ipt_fw_dir'
     description: >-
@@ -221,6 +221,19 @@ options:
       Assume the firewall machine is part of "any" and matching
       network objects. When enabled, the compiler generates rules
       for traffic to/from the firewall itself.
+
+  flush_ruleset:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'flushRuleset'
+    description: >-
+      When enabled (default), the generated script runs
+      "nft flush ruleset" which removes ALL nftables rules before
+      loading new rules. When disabled, the script only deletes and
+      recreates the tables owned by FirewallFabrik, leaving rules
+      created by other tools (e.g. Docker, CrowdSec, fail2ban)
+      untouched.
 
   ignore_empty_groups:
     type: 'bool'
@@ -430,7 +443,7 @@ options:
 
   output_file:
     type: 'str'
-    default: ''
+    default: 'fwf.sh'
     supported: true
     widget: 'outputFileName'
     description: >-
@@ -470,7 +483,7 @@ options:
 
   script_name_on_firewall:
     type: 'str'
-    default: ''
+    default: 'fwf.sh'
     supported: true
     widget: 'fileNameOnFw'
     description: >-
@@ -488,15 +501,17 @@ options:
 
   table_name:
     type: 'str'
-    default: 'linuxfabrik'
+    default: 'fwf'
     supported: true
     widget: 'tableName'
+    placeholder: 'fwf'
     description: >-
       Base name for the nftables tables managed by FirewallFabrik.
       The compiler creates two tables: {name}_filter for packet
-      filtering and {name}_nat for NAT rules. Only these tables
-      are flushed when the firewall script runs, so rules created
-      by other tools (Docker, CrowdSec, fail2ban) remain untouched.
+      filtering and {name}_nat for NAT rules. When "Flush entire
+      ruleset" is disabled, only these tables are deleted and
+      recreated, so rules created by other tools (e.g. Docker,
+      CrowdSec, fail2ban) remain untouched.
 
   use_iptables_restore:
     type: 'bool'
