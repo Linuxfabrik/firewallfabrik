@@ -1225,7 +1225,7 @@ If you install a firewall that is using address tables with ipset enabled you ca
 
 .. code-block:: bash
 
-   guardian.fw reload_address_table bad_hosts /etc/fw/bad_hosts
+   guardian.fw reload_address_table bad_hosts /etc/bad_hosts
 
 where "guardian.fw" matches the name of your FirewallFabrik script file and "bad_hosts" is your address table object. This dynamically updates the list of addresses stored in memory for the bad_hosts set while iptables is running.
 

@@ -109,7 +109,7 @@ IPv4 address 10.3.14.108 and IPv6 address fe80::20c:29ff:fe1e:dcaa/64 configured
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-1-s.fw test_interfaces
+   root@linux-test-1:~# /etc/linux-test-1-s.fw test_interfaces
    # Adding ip address: eth0 192.0.2.1/24
    ip addr add 192.0.2.1/24 dev eth0
    ifconfig eth0 up
@@ -121,11 +121,11 @@ The script detected existing addresses and did nothing about them but printed co
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-1-s.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-1-s.fw interfaces
    # Adding ip address: eth0 192.0.2.1/24
    # Adding ip address: eth0 2001:db8:1f0e:162::2/32
    root@linux-test-1:~#
-   root@linux-test-1:~# /etc/fw/linux-test-1-s.fw test_interfaces
+   root@linux-test-1:~# /etc/linux-test-1-s.fw test_interfaces
    root@linux-test-1:~#
 
 IP address management works both ways: if the administrator deletes an address in the FirewallFabrik GUI, the script will remove it on the machine. To illustrate this, I am going to remove the second IPv4 and IPv6 addresses from the same interface *eth0* object and then recompile the script and run it again on the machine:
@@ -137,7 +137,7 @@ IP address management works both ways: if the administrator deletes an address i
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-1-s.fw test_interfaces
+   root@linux-test-1:~# /etc/linux-test-1-s.fw test_interfaces
    # Removing ip address: eth0 192.0.2.1/24
    ip addr del 192.0.2.1/24 dev eth0
    ifconfig eth0 up
@@ -280,7 +280,7 @@ The call to *update_vlans_of_interface* adds and removes VLANs as needed to make
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-vlan-1.fw test_interfaces
+   root@linux-test-1:~# /etc/linux-test-vlan-1.fw test_interfaces
    # Adding VLAN interface eth1.100 (parent: eth1)
    vconfig set_name_type DEV_PLUS_VID_NO_PAD
    vconfig add eth1 100
@@ -302,7 +302,7 @@ The script uses vconfig to set up the naming scheme and add VLAN interfaces, the
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-vlan-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-vlan-1.fw interfaces
    # Adding VLAN interface eth1.100 (parent: eth1)
    Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config
    Added VLAN with VID == 100 to IF -:eth1:-
@@ -346,7 +346,7 @@ Let's try to run the same script again:
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-vlan-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-vlan-1.fw interfaces
    root@linux-test-1:~#
 
 The script detected that both VLAN interfaces already exist and have correct IP addresses and did nothing.
@@ -362,7 +362,7 @@ Then I recompile the firewall, copy the generated script to the firewall and run
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-vlan-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-vlan-1.fw interfaces
    # Adding VLAN interface eth1.102 (parent: eth1)
    Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config
    Added VLAN with VID == 102 to IF -:eth1:-
@@ -385,7 +385,7 @@ Now lets rename both VLAN interfaces to use different naming scheme:
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-vlan-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-vlan-1.fw interfaces
    # Adding VLAN interface vlan0101 (parent: eth1)
    Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config
    Added VLAN with VID == 101 to IF -:eth1:-
@@ -529,7 +529,7 @@ The firewall machine where I am going to run generated script has interfaces eth
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-bridge-1.fw  interfaces
+   root@linux-test-1:~# /etc/linux-test-bridge-1.fw  interfaces
    Activating firewall script generated Fri Feb 26 16:53:05 2010 by vadim
    Running prolog script
    # Creating bridge interface
@@ -583,7 +583,7 @@ Now I am going to add another bridge port eth3 to br0, recompile the script, and
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-bridge-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-bridge-1.fw interfaces
    # Updating bridge configuration: addif br0 eth3
 
 All the script did is add eth3 to br0 bridge. New bridge configuration looks like this:
@@ -604,7 +604,7 @@ Now let's remove the bridge port in the GUI and see what happens. I am going to 
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-bridge-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-bridge-1.fw interfaces
    # Updating bridge configuration: delif br0 eth3
 
 .. code-block:: text
@@ -690,7 +690,7 @@ Now compile the firewall object, copy the generated script to the firewall machi
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-bond-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-bond-1.fw interfaces
    # Add bonding interface slave: bond0 eth2
    # Add bonding interface slave: bond0 eth3
    # Adding ip address: bond0 10.1.1.1/24
@@ -761,7 +761,7 @@ Running the script a second time does nothing because interface bond0 already ex
 
 .. code-block:: text
 
-   root@linux-test-1:~# /etc/fw/linux-test-bond-1.fw interfaces
+   root@linux-test-1:~# /etc/linux-test-bond-1.fw interfaces
    root@linux-test-1:~#
 
 .. note::

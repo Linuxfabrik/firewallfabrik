@@ -193,7 +193,7 @@ The built-in policy installer has been designed to work with a dedicated firewal
 Installation Overview
 ~~~~~~~~~~~~~~~~~~~~~
 
-Create directory */etc/fw/* on your firewall.
+Create directory */etc/* on your firewall.
 
 Now let's install the script using FirewallFabrik's "install" functionality. Open your object file, if it isn't open already, then select Rules > Install.
 
@@ -274,13 +274,13 @@ The built-in installer can recognize sudo password prompts and enter the passwor
 
    adduser fwadmin
 
-* Create directory /etc/fw/ on the firewall, make it belong to group fwadmin, make it group writable.
+* Create directory /etc/ on the firewall, make it belong to group fwadmin, make it group writable.
 
 .. code-block:: bash
 
-   mkdir /etc/fw
-   chgrp fwadmin /etc/fw
-   chmod g+w /etc/fw
+   mkdir /etc
+   chgrp fwadmin /etc
+   chmod g+w /etc
 
 * Configure sudo to permit user fwadmin to execute the firewall script and a couple of other commands used by the FirewallFabrik policy installer. Run *visudo* on the firewall to edit file */etc/sudoers* as follows:
 
@@ -288,13 +288,13 @@ The built-in installer can recognize sudo password prompts and enter the passwor
 
    Defaults:%fwadmin   !lecture , passwd_timeout=1 , timestamp_timeout=1
    # User alias specification
-   %fwadmin  ALL = PASSWD: /etc/fw/<FWNAME>.fw , /usr/bin/pkill , /sbin/shutdown
+   %fwadmin  ALL = PASSWD: /etc/<FWNAME>.fw , /usr/bin/pkill , /sbin/shutdown
 
-Here <FWNAME> is the name of the firewall. Installer will log in to the firewall as user fwadmin, copy the firewall script to file /etc/fw/<FWNAME>.fw and then use the following command to execute it:
+Here <FWNAME> is the name of the firewall. Installer will log in to the firewall as user fwadmin, copy the firewall script to file /etc/<FWNAME>.fw and then use the following command to execute it:
 
 .. code-block:: bash
 
-   ssh fwadmin@firewall sudo -S /etc/fw/<FWNAME>.fw
+   ssh fwadmin@firewall sudo -S /etc/<FWNAME>.fw
 
 * Set up ssh access to the firewall. Make sure you can log in as user fwadmin using ssh from your management workstation:
 
@@ -313,7 +313,7 @@ You may use either password or public key authentication; the installer will wor
 
 * If you need to use an alternative name or IP address to communicate with the firewall, put it in the corresponding field in the same dialog page.
 
-* Make sure the entry field directory on the firewall where script should be installed is set to */etc/fw*. FirewallFabrik is not going to create this directory, so you need to create it manually before you install the firewall policy (see above).
+* Make sure the entry field directory on the firewall where script should be installed is set to */etc*. FirewallFabrik is not going to create this directory, so you need to create it manually before you install the firewall policy (see above).
 
 * Leave "Policy install script" and "Command line options" fields blank.
 
@@ -322,7 +322,7 @@ You may use either password or public key authentication; the installer will wor
 Configuring Installer if You Use Root Account to Manage the Firewall
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Create directory /etc/fw/ on the firewall, make it belong to root, make it writable.
+* Create directory /etc/ on the firewall, make it belong to root, make it writable.
 
 * Set up ssh access to the firewall. Make sure you can log in as root using ssh from your management workstation:
 
@@ -334,7 +334,7 @@ You may use either password or public key authentication; the installer will wor
 
 * In the installer tab of the firewall settings dialog of the firewall object put "root" as the user name you use to log in to the firewall.
 
-* Make sure entry field directory on the firewall where script should be installed is set to */etc/fw*.
+* Make sure entry field directory on the firewall where script should be installed is set to */etc*.
 
 * Leave Policy install script and Command line options fields blank.
 

@@ -1449,7 +1449,7 @@ This command should probably be put in a script which should run from cron once 
 
 .. code-block:: text
 
-   /etc/fw/firewall.sh reload_address_table blocklist /etc/fw/blocklist_file.txt
+   /etc/firewall.sh reload_address_table blocklist /etc/blocklist_file.txt
 
 If the firewall does not support module ipset, you just need to re-run the firewall script to update the rules with new ip addresses.
 
@@ -3021,7 +3021,7 @@ To test this feature, you can run the generated script with the command-line par
        inet 10.1.1.2/24 brd 10.1.1.255 scope global eth1
        inet6 fe80::20c:29ff:fefc:6796/64 scope link
           valid_lft forever preferred_lft forever
-   root@linux-test-4:~# /etc/fw/linux-test-4.fw test_interfaces
+   root@linux-test-4:~# /etc/linux-test-4.fw test_interfaces
    # Adding VLAN interface eth1.101 (parent: eth1)
    vconfig set_name_type DEV_PLUS_VID_NO_PAD
    vconfig add eth1 101
@@ -3048,7 +3048,7 @@ To set interfaces up and load iptables rules, just run the script with command l
 
 .. code-block:: text
 
-   root@linux-test-2:~# /etc/fw/linux-test-4.fw interfaces
+   root@linux-test-2:~# /etc/linux-test-4.fw interfaces
    # Adding VLAN interface eth1.101 (parent: eth1)
    Set name-type for VLAN subsystem. Should be visible in /proc/net/vlan/config
    Added VLAN with VID == 101 to IF -:eth1:-
@@ -3093,7 +3093,7 @@ Now that VLAN interfaces are there and IP addresses are correct, let's see what 
 
 .. code-block:: text
 
-   root@linux-test-2:~# /etc/fw/linux-test-4.fw test_interfaces
+   root@linux-test-2:~# /etc/linux-test-4.fw test_interfaces
    root@linux-test-2:~#
 
 The script verified configuration and has found that it does not need to change anything.
