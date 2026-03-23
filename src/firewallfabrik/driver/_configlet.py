@@ -185,6 +185,12 @@ class Configlet:
             endif_end = endif_match.end()
             body = stream[if_end : endif_match.start()]
 
+            # For inline if/endif on a single line, strip surrounding
+            # whitespace so that "{{if v}} cmd {{endif}}" expands to
+            # "cmd" without extra leading/trailing spaces.
+            if '\n' not in body:
+                body = body.strip()
+
             # Evaluate condition
             replacement = ''
             if var_name in self._vars:
