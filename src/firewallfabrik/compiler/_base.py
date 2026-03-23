@@ -40,14 +40,27 @@ class BaseCompiler:
     def status(self) -> CompilerStatus:
         return self._status
 
+    @staticmethod
+    def _format_rule_id(rule) -> str:
+        """Format rule identifier using position, falling back to label."""
+        # label is set by the compiler prolog: "N (global)", "N (NAT)" etc.
+        # But custom-labeled rules keep their DB label (e.g. "color2")
+        # which is not useful for error messages. Prefer position.
+        pos = getattr(rule, 'position', None)
+        label = getattr(rule, 'label', '') or ''
+        if pos is not None:
+            return label if label.startswith(f'{pos} ') else str(pos)
+        return label or '?'
+
     def error(self, rule_or_msg, msg: str | None = None) -> None:
         """Record an error, optionally associated with a rule."""
         if msg is None:
             self._errors.append(str(rule_or_msg))
         else:
-            label = getattr(rule_or_msg, 'label', '')
-            text = f'Rule {label}: {msg}' if label else msg
+            rid = self._format_rule_id(rule_or_msg)
+            text = f'Rule {rid}: {msg}'
             self._errors.append(text)
+            label = getattr(rule_or_msg, 'label', '')
             if label:
                 self._rule_errors.setdefault(label, []).append(text)
         self._status = CompilerStatus.FWCOMPILER_ERROR
@@ -57,9 +70,10 @@ class BaseCompiler:
         if msg is None:
             self._warnings.append(str(rule_or_msg))
         else:
-            label = getattr(rule_or_msg, 'label', '')
-            text = f'Rule {label}: {msg}' if label else msg
+            rid = self._format_rule_id(rule_or_msg)
+            text = f'Rule {rid}: {msg}'
             self._warnings.append(text)
+            label = getattr(rule_or_msg, 'label', '')
             if label:
                 self._rule_errors.setdefault(label, []).append(text)
         if self._status == CompilerStatus.FWCOMPILER_SUCCESS:
