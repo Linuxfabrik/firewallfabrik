@@ -19,6 +19,15 @@ from .normalize import normalize_nft
 
 _CASES = discover_test_cases('nft')
 
+# Firewalls that use compile-time DNS resolution (DNSName objects).
+# Resolved IPs change between runs, making the test non-deterministic.
+_DNS_DEPENDENT_FIREWALLS = frozenset(
+    {
+        'firewall33',
+        'firewall33-1',
+    }
+)
+
 
 @pytest.mark.parametrize(
     ('fixture_name', 'fw_name'),
@@ -27,6 +36,11 @@ _CASES = discover_test_cases('nft')
 )
 def test_nftables_expected_output(fixture_name, fw_name, compile_nft, tmp_path):
     """Compile fixture and compare normalized output to expected output."""
+    if fw_name in _DNS_DEPENDENT_FIREWALLS:
+        pytest.xfail(
+            reason='DNS-dependent — resolved IPs vary between runs',
+        )
+
     fixture_path = _find_fixture(fixture_name)
     expected_path = EXPECTED_OUTPUT_DIR / 'nft' / fixture_name / f'{fw_name}.fw'
 
