@@ -953,7 +953,7 @@ class CheckForTCPEstablished(BasicRuleProcessor):
         for srv in srv_slot:
             if isinstance(srv, TCPService):
                 established = (srv.data or {}).get('established', False)
-                if established:
+                if str(established).lower() in ('true', '1'):
                     self.compiler.abort(
                         rule,
                         f'TCPService object with option "established" is not '
