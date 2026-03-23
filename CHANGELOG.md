@@ -10,7 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- nftables: Generated scripts now use named tables (`linuxfabrik_filter`, `linuxfabrik_nat`) instead of flushing the entire ruleset. This allows coexistence with Docker, CrowdSec, fail2ban and other tools that manage their own nftables tables. The table name is configurable in the nftables settings dialog (default: `linuxfabrik`).
+- "Flush entire ruleset" option for both iptables and nftables. When disabled, FirewallFabrik only manages its own tables/chains (e.g. `fwf_filter`, `fwf_nat` for nftables or `fwf_INPUT`, `fwf_FORWARD` for iptables), leaving rules created by other tools like Docker, CrowdSec and fail2ban untouched.
+
+### Changed
+
+- Default output file name changed from firewall object name to `fwf.sh`.
+- Default script directory on the firewall changed from `/etc/fw` to `/etc`.
+- Default table/chain prefix changed from `linuxfabrik` to `fwf`.
 
 ### Fixed
 
