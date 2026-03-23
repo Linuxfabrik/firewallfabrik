@@ -10,15 +10,15 @@
 #
 #  Simple policy that makes sense in ipv4 but translates into a few wide-matching rules in ipv6. Policy is configured as dual address family
 #
-# Rule fw-ipv6-3 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 7: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 0 shadows Rule 1 below it
 # Rule 0 shadows Rule 2 below it
 # Rule 2 shadows Rule 3 below it
 # Rule 0 shadows Rule 3 below it
 # Rule 2 shadows Rule 3 below it
-# Rule fw-ipv6-3 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 7: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 
 FWBDEBUG=""
 

@@ -12,13 +12,13 @@
 
 #  normal script mode (not using  iptables-restore)
 #
-# Rule rule4_branch 0 (eth1): Branch action not yet supported by nftables compiler
-# Rule rule4_branch 0 (eth1): Branch action not yet supported by nftables compiler
-# Rule rule4_branch 1 (eth0): Branch action not yet supported by nftables compiler
-# Rule rule4_branch 1 (eth0): Branch action not yet supported by nftables compiler
-# Rule rule6_branch 0 (global): Branch action not yet supported by nftables compiler
-# Rule rule6_branch 0 (global): Branch action not yet supported by nftables compiler
-# Rule rule6_branch 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
@@ -308,12 +308,12 @@ table ip fwf_filter {
         #
         # Rule rule4_branch 0 (eth1)
         #
-        # # Rule rule4_branch 0 (eth1): Branch action not yet supported by nftables compiler
+        # # Rule 0: Branch action not yet supported by nftables compiler
         iifname "eth1" log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule rule4_branch 1 (eth0)
         #
-        # # Rule rule4_branch 1 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 1: Branch action not yet supported by nftables compiler
         iifname "eth0" log prefix "RULE 1 -- BRANCH " level info
         #
         # Rule rule6_branch 0 (global)
@@ -448,12 +448,12 @@ table ip fwf_filter {
         #
         # Rule rule4_branch 0 (eth1)
         #
-        # # Rule rule4_branch 0 (eth1): Branch action not yet supported by nftables compiler
+        # # Rule 0: Branch action not yet supported by nftables compiler
         iifname "eth1" log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule rule4_branch 1 (eth0)
         #
-        # # Rule rule4_branch 1 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 1: Branch action not yet supported by nftables compiler
         iifname "eth0" log prefix "RULE 1 -- BRANCH " level info
         #
         # Rule rule6_branch 0 (global)

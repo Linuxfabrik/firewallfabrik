@@ -11,14 +11,14 @@
 #  testing AddressTable
 #
 # Rule 0 (NAT): Interface "eth0.100" has no addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 0: Could not resolve any source addresses
 # AddressTable "addrtbl 1": file not found (addr-table-1.tbl)
 
 FWBDEBUG=""
@@ -247,11 +247,11 @@ table ip fwf_filter {
         #
         # Rule Policy_fw32 0 (eth0.100)
         #
-        # # Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        # # Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
         iifname "eth0.100" drop
-        # # Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        # # Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
         iifname "eth0.100" ip saddr 192.168.1.0/24 drop
         #
         # Rule Policy_fw32 1 (global)
@@ -269,11 +269,11 @@ table ip fwf_filter {
         #
         # Rule Policy_fw32 0 (eth0.100)
         #
-        # # Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        # # Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
         iifname "eth0.100" drop
-        # # Rule Policy_fw32 0 (eth0.100): Could not resolve any source addresses
-# Rule Policy_fw32 0 (eth0.100): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        # # Rule 0: Could not resolve any source addresses
+# Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
         iifname "eth0.100" ip saddr 192.168.1.0/24 drop
         #
         # Rule Policy_fw32 1 (global)

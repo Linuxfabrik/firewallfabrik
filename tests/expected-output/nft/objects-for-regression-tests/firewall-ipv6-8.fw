@@ -10,13 +10,13 @@
 #
 #  matching multicast with different directions
 #
-# Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
+# Rule 14: Branch action not yet supported by nftables compiler
+# Rule 14: Branch action not yet supported by nftables compiler
+# Rule 14: Branch action not yet supported by nftables compiler
+# Rule 15: Branch action not yet supported by nftables compiler
+# Rule 15: Branch action not yet supported by nftables compiler
+# Rule 15: Branch action not yet supported by nftables compiler
+# Rule 15: Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -281,12 +281,12 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
+        # # Rule 14: Branch action not yet supported by nftables compiler
         meta l4proto 89
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 15: Branch action not yet supported by nftables compiler
         iifname "eth0" meta l4proto 89
     }
 
@@ -335,14 +335,14 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
+        # # Rule 14: Branch action not yet supported by nftables compiler
         meta l4proto 89
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 15: Branch action not yet supported by nftables compiler
         iifname "eth0" meta l4proto 89
-        # # Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 15: Branch action not yet supported by nftables compiler
         oifname "eth0" meta l4proto 89
     }
 
@@ -394,12 +394,12 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule Policy_v6 14 (global): Branch action not yet supported by nftables compiler
+        # # Rule 14: Branch action not yet supported by nftables compiler
         meta l4proto 89
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule Policy_v6 15 (eth0): Branch action not yet supported by nftables compiler
+        # # Rule 15: Branch action not yet supported by nftables compiler
         oifname "eth0" meta l4proto 89
     }
 }

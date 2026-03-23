@@ -10,15 +10,15 @@
 #
 #  this object is used to hold branch rulesets for firewall82
 #
-# Rule Policy_A 0 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 0 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 0 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 1 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 1 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 1 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 2 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 2 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_A 2 (global): Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 0: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 2: Branch action not yet supported by nftables compiler
+# Rule 2: Branch action not yet supported by nftables compiler
+# Rule 2: Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 

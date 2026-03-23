@@ -11,16 +11,16 @@
 
 #  more complex and realistic combination of Tag and Route rules that are in the separate Policy rule set
 #
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 4 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 4 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 4 (global): Service type TagService not yet supported by nftables compiler
-# Rule Policy_1 6 (global): Tagging not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 3: Service type TagService not yet supported by nftables compiler
+# Rule 4: Service type TagService not yet supported by nftables compiler
+# Rule 4: Service type TagService not yet supported by nftables compiler
+# Rule 4: Service type TagService not yet supported by nftables compiler
+# Rule 6: Tagging not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -309,7 +309,7 @@ table ip fwf_filter {
         #
         # Rule Policy_1 6 (global)
         #
-        # # Rule Policy_1 6 (global): Tagging not yet supported by nftables compiler
+        # # Rule 6: Tagging not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new log prefix "RULE 6 -- CONTINUE " level info
         #
         # Rule 0 (global)
@@ -337,7 +337,7 @@ table ip fwf_filter {
         #
         # Rule Policy_1 6 (global)
         #
-        # # Rule Policy_1 6 (global): Tagging not yet supported by nftables compiler
+        # # Rule 6: Tagging not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new log prefix "RULE 6 -- CONTINUE " level info
         #
         # Rule 0 (global)

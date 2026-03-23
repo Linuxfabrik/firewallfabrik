@@ -11,9 +11,9 @@
 #  This firewall has three interfaces. Eth0 faces outside and has a static routable address; eth1 faces inside; eth2 is connected to DMZ subnet.
 #  Policy includes basic rules to permit unrestricted outbound access and anti-spoofing rules. Access to the firewall is permitted only from internal network and only using SSH. The firewall uses one of the machines on internal network for DNS. Internal network is configured with address 192.168.1.0/255.255.255.0, DMZ is 192.168.2.0/255.255.255.0. Since DMZ used private IP address, it needs NAT. There is a mail relay host located on DMZ (object 'server on dmz'). Policy rules permit SMTP connections to it from the Internet and allow this server to connect to a host on internal network 'internal server'. All other access from DMZ to internal net is denied. To provide access to the mail relay its private address is mapped to firewall's outside interface address by NAT rule #1.
 #
-# Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
-# Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
+# Rule 1: Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -337,7 +337,7 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 1 (global)
         #
-        # # Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
+        # # Rule 1: Branch action not yet supported by nftables compiler
         meta l4proto 89
     }
 
@@ -431,7 +431,7 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 1 (global)
         #
-        # # Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
+        # # Rule 1: Branch action not yet supported by nftables compiler
         meta l4proto 89
     }
 
@@ -531,7 +531,7 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 1 (global)
         #
-        # # Rule Policy_v6 1 (global): Branch action not yet supported by nftables compiler
+        # # Rule 1: Branch action not yet supported by nftables compiler
         meta l4proto 89
     }
 }
