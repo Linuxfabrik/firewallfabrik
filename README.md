@@ -35,13 +35,21 @@ FirewallFabrik is a modern successor to [Firewall Builder](https://github.com/fw
 This project was developed with the assistance of Claude Code by Anthropic.
 
 
-## Quick Start
+## Installation
 
-```shell
-# Run FirewallFabrik without installing (requires uv)
+Make sure to include the `[gui]` extra to pull in PySide6 for the graphical interface.
+
+### Using uv (recommended)
+
+The recommended way to install FirewallFabrik. You can run it without a permanent install:
+
+```bash
 uvx --from 'firewallfabrik[gui]' fwf
+```
 
-# Or install it
+Or install it as a tool:
+
+```bash
 uv tool install 'firewallfabrik[gui]'
 ```
 
