@@ -253,8 +253,8 @@ CI/CD Integration
 
 For teams using a CI/CD pipeline, the typical workflow is:
 
-1. Edit the firewall policy in the FirewallFabrik GUI.
-2. Save and compile the policy (``Rules > Compile``).
+1. Edit the firewall policy — either in the FirewallFabrik GUI or by modifying the ``.fwf`` YAML file directly (e.g. via scripts or other automation tools to add rules, objects and attributes).
+2. Save and compile — either via the GUI (``Rules > Compile``) or on the command line (``fwf compile myfile.fwf``).
 3. Commit the ``.fwf`` source file and the generated ``.fw`` script(s) to Git.
 4. A CI/CD pipeline (GitLab CI, GitHub Actions, Jenkins, etc.) picks up the change and runs the deployment playbook or script.
 
