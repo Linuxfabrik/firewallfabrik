@@ -32,7 +32,6 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 
-import firewallfabrik
 from firewallfabrik.compiler._base import CompilerStatus
 from firewallfabrik.core.objects import (
     NAT,
@@ -43,6 +42,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
+from firewallfabrik.platforms.nftables import __compiler_version__
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -672,7 +672,7 @@ class CompilerDriver_nft(CompilerDriver):
         filter_family = 'inet' if fw_has_ipv6 else 'ip'
 
         context = {
-            'version': firewallfabrik.__version__,
+            'version': __compiler_version__,
             'user': user_name,
             'comment': comment,
             'errors_and_warnings': errors_and_warnings,

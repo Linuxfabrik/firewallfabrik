@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 
-import firewallfabrik
 from firewallfabrik.compiler._base import CompilerStatus
 from firewallfabrik.core.objects import (
     NAT,
@@ -41,6 +40,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
+from firewallfabrik.platforms.iptables import __compiler_version__
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -655,7 +655,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Top comment configlet
                 top_comment = Configlet('linux24', 'top_comment')
-                top_comment.set_variable('version', firewallfabrik.__version__)
+                top_comment.set_variable('version', __compiler_version__)
                 top_comment.set_variable('user', user_name)
                 top_comment.set_variable('database', '')
 

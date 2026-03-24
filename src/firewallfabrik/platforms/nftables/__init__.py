@@ -11,3 +11,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 """nftables platform compiler package."""
+
+__compiler_version__ = '1.4.0'
