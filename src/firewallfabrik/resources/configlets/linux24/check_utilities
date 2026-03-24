@@ -39,12 +39,12 @@ find_program() {
 check_tools() {
   find_program command
   find_program $IPTABLES
-{{if need_iptables_restore}}  find_program $IPTABLES_RESTORE{{endif}}
-{{if need_ip6tables_restore}}  find_program $IP6TABLES_RESTORE{{endif}}
-{{if need_modprobe}}  find_program $MODPROBE {{endif}}
+  {{if need_iptables_restore}}find_program $IPTABLES_RESTORE{{endif}}
+  {{if need_ip6tables_restore}}find_program $IP6TABLES_RESTORE{{endif}}
+  {{if need_modprobe}}find_program $MODPROBE{{endif}}
   find_program $IP
-{{if need_vconfig}}  find_program $VCONFIG {{endif}}
-{{if need_brctl}}  find_program $BRCTL {{endif}}
-{{if need_ifenslave}}  find_program $IFENSLAVE {{endif}}
-{{if need_ipset}}  find_program $IPSET {{endif}}
+  {{if need_vconfig}}find_program $VCONFIG{{endif}}
+  {{if need_brctl}}find_program $BRCTL{{endif}}
+  {{if need_ifenslave}}find_program $IFENSLAVE{{endif}}
+  {{if need_ipset}}find_program $IPSET{{endif}}
 }
