@@ -628,6 +628,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Status action configlet
                 status_action = Configlet('linux24', 'status_action')
+                status_action.set_variable('opt_wait', opt_wait)
                 status_action.collapse_empty_strings(True)
                 script_skeleton.set_variable('status_action', status_action.expand())
 
