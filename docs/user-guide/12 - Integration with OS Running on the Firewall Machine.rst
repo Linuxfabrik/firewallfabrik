@@ -197,50 +197,53 @@ In modern infrastructure, firewall policies are often deployed as part of an aut
 Ansible
 ~~~~~~~
 
-An Ansible playbook to deploy a FirewallFabrik-generated policy might look like this:
+An Ansible playbook to deploy a FirewallFabrik-generated policy might look like this (following the `Linuxfabrik Ansible Development Guidelines <https://github.com/Linuxfabrik/lfops/blob/main/CONTRIBUTING.rst>`_):
 
 .. code-block:: yaml
 
-   ---
-   - name: Deploy firewall policy
-     hosts: firewalls
+   - name: 'Playbook linuxfabrik.lfops.firewallfabrik'
+     hosts: 'firewalls'
      become: true
+
      tasks:
-       - name: Copy firewall script
-         ansible.builtin.copy:
-           src: "output/{{ inventory_hostname }}.fw"
-           dest: /etc/firewall/{{ inventory_hostname }}.fw
-           owner: root
-           group: root
-           mode: '0700'
-         notify: Activate firewall
 
-       - name: Ensure systemd service exists
-         ansible.builtin.copy:
-           src: firewallfabrik.service
-           dest: /etc/systemd/system/firewallfabrik.service
-           owner: root
-           group: root
-           mode: '0644'
+       - name: 'Deploy firewall script'
+         ansible.builtin.template:
+           src: 'output/{{ inventory_hostname }}.fw'
+           dest: '/etc/fwf.sh'
+           owner: 'root'
+           group: 'root'
+           mode: 0o0700
+           backup: true
+         notify: 'firewallfabrik: activate firewall'
+
+       - name: 'Deploy systemd service'
+         ansible.builtin.template:
+           src: 'firewallfabrik.service.j2'
+           dest: '/etc/systemd/system/firewallfabrik.service'
+           owner: 'root'
+           group: 'root'
+           mode: 0o0644
+           backup: true
          notify:
-           - Reload systemd
-           - Activate firewall
+           - 'firewallfabrik: reload systemd'
+           - 'firewallfabrik: activate firewall'
 
-       - name: Enable firewall service
-         ansible.builtin.systemd:
-           name: firewallfabrik
+       - name: 'Enable firewall service'
+         ansible.builtin.service:
+           name: 'firewallfabrik'
            enabled: true
-           daemon_reload: true
 
      handlers:
-       - name: Reload systemd
+
+       - name: 'firewallfabrik: reload systemd'
          ansible.builtin.systemd:
            daemon_reload: true
 
-       - name: Activate firewall
-         ansible.builtin.systemd:
-           name: firewallfabrik
-           state: reloaded
+       - name: 'firewallfabrik: activate firewall'
+         ansible.builtin.service:
+           name: 'firewallfabrik'
+           state: 'reloaded'
 
 This approach ensures that the firewall script is deployed consistently across all machines and activated in a controlled manner.
 
