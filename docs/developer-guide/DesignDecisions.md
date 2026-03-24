@@ -51,6 +51,29 @@ In FirewallFabrik, `linux24` is a **host OS identifier** (not a platform). It re
 Renaming it would break backward compatibility with existing `.fwb` files, configlet templates, and the compiler infrastructure, with no functional benefit. The UI displays it simply as "Linux" (see `platform_settings.py`).
 
 
+## Versioning: GUI vs. Compilers
+
+The project maintains three independent version numbers:
+
+| Component | Location | Example |
+|---|---|---|
+| GUI / Package | `firewallfabrik/__init__.py` → `__version__` | `1.4.0rc1` |
+| iptables compiler | `platforms/iptables/__init__.py` → `__compiler_version__` | `1.4.0` |
+| nftables compiler | `platforms/nftables/__init__.py` → `__compiler_version__` | `1.4.0` |
+
+The **package version** (`__version__`) is the version users see in `fwf --version`, the About dialog, and `pip show firewallfabrik`. It changes with every release — GUI features, bug fixes, documentation, anything.
+
+The **compiler versions** (`__compiler_version__`) are embedded in the generated firewall scripts (e.g. `#  FirewallFabrik fwf-ipt v1.4.0`). They change **only when the compiler output changes** — new configlets, rule generation fixes, template changes, etc. A purely cosmetic GUI change does not bump the compiler version.
+
+This separation exists for **determinism**: if a user recompiles the same policy with a new GUI release that did not touch the compiler, the generated script must be byte-identical. Without separate versions, every GUI release would change the version header in every generated script, which breaks idempotency checks and produces unnecessary diffs.
+
+**When to bump which version:**
+
+- GUI-only change (dialog fix, tree behavior, etc.) → bump `__version__` only.
+- Compiler change (configlet, template, rule processor, etc.) → bump the affected `__compiler_version__` **and** `__version__`.
+- Both → bump all three.
+
+
 ## GUI Architecture
 
 ### .ui Files and the Custom UI Loader
