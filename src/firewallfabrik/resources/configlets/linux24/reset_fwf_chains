@@ -11,12 +11,12 @@ reset_fwf_chains_v4() {
   local prefix="$1"
   local table chain rulenum
 
-  # For each table that exists, remove FWF jump rules from built-in
-  # chains (in reverse order to keep line numbers stable), then flush
-  # and delete FWF's own chains.
+  # For each table, remove FWF jump rules from built-in chains (in
+  # reverse order to keep line numbers stable), then flush and delete
+  # FWF's own chains.  We do not check /proc/net/ip_tables_names
+  # because it is absent on systems using the iptables-nft backend;
+  # instead we query iptables directly and suppress errors.
   for table in filter nat mangle; do
-    [ -f /proc/net/ip_tables_names ] && grep -qw "$table" /proc/net/ip_tables_names || continue
-
     # Remove jump rules targeting our prefixed chains from built-in chains.
     for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
       $IPTABLES {{$opt_wait}} -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
@@ -41,8 +41,6 @@ reset_fwf_chains_v6() {
   local table chain rulenum
 
   for table in filter nat mangle; do
-    [ -f /proc/net/ip6_tables_names ] && grep -qw "$table" /proc/net/ip6_tables_names || continue
-
     for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
       $IP6TABLES {{$opt_wait}} -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
         | grep "${prefix}_" | awk '{print $1}' | sort -rn \

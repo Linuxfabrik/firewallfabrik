@@ -614,8 +614,10 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
                 script_skeleton.set_variable('block_action', block_action.expand())
 
-                # Stop action configlet — keeps policies at DROP after
-                # flushing (server stays protected, not wide open).
+                # Stop action configlet — in full-flush mode policies
+                # stay at DROP (server stays protected); in coexistence
+                # mode policies are restored to ACCEPT so other tools'
+                # rules keep working.
                 stop_action = Configlet('linux24', 'stop_action')
                 stop_action.set_variable('opt_wait', opt_wait)
                 stop_action.collapse_empty_strings(True)
@@ -624,12 +626,31 @@ class CompilerDriver_ipt(CompilerDriver):
                     'ssh_management_address',
                     mgmt_addr,
                 )
+                stop_action.set_variable(
+                    'coexistence_v4',
+                    1 if (not flush_ruleset and have_ipv4) else 0,
+                )
+                stop_action.set_variable(
+                    'coexistence_v6',
+                    1 if (not flush_ruleset and have_ipv6) else 0,
+                )
                 script_skeleton.set_variable('stop_action', stop_action.expand())
 
-                # Status action configlet
+                # Status action configlet — in coexistence mode checks
+                # for FWF-specific chains instead of counting all chains
+                # (Docker etc. always add their own chains).
                 status_action = Configlet('linux24', 'status_action')
                 status_action.set_variable('opt_wait', opt_wait)
                 status_action.collapse_empty_strings(True)
+                status_action.set_variable(
+                    'coexistence_mode',
+                    0 if flush_ruleset else 1,
+                )
+                status_action.set_variable(
+                    'flush_mode',
+                    1 if flush_ruleset else 0,
+                )
+                status_action.set_variable('table_name', table_name)
                 script_skeleton.set_variable('status_action', status_action.expand())
 
                 # Top comment configlet
