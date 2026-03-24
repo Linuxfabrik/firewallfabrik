@@ -221,12 +221,9 @@ class PrintRule(PolicyRuleProcessor):
             if _version_compare(self.version, '1.4.20') >= 0:
                 opt_wait = '-w '
 
-            result = f'{iptables_cmd} {opt_wait}-N {chain}'
-
             my_table = getattr(ipt_comp, 'my_table', 'filter')
-            if my_table != 'filter':
-                result += f' -t {my_table}'
-            result += '\n'
+            table_opt = f' -t {my_table}' if my_table != 'filter' else ''
+            result = f'{iptables_cmd} {opt_wait}-N {chain}{table_opt} 2>/dev/null\n'
 
             ipt_comp.minus_n_commands[chain] = True
             return result
