@@ -108,7 +108,7 @@ flush_own_tables() {
 }
 
 block_action() {
-    $NFT flush ruleset 2>/dev/null
+    flush_own_tables
     # block all traffic by default (always use inet to block both IPv4 and IPv6)
     $NFT add table inet fwf_filter
     $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
@@ -117,7 +117,7 @@ block_action() {
 }
 
 stop_action() {
-    $NFT flush ruleset 2>/dev/null
+    flush_own_tables
 }
 
 check_nft_status() {

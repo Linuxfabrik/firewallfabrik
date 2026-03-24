@@ -14,7 +14,7 @@
 
 The compiler must never emit ``flush ruleset`` (which wipes tables
 managed by other tools like Docker, CrowdSec, or fail2ban).  Instead
-it uses named tables (default: ``linuxfabrik_filter`` / ``linuxfabrik_nat``)
+it uses named tables (default: ``fwf_filter`` / ``fwf_nat``)
 and only flushes those.
 """
 
@@ -38,7 +38,7 @@ def test_filter_table_uses_named_table(compile_nft, tmp_path):
     output_path = compile_nft(fixture_path, 'fw-test', tmp_path)
     script = output_path.read_text()
 
-    assert re.search(r'table \w+ linuxfabrik_filter \{', script)
+    assert re.search(r'table \w+ fwf_filter \{', script)
     assert not re.search(r'table \w+ filter \{', script)
 
 
@@ -48,7 +48,7 @@ def test_nat_table_uses_named_table(compile_nft, tmp_path):
     output_path = compile_nft(fixture_path, 'fw-nat-negation', tmp_path)
     script = output_path.read_text()
 
-    assert re.search(r'table \w+ linuxfabrik_nat \{', script)
+    assert re.search(r'table \w+ fwf_nat \{', script)
     assert not re.search(r'table \w+ nat \{', script)
 
 
@@ -60,11 +60,11 @@ def test_flush_own_tables_function(compile_nft, tmp_path):
 
     assert 'flush_own_tables()' in script
     # Must delete both inet and ip variants of filter table
-    assert '$NFT delete table inet linuxfabrik_filter' in script
-    assert '$NFT delete table ip linuxfabrik_filter' in script
+    assert '$NFT delete table inet fwf_filter' in script
+    assert '$NFT delete table ip fwf_filter' in script
     # Must delete both inet and ip variants of nat table
-    assert '$NFT delete table inet linuxfabrik_nat' in script
-    assert '$NFT delete table ip linuxfabrik_nat' in script
+    assert '$NFT delete table inet fwf_nat' in script
+    assert '$NFT delete table ip fwf_nat' in script
 
 
 def test_block_action_uses_inet(compile_nft, tmp_path):
@@ -78,10 +78,10 @@ def test_block_action_uses_inet(compile_nft, tmp_path):
     assert match, 'block_action() not found in script'
     block_body = match.group(1)
 
-    assert '$NFT add table inet linuxfabrik_filter' in block_body
-    assert '$NFT add chain inet linuxfabrik_filter input' in block_body
-    assert '$NFT add chain inet linuxfabrik_filter forward' in block_body
-    assert '$NFT add chain inet linuxfabrik_filter output' in block_body
+    assert '$NFT add table inet fwf_filter' in block_body
+    assert '$NFT add chain inet fwf_filter input' in block_body
+    assert '$NFT add chain inet fwf_filter forward' in block_body
+    assert '$NFT add chain inet fwf_filter output' in block_body
 
 
 def test_stop_action_calls_flush_own_tables(compile_nft, tmp_path):
@@ -107,7 +107,7 @@ def test_script_body_atomic_table_recreation(compile_nft, tmp_path):
     heredoc = match.group(1)
 
     # Must create empty table then delete it (atomic cleanup)
-    assert re.search(r'table \w+ linuxfabrik_filter \{\}', heredoc)
+    assert re.search(r'table \w+ fwf_filter \{\}', heredoc)
     assert 'delete table' in heredoc
     # Then recreate with actual rules
-    assert re.search(r'table \w+ linuxfabrik_filter \{\n', heredoc)
+    assert re.search(r'table \w+ fwf_filter \{\n', heredoc)

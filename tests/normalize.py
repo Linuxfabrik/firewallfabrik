@@ -129,8 +129,10 @@ def normalize_ipt(text: str) -> str:
         text,
     )
     # Normalize Python chain name hashes (C<hex>.N -> CHAIN)
+    # Use lookbehind instead of \b because chain names may be prefixed
+    # (e.g. fwf_C50aea6640ba2.0) and \b does not match between _ and C.
     text = re.sub(
-        r'\bC[0-9a-f]{8,}\.\d+',
+        r'(?<![a-zA-Z0-9])C[0-9a-f]{8,}\.\d+',
         'CHAIN',
         text,
     )

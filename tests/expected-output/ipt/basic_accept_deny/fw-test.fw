@@ -384,9 +384,9 @@ script_body() {
 
  # ================ Table 'filter', automatic rules
  # accept established sessions
- $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
  # ================ Table 'filter', rule set Policy
  #
@@ -394,33 +394,33 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 203.0.113.1 -j ACCEPT
+ $IPTABLES -N fwf_CHAIN 2>/dev/null
+ $IPTABLES -A fwf_INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j fwf_CHAIN
+ $IPTABLES -A fwf_CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A fwf_CHAIN -d 203.0.113.1 -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
- $IPTABLES -A CHAIN -d 203.0.113.1 -j ACCEPT
+ $IPTABLES -N fwf_CHAIN 2>/dev/null
+ $IPTABLES -A fwf_INPUT -p icmp -m icmp --icmp-type 8/0 -m state --state NEW -j fwf_CHAIN
+ $IPTABLES -A fwf_CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A fwf_CHAIN -d 203.0.113.1 -j ACCEPT
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A INPUT -m state --state NEW -j DROP
- $IPTABLES -A FORWARD -i + -m state --state NEW -j DROP
+ $IPTABLES -A fwf_INPUT -m state --state NEW -j DROP
+ $IPTABLES -A fwf_FORWARD -i + -m state --state NEW -j DROP
  #
  # Rule 3 (global)
  #
  echo "Rule 3 (global)"
  #
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
+ $IPTABLES -A fwf_OUTPUT -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
+ $IPTABLES -A fwf_FORWARD -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
 }
 
 ip_forward() {
@@ -430,8 +430,7 @@ ip_forward() {
 
 reset_all() {
  :
- command -v nft >/dev/null 2>&1 && nft flush ruleset
- reset_iptables_v4
+ reset_fwf_chains_v4 "fwf"
 }
 
 block_action() {
@@ -440,13 +439,17 @@ block_action() {
 
 stop_action() {
  reset_all
+ # Restore permissive policies so other tools' rules keep working.
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IPTABLES -P OUTPUT ACCEPT
 }
 
 status_action() {
- # Full-flush mode: check if iptables has user-defined chains
- # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
- chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
- [ "$chains" -gt 3 ] && return 0
+ # Coexistence mode: check for FirewallFabrik's own prefixed chains.
+ # Counting all chains would give false positives when Docker,
+ # CrowdSec or fail2ban create their own chains.
+ $IPTABLES -L -n 2>/dev/null | grep -q "^Chain fwf_" && return 0
  echo "Firewall is not configured"
  exit 3
 }
@@ -471,7 +474,7 @@ case "$cmd" in
  verify_interfaces
 
  reset_all
-
+ setup_fwf_jumps_v4 "fwf"
 
  script_body || run_epilog_and_exit 1
  ip_forward
