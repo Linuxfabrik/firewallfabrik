@@ -442,25 +442,12 @@ stop_action() {
  reset_all
 }
 
-check_iptables() {
- IP_TABLES="$1"
- [ ! -e $IP_TABLES ] && return 151
- NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
- [ -z "$NF_TABLES" ] && return 152
- return 0
-}
 status_action() {
- check_iptables "/proc/net/ip_tables_names"
- ret_ipv4=$?
- check_iptables "/proc/net/ip6_tables_names"
- ret_ipv6=$?
- [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
- [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
- echo "iptables modules are not loaded"
- }
- [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
+ # Check if iptables is functional and has user-defined chains
+ # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
+ chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
+ [ "$chains" -gt 3 ] && return 0
  echo "Firewall is not configured"
- }
  exit 3
 }
 
