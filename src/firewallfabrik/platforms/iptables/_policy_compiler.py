@@ -755,6 +755,24 @@ class PolicyCompiler_ipt(PolicyCompiler):
         conf.set_variable('end_rule', '')
         conf.set_variable('state_module_option', state_module_option)
 
+        # Chain names — prefixed in coexistence mode.
+        prefix = self.chain_prefix
+        conf.set_variable('chain_input', f'{prefix}_INPUT' if prefix else 'INPUT')
+        conf.set_variable(
+            'chain_output',
+            f'{prefix}_OUTPUT' if prefix else 'OUTPUT',
+        )
+        conf.set_variable(
+            'chain_forward',
+            f'{prefix}_FORWARD' if prefix else 'FORWARD',
+        )
+        drop_inv = f'{prefix}_drop_invalid' if prefix else 'drop_invalid'
+        conf.set_variable('prefix_drop_invalid', drop_inv)
+        create_cmd = (
+            f'{iptables_cmd} -N {drop_inv} 2>/dev/null' if not use_restore else ''
+        )
+        conf.set_variable('create_drop_invalid_chain', create_cmd)
+
         conf.set_variable(
             'accept_established',
             1 if self.fw.get_option('accept_established') else 0,
