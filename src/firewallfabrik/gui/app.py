@@ -13,6 +13,7 @@
 """Application entry point for the FirewallFabrik GUI."""
 
 import argparse
+import os
 import pathlib
 import signal
 import sys
@@ -67,6 +68,13 @@ def main():
         metavar='FILE',
         help='database file to load on startup',
     )
+
+    # Suppress harmless Wayland text-input warnings (Qt 6 / zwp_text_input_v3
+    # emits noisy "Got leave event for surface 0x0" messages on focus changes).
+    rules = os.environ.get('QT_LOGGING_RULES', '')
+    if rules:
+        rules += ';'
+    os.environ['QT_LOGGING_RULES'] = rules + 'qt.qpa.wayland.textinput=false'
 
     # Use parse_known_args so Qt-specific flags (e.g. -platform) pass through.
     args, remaining = parser.parse_known_args()
