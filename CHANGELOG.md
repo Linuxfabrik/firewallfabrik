@@ -21,11 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
+- Coexistence mode: `status` command now correctly detects whether the firewall is active, even when other tools like Docker create additional chains.
+- Coexistence mode: `stop` command now properly removes FirewallFabrik's chains and jump rules on all systems, including those using the iptables-nft backend.
+- Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
 - Compiler error and warning messages now show the rule position number instead of the color label.
 - Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
 - Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
 - Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.
 - Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
+- Harmless Qt/Wayland text-input warnings suppressed during GUI startup.
 - Main window border is now clearly visible on GNOME/Wayland.
 - `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
 - `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
