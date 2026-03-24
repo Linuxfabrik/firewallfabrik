@@ -261,7 +261,7 @@ reset_fwf_chains_v4() {
  # Remove jump rules targeting our prefixed chains from built-in chains.
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
  $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read rulenum; do
  $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
@@ -286,7 +286,7 @@ reset_fwf_chains_v6() {
 
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
  $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read rulenum; do
  $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
@@ -402,7 +402,7 @@ script_body() {
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -N RULE_1
+ $IPTABLES -N RULE_1 2>/dev/null
  $IPTABLES -A OUTPUT -j RULE_1
  $IPTABLES -A INPUT -j RULE_1
  $IPTABLES -A FORWARD -j RULE_1

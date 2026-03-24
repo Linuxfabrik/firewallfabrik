@@ -262,7 +262,7 @@ reset_fwf_chains_v4() {
  # Remove jump rules targeting our prefixed chains from built-in chains.
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
  $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read rulenum; do
  $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
@@ -287,7 +287,7 @@ reset_fwf_chains_v6() {
 
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
  $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep -w "${prefix}_" | awk '{print $1}' | sort -rn \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read rulenum; do
  $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
@@ -418,7 +418,7 @@ script_body() {
  #
  echo "Rule 0 (eth1)"
  #
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -i eth1 -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -s 192.168.1.1 -j ACCEPT
  $IPTABLES -A CHAIN -s 198.51.100.1 -j ACCEPT
