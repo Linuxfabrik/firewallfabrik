@@ -1,25 +1,16 @@
-Introduction
-============
+# Introduction
 
-
-.. contents::
-   :local:
-   :depth: 2
-
-
-Introducing FirewallFabrik
---------------------------
+## Introducing FirewallFabrik
 
 FirewallFabrik simplifies firewall policy management for Linux-based firewall platforms, currently supporting Netfilter/iptables and nftables. It provides a professional-grade GUI built with Python and PySide6 (Qt6), making administration tasks straightforward and efficient.
 
 With FirewallFabrik, you can manage the security policy of your firewall efficiently and accurately, without the learning curve usually associated with command line interfaces. Instead of thinking in terms of obscure commands and parameters, you simply create a set of objects describing your firewall, servers, and subnets, and then implement your firewall policy by dragging objects into policy rules. You can also take advantage of a large collection of predefined objects describing many standard protocols and services. Once a policy is built in the GUI, you can compile it and install it on one, or several, firewall machines.
 
-.. figure:: img/firewall-builder-main-window.png
-   :alt: FirewallFabrik Main Window
+<figure>
+<img src="img/firewall-builder-main-window.png" alt="img/firewall-builder-main-window.png" />
+</figure>
 
-
-Overview of FirewallFabrik Features
-------------------------------------
+## Overview of FirewallFabrik Features
 
 FirewallFabrik helps you write and manage configuration for your firewalls. It generates iptables shell scripts and nftables configurations for you. You can then deploy the generated scripts manually, through your existing automation (Ansible, CI/CD pipelines), or using the built-in installer. FirewallFabrik provides search functions and full undo/redo history. It allows you to reuse the same address and service objects in the rules of many firewalls. It simplifies coordinated changes of the rules and helps avoid errors in generated configurations.
 
@@ -41,197 +32,104 @@ FirewallFabrik can generate scripts that set up *interfaces*, *IP addresses*, an
 
 The built-in policy installer uses SSH for a secure communication channel to each firewall and has many safeguards to make sure you never cut yourself off from a firewall in case of a policy mistake. The policy installer can deploy to one firewall or to many firewalls in a batch.
 
+## Firewall Policy as Code
 
-Firewall Policy as Code
--------------------------
+FirewallFabrik uses a human-readable YAML file format (`.fwf`) that works well with version control systems like Git. This makes it straightforward to adopt an Infrastructure as Code workflow for your firewall management:
 
-FirewallFabrik uses a human-readable YAML file format (``.fwf``) that works well with version control systems like Git. This makes it straightforward to adopt an Infrastructure as Code workflow for your firewall management:
-
-* **Version control**: Store your ``.fwf`` files in a Git repository to maintain a full history of every policy change, including who changed what and when.
-* **Peer review**: Use merge/pull requests to have policy changes reviewed by a colleague before they are deployed.
-* **Automated deployment**: Integrate the compiled firewall scripts into your existing automation -- whether that is an Ansible playbook, a CI/CD pipeline (GitLab CI, GitHub Actions, Jenkins), or a simple shell script.
-* **Reproducibility**: The generated ``.fw`` script is fully deterministic -- the same ``.fwf`` input always produces byte-identical output. You can rebuild the exact same firewall state at any time, verify integrity via checksums, and rely on ``diff`` or ``git diff`` to confirm that only intentional changes are present. Unlike Firewall Builder, FirewallFabrik does not embed a generation timestamp in the script. Deployment timestamps should be managed by your deployment process (e.g. Ansible, CI/CD pipeline, or a wrapper script that records the deployment time on the target host).
+- **Version control**: Store your `.fwf` files in a Git repository to maintain a full history of every policy change, including who changed what and when.
+- **Peer review**: Use merge/pull requests to have policy changes reviewed by a colleague before they are deployed.
+- **Automated deployment**: Integrate the compiled firewall scripts into your existing automation -- whether that is an Ansible playbook, a CI/CD pipeline (GitLab CI, GitHub Actions, Jenkins), or a simple shell script.
+- **Reproducibility**: The generated `.fw` script is fully deterministic -- the same `.fwf` input always produces byte-identical output. You can rebuild the exact same firewall state at any time, verify integrity via checksums, and rely on `diff` or `git diff` to confirm that only intentional changes are present. Unlike Firewall Builder, FirewallFabrik does not embed a generation timestamp in the script. Deployment timestamps should be managed by your deployment process (e.g. Ansible, CI/CD pipeline, or a wrapper script that records the deployment time on the target host).
 
 Even if you start with a simple manual workflow (edit, compile, scp, activate), the YAML-based format makes it easy to evolve toward a fully automated deployment pipeline as your environment grows.
 
+## File Formats
 
-File Formats
-------------
+FirewallFabrik uses its own YAML-based file format (`.fwf`) for storing firewall configurations. This format is human-readable, diff-friendly, and works well with version control systems like Git.
 
-FirewallFabrik uses its own YAML-based file format (``.fwf``) for storing firewall configurations. This format is human-readable, diff-friendly, and works well with version control systems like Git.
-
-For users migrating from Firewall Builder, FirewallFabrik can import existing Firewall Builder XML files (``.fwb``) directly. When saving, the data is always written in the new ``.fwf`` format. See :doc:`17 - Migrating from Firewall Builder` for details.
+For users migrating from Firewall Builder, FirewallFabrik can import existing Firewall Builder XML files (`.fwb`) directly. When saving, the data is always written in the new `.fwf` format. See [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md) for details.
 
 Internally, FirewallFabrik loads all data into an in-memory SQLite database (via SQLAlchemy) for fast querying and editing, with full undo/redo support through database snapshots.
 
+## Heritage
 
-Heritage
---------
-
-FirewallFabrik is built on a long and proven history. It is a modernized port of `Firewall Builder <http://sourceforge.net/projects/fwbuilder>`_, a well-established firewall configuration tool registered on SourceForge since 2000 that has gone through several major releases.
+FirewallFabrik is built on a long and proven history. It is a modernized port of [Firewall Builder](http://sourceforge.net/projects/fwbuilder), a well-established firewall configuration tool registered on SourceForge since 2000 that has gone through several major releases.
 
 FirewallFabrik carries this project forward into the modern world. Its core concepts and ideas have been preserved and systematically evolved -- including a transition from C++ to Python, from Qt5 to Qt6, from XML to YAML, and toward a more contemporary architecture overall.
 
 While FirewallFabrik is an independent project, it clearly stands on the shoulders of Firewall Builder. The majority of the credit and historical merit therefore belongs to this outstanding tool and its original developers.
 
-
-How FirewallFabrik Compares to Other Tools
-------------------------------------------
+## How FirewallFabrik Compares to Other Tools
 
 If you are evaluating FirewallFabrik for your environment, it helps to understand how it differs from other popular firewall management tools. FirewallFabrik is a **centralized firewall policy design, compilation, and audit tool**. It does not run on the firewall itself -- it models your network objects in a database, lets you design and review rules in a desktop GUI, and then compiles them into deployment-ready configurations for your firewalls.
 
 This is a fundamentally different approach from tools like UFW, firewalld, pfSense, or OPNsense. Crucially, FirewallFabrik is not a replacement for deployment tools like Ansible or Terraform -- it **complements** them. FirewallFabrik produces the shell scripts; your existing automation pipeline deploys them. The following comparisons help you decide whether FirewallFabrik is the right fit for your use case.
 
+### vs. UFW
 
-vs. UFW
-^^^^^^^
+UFW ("Uncomplicated Firewall") is a simple command-line interface for managing firewall rules on a single Linux host. It is designed for quick, straightforward setups like `ufw allow 22/tcp`.
 
-UFW ("Uncomplicated Firewall") is a simple command-line interface for managing firewall rules on a single Linux host. It is designed for quick, straightforward setups like ``ufw allow 22/tcp``.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 37 38
-
-   * - Aspect
-     - FirewallFabrik
-     - UFW
-   * - Approach
-     - Offline compiler generating shell scripts
-     - Live CLI running on the firewall
-   * - Clustering
-     - Failover groups, state sync (conntrackd)
-     - No
-   * - Custom chains
-     - Automatic and user-defined branching
-     - No
-   * - IPv6
-     - Full dual-stack compilation
-     - Supported but basic
-   * - Multi-firewall
-     - Yes -- single database, many firewalls
-     - No -- per-host only
-   * - NAT
-     - Full SNAT, DNAT, Masquerade, Redirect, Load Balancing, SDNAT
-     - Manual editing of ``before.rules``
-   * - Object model
-     - Rich: hosts, networks, groups, services, interfaces, clusters
-     - None -- just rules with IPs/ports
-   * - Routing
-     - ``ip route`` generation, ECMP
-     - No
-   * - Rule analysis
-     - Shadowing detection, optimization, negation handling
-     - None
+| Aspect | FirewallFabrik | UFW |
+|----|----|----|
+| Approach | Offline compiler generating shell scripts | Live CLI running on the firewall |
+| Clustering | Failover groups, state sync (conntrackd) | No |
+| Custom chains | Automatic and user-defined branching | No |
+| IPv6 | Full dual-stack compilation | Supported but basic |
+| Multi-firewall | Yes -- single database, many firewalls | No -- per-host only |
+| NAT | Full SNAT, DNAT, Masquerade, Redirect, Load Balancing, SDNAT | Manual editing of `before.rules` |
+| Object model | Rich: hosts, networks, groups, services, interfaces, clusters | None -- just rules with IPs/ports |
+| Routing | `ip route` generation, ECMP | No |
+| Rule analysis | Shadowing detection, optimization, negation handling | None |
 
 **When to use UFW instead:** You have a single server with a handful of simple allow/deny rules and want to manage them directly on the command line.
 
 **When to use FirewallFabrik instead:** You manage multiple firewalls, need NAT, clustering, or complex rule sets, or want reusable objects and rule analysis.
 
-
-vs. firewalld
-^^^^^^^^^^^^^^
+### vs. firewalld
 
 firewalld is a dynamic firewall daemon that runs directly on the host. It uses a zone-based model and supports instant runtime changes via its D-Bus API.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 25 37 38
-
-   * - Aspect
-     - FirewallFabrik
-     - firewalld
-   * - Approach
-     - Offline compiler
-     - Live daemon (D-Bus API)
-   * - Abstraction
-     - Objects + rules compiled to scripts
-     - Zones + services + rich rules
-   * - Multi-firewall
-     - Yes
-     - No -- per-host daemon
-   * - NAT
-     - Full NAT matrix
-     - Masquerade per zone, basic port forwarding
-   * - nftables
-     - Native compiler backend
-     - Uses nftables as backend (since v0.6)
-   * - Object model
-     - Hierarchical groups, address tables, service groups
-     - Flat zones, predefined services
-   * - Rule complexity
-     - Arbitrary rule chains, negation, branching
-     - Rich rules cover basics, limited nesting
-   * - Runtime changes
-     - Recompile + redeploy
-     - Instant (reload or permanent)
+| Aspect | FirewallFabrik | firewalld |
+|----|----|----|
+| Approach | Offline compiler | Live daemon (D-Bus API) |
+| Abstraction | Objects + rules compiled to scripts | Zones + services + rich rules |
+| Multi-firewall | Yes | No -- per-host daemon |
+| NAT | Full NAT matrix | Masquerade per zone, basic port forwarding |
+| nftables | Native compiler backend | Uses nftables as backend (since v0.6) |
+| Object model | Hierarchical groups, address tables, service groups | Flat zones, predefined services |
+| Rule complexity | Arbitrary rule chains, negation, branching | Rich rules cover basics, limited nesting |
+| Runtime changes | Recompile + redeploy | Instant (reload or permanent) |
 
 **When to use firewalld instead:** You manage a single host, need instant runtime changes, or rely on tight integration with NetworkManager and systemd.
 
 **When to use FirewallFabrik instead:** You need centralized management of multiple firewalls, complex NAT configurations, custom chain branching, or rule shadowing analysis across your infrastructure.
 
-
-vs. pfSense / OPNsense
-^^^^^^^^^^^^^^^^^^^^^^^^
+### vs. pfSense / OPNsense
 
 pfSense and OPNsense are complete firewall operating systems based on FreeBSD. They run on dedicated hardware or virtual machines and provide a full web-based management interface.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 25 37 38
-
-   * - Aspect
-     - FirewallFabrik
-     - pfSense / OPNsense
-   * - What it is
-     - Policy compiler + desktop GUI
-     - Full firewall OS (FreeBSD-based)
-   * - Runs on
-     - Your workstation (designs rules for remote firewalls)
-     - Dedicated hardware or VM (is the firewall itself)
-   * - Captive portal
-     - No
-     - Yes
-   * - DHCP/DNS
-     - No
-     - Built-in (ISC DHCP, Unbound)
-   * - Firewall engine
-     - Currently generates iptables/nftables; open to additional backends
-     - PF (Packet Filter) on FreeBSD
-   * - HA
-     - Cluster modeling + conntrackd
-     - Native CARP + pfsync
-   * - IDS/IPS
-     - No
-     - Suricata/Snort integration
-   * - Multi-firewall
-     - Yes -- central management from one database
-     - No -- each appliance is managed individually
-   * - NAT
-     - Comprehensive for iptables/nftables
-     - Comprehensive for PF
-   * - Package ecosystem
-     - No
-     - Extensive (HAProxy, Squid, ntopng, ...)
-   * - Rule analysis
-     - Shadowing detection, optimization
-     - Basic duplicate detection
-   * - Traffic shaping
-     - Partial (MARK/CLASSIFY for tc)
-     - Full ALTQ/CoDel integration
-   * - VPN
-     - No
-     - OpenVPN, WireGuard, IPsec
-   * - Web UI
-     - No (desktop Qt6 GUI)
-     - Yes -- full web management
+| Aspect | FirewallFabrik | pfSense / OPNsense |
+|----|----|----|
+| What it is | Policy compiler + desktop GUI | Full firewall OS (FreeBSD-based) |
+| Runs on | Your workstation (designs rules for remote firewalls) | Dedicated hardware or VM (is the firewall itself) |
+| Captive portal | No | Yes |
+| DHCP/DNS | No | Built-in (ISC DHCP, Unbound) |
+| Firewall engine | Currently generates iptables/nftables; open to additional backends | PF (Packet Filter) on FreeBSD |
+| HA | Cluster modeling + conntrackd | Native CARP + pfsync |
+| IDS/IPS | No | Suricata/Snort integration |
+| Multi-firewall | Yes -- central management from one database | No -- each appliance is managed individually |
+| NAT | Comprehensive for iptables/nftables | Comprehensive for PF |
+| Package ecosystem | No | Extensive (HAProxy, Squid, ntopng, ...) |
+| Rule analysis | Shadowing detection, optimization | Basic duplicate detection |
+| Traffic shaping | Partial (MARK/CLASSIFY for tc) | Full ALTQ/CoDel integration |
+| VPN | No | OpenVPN, WireGuard, IPsec |
+| Web UI | No (desktop Qt6 GUI) | Yes -- full web management |
 
 **When to use pfSense/OPNsense instead:** You want an all-in-one firewall appliance with built-in VPN, IDS/IPS, DNS, DHCP, and a web UI -- typically for branch offices, small-to-medium businesses, or lab environments.
 
 **When to use FirewallFabrik instead:** You need to design, compile, and deploy firewall rules across multiple firewalls from a central workstation. FirewallFabrik does not replace a firewall appliance -- it replaces the need to manually write and maintain firewall rules. It currently targets iptables and nftables, with the architecture open to additional backends.
 
-
-Strengths of FirewallFabrik
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Strengths of FirewallFabrik
 
 - **Visual overview across all firewalls** -- see the policies of all your firewalls side by side in one application. This makes it easy to maintain an overview, understand cross-firewall communication flows, and spot gaps or inconsistencies that are invisible when managing firewalls individually.
 - **Audit and traceability** -- every rule references named objects (hosts, networks, services) rather than raw IP addresses and port numbers. This provides clear traceability: you can instantly find all rules across all firewalls that reference a specific server or service. During audits, reviewers can understand the intent of each rule without deciphering cryptic iptables syntax.
@@ -243,11 +141,9 @@ Strengths of FirewallFabrik
 - **Dual-stack IPv4/IPv6** -- separate compilation passes with automatic version filtering.
 - **Cluster support** -- model failover groups and state synchronization.
 - **Idempotent output** -- the generated shell scripts can be re-applied safely. They flush and rebuild the entire rule set on each run, so the result is always the same regardless of the firewall's previous state.
-- **Reproducibility** -- generated shell scripts are fully deterministic (no embedded timestamps) and human-readable. The same input always produces byte-identical output. Store the ``.fwf`` source file in version control to maintain a complete history of every policy change.
+- **Reproducibility** -- generated shell scripts are fully deterministic (no embedded timestamps) and human-readable. The same input always produces byte-identical output. Store the `.fwf` source file in version control to maintain a complete history of every policy change.
 
-
-Limitations of FirewallFabrik
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Limitations of FirewallFabrik
 
 - **No live runtime** -- FirewallFabrik is not a daemon. Changes require recompilation and redeployment.
 - **No network services** -- it does not provide VPN, DNS, DHCP, or IDS/IPS.
@@ -255,21 +151,17 @@ Limitations of FirewallFabrik
 - **Currently iptables and nftables only** -- additional compiler backends (e.g. PF) could be added in the future, but are not available yet (as of 2026).
 - **No traffic monitoring** -- it compiles rules but does not observe or visualize live traffic.
 
-
-Supported Platforms
--------------------
+## Supported Platforms
 
 FirewallFabrik's architecture is platform-agnostic -- the object model, rule engine, and GUI are independent of any specific firewall backend. Additional compiler backends can be added as the need arises. Currently, two backends are available:
 
 - **iptables** -- the mature, battle-tested Netfilter firewall framework with a comprehensive compilation pipeline (55+ rule processors).
 - **nftables** -- the modern successor to iptables, default on all major Linux distributions, with native support for sets, maps, and a cleaner rule syntax.
 
-Both backends produce deployment-ready output: shell scripts with individual ``iptables`` commands or ``iptables-restore`` batch format for iptables, and ``nft`` batch files for nftables.
+Both backends produce deployment-ready output: shell scripts with individual `iptables` commands or `iptables-restore` batch format for iptables, and `nft` batch files for nftables.
 
-
-Platforms from Firewall Builder Not Carried Forward
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+### Platforms from Firewall Builder Not Carried Forward
 
 Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik currently ships with iptables and nftables backends and adds native nftables support, which Firewall Builder never had. Several legacy platforms (Cisco PIX, FWSM, ipfw, ipfilter) have been dropped entirely, while others (Cisco ASA/IOS/NX-OS, JunOS, PF) are candidates for future backends.
 
-For a detailed platform compatibility matrix and migration instructions, see :doc:`17 - Migrating from Firewall Builder`.
+For a detailed platform compatibility matrix and migration instructions, see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md).

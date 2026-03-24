@@ -45,30 +45,17 @@ uvx --from 'firewallfabrik[gui]' fwf
 uv tool install 'firewallfabrik[gui]'
 ```
 
-For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.rst).
+For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.md).
 
 
 ## Documentation
 
 * [User Guide](docs/user-guide/) -- installation, GUI overview, working with objects, firewall policies, cookbook, and more.
-* [Migrating from Firewall Builder](docs/user-guide/17%20-%20Migrating%20from%20Firewall%20Builder.rst) -- import .fwb files and differences.
+* [Migrating from Firewall Builder](docs/user-guide/17%20-%20Migrating%20from%20Firewall%20Builder.md) -- import .fwb files and differences.
 * [Developer Guide](docs/developer-guide/) -- database manager, debugging, rule processors, testing, and design decisions.
 * [Changelog](CHANGELOG.md) -- release history.
 * [Contributing](CONTRIBUTING.md) -- how to contribute.
 * [Issue Tracker](https://github.com/Linuxfabrik/firewallfabrik/issues) -- bug reports and feature requests.
-
-
-### Building the Documentation
-
-The documentation is built with [Sphinx](https://www.sphinx-doc.org/) using the Read the Docs theme. To build it locally:
-
-```bash
-pip install sphinx sphinx-rtd-theme myst-parser
-cd docs
-make html
-```
-
-The generated HTML will be in `docs/_build/html/`. Open `docs/_build/html/index.html` in a browser to view it.
 
 
 ### Source Code Documentation
