@@ -2,7 +2,6 @@ Appendix
 ========
 
 .. sectnum::
-   :start: 16
 
 .. contents::
    :local:

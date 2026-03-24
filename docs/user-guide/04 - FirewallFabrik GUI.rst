@@ -2,7 +2,6 @@ FirewallFabrik GUI
 ====================
 
 .. sectnum::
-   :start: 4
 
 .. contents::
    :local:

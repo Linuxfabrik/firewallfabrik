@@ -2,7 +2,6 @@ Integration with OS Running on the Firewall Machine
 ====================================================
 
 .. sectnum::
-   :start: 12
 
 .. contents::
    :local:
@@ -93,6 +92,48 @@ Both platforms support this coexistence mode:
 * **iptables**: FirewallFabrik creates prefixed chains (e.g. ``fwf_INPUT``, ``fwf_FORWARD``, ``fwf_OUTPUT``) and inserts jump rules into the built-in chains. Only the prefixed chains are flushed on reload.
 
 The table/chain prefix is configurable via **"Table name"** in the firewall settings dialog (default: ``fwf``).
+
+
+How nftables Coexistence Works
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FirewallFabrik creates two named nftables tables (e.g. ``fwf_filter`` and ``fwf_nat``). When ``"Flush entire ruleset"`` is disabled, the generated script only deletes and recreates these two tables — other tools' tables are never touched. The ``nft`` rules file uses an atomic create-then-delete pattern:
+
+.. code-block:: text
+
+   table ip fwf_filter {}
+   delete table ip fwf_filter
+
+   table ip fwf_filter {
+       chain input { type filter hook input priority filter; policy drop; ... }
+       chain forward { ... }
+       chain output { ... }
+   }
+
+This is safe because ``nft -f`` processes the entire file atomically.
+
+
+How iptables Coexistence Works
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since iptables has no table namespace mechanism, FirewallFabrik uses prefixed user chains. When ``"Flush entire ruleset"`` is disabled, the generated script:
+
+1. Removes any existing ``fwf_*`` chains and their jump rules from the built-in chains (``reset_fwf_chains``).
+2. Creates new prefixed chains (``fwf_INPUT``, ``fwf_FORWARD``, ``fwf_OUTPUT``) and inserts jump rules at position 1 in the built-in chains (``setup_fwf_jumps``).
+3. All firewall rules target the prefixed chains instead of the built-in chains.
+
+.. code-block:: text
+
+   Chain INPUT (policy DROP)
+    fwf_INPUT    all  --  0.0.0.0/0  0.0.0.0/0    ← FWF jump rule
+    CROWDSEC_CHAIN ...                               ← other tool
+    f2b-sshd ...                                     ← other tool
+
+   Chain fwf_INPUT (1 references)
+    ... FirewallFabrik rules ...
+
+On ``stop``, only the ``fwf_*`` chains and their jump rules are removed. The built-in chain policies remain at DROP, and other tools' chains are untouched.
+
 
 .. warning::
 

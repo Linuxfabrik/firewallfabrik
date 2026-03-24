@@ -2,7 +2,6 @@ Working with Objects
 ====================
 
 .. sectnum::
-   :start: 5
 
 .. contents::
    :local:

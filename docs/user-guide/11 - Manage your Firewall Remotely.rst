@@ -2,7 +2,6 @@ Manage your Firewall Remotely
 =============================
 
 .. sectnum::
-   :start: 11
 
 .. contents::
    :local:

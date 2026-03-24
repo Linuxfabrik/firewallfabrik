@@ -2,7 +2,6 @@ Migrating from Firewall Builder
 ================================
 
 .. sectnum::
-   :start: 17
 
 .. contents::
    :local:

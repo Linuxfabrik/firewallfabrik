@@ -2,7 +2,6 @@ Troubleshooting
 ===============
 
 .. sectnum::
-   :start: 15
 
 .. contents::
    :local:

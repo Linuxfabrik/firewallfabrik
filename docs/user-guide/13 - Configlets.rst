@@ -2,7 +2,6 @@ Configlets
 ==========
 
 .. sectnum::
-   :start: 13
 
 .. contents::
    :local:

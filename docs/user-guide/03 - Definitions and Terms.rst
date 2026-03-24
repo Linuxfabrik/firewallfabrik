@@ -2,7 +2,6 @@ Definitions and Terms
 ======================
 
 .. sectnum::
-   :start: 3
 
 .. contents::
    :local:

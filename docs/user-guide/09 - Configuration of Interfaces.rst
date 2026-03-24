@@ -2,7 +2,6 @@ Configuration of Interfaces
 ===========================
 
 .. sectnum::
-   :start: 9
 
 .. contents::
    :local:
