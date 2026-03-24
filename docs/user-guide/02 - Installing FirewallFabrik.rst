@@ -1,7 +1,6 @@
 Installing FirewallFabrik
 =========================
 
-.. sectnum::
 
 .. contents::
    :local:

@@ -1,7 +1,6 @@
 Introduction
 ============
 
-.. sectnum::
 
 .. contents::
    :local:

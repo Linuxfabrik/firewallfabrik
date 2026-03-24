@@ -1,7 +1,6 @@
 FirewallFabrik Cookbook
 ======================
 
-.. sectnum::
 
 .. contents::
    :local:

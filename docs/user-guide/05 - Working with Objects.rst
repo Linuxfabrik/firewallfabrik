@@ -1,7 +1,6 @@
 Working with Objects
 ====================
 
-.. sectnum::
 
 .. contents::
    :local:

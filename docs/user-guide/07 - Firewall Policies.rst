@@ -1,7 +1,6 @@
 Firewall Policies
 =================
 
-.. sectnum::
 
 .. contents::
    :local:

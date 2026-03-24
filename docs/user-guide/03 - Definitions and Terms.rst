@@ -1,7 +1,6 @@
 Definitions and Terms
 ======================
 
-.. sectnum::
 
 .. contents::
    :local:

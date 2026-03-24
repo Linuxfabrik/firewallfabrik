@@ -1,7 +1,6 @@
 Compiling and Installing a Policy
 ==================================
 
-.. sectnum::
 
 .. contents::
    :local:

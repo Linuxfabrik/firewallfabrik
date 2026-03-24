@@ -1,7 +1,6 @@
 Cluster Configuration
 =====================
 
-.. sectnum::
 
 .. contents::
    :local:

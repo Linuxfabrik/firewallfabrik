@@ -1,7 +1,6 @@
 Integration with OS Running on the Firewall Machine
 ====================================================
 
-.. sectnum::
 
 .. contents::
    :local:

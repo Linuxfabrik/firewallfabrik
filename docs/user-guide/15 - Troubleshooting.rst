@@ -1,7 +1,6 @@
 Troubleshooting
 ===============
 
-.. sectnum::
 
 .. contents::
    :local:

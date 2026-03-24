@@ -1,7 +1,6 @@
 Configuration of Interfaces
 ===========================
 
-.. sectnum::
 
 .. contents::
    :local:

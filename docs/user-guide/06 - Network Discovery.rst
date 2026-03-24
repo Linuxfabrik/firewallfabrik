@@ -1,7 +1,6 @@
 Network Discovery
 =================
 
-.. sectnum::
 
 .. contents::
    :local:

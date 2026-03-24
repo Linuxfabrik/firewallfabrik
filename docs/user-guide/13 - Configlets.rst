@@ -1,7 +1,6 @@
 Configlets
 ==========
 
-.. sectnum::
 
 .. contents::
    :local:
