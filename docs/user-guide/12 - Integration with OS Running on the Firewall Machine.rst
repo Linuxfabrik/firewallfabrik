@@ -111,14 +111,13 @@ For a typical setup with FirewallFabrik, Docker, CrowdSec and fail2ban, configur
    [Unit]
    Description=FirewallFabrik firewall policy
    DefaultDependencies=no
-   Before=network-pre.target
    Wants=network-pre.target
    After=local-fs.target
 
-   # Start before other tools so the machine is protected as
-   # early as possible. Tools that start later insert their
-   # rules at position 1 (evaluated first).
-   Before=docker.service crowdsec.service fail2ban.service
+   # Start before network and before other tools so the machine
+   # is protected as early as possible. Tools that start later
+   # insert their rules at position 1 (evaluated first).
+   Before=network-pre.target docker.service crowdsec.service fail2ban.service
 
    [Service]
    Type=oneshot
