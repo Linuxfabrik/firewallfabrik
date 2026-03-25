@@ -453,7 +453,10 @@ status_action() {
  # Full-flush mode: check if iptables has user-defined chains
  # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
  chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
- [ "$chains" -gt 3 ] && return 0
+ [ "$chains" -gt 3 ] && {
+ echo "Firewall is active"
+ return 0
+ }
  echo "Firewall is not configured"
  exit 3
 }

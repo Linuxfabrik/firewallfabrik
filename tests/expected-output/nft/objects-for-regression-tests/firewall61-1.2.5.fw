@@ -401,6 +401,7 @@ status_action() {
     check_nft_status
     ret=$?
     if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
         return 0
     fi
     echo "Firewall is not configured"
