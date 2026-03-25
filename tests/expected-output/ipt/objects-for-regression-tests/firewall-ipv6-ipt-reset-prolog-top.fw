@@ -6,13 +6,14 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall-ipv6-ipt-reset-prolog-top.fw /etc/firewall-ipv6-ipt-reset-prolog-top.fw
+# files: * firewall-ipv6-ipt-reset-prolog-top.fw fwf.sh
 #
 # Compiled for iptables (any version)
 #
 # Policy is configured as dual address family. Usigng iptables-restore. Prolog is on top of the policy
 
 FWBDEBUG=""
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -251,6 +252,107 @@ clear_addresses_except_known_interfaces() {
  done
 }
 
+reset_fwf_chains_v4() {
+ local prefix="$1"
+ local table chain rulenum
+
+ # For each table, remove FWF jump rules from built-in chains (in
+ # reverse order to keep line numbers stable), then flush and delete
+ # FWF's own chains. We do not check /proc/net/ip_tables_names
+ # because it is absent on systems using the iptables-nft backend;
+ # instead we query iptables directly and suppress errors.
+ for table in filter nat mangle; do
+ # Remove jump rules targeting our prefixed chains from built-in chains.
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read rulenum; do
+ $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ # Flush all our prefixed chains first, then delete them in a
+ # second pass. A single pass fails when sub-chains (e.g.
+ # fwf_C...) sort alphabetically before their parent chains
+ # (fwf_INPUT) -- the delete would fail because the parent still
+ # references the sub-chain.
+ $IPTABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IPTABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IPTABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IPTABLES -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+reset_fwf_chains_v6() {
+ local prefix="$1"
+ local table chain rulenum
+
+ for table in filter nat mangle; do
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read rulenum; do
+ $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IP6TABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IP6TABLES -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+setup_fwf_jumps_v4() {
+ local prefix="$1"
+
+ # Set built-in chain policies to DROP for security.
+ $IPTABLES -P INPUT DROP
+ $IPTABLES -P FORWARD DROP
+ $IPTABLES -P OUTPUT DROP
+
+ # Create our prefixed chains (ignore error if they already exist).
+ $IPTABLES -N "${prefix}_INPUT" 2>/dev/null
+ $IPTABLES -N "${prefix}_FORWARD" 2>/dev/null
+ $IPTABLES -N "${prefix}_OUTPUT" 2>/dev/null
+
+ # Insert jump rules at position 1 (top of chain).
+ # Tools that start later (Docker, CrowdSec, fail2ban) will insert
+ # their own rules at position 1, pushing ours down. Control the
+ # evaluation order via systemd unit ordering.
+ $IPTABLES -I INPUT 1 -j "${prefix}_INPUT"
+ $IPTABLES -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IPTABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+}
+
+setup_fwf_jumps_v6() {
+ local prefix="$1"
+
+ $IP6TABLES -P INPUT DROP
+ $IP6TABLES -P FORWARD DROP
+ $IP6TABLES -P OUTPUT DROP
+
+ $IP6TABLES -N "${prefix}_INPUT" 2>/dev/null
+ $IP6TABLES -N "${prefix}_FORWARD" 2>/dev/null
+ $IP6TABLES -N "${prefix}_OUTPUT" 2>/dev/null
+
+ $IP6TABLES -I INPUT 1 -j "${prefix}_INPUT"
+ $IP6TABLES -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IP6TABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+}
+
 check_file() {
  test -r "$2" || {
  echo "Can not find file $2 referenced by address table object $1"
@@ -338,7 +440,6 @@ script_body() {
  OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- {{create_drop_invalid_chain}}
  OUTPUT -m state --state INVALID -j drop_invalid
  INPUT -m state --state INVALID -j drop_invalid
  FORWARD -m state --state INVALID -j drop_invalid
@@ -375,7 +476,6 @@ script_body() {
  OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop packets that do not match any valid state and log them
- {{create_drop_invalid_chain}}
  OUTPUT -m state --state INVALID -j drop_invalid
  INPUT -m state --state INVALID -j drop_invalid
  FORWARD -m state --state INVALID -j drop_invalid
@@ -408,33 +508,17 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -P OUTPUT ACCEPT
- $IPTABLES -P INPUT ACCEPT
- $IPTABLES -P FORWARD ACCEPT
- $IP6TABLES -P OUTPUT ACCEPT
- $IP6TABLES -P INPUT ACCEPT
- $IP6TABLES -P FORWARD ACCEPT
 }
 
-check_iptables() {
- IP_TABLES="$1"
- [ ! -e $IP_TABLES ] && return 151
- NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
- [ -z "$NF_TABLES" ] && return 152
- return 0
-}
 status_action() {
- check_iptables "/proc/net/ip_tables_names"
- ret_ipv4=$?
- check_iptables "/proc/net/ip6_tables_names"
- ret_ipv6=$?
- [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
- [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
- echo "iptables modules are not loaded"
+ # Full-flush mode: check if iptables has user-defined chains
+ # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
+ chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
+ [ "$chains" -gt 3 ] && {
+ echo "Firewall is active"
+ return 0
  }
- [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
  echo "Firewall is not configured"
- }
  exit 3
 }
 
@@ -459,11 +543,11 @@ case "$cmd" in
 
 
 
- script_body
+
+ script_body || run_epilog_and_exit 1
  ip_forward
 
  epilog_commands
- RETVAL=$?
  ;;
 
  stop)
@@ -500,6 +584,7 @@ case "$cmd" in
 
  *)
  echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+ RETVAL=1
  ;;
 
 esac

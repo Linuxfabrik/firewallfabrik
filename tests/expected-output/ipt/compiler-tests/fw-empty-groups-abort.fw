@@ -270,11 +270,19 @@ reset_fwf_chains_v4() {
  done
  done
 
- # Flush and delete our prefixed chains.
+ # Flush all our prefixed chains first, then delete them in a
+ # second pass. A single pass fails when sub-chains (e.g.
+ # fwf_C...) sort alphabetically before their parent chains
+ # (fwf_INPUT) -- the delete would fail because the parent still
+ # references the sub-chain.
  $IPTABLES -t "$table" -L -n 2>/dev/null \
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read chain; do
  $IPTABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IPTABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
  $IPTABLES -t "$table" -X "$chain" 2>/dev/null
  done
  done
@@ -297,6 +305,10 @@ reset_fwf_chains_v6() {
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read chain; do
  $IP6TABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
  $IP6TABLES -t "$table" -X "$chain" 2>/dev/null
  done
  done

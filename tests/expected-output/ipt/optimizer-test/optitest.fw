@@ -6,12 +6,13 @@
 #
 # Generated TIMESTAMP
 #
-# files: * optitest.fw /etc/optitest.fw
+# files: * optitest.fw fwf.sh
 #
 # Compiled for iptables 1.2.9
 #
 
 FWBDEBUG=""
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -247,6 +248,107 @@ clear_addresses_except_known_interfaces() {
  done
 }
 
+reset_fwf_chains_v4() {
+ local prefix="$1"
+ local table chain rulenum
+
+ # For each table, remove FWF jump rules from built-in chains (in
+ # reverse order to keep line numbers stable), then flush and delete
+ # FWF's own chains. We do not check /proc/net/ip_tables_names
+ # because it is absent on systems using the iptables-nft backend;
+ # instead we query iptables directly and suppress errors.
+ for table in filter nat mangle; do
+ # Remove jump rules targeting our prefixed chains from built-in chains.
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read rulenum; do
+ $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ # Flush all our prefixed chains first, then delete them in a
+ # second pass. A single pass fails when sub-chains (e.g.
+ # fwf_C...) sort alphabetically before their parent chains
+ # (fwf_INPUT) -- the delete would fail because the parent still
+ # references the sub-chain.
+ $IPTABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IPTABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IPTABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IPTABLES -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+reset_fwf_chains_v6() {
+ local prefix="$1"
+ local table chain rulenum
+
+ for table in filter nat mangle; do
+ for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
+ $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ | grep "${prefix}_" | awk '{print $1}' | sort -rn \
+ | while read rulenum; do
+ $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ done
+ done
+
+ $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IP6TABLES -t "$table" -F "$chain" 2>/dev/null
+ done
+ $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ | grep "^Chain ${prefix}_" | awk '{print $2}' \
+ | while read chain; do
+ $IP6TABLES -t "$table" -X "$chain" 2>/dev/null
+ done
+ done
+}
+
+setup_fwf_jumps_v4() {
+ local prefix="$1"
+
+ # Set built-in chain policies to DROP for security.
+ $IPTABLES -P INPUT DROP
+ $IPTABLES -P FORWARD DROP
+ $IPTABLES -P OUTPUT DROP
+
+ # Create our prefixed chains (ignore error if they already exist).
+ $IPTABLES -N "${prefix}_INPUT" 2>/dev/null
+ $IPTABLES -N "${prefix}_FORWARD" 2>/dev/null
+ $IPTABLES -N "${prefix}_OUTPUT" 2>/dev/null
+
+ # Insert jump rules at position 1 (top of chain).
+ # Tools that start later (Docker, CrowdSec, fail2ban) will insert
+ # their own rules at position 1, pushing ours down. Control the
+ # evaluation order via systemd unit ordering.
+ $IPTABLES -I INPUT 1 -j "${prefix}_INPUT"
+ $IPTABLES -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IPTABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+}
+
+setup_fwf_jumps_v6() {
+ local prefix="$1"
+
+ $IP6TABLES -P INPUT DROP
+ $IP6TABLES -P FORWARD DROP
+ $IP6TABLES -P OUTPUT DROP
+
+ $IP6TABLES -N "${prefix}_INPUT" 2>/dev/null
+ $IP6TABLES -N "${prefix}_FORWARD" 2>/dev/null
+ $IP6TABLES -N "${prefix}_OUTPUT" 2>/dev/null
+
+ $IP6TABLES -I INPUT 1 -j "${prefix}_INPUT"
+ $IP6TABLES -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IP6TABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+}
+
 check_file() {
  test -r "$2" || {
  echo "Can not find file $2 referenced by address table object $1"
@@ -358,24 +460,24 @@ script_body() {
  # Test 7 : Optimize : src, dst, svc
  # Time should appear on the src rules in the FORWARD table
  # +Logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -i eth0 -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -s 10.0.1.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N In_RULE_6
+ $IPTABLES -N In_RULE_6 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_6
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_6
  $IPTABLES -A In_RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- ACCEPT "
  $IPTABLES -A In_RULE_6 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -o eth0 -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -s 10.0.1.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N Out_RULE_6
+ $IPTABLES -N Out_RULE_6 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_6
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_6
  $IPTABLES -A Out_RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- ACCEPT "
@@ -386,12 +488,12 @@ script_body() {
  echo "Rule 7 (eth0)"
  #
  # Test 7 : Optimize on service - dsts -> user chain
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -j ACCEPT
  $IPTABLES -A CHAIN -d 10.0.0.2 -j ACCEPT
  $IPTABLES -A CHAIN -d 10.0.0.3 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -j ACCEPT
  $IPTABLES -A CHAIN -d 10.0.0.2 -j ACCEPT
@@ -402,12 +504,12 @@ script_body() {
  echo "Rule 8 (eth0)"
  #
  # Test 8 : Optimize on service - srcs -> user chain
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j ACCEPT
  $IPTABLES -A CHAIN -s 10.0.1.2 -j ACCEPT
  $IPTABLES -A CHAIN -s 10.0.1.3 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j ACCEPT
  $IPTABLES -A CHAIN -s 10.0.1.2 -j ACCEPT
@@ -420,12 +522,12 @@ script_body() {
  # Test 9 : Optimize on service - srcs -> user chain
  # Dst to stay on rule in FORWARD table
  # + options TCP RST Reject Test
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -s 10.0.1.2 -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -s 10.0.1.3 -j REJECT --reject-with tcp-reset
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -d 10.0.0.1 --dport 80 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -s 10.0.1.2 -j REJECT --reject-with tcp-reset
@@ -437,17 +539,17 @@ script_body() {
  #
  # Test 10 : Optimize on src & dst, services -> user chain
  # + Logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
- $IPTABLES -N In_RULE_10
+ $IPTABLES -N In_RULE_10 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -j In_RULE_10
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j In_RULE_10
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j In_RULE_10
  $IPTABLES -A In_RULE_10 -j LOG --log-level info --log-prefix "RULE 10 -- ACCEPT "
  $IPTABLES -A In_RULE_10 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
- $IPTABLES -N Out_RULE_10
+ $IPTABLES -N Out_RULE_10 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -j Out_RULE_10
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j Out_RULE_10
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j Out_RULE_10
@@ -473,26 +575,26 @@ script_body() {
  # Test 12 : Optimize : src, dst, svc
  # + options limit test
  # + logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N In_RULE_12
+ $IPTABLES -N In_RULE_12 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p 51 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A In_RULE_12 -j LOG --log-level info --log-prefix "RULE 12 -- ACCEPT "
  $IPTABLES -A In_RULE_12 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N Out_RULE_12
+ $IPTABLES -N Out_RULE_12 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
@@ -509,28 +611,28 @@ script_body() {
  # +Logging
  # NOT OPTIMUM : Time appears in Logging
  # SOLUTION : Patch logging not to include time?
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N In_RULE_13
+ $IPTABLES -N In_RULE_13 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p 51 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A In_RULE_13 -j LOG --log-level info --log-prefix "RULE 13 -- ACCEPT "
  $IPTABLES -A In_RULE_13 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N Out_RULE_13
+ $IPTABLES -N Out_RULE_13 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
@@ -549,12 +651,12 @@ script_body() {
  # + Logging
  # NOT OPTIMUM : Time appears in Logging
  # SOLUTION : Patch logging not to include time?
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
@@ -569,12 +671,12 @@ script_body() {
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p 51 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
  $IPTABLES -A CHAIN -p 51 -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
@@ -603,12 +705,12 @@ script_body() {
  echo "Rule 16 (eth0)"
  #
  # Test 16 : Check INPUT/OUPUT with FW part of rule
- $IPTABLES -N In_RULE_16
+ $IPTABLES -N In_RULE_16 2>/dev/null
  $IPTABLES -A INPUT -i eth0 -p tcp -m tcp --dport 21 -j In_RULE_16
  $IPTABLES -A FORWARD -i eth0 -p tcp -m tcp -d 10.0.0.1 --dport 21 -j In_RULE_16
  $IPTABLES -A In_RULE_16 -j LOG --log-level info --log-prefix "RULE 16 -- DENY "
  $IPTABLES -A In_RULE_16 -j DROP
- $IPTABLES -N Out_RULE_16
+ $IPTABLES -N Out_RULE_16 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -p tcp -m tcp -d 10.0.0.1 --dport 21 -j Out_RULE_16
  $IPTABLES -A Out_RULE_16 -j LOG --log-level info --log-prefix "RULE 16 -- DENY "
  $IPTABLES -A Out_RULE_16 -j DROP
@@ -677,13 +779,13 @@ script_body() {
  # Test 7 : Optimize : src, dst, svc
  # Time should appear on the src rules in the FORWARD table
  # +Logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 21 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -p udp -m udp --dport 873 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -s 10.0.1.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N RULE_25
+ $IPTABLES -N RULE_25 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j RULE_25
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j RULE_25
  $IPTABLES -A RULE_25 -j LOG --log-level info --log-prefix "RULE 25 -- ACCEPT "
@@ -694,7 +796,7 @@ script_body() {
  echo "Rule 26 (global)"
  #
  # Test 7 : Optimize on service - dsts -> user chain
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -j ACCEPT
  $IPTABLES -A CHAIN -d 10.0.0.2 -j ACCEPT
@@ -705,7 +807,7 @@ script_body() {
  echo "Rule 27 (global)"
  #
  # Test 8 : Optimize on service - srcs -> user chain
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -p tcp -m tcp --dport 80 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j ACCEPT
  $IPTABLES -A CHAIN -s 10.0.1.2 -j ACCEPT
@@ -718,7 +820,7 @@ script_body() {
  # Test 9 : Optimize on service - srcs -> user chain
  # Dst to stay on rule in FORWARD table
  # + options TCP RST Reject Test
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -p tcp -m tcp -d 10.0.0.1 --dport 80 -j CHAIN
  $IPTABLES -A CHAIN -s 10.0.1.1 -j REJECT --reject-with tcp-reset
  $IPTABLES -A CHAIN -s 10.0.1.2 -j REJECT --reject-with tcp-reset
@@ -730,9 +832,9 @@ script_body() {
  #
  # Test 10 : Optimize on src & dst, services -> user chain
  # + Logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
- $IPTABLES -N RULE_29
+ $IPTABLES -N RULE_29 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -j RULE_29
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j RULE_29
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j RULE_29
@@ -757,13 +859,13 @@ script_body() {
  # Test 12 : Optimize : src, dst, svc
  # + options limit test
  # + logging
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
- $IPTABLES -N RULE_31
+ $IPTABLES -N RULE_31 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j RULE_31
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j RULE_31
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j RULE_31
@@ -780,14 +882,14 @@ script_body() {
  # +Logging
  # NOT OPTIMUM : Time appears in Logging
  # SOLUTION : Patch logging not to include time?
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N RULE_32
+ $IPTABLES -N RULE_32 2>/dev/null
  $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j RULE_32
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j RULE_32
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j RULE_32
@@ -806,12 +908,12 @@ script_body() {
  # + Logging
  # NOT OPTIMUM : Time appears in Logging
  # SOLUTION : Patch logging not to include time?
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 10.0.1.1 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -s 10.0.1.1 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A FORWARD -s 10.0.1.2 -m state --state NEW -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -N CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.1 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
@@ -839,7 +941,7 @@ script_body() {
  echo "Rule 35 (global)"
  #
  # Test 16 : Check INPUT/OUPUT with FW part of rule
- $IPTABLES -N RULE_35
+ $IPTABLES -N RULE_35 2>/dev/null
  $IPTABLES -A INPUT -p tcp -m tcp --dport 21 -j RULE_35
  $IPTABLES -A FORWARD -p tcp -m tcp -d 10.0.0.1 --dport 21 -j RULE_35
  $IPTABLES -A RULE_35 -j LOG --log-level info --log-prefix "RULE 35 -- DENY "
@@ -863,30 +965,17 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -P OUTPUT ACCEPT
- $IPTABLES -P INPUT ACCEPT
- $IPTABLES -P FORWARD ACCEPT
 }
 
-check_iptables() {
- IP_TABLES="$1"
- [ ! -e $IP_TABLES ] && return 151
- NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
- [ -z "$NF_TABLES" ] && return 152
- return 0
-}
 status_action() {
- check_iptables "/proc/net/ip_tables_names"
- ret_ipv4=$?
- check_iptables "/proc/net/ip6_tables_names"
- ret_ipv6=$?
- [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
- [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
- echo "iptables modules are not loaded"
+ # Full-flush mode: check if iptables has user-defined chains
+ # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
+ chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
+ [ "$chains" -gt 3 ] && {
+ echo "Firewall is active"
+ return 0
  }
- [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
  echo "Firewall is not configured"
- }
  exit 3
 }
 
@@ -911,11 +1000,11 @@ case "$cmd" in
 
  reset_all
 
- script_body
+
+ script_body || run_epilog_and_exit 1
  ip_forward
 
  epilog_commands
- RETVAL=$?
  ;;
 
  stop)
@@ -952,6 +1041,7 @@ case "$cmd" in
 
  *)
  echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+ RETVAL=1
  ;;
 
 esac
