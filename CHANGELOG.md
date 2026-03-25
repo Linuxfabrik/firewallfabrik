@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
 - Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 - Compiler error and warning messages now show the rule position number instead of the color label.
+- IPv6 address and network dialogs now accept prefix lengths 0-128 instead of 1-127 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
 - Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
 - Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
 - Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.

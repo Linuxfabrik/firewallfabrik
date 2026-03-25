@@ -176,7 +176,7 @@ class IPv6Dialog(_BaseAddressDialog):
         if nm:
             try:
                 prefix = int(nm)
-                if prefix < 1 or prefix > 127:
+                if prefix < 0 or prefix > 128:
                     raise ValueError
             except ValueError:
                 QMessageBox.warning(
@@ -281,7 +281,7 @@ class NetworkDialogIPv6(_BaseAddressDialog):
         if nm:
             try:
                 prefix = int(nm)
-                if prefix < 1 or prefix > 127:
+                if prefix < 0 or prefix > 128:
                     raise ValueError
             except ValueError:
                 QMessageBox.warning(
