@@ -259,12 +259,12 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table inet fwf_filter {}
-delete table inet fwf_filter
+table ip fwf_filter {}
+delete table ip fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
 
-table inet fwf_filter {
+table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
@@ -292,20 +292,6 @@ table inet fwf_filter {
         # Rule 6 (global)
         #
         log prefix "RULE 6 -- REJECT " level info reject
-        #
-        # Rule 1 (global)
-        #
-        ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        # All other attempts to connect to
-        # the firewall are denied and logged
-        ct state new log prefix "RULE 4 -- DENY " level info drop
-        #
-        # Rule 6 (global)
-        #
-        log prefix "RULE 6 -- REJECT " level info reject
     }
 
     chain forward {
@@ -324,19 +310,6 @@ table inet fwf_filter {
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 tcp dport 1 ct state new accept
-        #
-        # Rule 6 (global)
-        #
-        log prefix "RULE 6 -- REJECT " level info reject
-        #
-        # Rule 0 (global)
-        #
-        # anti spoofing rule
-        ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr 192.168.171.2 ct state new log prefix "RULE 0 -- DENY " level info drop
-        #
-        # Rule 1 (global)
-        #
-        ct state new accept
         #
         # Rule 6 (global)
         #
@@ -366,20 +339,6 @@ table inet fwf_filter {
         # Rule 5 (global)
         #
         ip saddr 192.168.1.0/24 tcp dport 1 ct state new accept
-        #
-        # Rule 6 (global)
-        #
-        log prefix "RULE 6 -- REJECT " level info reject
-        #
-        # Rule 1 (global)
-        #
-        ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        # All other attempts to connect to
-        # the firewall are denied and logged
-        ip6 daddr fe80::21d:9ff:fe8b:8e94 ct state new log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule 6 (global)
         #

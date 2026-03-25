@@ -15,6 +15,10 @@
 # AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # AddressTable "empty table": file not found (emtpy-table.tbl)
 # AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# AddressTable "empty table": file not found (emtpy-table.tbl)
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 
 FWBDEBUG=""
 RETVAL=0
@@ -593,6 +597,166 @@ script_body() {
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 25 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 25 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 25 -m state --state NEW -j ACCEPT
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+ # ================ Table 'nat', rule set NAT
+ #
+ # Rule 0 (NAT)
+ #
+ echo "Rule 0 (NAT)"
+ #
+ $IP6TABLES -t nat -N CHAIN
+ $IP6TABLES -t nat -A CHAIN -j RETURN
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ $IP6TABLES -N RULE_1 2>/dev/null
+ $IP6TABLES -A OUTPUT -j RULE_1
+ $IP6TABLES -A FORWARD -j RULE_1
+ $IP6TABLES -A RULE_1 -j LOG --log-level debug --log-prefix "RULE 1 -- DENY on global "
+ $IP6TABLES -A RULE_1 -j DROP
+ #
+ # Rule 2 (global)
+ #
+ echo "Rule 2 (global)"
+ #
+ $IP6TABLES -N RULE_2 2>/dev/null
+ $IP6TABLES -A RULE_2 -j LOG --log-level debug --log-prefix "RULE 2 -- DENY on global "
+ $IP6TABLES -A RULE_2 -j DROP
+ #
+ # Rule 3 (global)
+ #
+ echo "Rule 3 (global)"
+ #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp --dport 25 -j DROP
+ $IP6TABLES -A FORWARD -p tcp -m tcp --dport 25 -j DROP
+ #
+ # Rule 4 (global)
+ #
+ echo "Rule 4 (global)"
+ #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -s $i_eth0_100_v6 --dport 25 -j DROP
+ #
+ # Rule 5 (global)
+ #
+ echo "Rule 5 (global)"
+ #
+ $IP6TABLES -N RULE_5 2>/dev/null
+ $IP6TABLES -A INPUT -j RULE_5
+ $IP6TABLES -A FORWARD -j RULE_5
+ $IP6TABLES -A RULE_5 -j LOG --log-level debug --log-prefix "RULE 5 -- DENY on global "
+ $IP6TABLES -A RULE_5 -j DROP
+ #
+ # Rule 6 (global)
+ #
+ echo "Rule 6 (global)"
+ #
+ $IP6TABLES -N RULE_6 2>/dev/null
+ $IP6TABLES -A INPUT -j RULE_6
+ $IP6TABLES -A FORWARD -j RULE_6
+ $IP6TABLES -A RULE_6 -j LOG --log-level debug --log-prefix "RULE 6 -- DENY on global "
+ $IP6TABLES -A RULE_6 -j DROP
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ $IP6TABLES -N CHAIN 2>/dev/null
+ $IP6TABLES -A OUTPUT -m state --state NEW -j CHAIN
+ $IP6TABLES -A INPUT -m state --state NEW -j CHAIN
+ $IP6TABLES -A FORWARD -m state --state NEW -j CHAIN
+ $IP6TABLES -A CHAIN -j RETURN
+ $IP6TABLES -A CHAIN -j ACCEPT
+ #
+ # Rule 8 (global)
+ #
+ echo "Rule 8 (global)"
+ #
+ $IP6TABLES -N CHAIN 2>/dev/null
+ $IP6TABLES -A INPUT -s $i_eth0_100_v6 -m state --state NEW -j CHAIN
+ $IP6TABLES -A OUTPUT -s $i_eth0_100_v6 -m state --state NEW -j CHAIN
+ $IP6TABLES -A CHAIN -j RETURN
+ $IP6TABLES -A CHAIN -j ACCEPT
+ #
+ # Rule 9 (global)
+ #
+ echo "Rule 9 (global)"
+ #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp --dport 25 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -p tcp -m tcp --dport 25 -m state --state NEW -j ACCEPT
+ #
+ # Rule 11 (global)
+ #
+ echo "Rule 11 (global)"
+ #
+ $IP6TABLES -N RULE_11 2>/dev/null
+ $IP6TABLES -A OUTPUT -j RULE_11
+ $IP6TABLES -A INPUT -j RULE_11
+ $IP6TABLES -A FORWARD -j RULE_11
+ $IP6TABLES -A RULE_11 -j LOG --log-level debug --log-prefix "RULE 11 -- DENY on global "
+ $IP6TABLES -A RULE_11 -j DROP
+ #
+ # Rule 12 (global)
+ #
+ echo "Rule 12 (global)"
+ #
+ # using address table
+ # object with no addresses
+ $IP6TABLES -N RULE_12 2>/dev/null
+ $IP6TABLES -A OUTPUT -j RULE_12
+ $IP6TABLES -A INPUT -j RULE_12
+ $IP6TABLES -A FORWARD -j RULE_12
+ $IP6TABLES -A RULE_12 -j LOG --log-level debug --log-prefix "RULE 12 -- DENY on global "
+ $IP6TABLES -A RULE_12 -j DROP
+ #
+ # Rule 13 (global)
+ #
+ echo "Rule 13 (global)"
+ #
+ # using address table
+ # object with no addresses
+ $IP6TABLES -N RULE_13 2>/dev/null
+ $IP6TABLES -A RULE_13 -j LOG --log-level debug --log-prefix "RULE 13 -- DENY on global "
+ $IP6TABLES -A RULE_13 -j DROP
+ # ================ Table 'filter', rule set Policy_ipv6
+ #
+ # Rule Policy_ipv6 0 (global)
+ #
+ echo "Rule Policy_ipv6 0 (global)"
+ #
+ $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state NEW -j ACCEPT
+ #
+ # Rule Policy_ipv6 1 (global)
+ #
+ echo "Rule Policy_ipv6 1 (global)"
+ #
+ $IP6TABLES -N Policy_ipv6_1 2>/dev/null
+ $IP6TABLES -A OUTPUT -j Policy_ipv6_1
+ $IP6TABLES -A INPUT -j Policy_ipv6_1
+ $IP6TABLES -A FORWARD -j Policy_ipv6_1
+ $IP6TABLES -A Policy_ipv6_1 -j LOG --log-level debug --log-prefix "RULE 1 -- DENY on global "
+ $IP6TABLES -A Policy_ipv6_1 -j DROP
 }
 
 ip_forward() {
@@ -604,6 +768,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -641,7 +806,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules "nat "
+ load_modules "nat ipv6"
  configure_interfaces
  verify_interfaces
 

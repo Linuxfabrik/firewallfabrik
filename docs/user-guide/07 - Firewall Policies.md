@@ -179,7 +179,7 @@ All policy rule sets have configurable parameters. To see a policy rule set's pa
 
 This dialog has a Name, IPv4/IPv6 setting and a Top ruleset checkbox. For iptables firewalls, there is also a pair of radio buttons that indicates whether the policy should affect filter+mangle tables or just mangle table.
 
-The IPv4/IPv6 pull-down menu lets you select whether the rule set should be compiled for IPv4 only (ignoring any IPv6-related rules), IPv6 only (ignoring any IPv4-related rules), or for both IPv4 and IPv6. If both IPv4 and IPv6 are selected, the compiler automatically places each rule into the correct part of the configuration.
+The IPv4/IPv6 pull-down menu lets you select whether the rule set should be compiled for IPv4 only (ignoring any IPv6-related rules), IPv6 only (ignoring any IPv4-related rules), or for both IPv4 and IPv6. This setting directly controls which compilation passes the compiler executes. If at least one rule set on a firewall enables IPv6, the compiler generates ip6tables (or nftables inet) rules for that firewall. If no rule set enables IPv6, the IPv6 compilation pass is skipped entirely. The compiler automatically places each rule into the correct part of the configuration based on the address objects used in the rule.
 
 When multiple rule sets have been defined, one rule set is tagged as the "top" rule set by checking the Top rule set checkbox when the rule set is added. The top rule set is the primary rule set assigned to the device. Only one rule set of each type can be marked as the top rule set. The top rule set is always used (if it has any rules). Other rule sets are only used if they are the targets of branching. Scripts are generated as follows for target platforms.
 

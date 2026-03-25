@@ -22,8 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
 - Coexistence mode: `status` command now correctly detects whether the firewall is active, even when other tools like Docker create additional chains.
+- Coexistence mode: `stop` command now properly removes all FirewallFabrik chains, including sub-chains with hash-based names (e.g. `fwf_C...`) that were previously left behind ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 - Coexistence mode: `stop` command now properly removes FirewallFabrik's chains and jump rules on all systems, including those using the iptables-nft backend.
 - Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
+- Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 - Compiler error and warning messages now show the rule position number instead of the color label.
 - Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
 - Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.

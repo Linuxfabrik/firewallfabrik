@@ -122,18 +122,6 @@ class CompilerDriver_nft(CompilerDriver):
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)
 
-                # Check if firewall has any IPv6 addresses
-                fw_has_ipv6 = False
-                for iface in fw.interfaces:
-                    for addr in iface.addresses:
-                        if addr.is_v6():
-                            fw_has_ipv6 = True
-                            break
-                    if fw_has_ipv6:
-                        break
-                if not fw_has_ipv6:
-                    self.ipv6_run = False
-
                 # Gather all rule sets
                 all_policies = (
                     session.execute(
@@ -154,6 +142,13 @@ class CompilerDriver_nft(CompilerDriver):
                     .scalars()
                     .all()
                 )
+
+                # Determine whether to run IPv4/IPv6 compilation passes
+                # based on the rule sets' explicit address-family flags.
+                # If no rule set enables IPv6, skip the IPv6 pass entirely.
+                self._any_rs_ipv6 = any(rs.ipv6 for rs in (*all_policies, *all_nat))
+                if not self._any_rs_ipv6:
+                    self.ipv6_run = False
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
@@ -301,7 +296,7 @@ class CompilerDriver_nft(CompilerDriver):
                     oscnf,
                     filter_chains,
                     nat_chains,
-                    fw_has_ipv6,
+                    self._any_rs_ipv6,
                 )
 
                 # Single-rule compile mode: return raw rules (no shell wrapper)
@@ -661,15 +656,7 @@ class CompilerDriver_nft(CompilerDriver):
         nat_table = f'{table_name}_nat'
 
         # Determine filter family (must match _assemble_nft_rules_body)
-        fw_has_ipv6 = False
-        for iface in fw.interfaces:
-            for addr in iface.addresses:
-                if addr.is_v6():
-                    fw_has_ipv6 = True
-                    break
-            if fw_has_ipv6:
-                break
-        filter_family = 'inet' if fw_has_ipv6 else 'ip'
+        filter_family = 'inet' if self._any_rs_ipv6 else 'ip'
 
         context = {
             'version': __compiler_version__,

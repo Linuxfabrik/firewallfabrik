@@ -22,14 +22,6 @@
 # Rule 1 shadows Rule 3 below it
 # Rule 1 shadows Rule 5 below it
 # Rule 1 shadows Rule 5 below it
-# Rule 1 shadows Rule 2 below it
-# Rule 1 shadows Rule 3 below it
-# Rule 1 shadows Rule 5 below it
-# Rule 1 shadows Rule 5 below it
-# Rule 1 shadows Rule 2 below it
-# Rule 1 shadows Rule 3 below it
-# Rule 1 shadows Rule 5 below it
-# Rule 1 shadows Rule 5 below it
 
 FWBDEBUG=""
 RETVAL=0
@@ -589,71 +581,6 @@ script_body() {
  $IPTABLES -A INPUT -j RULE_6
  $IPTABLES -A FORWARD -j RULE_6
  $IPTABLES -A RULE_6 -j REJECT
-
- # ================ IPv6
-
- # ================ Table 'filter', automatic rules
- # accept established sessions
- $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
-
- # ================ Table 'filter', rule set Policy
- #
- # Rule 0 (global)
- #
- echo "Rule 0 (global)"
- #
- # anti spoofing rule
- $IP6TABLES -N In_RULE_0 2>/dev/null
- $IP6TABLES -A FORWARD -i + -s 192.0.2.1 -d 192.168.171.2 -m state --state NEW -j In_RULE_0
- $IP6TABLES -A In_RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
- $IP6TABLES -A In_RULE_0 -j DROP
- #
- # Rule 1 (global)
- #
- echo "Rule 1 (global)"
- #
- $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
- $IP6TABLES -A INPUT -m state --state NEW -j ACCEPT
- $IP6TABLES -A FORWARD -m state --state NEW -j ACCEPT
- #
- # Rule 3 (global)
- #
- echo "Rule 3 (global)"
- #
- # Firewall uses one of the machines
- # on internal network for DNS
- $IP6TABLES -N RULE_3 2>/dev/null
- $IP6TABLES -A RULE_3 -j LOG --log-level info --log-prefix "RULE 3 -- ACCEPT "
- $IP6TABLES -A RULE_3 -j ACCEPT
- #
- # Rule 4 (global)
- #
- echo "Rule 4 (global)"
- #
- # All other attempts to connect to
- # the firewall are denied and logged
- $IP6TABLES -N RULE_4 2>/dev/null
- $IP6TABLES -A OUTPUT -d 192.0.2.1 -m state --state NEW -j RULE_4
- $IP6TABLES -A INPUT -m state --state NEW -j RULE_4
- $IP6TABLES -A RULE_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
- $IP6TABLES -A RULE_4 -j DROP
- #
- # Rule 6 (global)
- #
- echo "Rule 6 (global)"
- #
- $IP6TABLES -N RULE_6 2>/dev/null
- $IP6TABLES -A OUTPUT -p tcp -m tcp -j RULE_6
- $IP6TABLES -A INPUT -p tcp -m tcp -j RULE_6
- $IP6TABLES -A FORWARD -p tcp -m tcp -j RULE_6
- $IP6TABLES -A RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- REJECT "
- $IP6TABLES -A RULE_6 -j REJECT --reject-with tcp-reset
- $IP6TABLES -A OUTPUT -j RULE_6
- $IP6TABLES -A INPUT -j RULE_6
- $IP6TABLES -A FORWARD -j RULE_6
- $IP6TABLES -A RULE_6 -j REJECT
 }
 
 ip_forward() {
@@ -665,7 +592,6 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
- reset_iptables_v6
 }
 
 block_action() {
@@ -703,7 +629,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules "nat ipv6"
+ load_modules "nat "
  configure_interfaces
  verify_interfaces
 

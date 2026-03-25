@@ -430,6 +430,14 @@ script_body() {
  # address 192.168.1.11 should not be considered a broadcast on the subnet attached to eth0
  $IPTABLES -A OUTPUT -d 192.168.1.11 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -d 192.168.1.11 -m state --state NEW -j ACCEPT
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 }
 
 ip_forward() {
@@ -441,6 +449,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -478,7 +487,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules " ipv6"
  configure_interfaces
  verify_interfaces
 

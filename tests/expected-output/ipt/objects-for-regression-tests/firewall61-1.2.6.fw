@@ -447,6 +447,52 @@ script_body() {
  $IPTABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_1
  $IPTABLES -w -A RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
  $IPTABLES -w -A RULE_1 -j DROP
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ # ================ Table 'mangle', automatic rules
+ $IP6TABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IP6TABLES -w -N RULE_0 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -j RULE_0
+ $IP6TABLES -w -A INPUT -j RULE_0
+ $IP6TABLES -w -A FORWARD -j RULE_0
+ $IP6TABLES -w -A RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- BRANCH "
+ $IP6TABLES -w -A RULE_0
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ $IP6TABLES -w -N RULE_1 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_1
+ $IP6TABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_1
+ $IP6TABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j RULE_1
+ $IP6TABLES -w -A RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
+ $IP6TABLES -w -A RULE_1 -j DROP
+ # ================ Table 'filter', rule set Policy_ipv6
+ #
+ # Rule Policy_ipv6 0 (global)
+ #
+ echo "Rule Policy_ipv6 0 (global)"
+ #
+ $IP6TABLES -w -N Policy_ipv6_0 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -j Policy_ipv6_0
+ $IP6TABLES -w -A INPUT -j Policy_ipv6_0
+ $IP6TABLES -w -A FORWARD -j Policy_ipv6_0
+ $IP6TABLES -w -A Policy_ipv6_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IP6TABLES -w -A Policy_ipv6_0 -j DROP
 }
 
 ip_forward() {
@@ -458,6 +504,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -495,7 +542,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules " ipv6"
  configure_interfaces
  verify_interfaces
 

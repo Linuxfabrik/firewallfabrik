@@ -65,6 +65,76 @@
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
+# Rule 0 (NAT): Cannot resolve address for object type AddressTable
+# Rule 0 (NAT): Interface "eth0.100" has no addresses
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 4 (global): Could not resolve any source addresses
+# Rule 4 (global): Cannot resolve address for object type AddressTable
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 4 (global): Could not resolve any source addresses
+# Rule 4 (global): Cannot resolve address for object type AddressTable
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 8 (global): Could not resolve any source addresses
+# Rule 8 (global): Cannot resolve address for object type AddressTable
+# Rule 8 (global): Could not resolve any destination addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 8 (global): Could not resolve any source addresses
+# Rule 8 (global): Cannot resolve address for object type AddressTable
+# Rule 8 (global): Could not resolve any destination addresses
+# AddressTable "empty table": file not found (emtpy-table.tbl)
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 
 FWBDEBUG=""
 
@@ -280,12 +350,12 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table ip fwf_filter {}
-delete table ip fwf_filter
+table inet fwf_filter {}
+delete table inet fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
 
-table ip fwf_filter {
+table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
@@ -331,6 +401,46 @@ table ip fwf_filter {
         # is only valid in combination
         # with "-p tcp -m tcp"
         ip saddr 192.168.1.0/24 tcp dport 25 ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule 5 (global)
+        #
+        # # Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+        log prefix "RULE 5 -- DENY on global " level debug drop
+        #
+        # Rule 6 (global)
+        #
+        # # Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+        log prefix "RULE 6 -- DENY on global " level debug drop
+        #
+        # Rule 7 (global)
+        #
+        # # Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+        ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY on global " level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # using address table
+        # object with no addresses
+        log prefix "RULE 12 -- DENY on global " level debug drop
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule Policy_ipv6 1 (global)
+        #
+        log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain forward {
@@ -409,6 +519,68 @@ table ip fwf_filter {
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
         ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        # # Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+        log prefix "RULE 1 -- DENY on global " level debug drop
+        #
+        # Rule 3 (global)
+        #
+        # # Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+        tcp dport 25 drop
+        #
+        # Rule 5 (global)
+        #
+        # # Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+        log prefix "RULE 5 -- DENY on global " level debug drop
+        #
+        # Rule 6 (global)
+        #
+        # # Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+        log prefix "RULE 6 -- DENY on global " level debug drop
+        #
+        # Rule 7 (global)
+        #
+        # # Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+        ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        tcp dport 25 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY on global " level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # using address table
+        # object with no addresses
+        log prefix "RULE 12 -- DENY on global " level debug drop
+        #
+        # Rule 15 (global)
+        #
+        # # Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+        ct state new accept
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule Policy_ipv6 1 (global)
+        #
+        log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain output {
@@ -485,12 +657,76 @@ table ip fwf_filter {
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
         ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule 1 (global)
+        #
+        # # Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+        log prefix "RULE 1 -- DENY on global " level debug drop
+        #
+        # Rule 3 (global)
+        #
+        # # Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+        tcp dport 25 drop
+        #
+        # Rule 4 (global)
+        #
+        # # Rule 4 (global): Cannot resolve address for object type AddressTable
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Could not resolve any source addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        tcp dport 25 drop
+        #
+        # Rule 8 (global)
+        #
+        # # Rule 8 (global): Cannot resolve address for object type AddressTable
+# Rule 8 (global): Could not resolve any destination addresses
+# Rule 8 (global): Could not resolve any source addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+        ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        tcp dport 25 ct state new accept
+        #
+        # Rule 11 (global)
+        #
+        log prefix "RULE 11 -- DENY on global " level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # using address table
+        # object with no addresses
+        log prefix "RULE 12 -- DENY on global " level debug drop
+        #
+        # Rule 15 (global)
+        #
+        # # Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+        ct state new accept
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        ct state new accept
+        #
+        # Rule Policy_ipv6 1 (global)
+        #
+        log prefix "RULE 1 -- DENY on global " level debug drop
     }
 }
 
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
+        tcp dport 25 dnat to 192.168.1.10
         #
         # Rule 0 (NAT)
         #

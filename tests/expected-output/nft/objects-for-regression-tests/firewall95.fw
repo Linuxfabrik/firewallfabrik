@@ -231,10 +231,10 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table ip fwf_filter {}
-delete table ip fwf_filter
+table inet fwf_filter {}
+delete table inet fwf_filter
 
-table ip fwf_filter {
+table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept

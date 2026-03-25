@@ -436,6 +436,41 @@ script_body() {
  $IPTABLES -A FORWARD -j RULE_0
  $IPTABLES -A RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- BRANCH "
  $IPTABLES -A RULE_0
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # ================ Table 'mangle', automatic rules
+ $IP6TABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IP6TABLES -N RULE_0 2>/dev/null
+ $IP6TABLES -A OUTPUT -j RULE_0
+ $IP6TABLES -A INPUT -j RULE_0
+ $IP6TABLES -A FORWARD -j RULE_0
+ $IP6TABLES -A RULE_0 -j LOG --log-level info --log-prefix "RULE 0 -- BRANCH "
+ $IP6TABLES -A RULE_0
+ # ================ Table 'filter', rule set Policy_ipv6
+ #
+ # Rule Policy_ipv6 0 (global)
+ #
+ echo "Rule Policy_ipv6 0 (global)"
+ #
+ $IP6TABLES -N Policy_ipv6_0 2>/dev/null
+ $IP6TABLES -A OUTPUT -j Policy_ipv6_0
+ $IP6TABLES -A INPUT -j Policy_ipv6_0
+ $IP6TABLES -A FORWARD -j Policy_ipv6_0
+ $IP6TABLES -A Policy_ipv6_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IP6TABLES -A Policy_ipv6_0 -j DROP
 }
 
 ip_forward() {
@@ -447,6 +482,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -484,7 +520,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules " ipv6"
  configure_interfaces
  verify_interfaces
 

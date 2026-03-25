@@ -13,6 +13,9 @@
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -235,10 +238,10 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table ip fwf_filter {}
-delete table ip fwf_filter
+table inet fwf_filter {}
+delete table inet fwf_filter
 
-table ip fwf_filter {
+table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
@@ -251,6 +254,19 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 0 (global)
+        #
+        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        log prefix "RULE 0 -- BRANCH " level info
+        #
+        # Rule 1 (global)
+        #
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
@@ -265,6 +281,19 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 0 (global)
+        #
+        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        log prefix "RULE 0 -- BRANCH " level info
+        #
+        # Rule 1 (global)
+        #
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
@@ -279,6 +308,19 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 0 (global)
+        #
+        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        log prefix "RULE 0 -- BRANCH " level info
+        #
+        # Rule 1 (global)
+        #
+        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

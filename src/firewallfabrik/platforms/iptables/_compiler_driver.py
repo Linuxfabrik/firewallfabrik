@@ -178,21 +178,6 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Create OS configurator
                 oscnf = OSConfigurator_linux24(session, fw)
 
-                # Check if firewall has any IPv6 addresses on its
-                # interfaces.  Without IPv6 addresses, skip the IPv6
-                # compilation pass entirely to avoid emitting rules
-                # for address-family-agnostic ("any") elements.
-                fw_has_ipv6 = False
-                for iface in fw.interfaces:
-                    for addr in iface.addresses:
-                        if addr.is_v6():
-                            fw_has_ipv6 = True
-                            break
-                    if fw_has_ipv6:
-                        break
-                if not fw_has_ipv6:
-                    self.ipv6_run = False
-
                 # Gather all rule sets
                 all_policies = (
                     session.execute(
@@ -216,6 +201,13 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 have_ipv4 = False
                 have_ipv6 = False
+
+                # Determine whether to run IPv4/IPv6 compilation passes
+                # based on the rule sets' explicit address-family flags.
+                # If no rule set enables IPv6, skip the IPv6 pass entirely.
+                any_rs_ipv6 = any(rs.ipv6 for rs in (*all_policies, *all_nat))
+                if not any_rs_ipv6:
+                    self.ipv6_run = False
 
                 # Chain trackers per table
                 minus_n_commands_filter: dict[str, bool] = {}

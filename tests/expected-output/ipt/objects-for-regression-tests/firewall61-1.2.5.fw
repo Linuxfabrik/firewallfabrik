@@ -524,6 +524,129 @@ script_body() {
  $IPTABLES -w -A FORWARD -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
  $IPTABLES -w -A fw61-Policy_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
  $IPTABLES -w -A fw61-Policy_8 -j DROP
+
+ # ================ IPv6
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IP6TABLES -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IP6TABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ # ================ Table 'mangle', automatic rules
+ $IP6TABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+ # ================ Table 'filter', rule set Policy_ipv6
+ #
+ # Rule Policy_ipv6 0 (global)
+ #
+ echo "Rule Policy_ipv6 0 (global)"
+ #
+ $IP6TABLES -w -N Policy_ipv6_0 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -j Policy_ipv6_0
+ $IP6TABLES -w -A INPUT -j Policy_ipv6_0
+ $IP6TABLES -w -A FORWARD -j Policy_ipv6_0
+ $IP6TABLES -w -A Policy_ipv6_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IP6TABLES -w -A Policy_ipv6_0 -j DROP
+ # ================ Table 'filter', rule set fw61-Policy
+ #
+ # Rule fw61-Policy 0 (global)
+ #
+ echo "Rule fw61-Policy 0 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_0 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
+ $IP6TABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
+ $IP6TABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sat -j fw61-Policy_0
+ $IP6TABLES -w -A fw61-Policy_0 -j LOG --log-level info --log-prefix "RULE 0 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_0 -j DROP
+ #
+ # Rule fw61-Policy 1 (global)
+ #
+ echo "Rule fw61-Policy 1 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_1 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
+ $IP6TABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
+ $IP6TABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j fw61-Policy_1
+ $IP6TABLES -w -A fw61-Policy_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_1 -j DROP
+ #
+ # Rule fw61-Policy 2 (global)
+ #
+ echo "Rule fw61-Policy 2 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_2 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
+ $IP6TABLES -w -A INPUT -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
+ $IP6TABLES -w -A FORWARD -m time --timestart 18:00 --timestop 23:59 -j fw61-Policy_2
+ $IP6TABLES -w -A fw61-Policy_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_2 -j DROP
+ #
+ # Rule fw61-Policy 3 (global)
+ #
+ echo "Rule fw61-Policy 3 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_3 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
+ $IP6TABLES -w -A INPUT -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
+ $IP6TABLES -w -A FORWARD -m time --timestart 00:00 --timestop 23:59 --weekdays Sun,Sat -j fw61-Policy_3
+ $IP6TABLES -w -A fw61-Policy_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_3 -j DROP
+ #
+ # Rule fw61-Policy 4 (global)
+ #
+ echo "Rule fw61-Policy 4 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_4 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
+ $IP6TABLES -w -A INPUT -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
+ $IP6TABLES -w -A FORWARD -m time --timestart 09:00 --timestop 17:00 --weekdays Mon,Tue,Wed,Thu,Fri -j fw61-Policy_4
+ $IP6TABLES -w -A fw61-Policy_4 -j LOG --log-level info --log-prefix "RULE 4 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_4 -j DROP
+ #
+ # Rule fw61-Policy 5 (global)
+ #
+ echo "Rule fw61-Policy 5 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_5 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
+ $IP6TABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
+ $IP6TABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_5
+ $IP6TABLES -w -A fw61-Policy_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_5 -j DROP
+ #
+ # Rule fw61-Policy 6 (global)
+ #
+ echo "Rule fw61-Policy 6 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_6 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
+ $IP6TABLES -w -A INPUT -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
+ $IP6TABLES -w -A FORWARD -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j fw61-Policy_6
+ $IP6TABLES -w -A fw61-Policy_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_6 -j DROP
+ #
+ # Rule fw61-Policy 7 (global)
+ #
+ echo "Rule fw61-Policy 7 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_7 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
+ $IP6TABLES -w -A INPUT -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
+ $IP6TABLES -w -A FORWARD -m time --timestart 00:00 --timestop 01:00 --weekdays Fri,Sat -j fw61-Policy_7
+ $IP6TABLES -w -A fw61-Policy_7 -j LOG --log-level info --log-prefix "RULE 7 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_7 -j DROP
+ #
+ # Rule fw61-Policy 8 (global)
+ #
+ echo "Rule fw61-Policy 8 (global)"
+ #
+ $IP6TABLES -w -N fw61-Policy_8 2>/dev/null
+ $IP6TABLES -w -A OUTPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
+ $IP6TABLES -w -A INPUT -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
+ $IP6TABLES -w -A FORWARD -m time --timestart 01:00 --timestop 02:00 --weekdays Fri,Sat -j fw61-Policy_8
+ $IP6TABLES -w -A fw61-Policy_8 -j LOG --log-level info --log-prefix "RULE 8 -- DENY "
+ $IP6TABLES -w -A fw61-Policy_8 -j DROP
 }
 
 ip_forward() {
@@ -535,6 +658,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -572,7 +696,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules " ipv6"
  configure_interfaces
  verify_interfaces
 
