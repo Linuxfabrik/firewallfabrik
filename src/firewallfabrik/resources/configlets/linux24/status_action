@@ -22,13 +22,19 @@ status_action() {
     # Coexistence mode: check for FirewallFabrik's own prefixed chains.
     # Counting all chains would give false positives when Docker,
     # CrowdSec or fail2ban create their own chains.
-    $IPTABLES {{$opt_wait}} -L -n 2>/dev/null | grep -q "^Chain {{$table_name}}_" && return 0
+    $IPTABLES {{$opt_wait}} -L -n 2>/dev/null | grep -q "^Chain {{$table_name}}_" && {
+        echo "Firewall is active"
+        return 0
+    }
 {{endif}}
 {{if flush_mode}}
     # Full-flush mode: check if iptables has user-defined chains
     # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
     chains=$($IPTABLES {{$opt_wait}} -L -n 2>/dev/null | grep -c "^Chain ")
-    [ "$chains" -gt 3 ] && return 0
+    [ "$chains" -gt 3 ] && {
+        echo "Firewall is active"
+        return 0
+    }
 {{endif}}
     echo "Firewall is not configured"
     exit 3
