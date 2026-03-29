@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.4.0] - 2026-03-29
+
 ### Added
 
 - "Flush entire ruleset" option for both iptables and nftables. When disabled, FirewallFabrik only manages its own tables/chains (e.g. `fwf_filter`, `fwf_nat` for nftables or `fwf_INPUT`, `fwf_FORWARD` for iptables), leaving rules created by other tools like Docker, CrowdSec and fail2ban untouched.
@@ -276,7 +281,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...HEAD
+[v1.4.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.2.0...v1.3.0
 [v1.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...v1.2.0
 [v1.1.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.0.1...v1.1.0
