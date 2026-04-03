@@ -594,9 +594,28 @@ class EditorManager(QObject):
         if self._current_editor is not None and self._editor_session is not None:
             self.on_editor_changed()
 
+    def _close_and_refresh_index(self, model, index):
+        """Close the current editor and return a refreshed *index*.
+
+        ``close()`` may flush pending changes, which triggers a model
+        reload and invalidates the old *index*.  By capturing the rule
+        identity beforehand and re-fetching afterwards we avoid dangling
+        internal pointers (SIGSEGV).
+        """
+        row_data = model.get_row_data(index)
+        rule_id = row_data.rule_id if row_data is not None else None
+        self.close()
+        if rule_id is not None:
+            fresh = model.index_for_rule(rule_id)
+            if fresh.isValid():
+                return fresh
+        return None
+
     def open_comment_editor(self, model, index):
         """Open the comment editor panel in the editor pane."""
-        self.close()
+        index = self._close_and_refresh_index(model, index)
+        if index is None:
+            return
 
         self._ui.comment_panel.load_rule(model, index)
         self._ui.stack.setCurrentWidget(
@@ -613,7 +632,9 @@ class EditorManager(QObject):
 
     def open_rule_options(self, model, index):
         """Open the rule options panel in the editor pane."""
-        self.close()
+        index = self._close_and_refresh_index(model, index)
+        if index is None:
+            return
 
         if model.rule_set_type == 'NAT':
             panel = self._ui.nat_rule_options
@@ -632,7 +653,9 @@ class EditorManager(QObject):
 
     def open_metric_editor(self, model, index):
         """Open the metric editor panel in the editor pane."""
-        self.close()
+        index = self._close_and_refresh_index(model, index)
+        if index is None:
+            return
 
         self._ui.metric_editor.load_rule(model, index)
         self._ui.stack.setCurrentWidget(
@@ -647,7 +670,9 @@ class EditorManager(QObject):
 
     def open_action_editor(self, model, index):
         """Open the action parameters panel in the editor pane."""
-        self.close()
+        index = self._close_and_refresh_index(model, index)
+        if index is None:
+            return
 
         self._ui.actions_dialog.load_rule(model, index)
         self._ui.stack.setCurrentWidget(
@@ -673,7 +698,9 @@ class EditorManager(QObject):
 
     def open_direction_editor(self, model, index):
         """Open the (blank) direction pane in the editor pane."""
-        self.close()
+        index = self._close_and_refresh_index(model, index)
+        if index is None:
+            return
 
         self._blank_label.clear()
         self._ui.stack.setCurrentWidget(
