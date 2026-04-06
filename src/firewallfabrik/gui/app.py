@@ -69,6 +69,11 @@ def main():
         help='database file to load on startup',
     )
 
+    # Prefer the Wayland platform plugin when a Wayland session is available
+    # and the user has not chosen a plugin explicitly.
+    if 'QT_QPA_PLATFORM' not in os.environ and os.environ.get('WAYLAND_DISPLAY'):
+        os.environ['QT_QPA_PLATFORM'] = 'wayland'
+
     # Suppress harmless Wayland text-input warnings (Qt 6 / zwp_text_input_v3
     # emits noisy "Got leave event for surface 0x0" messages on focus changes).
     rules = os.environ.get('QT_LOGGING_RULES', '')

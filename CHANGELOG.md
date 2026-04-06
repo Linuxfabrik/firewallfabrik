@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 tbd
 
 
-## [v1.4.1rc1] - 2026-04-03
+## [v1.4.1rc2] - 2026-04-06
 
 ### Changed
 
@@ -20,6 +20,7 @@ tbd
 
 ### Fixed
 
+- GUI failed to start on Wayland-only systems (e.g. GNOME without X11) because Qt defaulted to the xcb platform plugin ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
 - Sporadic SIGSEGV crash when opening a rule editor (action, comment, direction, metric, options) while another editor had unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
 
@@ -293,8 +294,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc1...HEAD
-[v1.4.1rc1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...v1.4.1rc1
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc2...HEAD
+[v1.4.1rc2]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...v1.4.1rc2
 [v1.4.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.2.0...v1.3.0
 [v1.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...v1.2.0
