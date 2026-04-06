@@ -69,10 +69,12 @@ def main():
         help='database file to load on startup',
     )
 
-    # Prefer the Wayland platform plugin when a Wayland session is available
-    # and the user has not chosen a plugin explicitly.
+    # Prefer Wayland platform plugins when a Wayland session is available
+    # and the user has not chosen a plugin explicitly.  The semicolon-
+    # separated list makes Qt try each plugin in order, covering setups
+    # where only a specific variant (e.g. wayland-egl) is installed.
     if 'QT_QPA_PLATFORM' not in os.environ and os.environ.get('WAYLAND_DISPLAY'):
-        os.environ['QT_QPA_PLATFORM'] = 'wayland'
+        os.environ['QT_QPA_PLATFORM'] = 'wayland;wayland-egl;wayland-brcm'
 
     # Suppress harmless Wayland text-input warnings (Qt 6 / zwp_text_input_v3
     # emits noisy "Got leave event for surface 0x0" messages on focus changes).

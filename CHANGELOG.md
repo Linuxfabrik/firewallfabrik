@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 tbd
 
 
+## [v1.4.1rc3] - 2026-04-06
+
+### Fixed
+
+- Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+
+
 ## [v1.4.1rc2] - 2026-04-06
 
 ### Changed
