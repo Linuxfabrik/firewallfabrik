@@ -1,0 +1,88 @@
+site_name: 'Linuxfabrik FirewallFabrik'
+site_url: 'https://linuxfabrik.github.io/firewallfabrik/'
+repo_url: 'https://github.com/Linuxfabrik/firewallfabrik'
+repo_name: 'Linuxfabrik/firewallfabrik'
+
+theme:
+  name: 'material'
+  icon:
+    logo: 'material/wall-fire'
+  palette:
+    - scheme: 'default'
+      primary: 'blue grey'
+      accent: 'orange'
+      toggle:
+        icon: 'material/brightness-7'
+        name: 'Switch to dark mode'
+    - scheme: 'slate'
+      primary: 'blue grey'
+      accent: 'orange'
+      toggle:
+        icon: 'material/brightness-4'
+        name: 'Switch to light mode'
+  features:
+    - content.code.copy
+    - navigation.expand
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+validation:
+  links:
+    not_found: 'info'
+    unrecognized_links: 'info'
+  anchors: 'info'
+
+exclude_docs: |
+  README.md
+  developer-guide/README.md
+  user-guide/README.md
+
+not_in_nav: |
+  CHANGELOG.md
+  CODE_OF_CONDUCT.md
+  contributing.md
+  object-tree-spec.md
+  security.md
+
+nav:
+  - 'Home': 'index.md'
+  - 'User Guide':
+      - 'Introduction': 'user-guide/01 - Introduction.md'
+      - 'Installing FirewallFabrik': 'user-guide/02 - Installing FirewallFabrik.md'
+      - 'Definitions and Terms': 'user-guide/03 - Definitions and Terms.md'
+      - 'FirewallFabrik GUI': 'user-guide/04 - FirewallFabrik GUI.md'
+      - 'Working with Objects': 'user-guide/05 - Working with Objects.md'
+      - 'Network Discovery': 'user-guide/06 - Network Discovery.md'
+      - 'Firewall Policies': 'user-guide/07 - Firewall Policies.md'
+      - 'Cluster Configuration': 'user-guide/08 - Cluster Configuration.md'
+      - 'Configuration of Interfaces': 'user-guide/09 - Configuration of Interfaces.md'
+      - 'Compiling and Installing a Policy': 'user-guide/10 - Compiling and Installing a Policy.md'
+      - 'Manage your Firewall Remotely': 'user-guide/11 - Manage your Firewall Remotely.md'
+      - 'Integration with OS': 'user-guide/12 - Integration with OS Running on the Firewall Machine.md'
+      - 'Configlets': 'user-guide/13 - Configlets.md'
+      - 'Cookbook': 'user-guide/14 - FirewallFabrik Cookbook.md'
+      - 'Troubleshooting': 'user-guide/15 - Troubleshooting.md'
+      - 'Appendix': 'user-guide/16 - Appendix.md'
+      - 'Migrating from Firewall Builder': 'user-guide/17 - Migrating from Firewall Builder.md'
+  - 'Developer Guide':
+      - 'Database Manager': 'developer-guide/DatabaseManager.md'
+      - 'Debugging': 'developer-guide/Debugging.md'
+      - 'Design Decisions': 'developer-guide/DesignDecisions.md'
+      - 'Platform Defaults': 'developer-guide/PlatformDefaults.md'
+      - 'Rule Processors': 'developer-guide/RuleProcessors.md'
+      - 'Testing': 'developer-guide/Testing.md'

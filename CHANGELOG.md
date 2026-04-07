@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Documentation on how to install Release Candidate (RC) versions
+- MkDocs-based documentation site, deployed automatically to GitHub Pages
 
 
 ## [v1.4.1rc3] - 2026-04-06

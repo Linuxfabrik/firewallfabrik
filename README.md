@@ -68,6 +68,8 @@ For the full installation guide (pipx, pip, development setup, native themes, de
 
 ## Documentation
 
+Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https://linuxfabrik.github.io/firewallfabrik/). It is automatically built and deployed on every push to `main`.
+
 * [User Guide](docs/user-guide/) -- installation, GUI overview, working with objects, firewall policies, cookbook, and more.
 * [Migrating from Firewall Builder](docs/user-guide/17%20-%20Migrating%20from%20Firewall%20Builder.md) -- import .fwb files and differences.
 * [Developer Guide](docs/developer-guide/) -- database manager, debugging, rule processors, testing, and design decisions.
