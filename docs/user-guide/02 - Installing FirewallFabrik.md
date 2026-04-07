@@ -36,6 +36,58 @@ pip install --user 'firewallfabrik[gui]'
 
 On certain Linux distributions that protect the system Python environment, you may need to add the `--break-system-packages` flag.
 
+## Installing a Release Candidate
+
+Release Candidates (RC) are pre-release versions published on PyPI for testing before a stable release. By default, pip, uv, and pipx only install stable releases. To install an RC version, you need to explicitly allow pre-releases.
+
+### Using uv
+
+``` bash
+uvx --from 'firewallfabrik[gui]' --prerelease allow fwf
+```
+
+Or install it as a tool:
+
+``` bash
+uv tool install 'firewallfabrik[gui]' --prerelease allow
+```
+
+If you already have a stable version installed via `uv tool`, upgrade to the RC:
+
+``` bash
+uv tool upgrade firewallfabrik --prerelease allow
+```
+
+### Using pipx
+
+``` bash
+pipx install 'firewallfabrik[gui]' --pip-args='--pre'
+```
+
+### Using pip
+
+``` bash
+pip install --user --pre 'firewallfabrik[gui]'
+```
+
+Alternatively, you can install a specific RC version directly by pinning the version. This works with all tools and does not require a pre-release flag:
+
+``` bash
+uv tool install 'firewallfabrik[gui]==1.4.1rc3'
+pip install --user 'firewallfabrik[gui]==1.4.1rc3'
+pipx install 'firewallfabrik[gui]==1.4.1rc3'
+```
+
+### Reverting to a stable release
+
+After testing the RC, you can go back to the latest stable release by re-installing without the pre-release flag:
+
+``` bash
+uv tool install 'firewallfabrik[gui]' --force
+pipx install 'firewallfabrik[gui]' --force
+pip install --user 'firewallfabrik[gui]' --force-reinstall
+```
+
 ## CLI-Only Installation (No GUI)
 
 If you only need the command-line compilers (`fwf-ipt`, `fwf-nft`) and do not need the graphical interface, you can install without the `[gui]` extra. This avoids pulling in PySide6:
@@ -172,11 +224,11 @@ This bypasses the `fwf` entry point and runs the application module directly. It
 
 FirewallFabrik provides the following commands:
 
-`fwf`  
+`fwf`
 The graphical interface (requires the `[gui]` extra).
 
-`fwf-ipt`  
+`fwf-ipt`
 Command-line compiler for iptables configurations.
 
-`fwf-nft`  
+`fwf-nft`
 Command-line compiler for nftables configurations.

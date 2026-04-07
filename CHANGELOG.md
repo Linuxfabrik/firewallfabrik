@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+- Documentation on how to install Release Candidate (RC) versions
 
 
 ## [v1.4.1rc3] - 2026-04-06
