@@ -70,25 +70,6 @@ For the full installation guide (pipx, pip, development setup, native themes, de
 
 Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https://linuxfabrik.github.io/firewallfabrik/). It is automatically built and deployed on every push to `main`.
 
-* [User Guide](docs/user-guide/) -- installation, GUI overview, working with objects, firewall policies, cookbook, and more.
-* [Migrating from Firewall Builder](docs/user-guide/17%20-%20Migrating%20from%20Firewall%20Builder.md) -- import .fwb files and differences.
-* [Developer Guide](docs/developer-guide/) -- database manager, debugging, rule processors, testing, and design decisions.
-* [Changelog](CHANGELOG.md) -- release history.
-* [Contributing](CONTRIBUTING.md) -- how to contribute.
-* [Issue Tracker](https://github.com/Linuxfabrik/firewallfabrik/issues) -- bug reports and feature requests.
-
-
-### Source Code Documentation
-
-To generate browsable API documentation for all Python modules:
-
-```shell
-pip install pdoc
-pdoc --output-dir docs/source-code src/firewallfabrik
-```
-
-Open `docs/source-code/index.html` in a browser to view it.
-
 
 ## License
 
