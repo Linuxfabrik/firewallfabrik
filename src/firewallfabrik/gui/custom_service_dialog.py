@@ -14,8 +14,12 @@
 
 import socket
 
+from PySide6.QtCore import QSettings
+
 from firewallfabrik.gui.base_object_dialog import BaseObjectDialog
 from firewallfabrik.gui.platform_settings import get_enabled_platforms
+
+_SETTINGS_KEY = 'CustomService/Platform'
 
 _PROTOCOL_CHOICES = ('any', 'icmp', 'ipv6-icmp', 'tcp', 'udp')
 
@@ -51,8 +55,11 @@ class CustomServiceDialog(BaseObjectDialog):
             get_enabled_platforms().items(), key=lambda t: t[1].casefold()
         ):
             self.platform.addItem(display, key)
-        # Default to nftables if enabled, otherwise first entry.
-        idx = self.platform.findData('nftables')
+        # Restore last-used platform from settings (like fwbuilder).
+        saved_platform = QSettings().value(_SETTINGS_KEY, '')
+        idx = self.platform.findData(saved_platform) if saved_platform else -1
+        if idx < 0:
+            idx = self.platform.findData('nftables')
         if idx >= 0:
             self.platform.setCurrentIndex(idx)
         self.platform.blockSignals(False)
@@ -94,6 +101,7 @@ class CustomServiceDialog(BaseObjectDialog):
         self._save_current_code()
         self._current_platform = self.platform.currentData() or ''
         self.code.setText(self._all_codes.get(self._current_platform, ''))
+        QSettings().setValue(_SETTINGS_KEY, self._current_platform)
 
     def _save_current_code(self):
         """Store the current code text into the per-platform map."""
