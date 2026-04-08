@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+* Fix `--require-hashes` pip installs in CI workflows by using pinned versions instead
 
 
 ## [v1.4.3] - 2026-04-08

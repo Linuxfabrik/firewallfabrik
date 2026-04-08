@@ -27,9 +27,7 @@ jobs:
           python-version: '3.12'
 
       - name: 'Install dependencies'
-        run: |
-          pip install --require-hashes --requirement /dev/stdin <<< "mkdocs==1.6.1 --hash=sha256:db91759624d1647f3f34aa0c3f327dd2601beae39a366d6e064c03468d35c20e"
-          pip install --require-hashes --requirement /dev/stdin <<< "mkdocs-material==9.7.6 --hash=sha256:71b84353921b8ea1ba84fe11c50912cc512da8fe0881038fcc9a0761c0e635ba"
+        run: 'pip install mkdocs==1.6.1 mkdocs-material==9.7.6'
 
       - name: 'Create doc symlinks'
         run: |
