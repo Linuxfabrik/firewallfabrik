@@ -492,6 +492,11 @@ class ObjectTree(QWidget):
                 self._applying_saved_width = True
                 header.resizeSection(0, saved)
                 self._applying_saved_width = False
+            else:
+                w = max(self._tree.viewport().width() * 2 // 3, 150)
+                self._applying_saved_width = True
+                header.resizeSection(0, w)
+                self._applying_saved_width = False
         else:
             self._tree.setColumnCount(1)
             self._tree.setHeaderHidden(True)
