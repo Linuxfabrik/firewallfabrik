@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Custom Service editor: Platform dropdown always reset to nftables instead of remembering the last selection ([#61](https://github.com/Linuxfabrik/firewallfabrik/issues/61)).
+- Sporadic SIGSEGV crash when rebuilding the object tree after compilation or when closing/creating files ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
 
 ## [v1.4.2] - 2026-04-08
