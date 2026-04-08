@@ -838,7 +838,7 @@ class FWWindow(QMainWindow):
         path = shutil.which('pyside6-rcc')
         if path:
             return path
-        candidate = Path(sys.executable).resolve().parent / 'pyside6-rcc'
+        candidate = Path(sys.prefix) / 'bin' / 'pyside6-rcc'
         if candidate.is_file():
             return str(candidate)
         return None
