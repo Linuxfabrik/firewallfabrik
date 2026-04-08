@@ -23,7 +23,11 @@ jobs:
           allow-prereleases: true
 
       - name: 'Install build tools'
-        run: 'pip install --require-hashes --requirement /dev/stdin <<< "build==1.4.2 --hash=sha256:7a4d8651ea877cb2a89458b1b198f2e69f536c95e89129dbf5d448045d60db88"'
+        run: |
+          pip install --require-hashes --requirement /dev/stdin <<'EOF'
+          build==1.4.2 --hash=sha256:7a4d8651ea877cb2a89458b1b198f2e69f536c95e89129dbf5d448045d60db88
+          packaging==26.0 --hash=sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529
+          EOF
 
       - name: 'Build package'
         run: 'python -m build'
