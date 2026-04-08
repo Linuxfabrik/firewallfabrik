@@ -8,28 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.4.1] - 2026-04-08
+
 ### Added
 
 - Documentation on how to install Release Candidate (RC) versions
 - MkDocs-based documentation site, deployed automatically to GitHub Pages
-
-
-## [v1.4.1rc5] - 2026-04-08
-
-### Fixed
-
-- `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-- Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
-
-
-## [v1.4.1rc3] - 2026-04-06
-
-### Fixed
-
-- Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-
-
-## [v1.4.1rc2] - 2026-04-06
 
 ### Changed
 
@@ -39,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - GUI failed to start on Wayland-only systems (e.g. GNOME without X11) because Qt defaulted to the xcb platform plugin ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+- Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+- `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+- Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
 - Sporadic SIGSEGV crash when opening a rule editor (action, comment, direction, metric, options) while another editor had unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
 
@@ -312,11 +302,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc5...HEAD
-[v1.4.1rc5]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc4...v1.4.1rc5
-[v1.4.1rc4]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc3...v1.4.1rc4
-[v1.4.1rc3]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc2...v1.4.1rc3
-[v1.4.1rc2]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...v1.4.1rc2
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1...HEAD
+[v1.4.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...v1.4.1
 [v1.4.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.2.0...v1.3.0
 [v1.2.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.1.0...v1.2.0

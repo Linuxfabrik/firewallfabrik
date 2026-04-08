@@ -70,12 +70,12 @@ pipx install 'firewallfabrik[gui]' --pip-args='--pre'
 pip install --user --pre 'firewallfabrik[gui]'
 ```
 
-Alternatively, you can install a specific RC version directly by pinning the version. This works with all tools and does not require a pre-release flag:
+Alternatively, you can install a specific RC version directly by pinning the version:
 
 ``` bash
-uv tool install 'firewallfabrik[gui]==1.4.1rc5'
-pip install --user 'firewallfabrik[gui]==1.4.1rc5'
-pipx install 'firewallfabrik[gui]==1.4.1rc5'
+uv tool install 'firewallfabrik[gui]==<version>' --prerelease allow
+pip install --user 'firewallfabrik[gui]==<version>'
+pipx install 'firewallfabrik[gui]==<version>'
 ```
 
 ### Reverting to a stable release
