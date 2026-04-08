@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Fixed
+
+- Images not loading on the MkDocs documentation site due to broken relative paths in HTML image tags.
 
 
 ## [v1.4.1] - 2026-04-08

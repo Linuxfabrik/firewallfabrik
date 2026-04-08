@@ -82,15 +82,9 @@ If the firewall runs a caching name server (`/etc/resolv.conf` lists `127.0.0.1`
 1.  Permit traffic on the loopback interface (firewall to itself).
 2.  Permit the firewall to send DNS queries to external name servers.
 
-<figure>
-<img src="img/troubleshoot-dns-on-loopback.png" alt="img/troubleshoot-dns-on-loopback.png" />
-<figcaption>DNS rule on loopback interface</figcaption>
-</figure>
+![DNS rule on loopback interface](img/troubleshoot-dns-on-loopback.png)
 
-<figure>
-<img src="img/troubleshoot-dns-to-name-servers.png" alt="img/troubleshoot-dns-to-name-servers.png" />
-<figcaption>DNS rule to external name servers</figcaption>
-</figure>
+![DNS rule to external name servers](img/troubleshoot-dns-to-name-servers.png)
 
 ### Cannot Access Internet from Behind Firewall
 

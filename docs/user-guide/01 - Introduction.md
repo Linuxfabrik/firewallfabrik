@@ -6,9 +6,7 @@ FirewallFabrik simplifies firewall policy management for Linux-based firewall pl
 
 With FirewallFabrik, you can manage the security policy of your firewall efficiently and accurately, without the learning curve usually associated with command line interfaces. Instead of thinking in terms of obscure commands and parameters, you simply create a set of objects describing your firewall, servers, and subnets, and then implement your firewall policy by dragging objects into policy rules. You can also take advantage of a large collection of predefined objects describing many standard protocols and services. Once a policy is built in the GUI, you can compile it and install it on one, or several, firewall machines.
 
-<figure>
-<img src="img/firewall-builder-main-window.png" alt="img/firewall-builder-main-window.png" />
-</figure>
+![img/firewall-builder-main-window.png](img/firewall-builder-main-window.png)
 
 ## Overview of FirewallFabrik Features
 

@@ -12,10 +12,7 @@ The FirewallFabrik GUI consists of a main window and some dialog boxes. In the n
 
 This figure shows the FirewallFabrik GUI with an object file open.
 
-<figure>
-<img src="img/gui-main-window.png" alt="img/gui-main-window.png" />
-<figcaption>The Main Window</figcaption>
-</figure>
+![The Main Window](img/gui-main-window.png)
 
 The sections of the main window are as follows:
 
@@ -23,19 +20,13 @@ The sections of the main window are as follows:
 
 FirewallFabrik comes with menus and a tool bar at the top of the window.
 
-<figure>
-<img src="img/gui-menu-and-tool-bars.png" alt="img/gui-menu-and-tool-bars.png" />
-<figcaption>Menu and Tool Bars</figcaption>
-</figure>
+![Menu and Tool Bars](img/gui-menu-and-tool-bars.png)
 
 **The Object Tree**
 
 Displayed on the left side of the window, the object tree displays firewalls, hosts, interfaces, services, and other "objects" that you will use when creating policies for your firewall. See the [Object Tree](#object-tree) section for details on the objects in the tree and how to filter the object tree.
 
-<figure>
-<img src="img/gui-object-tree.png" alt="img/gui-object-tree.png" />
-<figcaption>The Object Tree</figcaption>
-</figure>
+![The Object Tree](img/gui-object-tree.png)
 
 **The Policy Rule Set Workspace**
 
@@ -45,10 +36,7 @@ Each rule set opens in its own sub-window within a Multiple Document Interface (
 
 See [05 - Working with Objects](05%20-%20Working%20with%20Objects.md) for instructions on creating a firewall object. See [07 - Firewall Policies](07%20-%20Firewall%20Policies.md) for instructions on working with policies.
 
-<figure>
-<img src="img/gui-policy-area.png" alt="img/gui-policy-area.png" />
-<figcaption>The Policy Area</figcaption>
-</figure>
+![The Policy Area](img/gui-policy-area.png)
 
 **The Object Editor Panel**
 
@@ -70,20 +58,11 @@ Displays the compiler output for single-rule compiles.
 
 Close the editor panel by clicking the X or by unchecking View \> Editor Panel.
 
-<figure>
-<img src="img/gui-object-editor.png" alt="img/gui-object-editor.png" />
-<figcaption>Object Editor, Partial View</figcaption>
-</figure>
+![Object Editor, Partial View](img/gui-object-editor.png)
 
-<figure>
-<img src="img/gui-find-and-replace.png" alt="img/gui-find-and-replace.png" />
-<figcaption>Find-and-Replace Object Panel, Partial View</figcaption>
-</figure>
+![Find-and-Replace Object Panel, Partial View](img/gui-find-and-replace.png)
 
-<figure>
-<img src="img/gui-output-view.png" alt="img/gui-output-view.png" />
-<figcaption>Output View, Partial View</figcaption>
-</figure>
+![Output View, Partial View](img/gui-output-view.png)
 
 **Undo Stack**
 
@@ -95,10 +74,7 @@ The Undo Stack can "float" as its own window by clicking the button at the top o
 
 See the [Undo Stack](#undo-stack) section for a more detailed explanation of the Undo Stack.
 
-<figure>
-<img src="img/gui-undo-stack-panel.png" alt="img/gui-undo-stack-panel.png" />
-<figcaption>Undo Stack</figcaption>
-</figure>
+![Undo Stack](img/gui-undo-stack-panel.png)
 
 ## GUI Menu and Tool Bars
 
@@ -213,10 +189,7 @@ In addition, the right-click context menu on policy rules has a selection for Co
 
 The Tool Bar has buttons for commonly used functions:
 
-<figure>
-<img src="img/gui-toolbar-buttons.png" alt="img/gui-toolbar-buttons.png" />
-<figcaption>Buttons</figcaption>
-</figure>
+![Buttons](img/gui-toolbar-buttons.png)
 
 | Button | Explanation |
 |----|----|
@@ -231,10 +204,7 @@ Tool Bar
 
 ## Object Tree
 
-<figure>
-<img src="img/gui-object-tree-structure.png" alt="img/gui-object-tree-structure.png" />
-<figcaption>Object Tree Structure</figcaption>
-</figure>
+![Object Tree Structure](img/gui-object-tree-structure.png)
 
 The object tree stores all objects in a predefined hierarchy:
 
@@ -250,10 +220,7 @@ The program has two default libraries: User and Standard.
 - The User library holds objects that you define, including objects for your firewall, hosts, and networks.
 - The Standard library holds a collection of predefined standard objects that come with FirewallFabrik. Note that you need not (and cannot) insert objects into the Standard library.
 
-<figure>
-<img src="img/gui-standard-objects.png" alt="img/gui-standard-objects.png" />
-<figcaption>Standard Objects</figcaption>
-</figure>
+![Standard Objects](img/gui-standard-objects.png)
 
 In addition, you can create custom libraries by selecting New Library from the New Object menu. You can populate the new library by copying and pasting objects from other libraries or by creating them from scratch within the new library. See [05 - Working with Objects](05%20-%20Working%20with%20Objects.md) for instructions on creating user-defined libraries.
 
@@ -297,33 +264,21 @@ FirewallFabrik comes with a set of predefined system folders. You can also creat
 
 The following figure shows the object tree of a retailer with multiple stores in several cities. As you can see the objects are not grouped together which can make it hard to quickly find the object you are looking for. Subfolders provide an easy way to organize your objects.
 
-<figure>
-<img src="img/gui-object-tree-without-subfolders.png" alt="img/gui-object-tree-without-subfolders.png" />
-<figcaption>Object Tree without Subfolders</figcaption>
-</figure>
+![Object Tree without Subfolders](img/gui-object-tree-without-subfolders.png)
 
 To add a subfolder right-click on one of the system folders, in this case we are going to start with the Firewalls folder, and select the New Subfolder menu item.
 
-<figure>
-<img src="img/gui-add-firewalls-subfolder.png" alt="img/gui-add-firewalls-subfolder.png" />
-<figcaption>Add Firewalls Subfolder</figcaption>
-</figure>
+![Add Firewalls Subfolder](img/gui-add-firewalls-subfolder.png)
 
 A dialog window will appear. Enter the name of your subfolder and click OK. In this case we will create a new subfolder called "Berlin" to hold all the Firewall objects located in Berlin.
 
 To add the firewalls to the Berlin subfolder, select the firewall objects in the tree, and drag-and-drop the firewalls onto the Berlin subfolder.
 
-<figure>
-<img src="img/gui-moving-objects-to-subfolder.png" alt="img/gui-moving-objects-to-subfolder.png" />
-<figcaption>Moving Objects to Subfolder</figcaption>
-</figure>
+![Moving Objects to Subfolder](img/gui-moving-objects-to-subfolder.png)
 
 The following figure shows the Object Tree after folders have been created for both London and New York and the firewalls at each of these locations have been moved to the subfolder. As you can see this makes it much easier to find things quickly in your tree.
 
-<figure>
-<img src="img/gui-subfolders-for-firewalls.png" alt="img/gui-subfolders-for-firewalls.png" />
-<figcaption>Subfolders for Firewalls</figcaption>
-</figure>
+![Subfolders for Firewalls](img/gui-subfolders-for-firewalls.png)
 
 While this example showed using subfolders in the Firewalls system folder, you can create subfolders in any of the predefined system folders.
 
@@ -340,26 +295,17 @@ Use Ctrl+F to focus the filter field. Click the X in the filter box to clear the
 
 As your configuration grows you will find that it becomes harder to quickly find the objects you are looking for. This example shows how filtering helps.
 
-<figure>
-<img src="img/gui-empty-filter-field.png" alt="img/gui-empty-filter-field.png" />
-<figcaption>Empty Filter Field</figcaption>
-</figure>
+![Empty Filter Field](img/gui-empty-filter-field.png)
 
 In the example, the word "new york" is typed into Filter field, with the goal of retrieving all address-related objects. As the screen shot below shows, filtering takes effect immediately. In the example, only "new" has been typed but the tree is already filtered by those characters, showing the Address Range, Addresses, Groups, and Networks objects that include "new" in their name.
 
-<figure>
-<img src="img/gui-populated-filter-field.png" alt="img/gui-populated-filter-field.png" />
-<figcaption>Populated Filter Field</figcaption>
-</figure>
+![Populated Filter Field](img/gui-populated-filter-field.png)
 
 ### Object Attributes in the Tree
 
 If you check the "Show attributes in tree" checkbox in the Preferences \> Objects tab, the object tree displays a second column of information, as shown below.
 
-<figure>
-<img src="img/gui-object-attributes-column.png" alt="img/gui-object-attributes-column.png" />
-<figcaption>Object Attributes Column</figcaption>
-</figure>
+![Object Attributes Column](img/gui-object-attributes-column.png)
 
 The information shown depends on the type of object.
 
@@ -369,22 +315,13 @@ If you check the checkbox but don't see the second column, make the panel wider 
 
 New objects can be created using the New Object menu, accessed by clicking this icon above the object tree:
 
-<figure>
-<img src="img/gui-create-objects-button.png" alt="img/gui-create-objects-button.png" />
-<figcaption>Create Objects button</figcaption>
-</figure>
+![Create Objects button](img/gui-create-objects-button.png)
 
-<figure>
-<img src="img/gui-creating-objects-using-object-menu.png" alt="img/gui-creating-objects-using-object-menu.png" />
-<figcaption>Creating Objects Using The Object Menu</figcaption>
-</figure>
+![Creating Objects Using The Object Menu](img/gui-creating-objects-using-object-menu.png)
 
 You can also create objects by right-clicking a folder in a library (though not in the read-only Standard library). If you right-click a folder, you can only create objects appropriate to that folder. For example, an interface object can only be placed under a host or firewall object, so the Add Interface option is available only if you right-click a host or firewall.
 
-<figure>
-<img src="img/gui-creating-objects-by-right-clicking.png" alt="img/gui-creating-objects-by-right-clicking.png" />
-<figcaption>Creating Objects by Right-Clicking</figcaption>
-</figure>
+![Creating Objects by Right-Clicking](img/gui-creating-objects-by-right-clicking.png)
 
 Another way to create objects is to use the Duplicate option when you right-click an object. This allows you to create a copy of the object. For example, you may want to create a firewall policy for one platform, duplicate it, then just change the target platform on the copy. Note that copies are not linked in any way. A change to the original has no effect on the copy, and vice versa.
 
@@ -408,42 +345,27 @@ The following figure shows a portion of an object tree, an access policy, and th
 
 In the example stack, a new, blank rule has just been added to the policy.
 
-<figure>
-<img src="img/gui-policy-and-undo-stack.png" alt="img/gui-policy-and-undo-stack.png" />
-<figcaption>Policy and the Undo Stack</figcaption>
-</figure>
+![Policy and the Undo Stack](img/gui-policy-and-undo-stack.png)
 
 The "inside range" IP object is now added to the Source of the new rule, and the "outside range 2" IP object is added to the Destination of the rule. However, in this example, we have made a mistake: Instead of adding "outside range 2" to the Destination, we accidentally added the "outside range" object to the Source field.
 
 You can see the object in the policy and the undo history in the following screenshot.
 
-<figure>
-<img src="img/gui-added-inside-range-and-outside-range.png" alt="img/gui-added-inside-range-and-outside-range.png" />
-<figcaption>Added Inside Range and Outside Range</figcaption>
-</figure>
+![Added Inside Range and Outside Range](img/gui-added-inside-range-and-outside-range.png)
 
 To fix the error, we do two things. First, we click on "insert inside range" in the Undo Stack. This rolls back the stack to before the point at which we inserted "outside range 2."
 
-<figure>
-<img src="img/gui-removed-outside-range-from-source.png" alt="img/gui-removed-outside-range-from-source.png" />
-<figcaption>Removed Outside Range from Source</figcaption>
-</figure>
+![Removed Outside Range from Source](img/gui-removed-outside-range-from-source.png)
 
 Next, we drag "outside range 2" into the Destination field. You can see that the "insert outside range" entry has been removed from the stack, and the "insert outside range 2" edit now appears as the most recent change.
 
-<figure>
-<img src="img/gui-added-outside-range-2-to-destination.png" alt="img/gui-added-outside-range-2-to-destination.png" />
-<figcaption>Added Outside Range 2 to Destination</figcaption>
-</figure>
+![Added Outside Range 2 to Destination](img/gui-added-outside-range-2-to-destination.png)
 
 ## Preferences Dialog
 
 To open the Preferences dialog, select Edit \> Preferences (Ctrl+,). The dialog has several tabs, described here.
 
-<figure>
-<img src="img/gui-preferences-dialog.png" alt="img/gui-preferences-dialog.png" />
-<figcaption>The GUI Preferences Dialog</figcaption>
-</figure>
+![The GUI Preferences Dialog](img/gui-preferences-dialog.png)
 
 | Objects Preferences | Explanation |
 |----|----|

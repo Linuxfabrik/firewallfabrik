@@ -16,10 +16,7 @@ FirewallFabrik compensates for differences in implementation between firewall pl
 
 ## Firewall Access Policy Rule Sets
 
-<figure>
-<img src="img/policy-access-policies.png" alt="img/policy-access-policies.png" />
-<figcaption>Access Policies</figcaption>
-</figure>
+![Access Policies](img/policy-access-policies.png)
 
 Access policy rules provide access control because they define which packets are permitted and which are denied. A firewall access policy consists of a set of rules. Each packet is analysed and its elements compared against elements in the rules of the policy sequentially, from top to bottom. The first rule that matches the packet has its configured action applied, and any processing specified in the rule's configured options is performed.
 
@@ -48,10 +45,7 @@ Configure these rule elements by dragging some combination of addressable object
 
 In addition, you can exclude, or "negate," a source or destination address by dragging it into the field, then right-clicking and selecting Negate from the context menu. In the example presented in Figure 7.2, the RFC 1918 address range object has been excluded from the rule; as a result, the rule matches any destination address *except* addresses within the private address space.
 
-<figure>
-<img src="img/policy-destination-rfc1918.png" alt="img/policy-destination-rfc1918.png" />
-<figcaption>Destination Matches Any RFC 1918 IP Address</figcaption>
-</figure>
+![Destination Matches Any RFC 1918 IP Address](img/policy-destination-rfc1918.png)
 
 ### Service
 
@@ -77,17 +71,11 @@ This automatic change of the direction is only performed when the direction is B
 
 Note that traffic direction is defined with respect to the firewall device, not with respect to the network behind it. For example, packets that leave the internal network through the firewall are considered "inbound" on firewall's internal interface and "outbound" on its external interface. Likewise, packets that come from the Internet are "inbound" on the firewall's external interface and "outbound" on its internal interface. Figure 7.3 illustrates directions for packets entering or exiting the firewall interface.
 
-<figure>
-<img src="img/policy-traffic-directions.png" alt="img/policy-traffic-directions.png" />
-<figcaption>Traffic Directions</figcaption>
-</figure>
+![Traffic Directions](img/policy-traffic-directions.png)
 
 For iptables, FirewallFabrik can generate rules in the **FORWARD** chain without the **-i interface** or **-o interface** clauses when appropriate. FirewallFabrik always tries to use this construct for rules with direction Both, unless addresses in the source and destination indicate that the rule can be made more specific.
 
-<figure>
-<img src="img/policy-modifying-direction.png" alt="img/policy-modifying-direction.png" />
-<figcaption>Modifying the Direction of a Policy Rule</figcaption>
-</figure>
+![Modifying the Direction of a Policy Rule](img/policy-modifying-direction.png)
 
 ### Action
 
@@ -101,10 +89,7 @@ Some actions have parameters. For these actions, FirewallFabrik opens the action
 - **Deny**: Silently drops the packet. No subsequent rules are applied. This action has no parameters.
 - **Reject**: The packet is dropped and the firewall reacts to the packet in the way you specify; for example, the firewall can send a TCP RST message or one of a number of ICMP messages. No subsequent rules are applied. This action has one parameter: when you select Reject as the action, the action dialog automatically opens for you to specify the response to be sent. Figure 7.5 shows the supported responses for the Reject action.
 
-<figure>
-<img src="img/policy-reject-action-responses.png" alt="img/policy-reject-action-responses.png" />
-<figcaption>Responses for the Reject Action</figcaption>
-</figure>
+![Responses for the Reject Action](img/policy-reject-action-responses.png)
 
 - **Accounting**: Counts packets matching the rule, but makes no decision on the packet. Even if the packet matches, the inspection process continues with subsequent rules. For iptables this action has one parameter which is the name of the rule chain that will be created. Traffic that matches this rule will have a target of the defined accounting user chain. In this case the traffic is neither accepted nor denied, so in order for the traffic to be passed through the firewall another rule must be defined with the Action set to Accept.
 - **Queue**: Supported only for iptables. Passes the packet to a user-space process for inspection. It is translated into **QUEUE** for iptables. This action has no parameters.
@@ -112,10 +97,7 @@ Some actions have parameters. For these actions, FirewallFabrik opens the action
 - **Branch**: Supported only for iptables, which provides suitable syntax for allowing control to return to the higher-level rule set if the branch cannot make a final decision about the packet. Used to branch to a different rule set. For iptables, this action is translated into a user-defined chain. The name of the chain is the name of the Policy rule set object that the branch jumps to. This action has one parameter: when you select Branch as the action, the action dialog automatically opens for you with a drop area to drag-and-drop the Policy rule set which will be branched to.
 - **Continue**: Continue is, essentially, an empty action. You can use this option when you want to assign an option, such as logging or packet marking, to a matched packet but take no other action in that rule. This action has no parameters. On iptables systems, using just the Continue action results generates a rule that has no **-j** target defined. If the action is set to Continue and the logging option has been applied, the generated rule has the **-j LOG** target set.
 
-<figure>
-<img src="img/policy-rule-actions.png" alt="img/policy-rule-actions.png" />
-<figcaption>Rule Actions</figcaption>
-</figure>
+![Rule Actions](img/policy-rule-actions.png)
 
 Policy actions can be combined with rule options specified in the Options rule element to have the firewall perform multiple operations within a single rule. For example, you can tag, classify, and accept a packet within a single rule by setting the Tag and Classify options and setting the action to Accept. For more information on configuring policies to perform multiple operations, see [Configuring Multiple Operations per Rule](#configuring-multiple-operations-per-rule).
 
@@ -148,10 +130,7 @@ Rule options may include the following, depending on the target platform:
 
 Figure 7.7 shows the Tag tab of the Options dialog for the **iptables** platform.
 
-<figure>
-<img src="img/policy-iptables-options-dialog.png" alt="img/policy-iptables-options-dialog.png" />
-<figcaption>iptables Options Dialog</figcaption>
-</figure>
+![iptables Options Dialog](img/policy-iptables-options-dialog.png)
 
 If the options of a particular rule have been changed from their default values, an icon appears in the Option field for that rule. Keep in mind that not all rules have the same default options. For example, by default a Deny rule is stateless, because there is no reason to keep state on a connection that won't be allowed. So, if you turn on state for a Deny rule, you'll see the icon. An Accept rule, on the other hand, has the opposite behavior. By default, state is kept for Accept rules, so no icon appears when state is on. In other words, if you turn state keeping off, then if you change the default behavior for that rule, the icon is displayed.
 
@@ -163,19 +142,13 @@ Every firewall object created in FirewallFabrik begins with a single policy rule
 
 In the following example, the firewall object "fw" has three policy rule sets: **Policy**, **Policy_2**, and **mgmt**:
 
-<figure>
-<img src="img/policy-multiple-rule-sets.png" alt="img/policy-multiple-rule-sets.png" />
-<figcaption>Firewall with Multiple Policy Rule Sets</figcaption>
-</figure>
+![Firewall with Multiple Policy Rule Sets](img/policy-multiple-rule-sets.png)
 
 To create an additional rule set, right-click the firewall object in the tree and select Add Policy Rule Set from the context menu.
 
 All policy rule sets have configurable parameters. To see a policy rule set's parameters, open it in the editor by double-clicking it in the tree.
 
-<figure>
-<img src="img/policy-rule-set-dialog-iptables.png" alt="img/policy-rule-set-dialog-iptables.png" />
-<figcaption>Policy Rule Set Dialog (iptables)</figcaption>
-</figure>
+![Policy Rule Set Dialog (iptables)](img/policy-rule-set-dialog-iptables.png)
 
 This dialog has a Name, IPv4/IPv6 setting and a Top ruleset checkbox. For iptables firewalls, there is also a pair of radio buttons that indicates whether the policy should affect filter+mangle tables or just mangle table.
 
@@ -187,10 +160,7 @@ When multiple rule sets have been defined, one rule set is tagged as the "top" r
 
 You fork processing between rule sets using the Branch rule action. In the example, this rule causes packets headed for the **fw-mgmt** host to be passed to the **mgmt** rule set.
 
-<figure>
-<img src="img/policy-passing-packet-to-mgmt.png" alt="img/policy-passing-packet-to-mgmt.png" />
-<figcaption>Passing a Packet to the 'mgmt' Rule Set</figcaption>
-</figure>
+![Passing a Packet to the 'mgmt' Rule Set](img/policy-passing-packet-to-mgmt.png)
 
 A packet directed to the **mgmt** rule set leaves the main rule set and begins matching against rules in the **mgmt** rule set. If it matches in the **mgmt** rule set, then the specified action is taken. If it does not match in the **mgmt** rule set, processing is passed back to the calling rule set.
 
@@ -203,15 +173,9 @@ A packet directed to the **mgmt** rule set leaves the main rule set and begins m
 
 Address translation is useful when you need to provide Internet access to machines on the internal network using private address space (10.0.0.0/8, 172.16.0.0/12, and 192.168.0.0/16, as defined in RFC 1918). Private addresses are not routable on the Internet, which means clients out on the Internet cannot connect to servers with private addresses. Conversely, machines on the network using one of these addresses cannot connect to servers on the Internet directly. In order to allow internal machines to establish connections with external machines, the firewall must convert the private addresses to public addresses, and vice versa. In other words, the firewall must perform Network Address Translation (NAT). In FirewallFabrik, NAT rules are added in the NAT rule set, located under the firewall object in the tree.
 
-<figure>
-<img src="img/nat-rule-set.png" alt="img/nat-rule-set.png" />
-<figcaption>NAT Rule Set</figcaption>
-</figure>
+![NAT Rule Set](img/nat-rule-set.png)
 
-<figure>
-<img src="img/nat-translation-rules.png" alt="img/nat-translation-rules.png" />
-<figcaption>Network Address Translation Rules</figcaption>
-</figure>
+![Network Address Translation Rules](img/nat-translation-rules.png)
 
 As in firewall policies, NAT rules are inspected by the firewall in the order they appear in the policy. Each NAT rule consists of the following rule elements:
 
@@ -257,10 +221,7 @@ One of the consequences of this design is that rule \#1 on Figure 7.12 provides 
 > [!NOTE]
 > Interface object can be used in the NAT rules even if the address of this interface is obtained dynamically and is not known beforehand.
 
-<figure>
-<img src="img/nat-source-translation-directions.png" alt="img/nat-source-translation-directions.png" />
-<figcaption>Translations done to packets going in different directions: (A) when firewall object is used in TSrc in the NAT rule; (B) when interface eth1 is used in TSrc in the NAT rule; (C) when host object with address 192.0.2.50 is used in TSrc in the NAT rule</figcaption>
-</figure>
+![Translations done to packets going in different directions: (A) when firewall object is used in TSrc in the NAT rule; (B) when interface eth1 is used in TSrc in the NAT rule; (C) when host object with address 192.0.2.50 is used in TSrc in the NAT rule](img/nat-source-translation-directions.png)
 
 #### Examples of Source Address Translation Rules
 
@@ -272,19 +233,13 @@ Source address translation is useful when you need to let machines using private
 
 In the following examples we will use a firewall object configured as follows:
 
-<figure>
-<img src="img/nat-firewall-object-details.png" alt="img/nat-firewall-object-details.png" />
-<figcaption>Firewall object with eth0 interface details</figcaption>
-</figure>
+![Firewall object with eth0 interface details](img/nat-firewall-object-details.png)
 
 The external interface of the firewall is *eth0*, it has a static IP address 192.0.2.1 (this is an example address, normally external interface would have a publicly routable address).
 
 The simplest source address translation rule looks like this:
 
-<figure>
-<img src="img/nat-basic-snat-rule.png" alt="img/nat-basic-snat-rule.png" />
-<figcaption>Basic source address translation rule</figcaption>
-</figure>
+![Basic source address translation rule](img/nat-basic-snat-rule.png)
 
 We put the interface of the firewall into Translated Src and an object representing the internal network in the Original Src element of the rule. This tells the firewall to replace the source address of packets that match the "Original" side of the rule with the address of the interface *eth0*.
 
@@ -303,10 +258,7 @@ Note that FirewallFabrik uses the chain *POSTROUTING* for the source address tra
 
 The generated configurations in the previous examples used the IP address of the external interface for translation. Let's see what configuration FirewallFabrik will produce if the external interface has a dynamic address that is not known at the time when configuration is generated.
 
-<figure>
-<img src="img/nat-dynamic-interface-config.png" alt="img/nat-dynamic-interface-config.png" />
-<figcaption>Dynamic interface configuration</figcaption>
-</figure>
+![Dynamic interface configuration](img/nat-dynamic-interface-config.png)
 
 The NAT rule looks exactly the same as in examples above: we still put interface *eth0* in Translated Src even though its address is unknown.
 
@@ -322,17 +274,11 @@ $IPTABLES -t nat -A POSTROUTING -o eth0  -s 172.16.22.0/24 -j MASQUERADE
 
 FirewallFabrik can generate configurations for the NAT rules that manipulate not only addresses, but also ports and port ranges. Consider this hypothetical example where we want to squeeze a source port range from the whole unprivileged range 1024 - 65535 to the rather limited range 10000 - 20000 on all connections from internal network to the server on the DMZ:
 
-<figure>
-<img src="img/nat-port-translation-rule.png" alt="img/nat-port-translation-rule.png" />
-<figcaption>Port translation NAT rule</figcaption>
-</figure>
+![Port translation NAT rule](img/nat-port-translation-rule.png)
 
 TCP Service object "sport range 10000-20000" is defined as follows:
 
-<figure>
-<img src="img/nat-tcp-service-sport-range.png" alt="img/nat-tcp-service-sport-range.png" />
-<figcaption>TCP Service object with source port range 10000-20000</figcaption>
-</figure>
+![TCP Service object with source port range 10000-20000](img/nat-tcp-service-sport-range.png)
 
 For iptables, FirewallFabrik generates the following command for this rule:
 
@@ -349,17 +295,11 @@ This rule matches source port range "1024-65535" and original destination addres
 
 Many firewall platforms can use NAT to perform simple load balancing of outgoing sessions across a pool of IP addresses. To set this up in FirewallFabrik, we start with an address range object:
 
-<figure>
-<img src="img/nat-address-range-object.png" alt="img/nat-address-range-object.png" />
-<figcaption>Address range object for load balancing</figcaption>
-</figure>
+![Address range object for load balancing](img/nat-address-range-object.png)
 
 We then use it in the "Translated Source" of the NAT rule:
 
-<figure>
-<img src="img/nat-load-balancing-rule.png" alt="img/nat-load-balancing-rule.png" />
-<figcaption>Load balancing NAT rule</figcaption>
-</figure>
+![Load balancing NAT rule](img/nat-load-balancing-rule.png)
 
 Here is what we get for the iptables firewall:
 
@@ -372,17 +312,11 @@ $IPTABLES -t nat -A POSTROUTING -o eth+  -s 172.16.22.0/24 \
 
 It is possible to use a network object of smaller size in Translated Source which is equivalent to using a small address range:
 
-<figure>
-<img src="img/nat-network-object-small.png" alt="img/nat-network-object-small.png" />
-<figcaption>Network object for load balancing</figcaption>
-</figure>
+![Network object for load balancing](img/nat-network-object-small.png)
 
 We can use it in the rule just like the range object:
 
-<figure>
-<img src="img/nat-network-object-in-rule.png" alt="img/nat-network-object-in-rule.png" />
-<figcaption>Network object used in NAT rule for load balancing</figcaption>
-</figure>
+![Network object used in NAT rule for load balancing](img/nat-network-object-in-rule.png)
 
 Unfortunately, the smaller network object in Translated Source is not supported for iptables because in iptables, SNAT target can only accept a single IP address or a range of addresses, but not a subnet specification.
 
@@ -394,22 +328,13 @@ Basically this rule says "if destination address of the packet matches the exter
 
 A rule that does not specify any service for the translation translates addresses in packets of all protocols. This approach can make some rules impractical because they will translate and bounce any packets that are headed for the firewall, making it impossible to connect to the firewall itself using telnet or any other protocol. This is especially inconvenient since, as we saw earlier, translation happens for packets coming from all directions; this means that you won't be able to connect to the firewall even from inside of your network. To alleviate this problem we just add an appropriate service object to the rule as shown in Figure 7.24:
 
-<figure>
-<img src="img/nat-http-translation-rule.png" alt="img/nat-http-translation-rule.png" />
-<figcaption>Translation Limited to Packets of HTTP Protocol</figcaption>
-</figure>
+![Translation Limited to Packets of HTTP Protocol](img/nat-http-translation-rule.png)
 
 Rule \#0 in Figure 7.24 has limited scope because of the service object "http" in Original Service; it matches and performs address translation only for packets of HTTP protocol, while other packets are processed by TCP/IP stack on the firewall as usual. Very often we only want to translate address for packets coming from particular side of the firewall, typically from the Internet, and do not change other packets. Rule \#0 on Figure 7.25 achieves this goal by using firewall's interface object in Original Destination. Only packets with destination address the same as that of interface eth1 of the firewall match this rule and get their address translated. Packets coming from other directions will have different destination address and won't match the rule (see Figure 7.26 (B)).
 
-<figure>
-<img src="img/nat-dnat-firewall-interface.png" alt="img/nat-dnat-firewall-interface.png" />
-<figcaption>Destination Address Translation Rule Using Firewall Interface</figcaption>
-</figure>
+![Destination Address Translation Rule Using Firewall Interface](img/nat-dnat-firewall-interface.png)
 
-<figure>
-<img src="img/nat-dnat-directions.png" alt="img/nat-dnat-directions.png" />
-<figcaption>Translations done to packets going in different directions: (A) when firewall object is used in ODst in the NAT rule and (B) when interface eth1 is used in ODst in the NAT rule</figcaption>
-</figure>
+![Translations done to packets going in different directions: (A) when firewall object is used in ODst in the NAT rule and (B) when interface eth1 is used in ODst in the NAT rule](img/nat-dnat-directions.png)
 
 #### Examples of Destination Address Translation Rules in FirewallFabrik
 
@@ -419,26 +344,17 @@ This section demonstrates examples of NAT rules that manipulate the destination 
 
 In cases where we have no public IP addresses to spare, we can still use NAT to permit access to the server. In this case, we will use address that belongs to the firewall's external interface. Here is a screenshot showing the firewall object, its interfaces, and an address object that belongs to the external interface:
 
-<figure>
-<img src="img/nat-firewall-ip-for-server.png" alt="img/nat-firewall-ip-for-server.png" />
-<figcaption>Firewall object with external interface address</figcaption>
-</figure>
+![Firewall object with external interface address](img/nat-firewall-ip-for-server.png)
 
 We can either use an interface object or a corresponding address object in the rule. The following two examples of rules are equivalent:
 
 Using an interface object:
 
-<figure>
-<img src="img/nat-dnat-using-interface.png" alt="img/nat-dnat-using-interface.png" />
-<figcaption>DNAT rule using interface object</figcaption>
-</figure>
+![DNAT rule using interface object](img/nat-dnat-using-interface.png)
 
 Using an address object:
 
-<figure>
-<img src="img/nat-dnat-using-address.png" alt="img/nat-dnat-using-address.png" />
-<figcaption>DNAT rule using address object</figcaption>
-</figure>
+![DNAT rule using address object](img/nat-dnat-using-address.png)
 
 The external interface *eth0* of the firewall has just one IP address; therefore, these two variants of the NAT rule are equivalent.
 
@@ -446,10 +362,7 @@ If the firewall has multiple public IP addresses, then you can add them as addit
 
 Both NAT rules demonstrated in this example provide translation for the destination address of the packet so it can reach the server behind the firewall. We still need a policy rule to actually permit this kind of connection. This rule can be added to the global policy as follows:
 
-<figure>
-<img src="img/nat-policy-rule-with-nat.png" alt="img/nat-policy-rule-with-nat.png" />
-<figcaption>Policy rule to permit translated traffic</figcaption>
-</figure>
+![Policy rule to permit translated traffic](img/nat-policy-rule-with-nat.png)
 
 You always need a combination of the NAT rule and a policy rule to do both address translation and then permit the translated packet.
 
@@ -481,17 +394,11 @@ In all previous examples, the external interface of the firewall had a static IP
 
 Configuration of objects used in this example:
 
-<figure>
-<img src="img/nat-dynamic-external-interface.png" alt="img/nat-dynamic-external-interface.png" />
-<figcaption>Dynamic external interface configuration</figcaption>
-</figure>
+![Dynamic external interface configuration](img/nat-dynamic-external-interface.png)
 
 The only difference is that interface *eth0* of the firewall is dynamic and has no IP address. In order to build NAT rules we use this interface in Original Destination (the rule looks exactly the same as rules in the previous examples):
 
-<figure>
-<img src="img/nat-dnat-dynamic-rule.png" alt="img/nat-dnat-dynamic-rule.png" />
-<figcaption>DNAT rule using dynamic interface</figcaption>
-</figure>
+![DNAT rule using dynamic interface](img/nat-dnat-dynamic-rule.png)
 
 FirewallFabrik uses the method specific to the target firewall platform that allows it to use an interface with dynamic address in policy and NAT rules. For example, the iptables script generated by FirewallFabrik includes a shell function that determines the address of an interface. This function is then used in the generated iptables commands:
 
@@ -508,17 +415,11 @@ $IPTABLES -t nat -A PREROUTING  -p tcp -m tcp  -d $i_eth0 \
 
 Destination port translation allows you to redirect connections arriving at one port to a different port on the internal server. For example, you might want external HTTP connections arriving on port 8080 to be redirected to port 80 on the internal web server. To set this up, we create a TCP service object for port 8080:
 
-<figure>
-<img src="img/nat-tcp-service-port-8080.png" alt="img/nat-tcp-service-port-8080.png" />
-<figcaption>TCP Service object for port 8080</figcaption>
-</figure>
+![TCP Service object for port 8080](img/nat-tcp-service-port-8080.png)
 
 We then use it in the NAT rule to translate destination port:
 
-<figure>
-<img src="img/nat-port-translation-dnat.png" alt="img/nat-port-translation-dnat.png" />
-<figcaption>Port translation DNAT rule</figcaption>
-</figure>
+![Port translation DNAT rule](img/nat-port-translation-dnat.png)
 
 For iptables:
 
@@ -545,10 +446,7 @@ Construct these rules the same way you construct access policy or NAT rules, by 
 
 If you want to use ECMP (Equal Cost Multi Path) routing rules with your iptables-based firewall, make sure your kernel is compiled with the `CONFIG_IP_ROUTE_MULTIPATH` option. See [ECMP routes](#ecmp-routes) for instructions on creating multiple paths to a destination.
 
-<figure>
-<img src="img/policy-routing-rule.png" alt="img/policy-routing-rule.png" />
-<figcaption>A Routing Rule</figcaption>
-</figure>
+![A Routing Rule](img/policy-routing-rule.png)
 
 The routing rule contains the following elements:
 
@@ -586,10 +484,7 @@ FirewallFabrik supports ECMP routes in Linux-based firewalls using iptables. To 
 
 In this example, there are three different paths to HostA.
 
-<figure>
-<img src="img/policy-ecmp-routing-rule.png" alt="img/policy-ecmp-routing-rule.png" />
-<figcaption>ECMP Routing Rule</figcaption>
-</figure>
+![ECMP Routing Rule](img/policy-ecmp-routing-rule.png)
 
 Rules are automatically classified in ECMP rules and non-ECMP. The ECMP rules are written out in a separated section of the firewall script after the "normal" routing rules.
 
@@ -597,10 +492,7 @@ Rules are automatically classified in ECMP rules and non-ECMP. The ECMP rules ar
 
 ### Adding and Removing Rules
 
-<figure>
-<img src="img/policy-modifying-rules.png" alt="img/policy-modifying-rules.png" />
-<figcaption>Modifying Policy Rules</figcaption>
-</figure>
+![Modifying Policy Rules](img/policy-modifying-rules.png)
 
 Rules can be added, removed, or moved around in the rule set using the Rules menu or the context menu shown in the figure above. To open the context menu, right-click the rule number in the first column of the rule.
 
@@ -674,10 +566,7 @@ To add objects to a policy or NAT rule, you can either drag the objects from the
 
 Right-clicking when the cursor is over the rule elements "Source", "Destination" or "Service" opens a context-sensitive pop-up menu. The same context menu appears when you hover the mouse over the "Original Source", "Original Destination", "Original Service", "Translated Source", "Translated Destination" and "Translated Service" rule elements in a NAT rule.
 
-<figure>
-<img src="img/policy-modifying-objects.png" alt="img/policy-modifying-objects.png" />
-<figcaption>Modifying Objects in a Policy Rule</figcaption>
-</figure>
+![Modifying Objects in a Policy Rule](img/policy-modifying-objects.png)
 
 This menu provides items for the following functions:
 
@@ -721,10 +610,7 @@ This menu provides items for the following functions:
 
 To change a rule action, right-click in the Action field and select the new action from the context menu. Depending on the action selected, the Action dialog may open for you to specify parameter settings.
 
-<figure>
-<img src="img/policy-changing-action.png" alt="img/policy-changing-action.png" />
-<figcaption>Modifying the Action of a Policy Rule</figcaption>
-</figure>
+![Modifying the Action of a Policy Rule](img/policy-changing-action.png)
 
 Rule actions are described in detail in [Action](#action).
 
@@ -732,10 +618,7 @@ Rule actions are described in detail in [Action](#action).
 
 To change the traffic direction for a rule, right-click in the Direction field and select the new direction from the context menu.
 
-<figure>
-<img src="img/policy-changing-direction.png" alt="img/policy-changing-direction.png" />
-<figcaption>Modifying the Direction of a Policy Rule</figcaption>
-</figure>
+![Modifying the Direction of a Policy Rule](img/policy-changing-direction.png)
 
 Traffic directions are described in detail in [Direction](#direction).
 
@@ -743,10 +626,7 @@ Traffic directions are described in detail in [Direction](#direction).
 
 To change the options and log settings associated with a rule, right-click in the Options field and select a menu item from the context menu. Enable or disable logging by right-clicking the Options field and selecting Logging On or Logging Off, respectively, from the context menu. Set rule options or change log settings by opening the Options dialog. You can do this by double-clicking within the Options field of the rule or by right-clicking the Options field and selecting Rule Options from the context menu.
 
-<figure>
-<img src="img/policy-rule-options-menu.png" alt="img/policy-rule-options-menu.png" />
-<figcaption>Rule Options for Policies</figcaption>
-</figure>
+![Rule Options for Policies](img/policy-rule-options-menu.png)
 
 Rule options and log settings are described in detail in [Options and Logging](#options-and-logging).
 
@@ -760,10 +640,7 @@ For iptables, which does not explicitly support configuring multiple operations 
 
 Let's look at an example where traffic matching a particular rule, such as the one shown below. This rule matches SSH traffic destined to a specific address.
 
-<figure>
-<img src="img/policy-basic-rule-no-options.png" alt="img/policy-basic-rule-no-options.png" />
-<figcaption>Basic rule with no options set</figcaption>
-</figure>
+![Basic rule with no options set](img/policy-basic-rule-no-options.png)
 
 The way the rule is currently defined traffic matching the rule will be accepted and no other operations will be performed. However, if in addition to accepting the traffic you also want to classify the traffic into classful qdisc for use with tc, then you need to use the Classify rule option to define the classify value that should be set for traffic matching the rule.
 
@@ -775,17 +652,11 @@ Steps for adding classify string to matching traffic:
 2.  Click on Classify tab in the Editor panel at the bottom of the screen
 3.  Enter the value 1:20 in the text box for the Classify string as shown below
 
-<figure>
-<img src="img/policy-classify-string-editor.png" alt="img/policy-classify-string-editor.png" />
-<figcaption>Entering classify string in Editor panel</figcaption>
-</figure>
+![Entering classify string in Editor panel](img/policy-classify-string-editor.png)
 
 Notice that the Classify icon and classify string value are now displayed in the rule's Options column. This lets you quickly and easily see what options have been configured for a particular rule.
 
-<figure>
-<img src="img/policy-rule-with-classify.png" alt="img/policy-rule-with-classify.png" />
-<figcaption>Rule with Classify option set</figcaption>
-</figure>
+![Rule with Classify option set](img/policy-rule-with-classify.png)
 
 Using the [10 - Compiling and Installing a Policy](10%20-%20Compiling%20and%20Installing%20a%20Policy.md) feature you can see that this rule will result in the following iptables commands being generated.
 
@@ -809,54 +680,33 @@ Let's look at a simple example of using rule groups.
 
 The figure below shows a fragment of a set of rules. There are two rules for packets destined for eth0, several rules for packets destined for eth1, and a couple rules for eth2-destined packets.
 
-<figure>
-<img src="img/policy-rules-without-grouping.png" alt="img/policy-rules-without-grouping.png" />
-<figcaption>Rules without Grouping</figcaption>
-</figure>
+![Rules without Grouping](img/policy-rules-without-grouping.png)
 
 The eth1 rules take up a lot of space, so let's group them together. We can then collapse the group so it uses less space.
 
 To create the group, right-click in the rule number cell of the first "eth1" rule and select New group. (You don't have to click the first rule. Any rule in the group will do.)
 
-<figure>
-<img src="img/policy-creating-group.png" alt="img/policy-creating-group.png" />
-<figcaption>Creating a Group</figcaption>
-</figure>
+![Creating a Group](img/policy-creating-group.png)
 
 A dialog appears. Enter the name of the group. This name is for your convenience only, so it can be anything. Here we're naming the group after the interface, but a more descriptive name can be more useful.
 
-<figure>
-<img src="img/policy-naming-group.png" alt="img/policy-naming-group.png" />
-<figcaption>Naming a Group</figcaption>
-</figure>
+![Naming a Group](img/policy-naming-group.png)
 
 Now we have a group with one entry. This doesn't provide much value, so let's add other rules to the group. You can add as many rules as you want, but they must all be contiguous in the rule set.
 
-<figure>
-<img src="img/policy-group-one-entry.png" alt="img/policy-group-one-entry.png" />
-<figcaption>Group with One Entry</figcaption>
-</figure>
+![Group with One Entry](img/policy-group-one-entry.png)
 
 To add more rules, right-click a rule adjacent to the rule in the group, then select Add to the group eth1.
 
-<figure>
-<img src="img/policy-adding-to-group.png" alt="img/policy-adding-to-group.png" />
-<figcaption>Adding a Rule to a Group</figcaption>
-</figure>
+![Adding a Rule to a Group](img/policy-adding-to-group.png)
 
 Do that to the rest of the "eth1" rows, and we now have a populated group. You can select several consecutive rules and add them to the group at once.
 
-<figure>
-<img src="img/policy-group-of-rules.png" alt="img/policy-group-of-rules.png" />
-<figcaption>A Group of Rules</figcaption>
-</figure>
+![A Group of Rules](img/policy-group-of-rules.png)
 
 To collapse the group, just click the little minus (-) or a triangle icon (depends on the OS and visual style) in the upper left of the group.
 
-<figure>
-<img src="img/policy-collapsed-group.png" alt="img/policy-collapsed-group.png" />
-<figcaption>Collapsed Group</figcaption>
-</figure>
+![Collapsed Group](img/policy-collapsed-group.png)
 
 The group now takes up less room on your screen, though it has not changed in function.
 

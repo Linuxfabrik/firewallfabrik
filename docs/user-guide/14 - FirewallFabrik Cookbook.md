@@ -10,77 +10,47 @@ We start with a firewall object created in with a three-interface template and t
 
 To begin, find the IP address of the internal interface of the firewall in the tree and double-click it to open it in the editor.
 
-<figure>
-<img src="img/cookbook-001.png" alt="img/cookbook-001.png" />
-<figcaption>New Firewall.</figcaption>
-</figure>
+![New Firewall.](img/cookbook-001.png)
 
 Edit the IP address (and possibly the netmask if needed), then click "Apply". This changes the IP address of the interface of the firewall.
 
-<figure>
-<img src="img/cookbook-002.png" alt="img/cookbook-002.png" />
-<figcaption>Edit the Network Address.</figcaption>
-</figure>
+![Edit the Network Address.](img/cookbook-002.png)
 
 Now we need to change the IP address used in the rules. To do this, we create a new network object with the correct address and replace the object net-192.168.1.0 in all rules with this new network object.
 
 Use New Object menu to create the network object.
 
-<figure>
-<img src="img/cookbook-003.png" alt="img/cookbook-003.png" />
-<figcaption>Creating a New Network Object.</figcaption>
-</figure>
+![Creating a New Network Object.](img/cookbook-003.png)
 
 A new network object is created with default name "New Network" and IP address 0.0.0.0.
 
-<figure>
-<img src="img/cookbook-004.png" alt="img/cookbook-004.png" />
-<figcaption>New Object.</figcaption>
-</figure>
+![New Object.](img/cookbook-004.png)
 
 Edit the object name and address, then click Apply.
 
-<figure>
-<img src="img/cookbook-005.png" alt="img/cookbook-005.png" />
-<figcaption>Edit Name and Address.</figcaption>
-</figure>
+![Edit Name and Address.](img/cookbook-005.png)
 
 Select Object/Find to activate the search and replace dialog.
 
-<figure>
-<img src="img/cookbook-006.png" alt="img/cookbook-006.png" />
-<figcaption>Activate Find Dialog.</figcaption>
-</figure>
+![Activate Find Dialog.](img/cookbook-006.png)
 
 Drag and drop the object "net-192.168.1.0" from a policy rule or from its location in the "Standard" library to the left object field in the search and replace dialog.
 
-<figure>
-<img src="img/cookbook-007.png" alt="img/cookbook-007.png" />
-<figcaption>Drag the Original Object to the Find Field.</figcaption>
-</figure>
+![Drag the Original Object to the Find Field.](img/cookbook-007.png)
 
 Locate the new network object you just created and drag and drop it to the right object field in the search and replace dialog.
 
-<figure>
-<img src="img/cookbook-008.png" alt="img/cookbook-008.png" />
-<figcaption>Drag the New Object to the Replace Field.</figcaption>
-</figure>
+![Drag the New Object to the Replace Field.](img/cookbook-008.png)
 
 Change the scope to Policy of all firewalls and click Replace all. If you have many firewalls in the tree and you only want to replace in this one, use the scope policy of the opened firewall instead. A pop-up dialog appears telling you how many replacements have been done.
 
-<figure>
-<img src="img/cookbook-009.png" alt="img/cookbook-009.png" />
-<figcaption>Replacement Confirmation Dialog.</figcaption>
-</figure>
+![Replacement Confirmation Dialog.](img/cookbook-009.png)
 
 Note how the search and replace function replaced the object "net-192.168.1.0" with "internal net" in the NAT rules as well.
 
 If the IP address used for the DMZ network in this template does not match your configuration, you can change it using the same procedure.
 
-<figure>
-<img src="img/cookbook-010.png" alt="img/cookbook-010.png" />
-<figcaption>New object used in all rule sets.</figcaption>
-</figure>
+![New object used in all rule sets.](img/cookbook-010.png)
 
 # Examples of Access Policy Rules
 
@@ -90,19 +60,13 @@ We start with the firewall object that looks like the one shown on the figure be
 
 To illustrate generated configurations for platforms other than iptables/Linux in this chapter, I am using similarly configured firewall objects with different platform and host OS settings.
 
-<figure>
-<img src="img/cookbook-011.png" alt="img/cookbook-011.png" />
-<figcaption>Firewall and Its Interfaces Used in the Examples in this Chapter.</figcaption>
-</figure>
+![Firewall and Its Interfaces Used in the Examples in this Chapter.](img/cookbook-011.png)
 
 ## Permit Internal LAN to Connect to the Internet
 
 In this example, we create a rule to permit our internal LAN to connect to the Internet using any protocol. The network object "net-192.168.1.0" should be configured with the IP address and netmask corresponding to those used on the internal network behind the firewall. Since the internal LAN in this example uses a private address block, the rules described here are insufficient and should be accompanied with corresponding NAT (Network Address Translation) rules. We discuss NAT rules in the next chapter.
 
-<figure>
-<img src="img/cookbook-012.png" alt="img/cookbook-012.png" />
-<figcaption>Permit the Internal Network to Connect to the Internet.</figcaption>
-</figure>
+![Permit the Internal Network to Connect to the Internet.](img/cookbook-012.png)
 
 Here are the iptables commands generated for this example:
 
@@ -169,10 +133,7 @@ Even if you choose to turn option "Assume firewall is part of any" off and do no
 
 This is one of the simplest, most basic tasks you may want your firewall to do: block all the traffic while letting certain protocols through. Let's assume that we have a network consisting of just the firewall "firewall1" and a few hosts behind it. We want to let SMTP through to the mail server from the Internet and block everything else. All we need to do is put the following rules in the Global Policy:
 
-<figure>
-<img src="img/cookbook-013.png" alt="img/cookbook-013.png" />
-<figcaption>Example of a Rule Permitting Only Certain Protocols to the Server and Blocking Everything Else.</figcaption>
-</figure>
+![Example of a Rule Permitting Only Certain Protocols to the Server and Blocking Everything Else.](img/cookbook-013.png)
 
 Rule \#0 allows SMTP through to the server, while rule \#1 blocks and logs everything else. It is worth mentioning that this policy also blocks all the access to firewall itself, including access to it from internal hosts.
 
@@ -207,10 +168,7 @@ The generated iptables rules were placed in both *OUTPUT* and *FORWARD* chains b
 
 In this example, we look at the rule that is similar to the previous one, but also matches source address. This rule permits access to the mail server inside from mail relay on DMZ and from no other source. Generated iptables rules are very similar to the previous example, they just add source address matching.
 
-<figure>
-<img src="img/cookbook-014.png" alt="img/cookbook-014.png" />
-<figcaption>A Rule Permitting only Certain Protocols from a Limited Set of Sources to the Server.</figcaption>
-</figure>
+![A Rule Permitting only Certain Protocols from a Limited Set of Sources to the Server.](img/cookbook-014.png)
 
 Here is the code generated for iptables from this rule:
 
@@ -241,10 +199,7 @@ Simple anti-spoofing rule looks like shown on the figure below. Unlike the rule 
 
 Section 5.2.2 explains how a firewall object and its interfaces can be created. Section 5.2.5 has more details on the firewall's interfaces, their types, and other properties. Section 7.2.4 explains the concept of direction.
 
-<figure>
-<img src="img/cookbook-015.png" alt="img/cookbook-015.png" />
-<figcaption>A Basic Anti-Spoofing Rule.</figcaption>
-</figure>
+![A Basic Anti-Spoofing Rule.](img/cookbook-015.png)
 
 Here are the iptables commands generated for this rule:
 
@@ -272,10 +227,7 @@ An anti-spoofing rule must match all addresses of the firewall to leave no holes
 
 In this test, I use a variation of the same firewall object where external interface *"eth0"* is configured as "dynamic". The anti-spoofing rule looks exactly like the rule in the previous example and matches the same external interface "eth0", direction "inbound":
 
-<figure>
-<img src="img/cookbook-016.png" alt="img/cookbook-016.png" />
-<figcaption>Basic Anti-Spoofing Rule.</figcaption>
-</figure>
+![Basic Anti-Spoofing Rule.](img/cookbook-016.png)
 
 The generated iptables script looks like this:
 
@@ -305,19 +257,13 @@ Sometimes we need to define a lot of very similar rules for multiple hosts or ne
 
 Groups make policy rules more readable, but object groups have the additional great advantage of being reusable. You can have many different rules using the same group object. If you ever need to add another host or address to the group, you only need to do it once and all rules will automatically pick the change after recompile.
 
-<figure>
-<img src="img/cookbook-017.png" alt="img/cookbook-017.png" />
-<figcaption>Object Group Consisting of Three Host Objects</figcaption>
-</figure>
+![Object Group Consisting of Three Host Objects](img/cookbook-017.png)
 
 To add objects to a group, simply drag them from the tree on the left into group view on the right, or use Copy/Paste functions available via menus.
 
 Once an appropriate group has been created, it can be used for the policy and NAT rules just like any other object.
 
-<figure>
-<img src="img/cookbook-018.png" alt="img/cookbook-018.png" />
-<figcaption>A Rule Using an Object Group</figcaption>
-</figure>
+![A Rule Using an Object Group](img/cookbook-018.png)
 
 Here is the iptables commands generated for this example:
 
@@ -345,17 +291,11 @@ In the example above, the three hosts used for the group "management hosts" have
 
 Since addresses of the management hosts are consecutive, we can use an address range object to describe them:
 
-<figure>
-<img src="img/cookbook-019.png" alt="img/cookbook-019.png" />
-<figcaption>Address Range Object for Management Hosts</figcaption>
-</figure>
+![Address Range Object for Management Hosts](img/cookbook-019.png)
 
 We use this object in the rule just like any other object. Figure 14.20 shows the rule:
 
-<figure>
-<img src="img/cookbook-020.png" alt="img/cookbook-020.png" />
-<figcaption>Rule Using an Address Range</figcaption>
-</figure>
+![Rule Using an Address Range](img/cookbook-020.png)
 
 The main difference in the generated code for the rule using a address range compared to the rule using collection of individual addresses is that compiler is allowed to optimize it. It tries to squeeze the address range to the minimal set of address and network objects. Here is how it looks like for iptables:
 
@@ -374,10 +314,7 @@ Again, the difference may not be very great when we have only three IP addresses
 
 Suppose we need to permit SSH access to the firewall. In the simplest case we just create a rule with a firewall object (fw) in the destination and a service object SSH in the service. The SSH service object can be found in the Standard objects tree, under Services/TCP. Here is the rule:
 
-<figure>
-<img src="img/cookbook-021.png" alt="img/cookbook-021.png" />
-<figcaption>SSH from Anywhere</figcaption>
-</figure>
+![SSH from Anywhere](img/cookbook-021.png)
 
 The generated iptables rule is rather simple:
 
@@ -392,42 +329,27 @@ The iptables platform has a concept of chains that separate different packet flo
 
 Obviously, this rule makes the firewall too open because it permits SSH connections to it from any host on the Internet. It would be a good idea to restrict it so that it permitted connections only from the internal LAN. This is easy: we just put the object "LAN" in the source of the corresponding rule:
 
-<figure>
-<img src="img/cookbook-022.png" alt="img/cookbook-022.png" />
-<figcaption>SSH from LAN</figcaption>
-</figure>
+![SSH from LAN](img/cookbook-022.png)
 
 The generated configuration will follow the same pattern but add matching of the source address of the packet to make sure it comes from local LAN.
 
 We should be careful not to permit more protocols to the firewall than we really intend to. Let's look at the simple rule permitting connects from internal LAN to the Internet (rule \#0 on the screenshot below):
 
-<figure>
-<img src="img/cookbook-023.png" alt="img/cookbook-023.png" />
-<figcaption>LAN to Anywhere</figcaption>
-</figure>
+![LAN to Anywhere](img/cookbook-023.png)
 
 Logic says that the destination "any" should match any address, including the ones that belong to the firewall itself. In FirewallFabrik, this can actually be changed using a checkbox in the Compiler tab of the Firewall Settings dialog of the firewall object. If the checkbox "Assume firewall is part of any" is checked, then the compiler generates rules assuming that "any" matches the firewall as well. So, if this option is on, then this rule permits any connections from internal LAN to the firewall, regardless of the protocol. Here is how we can modify the rule permitting access to the Internet to exclude the firewall from it using negation:
 
-<figure>
-<img src="img/cookbook-024.png" alt="img/cookbook-024.png" />
-<figcaption>Negating the Firewall as a Destination from the LAN</figcaption>
-</figure>
+![Negating the Firewall as a Destination from the LAN](img/cookbook-024.png)
 
 We are now using negation in the destination; the meaning of this rule is "permit connections on any protocols from machines on the network 'LAN' to any host except the firewall". We still need a rule described above to permit SSH to the firewall, but the rule permitting access from LAN to anywhere does not open additional access to the firewall anymore. I am going to demonstrate the generated iptables configurations for rules with negation like this later.
 
 Is there any way to make it even more restrictive? It is always a good idea to restrict access to the firewall to just one machine and use that machine to compile the policy and manage the firewall. Let's call this machine a management station "fw-mgmt". Here is more restrictive combination of rules that permits SSH access to the firewall only from fw-mgmt, permits access from LAN to anywhere except the firewall on any protocol and blocks everything else. This combination of rules works the same regardless of the setting of the option "Assume firewall is part of any".
 
-<figure>
-<img src="img/cookbook-025.png" alt="img/cookbook-025.png" />
-<figcaption>Firewall Access from Only One Machine</figcaption>
-</figure>
+![Firewall Access from Only One Machine](img/cookbook-025.png)
 
 Three rules shown above are very good at restricting access to the firewall from all sources except for the dedicated management workstation. The problem with them is that the firewall policy is never this simple and short. As you add more rules, you can add a rule with a side-effect of permitting access to the firewall sooner or later. This is one of the reason many administrators prefer to keep option "Assume firewall is part of any" turned off. In any case, it may be a good idea to build rules for the access to the firewall explicitly and group them together. It would look like something like this:
 
-<figure>
-<img src="img/cookbook-026.png" alt="img/cookbook-026.png" />
-<figcaption>Firewall Access from Only One Machine; All Other Access to the Firewall Explicitly Denied</figcaption>
-</figure>
+![Firewall Access from Only One Machine; All Other Access to the Firewall Explicitly Denied](img/cookbook-026.png)
 
 I do not include the generated iptables code because it should be clear by now how it should look. It is more important that rules in FirewallFabrik GUI look exactly the same regardless of the specific configuration.
 
@@ -435,10 +357,7 @@ Policy rules demonstrated in these examples are good at restricting access to th
 
 To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Firewall Settings" button. This is described in more details in [04 - FirewallFabrik GUI](04%20-%20FirewallFabrik%20GUI.md). In the dialog that appears, locate controls shown on Figure 14.27.
 
-<figure>
-<img src="img/cookbook-027.png" alt="img/cookbook-027.png" />
-<figcaption>Option Enabling an Automatic Rule to Permit SSH Access from a Management Workstation</figcaption>
-</figure>
+![Option Enabling an Automatic Rule to Permit SSH Access from a Management Workstation](img/cookbook-027.png)
 
 Enter the single IP as shown on the screenshot or subnet definition in the input field and click "OK", then recompile the policy. Here is what gets added on the top of the generated iptables script:
 
@@ -467,10 +386,7 @@ Now all the administrator needs to do is enter the IP address of the management 
 
 FirewallFabrik can be used to generate a policy for the firewall running on the server. Here is an example that shows how to set up a policy to permit access to different ports on the server. First of all, we need to create a firewall object to represent our server. The only difference between this case and a usual case where firewall protects one or more networks behind it is that for the server-firewall we only need to create one interface besides the loopback. The following screenshot demonstrates a policy that permits access to the web server running on this machine (both HTTP and HTTPS), as well as FTP and management access via SSH. Rule \#1 allows the server to use DNS for name resolution. The service object used in the "Service" column in rule \#1 is in fact a group that consists of TCP and UDP service objects that represent TCP and UDP variants of the protocol (both use the same destination port 53).
 
-<figure>
-<img src="img/cookbook-028.png" alt="img/cookbook-028.png" />
-<figcaption>Policy for Server</figcaption>
-</figure>
+![Policy for Server](img/cookbook-028.png)
 
 In this example, I turned the option "Assume firewall is part of any" off to simplify generated script. Here is the iptables script created for these rules:
 
@@ -501,17 +417,11 @@ Note how iptables commands generated for rule \#0 went into chain INPUT, whereas
 
 Sometimes the web server is bound to several IP addresses on the same machine. One typical situation when this is needed is when the web server supports multiple sites using the HTTPS protocol. The following firewall configuration demonstrates the case when interface eth0 has two IP addresses (192.0.2.1 and 192.0.2.2):
 
-<figure>
-<img src="img/cookbook-029.png" alt="img/cookbook-029.png" />
-<figcaption>Server Configuration with Two IP Addresses</figcaption>
-</figure>
+![Server Configuration with Two IP Addresses](img/cookbook-029.png)
 
 Suppose the web server should accept HTTPS connections to both IP addresses, while HTTP and FTP are allowed only on address 192.0.2.1. The management access to the server is allowed only via protocol SSH and only from the management workstation "fw-mgmt". The following rules enforce this policy:
 
-<figure>
-<img src="img/cookbook-030.png" alt="img/cookbook-030.png" />
-<figcaption>Policy for Server with Multiple IP Addresses</figcaption>
-</figure>
+![Policy for Server with Multiple IP Addresses](img/cookbook-030.png)
 
 > [!NOTE]
 > The same rules could be used to permit or deny access to different ports on a server located on the network behind a dedicated firewall.
@@ -542,10 +452,7 @@ $IPTABLES -A INPUT -p tcp -m tcp -s 192.0.2.100 -d 192.0.2.1 --dport 22 \
 
 Many services running on the firewall machine need to be able to establish connections to the same machine. X11, RPC, DNS are services like that, to name a few. Blocking these services on the firewall can cause various problems, depending on what protocol is being blocked. If it is DNS, then it may take a lot longer than usual to get to a command-line prompt when logging in to the machine using Telnet or SSH. Once logged in, you won't be able to resolve any host names into addresses. If X11 is blocked, then X server and any graphic environment using it (KDE, Gnome etc.) won't start. In any case though the problem can easily be solved by adding a simple any-any rule and specifying the loopback interface of the firewall to permit all sorts of communications. As shown on Figure 14.31, this rule must specify the loopback interface, have action Accept and direction Both.
 
-<figure>
-<img src="img/cookbook-031.png" alt="img/cookbook-031.png" />
-<figcaption>Rule Permitting Everything on the Loopback Interface</figcaption>
-</figure>
+![Rule Permitting Everything on the Loopback Interface](img/cookbook-031.png)
 
 > [!NOTE]
 > Running X11 and other complex services on the dedicated firewall machine should be discouraged. However, you may want to run a firewall to protect a server, workstation, or laptop where X11, RPC, and other services are perfectly normal.
@@ -563,10 +470,7 @@ Fragmented IP packets, although useful in certain situations, are often used as 
 
 In FirewallFabrik, we provide a way to set flags or options in the IP service object. Two options deal with fragments: one is called "all fragments" and another "short fragments". Figure 14.32 shows how a user-defined object called "fragments" looks with both options turned on. Policy compilers recognize this object and generate correct code for underlying firewall software platform.
 
-<figure>
-<img src="img/cookbook-032.png" alt="img/cookbook-032.png" />
-<figcaption>IP Service Object Representing Fragmented Packets</figcaption>
-</figure>
+![IP Service Object Representing Fragmented Packets](img/cookbook-032.png)
 
 The "ip_fragments" object, which is included in the section "Services/IP" of the Standard objects tree, is set to block "short" fragments only.
 
@@ -574,17 +478,11 @@ Another potentially harmful type of packets is so called "Christmas tree" packet
 
 Some platforms provide a mechanism to turn on and off stateful inspection on individual rules. Turning it off on those rules which do not require it may improve performance of the firewall. Obviously, we do not need stateful inspection while analysing fragmented packets as we do not really want any session to be established, so we can safely use this option on this rule. One example of firewall platform which supports stateful inspection but provides a way to turn it on and off is iptables. In FirewallFabrik, this can be done in the rule options dialog (which is platform-sensitive and shows different options for different platforms). Figure 14.33 shows rule logging options dialog for iptables:
 
-<figure>
-<img src="img/cookbook-033.png" alt="img/cookbook-033.png" />
-<figcaption>Rule Options Dialog for iptables Firewall</figcaption>
-</figure>
+![Rule Options Dialog for iptables Firewall](img/cookbook-033.png)
 
 Here is an example of the policy rule which is intended to block short fragments and TCP "Christmas scan" packets. The icon in the Options column indicates that logging is turned on.
 
-<figure>
-<img src="img/cookbook-034.png" alt="img/cookbook-034.png" />
-<figcaption>A Rule Blocking Short Fragmented Packets and TCP "Christmas Scan" Packets</figcaption>
-</figure>
+![A Rule Blocking Short Fragmented Packets and TCP "Christmas Scan" Packets](img/cookbook-034.png)
 
 This rule applies to all packets crossing the firewall regardless of their origin. This means that it will block such packets originating in your network, too. If by some reason you might want to be able to send this kind of packets out, then specify your external interface in the Interface column.
 
@@ -594,15 +492,9 @@ Suppose we want to block connections to certain ports on the server behind the f
 
 The simplest way to block any protocol is to use a "Deny" action in the policy rule. Since "Deny" causes the firewall to silently drop the packet, the sender never knows what happened to it and keeps waiting for response. To avoid this delay we will set rule Action to "Reject". Normally "Reject" makes the firewall to send ICMP "unreachable" message back to sender, thus indicating that access to requested port is denied by the firewall. This may be insufficient in some cases, because the host trying to connect to our Ident port won't understand this type of ICMP message and will keep trying. In fact, most OSs do not recognize an ICMP "administratively prohibited" message and do keep trying. To make the host on the other side stop its attempts right away, we need to send an TCP RST packet back instead of an ICMP message. This can be done by setting the appropriate parameter for the "Reject" action. To set an Action parameter, change the Action to "Reject," then double-click the Reject icon to get the parameters dialog. (see Figure 14.36). It is also safe to turn stateful inspection off on this rule since we do not want connection to be established and therefore do not need to keep track of it.
 
-<figure>
-<img src="img/cookbook-035.png" alt="img/cookbook-035.png" />
-<figcaption>Using a "Reject" Action with the Rule Option</figcaption>
-</figure>
+![Using a "Reject" Action with the Rule Option](img/cookbook-035.png)
 
-<figure>
-<img src="img/cookbook-036.png" alt="img/cookbook-036.png" />
-<figcaption>Adding a Rule Option to Send an TCP RST Packet</figcaption>
-</figure>
+![Adding a Rule Option to Send an TCP RST Packet](img/cookbook-036.png)
 
 Here is what FirewallFabrik generates for the rule shown above for iptables:
 
@@ -619,10 +511,7 @@ Suppose we want to set up a rule to permit access from the host on DMZ net "mail
 
 There are two solutions to this problem. First, we can use two rules: first will deny access from "mail_relay_1" to "internal_net" and the second will permit access from "mail_relay_1" to "any". Since rules are consulted in the order they are specified in the policy, access to the internal net will be blocked by the first rule since the packet would hit it first. These two rules are represented on Figure 14.37.
 
-<figure>
-<img src="img/cookbook-037.png" alt="img/cookbook-037.png" />
-<figcaption>Using Two Rules to Block Access from the DMZ to the Internal Net and Permit Access to the Internet</figcaption>
-</figure>
+![Using Two Rules to Block Access from the DMZ to the Internal Net and Permit Access to the Internet](img/cookbook-037.png)
 
 Here are the generated iptables rules:
 
@@ -640,10 +529,7 @@ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.2.22 --dport 25 \
 
 Another solution uses negation. We can specify destination in the rule as "not internal_net", thus permitting access to anything but "internal_net". Negation can be enabled and disabled in the pop-up menu which you call by right-clicking the corresponding rule field. This rule depends on the rules below it to block access from "mail_relay1" to the "internal_net". If the policy was built using a general principle of blocking everything and then enabling only types of connections that must be permitted, then it usually has a "catch-all" rule at the bottom that blocks everything. This last rule is going to deny connections from the "mail_relay1" to "internal_net".
 
-<figure>
-<img src="img/cookbook-038.png" alt="img/cookbook-038.png" />
-<figcaption>Using a Rule with Negation to Block Access from the DMZ to the Internal Net and Permit Access to the Internet</figcaption>
-</figure>
+![Using a Rule with Negation to Block Access from the DMZ to the Internal Net and Permit Access to the Internet](img/cookbook-038.png)
 
 FirewallFabrik can use the "!" option to generate a compact iptables command for this rule:
 
@@ -658,10 +544,7 @@ Negation Can Be Used in NAT Rules in a Similar Way
 
 Things get more complicated if we have several networks inside and want to build a rule to permit connects from a server on DMZ to everywhere except for the three internal networks:
 
-<figure>
-<img src="img/cookbook-039.png" alt="img/cookbook-039.png" />
-<figcaption>Using a Rule with Negation to Block Access from DMZ to Internal Net and Permit Access to the Internet</figcaption>
-</figure>
+![Using a Rule with Negation to Block Access from DMZ to Internal Net and Permit Access to the Internet](img/cookbook-039.png)
 
 Simple "!" negation in the generated iptables command won't work, so the program generates the following more complicated script:
 
@@ -695,36 +578,21 @@ Note how the rule should be placed in the table "mangle", chain "POSTROUTING". T
 
 We start with a tag service object configured with tag "1":
 
-<figure>
-<img src="img/cookbook-040.png" alt="img/cookbook-040.png" />
-<figcaption>Simple TagService Object</figcaption>
-</figure>
+![Simple TagService Object](img/cookbook-040.png)
 
 We also need a TCP service object to match source port 80:
 
-<figure>
-<img src="img/cookbook-041.png" alt="img/cookbook-041.png" />
-<figcaption>TCP Service to Match Source Port 80</figcaption>
-</figure>
+![TCP Service to Match Source Port 80](img/cookbook-041.png)
 
 And now the rule:
 
-<figure>
-<img src="img/cookbook-042.png" alt="img/cookbook-042.png" />
-<figcaption>Rule Matching the Tag Service</figcaption>
-</figure>
+![Rule Matching the Tag Service](img/cookbook-042.png)
 
 In order to replicate the rule from the Guide, I leave Source and Destination "any", put outside interface of the firewall in "Interface" column, set direction to "Outbound", set action to "Tag" and make it stateless. The following screenshots demonstrate how this is done:
 
-<figure>
-<img src="img/cookbook-043.png" alt="img/cookbook-043.png" />
-<figcaption>Configuring the Tag Action</figcaption>
-</figure>
+![Configuring the Tag Action](img/cookbook-043.png)
 
-<figure>
-<img src="img/cookbook-044.png" alt="img/cookbook-044.png" />
-<figcaption>Configuring Rule Options to Make the Rule Stateless</figcaption>
-</figure>
+![Configuring Rule Options to Make the Rule Stateless](img/cookbook-044.png)
 
 This configuration makes FirewallFabrik generate an iptables command that is exactly the same as the one given in "A Practical Guide to Linux Traffic Control."
 
@@ -739,52 +607,31 @@ This rule automatically restores mark on the packets that belong to the marked s
 
 We start with a firewall object that has some basic IPv4 policy. First, we need to add IPv6 addresses to its interfaces. Right-click to open the context menu associated with the interface object in the tree and click the item "Add IPv6 address".
 
-<figure>
-<img src="img/cookbook-045.png" alt="img/cookbook-045.png" />
-<figcaption>Adding IPv6 Addresses to an Interface.</figcaption>
-</figure>
+![Adding IPv6 Addresses to an Interface.](img/cookbook-045.png)
 
 Enter the address and netmask length, using the address required by your topology.
 
-<figure>
-<img src="img/cookbook-046.png" alt="img/cookbook-046.png" />
-<figcaption>Entering Address and Netmask.</figcaption>
-</figure>
+![Entering Address and Netmask.](img/cookbook-046.png)
 
 Adding IPv6 to an Internal Interface
 
-<figure>
-<img src="img/cookbook-047.png" alt="img/cookbook-047.png" />
-<figcaption>The Internal Interface.</figcaption>
-</figure>
+![The Internal Interface.](img/cookbook-047.png)
 
 We also need to create a network object to represent our local IPv6 network. Click New Network IPv6 in the new object menu.
 
-<figure>
-<img src="img/cookbook-048.png" alt="img/cookbook-048.png" />
-<figcaption>Creating the IPv6 Network Object.</figcaption>
-</figure>
+![Creating the IPv6 Network Object.](img/cookbook-048.png)
 
 Enter the name and address of this network. We are using the link-local address for illustration purposes.
 
-<figure>
-<img src="img/cookbook-049.png" alt="img/cookbook-049.png" />
-<figcaption>The IPv6 Network Object Name and Address.</figcaption>
-</figure>
+![The IPv6 Network Object Name and Address.](img/cookbook-049.png)
 
 Inspect the regular policy object. To see its parameters, double-click it in the tree to open it in the editor (see screenshot below). This object has a Name, IPv4/IPv6 setting and a Top ruleset checkbox. For iptables firewalls, there is also a pair of radio buttons that indicates whether the policy should affect filter+mangle tables or just mangle table.
 
-<figure>
-<img src="img/cookbook-050.png" alt="img/cookbook-050.png" />
-<figcaption>Policy Parameters.</figcaption>
-</figure>
+![Policy Parameters.](img/cookbook-050.png)
 
 The *IPv4/IPv6* setting tells the compiler how it should interpret addresses of objects that appear in the rules. Possible configurations are "IPv4 only", "IPv6 only" and "Mixed IPv4 and IPv6":
 
-<figure>
-<img src="img/cookbook-051.png" alt="img/cookbook-051.png" />
-<figcaption>IPv4/IPv6 Rule Set Configuration.</figcaption>
-</figure>
+![IPv4/IPv6 Rule Set Configuration.](img/cookbook-051.png)
 
 - **"IPv4 only rule set"** - Only addressable objects with IPv4 addresses will be used in the rules. If an object with an IPv6 address appears in rules, it is ignored. IPv6-only services such as ICMPv6 are also ignored. TCP and UDP services are used since they apply for both IPv4 and IPv6 rules.
 - **"IPv6 only rule set"** - Only objects with IPv6 addresses are used and those with IPv4 addresses are ignored. IPv6-only services such as ICMPv6 are used but IPv4-only services such as ICMP are ignored. TCP and UDP services are used since they apply for both IPv4 and IPv6 rules.
@@ -796,24 +643,15 @@ The compiler treats the *"top rule set"* parameter as follows:
 
 To add new policy, right-click the firewall object in the tree to open the context menu and use the menu item Add Policy Rule Set.
 
-<figure>
-<img src="img/cookbook-052.png" alt="img/cookbook-052.png" />
-<figcaption>Adding a Policy Rule Set.</figcaption>
-</figure>
+![Adding a Policy Rule Set.](img/cookbook-052.png)
 
 Assign a unique name to the new policy object, make it IPv6, and check the top ruleset checkbox, then click Apply.
 
-<figure>
-<img src="img/cookbook-053.png" alt="img/cookbook-053.png" />
-<figcaption>Setting Rule Set Parameters.</figcaption>
-</figure>
+![Setting Rule Set Parameters.](img/cookbook-053.png)
 
 Now click the new policy object in the tree ("Policy_ipv6") and add some rules as usual. Here we have added a rule to permit all on loopback, a rule to permit incoming HTTP and ICMPv6 to the firewall and a rule to permit outgoing sessions from the internal network (object "local ipv6 net") and the firewall itself.
 
-<figure>
-<img src="img/cookbook-054.png" alt="img/cookbook-054.png" />
-<figcaption>Adding Policy Rules.</figcaption>
-</figure>
+![Adding Policy Rules.](img/cookbook-054.png)
 
 Now compile the policy. Note that in the progress output the compiler shows that it first processes IPv4 policy rule set, then compiles IPv6 policy rule set. I still have bunch of rules in the IPv4 policy from the previous examples in this section but the IPv6 policy is small and only has a few rules as shown on the screenshot above.
 
@@ -891,10 +729,7 @@ $IP6TABLES -A Policy_ipv6_3  -j DROP
 
 Let's try to compile the policy rule set configured as mixed IPv4+IPv6. To illustrate, I am using two simple rules.
 
-<figure>
-<img src="img/cookbook-055.png" alt="img/cookbook-055.png" />
-<figcaption>Mixed IPv4/IPv6 Rule Set Parameters.</figcaption>
-</figure>
+![Mixed IPv4/IPv6 Rule Set Parameters.](img/cookbook-055.png)
 
 Rule \#0 permits everything on the loopback. The loopback interface of the firewall has two addresses: 127.0.0.1/8 and ::1/128. Rule \#1 permits HTTP and any ICMPv6 to the firewall. Here is the generated iptables script for these two rules:
 
@@ -949,26 +784,17 @@ In addition, we run the webmin service on the same machine that we use to manage
 
 Here is the firewall object:
 
-<figure>
-<img src="img/cookbook-058.png" alt="img/cookbook-058.png" />
-<figcaption>Firewall Object with Multiple Services.</figcaption>
-</figure>
+![Firewall Object with Multiple Services.](img/cookbook-058.png)
 
 Here are the policy rules:
 
-<figure>
-<img src="img/cookbook-059.png" alt="img/cookbook-059.png" />
-<figcaption>Policy Rules.</figcaption>
-</figure>
+![Policy Rules.](img/cookbook-059.png)
 
 Access to the webmin service is only permitted from the local network, while access to the secure web servers running on virtual addresses fxp0-ip1, fxp0-ip2 and fxp0-ip3 is permitted from anywhere.
 
 The following screenshot illustrates how the TCP service object webmin is created.
 
-<figure>
-<img src="img/cookbook-060.png" alt="img/cookbook-060.png" />
-<figcaption>webmin object.</figcaption>
-</figure>
+![webmin object.](img/cookbook-060.png)
 
 The webmin service uses port 10000, so we put this port number in both the beginning and end of the destination port range. We do not need to do any inspection of the TCP flags and leave all of them unchecked in this object.
 
@@ -978,26 +804,17 @@ It is often convenient to use a firewall as a DHCP and DNS server for the local 
 
 The following combination of rules permits machines on the local net to use the firewall as DHCP server:
 
-<figure>
-<img src="img/cookbook-061.png" alt="img/cookbook-061.png" />
-<figcaption>Rules with DHCP.</figcaption>
-</figure>
+![Rules with DHCP.](img/cookbook-061.png)
 
 The first rule permits two types of DHCP requests: the initial discovery request that is sent to the broadcast address 255.255.255.255 and the renewal request that is sent to the firewall's address. The address range object "broadcast" can be found in the Standard objects tree, under Objects/Address Ranges; this object defines broadcast address 255.255.255.255. The second rule in the pair permits DHCP replies sent by the firewall. The Service object "DHCP" can be found in the "Standard" objects tree, under Services/Groups.
 
 We could make these rules more narrow if we used the internal interface of the firewall in place of the firewall object. Assuming interface eth0 is connected to the internal net, the rules would look like this:
 
-<figure>
-<img src="img/cookbook-062.png" alt="img/cookbook-062.png" />
-<figcaption>Rules with DHCP Using a Firewall Interface.</figcaption>
-</figure>
+![Rules with DHCP Using a Firewall Interface.](img/cookbook-062.png)
 
 To permit the local network to use the firewall as a DNS server, we need to permit DNS queries directed to the firewall, DNS replies sent by the firewall, DNS queries sent by the firewall to servers on the Internet and replies sent back to it. The following pair of rules does just that:
 
-<figure>
-<img src="img/cookbook-063.png" alt="img/cookbook-063.png" />
-<figcaption>Rules with DNS.</figcaption>
-</figure>
+![Rules with DNS.](img/cookbook-063.png)
 
 The service object group object DNS can be found in the "Standard" objects tree, under Services/Groups. This group consists of both the UDP object domain and TCP object domain. Both objects define destination port 53 and ignore source port. Since we do not specify the source port, these objects match both queries sent by the domain name server (source port is 53) and the resolver on the workstations on the local net (source port is \>1024). We need to use objects representing both UDP and TCP protocols because DNS falls back to TCP if the answer for the query is too big and won't fit in the standard UDP datagram. DNS zone transfers also use the TCP protocol.
 
@@ -1005,28 +822,19 @@ The service object group object DNS can be found in the "Standard" objects tree,
 
 This example shows the rule that permits only certain types of outgoing connections. To permit outgoing web access but nothing else, we put the firewall object in Source and the corresponding service object in Service:
 
-<figure>
-<img src="img/cookbook-064.png" alt="img/cookbook-064.png" />
-<figcaption>HTTP-Only.</figcaption>
-</figure>
+![HTTP-Only.](img/cookbook-064.png)
 
 Rule \#1 blocking packets going from any source to any destination also blocks packet originating on the firewall (provided option "Assume firewall is part of any" is on). The combination of these two rules permits only outgoing HTTP connections from the firewall and nothing else.
 
 Although we permit outgoing HTTP connections here, we should probably permit outgoing DNS queries as well. The browser running on this machine would not be able to connect to a web site if it cannot resolve the name via DNS. Here is the corrected policy:
 
-<figure>
-<img src="img/cookbook-065.png" alt="img/cookbook-065.png" />
-<figcaption>HTTP and DNS.</figcaption>
-</figure>
+![HTTP and DNS.](img/cookbook-065.png)
 
 The DNS service object, which includes both the UDP and TCP versions, can be found in the "Standard" tree under Services/Groups.
 
 We may also want to permit protocols used for troubleshooting, such as ping. In order to permit it, we just add ICMP Service object "ping request" to the list of services permitted by rule \#0:
 
-<figure>
-<img src="img/cookbook-066.png" alt="img/cookbook-066.png" />
-<figcaption>HTTP, DNS, and Ping.</figcaption>
-</figure>
+![HTTP, DNS, and Ping.](img/cookbook-066.png)
 
 > [!NOTE]
 > In FirewallFabrik, a firewall object represents any machine that runs firewall software. This is not necessarily a dedicated firewall protecting a local network, but may actually be a server or a laptop. For example, rules permitting HTTP to the dedicated firewall machine may not be very practical because running the web server on it would be risky, but if the firewall object represents a web server with iptables running on it, such rules make perfect sense. The rule permitting outbound HTTP access from the firewall machine explained in this example can be used as a part of the policy protecting a laptop or a workstation.
@@ -1037,10 +845,7 @@ Many firewall platforms support mechanisms by which control can be passed from o
 
 Branching rules can be used to create optimized rule sets or to improve readability or both. Consider the example shown in the following screenshot:
 
-<figure>
-<img src="img/cookbook-067.png" alt="img/cookbook-067.png" />
-<figcaption>A Firewall Object with Two Policy Rule Sets.</figcaption>
-</figure>
+![A Firewall Object with Two Policy Rule Sets.](img/cookbook-067.png)
 
 Firewall fw2 has two rule sets: "Policy" and "rate_limit". I am going to demonstrate how the second rule set can be used to rate limit packets that match different rules in the main rule set "Policy".
 
@@ -1049,17 +854,11 @@ Firewall fw2 has two rule sets: "Policy" and "rate_limit". I am going to demonst
 
 Let's create a rule to match ssh sessions to the firewall and instead of accepting or dropping them right away, pass control to the rule set "rate_limit" that will accept them only if they are not opened too fast. First, create this rule and choose action "Chain", then double-click the action and drag rule set object "rate_limit" into the well in the action dialog as shown in the screenshot:
 
-<figure>
-<img src="img/cookbook-068.png" alt="img/cookbook-068.png" />
-<figcaption>A Rule with Action "Chain".</figcaption>
-</figure>
+![A Rule with Action "Chain".](img/cookbook-068.png)
 
 Now we can configure rate limiting rule in the "rate_limit" rule set. I am going to use the iptables module "hashlimit" to configure rather sophisticated rate-limiting.
 
-<figure>
-<img src="img/cookbook-069.png" alt="img/cookbook-069.png" />
-<figcaption>Rate limiting rule.</figcaption>
-</figure>
+![Rate limiting rule.](img/cookbook-069.png)
 
 Here is the iptables script generated by the program for these rules:
 
@@ -1082,10 +881,7 @@ Those familiar with iptables will notice that FirewallFabrik created user-define
 
 Branching from a single rule is not very interesting. I could just use the same options with the rule \#0 in the top level Policy rule set and get the same result, except instead of the user defined chain "rate_limit" this all would have been done in the same iptables command. However branching to a dedicated rule set becomes more useful if I want to use the same rate limiting to control access to several servers behind the firewall on entirely different protocols. Here is new example:
 
-<figure>
-<img src="img/cookbook-070.png" alt="img/cookbook-070.png" />
-<figcaption>Several rules branching to the same rule set "rate_limit".</figcaption>
-</figure>
+![Several rules branching to the same rule set "rate_limit".](img/cookbook-070.png)
 
 Here is how generated iptables script looks like:
 
@@ -1129,17 +925,11 @@ This policy is rather permissive but it can easily be modified to suite more str
 
 I start with an existing firewall policy. The rules I am going to add to block SSH scans do not depend on other rules in the policy. First, I create a new policy rule set with name "block_ssh". This rule set is not the "top rule set", so generated iptables rules will be placed in the chain "block_ssh". I do not add any rules here. Rules will be added to this chain by an external script.
 
-<figure>
-<img src="img/cookbook-072.png" alt="img/cookbook-072.png" />
-<figcaption>Creating a "block_ssh" Rule Set.</figcaption>
-</figure>
+![Creating a "block_ssh" Rule Set.](img/cookbook-072.png)
 
 Create rule \#0 in the main policy to permit SSH to the firewall from internal network, then another one where the destination the firewall itself, the service is "ssh", the direction "Inbound" and action is "Branch". Open the action in the editor by double-clicking it, then drag the object representing rule set "block_ssh" into the well in the action editor panel. The idea is to first permit SSH to the firewall from the internal net (rule \#0), but for attempts to connect to the firewall on the SSH port from other sources pass control to chain "block_ssh". If that chain does not block the SSH session, the next rule \#2 permits it.
 
-<figure>
-<img src="img/cookbook-073.png" alt="img/cookbook-073.png" />
-<figcaption>Setting the "Chain" Action.</figcaption>
-</figure>
+![Setting the "Chain" Action.](img/cookbook-073.png)
 
 Here is what the iptables commands generated for rules 0-2 look like. Note that although the script creates the chain "block_ssh", it does not put any rules in it.
 
@@ -1218,17 +1008,11 @@ In this example, I only use the basic features of the "recent" module you can fi
 
 To use this module, I create the following custom service object (see Section 5.3.6):
 
-<figure>
-<img src="img/cookbook-074.png" alt="img/cookbook-074.png" />
-<figcaption>Custom Service Object Used to Define Parameters for the iptables Module "recent".</figcaption>
-</figure>
+![Custom Service Object Used to Define Parameters for the iptables Module "recent".](img/cookbook-074.png)
 
 This module matches packets that have source address that is on the list of the module and was seen within the last 600 seconds. Now we can use this module in a rule:
 
-<figure>
-<img src="img/cookbook-075.png" alt="img/cookbook-075.png" />
-<figcaption>Policy Rules Using the Custom Service Object "recent 10 min".</figcaption>
-</figure>
+![Policy Rules Using the Custom Service Object "recent 10 min".](img/cookbook-075.png)
 
 These two rules translate into the following iptables script:
 
@@ -1319,19 +1103,13 @@ Here CCODE1, CCODE2 and so on are ISO 3166 country codes.
 
 We start with creating Address Table object (See Section 5.2.14) with name "blocklist":
 
-<figure>
-<img src="img/cookbook-076.png" alt="img/cookbook-076.png" />
-<figcaption>Address Table Object Using the File "/tmp/iptables-blocklist.txt".</figcaption>
-</figure>
+![Address Table Object Using the File "/tmp/iptables-blocklist.txt".](img/cookbook-076.png)
 
 Since the object is configured as "run-time", the FirewallFabrik policy compiler generates configuration in a such way that addresses will be read at the time when policy is activated on the firewall machine. This can be achieved in different ways, for example the iptables compiler generates a shell script fragment that reads addresses, or if the firewall supports iptables module "ipset", the generated script will use it (Section 5.2.14.1). You do not have to recompile policy if you use "Run time" Address Table object every time the list of IP addresses is updated. If the generated script uses the ipset module, you only need to run the command on the firewall to reload addresses in the tables maintained by ipset in memory. If the generated firewall uses a shell script that reads the file, as is the case with iptables firewall that does not have the module ipset, then the same script needs to be re-run to pick up changes.
 
 Now we can use this object in the policy rules. To follow original HOWTO closely, I am added rules to control packets coming from the addresses in the list to the firewall, as well as packets going from the firewall to addresses in the list. My goal in this recipe was to reproduce rules found in the original HOWTO as close as possible.
 
-<figure>
-<img src="img/cookbook-077.png" alt="img/cookbook-077.png" />
-<figcaption>Policy Rules Using an Address Table Object.</figcaption>
-</figure>
+![Policy Rules Using an Address Table Object.](img/cookbook-077.png)
 
 In the rule \#1 address table object is in source, the firewall object is in destination, the direction is "inbound", and the action is "deny". This rule matches and drops packets coming from the addresses in the list to the firewall. The second rule reverses source and destination and makes direction "outbound" to match packets sent by the firewall to addresses in the list.
 
@@ -1396,9 +1174,7 @@ If the firewall does not support module ipset, you just need to re-run the firew
 
 The examples above were "hiding" multiple internal addresses behind just one external address. We had a whole network (potentially 254 hosts) use the same external address to access the Internet. Sometimes it is necessary to do translation where each internal host has a dedicated corresponding address on the outside. This is often called "1-1" NAT. Here is how this is done in FirewallFabrik when a whole network of the same dimension is available on the outside:
 
-<figure>
-<img src="img/cookbook-079.png" alt="img/cookbook-079.png" />
-</figure>
+![img/cookbook-079.png](img/cookbook-079.png)
 
 Network object *ext net* defines network "192.0.2.0/24", which is the same size as the internal network (this is a hypothetical example). Here is iptables command produced for this rule:
 
@@ -1414,9 +1190,7 @@ NETMAP target maps a whole network of addresses onto another network of addresse
 
 Sometimes a firewall that is doing NAT should skip translation for some pairs of source and destination addresses. One example when this is necessary is when you have DMZ segment that uses private addresses, so you need to use NAT to provide access to servers in DMZ from outside, but no NAT is needed for access to the same servers from internal network. Here is how it looks:
 
-<figure>
-<img src="img/cookbook-080.png" alt="img/cookbook-080.png" />
-</figure>
+![img/cookbook-080.png](img/cookbook-080.png)
 
 Firewall object *fw-1* has 4 interfaces:
 
@@ -1433,9 +1207,7 @@ The internal interface *eth1* also has IPv6 address but it is not used in this e
 
 Here is a NAT rule to permit access to the DMZ network (192.168.2.10) from internal network directly without NAT.
 
-<figure>
-<img src="img/cookbook-081.png" alt="img/cookbook-081.png" />
-</figure>
+![img/cookbook-081.png](img/cookbook-081.png)
 
 Here is the script generated for iptables:
 
@@ -1451,9 +1223,7 @@ $IPTABLES -t nat -A PREROUTING   -s 172.16.22.0/24 -d 192.168.2.0/24 -j ACCEPT
 
 Another useful class of destination translation rule is the one that does redirection. A rule like this makes the firewall send matching packets to itself, usually on a different port. This rule can be used to set up a transparent proxy. To set up a redirection rule in FirewallFabrik, place the firewall object or one of its interfaces in Translated Destination. Here is an example:
 
-<figure>
-<img src="img/cookbook-082.png" alt="img/cookbook-082.png" />
-</figure>
+![img/cookbook-082.png](img/cookbook-082.png)
 
 And here is what is generated for iptables:
 
@@ -1478,17 +1248,11 @@ Fortunately, FirewallFabrik supports this kind of a dual-translation NAT rule. R
 
 The firewall's eth0 interface is internal and is connected to the same subnet the web server belongs to. For any packet headed for any address of the firewall, TCP port 80, the rule \#0 substitutes its source address with the address of interface eth0 and its destination address with the address of the web server. The packet reaches the server because its destination address has been changed. This also makes the server reply back to the firewall, which in turn provides reverse translation before it sends these reply packets back to client hosts.
 
-<figure>
-<img src="img/cookbook-083.png" alt="img/cookbook-083.png" />
-<figcaption>DNAT Back to the Same LAN</figcaption>
-</figure>
+![DNAT Back to the Same LAN](img/cookbook-083.png)
 
 The rule above replaces source address of all packets regardless of their origin. Because of this, the web server sees all connections as if they were coming from the firewall rather than from the real clients. If having real client addresses in the web server log is necessary, the scope of this rule can be narrowed by placing object representing internal network in the Original Src. Since the source address needs to be translated only in the connections coming from the internal net, dual translation rule should only be needed for these connections. Connections coming from the Internet can be translated as usual. A combination of rules that implement this configuration is shown in the figure below. Rule \#0 does dual translation, while rule \#1 does a simple destination address translation. The dual translation rule must be the first in the pair because if it weren't, another one would match connections coming from the internal net and translate destination address without changing the source address.
 
-<figure>
-<img src="img/cookbook-084.png" alt="img/cookbook-084.png" />
-<figcaption>Using Dual Translation Only for Connections Coming from the Internal Network</figcaption>
-</figure>
+![Using Dual Translation Only for Connections Coming from the Internal Network](img/cookbook-084.png)
 
 > [!NOTE]
 > Not all firewall platforms provide the features FirewallFabrik needs to implement dual translation rules. Currently dual translation rules are supported only with iptables.
@@ -1497,14 +1261,9 @@ The rule above replaces source address of all packets regardless of their origin
 
 There are situations where both the source and destination IP addresses of a packet need to be NATted. The diagram below shows just such a scenario where an internal server needs to be accessed remotely from the outside using the Remote Desktop Protocol (RDP).
 
-<figure>
-<img src="img/cookbook-085.png" alt="img/cookbook-085.png" />
-</figure>
+![img/cookbook-085.png](img/cookbook-085.png)
 
-<figure>
-<img src="img/cookbook-086.png" alt="img/cookbook-086.png" />
-<figcaption>Network Configuration</figcaption>
-</figure>
+![Network Configuration](img/cookbook-086.png)
 
 What complicates this scenario is the fact that the default route for the ms-server-1 server directs traffic to rtr-1 instead of fw-2. If a remote user attempts to connect from the Internet to ms-server-1, and there is a destination NAT configured on the fw-2 firewall to forward traffic from a specific port on its outside eth0 interface to port 3389 (RDP) on ms-server-1, the ms-server-1 server will send the RDP response traffic to rtr-1 because of the default route and the remote desktop connection will never be established.
 
@@ -1521,10 +1280,7 @@ Table 14.2. FirewallFabrik Objects
 
 The NAT rule is created using these objects and objects from the Standard Library. After the double NAT rule is configured it should look like the figure below.
 
-<figure>
-<img src="img/cookbook-087.png" alt="img/cookbook-087.png" />
-<figcaption>Configured NAT Rule</figcaption>
-</figure>
+![Configured NAT Rule](img/cookbook-087.png)
 
 > [!NOTE]
 > The Original Src is set to Any, this will match the IP address of any remote PC on the Internet. To connect the ms-server-1 internal server using RDP, the remote PC will connect to fw-2's outside interface on port 4080.
@@ -1540,10 +1296,7 @@ $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp  -d 192.168.1.25 \
 
 After the NAT rule is installed on the firewall the traffic that is destined to port 4080 on the outside interface of fw-2 will be translated as shown in the diagram below.
 
-<figure>
-<img src="img/cookbook-088.png" alt="img/cookbook-088.png" />
-<figcaption>NAT Traffic Translation</figcaption>
-</figure>
+![NAT Traffic Translation](img/cookbook-088.png)
 
 > [!NOTE]
 > The Source ports in the example above are random and generated by the system originating the TCP connection.
@@ -1558,10 +1311,7 @@ This example demonstrates how FirewallFabrik can be used to generate firewall co
 
 In this example I am working with redundant web server configuration where each machine has its own IP address, plus three additional virtual addresses that can be used for virtual hosts. FirewallFabrik generates iptables script for both machines. Configuration of the HA agent should be handled either manually or using specialized configuration system such as pacemaker.
 
-<figure>
-<img src="img/cookbook-096.png" alt="img/cookbook-096.png" />
-<figcaption>HA Configuration Using Two Web Servers</figcaption>
-</figure>
+![HA Configuration Using Two Web Servers](img/cookbook-096.png)
 
 > [!NOTE]
 > IPv6 addresses are not used in this recipe. Some interface objects in the screenshots have ipv6 addresses because firewall objects were "discovered" using snmp which finds IPv6 addresses. You can disregard these addresses while working with examples in this chapter.
@@ -1582,10 +1332,7 @@ If you are interested in more detailed explanation of the "old" style heartbeat 
 
 Once heartbeat daemon is configured and started on both servers, their IP address configuration looks like shown in Figure 14.89 and Figure 14.90. Virtual addresses were highlighted to illustrate that the heartbeat is running in active/active configuration, that is, two virtual addresses are active on one machine and the third is active on another. If either machine dies, all three virtual addresses will move over to the one that is left working.
 
-<figure>
-<img src="img/cookbook-097.png" alt="img/cookbook-097.png" />
-<figcaption>IP Addresses of the Web Server linux-test-1</figcaption>
-</figure>
+![IP Addresses of the Web Server linux-test-1](img/cookbook-097.png)
 
 ``` text
 root@linux-test-1:/etc/ha.d# ip addr ls
@@ -1603,10 +1350,7 @@ root@linux-test-1:/etc/ha.d# ip addr ls
        valid_lft forever preferred_lft forever
 ```
 
-<figure>
-<img src="img/cookbook-098.png" alt="img/cookbook-098.png" />
-<figcaption>IP Addresses of the Web Server linux-test-2</figcaption>
-</figure>
+![IP Addresses of the Web Server linux-test-2](img/cookbook-098.png)
 
 ``` text
 root@linux-test-2:/etc/ha.d# ip addr ls
@@ -1629,113 +1373,68 @@ Here I present an abbreviated explanation of the process of creating firewall an
 
 As usual, to create a firewall object I use main menu "Object/New object" which opens a menu of object types:
 
-<figure>
-<img src="img/cookbook-099.png" alt="img/cookbook-099.png" />
-<figcaption>Creating the First Member Firewall Object</figcaption>
-</figure>
+![Creating the First Member Firewall Object](img/cookbook-099.png)
 
 After I choose the type "Firewall", a wizard used to create new firewall object opens:
 
-<figure>
-<img src="img/cookbook-100.png" alt="img/cookbook-100.png" />
-<figcaption>Choosing the Name, Platform, and Host OS for the Firewall Object</figcaption>
-</figure>
+![Choosing the Name, Platform, and Host OS for the Firewall Object](img/cookbook-100.png)
 
 To make things simpler, I am going to use preconfigured template object "web server" that comes with the package. This object represents a machine with one interface "eth0" and comes with some basic firewall policy that can be useful as a starting point for the firewall configuration for a web server.
 
-<figure>
-<img src="img/cookbook-101.png" alt="img/cookbook-101.png" />
-<figcaption>Choosing a Template Firewall Object</figcaption>
-</figure>
+![Choosing a Template Firewall Object](img/cookbook-101.png)
 
 The template firewall object has IP address that does not match the address chosen for this example. The next page of the wizard allows me to change the address and add two more:
 
-<figure>
-<img src="img/cookbook-102.png" alt="img/cookbook-102.png" />
-<figcaption>Changing the IP Address of the Firewall Object</figcaption>
-</figure>
+![Changing the IP Address of the Firewall Object](img/cookbook-102.png)
 
 Once I am done changing IP addresses and clicking "Finish", the new firewall object is created and is added to the library of objects that was opened at the moment. In this example this library is called "Cookbook2". I "floated" the object tree panel to make the screenshot more compact. You can see the new firewall object in the tree, its interfaces and IP addresses, as well as preconfigured policy rule set on screenshot Figure 14.95:
 
-<figure>
-<img src="img/cookbook-103.png" alt="img/cookbook-103.png" />
-<figcaption>Firewall Object Created from the Template</figcaption>
-</figure>
+![Firewall Object Created from the Template](img/cookbook-103.png)
 
 The member firewall object's interface "eth0" has only one IP address which is its own, in our example 10.3.14.108. Virtual addresses managed by heartbeat will be added to the cluster object later.
 
 Next, I create the second member firewall linux-test-2 with its own ip address:
 
-<figure>
-<img src="img/cookbook-104.png" alt="img/cookbook-104.png" />
-<figcaption>Two Member Firewall Objects</figcaption>
-</figure>
+![Two Member Firewall Objects](img/cookbook-104.png)
 
 Because our firewall objects represent web servers which should never have to forward packets, we should turn ip forwarding off. To do this, double-click the firewall object in the tree to open it in the editor, then click "Host OS settings" button and turn IP forwarding off as shown in Figure 14.97. Turning ip forwarding off in this dialog has several consequences: generated firewall script will actually turn it off on the server and FirewallFabrik policy compiler will not generate any rules in the FORWARD chain.
 
-<figure>
-<img src="img/cookbook-105.png" alt="img/cookbook-105.png" />
-<figcaption>Turn Off IP Forwarding</figcaption>
-</figure>
+![Turn Off IP Forwarding](img/cookbook-105.png)
 
 Now that I have both firewall objects, I can create cluster object that will represent my HA pair. To do this, I select both firewall objects in the tree by clicking on them while holding Ctrl key, then right-click to open context menu and choose the item "New cluster from selected firewalls":
 
-<figure>
-<img src="img/cookbook-106.png" alt="img/cookbook-106.png" />
-<figcaption>Creating a Cluster Object from Two Member Firewalls</figcaption>
-</figure>
+![Creating a Cluster Object from Two Member Firewalls](img/cookbook-106.png)
 
 This opens a wizard that will walk you through the process of creating new cluster object. The wizard was opened using "New cluster from selected firewalls" menu, because of that there are only two firewall objects in the list. If I used main menu "Object/New Object" and then "New Cluster", I would see all firewalls defined in my data file in the list which can be quite long.
 
-<figure>
-<img src="img/cookbook-107.png" alt="img/cookbook-107.png" />
-<figcaption>Choosing the Name for the New Cluster Object</figcaption>
-</figure>
+![Choosing the Name for the New Cluster Object](img/cookbook-107.png)
 
 > [!NOTE]
 > A word about the "Master" column. Not all failover protocols require one of the member firewalls to be designated as "master". Most protocols used on Linux don't, so you can disregard this setting on the first page of the wizard.
 
-<figure>
-<img src="img/cookbook-108.png" alt="img/cookbook-108.png" />
-<figcaption>Choosing Interfaces of the Member Firewalls</figcaption>
-</figure>
+![Choosing Interfaces of the Member Firewalls](img/cookbook-108.png)
 
 This page of the wizard allows me to establish correspondence between interfaces of the member firewalls and create cluster interface objects that will represent them. Cluster interface object should have the same name as corresponding member firewall interfaces. The program tries to guess what interfaces of the member firewalls can be used for the cluster and in a simple configuration like the one I am working with, guesses right.
 
 On the next page of the wizard I can choose failover protocol used by the cluster on each interface (in principle, I can run different protocols on different interfaces) and virtual IP addresses.
 
-<figure>
-<img src="img/cookbook-109.png" alt="img/cookbook-109.png" />
-<figcaption>Choosing IP addresses for the interfaces of the cluster</figcaption>
-</figure>
+![Choosing IP addresses for the interfaces of the cluster](img/cookbook-109.png)
 
 Next page of the wizard is particularly interesting. Here I can choose which member firewall's policy to use for the cluster. This feature is designed mostly for those who convert from the old manually maintained configuration of redundant firewalls to the new cluster object and want to reuse policy rules that used to belong to one of the member firewalls.
 
-<figure>
-<img src="img/cookbook-110.png" alt="img/cookbook-110.png" />
-<figcaption>Cluster will inherit rules of one of the member firewalls</figcaption>
-</figure>
+![Cluster will inherit rules of one of the member firewalls](img/cookbook-110.png)
 
 When new cluster object inherits policy and other rule sets of one of the members, the program copies rules from the designated member to the cluster, then it creates copies of all member firewalls, clears their rule sets and sets the cluster up to use these copies as members. It keeps old member firewall objects in the file, but they are marked as inactive and renamed. These objects are kept as a backup in case you may want to check their configuration or copy rules. New cluster object is shown in Figure 14.103:
 
-<figure>
-<img src="img/cookbook-111.png" alt="img/cookbook-111.png" />
-<figcaption>New cluster object</figcaption>
-</figure>
+![New cluster object](img/cookbook-111.png)
 
 Each cluster interface has child "Failover group" object with the name "firewall:eth0:members" or similar. This is where you configure associated member firewall interfaces. Double click this object in the tree and then click "Manage Members" button in the dialog. Select interfaces of the member firewalls in the panel on the left hand side and click arrow button to add them to the list on the right. When you create cluster object using the wizard, the Failover Group objects are created automatically.
 
-<figure>
-<img src="img/cookbook-112.png" alt="img/cookbook-112.png" />
-<figcaption>Failover group object</figcaption>
-</figure>
+![Failover group object](img/cookbook-112.png)
 
 Failover Group object not only ties interfaces of the member firewalls together, it is also the place where you configure failover protocol and its parameters. I am using heartbeat in this example and failover group object "web_server_cluster:eth0:members" is configured with this protocol as shown in Figure 14.104. To configure parameters of the protocol, click "Edit protocol parameters" button. This opens dialog Figure 14.105:
 
-<figure>
-<img src="img/cookbook-113.png" alt="img/cookbook-113.png" />
-<figcaption>Parameters of heartbeat protocol</figcaption>
-</figure>
+![Parameters of heartbeat protocol](img/cookbook-113.png)
 
 These parameters are used to generate policy rules that permit packets of the protocol.
 
@@ -1750,10 +1449,7 @@ Because all policy and NAT rules are entered in the rule set objects of the clus
 
 Rules that we've got from the template object are shown in Figure 14.106:
 
-<figure>
-<img src="img/cookbook-114.png" alt="img/cookbook-114.png" />
-<figcaption>Overview of the policy rules and compiled output for rule #0</figcaption>
-</figure>
+![Overview of the policy rules and compiled output for rule #0](img/cookbook-114.png)
 
 - **Rule \#0**: anti-spoofing rule. This is the only rule in this simple setup that generates different iptables commands for two member firewalls. FirewallFabrik optimizes other rules using INPUT and OUTPUT chains as appropriate so they look identical on both firewalls. The bottom panel visible in Figure 14.106 shows generated iptables script for the rule \#0. To get that, select the rule in the rule set, click right mouse button and use menu item "Compile", or use keyboard shortcut "X".
 - **Rule \#1**: permits everything on loopback. This rule is configured as "stateless" to simplify generated iptables code. The output looks like this (commands for linux-test-2 firewall look the same):
@@ -1821,24 +1517,15 @@ You should modify the rules to suit your security policy, of course.
 
 Once you are happy with the rules, you can try to compile the whole script and deploy it to both member firewalls. To do this, I am going to use "Compile this" toolbar button located right above the rules as shown in Figure 14.107:
 
-<figure>
-<img src="img/cookbook-115.png" alt="img/cookbook-115.png" />
-<figcaption>"Compile this" toolbar button</figcaption>
-</figure>
+!["Compile this" toolbar button](img/cookbook-115.png)
 
 This opens standard "compile" dialog but it only shows the cluster and its two member firewalls. I actually have many other firewall and cluster objects in my test data file, but since I started compile process using "compile this" button, only those that are relevant to the cluster configuration I am working with at the moment are shown.
 
-<figure>
-<img src="img/cookbook-116.png" alt="img/cookbook-116.png" />
-<figcaption>Compiling cluster configuration</figcaption>
-</figure>
+![Compiling cluster configuration](img/cookbook-116.png)
 
 Clicking "Next" on the first page of the dialog starts the compiler. It processes both member firewalls, one after another, and prints its progress output in the window on the next page of the dialog. Errors and warnings, if any, appear there as well.
 
-<figure>
-<img src="img/cookbook-117.png" alt="img/cookbook-117.png" />
-<figcaption>Compiling process progress window</figcaption>
-</figure>
+![Compiling process progress window](img/cookbook-117.png)
 
 > [!TIP]
 > If compiler generates any errors or warnings, they are highlighted in the output using different colors. Errors appear red and warnings appear blue. The text lines of errors and warnings are clickable. Clicking on one automatically makes the main window switch to the firewall, rule set and rule that caused the message.
@@ -1889,10 +1576,7 @@ Rules with negative numbers were added by the program automatically to permit pa
 
 To fix this, I find interface "lo" of the cluster and failover group object "web_server_cluster:lo:members" located right under it in the tree:
 
-<figure>
-<img src="img/cookbook-118.png" alt="img/cookbook-118.png" />
-<figcaption>Failover group that was added to loopback interface</figcaption>
-</figure>
+![Failover group that was added to loopback interface](img/cookbook-118.png)
 
 Then I double click on the failover group "web_server_cluster:lo:members" in the tree to open it in the editor and switch the type from "heartbeat" to "None". Once this is done, I recompile the firewall again and inspect generated script:
 
@@ -1977,19 +1661,13 @@ More details on the installer and explanation of its options can be found in Cha
 
 To upload generated script to both firewalls and activate it, use toolbar button "Install" that is located next to the button "Compile". It also opens wizard-like dialog that lists the cluster and member firewalls and provides checkboxes that allow you to choose which firewall you want to install on (both by default).
 
-<figure>
-<img src="img/cookbook-119.png" alt="img/cookbook-119.png" />
-<figcaption>Policy installer parameters</figcaption>
-</figure>
+![Policy installer parameters](img/cookbook-119.png)
 
 Once you choose which firewalls you want to install the policy on and click Next, you are presented with policy installer dialog Figure 14.111 where you need to enter authentication credential and some other parameters that control installation process.
 
 Policy installer shows its progress in the dialog that looks like this:
 
-<figure>
-<img src="img/cookbook-120.png" alt="img/cookbook-120.png" />
-<figcaption>Policy installer progress</figcaption>
-</figure>
+![Policy installer progress](img/cookbook-120.png)
 
 Installer copies the script to the firewall using scp, then runs it there. If this is the first time you connect to the firewall using ssh, installer recognizes ssh warning about unknown host key and opens another pop-up dialog where it shows the key and asks administrator to verify it. If there were no errors during policy install, corresponding status is declared "success" in the left hand side column and installer tries to do the same for the next member firewall.
 
@@ -1997,10 +1675,7 @@ Installer copies the script to the firewall using scp, then runs it there. If th
 
 In this example, we work with two Linux machines running VRRPd for failover that form a High Availability (HA) firewall pair, and another machine behind them that will use this pair as a firewall. The set-up is shown in figure Figure 14.119. Machines *linux-test-1* and *linux-test-2* are the firewalls and *linux-test-3* is a workstation behind them. All testing is done on an isolated network using private IP addresses, subnet "outside" the firewalls is 10.3.14.0/255.255.255.0 and subnet "behind" the firewalls is 10.1.1.0/255.255.255.0. In fact, this network was located behind a router and another firewall that provided connection to the Internet. In real configurations, the subnet that is 10.3.14.0 here will probably use publicly routable IP addresses.
 
-<figure>
-<img src="img/cookbook-127.png" alt="img/cookbook-127.png" />
-<figcaption>HA Configuration Using Two Linux Machines Running VRRPd</figcaption>
-</figure>
+![HA Configuration Using Two Linux Machines Running VRRPd](img/cookbook-127.png)
 
 > [!NOTE]
 > IPv6 addresses are not used in this recipe. Some interface objects in the screenshots have IPv6 addresses because firewall objects were "discovered" using SNMP, which finds IPv6 addresses. You can disregard these addresses while working with examples in this chapter.
@@ -2054,45 +1729,30 @@ At this point, we can test our configuration by pinging virtual addresses on bot
 
 Now we can create objects in FirewallFabrik to represent this cluster. We start with two firewall objects configured with IP addresses but no policy or NAT rules. Interfaces and their addresses and netmasks are shown on Figure 14.120:
 
-<figure>
-<img src="img/cookbook-128.png" alt="img/cookbook-128.png" />
-<figcaption>Interfaces and Addresses of the Cluster Members</figcaption>
-</figure>
+![Interfaces and Addresses of the Cluster Members](img/cookbook-128.png)
 
 Now we can create the cluster. Use the usual "New object" menu and choose the object type "Cluster":
 
-<figure>
-<img src="img/cookbook-129.png" alt="img/cookbook-129.png" />
-<figcaption>Creating a New Cluster Object</figcaption>
-</figure>
+![Creating a New Cluster Object](img/cookbook-129.png)
 
 This starts the wizard that helps you create new cluster object. First, choose which firewall objects will be used for the cluster. Our test file is small and has only two firewall objects so the choice is obvious.
 
 In more complex configurations, you may have many firewall objects, not all of which need to be used in cluster configurations.
 
-<figure>
-<img src="img/cookbook-130.png" alt="img/cookbook-130.png" />
-<figcaption>First Page of the New Cluster Wizard</figcaption>
-</figure>
+![First Page of the New Cluster Wizard](img/cookbook-130.png)
 
 > [!NOTE]
 > Since all policy and NAT rules are configured in the cluster object, the same member firewall object can be used with different clusters. This is a great way to try different configurations or build some temporary ones.
 
 On the next page of the wizard we configure the mapping between cluster interfaces and interfaces of the member firewalls. In this simple set-up the mapping is direct: interface "eth0" of the cluster represents interfaces "eth0" of both members and the same goes for "eth1" and loopback. In the case of VRRP, heartbeat and keepalived on Linux, the name of the cluster interface must match the name of the member interfaces; that is, in our case we create cluster interfaces "eth0" and "eth1". The wizard does this automatically: it finds interfaces with the same name in both members and suggests cluster interfaces with the same name, mapped to those interfaces of the member firewalls. Feel free to edit if this guess was incorrect for your set-up. The "+" and "x" buttons in the top corners of the page allow you to add and remove cluster interfaces. See Section 8.1 for more information on the cluster interfaces in FirewallFabrik.
 
-<figure>
-<img src="img/cookbook-131.png" alt="img/cookbook-131.png" />
-<figcaption>Configuring Cluster Interfaces</figcaption>
-</figure>
+![Configuring Cluster Interfaces](img/cookbook-131.png)
 
 The next page of the wizard is used to set up virtual IP addresses and failover protocols for the cluster interfaces. Most protocols require an IP address, which you can add by clicking the "Add address" button.
 
 Choose the failover protocol using the drop-down list. Among other "real" protocols list includes item "None". Use this item if you do not want FirewallFabrik to add automatic policy rules to the generated configuration and plan to do this yourself. Also use this "protocol" to configure cluster loopback interface. In any case cluster interfaces must be configured with corresponding interfaces of the member firewalls to establish the mapping.
 
-<figure>
-<img src="img/cookbook-132.png" alt="img/cookbook-132.png" />
-<figcaption>Configuring Virtual IP Addresses of Cluster Interfaces</figcaption>
-</figure>
+![Configuring Virtual IP Addresses of Cluster Interfaces](img/cookbook-132.png)
 
 > [!NOTE]
 > The address and netmask pair of the cluster interface must be configured exactly the same as done by the cluster software. In the case of VRRPd, the netmask is /32 (see the output of "ip addr show" command above where it is visible that the address added by VRRPd comes with netmask /32). We use the same netmask in the address configuration in cluster interfaces eth0 and eth1. See `managing_ip_addresses_vrrpd` for the explanation of why this netmask is important.
@@ -2102,31 +1762,19 @@ The final page of the wizard allows you to choose to copy policy and NAT rules f
 > [!NOTE]
 > This is important because if a member firewall object has a policy or NAT rule set with the same name as the one in the cluster, then FirewallFabrik will use rules from the rule set of the member, thus overriding all the rules in the cluster's rule set with the same name. This allows you to create complex configurations where majority of the rules are defined and maintained in the cluster object, but a few rules can be created separately in the members to complement rules of the cluster.
 
-<figure>
-<img src="img/cookbook-133.png" alt="img/cookbook-133.png" />
-<figcaption>Final Page of the New Cluster Wizard</figcaption>
-</figure>
+![Final Page of the New Cluster Wizard](img/cookbook-133.png)
 
 The following screenshot demonstrates the newly created cluster object.
 
-<figure>
-<img src="img/cookbook-134.png" alt="img/cookbook-134.png" />
-<figcaption>Cluster Object</figcaption>
-</figure>
+![Cluster Object](img/cookbook-134.png)
 
 Each cluster interface has an additional child object (located underneath it in the tree) with the name *linux-test-1:eth0:members* and *linux-test-1:eth1:members*. These objects are failover groups; this is where the failover protocol and mapping between the cluster and member interfaces is configured. Screenshot Figure 14.127 highlights failover group that belongs to interface eth0:
 
-<figure>
-<img src="img/cookbook-135.png" alt="img/cookbook-135.png" />
-<figcaption>Cluster Failover Group in the Object Tree</figcaption>
-</figure>
+![Cluster Failover Group in the Object Tree](img/cookbook-135.png)
 
 The failover group is configured with the name, protocol, and interfaces of the member firewalls that correspond to the cluster interface this failover group belongs to. The failover group object selected on Figure 14.127 looks like this:
 
-<figure>
-<img src="img/cookbook-136.png" alt="img/cookbook-136.png" />
-<figcaption>Cluster Failover Group Object</figcaption>
-</figure>
+![Cluster Failover Group Object](img/cookbook-136.png)
 
 The failover group for the interface eth1 should look the same, except for using interfaces eth1 of the member firewalls. Use the button *Manage Members* to open a dialog that lets you add and remove member firewall interfaces in the failover group.
 
@@ -2135,31 +1783,19 @@ Another new type of object that appears in the clusters is State Synchronization
 > [!NOTE]
 > The purpose of this new object is to provide configuration parameters to let FirewallFabrik generate policy rules to permit packets of this protocol. At this time FirewallFabrik does not generate configuration or a command line for the conntrackd daemon.
 
-<figure>
-<img src="img/cookbook-137.png" alt="img/cookbook-137.png" />
-<figcaption>State Synchronization Group in the Object Tree</figcaption>
-</figure>
+![State Synchronization Group in the Object Tree](img/cookbook-137.png)
 
 Just like as for failover groups, a state synchronization group object is configured with the name, protocol, and member interfaces:
 
-<figure>
-<img src="img/cookbook-138.png" alt="img/cookbook-138.png" />
-<figcaption>State Synchronization Group Object</figcaption>
-</figure>
+![State Synchronization Group Object](img/cookbook-138.png)
 
 If you do not use *conntrackd* in your cluster set-up and do not need iptables rules to permit its packets in the generated script, then just do not configure state synchronization group object with interfaces of the member firewalls. Such an empty state synchronization group object will look like this when opened in the editor:
 
-<figure>
-<img src="img/cookbook-139.png" alt="img/cookbook-139.png" />
-<figcaption>Empty State Synchronization Group Object</figcaption>
-</figure>
+![Empty State Synchronization Group Object](img/cookbook-139.png)
 
 You can edit parameters of the state synchronization protocol, such as IP address of the multicast group it uses and port number if you click *Edit protocol parameters* button:
 
-<figure>
-<img src="img/cookbook-140.png" alt="img/cookbook-140.png" />
-<figcaption>State Synchronization Protocol Parameters</figcaption>
-</figure>
+![State Synchronization Protocol Parameters](img/cookbook-140.png)
 
 FirewallFabrik uses this information to generate policy rules to permit conntrack packets. See examples of the output generated by the policy compiler below.
 
@@ -2167,17 +1803,11 @@ FirewallFabrik uses this information to generate policy rules to permit conntrac
 
 Now we can move on to building a cluster policy and NAT rules. In the examples below, I am using a feature that lets you quickly compile single rule and see the result in the bottom panel of the GUI immediately. To do this, right-click anywhere in the rule to open context menu and use item "Compile" or highlight the rule and press the "X" key.
 
-<figure>
-<img src="img/cookbook-141.png" alt="img/cookbook-141.png" />
-<figcaption>Compiling a Single Rule</figcaption>
-</figure>
+![Compiling a Single Rule](img/cookbook-141.png)
 
 The following figure shows a minimal policy rule set for the cluster that demonstrates general principles used by FirewallFabrik to generate configurations for the member firewalls.
 
-<figure>
-<img src="img/cookbook-142.png" alt="img/cookbook-142.png" />
-<figcaption>Simple Policy for the Cluster, Also Showing the Generated iptables Commands for the Anti-Spoofing Rule</figcaption>
-</figure>
+![Simple Policy for the Cluster, Also Showing the Generated iptables Commands for the Anti-Spoofing Rule](img/cookbook-142.png)
 
 Let's inspect the policy rules shown in Figure 14.134. All rules are built with the global option "Assume firewall is part of any" turned off in both linux-test-1 and linux-test-2 firewalls.
 
@@ -2247,10 +1877,7 @@ Rules for conntrack are associated with interface eth1 because the state synchro
 
 Now let's look at the NAT rule built for this cluster:
 
-<figure>
-<img src="img/cookbook-143.png" alt="img/cookbook-143.png" />
-<figcaption>NAT Rule for the Cluster</figcaption>
-</figure>
+![NAT Rule for the Cluster](img/cookbook-143.png)
 
 Interface eth0 used in the "Translated Source" element of this rule is the one that belongs to the cluster, not member firewalls. The generated iptables commands use cluster interface that belongs to this interface for the translation. Otherwise this is very common SNAT rule.
 
@@ -2260,10 +1887,7 @@ At the beginning of this chapter I mentioned that it is important to create the 
 
 The generated script can manage IP addresses of interfaces of the firewall. This is optional and is controlled by checkboxes in the "Script" tab of the firewall object "advanced settings" dialog.
 
-<figure>
-<img src="img/cookbook-144.png" alt="img/cookbook-144.png" />
-<figcaption>Options in the "Script" tab of the firewall object dialog</figcaption>
-</figure>
+![Options in the "Script" tab of the firewall object dialog](img/cookbook-144.png)
 
 When the checkbox "Configure interfaces of the firewall machine" is turned on, FirewallFabrik adds the following lines to the generated script:
 
@@ -2286,10 +1910,7 @@ When the script adds and removes ip addresses of the firewall interfaces, it sho
 
 In this example, we work with two Linux machines running heartbeat for failover that form a High Availability (HA) firewall pair, and another machine behind them that will use this pair as a firewall. The set up is shown in figure Figure 14.137. Machines linux-test-1 and linux-test-2 are the firewalls and linux-test-3 is a workstation behind them. All testing is done on an isolated network using private IP addresses, subnet "outside" the firewalls is 10.3.14.0/255.255.255.0 and subnet "behind" the firewalls is 10.1.1.0/255.255.255.0. In fact, this network was located behind a router and another firewall that provided connection to the Internet. In real configurations, subnet that is 10.3.14.0 here will probably use publicly routable IP addresses.
 
-<figure>
-<img src="img/cookbook-145.png" alt="img/cookbook-145.png" />
-<figcaption>HA Configuration Using Two Linux Machines Running a Heartbeat</figcaption>
-</figure>
+![HA Configuration Using Two Linux Machines Running a Heartbeat](img/cookbook-145.png)
 
 > [!NOTE]
 > IPv6 addresses are not used in this recipe. Some interface objects in the screenshots have IPv6 addresses because firewall objects were "discovered" using SNMP which finds IPv6 addresses. You can disregard these addresses while working with examples in this chapter.
@@ -2313,10 +1934,7 @@ Assuming you have followed installation instructions for the heartbeat and have 
 
 Here is the configuration for the test setup I am using:
 
-<figure>
-<img src="img/cookbook-146.png" alt="img/cookbook-146.png" />
-<figcaption>Heartbeat configuration files</figcaption>
-</figure>
+![Heartbeat configuration files](img/cookbook-146.png)
 
 ``` text
 # cat ha.cf:
@@ -2370,40 +1988,25 @@ root@linux-test-2:~# ip -4 addr ls
 
 Now we can create objects in FirewallFabrik to represent this cluster. We start with two firewall objects configured with ip addresses but no policy or NAT rules. Interfaces and their addresses and netmasks are shown on Figure 14.139:
 
-<figure>
-<img src="img/cookbook-147.png" alt="img/cookbook-147.png" />
-<figcaption>Interfaces and Addresses of the Cluster Members</figcaption>
-</figure>
+![Interfaces and Addresses of the Cluster Members](img/cookbook-147.png)
 
 Now create the new cluster. First, select firewalls "linux-test-1" and "linux-test-2" in the tree, then click right mouse button to open context menu and use item "New cluster from selected firewalls" as shown on Figure 14.140.
 
-<figure>
-<img src="img/cookbook-148.png" alt="img/cookbook-148.png" />
-<figcaption>Creating a New Cluster Object from Selected Member Firewalls</figcaption>
-</figure>
+![Creating a New Cluster Object from Selected Member Firewalls](img/cookbook-148.png)
 
 This method opens up the wizard that creates a new cluster object with the list of the firewalls that shows two firewalls that were selected in the tree:
 
-<figure>
-<img src="img/cookbook-149.png" alt="img/cookbook-149.png" />
-<figcaption>Creating a New Cluster Object</figcaption>
-</figure>
+![Creating a New Cluster Object](img/cookbook-149.png)
 
 After you click "Next", you arrive on the next page where you establish correspondence between cluster interfaces and interfaces of the member firewalls. The program finds interfaces of the members with the same name that can be used for a cluster and preconfigures cluster interfaces using this information. In our case, it created cluster interfaces "eth0", "eth1" and "lo" and mapped them to the interfaces with the same name in both members. See Figure 14.142:
 
-<figure>
-<img src="img/cookbook-150.png" alt="img/cookbook-150.png" />
-<figcaption>Arranging Cluster Interfaces</figcaption>
-</figure>
+![Arranging Cluster Interfaces](img/cookbook-150.png)
 
 This example is straightforward because there is a direct correspondence between them. In more complex cases, member firewalls may have different number of interfaces, only some of which should be used for the cluster configuration. The heartbeat does not create a new interface so the cluster interface objects must have the same name as corresponding member interfaces; in our case "eth0", "eth1" and "lo". You can create new cluster interfaces or delete existing ones on this page using the "+" and "x" buttons. See Section 8.1 for more information on the cluster interfaces in FirewallFabrik.
 
 We assign IP addresses and choose failover protocols for the cluster interfaces on the next page of the wizard:
 
-<figure>
-<img src="img/cookbook-151.png" alt="img/cookbook-151.png" />
-<figcaption>Configuring the IP Addresses of the Cluster Interfaces</figcaption>
-</figure>
+![Configuring the IP Addresses of the Cluster Interfaces](img/cookbook-151.png)
 
 Most protocols require an IP address, which you can add by clicking "Add address" button. Choose the failover protocol using drop-down list. Among other "real" protocols list includes item "None". Use this item if you do not want FirewallFabrik to add automatic policy rules to the generated configuration and plan to do this yourself. Also use this "protocol" to configure cluster loopback interface. In any case cluster interfaces must be configured with corresponding interfaces of the member firewalls to establish the mapping.
 
@@ -2415,31 +2018,19 @@ Final page of the wizard allows you to choose to copy policy and NAT rules from 
 > [!NOTE]
 > This is important because if a member firewall object has a policy or NAT rule set with the same name as the one in the cluster, then FirewallFabrik will use rules from the rule set of the member, thus overriding all the rules in the cluster's rule set with the same name. This allows you to create complex configurations where majority of the rules are defined and maintained in the cluster object, but a few rules can be created separately in the members to complement rules of the cluster.
 
-<figure>
-<img src="img/cookbook-152.png" alt="img/cookbook-152.png" />
-<figcaption>Final Page of the New Cluster Wizard</figcaption>
-</figure>
+![Final Page of the New Cluster Wizard](img/cookbook-152.png)
 
 The following screenshot demonstrates a newly created cluster object.
 
-<figure>
-<img src="img/cookbook-153.png" alt="img/cookbook-153.png" />
-<figcaption>Cluster Object</figcaption>
-</figure>
+![Cluster Object](img/cookbook-153.png)
 
 Each cluster interface has an additional child object (located underneath it in the tree) with the name *linux-test-1:eth0:members* and *linux-test-1:eth1:members*. These objects are failover groups, this is where the failover protocol and mapping between the cluster and member interfaces is configured. The screenshot highlights failover group that belongs to interface eth0:
 
-<figure>
-<img src="img/cookbook-154.png" alt="img/cookbook-154.png" />
-<figcaption>Cluster Failover Group in the Object Tree</figcaption>
-</figure>
+![Cluster Failover Group in the Object Tree](img/cookbook-154.png)
 
 The failover group is configured with the name, protocol, and interfaces of the member firewalls that correspond to the cluster interface this failover group belongs to. Failover group object selected on Figure 14.146 looks like this:
 
-<figure>
-<img src="img/cookbook-155.png" alt="img/cookbook-155.png" />
-<figcaption>Cluster Failover Group Object</figcaption>
-</figure>
+![Cluster Failover Group Object](img/cookbook-155.png)
 
 The failover group for the interface eth1 should look the same, except for using interfaces eth1 of the member firewalls. Use button *Manage Members* to open a dialog that lets you add and remove member firewall interfaces in the failover group.
 
@@ -2448,31 +2039,19 @@ Another new type of object that appears in the clusters is the state synchroniza
 > [!NOTE]
 > The purpose of this new object is to provide all necessary configuration parameters to let FirewallFabrik generate policy rules to permit packets of this protocol. At this time FirewallFabrik does not generate configuration or command line for the conntrackd daemon.
 
-<figure>
-<img src="img/cookbook-156.png" alt="img/cookbook-156.png" />
-<figcaption>State Synchronization Group in the Object Tree</figcaption>
-</figure>
+![State Synchronization Group in the Object Tree](img/cookbook-156.png)
 
 Just as for failover group objects, a state synchronization group object is configured with the name, protocol, and member interfaces:
 
-<figure>
-<img src="img/cookbook-157.png" alt="img/cookbook-157.png" />
-<figcaption>State Synchronization Group Object</figcaption>
-</figure>
+![State Synchronization Group Object](img/cookbook-157.png)
 
 If you do not use *conntrackd* in your cluster set-up and do not need iptables rules to permit its packets in the generated script, then just do not configure state synchronization group object with interfaces of the member firewalls. Such empty state synchronization group object will look like this when opened in the editor:
 
-<figure>
-<img src="img/cookbook-158.png" alt="img/cookbook-158.png" />
-<figcaption>Empty State Synchronization Group Object</figcaption>
-</figure>
+![Empty State Synchronization Group Object](img/cookbook-158.png)
 
 You can edit parameters of the state synchronization protocol, such as the IP address of the multicast group it uses and port number if you click the *Edit protocol parameters* button:
 
-<figure>
-<img src="img/cookbook-159.png" alt="img/cookbook-159.png" />
-<figcaption>State Synchronization Protocol Parameters</figcaption>
-</figure>
+![State Synchronization Protocol Parameters](img/cookbook-159.png)
 
 FirewallFabrik uses this information to generate policy rules to permit conntrack packets. See examples of the output generated by the policy compiler below.
 
@@ -2491,17 +2070,11 @@ FirewallFabrik uses this information to generate policy rules to permit conntrac
 
 Now we can move on to building cluster policy and NAT rules. In the examples below I am using a FirewallFabrik feature that lets you quickly compile a single rule and see the result in the bottom panel of the GUI immediately. To do this, right-click anywhere in the rule to open context menu and use the item "Compile" or highlight the rule and hit keyboard key "X".
 
-<figure>
-<img src="img/cookbook-160.png" alt="img/cookbook-160.png" />
-<figcaption>Compiling a Single Rule</figcaption>
-</figure>
+![Compiling a Single Rule](img/cookbook-160.png)
 
 The following figure shows a minimal policy rule set for the cluster that demonstrates general principles used by FirewallFabrik to generate configurations for the member firewalls.
 
-<figure>
-<img src="img/cookbook-161.png" alt="img/cookbook-161.png" />
-<figcaption>Simple Policy for the Cluster, Also Showing Generated iptables Commands for the Anti-Spoofing Rule</figcaption>
-</figure>
+![Simple Policy for the Cluster, Also Showing Generated iptables Commands for the Anti-Spoofing Rule](img/cookbook-161.png)
 
 Let's inspect the policy rules shown in Figure 14.153. All rules are built with the global option "Assume firewall is part of any" turned off in both linux-test-1 and linux-test-2 firewalls.
 
@@ -2591,17 +2164,11 @@ Apparently conntrackd can also work using unicast addresses however I can not pr
 
 To build iptables rules for heartbeat and conntrack working with unicast addresses, open failover group objects associated with cluster interfaces as shown in Figure 14.146 and Figure 14.147, click "Edit protocol parameters" button and turn on checkbox "Use unicast address":
 
-<figure>
-<img src="img/cookbook-162.png" alt="img/cookbook-162.png" />
-<figcaption>Using Heartbeat in Unicast Mode</figcaption>
-</figure>
+![Using Heartbeat in Unicast Mode](img/cookbook-162.png)
 
 To switch to unicast for conntrackd, open the state synchronization group object in the editor and click the "Edit protocol parameters" button, then check the "Use unicast address" checkbox:
 
-<figure>
-<img src="img/cookbook-163.png" alt="img/cookbook-163.png" />
-<figcaption>Using Conntrackd in Unicast Mode</figcaption>
-</figure>
+![Using Conntrackd in Unicast Mode](img/cookbook-163.png)
 
 > [!NOTE]
 > When you switch to unicast, the "Address" input field in the heartbeat and conntrack protocol parameters dialogs becomes disabled.
@@ -2630,10 +2197,7 @@ $IPTABLES -A INPUT -i eth1 -p udp -m udp -s 10.1.1.2 --dport 3780 -j ACCEPT
 
 Now let's look at the NAT rule built for this cluster:
 
-<figure>
-<img src="img/cookbook-164.png" alt="img/cookbook-164.png" />
-<figcaption>NAT Rule for the Cluster</figcaption>
-</figure>
+![NAT Rule for the Cluster](img/cookbook-164.png)
 
 The interface eth0 used in the "Translated Source" element of this rule is the one that belongs to the cluster, not member firewalls. The generated iptables commands use the cluster interface that belongs to this interface for the translation. Otherwise, this is a very straightforward SNAT rule.
 
@@ -2641,10 +2205,7 @@ The interface eth0 used in the "Translated Source" element of this rule is the o
 
 In order to ensure the environment in which generated iptables rules will work really matches assumptions under which these rules were generated, FirewallFabrik can manage the IP addresses of the interfaces of the firewall machine. This feature is optional and is controlled by the checkbox "Configure interfaces of the firewall machine" in the "Script" tab of the firewall object "advanced settings" dialog:
 
-<figure>
-<img src="img/cookbook-165.png" alt="img/cookbook-165.png" />
-<figcaption>Options in the "Script" Tab of the Firewall Object Dialog</figcaption>
-</figure>
+![Options in the "Script" Tab of the Firewall Object Dialog](img/cookbook-165.png)
 
 The reason for this is that if the program generates rules assuming certain addresses belong to the firewall, but in fact they do not, packets will go into chains different from those used in the generated iptables commands and the behavior of the firewall will be wrong.
 
@@ -2652,10 +2213,7 @@ The code that manages the addresses of interfaces should be able to find and ign
 
 In this example, we are working with the same two Linux machines used in the previous example `Section 14.4.3 <linux-cluster-using-heartbeat>` running heartbeat for failover that form a High Availability (HA) firewall pair. In addition to standard Ethernet interfaces the firewalls in the cluster are using an OpenVPN tunnel interface, tun0, to connect to a remote location.
 
-<figure>
-<img src="img/cookbook-171.png" alt="img/cookbook-171.png" />
-<figcaption>Linux Cluster with OpenVPN Tunnel Interfaces.</figcaption>
-</figure>
+![Linux Cluster with OpenVPN Tunnel Interfaces.](img/cookbook-171.png)
 
 > [!NOTE]
 > You must configure OpenVPN tunnels outside of FirewallFabrik. Configuration of OpenVPN tunnels is outside the scope of this cookbook; you can find more information about OpenVPN and information on configuring tunnels at www.openvpn.net.
@@ -2731,10 +2289,7 @@ With this configuration in place, you can now use the tun0 interface as you woul
 
 In this recipe, we are looking at the Linux cluster configuration using heartbeat and VLANs shown in Figure 14.159. Interface *eth1* of both firewalls is configured to run two VLANs, *101* and *102*, connected to the protected subnet and DMZ respectively. The heartbeat runs on all three connections: *eth0*, *eth1.101* and *eth1.102*. This recipe demonstrates use of VLAN interfaces in FirewallFabrik.
 
-<figure>
-<img src="img/cookbook-172.png" alt="img/cookbook-172.png" />
-<figcaption>Linux Cluster Using Heartbeat and VLANs.</figcaption>
-</figure>
+![Linux Cluster Using Heartbeat and VLANs.](img/cookbook-172.png)
 
 > [!NOTE]
 > IPv6 addresses are not used in this recipe. Some interface objects in the screenshots have IPv6 addresses, because firewall objects were "discovered" using SNMP, which finds IPv6 addresses. You can disregard these addresses while working with examples in this chapter.
@@ -2743,36 +2298,21 @@ In this recipe, we are looking at the Linux cluster configuration using heartbea
 
 As in the previous examples, we start with member firewall objects. The difference between this and previous examples is that now we need to configure VLAN interfaces. Let's start with firewall objects with interfaces *eth0* and *eth1*. In fact, these objects are copies of the *linux-test-1* and *linux-test-2* objects used in `Section 14.4.3 <linux-cluster-using-heartbeat>`. New objects have names *linux-test-3* and *linux-test-4*. I am going to add VLAN interfaces and rearrange IP address objects to match the network diagram Figure 14.159.
 
-<figure>
-<img src="img/cookbook-173.png" alt="img/cookbook-173.png" />
-<figcaption>Member Firewall Objects without VLAN Interfaces.</figcaption>
-</figure>
+![Member Firewall Objects without VLAN Interfaces.](img/cookbook-173.png)
 
 First, we need to add VLAN subinterface to eth1. To do this, select eth1 in the tree, right-click, and select "New interface" from the context menu to add the interface object:
 
-<figure>
-<img src="img/cookbook-174.png" alt="img/cookbook-174.png" />
-<figcaption>Using the Context Menu to Add a Subinterface.</figcaption>
-</figure>
+![Using the Context Menu to Add a Subinterface.](img/cookbook-174.png)
 
-<figure>
-<img src="img/cookbook-175.png" alt="img/cookbook-175.png" />
-<figcaption>Subinterface Created with a Default Name.</figcaption>
-</figure>
+![Subinterface Created with a Default Name.](img/cookbook-175.png)
 
 The new interface object is created with the default name "Interface". Double-click it to open it in the editor and rename it to *eth1.101*:
 
-<figure>
-<img src="img/cookbook-176.png" alt="img/cookbook-176.png" />
-<figcaption>VLAN Subinterface in the Editor.</figcaption>
-</figure>
+![VLAN Subinterface in the Editor.](img/cookbook-176.png)
 
 Click the "Advanced interface settings" button to verify its VLAN configuration:
 
-<figure>
-<img src="img/cookbook-177.png" alt="img/cookbook-177.png" />
-<figcaption>VLAN Configuration of the Subinterface.</figcaption>
-</figure>
+![VLAN Configuration of the Subinterface.](img/cookbook-177.png)
 
 Note that interface type has been set to VLAN automatically. This is because FirewallFabrik analyses the name of the subinterface and automatically chooses the correct type in the "Advanced" settings dialog. If the interface name matches a standard VLAN interface name for the chosen host OS, then it automatically is recognized as a VLAN subinterface and the program extracts VLAN ID from its name. For example, supported VLAN interface names on Linux are "eth1.101", "eth1.0101", "vlan101", "vlan0101". On other OSs, naming conventions are often different.
 
@@ -2780,75 +2320,48 @@ Create subinterface *eth1.102* using the same method.
 
 Now you can move IP address objects from the interface *eth1* to subinterface *eth1.101*. Use the context menu items *Cut* and *Paste* to do this. While doing this, I also removed the IPv6 addresses that are not used in this example. You should arrive at the following configuration:
 
-<figure>
-<img src="img/cookbook-178.png" alt="img/cookbook-178.png" />
-<figcaption>IP Addresses Reassigned to the Subinterface.</figcaption>
-</figure>
+![IP Addresses Reassigned to the Subinterface.](img/cookbook-178.png)
 
 We also need to configure IP address for the second VLAN interface *eth1.102* using context menu item "New address".
 
 Finally, we have the firewall object *linux-test-3* configured according to the network diagram Figure 14.159:
 
-<figure>
-<img src="img/cookbook-179.png" alt="img/cookbook-179.png" />
-<figcaption>Adding IP Addresses to VLAN Subinterface.</figcaption>
-</figure>
+![Adding IP Addresses to VLAN Subinterface.](img/cookbook-179.png)
 
 This is not quite all yet though. Interface *eth1* is now a parent of two VLAN subinterfaces *eth1.101* and *eth1.102*. In this configuration, *eth1* does not have an IP address of its own. To reflect this, open it in the editor and check "Unnumbered" interface button as shown below:
 
-<figure>
-<img src="img/cookbook-180.png" alt="img/cookbook-180.png" />
-<figcaption>Interface eth1 Is Unnumbered.</figcaption>
-</figure>
+![Interface eth1 Is Unnumbered.](img/cookbook-180.png)
 
 We need to configure the second firewall object *linux-test-4* as well. You can repeat the process you just used to add subinterfaces and addresses like it was done for *linux-test-3*, or instead of doing this from scratch, you can copy and paste interface objects *eth1.101* and *eth1.102* from *linux-test-3* to interface *eth1* of *linux-test-4* and then just edit addresses. Here is the final configuration of both member firewalls:
 
-<figure>
-<img src="img/cookbook-181.png" alt="img/cookbook-181.png" />
-<figcaption>VLAN Subinterface and Addresses of Both Member Firewalls.</figcaption>
-</figure>
+![VLAN Subinterface and Addresses of Both Member Firewalls.](img/cookbook-181.png)
 
 ### Building a Cluster Object
 
 Now that both member firewall objects are ready, we can create an object for the cluster. Use the "New Object" menu, and select the "Cluster" option to launch the wizard. On the first page of the wizard, choose *linux-test-3* and *linux-test-4* firewalls and enter the name for the cluster object:
 
-<figure>
-<img src="img/cookbook-182.png" alt="img/cookbook-182.png" />
-<figcaption>Creating the Cluster Object.</figcaption>
-</figure>
+![Creating the Cluster Object.](img/cookbook-182.png)
 
 On the next page of the wizard, you can build cluster interfaces. The program finds interfaces of the member firewalls with the same name and preconfigures cluster interface objects. On this page of the wizard, you can add or delete cluster interfaces and establish correspondence between them and interfaces of the member firewalls. The screenshot Figure 14.170 shows this page:
 
-<figure>
-<img src="img/cookbook-183.png" alt="img/cookbook-183.png" />
-<figcaption>Interfaces of the Cluster.</figcaption>
-</figure>
+![Interfaces of the Cluster.](img/cookbook-183.png)
 
 > [!NOTE]
 > You only need to create interfaces of the cluster object that correspond to the interfaces of member firewalls that actually pass traffic and run failover protocols. This means you need *eth1.101*, *eth1.102* cluster interfaces but do not need *eth1*.
 
 Moving on, on the next page of the wizard we configure IP addresses of the cluster interfaces according to our network diagram Figure 14.159:
 
-<figure>
-<img src="img/cookbook-184.png" alt="img/cookbook-184.png" />
-<figcaption>IP Addresses of the Cluster Interfaces.</figcaption>
-</figure>
+![IP Addresses of the Cluster Interfaces.](img/cookbook-184.png)
 
 The next page of the wizard offers an opportunity to use policy and NAT rules of one of the member firewalls for the cluster. However since our member firewalls have no rules, we do not need to use this feature and can just finish creating new cluster object. New cluster object is shown on Figure 14.172:
 
-<figure>
-<img src="img/cookbook-185.png" alt="img/cookbook-185.png" />
-<figcaption>Cluster Object Configuration.</figcaption>
-</figure>
+![Cluster Object Configuration.](img/cookbook-185.png)
 
 ### Managing VLAN Interfaces and Their IP Addresses
 
 FirewallFabrik can generate a shell script to configure VLAN interfaces for both member firewalls. The script is in fact a shell function inside the common firewall configuration script FirewallFabrik creates for each firewall. To activate this feature, open each member firewall object in the editor by double clicking it in the tree and click "Firewall Settings" button, then navigate to the "Script" tab of the dialog. Screenshot Figure 14.173 shows this tab. Turn checkbox "Configure VLAN interfaces" on:
 
-<figure>
-<img src="img/cookbook-186.png" alt="img/cookbook-186.png" />
-<figcaption>Turn VLAN Configuration On.</figcaption>
-</figure>
+![Turn VLAN Configuration On.](img/cookbook-186.png)
 
 If you compile the policy for the cluster (or a standalone firewall) with the "Configure VLAN interfaces" checkbox turned on, the generated script includes the following fragment that is executed before iptables rules are loaded:
 
@@ -3017,19 +2530,13 @@ For this example we will be using FirewallFabrik to configure a Linux host with 
 
 First we need to create an object with the source port set to 80. This corresponds to the HTTP traffic leaving the server which is what we want to limit.
 
-<figure>
-<img src="img/cookbook-187.png" alt="img/cookbook-187.png" />
-<figcaption>HTTP source object.</figcaption>
-</figure>
+![HTTP source object.](img/cookbook-187.png)
 
 Next we need to decide what classification class ID we want to use for this traffic. This is the value that will be configured in FirewallFabrik to have iptables set the `-j CLASSIFY --set-class` target and value. For this example we are going to use class ID 1:10.
 
 To set the class ID for the HTTP traffic originating from the server, we need to add a rule that allows the traffic as shown in Figure 14.176.
 
-<figure>
-<img src="img/cookbook-188.png" alt="img/cookbook-188.png" />
-<figcaption>Classify Rule.</figcaption>
-</figure>
+![Classify Rule.](img/cookbook-188.png)
 
 To create this rule the following was done:
 
@@ -3040,10 +2547,7 @@ To create this rule the following was done:
 
 When we set the Action to Classify, the Editor Panel provides an input box where we can set the class ID value. In this case we used 1:10 as shown in Figure 14.177 below.
 
-<figure>
-<img src="img/cookbook-189.png" alt="img/cookbook-189.png" />
-<figcaption>Classify Rule showing class ID setting in the Editor Panel.</figcaption>
-</figure>
+![Classify Rule showing class ID setting in the Editor Panel.](img/cookbook-189.png)
 
 **Configuring tc to rate limit traffic**
 
@@ -3067,10 +2571,7 @@ tc class add dev eth0 parent 1:1 classid 1:10 htb rate 1kbit ceil ${RATE_HTTP}kb
 
 Your configuration should now look like Figure 14.178.
 
-<figure>
-<img src="img/cookbook-190.png" alt="img/cookbook-190.png" />
-<figcaption>Epilog configuration with tc commands for traffic shaping.</figcaption>
-</figure>
+![Epilog configuration with tc commands for traffic shaping.](img/cookbook-190.png)
 
 While this example showed controlling bandwidth from a single host, you can also apply the same concepts to a network firewall that provides traffic shaping for multiple systems on a network. Useful Tricks -------------
 
@@ -3082,15 +2583,9 @@ Normally the cluster feature is used to create high availability firewall pairs,
 
 For this recipe, we are going to use the web farm example shown below. The example starts with two servers running Linux with iptables should have identical firewall polices. We'll cover creating the firewalls and cluster and assigning rules to it. At the end we'll walk through adding a third server to the cluster.
 
-<figure>
-<img src="img/cookbook-180.png" alt="img/cookbook-180.png" />
-<figcaption>Server Configuration (top).</figcaption>
-</figure>
+![Server Configuration (top).](img/cookbook-180.png)
 
-<figure>
-<img src="img/cookbook-181.png" alt="img/cookbook-181.png" />
-<figcaption>Server Configuration (bottom).</figcaption>
-</figure>
+![Server Configuration (bottom).](img/cookbook-181.png)
 
 On these servers we want to implement the following basic firewall rules.
 
@@ -3105,17 +2600,11 @@ To create a cluster, we first need to create the firewall objects that will be m
 
 After you have created the firewall object, it should look like this in the object tree:
 
-<figure>
-<img src="img/cookbook-182.png" alt="img/cookbook-182.png" />
-<figcaption>web-01 firewall object.</figcaption>
-</figure>
+![web-01 firewall object.](img/cookbook-182.png)
 
 By default, FirewallFabrik sets the firewall object to route (forward) IP packets. Since this is a server firewall we should disable IP forwarding on the host. Do this by double-clicking the firewall object and then click on Host OS Settings in the Editor Panel at the bottom. Change the setting for IPv4 Packet Forwarding to Off.
 
-<figure>
-<img src="img/cookbook-183.png" alt="img/cookbook-183.png" />
-<figcaption>Disable IP Forwarding.</figcaption>
-</figure>
+![Disable IP Forwarding.](img/cookbook-183.png)
 
 To create a second firewall object for web-02 you can use the Duplicate feature in FirewallFabrik.
 
@@ -3127,28 +2616,19 @@ To create a second firewall object for web-02 you can use the Duplicate feature 
 
 To create a new cluster right-click the Clusters folder in the object tree and select New Cluster. This will launch the New Cluster wizard. Name the cluster (for example, web-servers), and select both web-01 and web-02 to be members of the cluster. Since we are not using failover it does not matter which firewall is set to Master.
 
-<figure>
-<img src="img/cookbook-185.png" alt="img/cookbook-185.png" />
-<figcaption>Creating a New Cluster.</figcaption>
-</figure>
+![Creating a New Cluster.](img/cookbook-185.png)
 
 Click *Next \>*
 
 Since both servers use eth0 as the outside interface leave the interface mapping as is. If you have servers with different interface names on your server, for example if one server uses eth0 and the other server uses eth1, you can set the mapping here.
 
-<figure>
-<img src="img/cookbook-187.png" alt="img/cookbook-187.png" />
-<figcaption>Cluster Interface Mapping.</figcaption>
-</figure>
+![Cluster Interface Mapping.](img/cookbook-187.png)
 
 Click *Next \>*
 
 To make the cluster interface easy to identify, update the label associated with interfaces eth0 and lo. Since we are not running our servers as a high availability cluster with failover set the Failover protocol to None.
 
-<figure>
-<img src="img/cookbook-188.png" alt="img/cookbook-188.png" />
-<figcaption>Set Cluster Interface Configuration.</figcaption>
-</figure>
+![Set Cluster Interface Configuration.](img/cookbook-188.png)
 
 > [!NOTE]
 > Make sure to update *both* the eth0 and lo interfaces.
@@ -3157,19 +2637,13 @@ Click *Next \>*
 
 We want to create new rules for our cluster, so set the source of the cluster rules to be "do not use any, I will create new policy and NAT rules".
 
-<figure>
-<img src="img/cookbook-190.png" alt="img/cookbook-190.png" />
-<figcaption>Set the Source of the Cluster Rules.</figcaption>
-</figure>
+![Set the Source of the Cluster Rules.](img/cookbook-190.png)
 
 Click *Finish*
 
 Once you are done you should see a new cluster object in the tree that looks like this:
 
-<figure>
-<img src="img/cookbook-191.png" alt="img/cookbook-191.png" />
-<figcaption>New Cluster Object web-servers.</figcaption>
-</figure>
+![New Cluster Object web-servers.](img/cookbook-191.png)
 
 **Step 3 - Define Cluster Policy Rules**
 
@@ -3182,10 +2656,7 @@ After you create the cluster, the policy object is automatically opened in the R
 
 After you configure these rules your policy should look like this:
 
-<figure>
-<img src="img/cookbook-192.png" alt="img/cookbook-192.png" />
-<figcaption>Set the source of the cluster rules.</figcaption>
-</figure>
+![Set the source of the cluster rules.](img/cookbook-192.png)
 
 > [!NOTE]
 > Make sure to use the objects from the cluster when creating the rules. These objects will automatically get translated to the correct object for the individual cluster members.
@@ -3220,10 +2691,7 @@ To add a new server to the cluster, you first need to create the firewall object
 
 The next step is to add the new web-03 firewall object to the cluster.
 
-<figure>
-<img src="img/cookbook-193.png" alt="img/cookbook-193.png" />
-<figcaption>Add the New web-03 Server to the web-servers Cluster.</figcaption>
-</figure>
+![Add the New web-03 Server to the web-servers Cluster.](img/cookbook-193.png)
 
 Repeat this process for the "lo" loopback interface. Remember the steps are:
 
@@ -3237,36 +2705,21 @@ Repeat this process for the "lo" loopback interface. Remember the steps are:
 
 To deploy the firewall policy on web-03 you need to compile and install the cluster policy. Since the cluster policy hasn't changed we don't need to re-install the policy on web-01 or web-02 so we unselect them from the install list.
 
-<figure>
-<img src="img/cookbook-195.png" alt="img/cookbook-195.png" />
-<figcaption>Compile the Cluster Policy and Install on web-03.</figcaption>
-</figure>
+![Compile the Cluster Policy and Install on web-03.](img/cookbook-195.png)
 
 You can add and remove servers to the cluster as needed. Here's our configuration now that we have three servers in the cluster all running the same firewall rules.
 
-<figure>
-<img src="img/cookbook-196.png" alt="img/cookbook-196.png" />
-<figcaption>Cluster with Three Firewalls Sharing the Same Firewall Policy (top).</figcaption>
-</figure>
+![Cluster with Three Firewalls Sharing the Same Firewall Policy (top).](img/cookbook-196.png)
 
-<figure>
-<img src="img/cookbook-197.png" alt="img/cookbook-197.png" />
-<figcaption>Cluster with Three Firewalls Sharing the Same Firewall Policy (bottom).</figcaption>
-</figure>
+![Cluster with Three Firewalls Sharing the Same Firewall Policy (bottom).](img/cookbook-197.png)
 
 ## Creating Local Firewall Rules for a Cluster Member
 
 In the previous recipe, we showed how to use the FirewallFabrik cluster object to create a single firewall policy that gets installed on multiple servers. When we finished the cluster was configured with three servers as shown below.
 
-<figure>
-<img src="img/cookbook-198.png" alt="img/cookbook-198.png" />
-<figcaption>Cluster with Three Firewalls Sharing the Same Firewall Policy with One Firewall Also Using Local Rules (top).</figcaption>
-</figure>
+![Cluster with Three Firewalls Sharing the Same Firewall Policy with One Firewall Also Using Local Rules (top).](img/cookbook-198.png)
 
-<figure>
-<img src="img/cookbook-199.png" alt="img/cookbook-199.png" />
-<figcaption>Cluster with Three Firewalls Sharing the Same Firewall Policy with One Firewall Also Using Local Rules (bottom).</figcaption>
-</figure>
+![Cluster with Three Firewalls Sharing the Same Firewall Policy with One Firewall Also Using Local Rules (bottom).](img/cookbook-199.png)
 
 In this recipe we will show how to create a set of local rules on one of the cluster members. Local rules are evaluated *in addition* to the rules that are configured for the cluster.
 
@@ -3282,26 +2735,17 @@ Since we only want this policy applied to *one* of the servers in the cluster, n
 
 In this example we name the new policy object "local_rules". The policy name can be any name you choose except that it cannot be the same name as the policy that contains the main firewall rules for the cluster which, by default, is 'Policy'.
 
-<figure>
-<img src="img/cookbook-200.png" alt="img/cookbook-200.png" />
-<figcaption>New Policy in Cluster Object web-servers.</figcaption>
-</figure>
+![New Policy in Cluster Object web-servers.](img/cookbook-200.png)
 
 After you are done, you should see the new policy named local_rules under the web-servers cluster object.
 
-<figure>
-<img src="img/cookbook-202.png" alt="img/cookbook-202.png" />
-<figcaption>Cluster Object web-servers with New Policy local_rules.</figcaption>
-</figure>
+![Cluster Object web-servers with New Policy local_rules.](img/cookbook-202.png)
 
 **Step 2 - Create a New Policy in the web-03 Server Object**
 
 Next we need to create a policy object on the web-03 firewall *using exactly the same name* as we used for the policy object on the web-servers cluster.
 
-<figure>
-<img src="img/cookbook-203.png" alt="img/cookbook-203.png" />
-<figcaption>New Policy in Firewall Object web-03.</figcaption>
-</figure>
+![New Policy in Firewall Object web-03.](img/cookbook-203.png)
 
 > [!NOTE]
 > You must use the same name for the policy on both the cluster object and the firewall object.
@@ -3314,10 +2758,7 @@ Remember, the rule we want to add only to web-03 server is:
 
 When creating local rules use the interface objects of the firewall that the local rule is being configured on. For our example we use the interface object of the web-03 firewall for the destination and interface fields. After you configure the rule in the local_rules policy on web-03 the policy should look like this:
 
-<figure>
-<img src="img/cookbook-205.png" alt="img/cookbook-205.png" />
-<figcaption>New Rule in Policy local_rules on Firewall Object web-03.</figcaption>
-</figure>
+![New Rule in Policy local_rules on Firewall Object web-03.](img/cookbook-205.png)
 
 > [!NOTE]
 > Make sure to configure this rule in the local_rules policy object on the web-03 firewall object. You can see which firewall policy you are editing at the top of the Rules panel.
@@ -3326,20 +2767,14 @@ When creating local rules use the interface objects of the firewall that the loc
 
 For the rules in the policy 'local_rules' to be applied we need to setup a branching rule in the main policy called 'Policy' to jump to the local_rules policy. You can define the branch rule anywhere in the policy, in this example we are going to make the branch the first rule of the policy. This will ensure that the custom rules defined on web-03 will be run first, then the rest of the rules for the cluster will be applied.
 
-<figure>
-<img src="img/cookbook-206.png" alt="img/cookbook-206.png" />
-<figcaption>New Branching Rule in the Main Policy on the Cluster Object web-servers.</figcaption>
-</figure>
+![New Branching Rule in the Main Policy on the Cluster Object web-servers.](img/cookbook-206.png)
 
 > [!NOTE]
 > Make sure you set the branch target to be the 'local_rules' object from the cluster object and not one of the member firewalls.
 
 After you have configured the branching rule in the main policy your rules should look like this.
 
-<figure>
-<img src="img/cookbook-208.png" alt="img/cookbook-208.png" />
-<figcaption>Cluster Policy with Branch Rule on Top.</figcaption>
-</figure>
+![Cluster Policy with Branch Rule on Top.](img/cookbook-208.png)
 
 > [!NOTE]
 > Not all firewall platforms support branching, you can find out more about branching in `Section 7.2.8 <section-7-2-8>`.
@@ -3377,15 +2812,9 @@ $IPTABLES -A FORWARD -j local_rules
 
 This results in the firewall web-03 having the following rules matching applied.
 
-<figure>
-<img src="img/cookbook-209.png" alt="img/cookbook-209.png" />
-<figcaption>Firewall Rules Sequence for Traffic Destined to web-03 (top).</figcaption>
-</figure>
+![Firewall Rules Sequence for Traffic Destined to web-03 (top).](img/cookbook-209.png)
 
-<figure>
-<img src="img/cookbook-210.png" alt="img/cookbook-210.png" />
-<figcaption>Firewall Rules Sequence for Traffic Destined to web-03 (bottom).</figcaption>
-</figure>
+![Firewall Rules Sequence for Traffic Destined to web-03 (bottom).](img/cookbook-210.png)
 
 > [!NOTE]
 > All the other members of the cluster will have an empty rule chain created for local_rules. This means incoming traffic will go through this empty chain first before being passed back to the main rules defined in Policy.

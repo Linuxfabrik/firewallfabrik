@@ -22,10 +22,7 @@ In this section, we show how modifying a configlet lets you tailor your generate
 
 First, generate a basic firewall policy using a template. Then, tell the firewall to always accept SSH connections from the management server at 192.168.1.100 by entering that address in the "Always permit ssh access from the management workstation with this address" field in Firewall Settings.
 
-<figure>
-<img src="img/configlet-firewall-settings-dialog.png" alt="img/configlet-firewall-settings-dialog.png" />
-<figcaption>Firewall Settings Dialog (iptables).</figcaption>
-</figure>
+![Firewall Settings Dialog (iptables).](img/configlet-firewall-settings-dialog.png)
 
 Save and compile the firewall. The generated `.fw` file contains:
 

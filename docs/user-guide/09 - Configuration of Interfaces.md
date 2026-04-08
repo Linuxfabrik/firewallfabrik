@@ -49,10 +49,7 @@ The generated script can manage both IPv4 and IPv6 addresses.
 
 To illustrate how IP address management works, consider the following example. Interface *eth0* has two IPv4 and two IPv6 addresses:
 
-<figure>
-<img src="img/iface-example-ipv4-ipv6-config.png" alt="img/iface-example-ipv4-ipv6-config.png" />
-<figcaption>Example configuration with several IPv4 and IPv6 addresses</figcaption>
-</figure>
+![Example configuration with several IPv4 and IPv6 addresses](img/iface-example-ipv4-ipv6-config.png)
 
 Initial configuration of the addresses on the machine looks like this:
 
@@ -100,10 +97,7 @@ root@linux-test-1:~#
 
 IP address management works both ways: if the administrator deletes an address in the FirewallFabrik GUI, the script will remove it on the machine. To illustrate this, I am going to remove the second IPv4 and IPv6 addresses from the same interface *eth0* object and then recompile the script and run it again on the machine:
 
-<figure>
-<img src="img/iface-config-after-address-removal.png" alt="img/iface-config-after-address-removal.png" />
-<figcaption>Configuration after additional IPv4 and IPv6 addresses have been removed</figcaption>
-</figure>
+![Configuration after additional IPv4 and IPv6 addresses have been removed](img/iface-config-after-address-removal.png)
 
 ``` text
 root@linux-test-1:~# /etc/linux-test-1-s.fw test_interfaces
@@ -130,26 +124,17 @@ By default, FirewallFabrik attempts to determine an interface's function based o
 
 If a user tries to create an interface with a name that doesn't match the expected patterns FirewallFabrik will generate an error. For example, attempting to create the same *eth2.102* interface from our previous example as an interface object directly under a firewall object FirewallFabrik will generate the error shown below.
 
-<figure>
-<img src="img/iface-error-incorrect-vlan-name.png" alt="img/iface-error-incorrect-vlan-name.png" />
-<figcaption>Error message displayed when a VLAN interface name does not match the parent interface name.</figcaption>
-</figure>
+![Error message displayed when a VLAN interface name does not match the parent interface name.](img/iface-error-incorrect-vlan-name.png)
 
 If instead the *eth2.102* interface were to be created as a child object under the *eth2* interface then FirewallFabrik would not generate the error since the VLAN interface eth2.102 should be a sub-interface of eth2. Note that in this case FirewallFabrik will automatically set the interface type to VLAN and will set the VLAN ID to 102.
 
 You can view and edit the interface type and VLAN ID by clicking the "Advanced Interface Settings ..." button in the editor panel of the interface. An example of the advanced settings for eth2.102, when created as a child interface of eth2, is shown below.
 
-<figure>
-<img src="img/iface-advanced-settings-vlan.png" alt="img/iface-advanced-settings-vlan.png" />
-<figcaption>Advanced settings for eth2.102 interface showing Device Type set to VLAN and VLAN ID set to 102.</figcaption>
-</figure>
+![Advanced settings for eth2.102 interface showing Device Type set to VLAN and VLAN ID set to 102.](img/iface-advanced-settings-vlan.png)
 
 Sometimes you may want to override the default behavior where FirewallFabrik expects interface names to follow a specific naming convention. To disable this feature, open the FirewallFabrik preferences window, click the Objects tab and click the Interface sub-tab in the lower window. Uncheck the checkbox labeled "Verify interface names and autoconfigure their parameters using known name patterns".
 
-<figure>
-<img src="img/iface-disable-name-checking.png" alt="img/iface-disable-name-checking.png" />
-<figcaption>Disabling automatic interface name checking in the FirewallFabrik preferences dialog. Select the "Objects" tab, then the "Interface" sub-tab, and uncheck the verification checkbox.</figcaption>
-</figure>
+![Disabling automatic interface name checking in the FirewallFabrik preferences dialog. Select the "Objects" tab, then the "Interface" sub-tab, and uncheck the verification checkbox.](img/iface-disable-name-checking.png)
 
 In this mode, FirewallFabrik will not auto-populate any fields, even if the interface name matches an expected pattern like *eth2.102*. All interface parameters, such as interface type and VLAN ID, must be configured manually.
 
@@ -174,41 +159,26 @@ VLAN interfaces can have different names on Linux, depending on the naming conve
 
 To illustrate VLAN management on Linux, consider the firewall object "linux-test-vlan-1" shown below.
 
-<figure>
-<img src="img/iface-vlan-config-linux.png" alt="img/iface-vlan-config-linux.png" />
-<figcaption>Example configuration of the firewall object "linux-test-vlan-1" showing VLAN interfaces added to eth1.</figcaption>
-</figure>
+![Example configuration of the firewall object "linux-test-vlan-1" showing VLAN interfaces added to eth1.](img/iface-vlan-config-linux.png)
 
 The interface *eth1* is configured as "unnumbered" interface, we are going to add VLAN subinterfaces to it. To do this, select this interface in the tree and right-click to open the right-click menu:
 
-<figure>
-<img src="img/iface-adding-vlan-subinterface.png" alt="img/iface-adding-vlan-subinterface.png" />
-<figcaption>Right-click context menu on the eth1 interface showing the "New Interface" option to add a VLAN subinterface.</figcaption>
-</figure>
+![Right-click context menu on the eth1 interface showing the "New Interface" option to add a VLAN subinterface.](img/iface-adding-vlan-subinterface.png)
 
 The new subinterface is created with the generic name "Interface". To make it a VLAN interface we should rename it:
 
-<figure>
-<img src="img/iface-vlan-subinterface-eth1-100.png" alt="img/iface-vlan-subinterface-eth1-100.png" />
-<figcaption>The new VLAN subinterface renamed to eth1.100, shown in the object tree and editor panel.</figcaption>
-</figure>
+![The new VLAN subinterface renamed to eth1.100, shown in the object tree and editor panel.](img/iface-vlan-subinterface-eth1-100.png)
 
 The name of the interface is eth1.100, which implies VLAN ID 100. FirewallFabrik is aware of the naming schemes of VLAN interfaces on Linux and automatically recognizes this name and sets interface type to "VLAN" and its VLAN ID to "100". To inspect and change its VLAN ID, click the "Advanced Interface Settings" button:
 
-<figure>
-<img src="img/iface-vlan-parameters-dialog.png" alt="img/iface-vlan-parameters-dialog.png" />
-<figcaption>The VLAN interface parameters dialog showing Device Type set to VLAN and VLAN ID set to 100.</figcaption>
-</figure>
+![The VLAN interface parameters dialog showing Device Type set to VLAN and VLAN ID set to 100.](img/iface-vlan-parameters-dialog.png)
 
 > [!NOTE]
 > The program verifies the VLAN ID configured in the VLAN interface parameters dialog and compares it to the interface name to make sure they match. It does not let you set a VLAN ID that does not match interface name because vconfig would not let you do it on the Linux machine. The program also verifies subinterface name to make sure it matches one of the supported naming schemes. It allows names such as "eth1.100", "eth1.0100", "vlan100", "vlan0100" but would not allow any other name for the VLAN subinterface.
 
 I am going to add a second VLAN interface eth1.101 and add IPv4 addresses to both VLAN interfaces. The final configuration is shown below.
 
-<figure>
-<img src="img/iface-two-vlans-with-addresses.png" alt="img/iface-two-vlans-with-addresses.png" />
-<figcaption>Final configuration showing two VLAN subinterfaces eth1.100 and eth1.101 under eth1, each with an IPv4 address assigned.</figcaption>
-</figure>
+![Final configuration showing two VLAN subinterfaces eth1.100 and eth1.101 under eth1, each with an IPv4 address assigned.](img/iface-two-vlans-with-addresses.png)
 
 The generated script includes the following shell function that sets up all VLANs and IP addresses:
 
@@ -303,10 +273,7 @@ The script detected that both VLAN interfaces already exist and have correct IP 
 
 Now I am going to change the VLAN ID on one of the interfaces and demonstrate how the script executes the change on the firewall. First, I rename interface eth1.100 to eth1.102:
 
-<figure>
-<img src="img/iface-vlan-renamed-eth1-102.png" alt="img/iface-vlan-renamed-eth1-102.png" />
-<figcaption>Configuration after renaming VLAN interface eth1.100 to eth1.102, with the IP address reassigned.</figcaption>
-</figure>
+![Configuration after renaming VLAN interface eth1.100 to eth1.102, with the IP address reassigned.](img/iface-vlan-renamed-eth1-102.png)
 
 Then I recompile the firewall, copy the generated script to the firewall and run it:
 
@@ -324,10 +291,7 @@ The script added the new VLAN interface eth1.102 first, then removed eth1.100 an
 
 Now lets rename both VLAN interfaces to use different naming scheme:
 
-<figure>
-<img src="img/iface-vlans-renamed-naming-scheme.png" alt="img/iface-vlans-renamed-naming-scheme.png" />
-<figcaption>Configuration after renaming VLAN interfaces to use VLAN_PLUS_VID_NO_PAD naming scheme (vlan0101 and vlan0102).</figcaption>
-</figure>
+![Configuration after renaming VLAN interfaces to use VLAN_PLUS_VID_NO_PAD naming scheme (vlan0101 and vlan0102).](img/iface-vlans-renamed-naming-scheme.png)
 
 > [!NOTE]
 > There is a limitation in the implementation of the incremental VLAN management at this time. The generated script cannot correctly rename VLAN interfaces, (that is, change the name) without changing the VLAN ID. There are two workarounds: (1) you can remove VLAN interfaces manually and then run the script to let it add new ones, or (2) you can run the script twice. On the first run, it will issue errors because it can't add the VLAN interfaces with different name but the same VLAN ID, but it can delete old VLAN interfaces. On the second run it adds the VLAN interfaces with new names.
@@ -400,10 +364,7 @@ Bridge management for Linux firewalls was introduced in FirewallFabrik V4.0. The
 
 To enable FirewallFabrik bridge interface management, click the "Configure bridge interfaces" option in the Firewall Settings of the firewall that will include bridge interfaces.
 
-<figure>
-<img src="img/iface-bridge-enable-settings.png" alt="img/iface-bridge-enable-settings.png" />
-<figcaption>Example configuration; interfaces eth1 and eth2 will become bridge ports. Select the "Script" tab and enable script management of bridge interfaces.</figcaption>
-</figure>
+![Example configuration; interfaces eth1 and eth2 will become bridge ports. Select the "Script" tab and enable script management of bridge interfaces.](img/iface-bridge-enable-settings.png)
 
 With this setting enabled FirewallFabrik the generated firewall script will manage bridge interfaces on the firewall incrementally. This includes removing any bridge interfaces that are defined on the firewall system but are not defined in the FirewallFabrik configuration.
 
@@ -422,41 +383,26 @@ The script uses utility *brctl* to configure the bridge. It checks if the utilit
 
 To illustrate bridge management on Linux, consider the firewall object "linux-test-bridge-1" shown below:
 
-<figure>
-<img src="img/iface-bridge-config-linux.png" alt="img/iface-bridge-config-linux.png" />
-<figcaption>Example configuration; interfaces eth1 and eth2 will become bridge ports.</figcaption>
-</figure>
+![Example configuration; interfaces eth1 and eth2 will become bridge ports.](img/iface-bridge-config-linux.png)
 
 To build the bridge, I need to create bridge interface *"br0"*. This interface is just regular child object of the firewall object in the tree, to create it, select the firewall and right-click to open the context menu, then choose the item "New Interface". The new interface is created with generic name "Interface", rename it to *"br0"*. At this point we have interfaces br0, eth1, and eth2 but the latter two are not configured as bridge ports yet. Interface br0 is not a bridge yet, either.
 
-<figure>
-<img src="img/iface-bridge-interface-br0.png" alt="img/iface-bridge-interface-br0.png" />
-<figcaption>Bridge interface br0.</figcaption>
-</figure>
+![Bridge interface br0.](img/iface-bridge-interface-br0.png)
 
 To make br0 a bridge, open it in the editor by double-clicking it in the tree and then click the "Advanced Interface Settings" button. This opens a dialog where you can change the interface type and configure some parameters. Set the type to "bridge" and turn STP on if you need it.
 
-<figure>
-<img src="img/iface-bridge-type-settings.png" alt="img/iface-bridge-type-settings.png" />
-<figcaption>Configuring bridge interface type.</figcaption>
-</figure>
+![Configuring bridge interface type.](img/iface-bridge-type-settings.png)
 
 To make eth1 and eth2 bridge ports, use Cut and Paste operations on the objects in the tree. Paste both interface objects into the br0 interface so that they move to the position right under it in the tree as shown below. Notice how the program automatically recognized them as bridge ports and showed this in the second column of the tree.
 
-<figure>
-<img src="img/iface-bridge-ports-configured.png" alt="img/iface-bridge-ports-configured.png" />
-<figcaption>Configuring bridge ports.</figcaption>
-</figure>
+![Configuring bridge ports.](img/iface-bridge-ports-configured.png)
 
 > [!NOTE]
 > I have started with a firewall object that already had interface objects for eth1 and eth2, but this is not necessary. You can add bridge ports by creating new interface objects under the bridge interface using the right-click context menu and selecting "New Interface".
 
 Notice that bridge ports cannot have IP addresses of their own and corresponding items in the context menu are disabled:
 
-<figure>
-<img src="img/iface-bridge-port-disabled-functions.png" alt="img/iface-bridge-port-disabled-functions.png" />
-<figcaption>Functions disabled for bridge port subinterfaces.</figcaption>
-</figure>
+![Functions disabled for bridge port subinterfaces.](img/iface-bridge-port-disabled-functions.png)
 
 To complete interface configuration, we need to add an IP address to interface br0 if it needs one. I am going to add address 10.1.1.1/24 to test with. Then I can compile and run the script on the firewall.
 
@@ -511,10 +457,7 @@ br0             8000.000c291edcb4       no              eth1
 
 Now I am going to add another bridge port eth3 to br0, recompile the script, and run it on the firewall. First, add eth3 bridge port in the GUI:
 
-<figure>
-<img src="img/iface-bridge-add-third-port.png" alt="img/iface-bridge-add-third-port.png" />
-<figcaption>Adding a third bridge port.</figcaption>
-</figure>
+![Adding a third bridge port.](img/iface-bridge-add-third-port.png)
 
 ``` text
 root@linux-test-1:~# /etc/linux-test-bridge-1.fw interfaces
@@ -554,24 +497,15 @@ As expected, the script returned the bridge configuration to the state it was in
 
 FirewallFabrik can generate configuration for the bridging firewall using VLAN interfaces as bridge ports; however, there is a twist to this. Recall from [VLAN Interfaces](#vlan-interfaces) that VLANs are created in FirewallFabrik as subinterfaces under their respective parent interface. That is, the VLAN interface *"eth1.100"* is an interface object that sits in the tree right under interface *"eth1"*:
 
-<figure>
-<img src="img/iface-bridge-vlan-subinterface.png" alt="img/iface-bridge-vlan-subinterface.png" />
-<figcaption>VLAN subinterface eth1.100.</figcaption>
-</figure>
+![VLAN subinterface eth1.100.](img/iface-bridge-vlan-subinterface.png)
 
 As we have seen in [Bridge Interface Management on Linux](#bridge-interface-management-on-linux) and [Enabling Bridge Interface Management](#enabling-bridge-interface-management), bridge ports are also represented by interface objects located in the tree under corresponding bridge interface, as shown below:
 
-<figure>
-<img src="img/iface-bridge-ports-child-objects.png" alt="img/iface-bridge-ports-child-objects.png" />
-<figcaption>Bridge ports are child objects of the bridge interface.</figcaption>
-</figure>
+![Bridge ports are child objects of the bridge interface.](img/iface-bridge-ports-child-objects.png)
 
 If we want *eth1.100* to work as a bridge port, it must be created twice, once as a child of interface *eth1* and second time as a child of interface *br0*. The first copy represents it as a VLAN subinterface while the second one represents a bridge port.
 
-<figure>
-<img src="img/iface-bridge-vlan-as-bridge-ports.png" alt="img/iface-bridge-vlan-as-bridge-ports.png" />
-<figcaption>eth1.100 and eth1.101: VLAN interfaces acting as bridge ports.</figcaption>
-</figure>
+![eth1.100 and eth1.101: VLAN interfaces acting as bridge ports.](img/iface-bridge-vlan-as-bridge-ports.png)
 
 ## Bonding Interfaces
 
@@ -592,24 +526,15 @@ If a bonding interface exists on the machine but not in FirewallFabrik configura
 
 To configure bonding interface, we start with an interface object with name *"bond0"*. Create this interface as usual, open it in the editor by double clicking it in the tree, rename it, and then and click "Advanced Interface Settings" button. Set the type to "Bonding" in the drop-down list and set the other parameters:
 
-<figure>
-<img src="img/iface-bonding-settings.png" alt="img/iface-bonding-settings.png" />
-<figcaption>Bonding interface settings.</figcaption>
-</figure>
+![Bonding interface settings.](img/iface-bonding-settings.png)
 
 To add regular Ethernet interfaces as slaves to a bonding interface, copy and paste (or create) them so they become child objects of a bonding interface. A bonding interface needs an IP address as any other regular interface. Final configuration looks like shown below:
 
-<figure>
-<img src="img/iface-bonding-two-slaves.png" alt="img/iface-bonding-two-slaves.png" />
-<figcaption>Bonding interface bond0 with two slaves.</figcaption>
-</figure>
+![Bonding interface bond0 with two slaves.](img/iface-bonding-two-slaves.png)
 
 If you only want to be able to use the bonding interface in rules, then this is sufficient configuration. You can go ahead and add rules and place object "bond0" in "Source", "Destination" or "Interface" column of policy rules. If you want FirewallFabrik to generate a script that creates and configures this interface, then you need to enable support for this by turning the checkbox "Configure bonding interfaces" on in the "Script" tab of the firewall object settings dialog:
 
-<figure>
-<img src="img/iface-bonding-enable-settings.png" alt="img/iface-bonding-enable-settings.png" />
-<figcaption>Configuration of bonding interfaces should be enabled in firewall settings dialog.</figcaption>
-</figure>
+![Configuration of bonding interfaces should be enabled in firewall settings dialog.](img/iface-bonding-enable-settings.png)
 
 Now compile the firewall object, copy the generated script to the firewall machine and run it there. If the script is started using the command-line parameter "interfaces", it only configures interfaces and IP addresses but does not load iptables rules. Here is how it looks:
 

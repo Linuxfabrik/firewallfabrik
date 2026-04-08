@@ -4,28 +4,19 @@
 
 There are several ways to compile and install a policy, summarized here. The actual results are described in more detail in later sections of this chapter.
 
-<figure>
-<img src="img/compile-main-toolbar-icons.png" alt="img/compile-main-toolbar-icons.png" />
-<figcaption>Icons in the main toolbar.</figcaption>
-</figure>
+![Icons in the main toolbar.](img/compile-main-toolbar-icons.png)
 
 The hammer icon in the topmost toolbar (on the left) lets you compile, but not install, one or more of the firewalls or clusters in the object file. The arrow-and-wall icon lets you both compile and install firewalls.
 
 - The main menu items Rules \> Compile and Rules \> Install menu selections also let you compile, or compile and install, one or more firewalls or clusters.
 
-<figure>
-<img src="img/compile-policy-toolbar-icons.png" alt="img/compile-policy-toolbar-icons.png" />
-<figcaption>Icons in the toolbar specific to the currently opened firewall.</figcaption>
-</figure>
+![Icons in the toolbar specific to the currently opened firewall.](img/compile-policy-toolbar-icons.png)
 
 The hammer icon in the policy (on the right) toolbar lets you compile, but not install, the firewall of the current policy. The arrow-and-wall icon in the policy toolbar lets you both compile and install it. *Note that this compiles the firewall of the shown policy. Double-clicking a different firewall to bring up that firewall's object editor does not change the policy shown, and does not change which firewall will be compiled.*
 
 - The Compile and Install menu selections in the right-click context menu let you do a compile or compile-and-install on the firewall that you selected. You can ctrl-click or shift-click to select more than one firewall or cluster.
 
-<figure>
-<img src="img/compile-context-menu-options.png" alt="img/compile-context-menu-options.png" />
-<figcaption>Compile and install options in the context menu that appears when you right-click on a firewall or cluster object in the tree.</figcaption>
-</figure>
+![Compile and install options in the context menu that appears when you right-click on a firewall or cluster object in the tree.](img/compile-context-menu-options.png)
 
 - To compile a single rule, select it in the rule set, right-click it and select Compile. Or, select a rule, then press X on the keyboard. This only compiles the single rule and shows the result. This function does not produce a firewall script.
 
@@ -33,15 +24,9 @@ The hammer icon in the policy (on the right) toolbar lets you compile, but not i
 
 While you're developing your firewall policy, you can compile individual rules to confirm that they do what you intend. To compile an individual rule, right-click anywhere in the rule to open context menu, then select Compile. Or, highlight the rule and press "X".
 
-<figure>
-<img src="img/compile-single-rule.png" alt="img/compile-single-rule.png" />
-<figcaption>Compiling a single rule.</figcaption>
-</figure>
+![Compiling a single rule.](img/compile-single-rule.png)
 
-<figure>
-<img src="img/compile-generated-iptables-gui.png" alt="img/compile-generated-iptables-gui.png" />
-<figcaption>Generated iptables script for the rule #0 is shown in the GUI.</figcaption>
-</figure>
+![Generated iptables script for the rule #0 is shown in the GUI.](img/compile-generated-iptables-gui.png)
 
 ## Compiling firewall policies
 
@@ -49,10 +34,7 @@ Once you have a policy created, you need to compile it into a script that can ru
 
 Let's walk through compiling an iptables firewall. Below is the access policy of the firewall.
 
-<figure>
-<img src="img/compile-policy-example.png" alt="img/compile-policy-example.png" />
-<figcaption>A policy to compile.</figcaption>
-</figure>
+![A policy to compile.](img/compile-policy-example.png)
 
 To compile it use main menu item Rules \> Compile.
 
@@ -62,10 +44,7 @@ To compile several firewalls, use Shift-left click or Ctrl-left click to select 
 
 Different ways to compile one or several firewall objects were described earlier in [Different ways to compile](#different-ways-to-compile).
 
-<figure>
-<img src="img/compile-select-firewalls.png" alt="img/compile-select-firewalls.png" />
-<figcaption>Select your firewall.</figcaption>
-</figure>
+![Select your firewall.](img/compile-select-firewalls.png)
 
 Check the Compile checkbox next to the firewall you want to compile, and uncheck all the others.
 
@@ -75,17 +54,11 @@ In addition, you can see which firewalls and clusters have been modified since t
 
 As you can see in this image, firewalls that need compilation are in bold and are checked by default in the Compile dialog. Firewalls that have been compiled since their last change are in regular font and are unchecked by default.
 
-<figure>
-<img src="img/compile-uncompiled-firewalls-bold.png" alt="img/compile-uncompiled-firewalls-bold.png" />
-<figcaption>Uncompiled firewalls are in bold.</figcaption>
-</figure>
+![Uncompiled firewalls are in bold.](img/compile-uncompiled-firewalls-bold.png)
 
 To see the last time a firewall or cluster was compiled, double-click it to bring up its object editor.
 
-<figure>
-<img src="img/compile-object-editor-timestamps.png" alt="img/compile-object-editor-timestamps.png" />
-<figcaption>Object Editor Dialog with last modify and compile times.</figcaption>
-</figure>
+![Object Editor Dialog with last modify and compile times.](img/compile-object-editor-timestamps.png)
 
 Since we are just doing a compile, the only checkbox is the Compile checkbox. If we were doing a compile and install in the same run, you would also see an Install checkbox.
 
@@ -93,10 +66,7 @@ Click Next.
 
 A dialog appears that tracks the status of the compile. In this case, we have an error:
 
-<figure>
-<img src="img/compile-status-messages-error.png" alt="img/compile-status-messages-error.png" />
-<figcaption>Compile status messages.</figcaption>
-</figure>
+![Compile status messages.](img/compile-status-messages-error.png)
 
 Errors appear in red, and warnings appear in blue. In this case, it turns out that one of our rules shadows one of our other rules. For other types of problems, see [15 - Troubleshooting](15%20-%20Troubleshooting.md).
 
@@ -104,10 +74,7 @@ Errors and warnings are clickable. Clicking an error takes you to the portion of
 
 We fix the problem, then compile again.
 
-<figure>
-<img src="img/compile-successful.png" alt="img/compile-successful.png" />
-<figcaption>Successful compile.</figcaption>
-</figure>
+![Successful compile.](img/compile-successful.png)
 
 To see the created script, look in the same directory as your object file (`.fwf` or `.fwb`). If you have set an output file name in the firewall settings dialog (default: `fwf.sh`), that name is used. Otherwise, the file will be called `<firewallName>.fw`. (If you changed your default directory in the Preferences, then the generated script will be there instead.)
 
@@ -121,28 +88,19 @@ Clusters are represented by objects of type "Cluster" located in the object grou
 
 In the compile dialog list there are two columns of checkboxes: "Compile" and "Install". When you compile a cluster, the "Compile" checkboxes appear next to the cluster objects only while "Install" checkboxes appear next to the member firewall objects only. This is because to compile, the policy compiler needs to read the cluster object to get all the information about the cluster configuration, including the list of member firewalls. However, when generated configuration is ready and needs to be installed on member firewalls, the program needs to communicate with each member firewall separately. So the "Install" checkboxes are next to the member firewalls in the list, letting you turn installation on and off on each member separately.
 
-<figure>
-<img src="img/compile-cluster-two-members.png" alt="img/compile-cluster-two-members.png" />
-<figcaption>Compiling cluster object with two members.</figcaption>
-</figure>
+![Compiling cluster object with two members.](img/compile-cluster-two-members.png)
 
 ### Mixed Object Files
 
 The data file used for this example has a mix of cluster objects with corresponding member firewalls and standalone firewall objects that do not belong to any cluster. The latter get both "Compile" and "Install" checkboxes as visible in the figure below.
 
-<figure>
-<img src="img/compile-all-cluster-firewall-objects.png" alt="img/compile-all-cluster-firewall-objects.png" />
-<figcaption>Compiling all cluster and firewall objects.</figcaption>
-</figure>
+![Compiling all cluster and firewall objects.](img/compile-all-cluster-firewall-objects.png)
 
 ### Compile a Single Firewall within a Cluster
 
 You can try to compile a firewall object that is a member of a cluster by selecting it in the tree and using the context menu. When you do this, the program treats the object as standalone firewall rather than a cluster member and does not generate any cluster-related part of the configuration, such as policy rules for the failover protocols, the configuration script for failover interfaces, and so on. This is because a firewall object can actually be a member of several clusters, which is useful to test different cluster configurations or for transitions. In some cases a firewall object by itself may be so generic that it can describe member firewalls in different locations (if potential address collisions are not an issue or all addresses are dynamic). For these reasons, the program does not try to guess whether given a firewall object might be a cluster member and which cluster it is a member of and falls back to treating it as a simple standalone firewall object. However, the program shows a warning to indicate this as shown below. Here we selected firewall object "linux-test-1" in the tree and then used context menu to initiate compilation, forgetting that it is a member of two different cluster configurations:
 
-<figure>
-<img src="img/compile-member-as-standalone-warning.png" alt="img/compile-member-as-standalone-warning.png" />
-<figcaption>Compiling a member firewall as standalone firewall objects.</figcaption>
-</figure>
+![Compiling a member firewall as standalone firewall objects.](img/compile-member-as-standalone-warning.png)
 
 ## Installing a Policy onto a Firewall
 
@@ -162,17 +120,11 @@ Create directory */etc/* on your firewall.
 
 Now let's install the script using FirewallFabrik's "install" functionality. Open your object file, if it isn't open already, then select Rules \> Install.
 
-<figure>
-<img src="img/install-rules-install-menu.png" alt="img/install-rules-install-menu.png" />
-<figcaption>Select Rules/Install.</figcaption>
-</figure>
+![Select Rules/Install.](img/install-rules-install-menu.png)
 
 The following dialog appears:
 
-<figure>
-<img src="img/install-select-compile-and-install.png" alt="img/install-select-compile-and-install.png" />
-<figcaption>Select Compile and Install.</figcaption>
-</figure>
+![Select Compile and Install.](img/install-select-compile-and-install.png)
 
 As you can see, a list of all firewalls in the object file appear. Not all Compile checkboxes are checked by default. This is because FirewallFabrik keeps track of the last time the firewall was compiled and also keeps track of any changes since then. If the firewall has not changed since the last compile, that firewall is unchecked by default because no compile is needed.
 
@@ -180,10 +132,7 @@ You can see which firewalls have been modified since their last compile by looki
 
 Make sure the Install checkbox is checked next to the firewall you want to install (and the Compile checkbox if you've made changes since the last compile), then click Next. The following dialog appears:
 
-<figure>
-<img src="img/install-ssh-parameters.png" alt="img/install-ssh-parameters.png" />
-<figcaption>Firewall SSH and install parameters.</figcaption>
-</figure>
+![Firewall SSH and install parameters.](img/install-ssh-parameters.png)
 
 Enter the root username and password for the device, and specify the IP address of the management interface of the device.
 
@@ -191,10 +140,7 @@ Then click OK.
 
 If everything goes well, the following dialog appears and reports success. (If not, it will report failure. The log will tell you what went wrong. If the error is unclear, see [15 - Troubleshooting](15%20-%20Troubleshooting.md).)
 
-<figure>
-<img src="img/install-status-success.png" alt="img/install-status-success.png" />
-<figcaption>Installation status.</figcaption>
-</figure>
+![Installation status.](img/install-status-success.png)
 
 Log into the firewall to see the policy in place. For iptables, run `sudo iptables -L`.
 
@@ -202,26 +148,17 @@ Log into the firewall to see the policy in place. For iptables, run `sudo iptabl
 
 Installer does not use the name of the firewall when it connects; it always uses the firewall's IP address. Installer starts by scanning interfaces of the firewall object looking for one that is marked as "Management interface" in the interface object dialog. Installer uses the address of this interface to connect. The Management interface checkbox looks this:
 
-<figure>
-<img src="img/install-management-interface-checkbox.png" alt="img/install-management-interface-checkbox.png" />
-<figcaption>Management interface checkbox in the interface editor.</figcaption>
-</figure>
+![Management interface checkbox in the interface editor.](img/install-management-interface-checkbox.png)
 
 If your firewall has multiple addresses and you want to use the one that is not assigned to its interface in the FirewallFabrik object, then you can overwrite the address using the entry field in the *"Installer"* tab of the "Advanced" firewall object settings dialog, like this:
 
-<figure>
-<img src="img/install-advanced-settings-address.png" alt="img/install-advanced-settings-address.png" />
-<figcaption>Advanced settings dialog with alternative address for the installer.</figcaption>
-</figure>
+![Advanced settings dialog with alternative address for the installer.](img/install-advanced-settings-address.png)
 
 More about other input fields in this dialog below.
 
 Finally, you can overwrite the address on a one-time basis just for a particular install session using the entry field in the installer options dialog. This is the same dialog where you enter your password:
 
-<figure>
-<img src="img/install-options-alternative-address.png" alt="img/install-options-alternative-address.png" />
-<figcaption>Install options dialog with alternative address field.</figcaption>
-</figure>
+![Install options dialog with alternative address field.](img/install-options-alternative-address.png)
 
 ### Configuring Installer to Use Regular User Account to Manage the Firewall
 
@@ -265,10 +202,7 @@ You may use either password or public key authentication; the installer will wor
 
 - In the installer tab of the firewall settings dialog of the firewall object, put in your user name (here it is *"fwadmin"*):
 
-<figure>
-<img src="img/install-advanced-settings-username.png" alt="img/install-advanced-settings-username.png" />
-<figcaption>Installer tab of the firewall settings dialog with user name configured.</figcaption>
-</figure>
+![Installer tab of the firewall settings dialog with user name configured.](img/install-advanced-settings-username.png)
 
 - If you need to use an alternative name or IP address to communicate with the firewall, put it in the corresponding field in the same dialog page.
 - Make sure the entry field directory on the firewall where script should be installed is set to */etc*. FirewallFabrik is not going to create this directory, so you need to create it manually before you install the firewall policy (see above).
@@ -293,19 +227,13 @@ You may use either password or public key authentication; the installer will wor
 
 One of the typical errors that even experienced administrators make sometimes is to deploy a firewall that blocks ssh access to the firewall from the management workstation. You need your workstation to be able to communicate with the firewall in order to be able to make changes to the policy, so you always need to add a rule to permit ssh from the management workstation. FirewallFabrik can simplify this and generate this rule automatically if you put an IP address of your workstation in the entry field on the first page of firewall settings dialog. Here is the screenshot that illustrates this setting for an iptables firewall. The management workstation has an IP address 192.168.1.100
 
-<figure>
-<img src="img/install-advanced-settings-ssh-access.png" alt="img/install-advanced-settings-ssh-access.png" />
-<figcaption>Advanced settings with automatic SSH access rule from management workstation.</figcaption>
-</figure>
+![Advanced settings with automatic SSH access rule from management workstation.](img/install-advanced-settings-ssh-access.png)
 
 ### How to configure the installer to use an alternate ssh port number
 
 If the ssh daemon on your firewall is listening on an alternate port, then you need to configure the built-in installer so that it will run *scp* and *ssh* clients with command line parameters that would make them connect to this port. This is done in the installer tab of the firewall object advanced settings dialog as shown on the following screenshot (here we set the port to "2222"):
 
-<figure>
-<img src="img/install-advanced-settings-alternate-port.png" alt="img/install-advanced-settings-alternate-port.png" />
-<figcaption>Installer tab with additional command line parameters for ssh and scp to use alternate port 2222.</figcaption>
-</figure>
+![Installer tab with additional command line parameters for ssh and scp to use alternate port 2222.](img/install-advanced-settings-alternate-port.png)
 
 > [!NOTE]
 > The command line option that specifies the port number is different for *ssh* and *scp*. It is lowercase *-p* for *ssh* and uppercase *-P* for *scp*.
@@ -316,10 +244,7 @@ You can use the same input fields in this dialog to add any other command line p
 
 You can use the same entry fields in this dialog to provide other additional command line parameters for *ssh* and *scp*, for example to use keys from a different identity file. Here is how it looks:
 
-<figure>
-<img src="img/install-ssh-identity-parameters.png" alt="img/install-ssh-identity-parameters.png" />
-<figcaption>Configuring ssh and scp to use alternate port and alternate identity file.</figcaption>
-</figure>
+![Configuring ssh and scp to use alternate port and alternate identity file.](img/install-ssh-identity-parameters.png)
 
 Here we configure *ssh* and *scp* to use an alternate port and an alternate identity file `~/.ssh/fwadmin_identity`. The command line parameter for the port is different for *ssh* and *scp*, but the parameter for the identity file is the same (*-i*) for both utilities.
 
@@ -373,17 +298,11 @@ Another common source of problems with *scp* is described in SSH FAQs. When you 
 
 Now that all preparations are complete, we can move on and actually try to install a newly generated firewall policy. Select the firewall object in the object tree in FirewallFabrik, right-click and use menu item Install.
 
-<figure>
-<img src="img/install-select-compile-install-wizard.png" alt="img/install-select-compile-install-wizard.png" />
-<figcaption>Select firewalls to compile and install.</figcaption>
-</figure>
+![Select firewalls to compile and install.](img/install-select-compile-install-wizard.png)
 
 On this page of the wizard the program shows the list of all firewall objects with checkboxes that let you choose which ones should be recompiled and installed. Time stamps in the three columns show the time when each firewall object was modified, compiled and installed the last time. You can turn checkboxes on and off to make the program recompile and then install any number of firewall objects. It will first run the compiler for all of those marked for compile, then it will run the installer for all those marked for installation. Installer will ask for the user name and password, as well as other parameters, before running the install process for each of the firewalls. We will return to this page of the wizard later when we discuss batch install. After you click Next on this page, the program re-compiles the policy and opens the installer dialog for the first firewall marked for installation.
 
-<figure>
-<img src="img/install-options-dialog.png" alt="img/install-options-dialog.png" />
-<figcaption>Install options for firewall.</figcaption>
-</figure>
+![Install options for firewall.](img/install-options-dialog.png)
 
 This screenshot shows how the installer options dialog looks for iptables firewalls.
 
@@ -399,10 +318,7 @@ After all parameters are set and the password entered, click OK to start install
 
 If this is the first time your management machine is logging in to the firewall via ssh, it will find out that ssh host key of the firewall is unknown to it and will present you with a dialog:
 
-<figure>
-<img src="img/install-new-rsa-key-dialog.png" alt="img/install-new-rsa-key-dialog.png" />
-<figcaption>New RSA key verification dialog.</figcaption>
-</figure>
+![New RSA key verification dialog.](img/install-new-rsa-key-dialog.png)
 
 Here it says that it does not know host key of the firewall "crash". This is nothing more than a copy of the warning message presented by the ssh client. You should verify the host key manually and if it matches, click Yes. If you click No in the dialog, the installation process will be interrupted.
 
@@ -411,10 +327,7 @@ Here it says that it does not know host key of the firewall "crash". This is not
 
 After this, installer copies files to the firewall and runs policy script there. You can monitor its progress in the dialog as shown on the screenshot:
 
-<figure>
-<img src="img/install-successful-session.png" alt="img/install-successful-session.png" />
-<figcaption>Successful installation session.</figcaption>
-</figure>
+![Successful installation session.](img/install-successful-session.png)
 
 This is an example of a successful installation session. Installer records the status in the left side panel of the dialog. If you use the installer to update several firewall machines in one session, their names and corresponding status of the installation session for each will be shown in the panel on the left. You can save the installer log to a file using Save log to file button. This can be useful for documentation or troubleshooting.
 
@@ -424,23 +337,14 @@ If you marked multiple firewall objects for installation on the first page of th
 
 FirewallFabrik can help you manage the configuration of multiple firewalls if they all use the same user name and password for authentication. To update the policy on multiple firewalls in one operation, use the batch mode of the built-in installer. When you start the installer by clicking "Install" button in the toolbar or using main menu *"Rules/Install"*, the program opens the first page of the built-in installer where it lists all firewall objects.
 
-<figure>
-<img src="img/install-batch-select-firewalls.png" alt="img/install-batch-select-firewalls.png" />
-<figcaption>Select firewalls for batch install.</figcaption>
-</figure>
+![Select firewalls for batch install.](img/install-batch-select-firewalls.png)
 
 Select the firewalls you want to compile and install using batch install. Click the Next button and the firewalls will be compiled. At the bottom of the compiler dialog there is a checkbox for enabling batch installation. By default this option is disabled.
 
-<figure>
-<img src="img/install-batch-progress.png" alt="img/install-batch-progress.png" />
-<figcaption>Batch install - compilation progress with batch install checkbox.</figcaption>
-</figure>
+![Batch install - compilation progress with batch install checkbox.](img/install-batch-progress.png)
 
 When you click "Next", the program opens simplified version of the installation parameters dialog:
 
-<figure>
-<img src="img/install-batch-options.png" alt="img/install-batch-options.png" />
-<figcaption>Batch install options.</figcaption>
-</figure>
+![Batch install options.](img/install-batch-options.png)
 
 This is the same dialog as when we tried to install to a single firewall, except the batch mode dialog does not offer an input fields for the alternative address and some other parameters. You cannot enter alternative addresses in the install dialog while running it in batch mode because it will talk to multiple firewalls and one alternative address is not going to be useful. When you run installer in the batch mode, it asks to enter parameters only once before the installation process begins. After that, it uses this data to connect to each firewall that was marked for installation in the first page of the installer wizard in turn, log in, upload new configuration and activate it there.

@@ -41,9 +41,7 @@ To start the firewall object creation wizard, right-click the Firewalls folder i
 
 The first page of the wizard displays.
 
-<figure>
-<img src="img/obj-firewall-wizard-first-page.png" alt="img/obj-firewall-wizard-first-page.png" />
-</figure>
+![img/obj-firewall-wizard-first-page.png](img/obj-firewall-wizard-first-page.png)
 
 Give the firewall object a name. Usually, this name is the same name you assigned to the device, but it need not be if you're assigning interfaces manually. (If you are use SNMP or DNS to populate the interfaces, then the name must be the same as the device name.) Then specify the firewall software and device OS.
 
@@ -51,21 +49,15 @@ Leave the Use pre-configured template firewall objects checkbox unchecked.
 
 Click Next.
 
-<figure>
-<img src="img/obj-configure-interfaces-manually.png" alt="img/obj-configure-interfaces-manually.png" />
-</figure>
+![img/obj-configure-interfaces-manually.png](img/obj-configure-interfaces-manually.png)
 
 Select Configure interfaces manually and click Next.
 
-<figure>
-<img src="img/obj-add-interfaces-page.png" alt="img/obj-add-interfaces-page.png" />
-</figure>
+![img/obj-add-interfaces-page.png](img/obj-add-interfaces-page.png)
 
 This is the page where you can add interfaces to the firewall. In this page of the dialog, each interface is represented by a tab in the tabbed widget. Use the "+" button in the upper left corner to add a new interface. The "x" button in the upper right corner deletes an interface. Click the "+" button to create first interface and give it the name "eth0":
 
-<figure>
-<img src="img/obj-adding-interfaces-to-firewall.png" alt="img/obj-adding-interfaces-to-firewall.png" />
-</figure>
+![img/obj-adding-interfaces-to-firewall.png](img/obj-adding-interfaces-to-firewall.png)
 
 To add an IP address to the interface, click in the table cell in the "Address" column and begin typing the address. The cell becomes an editable field that lets you enter the address. Add the network mask using the table cell in the "Netmask" column. The "Type" drop-down list lets you choose between IPv4 and IPv6 addresses. The network mask field accepts both full numeric notation and bit length for IPv4 netmasks. For IPv6, only bit length is allowed. The "Remove" button removes the address. You can add several addresses to the same interface.
 
@@ -88,17 +80,13 @@ Once all the interfaces are configured, click Finish to create the new firewall 
 
 Another method you can use to create new firewall object is based on the use of preconfigured template objects that come with the program. To do this, select the "Use preconfigured template firewall objects" checkbox on the first page of the wizard, then click Next.
 
-<figure>
-<img src="img/obj-preconfigured-firewall-templates.png" alt="img/obj-preconfigured-firewall-templates.png" />
-</figure>
+![img/obj-preconfigured-firewall-templates.png](img/obj-preconfigured-firewall-templates.png)
 
 The program comes with several template objects. These include firewalls with two or three interfaces and a couple of firewall configurations intended for a server with one interface. Each template is configured with IP addresses and basic rules. Some templates assume all interfaces have static IP addresses, while others assume some interfaces have dynamic addresses. These template objects are intended to be a starting point that you can and should edit and modify to match your network configuration and security policy.
 
 Choose the template that is closest to your configuration and click Next.
 
-<figure>
-<img src="img/obj-editing-template-interfaces.png" alt="img/obj-editing-template-interfaces.png" />
-</figure>
+![img/obj-editing-template-interfaces.png](img/obj-editing-template-interfaces.png)
 
 This page of the wizard allows you to change IP addresses used in the template. You can add and remove addresses using the Add address and Remove buttons. Since configuration of the template object depends on its interfaces, the dialog does not let you add or remove interfaces for objects created from a template. Each interface is represented by a tab in the tabbed widget; you can switch between them clicking the tabs with the interface names. Section 5.2.2.1 lists all elements of this page of the dialog and explains their purpose.
 
@@ -110,21 +98,15 @@ Once all interfaces and addresses are entered or modified, click Finish to creat
 
 If your firewall runs an SNMP daemon, you can save yourself some time by using SNMP discovery to automatically create the interfaces of the new firewall object.
 
-<figure>
-<img src="img/obj-snmp-community-string.png" alt="img/obj-snmp-community-string.png" />
-</figure>
+![img/obj-snmp-community-string.png](img/obj-snmp-community-string.png)
 
 Start by checking the Use SNMP to discover interfaces of the firewall checkbox on the second page of the wizard and enter your SNMP "read" community. Then click Discover interfaces using SNMP.
 
-<figure>
-<img src="img/obj-snmp-discovery-output.png" alt="img/obj-snmp-discovery-output.png" />
-</figure>
+![img/obj-snmp-discovery-output.png](img/obj-snmp-discovery-output.png)
 
 The program runs a series of SNMP queries to the firewall to read the list of interfaces and their addresses. Both IPv4 and IPv6 address can be imported. For IPv6, the firewall must support IP-MIB RFC 4293. Once the discovery process finishes, click Next.
 
-<figure>
-<img src="img/obj-snmp-discovered-interfaces.png" alt="img/obj-snmp-discovered-interfaces.png" />
-</figure>
+![img/obj-snmp-discovered-interfaces.png](img/obj-snmp-discovered-interfaces.png)
 
 The next page of the wizard offers an opportunity to review the discovered interfaces and make adjustments, if necessary. This is the same page described previously in Section 5.2.2.1. You can add and remove interfaces and add, remove, or change their IP addresses. Section 5.2.2.1 lists all elements of this page of the dialog and explains the purpose of each.
 
@@ -134,9 +116,7 @@ When configuration of all interfaces is correct, click Finish to create the new 
 
 The firewall object represents the firewall machine and is the most complex object in FirewallFabrik. It has three sets of controls that you can modify, not including the policy rule sets. All these controls become available when you double-click the firewall object in the tree.
 
-<figure>
-<img src="img/obj-firewall-controls.png" alt="img/obj-firewall-controls.png" />
-</figure>
+![img/obj-firewall-controls.png](img/obj-firewall-controls.png)
 
 ##### Basic Firewall Controls
 
@@ -154,17 +134,13 @@ These controls let you specify the basic settings of the firewall, such as the n
 
 For explanations of the various controls, click the Help button in the dialog.
 
-<figure>
-<img src="img/obj-host-os-settings-dialog.png" alt="img/obj-host-os-settings-dialog.png" />
-</figure>
+![img/obj-host-os-settings-dialog.png](img/obj-host-os-settings-dialog.png)
 
 ##### Firewall Settings Dialog
 
 For explanations of the various controls, click the Help button in the dialog.
 
-<figure>
-<img src="img/obj-firewall-settings-dialog.png" alt="img/obj-firewall-settings-dialog.png" />
-</figure>
+![img/obj-firewall-settings-dialog.png](img/obj-firewall-settings-dialog.png)
 
 ### The Cluster Object
 
@@ -179,27 +155,19 @@ The procedure for setting up HA configuration is as follows:
 
 There are two ways to create new cluster object: you can use main menu "Object / New Object" option (or a toolbar button that calls the same function):
 
-<figure>
-<img src="img/obj-new-cluster-menu.png" alt="img/obj-new-cluster-menu.png" />
-</figure>
+![img/obj-new-cluster-menu.png](img/obj-new-cluster-menu.png)
 
 Using this menu option or toolbar button opens a wizard that guides you through the steps of creating new cluster object. The first page of the wizard shows all the available firewall objects. In this page, you choose which ones become cluster members:
 
-<figure>
-<img src="img/obj-cluster-wizard-members.png" alt="img/obj-cluster-wizard-members.png" />
-</figure>
+![img/obj-cluster-wizard-members.png](img/obj-cluster-wizard-members.png)
 
 Another method is to select two or more firewall objects that are to become cluster members, then right-click and select the "New cluster from selected firewalls" menu item. You can select two or more objects in the tree by clicking the object while holding the Ctrl key.
 
-<figure>
-<img src="img/obj-cluster-right-click-menu.png" alt="img/obj-cluster-right-click-menu.png" />
-</figure>
+![img/obj-cluster-right-click-menu.png](img/obj-cluster-right-click-menu.png)
 
 Using the right-click options launches the same wizard, but the list on its first page is already populated with the selected firewall objects, as shown below.
 
-<figure>
-<img src="img/obj-cluster-wizard-populated.png" alt="img/obj-cluster-wizard-populated.png" />
-</figure>
+![img/obj-cluster-wizard-populated.png](img/obj-cluster-wizard-populated.png)
 
 Reducing the number of firewall objects displayed in the wizard can be helpful when you have many of firewall objects defined in the object tree.
 
@@ -234,25 +202,17 @@ As objects, rule sets have parameters. In FirewallFabrik, rule sets have the fol
 - Top ruleset: One of your rule sets must be the "top" rule set. The top rule set is the one used by the firewall. Other rule sets of that type are used only if you branch to them using branching logic in the top rule set. (If you don't use branching, then only the rule set tagged as "top" is used.)
 - Comment: A free-form comment field.
 
-<figure>
-<img src="img/obj-rule-set-options.png" alt="img/obj-rule-set-options.png" />
-</figure>
+![img/obj-rule-set-options.png](img/obj-rule-set-options.png)
 
 ### Interface Object
 
-<figure>
-<img src="img/obj-interface-object-tree.png" alt="img/obj-interface-object-tree.png" />
-<figcaption>Figure 5.18. Interface Object</figcaption>
-</figure>
+![Figure 5.18. Interface Object](img/obj-interface-object-tree.png)
 
 Interface objects belong to firewall or host objects. Interface objects cannot exist alone.
 
 The dialog for the interface object that belongs to the firewall or host provides controls for the parameters described here. Controls that are only valid for the firewall, and not host objects, are marked as such.
 
-<figure>
-<img src="img/obj-interface-object-dialog.png" alt="img/obj-interface-object-dialog.png" />
-<figcaption>Figure 5.19. Interface Object</figcaption>
-</figure>
+![Figure 5.19. Interface Object](img/obj-interface-object-dialog.png)
 
 - **Name:** The name of the interface object in FirewallFabrik must match exactly the name of the interface of the firewall machine it represents. This will be something like "eth0", "eth1", "en0", "br0", and so on.
 - **Label:** This field serves the purpose of a descriptive label. FirewallFabrik GUI uses the label, if it is not blank, to show interfaces in the tree. One of the suggested uses for this field is to mark interfaces to reflect the network topology (for example, "outside," "inside") or the purpose ("web frontend" or "backup subnet").
@@ -273,10 +233,7 @@ For iptables and nftables firewalls, the security level has two values: "Externa
 
 Policy rules in FirewallFabrik have a rule element called Interface. You can drag-and-drop, or copy/paste interface object into this column of a rule to make the firewall match not only the source and destination address and service, but also the interface of the firewall through which packets enter or exit. The direction of the packet is defined in column Direction. Consider the following example:
 
-<figure>
-<img src="img/obj-rule-using-interface.png" alt="img/obj-rule-using-interface.png" />
-<figcaption>Figure 5.21. Rule Using an Interface Object</figcaption>
-</figure>
+![Figure 5.21. Rule Using an Interface Object](img/obj-rule-using-interface.png)
 
 Rule \#0 is "anti-spoofing" rule which relies on the ability to define interface and direction. It matches packets with source addresses equal to the addresses of the firewall's interfaces or internal network, but that are coming in from outside, which is determined by comparing the interface through which packets enter the firewall. Packets with "internal" addresses cannot normally come from outside, and if they do, they must be spoofed and should be dropped. This is what this rule does: it drops and logs these packets. Rule \#1 permits connections originating from the internal network going out, but it makes sure these packets enter the firewall through its internal interface.
 
@@ -323,17 +280,11 @@ So far, the examples in this section have demonstrated how to use Interface obje
 
 For example, we start with a firewall configuration where interface eth1 has two IP addresses, one IPv4 and another is IPv6. Note that this could be a host object as well because interfaces can belong either to a Firewall or a Host object.
 
-<figure>
-<img src="img/obj-interface-both-address-families.png" alt="img/obj-interface-both-address-families.png" />
-<figcaption>Figure 5.22. Interface Object with Both Address Families</figcaption>
-</figure>
+![Figure 5.22. Interface Object with Both Address Families](img/obj-interface-both-address-families.png)
 
 Interface eth1 has IPv4 address 172.16.22.1 and IPv6 address fe80::21d:9ff:fe8b:8e94. It is used in a simple policy rule as follows:
 
-<figure>
-<img src="img/obj-interface-object-in-rule.png" alt="img/obj-interface-object-in-rule.png" />
-<figcaption>Figure 5.23. Interface Object in a Rule</figcaption>
-</figure>
+![Figure 5.23. Interface Object in a Rule](img/obj-interface-object-in-rule.png)
 
 This policy rule set is configured as a mixed IPv4+IPv6 rule set. For iptables, the compiler generates the following code:
 
@@ -354,10 +305,7 @@ $IP6TABLES -A INPUT -p tcp -m tcp  -d fe80::21d:9ff:fe8b:8e94  --dport 22 \
 
 Since the interface has two addresses, one IPv4 and another IPv6, the compiler generates commands in both the IPv4 and IPv6 sections of the script, but it uses only the appropriate address in each. Other than that, the interface object behaves just like a set of addresses when used in the source or destination element of a rule. It can also be used in NAT rules. Here is an example:
 
-<figure>
-<img src="img/obj-ipv4-address-nat-rule.png" alt="img/obj-ipv4-address-nat-rule.png" />
-<figcaption>Figure 5.24. IPv4 Address Object Assigned to an Interface</figcaption>
-</figure>
+![Figure 5.24. IPv4 Address Object Assigned to an Interface](img/obj-ipv4-address-nat-rule.png)
 
 This generates the following code for iptables:
 
@@ -377,17 +325,11 @@ $IPTABLES -t nat -A PREROUTING  -p tcp -m tcp  -d 192.0.2.1 --dport 80 \
 
 The examples above demonstrated what happens when an interface with one or several IP addresses is used in policy and NAT rules. Let's look at the case when an interface has an address assigned dynamically. This means the address is unknown to the FirewallFabrik policy compiler when it generates the configuration script. The compiler uses features of the target firewall to work around this. Here is the configuration of the interface object eth0. The radio-button Address is assigned dynamically is selected.
 
-<figure>
-<img src="img/obj-interface-dynamic-address.png" alt="img/obj-interface-dynamic-address.png" />
-<figcaption>Figure 5.25. Interface with Dynamic Address</figcaption>
-</figure>
+![Figure 5.25. Interface with Dynamic Address](img/obj-interface-dynamic-address.png)
 
 The following policy rule uses interface eth0 in destination:
 
-<figure>
-<img src="img/obj-interface-dynamic-in-rule.png" alt="img/obj-interface-dynamic-in-rule.png" />
-<figcaption>Figure 5.26. Interface with Dynamic Address in a Rule</figcaption>
-</figure>
+![Figure 5.26. Interface with Dynamic Address in a Rule](img/obj-interface-dynamic-in-rule.png)
 
 Here is the result for iptables:
 
@@ -416,17 +358,11 @@ The shell functions "getaddr" and "getaddr6" are defined earlier in the script. 
 
 In case of the "normal" iptables firewall, FirewallFabrik adds an "-i eth0" or "-o eth0" parameter to the generated iptables command to make it match interface and direction. If radio button "Bridge port" is turned on in the interface object, the compiler uses a different option to make iptables match packets crossing bridge ports. Here is the interface "eth1" which is configured as a bridge port:
 
-<figure>
-<img src="img/obj-bridge-interface.png" alt="img/obj-bridge-interface.png" />
-<figcaption>Figure 5.27. Bridge Interface</figcaption>
-</figure>
+![Figure 5.27. Bridge Interface](img/obj-bridge-interface.png)
 
 Consider the following rule in the policy of the firewall this interface belongs to:
 
-<figure>
-<img src="img/obj-bridge-interface-in-rule.png" alt="img/obj-bridge-interface-in-rule.png" />
-<figcaption>Figure 5.28. Bridge Interface in Rule</figcaption>
-</figure>
+![Figure 5.28. Bridge Interface in Rule](img/obj-bridge-interface-in-rule.png)
 
 This rule matches interface "eth1" and generates the following iptables command:
 
@@ -445,10 +381,7 @@ The regular address object describes single a IPv4 address. It can be a child of
 
 In this case the object is a "child" or "leaf" under the an interface object, either on a host or a firewall object. To create this kind of an address, right-click the interface object to bring up the context menu.
 
-<figure>
-<img src="img/obj-ipv4-address-on-interface.png" alt="img/obj-ipv4-address-on-interface.png" />
-<figcaption>Figure 5.29. IPv4 Address Object Assigned to an Interface</figcaption>
-</figure>
+![Figure 5.29. IPv4 Address Object Assigned to an Interface](img/obj-ipv4-address-on-interface.png)
 
 Its dialog provides the following entry fields:
 
@@ -477,10 +410,7 @@ Its dialog provides the following entry fields:
 
 Here we use our IPv4 address in a rule (remember, it belongs to the interface):
 
-<figure>
-<img src="img/obj-ipv4-address-in-rule.png" alt="img/obj-ipv4-address-in-rule.png" />
-<figcaption>Figure 5.30. IPv4 Address Object Assigned to an Interface and Used in a Rule</figcaption>
-</figure>
+![Figure 5.30. IPv4 Address Object Assigned to an Interface and Used in a Rule](img/obj-ipv4-address-in-rule.png)
 
 FirewallFabrik's iptables compiler, for example, generates the following command from this rule:
 
@@ -497,10 +427,7 @@ This iptables rule was placed in the INPUT chain because the object in the "Dest
 
 In this case the object is located in the Objects / Addresses part of the objects tree and does not have a netmask entry field. To create this kind of an address, use the New Object menu to select New Address or use the right-click menu associated with the addresses folder in the tree.
 
-<figure>
-<img src="img/obj-standalone-ipv4-address.png" alt="img/obj-standalone-ipv4-address.png" />
-<figcaption>Figure 5.31. Stand-Alone IPv4 Address Object</figcaption>
-</figure>
+![Figure 5.31. Stand-Alone IPv4 Address Object](img/obj-standalone-ipv4-address.png)
 
 Dialog fields Name, Address and Comment have the same purpose and properties as an address object assigned to an interface object.
 
@@ -512,19 +439,13 @@ The IPv6 address object is similar to the IPv4 address object. Like IPv4 address
 
 #### When Used as Address of Interface
 
-<figure>
-<img src="img/obj-ipv6-address-on-interface.png" alt="img/obj-ipv6-address-on-interface.png" />
-<figcaption>Figure 5.32. IPv6 Address Object Assigned to an Interface Object</figcaption>
-</figure>
+![Figure 5.32. IPv6 Address Object Assigned to an Interface Object](img/obj-ipv6-address-on-interface.png)
 
 If it is used to describe an IPv6 address of an interface, it has a netmask represented as bit length. Unlike with IPv4 address object, an IPv6 netmask is never represented as a colon-separated string of octets.
 
 #### When Used as Stand-Alone Object
 
-<figure>
-<img src="img/obj-standalone-ipv6-address.png" alt="img/obj-standalone-ipv6-address.png" />
-<figcaption>Figure 5.33. Stand-Alone IPv6 Address Object</figcaption>
-</figure>
+![Figure 5.33. Stand-Alone IPv6 Address Object](img/obj-standalone-ipv6-address.png)
 
 In this case this object is located in the Objects / Addresses part of the objects tree (the same place where stand-alone IPv4 addresses are located) and does not have a netmask entry field. To create this kind of an address, use the New Object menu item New Address IPv6 or the right-click menu associated with the addresses folder in the tree.
 
@@ -532,10 +453,7 @@ Policy compilers treat IPv6 addresses in policy rules according to the same algo
 
 Consider the rule shown in the screenshot below where we use two IPv6 address objects. One object belongs to the interface inside of the firewall while another is the IPv6 address of the project's web site.
 
-<figure>
-<img src="img/obj-ipv6-address-in-rule.png" alt="img/obj-ipv6-address-in-rule.png" />
-<figcaption>Figure 5.34. IPv6 Address Objects in a Rule</figcaption>
-</figure>
+![Figure 5.34. IPv6 Address Objects in a Rule](img/obj-ipv6-address-in-rule.png)
 
 For iptables, FirewallFabrik generates the following commands from this rule:
 
@@ -552,10 +470,7 @@ The rule that matches the address described by *object guardian-2:eth1:ipv6* wen
 
 There is a special type of interface child object, called the Attached Network object, that represents the networks that are directly attached to the interface. Figure 5.35 shows an example firewall configuration for a firewall with two network interfaces.
 
-<figure>
-<img src="img/obj-attached-network-diagram.png" alt="img/obj-attached-network-diagram.png" />
-<figcaption>Figure 5.35. Example Firewall Configuration</figcaption>
-</figure>
+![Figure 5.35. Example Firewall Configuration](img/obj-attached-network-diagram.png)
 
 In the example configuration one of the interfaces, *eth0*, has one IP address and the other interface, *eth1*, has two IP addresses as shown in Table 5.2.
 
@@ -569,31 +484,19 @@ Table 5.2. Attached Networks
 
 To create an object that matches the attached networks, select an interface, right-click on the interface and select New Attached Network from the context menu as shown in Figure 5.36.
 
-<figure>
-<img src="img/obj-attached-network-context-menu.png" alt="img/obj-attached-network-context-menu.png" />
-<figcaption>Figure 5.36. Adding Attached Network Object to Interface eth1</figcaption>
-</figure>
+![Figure 5.36. Adding Attached Network Object to Interface eth1](img/obj-attached-network-context-menu.png)
 
 This will create a new child object under the eth1 interface object called *linux-1:eth1:attached*.
 
-<figure>
-<img src="img/obj-attached-network-child-object.png" alt="img/obj-attached-network-child-object.png" />
-<figcaption>Figure 5.37. Adding Attached Network Object to Interface eth1</figcaption>
-</figure>
+![Figure 5.37. Adding Attached Network Object to Interface eth1](img/obj-attached-network-child-object.png)
 
 If you open the object for editing as shown in Figure 5.38 you will see the list of all networks that are currently attached to the eth1 interface. If you add or delete IP addresses from the interface the Attached Network object will be automatically updated.
 
-<figure>
-<img src="img/obj-attached-network-editing.png" alt="img/obj-attached-network-editing.png" />
-<figcaption>Figure 5.38. Adding Attached Network Object to Interface eth1</figcaption>
-</figure>
+![Figure 5.38. Adding Attached Network Object to Interface eth1](img/obj-attached-network-editing.png)
 
 The Attached Network object can than be used in rules just like any other Network object. Figure 5.39 shows an example of using the Attached Network object from the eth1 interface in a NAT policy rule.
 
-<figure>
-<img src="img/obj-attached-network-nat-rule.png" alt="img/obj-attached-network-nat-rule.png" />
-<figcaption>Figure 5.39. Adding Attached Network Object to Interface eth1</figcaption>
-</figure>
+![Figure 5.39. Adding Attached Network Object to Interface eth1](img/obj-attached-network-nat-rule.png)
 
 Compiling this rule for an iptables firewall results in the output shown below.
 
@@ -609,10 +512,7 @@ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 172.16.0.0/24 -j SNAT --to-source 192
 
 ### Physical Address Objects
 
-<figure>
-<img src="img/obj-physical-address-object.png" alt="img/obj-physical-address-object.png" />
-<figcaption>Figure 5.40. The Physical Address Object</figcaption>
-</figure>
+![Figure 5.40. The Physical Address Object](img/obj-physical-address-object.png)
 
 The physical address object describes the hardware, or media, address of an interface. Currently only Ethernet MAC addresses are supported, but support for other kinds of physical addresses may be added in the future.
 
@@ -638,10 +538,7 @@ As described in Section 5.2.10.4, if an interface object that has multiple child
 
 Suppose we have a very important host on the network. We create a host object, then add an interface to it. The interface should have both address and physical address objects as shown in Figure 5.41. The two child objects are visible in the tree under the Interface "eth0".
 
-<figure>
-<img src="img/obj-host-with-mac-matching.png" alt="img/obj-host-with-mac-matching.png" />
-<figcaption>Figure 5.41. The Host Object with Address and Physical Address</figcaption>
-</figure>
+![Figure 5.41. The Host Object with Address and Physical Address](img/obj-host-with-mac-matching.png)
 
 > [!NOTE]
 > Note how MAC matching is checked in the host object dialog. This makes the compiler use the MAC addresses of the interfaces of this host.
@@ -698,10 +595,7 @@ Both a real packet originated from this host and a spoofed packet have a source 
 
 Using address and physical address objects in a rule is not the same as using the host or interface object to which these address and physical address belong. Here is what happens if we put objects representing IP address and MAC address in the rule:
 
-<figure>
-<img src="img/obj-rule-address-and-physical.png" alt="img/obj-rule-address-and-physical.png" />
-<figcaption>Figure 5.46. Policy Rule Using Address and Physical Address Objects</figcaption>
-</figure>
+![Figure 5.46. Policy Rule Using Address and Physical Address Objects](img/obj-rule-address-and-physical.png)
 
 For this rule, the following iptables commands are generated:
 
@@ -726,10 +620,7 @@ Most hosts have just a single (visible) interface with a single IP address. In t
 
 As in the Firewall object, interfaces and addresses are represented by objects that are organized in a tree. An interface can have multiple addresses. An example of a host with one interface and multiple addresses is shown in Figure 5.47. Host "test server" is located on the LAN and has three virtual IP addresses that all belong to the same interface, "eth0".
 
-<figure>
-<img src="img/obj-host-object-multiple-addresses.png" alt="img/obj-host-object-multiple-addresses.png" />
-<figcaption>Figure 5.47. A Host Object with One Interface and Multiple Virtual Addresses</figcaption>
-</figure>
+![Figure 5.47. A Host Object with One Interface and Multiple Virtual Addresses](img/obj-host-object-multiple-addresses.png)
 
 Note that in FirewallFabrik, the host object is an abstraction. It does not have to conform to an individual host. This host object may in fact represent a web farm that accepts connections on three IP addresses, each on a different computer.
 
@@ -765,10 +656,7 @@ Section 5.2.2 shows how to use the firewall object wizard. The host object wizar
 
 #### Editing
 
-<figure>
-<img src="img/obj-host-object-dialog.png" alt="img/obj-host-object-dialog.png" />
-<figcaption>Figure 5.48. Editing the Host Object</figcaption>
-</figure>
+![Figure 5.48. Editing the Host Object](img/obj-host-object-dialog.png)
 
 The Host object dialog allows you to edit the following parameters:
 
@@ -790,17 +678,11 @@ When a host object is used in a rule, it acts as a group of all of the addresses
 
 Consider the following Host object. It has interface eth0 with two IP addresses and a MAC address, interface he-ipv6 with an IPv6 address and a MAC address, interface lo (loopback) with its own IP address and interface sit0 (tunnel) with no address.
 
-<figure>
-<img src="img/obj-host-multiple-interfaces.png" alt="img/obj-host-multiple-interfaces.png" />
-<figcaption>Figure 5.49. Host with multiple interfaces, Some with Multiple Addresses</figcaption>
-</figure>
+![Figure 5.49. Host with multiple interfaces, Some with Multiple Addresses](img/obj-host-multiple-interfaces.png)
 
 Let's put this host object in a rule as follows:
 
-<figure>
-<img src="img/obj-host-in-rule.png" alt="img/obj-host-in-rule.png" />
-<figcaption>Figure 5.50. Host in a Rule</figcaption>
-</figure>
+![Figure 5.50. Host in a Rule](img/obj-host-in-rule.png)
 
 The rule set is configured as "IPv4 only", so even though interface he-ipv6 has IPv6 address, FirewallFabrik will ignore it while generating iptables commands for this rule. Interface eth0 has two IPv4 addresses and both will be used. Here are iptables commands generated for this rule:
 
@@ -814,10 +696,7 @@ $IPTABLES -A Cid6066X5981.1  -d   -j ACCEPT
 
 Let's see what we get for the same rule if we configure rule set object as "IPv4+IPv6":
 
-<figure>
-<img src="img/obj-host-in-rule-ipv4-ipv6.png" alt="img/obj-host-in-rule-ipv4-ipv6.png" />
-<figcaption>Figure 5.51. Host in a Rule with both IPv4 and IPv6</figcaption>
-</figure>
+![Figure 5.51. Host in a Rule with both IPv4 and IPv6](img/obj-host-in-rule-ipv4-ipv6.png)
 
 Since the rule is now configured to compile for both address families, FirewallFabrik processes it twice, once for each address family. Here is what we get (these are relevant fragments of the generated script):
 
@@ -841,31 +720,19 @@ $IP6TABLES -A Cid6066X5981.1  -d fe80::a3:e2c  -j ACCEPT
 
 Host and firewall objects have child interface objects, which in turn have child address and physical address objects. In fact, an interface object can have more than one associated address object. Let's see how this works:
 
-<figure>
-<img src="img/obj-host-multiple-addresses-tree.png" alt="img/obj-host-multiple-addresses-tree.png" />
-<figcaption>Figure 5.52. Host Object with an Interface with Multiple Addresses</figcaption>
-</figure>
+![Figure 5.52. Host Object with an Interface with Multiple Addresses](img/obj-host-multiple-addresses-tree.png)
 
-<figure>
-<img src="img/obj-host-multiple-addresses-rule.png" alt="img/obj-host-multiple-addresses-rule.png" />
-<figcaption>Figure 5.53. Using Objects with Multiple Addresses in Policy Rules</figcaption>
-</figure>
+![Figure 5.53. Using Objects with Multiple Addresses in Policy Rules](img/obj-host-multiple-addresses-rule.png)
 
 Consider example Figure 5.52, Figure 5.53. Here interface *eth0* of "test server" has three IP addresses (named "test server:eth0:0" through "test server:eth0:2") and interface *eth0* of "dmz host" has only one IP address: "dmz host:eth0". Policy rule \#9 says that "dmz host" can talk to "test server" using any protocol. Since "test server" has three different addresses, we need to generate policy a rule that will match any of them. (Obviously we cannot match all three at once, so the compiler uses a logical "OR", not a logical "AND" here.) Basically, rule \#9 is equivalent to three separate rules, each of them using one address of "test server" in turn. These three rules are represented in Figure 5.54 (original rule \#9 also shown there, but it is disabled.)
 
-<figure>
-<img src="img/obj-equivalent-rules.png" alt="img/obj-equivalent-rules.png" />
-<figcaption>Figure 5.54. Equivalent Rules</figcaption>
-</figure>
+![Figure 5.54. Equivalent Rules](img/obj-equivalent-rules.png)
 
 FirewallFabrik takes care of this situation automatically and generates the firewall policy described in Figure 5.53 as if a user had built a policy in the GUI using the three rules as shown in Figure 5.54.
 
 In fact, the algorithm used is even more general. In the example Figure 5.53, host "test server" has a single interface with multiple addresses that the compiler used to generate the target firewall code. The policy compiler works in a similar way even if the host or firewall object used in the rule has multiple interfaces and each interface, in turn, has multiple addresses. If a host (or firewall) object is used in the rule, then the compiler scans all its interfaces, finds all corresponding addresses, and uses them to generate the firewall configuration. If an interface object is used in the rule, then the compiler uses all its addresses. And finally, if an address or physical address object is used in the rule, then the compiler uses only this parameter to generate the firewall configuration. In other words, the compiler always traverses the tree, starting from the object found in the policy rule, and uses the parameters of all address and physical address objects it finds. IPv4 Network Object \~\~\~\~\~\~\~\~\~\~\~\~\~\~\~\~\~\~\~~
 
-<figure>
-<img src="img/obj-network-object.png" alt="img/obj-network-object.png" />
-<figcaption>The Network Object</figcaption>
-</figure>
+![The Network Object](img/obj-network-object.png)
 
 The network object describes an IP network or subnet. Use main menu Net Object / New Network item to create objects of this type. The Network object dialog object provides the following entry fields:
 
@@ -887,10 +754,7 @@ The network object describes an IP network or subnet. Use main menu Net Object /
 
 Let's use the network object shown above in a policy rule.
 
-<figure>
-<img src="img/obj-ipv4-network-in-rule.png" alt="img/obj-ipv4-network-in-rule.png" />
-<figcaption>IPv4 Network Object Used in a Rule</figcaption>
-</figure>
+![IPv4 Network Object Used in a Rule](img/obj-ipv4-network-in-rule.png)
 
 Here is what we get for iptables:
 
@@ -901,19 +765,13 @@ $IPTABLES -A FORWARD -p tcp -m tcp  -s 172.16.22.0/24  --dport 80  -m state \
 
 ### IPv6 Network Object
 
-<figure>
-<img src="img/obj-ipv6-network-object.png" alt="img/obj-ipv6-network-object.png" />
-<figcaption>IPv6 Network Object</figcaption>
-</figure>
+![IPv6 Network Object](img/obj-ipv6-network-object.png)
 
 The network object describes an IPv6 network or subnet. This object is very similar to the IPv4 network object, except you can only enter netmask as a bit length. Use main menu "Net Object / New Network IPv6" item to create objects of this type.
 
 Let's see what we get if we use an IPv6 network object in a policy rule as shown:
 
-<figure>
-<img src="img/obj-ipv6-network-in-rule.png" alt="img/obj-ipv6-network-in-rule.png" />
-<figcaption>IPv6 Network Object Used in a Rule</figcaption>
-</figure>
+![IPv6 Network Object Used in a Rule](img/obj-ipv6-network-in-rule.png)
 
 Here is the command generated for iptables:
 
@@ -924,10 +782,7 @@ $IP6TABLES -A FORWARD -p tcp -m tcp  -s 2001:470:1f0e:162::/64  --dport 80  \
 
 ### Address Range Object
 
-<figure>
-<img src="img/obj-address-range-object.png" alt="img/obj-address-range-object.png" />
-<figcaption>The Address Range Object</figcaption>
-</figure>
+![The Address Range Object](img/obj-address-range-object.png)
 
 The address range object describes a continuous range of IPv4 addresses. (Arbitrary address ranges for IPv6 is not supported.) To create a new address range object, use the main menu New Object / New Address Range option. Its dialog provides the following entry fields:
 
@@ -963,10 +818,7 @@ $IPTABLES -A FORWARD  -s 192.168.1.160  -m state --state NEW -j ACCEPT
 
 Sometimes you need to apply a rule to a set of addresses, but you don't know what those addresses will be when you're writing the policy. The address table object object can help in these situations.
 
-<figure>
-<img src="img/obj-address-table-object.png" alt="img/obj-address-table-object.png" />
-<figcaption>The Address Table Object</figcaption>
-</figure>
+![The Address Table Object](img/obj-address-table-object.png)
 
 The address table object has the following fields:
 
@@ -1002,10 +854,7 @@ If the object is configured as Run Time, policy compiler does not try to find an
 
 Here is an example of the file contents (this is what you see if you click the Edit File button in the object dialog):
 
-<figure>
-<img src="img/obj-address-table-file.png" alt="img/obj-address-table-file.png" />
-<figcaption>Address Table Text File</figcaption>
-</figure>
+![Address Table Text File](img/obj-address-table-file.png)
 
 Note that comments in the file can start with "#" or ";", that a comment can follow an address on the same line or take the whole line, and that lines can start with white space for formatting. This example file contains both IPv4 and IPv6 addresses for illustration purposes.
 
@@ -1013,10 +862,7 @@ Compile-time address table objects are supported because addresses are read by t
 
 Let's look at the firewall script generated by FirewallFabrik for iptables when the Address Table object used in the policy rule is configured first as "Compile Time" and then as "Run Time". The rule is very simple and looks like (Figure 5.62):
 
-<figure>
-<img src="img/obj-address-table-rule.png" alt="img/obj-address-table-rule.png" />
-<figcaption>Rule Using an Address Object</figcaption>
-</figure>
+![Rule Using an Address Object](img/obj-address-table-rule.png)
 
 This rule, with the object set to Compile Time, generates the following output:
 
@@ -1097,10 +943,7 @@ You can find more information about the netfilter ipset module at the [netfilter
 
 To enable the iptables "IP sets" functionality in FirewallFabrik, you must explicitly set the version of the iptables firewall that you want to use with the ipset module. Navigate to the firewall and double-click to open the object in the editor window. Set the iptables version number to a version that is at least 1.4.1.1.
 
-<figure>
-<img src="img/obj-ipset-firewall-version.png" alt="img/obj-ipset-firewall-version.png" />
-<figcaption>Set the firewall iptables version number</figcaption>
-</figure>
+![Set the firewall iptables version number](img/obj-ipset-firewall-version.png)
 
 After you have set the iptables version number, click Firewall Settings for this firewall. Near the bottom of the Firewall Settings dialog window you there is a checkbox that says:
 
@@ -1108,10 +951,7 @@ After you have set the iptables version number, click Firewall Settings for this
 
 Select this checkbox to enable using the iptables ipset module.
 
-<figure>
-<img src="img/obj-ipset-firewall-settings.png" alt="img/obj-ipset-firewall-settings.png" />
-<figcaption>Set the Firewall Settings to Use the IP set Module</figcaption>
-</figure>
+![Set the Firewall Settings to Use the IP set Module](img/obj-ipset-firewall-settings.png)
 
 If the checkbox and text are shown as greyed out, then go back and check that you set the iptables version number for this firewall.
 
@@ -1124,20 +964,11 @@ You can only use address tables that are set to Run Time with the ipset module. 
 
 The following example shows the FirewallFabrik configuration steps for setting up an Address Table called "bad_hosts", using that address table in a rule, and confirming the ipset configuration.
 
-<figure>
-<img src="img/obj-ipset-address-table.png" alt="img/obj-ipset-address-table.png" />
-<figcaption>Address Table Object</figcaption>
-</figure>
+![Address Table Object](img/obj-ipset-address-table.png)
 
-<figure>
-<img src="img/obj-ipset-editing-file.png" alt="img/obj-ipset-editing-file.png" />
-<figcaption>Editing the Address Table File</figcaption>
-</figure>
+![Editing the Address Table File](img/obj-ipset-editing-file.png)
 
-<figure>
-<img src="img/obj-ipset-rule.png" alt="img/obj-ipset-rule.png" />
-<figcaption>Rule Using Address Table Object</figcaption>
-</figure>
+![Rule Using Address Table Object](img/obj-ipset-rule.png)
 
 You can use the ipset tools to view the configuration of your "sets" once they have been created by FirewallFabrik on your firewall. For example, the command **ipset --list** will list all the configured "sets" on your firewall.
 
@@ -1168,17 +999,11 @@ In order to match broadcast or multicast addresses in the rules, we need to crea
 
 Here are few examples:
 
-<figure>
-<img src="img/obj-multicast-object.png" alt="img/obj-multicast-object.png" />
-<figcaption>Multicast Object</figcaption>
-</figure>
+![Multicast Object](img/obj-multicast-object.png)
 
 Object "all multicasts" is part of the Standard Objects library that comes with the program. It describes an entire address block allocated for multicasts. Consider a simple policy rule that permits all multicasts:
 
-<figure>
-<img src="img/obj-multicast-rule.png" alt="img/obj-multicast-rule.png" />
-<figcaption>Multicast Rule</figcaption>
-</figure>
+![Multicast Rule](img/obj-multicast-rule.png)
 
 For iptables, this rule translates into the following script:
 
@@ -1190,10 +1015,7 @@ The rule went into the INPUT chain because iptables processes multicast there.
 
 Here is another example, this time it involves broadcast addresses. The interface "inside" of the test firewall has address 172.16.22.1 with netmask 255.255.255.0. This defines subnet 172.16.22.0/255.255.255.0 with broadcast address 172.16.22.255. We create an address object with the name "net-172.16.22 broadcast" and address "172.16.22.255" and use it in the destination field of a policy rule. Another rule in the same example will match broadcast address "255.255.255.255"; an address range object that defines this address is present in the standard objects library under the name "broadcast". Here are the rules:
 
-<figure>
-<img src="img/obj-broadcast-rules.png" alt="img/obj-broadcast-rules.png" />
-<figcaption>Broadcast Rules</figcaption>
-</figure>
+![Broadcast Rules](img/obj-broadcast-rules.png)
 
 These two rules translate into the following script for iptables:
 
@@ -1213,17 +1035,11 @@ Both rules went into INPUT chain as expected.
 
 Compilers treat broadcast and multicast addresses differently if the firewall object is set to be a bridging firewall. In this case the checkbox "Bridging firewall" should be turned on in the firewall settings dialog and one or more interface objects should be marked as "Bridge port":
 
-<figure>
-<img src="img/obj-bridge-interface-broadcast.png" alt="img/obj-bridge-interface-broadcast.png" />
-<figcaption>Broadcast and Multicast Address in a Bridging Firewall</figcaption>
-</figure>
+![Broadcast and Multicast Address in a Bridging Firewall](img/obj-bridge-interface-broadcast.png)
 
 Now the rule that matches the broadcast destination address will be treated differently:
 
-<figure>
-<img src="img/obj-broadcast-multicast-rule.png" alt="img/obj-broadcast-multicast-rule.png" />
-<figcaption>Broadcast and Multicast Address in a Rule</figcaption>
-</figure>
+![Broadcast and Multicast Address in a Rule](img/obj-broadcast-multicast-rule.png)
 
 This produces the following iptables commands:
 
@@ -1240,10 +1056,7 @@ A DNS Name object represents a DNS "A" or "AAAA" record. The object resolves int
 
 The DNS Name object dialog looks like this:
 
-<figure>
-<img src="img/obj-dns-name-object.png" alt="img/obj-dns-name-object.png" />
-<figcaption>DNS Name Object</figcaption>
-</figure>
+![DNS Name Object](img/obj-dns-name-object.png)
 
 - Name:
 
@@ -1267,10 +1080,7 @@ Both compile-time and run-time DNS name objects are supported on all target fire
 
 Let's look at how the simple rule shown in Figure 5.89 compiles for iptables, both for compile-time and run-time DNS name objects.
 
-<figure>
-<img src="img/obj-dns-name-in-rule.png" alt="img/obj-dns-name-in-rule.png" />
-<figcaption>Rule Using DNS Name Object</figcaption>
-</figure>
+![Rule Using DNS Name Object](img/obj-dns-name-in-rule.png)
 
 ``` bash
 # Rule 0 (global)
@@ -1300,10 +1110,7 @@ $IP6TABLES -A FORWARD  -d ipv6.FirewallFabrik.org -m state --state NEW  -j ACCEP
 
 ### Object Groups
 
-<figure>
-<img src="img/obj-object-group.png" alt="img/obj-object-group.png" />
-<figcaption>Group of Objects</figcaption>
-</figure>
+![Group of Objects](img/obj-object-group.png)
 
 The group of objects holds references to hosts, networks, address ranges, firewalls and other groups of addressable objects (Figure 5.89). Use the New Object / New Object Group option to create a new group. Objects can be added to the group using the following methods:
 
@@ -1325,10 +1132,7 @@ Dynamic Groups allow you to define filter criteria to match objects based on the
 
 To create a Dynamic Group right-click on the Groups system folder in the object tree and select "New Dynamic Group". Figure 5.90 shows the new group in the Editor Panel with the default values set.
 
-<figure>
-<img src="img/obj-dynamic-group-creating.png" alt="img/obj-dynamic-group-creating.png" />
-<figcaption>Creating a Dynamic Group</figcaption>
-</figure>
+![Creating a Dynamic Group](img/obj-dynamic-group-creating.png)
 
 Click Add Match to create filter rules that will be used to determine which objects will be included in the Dynamic Group. Multiple filter rules can be created in a single group. The logic used between rules is "OR" where an object that matches *any* of the rules will be included in the group.
 
@@ -1340,40 +1144,25 @@ In this example the FirewallFabrik data file includes a number of objects that h
 
 To create a rule that matches all the network objects that are associated with New York, we create a new Dynamic Group called New York Networks as shown in Figure 5.91.
 
-<figure>
-<img src="img/obj-dynamic-group-example.png" alt="img/obj-dynamic-group-example.png" />
-<figcaption>Example of Dynamic Group</figcaption>
-</figure>
+![Example of Dynamic Group](img/obj-dynamic-group-example.png)
 
 From the preview window you can see that there are four networks that have Tags that include New York (remember that an object can have more than one Tag defined).
 
 Figure 5.92 shows a rule that includes the Dynamic Group object in the Source column of the rule.
 
-<figure>
-<img src="img/obj-dynamic-group-in-rule.png" alt="img/obj-dynamic-group-in-rule.png" />
-<figcaption>Dynamic Group Used in a Rule</figcaption>
-</figure>
+![Dynamic Group Used in a Rule](img/obj-dynamic-group-in-rule.png)
 
 Running a single rule compile, shown in Section 10.2, for this rule will result in all the objects that match the current filter rules in the "New York Networks" Dynamic Group getting expanded to match the four network elements that have Tags that include New York. The single rule compile output is shown in Figure 5.93.
 
-<figure>
-<img src="img/obj-dynamic-group-compile-output.png" alt="img/obj-dynamic-group-compile-output.png" />
-<figcaption>Compile Output of a Rule That Uses Dynamic Group</figcaption>
-</figure>
+![Compile Output of a Rule That Uses Dynamic Group](img/obj-dynamic-group-compile-output.png)
 
 Adding a new filter rule to the "New York Networks" Dynamic Group to include any Address Ranges that include the Tag of New York will result in the group shown in Figure 5.94.
 
-<figure>
-<img src="img/obj-dynamic-group-updated.png" alt="img/obj-dynamic-group-updated.png" />
-<figcaption>Updated Dynamic Group</figcaption>
-</figure>
+![Updated Dynamic Group](img/obj-dynamic-group-updated.png)
 
 Recompiling a rule that uses the "New York Networks" Dynamic Group object will automatically detect the additional Address Ranges that include the Tag of New York. Figure 5.95 shows the updated compiler output.
 
-<figure>
-<img src="img/obj-dynamic-group-updated-compile.png" alt="img/obj-dynamic-group-updated-compile.png" />
-<figcaption>Updated Dynamic Group Compile Output</figcaption>
-</figure>
+![Updated Dynamic Group Compile Output](img/obj-dynamic-group-updated-compile.png)
 
 ## Service Objects
 
@@ -1383,10 +1172,7 @@ In FirewallFabrik, service objects represent IP, ICMP, TCP, and UDP services suc
 
 The IP service object describes protocols that are not ICMP, TCP, or UDP. (ICMP, TCP, and UDP have their own service objects.) An IP protocol is defined by the 8-bit field in the IP packet header. The screenshot below represents the ESP object (Encapsulating Security Payload, part of the IPSEC protocol family) which uses the IP protocol number 50.
 
-<figure>
-<img src="img/obj-ip-service-object.png" alt="img/obj-ip-service-object.png" />
-<figcaption>Figure 5.96. IP Service Object</figcaption>
-</figure>
+![Figure 5.96. IP Service Object](img/obj-ip-service-object.png)
 
 > [!NOTE]
 > Protocol numbers are assigned by IANA; you can look up the number for a particular protocol at the following URL: <http://www.iana.org/assignments/protocol-numbers/>
@@ -1415,10 +1201,7 @@ Standard IP service objects that come with FirewallFabrik appear in the Standard
 
 You can create your own IP Service objects in the User library.
 
-<figure>
-<img src="img/obj-ip-service-editing.png" alt="img/obj-ip-service-editing.png" />
-<figcaption>Figure 5.97. Creating/Editing an IP Service Object</figcaption>
-</figure>
+![Figure 5.97. Creating/Editing an IP Service Object](img/obj-ip-service-editing.png)
 
 Service objects in the Standard are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the IP folder in the User tree and select New IP Service to create a service object from scratch.
 
@@ -1442,17 +1225,11 @@ The IP Service dialog provides the following controls:
 
 Consider the following IP Service objects:
 
-<figure>
-<img src="img/obj-ip-service-examples.png" alt="img/obj-ip-service-examples.png" />
-<figcaption>Table 5.4. IP Service object examples: EF, tos 0x10, all_fragments, lsrr</figcaption>
-</figure>
+![Table 5.4. IP Service object examples: EF, tos 0x10, all_fragments, lsrr](img/obj-ip-service-examples.png)
 
 Object *EF* has DSCP matching turned on, matching traffic class *EF*. Object *TOS 0x10* matches packets with TOS bits set to 0x10 (low delay). Object *all_fragments* has flag "all fragments" turned on, and finally object *lsrr* matches "loose source routing" option. Here is what we get for iptables when we use these objects in policy rules:
 
-<figure>
-<img src="img/obj-ip-service-in-rules.png" alt="img/obj-ip-service-in-rules.png" />
-<figcaption>Figure 5.98. IP Service objects in policy rules</figcaption>
-</figure>
+![Figure 5.98. IP Service objects in policy rules](img/obj-ip-service-in-rules.png)
 
 ``` bash
 # Rule 0 (global)
@@ -1499,10 +1276,7 @@ FirewallFabrik has service objects for both IPv4 and IPv6. ICMP service objects 
 
 Standard service objects are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the ICMP folder in the User tree and select New ICMP Service to create a service object from scratch.
 
-<figure>
-<img src="img/obj-icmp-service-list.png" alt="img/obj-icmp-service-list.png" />
-<figcaption>Figure 5.101. ICMP and ICMP6 Service Objects in the Standard Library</figcaption>
-</figure>
+![Figure 5.101. ICMP and ICMP6 Service Objects in the Standard Library](img/obj-icmp-service-list.png)
 
 As a firewall administrator, you need to understand the nature and purpose of ICMP in order to properly configure the firewall to block unwanted ICMP messages while permitting useful ones.
 
@@ -1510,22 +1284,13 @@ ICMP packets have two header fields that distinguish particular ICMP messages: t
 
 Any combination of the *type* and *code* values is allowed in the ICMP or ICMP6 object. For example, the following two screen shots illustrate definitions of ICMP and ICMP6 objects for the request packet of the well-known ping protocol. The type codes are different for IPv4 and IPv6 variants, although the code is equal to 0 in both:
 
-<figure>
-<img src="img/obj-icmp-ping-request.png" alt="img/obj-icmp-ping-request.png" />
-<figcaption>Figure 5.102. ICMP Service: ping request (type 8, code 0)</figcaption>
-</figure>
+![Figure 5.102. ICMP Service: ping request (type 8, code 0)](img/obj-icmp-ping-request.png)
 
-<figure>
-<img src="img/obj-icmp6-ping-request.png" alt="img/obj-icmp6-ping-request.png" />
-<figcaption>Figure 5.103. ICMP6 Service: ipv6 ping request (type 128, code 0)</figcaption>
-</figure>
+![Figure 5.103. ICMP6 Service: ipv6 ping request (type 128, code 0)](img/obj-icmp6-ping-request.png)
 
 Both ICMP and ICMP6 allow value "any" in type or code fields. For example, this can be used to build an object to match a family of ICMP messages with the same type but any code:
 
-<figure>
-<img src="img/obj-icmp-all-unreachables.png" alt="img/obj-icmp-all-unreachables.png" />
-<figcaption>Figure 5.104. ICMP Service: all ICMP unreachables (type 3, code any)</figcaption>
-</figure>
+![Figure 5.104. ICMP Service: all ICMP unreachables (type 3, code any)](img/obj-icmp-all-unreachables.png)
 
 Both IPv4 and IPv6 ICMP service dialogs provide the following controls:
 
@@ -1539,10 +1304,7 @@ Both IPv4 and IPv6 ICMP service dialogs provide the following controls:
 
 Consider the following rule where we use two ICMP objects, one for IPv4 and another for IPv6:
 
-<figure>
-<img src="img/obj-icmp-objects-in-rule.png" alt="img/obj-icmp-objects-in-rule.png" />
-<figcaption>Figure 5.105. ICMP and ICMP6 objects used in a rule</figcaption>
-</figure>
+![Figure 5.105. ICMP and ICMP6 objects used in a rule](img/obj-icmp-objects-in-rule.png)
 
 If the rule set this rule belongs to is configured as combined IPv4 and IPv6, then policy compiler will pick the ICMP service that matches address family on each separate pass, one for IPv4 and then for IPv6. Here is what we get for iptables:
 
@@ -1570,24 +1332,15 @@ Since port numbers are used to distinguish applications using the data stream pr
 
 FirewallFabrik comes with a collection of predefined TCP Service objects with port numbers already configured. You can simply use these objects in your policy rules, so you do not have to look up port numbers every time you need them. These objects are part of the *Standard Objects* library and are located in the *Services / TCP* branch.
 
-<figure>
-<img src="img/obj-tcp-service-ssh.png" alt="img/obj-tcp-service-ssh.png" />
-<figcaption>Figure 5.106. TCP Service objects in the Standard Library</figcaption>
-</figure>
+![Figure 5.106. TCP Service objects in the Standard Library](img/obj-tcp-service-ssh.png)
 
 The typical TCP Service object is represented in the following screenshot:
 
-<figure>
-<img src="img/obj-tcp-service-http.png" alt="img/obj-tcp-service-http.png" />
-<figcaption>Figure 5.107. TCP Service object: smtp (destination port 25)</figcaption>
-</figure>
+![Figure 5.107. TCP Service object: smtp (destination port 25)](img/obj-tcp-service-http.png)
 
 In FirewallFabrik, the TCP service object is a generalization of TCP protocol. The TCP header of a packet carries only one fixed value for the source port and one fixed value for the destination port. The TCP Service object allows a range of values to be used for the source and destination ports. This allows a single TCP Service object to describe either a family of protocols using consecutive port numbers, or a protocol that may use variable port numbers or simply many protocols that use port numbers from a certain range. For example, on Unix systems, TCP sessions opened by a privileged process always have their source port number assigned from a range below 1024, while unprivileged processes use source port numbers from a range starting from 1024 and above. The TCP Service object with a source port range defined as shown in the following screenshot describes all privileged TCP sessions.
 
-<figure>
-<img src="img/obj-tcp-service-source-port.png" alt="img/obj-tcp-service-source-port.png" />
-<figcaption>Figure 5.108. TCP Service: privileged TCP (source port 0-1023)</figcaption>
-</figure>
+![Figure 5.108. TCP Service: privileged TCP (source port 0-1023)](img/obj-tcp-service-source-port.png)
 
 Using "0" as both start and end values for a range means "any value" for that range. The source port range of the "privileged TCP" object starts from 0 and ends at 1023 (port ranges are inclusive in FirewallFabrik), while its destination port range's start and end are both set to zero, which means "any destination port". This object describes any TCP protocol with a source port in range 0-1023 and any destination port.
 
@@ -1616,17 +1369,11 @@ Usually the firewall cannot only match a combination of flags, but can also exam
 
 The object in the screenshot matches a TCP packet with any combination of port numbers, the TCP flag SYN set, and all other flags cleared. The firewall will examine all TCP flags.
 
-<figure>
-<img src="img/obj-tcp-service-ssh.png" alt="img/obj-tcp-service-ssh.png" />
-<figcaption>Figure 5.109. TCP Service: tcp-syn (SYN flag set, all others examined)</figcaption>
-</figure>
+![Figure 5.109. TCP Service: tcp-syn (SYN flag set, all others examined)](img/obj-tcp-service-ssh.png)
 
 A combination of flags and a mask can be used in a rule that looks for some flags to be set or unset and ignores other ones, regardless of their state. For example, we can create a rule that detects a so-called "null scan" which is done using TCP packets with all flags cleared. For this rule, we create a TCP service object "tcp null scan" where all flag masks are set but all TCP flags are cleared. This means we examine all flags but only match them if they are all cleared. This object is represented in the following screenshot:
 
-<figure>
-<img src="img/obj-tcp-service-ssh.png" alt="img/obj-tcp-service-ssh.png" />
-<figcaption>Figure 5.110. TCP Service: tcp null scan (all masks set, all flags cleared)</figcaption>
-</figure>
+![Figure 5.110. TCP Service: tcp null scan (all masks set, all flags cleared)](img/obj-tcp-service-ssh.png)
 
 TCP Service dialog provides the following controls:
 
@@ -1642,17 +1389,11 @@ TCP Service dialog provides the following controls:
 
 Let's start with an example using simple TCP service that describes the HTTP protocol. Both the beginning and the end of the source port range in this service object are set to "0," which means the program will leave these out when it generates target firewall configuration. The destination port range is defined as "80-80" which means the object describes just single destination tcp port "80". All flag checkboxes are unchecked, which means no flag-matching configuration will be generated.
 
-<figure>
-<img src="img/obj-tcp-service-http.png" alt="img/obj-tcp-service-http.png" />
-<figcaption>Figure 5.111. TCP Service: http (destination port 80)</figcaption>
-</figure>
+![Figure 5.111. TCP Service: http (destination port 80)](img/obj-tcp-service-http.png)
 
 Now we put this object in the "Service" element of a rule as shown on the next screenshot. To make this trivial example just a little bit more interesting, we configured the policy rule set as "Combined IPv4 and IPv6" and put two address objects in destination, one is IPv4 address and another is IPv6 address.
 
-<figure>
-<img src="img/obj-icmp-objects-in-rule.png" alt="img/obj-icmp-objects-in-rule.png" />
-<figcaption>Figure 5.112. Rule using TCP Service object "http"</figcaption>
-</figure>
+![Figure 5.112. Rule using TCP Service object "http"](img/obj-icmp-objects-in-rule.png)
 
 This rule compiles into the following for iptables:
 
@@ -1676,17 +1417,11 @@ $IP6TABLES -A FORWARD -p tcp -m tcp  -d 2001:470:1f0e:162::2 \
 
 In the next example, we look at the TCP service object that defines a specific source port range to match source ports greater than or equal to 1024:
 
-<figure>
-<img src="img/obj-tcp-service-source-port.png" alt="img/obj-tcp-service-source-port.png" />
-<figcaption>Figure 5.113. TCP Service: src ports &gt;= 1024</figcaption>
-</figure>
+![Figure 5.113. TCP Service: src ports &gt;= 1024](img/obj-tcp-service-source-port.png)
 
 Using this object in a rule as follows:
 
-<figure>
-<img src="img/obj-tcp-service-source-port.png" alt="img/obj-tcp-service-source-port.png" />
-<figcaption>Figure 5.114. Rule using TCP Service with source port range</figcaption>
-</figure>
+![Figure 5.114. Rule using TCP Service with source port range](img/obj-tcp-service-source-port.png)
 
 To make the rule slightly more realistic, we made it stateless using its options dialog (double-click in the column "Options" of this rule and check checkbox "Stateless" in the first tab of the dialog). Let's see what the program generates when this rule is compiled for iptables:
 
@@ -1702,17 +1437,11 @@ Stateful firewalls such as iptables offer a much better way to track and match r
 
 Here is an example of the TCP service object with flag "Established" set and source port range "80-80", that is, this object describes TCP packets coming from the web server operating on the standard port 80 back to the client.
 
-<figure>
-<img src="img/obj-tcp-service-established.png" alt="img/obj-tcp-service-established.png" />
-<figcaption>Figure 5.115. TCP Service: http established (source port 80, Established flag)</figcaption>
-</figure>
+![Figure 5.115. TCP Service: http established (source port 80, Established flag)](img/obj-tcp-service-established.png)
 
 Using this object in a rule:
 
-<figure>
-<img src="img/obj-tcp-service-established.png" alt="img/obj-tcp-service-established.png" />
-<figcaption>Figure 5.116. Rule using TCP Service with Established flag</figcaption>
-</figure>
+![Figure 5.116. Rule using TCP Service with Established flag](img/obj-tcp-service-established.png)
 
 ### UDP Service
 
@@ -1720,10 +1449,7 @@ The UDP service object is a generalization of the UDP protocol, which is a conne
 
 As in TCP, UDP uses port numbers to distinguish applications from one another. The UDP packet header carries two port numbers: the source port and the destination port. The UDP service object in FirewallFabrik allows for a definition of ranges for both the source and the destination ports. The meaning of values assigned to the start and end of the range is the same as in the TCP service object: ranges are inclusive, that is, both start and end ports of the range are included. Using "0" for both the start and end of the range means "any port". These rules work for both the source and destination ranges. The following screenshot shows the "dns" UDP Service object that represents the Domain Name System protocol, which uses destination port 53.
 
-<figure>
-<img src="img/obj-udp-service-dns.png" alt="img/obj-udp-service-dns.png" />
-<figcaption>Figure 5.117. UDP Service: domain (destination port 53)</figcaption>
-</figure>
+![Figure 5.117. UDP Service: domain (destination port 53)](img/obj-udp-service-dns.png)
 
 Objects in the Standard set of service objects are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the ICMP folder in the User tree and select New ICMP Service to create a service object from scratch.
 
@@ -1740,10 +1466,7 @@ The UDP Service dialog provides the following controls:
 
 In this example we'll use the UDP service object "domain" shown on screenshot above. The rule looks like this:
 
-<figure>
-<img src="img/obj-udp-service-in-rule.png" alt="img/obj-udp-service-in-rule.png" />
-<figcaption>Figure 5.118. Rule using UDP Service object "domain"</figcaption>
-</figure>
+![Figure 5.118. Rule using UDP Service object "domain"](img/obj-udp-service-in-rule.png)
 
 Here is iptables command generated for this rule:
 
@@ -1759,10 +1482,7 @@ This rule got a *"-i +"* clause because direction was set to *Inbound* but *"Int
 
 The following UDP service object defines source port range of the ports with values greater than or equal to 1024:
 
-<figure>
-<img src="img/obj-udp-source-port-dialog.png" alt="img/obj-udp-source-port-dialog.png" />
-<figcaption>Figure 5.119. UDP Service: src ports &gt;= 1024</figcaption>
-</figure>
+![Figure 5.119. UDP Service: src ports &gt;= 1024](img/obj-udp-source-port-dialog.png)
 
 Using this object in policy rule yields the following code for iptables:
 
@@ -1777,10 +1497,7 @@ $IPTABLES -A FORWARD  -i + -p udp -m udp  --sport 1024:65535  -m state \
 
 User service object matches the owner of the process on the firewall that sent the packet. It translates to the "owner" match in iptables.
 
-<figure>
-<img src="img/obj-user-service-dialog.png" alt="img/obj-user-service-dialog.png" />
-<figcaption>Figure 5.120. User Service Dialog</figcaption>
-</figure>
+![Figure 5.120. User Service Dialog](img/obj-user-service-dialog.png)
 
 - **Name:** This is the name of the object
 - **User id:** The user ID of the user account on the firewall device that the firewall should use to match packets.
@@ -1792,10 +1509,7 @@ The user service object is only supported for iptables.
 
 Let's look at how the simple rule shown in Figure 5.121 compiles for iptables.
 
-<figure>
-<img src="img/obj-user-service-rule.png" alt="img/obj-user-service-rule.png" />
-<figcaption>Figure 5.121. User Service Rule Example</figcaption>
-</figure>
+![Figure 5.121. User Service Rule Example](img/obj-user-service-rule.png)
 
 The firewall can associate a packet with a user only if the packet originated on the firewall. Packets that transit the firewall have no information about the user who owned the process that created these packets and sent them out because this process ran on an entirely different computer. For this reason, the object in the Source column must be the firewall.
 
@@ -1820,10 +1534,7 @@ The following screenshot represents a custom service object that uses the capabi
 > [!NOTE]
 > The code specified in the custom service object is used literally; no validation is done either by the FirewallFabrik GUI or the policy compilers.
 
-<figure>
-<img src="img/obj-custom-service-string.png" alt="img/obj-custom-service-string.png" />
-<figcaption>Figure 5.124. Custom Service: string module</figcaption>
-</figure>
+![Figure 5.124. Custom Service: string module](img/obj-custom-service-string.png)
 
 The Custom Service dialog provides the following controls:
 
@@ -1838,28 +1549,19 @@ The Custom Service dialog provides the following controls:
 
 The following example uses iptables module "recent". Quoting from the iptables manual, this module "allows you to dynamically create a list of IP addresses and then match against that list in a few different ways". We can use this module to throttle brute-force ssh scanning attacks where an attacker repeatedly connects to the ssh daemon trying to guess login name and password. The full explanation of how to use the custom service object in combination with *swatch* script on Linux to stop these attacks can be found in the FirewallFabrik Cookbook (Chapter 14). Here we focus only on the Custom Service object and iptables rules that can be obtained with it.
 
-<figure>
-<img src="img/obj-custom-service-ssh-throttling.png" alt="img/obj-custom-service-ssh-throttling.png" />
-<figcaption>Figure 5.125. Custom Service: ssh with throttling</figcaption>
-</figure>
+![Figure 5.125. Custom Service: ssh with throttling](img/obj-custom-service-ssh-throttling.png)
 
 The code string defined in this object is "--dport 22 -m recent --set". This matches port 22 (ssh), activates the module and adds source address of the packet to the default list maintained by the module.
 
 The second custom service object also matches port 22 and checks if the address is already on the list and was seen during the past one minute twice:
 
-<figure>
-<img src="img/obj-custom-service-ssh-throttled.png" alt="img/obj-custom-service-ssh-throttled.png" />
-<figcaption>Figure 5.126. Custom Service: ssh throttled to 2 per min</figcaption>
-</figure>
+![Figure 5.126. Custom Service: ssh throttled to 2 per min](img/obj-custom-service-ssh-throttled.png)
 
 Note that our goal is to match protocol SSH (tcp port 22) and at the same time activate iptables module "recent" and add some parameters for it. Both are done by means of a service object in FirewallFabrik; however placing two service objects in the "Service" field of a rule joins them by a logical OR operation. That is, if we were to put TCP service object "ssh" and custom service object that defines parameter for module "recent" in the "Service" field of the same rule, we would end up with two iptables commands, one matching tcp port 22 and another trying to use module "recent". Since we need to match both in the same rule, we have to add "--dport 22" to the code defined in the custom service object.
 
 Now, the rules using these objects:
 
-<figure>
-<img src="img/obj-custom-service-rules.png" alt="img/obj-custom-service-rules.png" />
-<figcaption>Figure 5.127. Rules using Custom Service objects for SSH throttling</figcaption>
-</figure>
+![Figure 5.127. Rules using Custom Service objects for SSH throttling](img/obj-custom-service-rules.png)
 
 Here are the iptables commands generated for these two rules:
 
@@ -1883,10 +1585,7 @@ First, we match port 22 and check if we have seen this source address during the
 
 The custom service object allows you to inject arbitrary strings into the generated firewall configuration in the place where port matching normally occurs. Another feature in FirewallFabrik that also allows for insertion of a code in the generated code is the custom action feature. The combination of custom service with custom action provides for a very flexible system where you can compose pretty much any required configuration line if it is not otherwise supported by the standard means. Suppose instead of just dropping SSH scan connections coming to our system, we want to slow them down, thus tying up the attacker's resources. Iptables has a target just for that called TARPIT. This target is specific for iptables and does not exist on the other firewalls supported by FirewallFabrik and there is no standard action for it. You can use the custom action mechanism to generate an iptables command with this target. In the rule, the action in it is set to "Custom Action". Double-clicking the action in the rule opens a dialog with its parameters (if any). The custom action object has one parameter: a free-form string where you enter the code you want to appear in the generated command:
 
-<figure>
-<img src="img/obj-custom-service-tarpit.png" alt="img/obj-custom-service-tarpit.png" />
-<figcaption>Figure 5.128. Using Custom Action with TARPIT target</figcaption>
-</figure>
+![Figure 5.128. Using Custom Action with TARPIT target](img/obj-custom-service-tarpit.png)
 
 Here is what we now get when we compile this policy for iptables:
 
@@ -1913,10 +1612,7 @@ Now the first rule ends up sending the packet to the "TARPIT" target rather than
 
 Time interval objects allow you to create a rule that only matches during certain periods of time, such as on weekend days, during work hours, or other periods. Time intervals operate based on the time as known *by the firewall device*.
 
-<figure>
-<img src="img/obj-time-interval-dialog.png" alt="img/obj-time-interval-dialog.png" />
-<figcaption>Figure 5.129. Time Interval Dialog</figcaption>
-</figure>
+![Figure 5.129. Time Interval Dialog](img/obj-time-interval-dialog.png)
 
 Time intervals define recurring schedules based on time-of-day and days of the week. You can combine these options to create an object that represents, for example, Tuesday afternoons from 1 to 3 PM, or weekday work hours from 9 AM to 5 PM.
 
@@ -1928,10 +1624,7 @@ Time intervals define recurring schedules based on time-of-day and days of the w
 
 A common use case is to limit recreational activities to non-work hours.
 
-<figure>
-<img src="img/obj-time-interval-rule.png" alt="img/obj-time-interval-rule.png" />
-<figcaption>Figure 5.130. Time Interval Rule Example</figcaption>
-</figure>
+![Figure 5.130. Time Interval Rule Example](img/obj-time-interval-rule.png)
 
 In this rule, the "quake" protocol is allowed from the internal network after hours and during weekends. Otherwise, the final "deny all" rule in the rule set would prevent it during other times (during work hours).
 
@@ -1943,36 +1636,24 @@ For an example of how you could use Tags, let's assume that you have two datacen
 
 Figure 5.131 shows the editor panel for an object called NY Datacenter-Net-1.
 
-<figure>
-<img src="img/obj-network-object-keywords.png" alt="img/obj-network-object-keywords.png" />
-<figcaption>Figure 5.131. Datacenter Network Object</figcaption>
-</figure>
+![Figure 5.131. Datacenter Network Object](img/obj-network-object-keywords.png)
 
 Click the Tags button to set the keywords for the active object. This will bring up the dialog window shown in Figure 5.132.
 
-<figure>
-<img src="img/obj-keywords-dialog-empty.png" alt="img/obj-keywords-dialog-empty.png" />
-<figcaption>Figure 5.132. Tags Dialog</figcaption>
-</figure>
+![Figure 5.132. Tags Dialog](img/obj-keywords-dialog-empty.png)
 
 As you can see no Tags have been configured yet, so there are no existing keywords that can be assigned to the object. To create a new keyword type the name of the keyword in the text box labeled "New Tag:".
 
 In this example we want to add the "datacenter" and "trusted" keywords to the network object. Figure 5.133 shows the dialog after the keywords have been entered. Click OK to apply the keywords to the object.
 
-<figure>
-<img src="img/obj-keywords-dialog-populated.png" alt="img/obj-keywords-dialog-populated.png" />
-<figcaption>Figure 5.133. Tags Dialog After Creating Some Tags</figcaption>
-</figure>
+![Figure 5.133. Tags Dialog After Creating Some Tags](img/obj-keywords-dialog-populated.png)
 
 > [!NOTE]
 > After you apply keywords to an object the keywords will be displayed in the Editor panel next to the Tags button.
 
 What if you have a lot of objects that need to have the same keywords applied? To apply a keyword to multiple objects at the same time select the objects in the tree, remember to use the CTRL or Shift keys to select more than one object, right-click on the selected objects and select Tags, then Add and then select the keyword you want to apply. Figure 5.134 shows applying the "datacenter" keyword to multiple Network objects.
 
-<figure>
-<img src="img/obj-keywords-multiple-objects.png" alt="img/obj-keywords-multiple-objects.png" />
-<figcaption>Figure 5.134. Applying Tags to Multiple Objects at Once</figcaption>
-</figure>
+![Figure 5.134. Applying Tags to Multiple Objects at Once](img/obj-keywords-multiple-objects.png)
 
 You can also remove keywords from multiple objects by selecting multiple objects, right-clicking and selecting Tags -\> Remove and then selecting the keyword that you want to remove.
 
@@ -1980,17 +1661,11 @@ After you have configured keywords for your objects you can type the keyword int
 
 Figure 5.135 shows the filtered view after the "datacenter" keyword has been typed into the filter box.
 
-<figure>
-<img src="img/obj-keywords-filter-datacenter.png" alt="img/obj-keywords-filter-datacenter.png" />
-<figcaption>Figure 5.135. Filtering Based on Tag - datacenter</figcaption>
-</figure>
+![Figure 5.135. Filtering Based on Tag - datacenter](img/obj-keywords-filter-datacenter.png)
 
 Another example is shown in Figure 5.136 where all the objects are being filtered for the "trusted" keyword. Only objects that have had the "trusted" keyword applied will be displayed. In this example only one of the two networks at each datacenter is considered trusted.
 
-<figure>
-<img src="img/obj-keywords-filter-trusted.png" alt="img/obj-keywords-filter-trusted.png" />
-<figcaption>Figure 5.136. Filtering Based on Tag - trusted</figcaption>
-</figure>
+![Figure 5.136. Filtering Based on Tag - trusted](img/obj-keywords-filter-trusted.png)
 
 ## Creating and Using a User-Defined Library of Objects
 
@@ -2000,40 +1675,25 @@ Let's create and distribute a simple user-defined library. Start by selecting th
 
 The library pull-down menu switches to New Library. This library is empty by default except for the standard folders.
 
-<figure>
-<img src="img/obj-new-user-library.png" alt="img/obj-new-user-library.png" />
-<figcaption>Figure 5.137. A New, Empty User-Defined Library</figcaption>
-</figure>
+![Figure 5.137. A New, Empty User-Defined Library](img/obj-new-user-library.png)
 
 Click the New Library icon to bring up the library dialog.
 
-<figure>
-<img src="img/obj-library-dialog.png" alt="img/obj-library-dialog.png" />
-<figcaption>Figure 5.138. Library Dialog</figcaption>
-</figure>
+![Figure 5.138. Library Dialog](img/obj-library-dialog.png)
 
 The Library dialog has three controls: Name, Color, and Comments. Enter a new name for the library in the Name field. (Here we are calling it ACME Library.) If you want, you can also specify a color for the library. This helps you easily distinguish one library from another when you are working. In this case, we have set the color to a shade of blue.
 
-<figure>
-<img src="img/obj-library-blue-background.png" alt="img/obj-library-blue-background.png" />
-<figcaption>Figure 5.139. ACME Library with Blue Background</figcaption>
-</figure>
+![Figure 5.139. ACME Library with Blue Background](img/obj-library-blue-background.png)
 
 Use the normal object creation procedures to create objects in the library. Here we have created two Address objects that represent web servers, a host object with two interfaces that matches an email server and a network object to match the local LAN.
 
-<figure>
-<img src="img/obj-library-with-objects.png" alt="img/obj-library-with-objects.png" />
-<figcaption>Figure 5.140. Library with User-Created Objects</figcaption>
-</figure>
+![Figure 5.140. Library with User-Created Objects](img/obj-library-with-objects.png)
 
 Click File/Save to save the object file.
 
 To export the library to a file, select File/Export Library. The following dialog appears:
 
-<figure>
-<img src="img/obj-export-library-dialog.png" alt="img/obj-export-library-dialog.png" />
-<figcaption>Figure 5.141. Export Your Library</figcaption>
-</figure>
+![Figure 5.141. Export Your Library](img/obj-export-library-dialog.png)
 
 If you want to make the library read-only, leave the Make exported libraries read-only checked. Otherwise, uncheck it.
 
@@ -2041,10 +1701,7 @@ Click OK.
 
 A file system Save dialog appears. Here you can specify a name and location for the file. Be sure the file has a *.fwl* file extension.
 
-<figure>
-<img src="img/obj-save-dialog-box.png" alt="img/obj-save-dialog-box.png" />
-<figcaption>Figure 5.142. Save Dialog Box</figcaption>
-</figure>
+![Figure 5.142. Save Dialog Box](img/obj-save-dialog-box.png)
 
 You can now move or e-mail the library to someone else.
 
@@ -2056,10 +1713,7 @@ You can now use this library like any other library. Keep in mind that changes t
 
 Imagine you have an access policy that looks something like this:
 
-<figure>
-<img src="img/obj-policy-before-find-replace.png" alt="img/obj-policy-before-find-replace.png" />
-<figcaption>Figure 5.143. Policy Before the Find/Replace</figcaption>
-</figure>
+![Figure 5.143. Policy Before the Find/Replace](img/obj-policy-before-find-replace.png)
 
 Further, imagine that you are reassigning all the IP addresses in 192.168.2.0/24 to be in the 192.168.3.0/24 subnet and that you need to modify the firewall rules to match.
 
@@ -2067,24 +1721,15 @@ One way to handle this is to manually browse through every rule in your firewall
 
 Select Find Object from the Object menu to open the Find and Replace dialog, shown here:
 
-<figure>
-<img src="img/obj-find-replace-dialog.png" alt="img/obj-find-replace-dialog.png" />
-<figcaption>Figure 5.144. Find/Replace Dialog</figcaption>
-</figure>
+![Figure 5.144. Find/Replace Dialog](img/obj-find-replace-dialog.png)
 
 To replace every net-192.168.2.0 object with the net-192.168.3.0 object, first create the new network object. Then, drag (or Copy/Paste) a net-192.168.2.0 object into the Find object field and the net-192.168.3.0 object into the Replace object field. Then, set the Scope for search and replace pull-down menu to policy of the opened firewall, as shown here:
 
-<figure>
-<img src="img/obj-find-replace-objects.png" alt="img/obj-find-replace-objects.png" />
-<figcaption>Figure 5.145. Objects to Find and Replace</figcaption>
-</figure>
+![Figure 5.145. Objects to Find and Replace](img/obj-find-replace-objects.png)
 
 Click Replace All to replace all instances.
 
-<figure>
-<img src="img/obj-policy-replaced.png" alt="img/obj-policy-replaced.png" />
-<figcaption>Figure 5.146. Policy with Objects Replaced</figcaption>
-</figure>
+![Figure 5.146. Policy with Objects Replaced](img/obj-policy-replaced.png)
 
 The Find object dialog has a number of controls you can use to constrain your searches:
 
