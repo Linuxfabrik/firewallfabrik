@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MkDocs-based documentation site, deployed automatically to GitHub Pages
 
 
+## [v1.4.1rc4] - 2026-04-08
+
+### Fixed
+
+- `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+- Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
+
+
 ## [v1.4.1rc3] - 2026-04-06
 
 ### Fixed
@@ -304,7 +312,9 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc2...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc4...HEAD
+[v1.4.1rc4]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc3...v1.4.1rc4
+[v1.4.1rc3]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1rc2...v1.4.1rc3
 [v1.4.1rc2]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.0...v1.4.1rc2
 [v1.4.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.3.0...v1.4.0
 [v1.3.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.2.0...v1.3.0

@@ -60,7 +60,7 @@ To test a pre-release version, either allow pre-releases or pin a specific RC ve
 ```bash
 uvx --from 'firewallfabrik[gui]' --prerelease allow fwf
 uv tool install 'firewallfabrik[gui]' --prerelease allow
-uv tool install 'firewallfabrik[gui]==1.4.1rc3'
+uv tool install 'firewallfabrik[gui]==1.4.1rc4'
 ```
 
 For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.md).

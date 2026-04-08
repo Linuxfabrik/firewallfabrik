@@ -24,7 +24,7 @@ class BuildPy(build_py):
                 '--binary',
                 'src/firewallfabrik/gui/ui/MainRes.qrc',
                 '-o',
-                'src/firewallfabrik/gui/MainRes.rcc',
+                'src/firewallfabrik/gui/ui/MainRes.rcc',
             ],
             check=True,
         )

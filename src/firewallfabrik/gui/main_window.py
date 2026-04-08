@@ -15,7 +15,9 @@
 import contextlib
 import importlib.resources
 import logging
+import shutil
 import subprocess
+import sys
 import traceback
 import uuid
 from pathlib import Path
@@ -825,14 +827,42 @@ class FWWindow(QMainWindow):
         self._start_maximized = settings.value('Window/maximized', False, type=bool)
 
     @staticmethod
+    def _find_pyside6_rcc():
+        """Locate the pyside6-rcc binary.
+
+        Checks PATH first, then falls back to the bin/ directory next to the
+        running Python interpreter (covers ``uv tool install`` and other
+        isolated virtual-environment setups where entry-point scripts are not
+        exposed to the user's PATH).
+        """
+        path = shutil.which('pyside6-rcc')
+        if path:
+            return path
+        candidate = Path(sys.executable).resolve().parent / 'pyside6-rcc'
+        if candidate.is_file():
+            return str(candidate)
+        return None
+
+    @staticmethod
     def _register_resources(ui_path):
         """Compile MainRes.qrc to a binary .rcc (if needed) and register it."""
         qrc = ui_path / 'MainRes.qrc'
         rcc = ui_path / 'MainRes.rcc'
         if not rcc.exists() or rcc.stat().st_mtime < qrc.stat().st_mtime:
+            rcc_bin = FWWindow._find_pyside6_rcc()
+            if rcc_bin is None:
+                QMessageBox.critical(
+                    None,
+                    'FirewallFabrik',
+                    QMainWindow.tr(
+                        'pyside6-rcc was not found.\n\n'
+                        'Install the PySide6 tools package and try again.'
+                    ),
+                )
+                raise SystemExit(1) from None
             try:
                 result = subprocess.run(
-                    ['pyside6-rcc', '--binary', str(qrc), '-o', str(rcc)],
+                    [rcc_bin, '--binary', str(qrc), '-o', str(rcc)],
                     capture_output=True,
                     text=True,
                 )
