@@ -1137,7 +1137,10 @@ class FWWindow(QMainWindow):
         # Close current state (mirrors fileClose but without the save prompt).
         self._close_editor()
         self._rs_mgr.close_all()
+        self._object_tree._tree.blockSignals(True)
+        self._object_tree._tree.setCurrentItem(None)
         self._object_tree._tree.clear()
+        self._object_tree._tree.blockSignals(False)
         self._object_tree._filter.clear()
         self.undoView.clear()
 
@@ -1316,7 +1319,10 @@ class FWWindow(QMainWindow):
             self._rs_mgr.save_state()
         self._close_editor()
         self._rs_mgr.close_all()
+        self._object_tree._tree.blockSignals(True)
+        self._object_tree._tree.setCurrentItem(None)
         self._object_tree._tree.clear()
+        self._object_tree._tree.blockSignals(False)
         self._object_tree._filter.clear()
         self.undoView.clear()
         self._db_manager = DatabaseManager()

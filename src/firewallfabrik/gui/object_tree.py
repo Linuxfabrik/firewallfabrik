@@ -289,11 +289,13 @@ class ObjectTree(QWidget):
         """
         had_tree = self._tree.topLevelItemCount() > 0
         expanded = self._save_expanded_state()
-        # Detach selection before clearing to prevent a segfault in
-        # Shiboken::Object::setParent() when clear() destroys the
-        # currently selected QTreeWidgetItem during a nested signal chain.
+        # Block signals and detach selection before clearing to prevent a
+        # segfault: clear() destroys QTreeWidgetItems which can trigger
+        # itemSelectionChanged while items are partially freed.
+        self._tree.blockSignals(True)
         self._tree.setCurrentItem(None)
         self._tree.clear()
+        self._tree.blockSignals(False)
         self._filter.clear()
 
         libraries = session.scalars(sqlalchemy.select(Library)).all()
