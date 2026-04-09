@@ -8,7 +8,7 @@
 ## {{if var}} is conditional operator.
 ##
 setup_fwf_jumps_v4() {
-  local prefix="$1"
+  prefix="$1"
 
   # Set built-in chain policies to DROP for security.
   $IPTABLES {{$opt_wait}} -P INPUT   DROP
@@ -30,7 +30,7 @@ setup_fwf_jumps_v4() {
 }
 
 setup_fwf_jumps_v6() {
-  local prefix="$1"
+  prefix="$1"
 
   $IP6TABLES {{$opt_wait}} -P INPUT   DROP
   $IP6TABLES {{$opt_wait}} -P FORWARD DROP

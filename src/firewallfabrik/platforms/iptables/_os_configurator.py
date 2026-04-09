@@ -300,7 +300,7 @@ class OSConfigurator_linux24(OSConfigurator):
         load_modules.set_variable(
             'load_modules', bool(self.fw.get_option('load_modules'))
         )
-        load_modules.set_variable('modules_dir', '/lib/modules/`uname -r`/kernel/net/')
+        load_modules.set_variable('modules_dir', '/lib/modules/$(uname -r)/kernel/net/')
 
         return load_modules.expand()
 

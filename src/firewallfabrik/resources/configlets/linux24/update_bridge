@@ -18,18 +18,19 @@ missing_port() {
 
     oldIFS=$IFS
     IFS="@"
-    set $intf
+    # shellcheck disable=SC2086
+    set -- $intf
     port=$1
     bridge_interface=$2
     IFS=$oldIFS
 
     if test "$cmd" = "add"; then
         echo "# Adding port $port to bridge $bridge_interface"
-        $FWBDEBUG $IP link set $port master $bridge_interface
-        $FWBDEBUG $IP link set $port up
+        $FWBDEBUG "$IP" link set "$port" master "$bridge_interface"
+        $FWBDEBUG "$IP" link set "$port" up
     else
         echo "# Removing port $port from bridge $bridge_interface"
-        $FWBDEBUG $IP link set $port nomaster
+        $FWBDEBUG "$IP" link set "$port" nomaster
     fi
 }
 
@@ -42,7 +43,7 @@ update_bridge() {
     CURRENT_PORTS=""
 
     FWB_PORTS=$(
-        for subint in $*; do
+        for subint in "$@"; do
           echo "${subint}@$bridge_interface"
         done | sort
     )
@@ -50,16 +51,16 @@ update_bridge() {
     # Create bridge if it does not exist yet.  This is redundant when
     # sync_bridge_interfaces has been called first but keeps
     # update_bridge usable on its own.
-    $IP link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
+    "$IP" link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
         echo "# Creating bridge interface $bridge_interface"
-        $FWBDEBUG $IP link add name $bridge_interface type bridge
-        $FWBDEBUG $IP link set $bridge_interface up
+        $FWBDEBUG "$IP" link add name "$bridge_interface" type bridge
+        $FWBDEBUG "$IP" link set "$bridge_interface" up
     }
 
     CURRENT_PORTS=$(
-        $IP link show master "$bridge_interface" 2>/dev/null | \
+        "$IP" link show master "$bridge_interface" 2>/dev/null | \
             awk -F'[ :]+' '/^[0-9]/ {print $2}' | \
-            while read port; do
+            while read -r port; do
                 echo "${port}@$bridge_interface"
             done | sort
     )
@@ -83,24 +84,24 @@ update_bridge() {
 ## sync_bridge_interfaces br0 br1
 
 sync_bridge_interfaces() {
-    $IP -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
+    "$IP" -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
         awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (!($1 in ignored_dict)) {print $1;}' | \
-         while read brintf; do
+         while read -r brintf; do
             echo "# Deleting bridge interface $brintf"
-             $FWBDEBUG $IP link set $brintf down
-             $FWBDEBUG $IP link delete $brintf type bridge
+             $FWBDEBUG "$IP" link set "$brintf" down
+             $FWBDEBUG "$IP" link delete "$brintf" type bridge
          done
 
-    for brint in $*; do
-        $IP link show "$brint" type bridge >/dev/null 2>&1 || {
+    for brint in "$@"; do
+        "$IP" link show "$brint" type bridge >/dev/null 2>&1 || {
             echo "# Creating bridge interface $brint"
-            $FWBDEBUG $IP link add name $brint type bridge
-            $FWBDEBUG $IP link set $brint up
+            $FWBDEBUG "$IP" link add name "$brint" type bridge
+            $FWBDEBUG "$IP" link set "$brint" up
         }
     done
 }

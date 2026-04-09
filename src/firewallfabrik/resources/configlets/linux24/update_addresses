@@ -14,7 +14,8 @@ missing_address() {
 
     oldIFS=$IFS
     IFS="@"
-    set $address
+    # shellcheck disable=SC2086
+    set -- $address
     addr=$1
     interface=$2
     IFS=$oldIFS
@@ -42,7 +43,7 @@ missing_address() {
 ## see only one warning, citing the name of the first p2p interface
 ## even if they have many.
 
-    $IP addr show dev $interface | grep -q POINTOPOINT && {
+    "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
         test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
         P2P_INTERFACE_WARNING="yes"
         return
@@ -52,19 +53,19 @@ missing_address() {
       echo "# Adding ip address: $interface $addr"
 ## Use "broadcast +" syntax to make ip assign broadcast automatically,
 ## but only for ipv4 addresses
-      echo $addr | grep -q ':' && {
-          $FWBDEBUG $IP addr $cmd $addr dev $interface
-      } || {
-          $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
-      }
+      if echo "$addr" | grep -q ':'; then
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+      else
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+      fi
     }
 
     test "$cmd" = "del" && {
       echo "# Removing ip address: $interface $addr"
-      $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
+      $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
     }
 
-    $FWBDEBUG $IP link set $interface up
+    $FWBDEBUG "$IP" link set "$interface" up
 }
 
 ##
@@ -76,14 +77,14 @@ list_addresses_by_scope() {
     interface=$1
     scope=$2
     ignore_list=$3
-    $IP addr ls dev $interface | \
+    "$IP" addr ls dev "$interface" | \
       awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
-        while read addr; do
+        while read -r addr; do
           echo "${addr}@$interface"
 	done | sort
 }
@@ -102,12 +103,13 @@ list_addresses_by_scope() {
 
 update_addresses_of_interface() {
     ignore_list=$2
-    set $1
+    # shellcheck disable=SC2086
+    set -- $1
     interface=$1
     shift
 
     FWB_ADDRS=$(
-      for addr in $*; do
+      for addr in "$@"; do
         echo "${addr}@$interface"
       done | sort
     )
@@ -115,14 +117,14 @@ update_addresses_of_interface() {
     CURRENT_ADDRS_ALL_SCOPES=""
     CURRENT_ADDRS_GLOBAL_SCOPE=""
 
-    $IP link show dev $interface >/dev/null 2>&1 && {
-      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
-      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
-    } || {
+    if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+    else
       echo "# Interface $interface does not exist"
       # Stop the script if we are not in test mode
       test -z "$FWBDEBUG" && exit 1
-    }
+    fi
 
     diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
     diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
@@ -139,15 +141,15 @@ update_addresses_of_interface() {
 ## addresses found on the firewall.
 ##
 clear_addresses_except_known_interfaces() {
-    $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
+    "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (/state/ && !($2 in ignored_dict)) {print $2;}' | \
-         while read intf; do
+         while read -r intf; do
             echo "# Removing addresses not configured in fwbuilder from interface $intf"
-            $FWBDEBUG $IP addr flush dev $intf scope global
-            $FWBDEBUG $IP link set $intf down
+            $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+            $FWBDEBUG "$IP" link set "$intf" down
          done
 }

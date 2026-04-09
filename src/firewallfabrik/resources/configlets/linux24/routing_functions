@@ -23,7 +23,7 @@ test -n "$HAVE_MKTEMP" && {
 
 test -z "$HAVE_MKTEMP" && {
   TMPDIRNAME="/tmp/.fwbuilder.tempdir.$$"
-  (umask 077 && mkdir $TMPDIRNAME) || exit 1
+  (umask 077 && mkdir "$TMPDIRNAME") || exit 1
 }
 
 TMPFILENAME="$TMPDIRNAME/.fwbuilder.out"
@@ -35,8 +35,8 @@ OLD_ROUTES="$TMPDIRNAME/.old_routes"
 restore_script_output()
 {
   exec 1>&3 2>&1
-  cat $TMPFILENAME
-  rm -rf $TMPDIRNAME
+  cat "$TMPFILENAME"
+  rm -rf "$TMPDIRNAME"
 }
 
 # if any routing rule fails we do our best to prevent freezing the firewall
@@ -45,9 +45,9 @@ route_command_error()
   echo "Error: Routing rule $1 couldn't be activated"
   echo "Recovering previous routing configuration..."
   # delete current routing rules
-  $IP route show | while read route ; do $IP route del $route ; done
+  "$IP" route show | while read -r route ; do "$IP" route del $route ; done
   # restore old routing rules
-  sh $OLD_ROUTES
+  sh "$OLD_ROUTES"
   echo "...done"
   restore_script_output
   epilog_commands
@@ -56,16 +56,16 @@ route_command_error()
 
 # redirect output to prevent ssh session from stalling
 exec 3>&1
-exec 1> $TMPFILENAME
+exec 1> "$TMPFILENAME"
 exec 2>&1
 
 # store previous routing configuration (sort: 'via' GW has to be
 # inserted after device routes)
 
-$IP route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > $OLD_ROUTES
+"$IP" route show | sort -k 2 | awk '{printf "ip route add %s\n",$0;}' > "$OLD_ROUTES"
 
 echo "Deleting routing rules previously set by user space processes..."
-$IP route show | grep -v {{$proto_filter}} | \
-    while read route ; do $IP route del $route ; done
+"$IP" route show | grep -v {{$proto_filter}} | \
+    while read -r route ; do "$IP" route del $route ; done
 
 echo "Activating non-ecmp routing rules..."

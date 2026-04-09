@@ -27,14 +27,14 @@ log() {
 }
 
 getInterfaceVarName() {
-    echo $1 | sed 's/\./_/'
+    echo "$1" | sed 's/\./_/'
 }
 
 getaddr_internal() {
     dev=$1
     name=$2
     af=$3
-    L=$($IP $af addr show dev $dev |  sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+    L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
     test -z "$L" && {
         eval "$name=''"
         return
@@ -46,7 +46,7 @@ getnet_internal() {
     dev=$1
     name=$2
     af=$3
-    L=$($IP route list proto kernel | grep $dev | grep -v default |  sed 's! .*$!!')
+    L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
     test -z "$L" && {
         eval "$name=''"
         return
@@ -55,30 +55,31 @@ getnet_internal() {
 }
 
 getaddr() {
-    getaddr_internal $1 $2 "-4"
+    getaddr_internal "$1" "$2" "-4"
 }
 
 getaddr6() {
-    getaddr_internal $1 $2 "-6"
+    getaddr_internal "$1" "$2" "-6"
 }
 
 getnet() {
-    getnet_internal $1 $2 "-4"
+    getnet_internal "$1" "$2" "-4"
 }
 
 getnet6() {
-    getnet_internal $1 $2 "-6"
+    getnet_internal "$1" "$2" "-6"
 }
 
 # function getinterfaces is used to process wildcard interfaces
 getinterfaces() {
     NAME=$1
-    $IP link show | grep ": $NAME" | while read L; do
+    "$IP" link show | grep ": $NAME" | while read -r L; do
         OIFS=$IFS
         IFS=" :"
-        set $L
+        # shellcheck disable=SC2086
+        set -- $L
         IFS=$OIFS
-        echo $2
+        echo "$2"
     done
 }
 
@@ -89,9 +90,9 @@ diff_intf() {
     cmd=$4
     for intf in $list1
     do
-        echo $list2 | grep -q $intf || {
-        # $vlan is absent in list 2
-            $func $intf $cmd
+        echo "$list2" | grep -q "$intf" || {
+        # $intf is absent in list 2
+            "$func" "$intf" "$cmd"
         }
     done
 }
@@ -104,12 +105,13 @@ missing_address() {
 
     oldIFS=$IFS
     IFS="@"
-    set $address
+    # shellcheck disable=SC2086
+    set -- $address
     addr=$1
     interface=$2
     IFS=$oldIFS
 
-    $IP addr show dev $interface | grep -q POINTOPOINT && {
+    "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
         test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
         P2P_INTERFACE_WARNING="yes"
         return
@@ -117,45 +119,46 @@ missing_address() {
 
     test "$cmd" = "add" && {
       echo "# Adding ip address: $interface $addr"
-      echo $addr | grep -q ':' && {
-          $FWBDEBUG $IP addr $cmd $addr dev $interface
-      } || {
-          $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
-      }
+      if echo "$addr" | grep -q ':'; then
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+      else
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+      fi
     }
 
     test "$cmd" = "del" && {
       echo "# Removing ip address: $interface $addr"
-      $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
+      $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
     }
 
-    $FWBDEBUG $IP link set $interface up
+    $FWBDEBUG "$IP" link set "$interface" up
 }
 
 list_addresses_by_scope() {
     interface=$1
     scope=$2
     ignore_list=$3
-    $IP addr ls dev $interface | \
+    "$IP" addr ls dev "$interface" | \
       awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
-        while read addr; do
+        while read -r addr; do
           echo "${addr}@$interface"
 	done | sort
 }
 
 update_addresses_of_interface() {
     ignore_list=$2
-    set $1
+    # shellcheck disable=SC2086
+    set -- $1
     interface=$1
     shift
 
     FWB_ADDRS=$(
-      for addr in $*; do
+      for addr in "$@"; do
         echo "${addr}@$interface"
       done | sort
     )
@@ -163,30 +166,30 @@ update_addresses_of_interface() {
     CURRENT_ADDRS_ALL_SCOPES=""
     CURRENT_ADDRS_GLOBAL_SCOPE=""
 
-    $IP link show dev $interface >/dev/null 2>&1 && {
-      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
-      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
-    } || {
+    if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+    else
       echo "# Interface $interface does not exist"
       # Stop the script if we are not in test mode
       test -z "$FWBDEBUG" && exit 1
-    }
+    fi
 
     diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
     diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
 }
 
 clear_addresses_except_known_interfaces() {
-    $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
+    "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (/state/ && !($2 in ignored_dict)) {print $2;}' | \
-         while read intf; do
+         while read -r intf; do
             echo "# Removing addresses not configured in fwbuilder from interface $intf"
-            $FWBDEBUG $IP addr flush dev $intf scope global
-            $FWBDEBUG $IP link set $intf down
+            $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+            $FWBDEBUG "$IP" link set "$intf" down
          done
 }
 
@@ -234,18 +237,19 @@ configure_interfaces() {
 
         oldIFS=$IFS
         IFS="@"
-        set $intf
+        # shellcheck disable=SC2086
+        set -- $intf
         port=$1
         bridge_interface=$2
         IFS=$oldIFS
 
         if test "$cmd" = "add"; then
             echo "# Adding port $port to bridge $bridge_interface"
-            $FWBDEBUG $IP link set $port master $bridge_interface
-            $FWBDEBUG $IP link set $port up
+            $FWBDEBUG "$IP" link set "$port" master "$bridge_interface"
+            $FWBDEBUG "$IP" link set "$port" up
         else
             echo "# Removing port $port from bridge $bridge_interface"
-            $FWBDEBUG $IP link set $port nomaster
+            $FWBDEBUG "$IP" link set "$port" nomaster
         fi
     }
 
@@ -258,7 +262,7 @@ configure_interfaces() {
         CURRENT_PORTS=""
 
         FWB_PORTS=$(
-            for subint in $*; do
+            for subint in "$@"; do
               echo "${subint}@$bridge_interface"
             done | sort
         )
@@ -266,16 +270,16 @@ configure_interfaces() {
         # Create bridge if it does not exist yet.  This is redundant when
         # sync_bridge_interfaces has been called first but keeps
         # update_bridge usable on its own.
-        $IP link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
+        "$IP" link show "$bridge_interface" type bridge >/dev/null 2>&1 || {
             echo "# Creating bridge interface $bridge_interface"
-            $FWBDEBUG $IP link add name $bridge_interface type bridge
-            $FWBDEBUG $IP link set $bridge_interface up
+            $FWBDEBUG "$IP" link add name "$bridge_interface" type bridge
+            $FWBDEBUG "$IP" link set "$bridge_interface" up
         }
 
         CURRENT_PORTS=$(
-            $IP link show master "$bridge_interface" 2>/dev/null | \
+            "$IP" link show master "$bridge_interface" 2>/dev/null | \
                 awk -F'[ :]+' '/^[0-9]/ {print $2}' | \
-                while read port; do
+                while read -r port; do
                     echo "${port}@$bridge_interface"
                 done | sort
         )
@@ -289,24 +293,24 @@ configure_interfaces() {
     }
 
     sync_bridge_interfaces() {
-        $IP -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
+        "$IP" -brief link show type bridge 2>/dev/null | awk '{print $1}' | \
             awk -v IGNORED="$*" \
             'BEGIN {
                split(IGNORED,ignored_arr);
                for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
              }
              (!($1 in ignored_dict)) {print $1;}' | \
-             while read brintf; do
+             while read -r brintf; do
                 echo "# Deleting bridge interface $brintf"
-                 $FWBDEBUG $IP link set $brintf down
-                 $FWBDEBUG $IP link delete $brintf type bridge
+                 $FWBDEBUG "$IP" link set "$brintf" down
+                 $FWBDEBUG "$IP" link delete "$brintf" type bridge
              done
 
-        for brint in $*; do
-            $IP link show "$brint" type bridge >/dev/null 2>&1 || {
+        for brint in "$@"; do
+            "$IP" link show "$brint" type bridge >/dev/null 2>&1 || {
                 echo "# Creating bridge interface $brint"
-                $FWBDEBUG $IP link add name $brint type bridge
-                $FWBDEBUG $IP link set $brint up
+                $FWBDEBUG "$IP" link add name "$brint" type bridge
+                $FWBDEBUG "$IP" link set "$brint" up
             }
         done
     }

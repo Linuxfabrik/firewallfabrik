@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler warnings (e.g. "Making rule stateless because it matches ICMPv6") no longer cause the compilation to be reported as failed; they are now shown as orange warnings in the GUI and CLI while the exit code remains 0
 * Fix `--require-hashes` pip installs in CI workflows by using pinned versions instead
+* Generated iptables shell scripts are now fully POSIX sh compliant and pass shellcheck without warnings: proper variable quoting, `read -r` for backslash safety, `local` replaced with plain variables, backticks replaced with `$()`, `test "X$var"` idiom modernized ([#36](https://github.com/Linuxfabrik/firewallfabrik/issues/36))
 
 
 ## [v1.4.4] - 2026-04-08

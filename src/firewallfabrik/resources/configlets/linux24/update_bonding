@@ -39,7 +39,7 @@ missing_bond() {
 
     test "$cmd" = "down" && {
       echo "# Bring unconfigured bonding interface $bond_intf down"
-      $FWBDEBUG $IP link set $bond_intf down
+      $FWBDEBUG "$IP" link set "$bond_intf" down
     }
 }
 
@@ -49,19 +49,20 @@ missing_slave() {
 
     oldIFS=$IFS
     IFS="@"
-    set $slave
+    # shellcheck disable=SC2086
+    set -- $slave
     intf=$1
     bond_interface=$2
     IFS=$oldIFS
 
-    test "$cmd" = "-d" && {
+    if test "$cmd" = "-d"; then
       echo "# Delete bonding interface slave: $bond_interface $intf"
-      $FWBDEBUG $IFENSLAVE -d $bond_interface $intf
-    } || {
+      $FWBDEBUG "$IFENSLAVE" -d "$bond_interface" "$intf"
+    else
       echo "# Add bonding interface slave: $bond_interface $intf"
-      $FWBDEBUG $IP link set $bond_interface up
-      $FWBDEBUG $IFENSLAVE $bond_interface $intf
-    }
+      $FWBDEBUG "$IP" link set "$bond_interface" up
+      $FWBDEBUG "$IFENSLAVE" "$bond_interface" "$intf"
+    fi
 }
 
 ## verify that bonding module is loaded with parameters that provide
@@ -85,25 +86,29 @@ load_bonding_module() {
     module_parameters=$*
 
     PROC_DIR="/proc/net/bonding/"
-    test -d $PROC_DIR || {
+    test -d "$PROC_DIR" || {
 ## module is not loaded. Load it with appropriate max_bonds argument
         cmd="$MODPROBE bonding $module_parameters"
-        test -n "$FWBDEBUG" && echo "# $cmd" || $cmd || {
-            # Module load failed.
-            cat <<EOF
+        if test -n "$FWBDEBUG"; then
+            echo "# $cmd"
+        else
+            $cmd || {
+                # Module load failed.
+                cat <<EOF
 
 Could not load bonding interface module. Try to add
 module parameters to the file /etc/modprobe.conf or
 /etc/modprobe.d/bond.conf and reboot
 EOF
-            # do not abort in test mode
-            test -z "$FWBDEBUG" && exit 1
-        }
+                # do not abort in test mode
+                test -z "$FWBDEBUG" && exit 1
+            }
+        fi
     }
     ## test that we now have bonding interfaces that we need
     for bondint in $bonding_interfaces; do
         PROD_BOND_IFACE="${PROC_DIR}/$bondint"
-        test -f $PROD_BOND_IFACE || {
+        test -f "$PROD_BOND_IFACE" || {
             echo "Bonding interface $bondint does not exist"
             test -z "$FWBDEBUG" && exit 1
         }
@@ -113,7 +118,7 @@ EOF
 ## If no bonding interfaces are configured in fwbuilder, unload the module
 ## to kill any that might be present on the machine.
 unload_bonding_module() {
-    $MODPROBE -r bonding
+    "$MODPROBE" -r bonding
 }
 
 ## update_bonding bond0 eth2 eth3
@@ -124,20 +129,20 @@ update_bonding() {
 
     PROC_DIR="/proc/net/bonding/"
     PROD_BOND_IFACE="${PROC_DIR}/$bond_interface"
-    test -f $PROD_BOND_IFACE && {
+    test -f "$PROD_BOND_IFACE" && {
 
         FWB_SLAVES=""
         CURRENT_SLAVES=""
 
         FWB_SLAVES=$(
-            for subint in $*; do
+            for subint in "$@"; do
                 echo "${subint}@$bond_interface"
             done | sort
         )
 
         CURRENT_SLAVES=$(
-            cat $PROD_BOND_IFACE | grep 'Slave Interface:' | \
-                while read a b slave; do
+            cat "$PROD_BOND_IFACE" | grep 'Slave Interface:' | \
+                while read -r a b slave; do
                     echo "${slave}@$bond_interface"
                 done | sort
         )
@@ -163,20 +168,20 @@ update_bonding() {
 ##
 clear_bonding_except_known() {
     PROC_DIR="/proc/net/bonding/"
-    ls $PROC_DIR | awk -v IGNORED="$*" \
+    ls "$PROC_DIR" | awk -v IGNORED="$*" \
         'BEGIN {
            split(IGNORED,ignored_arr);
            for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
          }
          (!($1 in ignored_dict)) {print $1;}' | \
-         while read bond_intf; do
+         while read -r bond_intf; do
              PROD_BOND_IFACE="${PROC_DIR}/$bond_intf"
-             slaves=$(cat $PROD_BOND_IFACE | awk '/[sS]lave [iI]nterface:/ { printf "%s ",$NF;}')
+             slaves=$(cat "$PROD_BOND_IFACE" | awk '/[sS]lave [iI]nterface:/ { printf "%s ",$NF;}')
              test -n "$slaves" && {
                  echo "Removing slaves and bringing unconfigured bonding interface $bond_intf down"
-                 $FWBDEBUG $IP link set $bond_intf up
-                 $FWBDEBUG $IFENSLAVE  -d $bond_intf $slaves
-                 $FWBDEBUG $IP link set $bond_intf down
+                 $FWBDEBUG "$IP" link set "$bond_intf" up
+                 $FWBDEBUG "$IFENSLAVE" -d "$bond_intf" $slaves
+                 $FWBDEBUG "$IP" link set "$bond_intf" down
              }
          done
 }

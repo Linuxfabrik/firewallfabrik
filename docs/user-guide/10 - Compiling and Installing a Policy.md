@@ -78,6 +78,18 @@ We fix the problem, then compile again.
 
 To see the created script, look in the same directory as your object file (`.fwf` or `.fwb`). If you have set an output file name in the firewall settings dialog (default: `fwf.sh`), that name is used. Otherwise, the file will be called `<firewallName>.fw`. (If you changed your default directory in the Preferences, then the generated script will be there instead.)
 
+### Shell Script Quality
+
+Generated iptables scripts use `#!/bin/sh` and are fully POSIX sh compliant. They pass [shellcheck](https://www.shellcheck.net/) without warnings. You can verify this yourself:
+
+``` bash
+shellcheck fwf.sh
+```
+
+The scripts contain a `# shellcheck disable=SC2034,SC2329` directive near the top. This suppresses two false positives: SC2034 (unused variable) and SC2329 (unused function). The affected variables and functions (e.g. `VCONFIG`, `IPSET`, `getaddr6()`) are included in every generated script but only used when the firewall configuration requires them (VLANs, ipset address tables, IPv6, etc.). shellcheck cannot know this because it analyzes each file in isolation.
+
+If your generated script still triggers shellcheck warnings, they are most likely caused by prolog or epilog scripts that you have added to the firewall object. These user-defined scripts are embedded verbatim and are not checked by the compiler. Make sure any custom prolog/epilog code is POSIX sh compliant (e.g. use `>/dev/null 2>&1` instead of `&>`, `[ ]` instead of `[[ ]]`).
+
 ## Compiling Cluster Configuration with FirewallFabrik
 
 Cluster compilation works very much like it does for individual firewalls. However, there are a few things to keep in mind.

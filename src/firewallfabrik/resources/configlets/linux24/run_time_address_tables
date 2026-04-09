@@ -27,9 +27,9 @@
 {{if using_ipset}}
 
 check_module_ipset() {
-    $IPSET --list > /dev/null 2>&1 || {
+    "$IPSET" --list > /dev/null 2>&1 || {
         echo "Detected an error with ipset utility :"
-        $IPSET -V
+        "$IPSET" -V
         exit 1
     }
 }
@@ -45,51 +45,52 @@ reload_address_table() {
     addrtbl_name=$1
     data_file=$2
 
-    test -z "$addrtbl_name" -o -z "$data_file" && {
+    test -z "$addrtbl_name" || test -z "$data_file" && {
         echo "Usage: reload_address_table address_table_object_name file_name"
         exit 1
     }
 
-    $IPSET -X tmp_fwb_set:ip -q
-    $IPSET -X tmp_fwb_set:net -q
+    "$IPSET" -X tmp_fwb_set:ip -q
+    "$IPSET" -X tmp_fwb_set:net -q
 
-    $IPSET -N tmp_fwb_set:ip  iphash
-    $IPSET -N tmp_fwb_set:net nethash
+    "$IPSET" -N tmp_fwb_set:ip  iphash
+    "$IPSET" -N tmp_fwb_set:net nethash
 
-    DATAFILE_SIZE=`wc -l $data_file|cut -d" " -f 1`
+    DATAFILE_SIZE=$(wc -l "$data_file" | cut -d" " -f 1)
     echo "Processing $DATAFILE_SIZE items in file: $data_file"
 
-    grep -Ev '^#|^;|^\s*$' $data_file | while read L ; do
-        set $L
+    grep -Ev '^#|^;|^\s*$' "$data_file" | while read -r L ; do
+        # shellcheck disable=SC2086
+        set -- $L
         addr=$1
-        if echo $addr | grep -q "/"
+        if echo "$addr" | grep -q "/"
         then
-            $IPSET -A tmp_fwb_set:net $addr
+            "$IPSET" -A tmp_fwb_set:net "$addr"
         else
-            $IPSET -A tmp_fwb_set:ip $addr
+            "$IPSET" -A tmp_fwb_set:ip "$addr"
         fi
     done
 
-    $IPSET --list ${addrtbl_name}:ip >/dev/null || $IPSET -N ${addrtbl_name}:ip iphash
-    $IPSET --list ${addrtbl_name}:net >/dev/null || $IPSET -N ${addrtbl_name}:net nethash
+    "$IPSET" --list "${addrtbl_name}:ip" >/dev/null || "$IPSET" -N "${addrtbl_name}:ip" iphash
+    "$IPSET" --list "${addrtbl_name}:net" >/dev/null || "$IPSET" -N "${addrtbl_name}:net" nethash
 
-    $IPSET -W ${addrtbl_name}:ip tmp_fwb_set:ip
-    $IPSET -W ${addrtbl_name}:net tmp_fwb_set:net
+    "$IPSET" -W "${addrtbl_name}:ip" tmp_fwb_set:ip
+    "$IPSET" -W "${addrtbl_name}:net" tmp_fwb_set:net
 
-    $IPSET --list ${addrtbl_name} >/dev/null || {
-        $IPSET -N ${addrtbl_name} setlist
+    "$IPSET" --list "${addrtbl_name}" >/dev/null || {
+        "$IPSET" -N "${addrtbl_name}" setlist
     }
 
-    $IPSET --list ${addrtbl_name} | grep -q ${addrtbl_name}:ip || {
-        $IPSET -A ${addrtbl_name} ${addrtbl_name}:ip
+    "$IPSET" --list "${addrtbl_name}" | grep -q "${addrtbl_name}:ip" || {
+        "$IPSET" -A "${addrtbl_name}" "${addrtbl_name}:ip"
     }
 
-    $IPSET --list ${addrtbl_name} | grep -q ${addrtbl_name}:net || {
-        $IPSET -A ${addrtbl_name} ${addrtbl_name}:net
+    "$IPSET" --list "${addrtbl_name}" | grep -q "${addrtbl_name}:net" || {
+        "$IPSET" -A "${addrtbl_name}" "${addrtbl_name}:net"
     }
 
-    $IPSET -X tmp_fwb_set:ip
-    $IPSET -X tmp_fwb_set:net
+    "$IPSET" -X tmp_fwb_set:ip
+    "$IPSET" -X tmp_fwb_set:net
 }
 
 add_to_address_table() {
@@ -97,18 +98,18 @@ add_to_address_table() {
     data_file=$2
     address=$3
 
-    test -z "$addrtbl_name" -o -z "$data_file" -o -z "$address" && {
+    test -z "$addrtbl_name" || test -z "$data_file" || test -z "$address" && {
         echo "Usage: add_to_address_table address_table_object_name file_name address"
         exit 1
     }
 
-    echo $address >> $data_file
+    echo "$address" >> "$data_file"
 
-    if echo $address | grep -q "/"
+    if echo "$address" | grep -q "/"
     then
-        $IPSET -A ${addrtbl_name}:net $address
+        "$IPSET" -A "${addrtbl_name}:net" "$address"
     else
-        $IPSET -A ${addrtbl_name}:ip $address
+        "$IPSET" -A "${addrtbl_name}:ip" "$address"
     fi
 }
 
@@ -117,20 +118,20 @@ remove_from_address_table() {
     data_file=$2
     address=$3
 
-    test -z "$addrtbl_name" -o -z "$data_file" -o -z "$address" && {
+    test -z "$addrtbl_name" || test -z "$data_file" || test -z "$address" && {
         echo "Usage: remove_from_address_table address_table_object_name file_name address"
         exit 1
     }
 
 ## note that $address may contain "/"
-    escaped_addr=$(echo $address | sed 's!/!\\/!')
-    sed -i "/^ *$escaped_addr *\$/d" $data_file
+    escaped_addr=$(echo "$address" | sed 's!/!\\/!')
+    sed -i "/^ *$escaped_addr *\$/d" "$data_file"
 
-    if echo $address | grep -q "/"
+    if echo "$address" | grep -q "/"
     then
-        $IPSET -D ${addrtbl_name}:net $address
+        "$IPSET" -D "${addrtbl_name}:net" "$address"
     else
-        $IPSET -D ${addrtbl_name}:ip $address
+        "$IPSET" -D "${addrtbl_name}:ip" "$address"
     fi
 }
 
@@ -138,16 +139,16 @@ test_address_table() {
     addrtbl_name=$1
     address=$2
 
-    test -z "$addrtbl_name" -o -z "$address" && {
+    test -z "$addrtbl_name" || test -z "$address" && {
         echo "Usage: test_address_table address_table_object_name address"
         exit 1
     }
 
-    if echo $address | grep -q "/"
+    if echo "$address" | grep -q "/"
     then
-        $IPSET -T ${addrtbl_name}:net $address
+        "$IPSET" -T "${addrtbl_name}:net" "$address"
     else
-        $IPSET -T ${addrtbl_name}:ip $address
+        "$IPSET" -T "${addrtbl_name}:ip" "$address"
     fi
 }
 

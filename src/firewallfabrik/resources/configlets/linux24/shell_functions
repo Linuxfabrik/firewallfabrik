@@ -6,7 +6,7 @@ log() {
 }
 
 getInterfaceVarName() {
-    echo $1 | sed 's/\./_/'
+    echo "$1" | sed 's/\./_/'
 }
 
 ##
@@ -29,7 +29,7 @@ getaddr_internal() {
     dev=$1
     name=$2
     af=$3
-    L=$($IP $af addr show dev $dev |  sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+    L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
     test -z "$L" && {
         eval "$name=''"
         return
@@ -41,7 +41,7 @@ getnet_internal() {
     dev=$1
     name=$2
     af=$3
-    L=$($IP route list proto kernel | grep $dev | grep -v default |  sed 's! .*$!!')
+    L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
     test -z "$L" && {
         eval "$name=''"
         return
@@ -55,7 +55,7 @@ getnet_internal() {
 ## assignes the list to the variable which name is given as arg 2.
 ##
 getaddr() {
-    getaddr_internal $1 $2 "-4"
+    getaddr_internal "$1" "$2" "-4"
 }
 
 ##
@@ -63,7 +63,7 @@ getaddr() {
 ## assignes the list to the variable which name is given as arg 2.
 ##
 getaddr6() {
-    getaddr_internal $1 $2 "-6"
+    getaddr_internal "$1" "$2" "-6"
 }
 
 ##
@@ -72,7 +72,7 @@ getaddr6() {
 ## to the variable which name is given as arg 2.
 ##
 getnet() {
-    getnet_internal $1 $2 "-4"
+    getnet_internal "$1" "$2" "-4"
 }
 
 ##
@@ -81,18 +81,19 @@ getnet() {
 ## to the variable which name is given as arg 2.
 ##
 getnet6() {
-    getnet_internal $1 $2 "-6"
+    getnet_internal "$1" "$2" "-6"
 }
 
 # function getinterfaces is used to process wildcard interfaces
 getinterfaces() {
     NAME=$1
-    $IP link show | grep ": $NAME" | while read L; do
+    "$IP" link show | grep ": $NAME" | while read -r L; do
         OIFS=$IFS
         IFS=" :"
-        set $L
+        # shellcheck disable=SC2086
+        set -- $L
         IFS=$OIFS
-        echo $2
+        echo "$2"
     done
 }
 
@@ -103,9 +104,9 @@ diff_intf() {
     cmd=$4
     for intf in $list1
     do
-        echo $list2 | grep -q $intf || {
-        # $vlan is absent in list 2
-            $func $intf $cmd
+        echo "$list2" | grep -q "$intf" || {
+        # $intf is absent in list 2
+            "$func" "$intf" "$cmd"
         }
     done
 }

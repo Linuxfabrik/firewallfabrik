@@ -23,5 +23,5 @@ epilog_commands() {
 
 run_epilog_and_exit() {
     epilog_commands
-    exit $1
+    exit "$1"
 }

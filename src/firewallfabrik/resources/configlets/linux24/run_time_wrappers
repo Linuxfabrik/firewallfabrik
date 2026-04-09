@@ -17,8 +17,9 @@
 
 
 {{if address_table}}
-grep -Ev '^#|^;|^\s*$' {{$address_table_file}} | while read L ; do
-  set $L; at_{{$address_table_var}}=$1; {{$command}}
+grep -Ev '^#|^;|^\s*$' {{$address_table_file}} | while read -r L ; do
+  # shellcheck disable=SC2086
+  set -- $L; at_{{$address_table_var}}=$1; {{$command}}
 done
 {{endif}}
 
@@ -27,10 +28,10 @@ done
 ## This can be something like "ppp*"
 ##
 {{if wildcard_interface}}
-getinterfaces {{$interface_family_name}} | while read I; do
-    ivar=$(getInterfaceVarName $I)
-    getaddr{{if ipv6}}6{{endif}} $I $ivar
-    cmd="$"${ivar}_list
+getinterfaces {{$interface_family_name}} | while read -r I; do
+    ivar=$(getInterfaceVarName "$I")
+    getaddr{{if ipv6}}6{{endif}} "$I" "$ivar"
+    cmd="\$"${ivar}_list
     eval "addr_list=$cmd"
     for addr in $addr_list
     do

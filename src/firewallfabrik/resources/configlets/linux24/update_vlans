@@ -33,81 +33,89 @@ missing_vlan() {
 
     oldIFS=$IFS
     IFS="@"
-    set $vlan
+    # shellcheck disable=SC2086
+    set -- $vlan
     subint=$1
     parent=$2
     IFS=$oldIFS
 
-    vlan_id=$(echo $subint | sed -r 's/(vlan|[^.]*\.)//')
+    vlan_id=$(echo "$subint" | sed -r 's/(vlan|[^.]*\.)//')
     test "$cmd" = "add" && {
-        echo $subint | grep -q "vlan" && name_type="VLAN_PLUS_VID" || name_type="DEV_PLUS_VID"
+        if echo "$subint" | grep -q "vlan"; then
+            name_type="VLAN_PLUS_VID"
+        else
+            name_type="DEV_PLUS_VID"
+        fi
         test "$vlan_id" \< "1" || name_type="${name_type}_NO_PAD"
         echo "# Adding VLAN interface $subint (parent: $parent)"
-        $FWBDEBUG $VCONFIG set_name_type $name_type
-        $FWBDEBUG $VCONFIG $cmd $parent $vlan_id
-        $FWBDEBUG $IP link set $subint up
+        $FWBDEBUG "$VCONFIG" set_name_type "$name_type"
+        $FWBDEBUG "$VCONFIG" "$cmd" "$parent" "$vlan_id"
+        $FWBDEBUG "$IP" link set "$subint" up
     }
     test "$cmd" = "rem" && {
         echo "# Removing VLAN interface $subint (parent: $parent)"
-        $FWBDEBUG $VCONFIG $cmd $subint
+        $FWBDEBUG "$VCONFIG" "$cmd" "$subint"
     }
 }
 
 parse_fwb_vlans() {
-    set $1
+    # shellcheck disable=SC2086
+    set -- $1
     vlan_parent_interface=$1
     shift
 
     FWB_VLANS=$(
-      for subint in $*; do
+      for subint in "$@"; do
         echo "${subint}@$vlan_parent_interface"
       done | sort
     )
-    echo $FWB_VLANS
+    echo "$FWB_VLANS"
 }
 
 parse_current_vlans() {
     vlan_parent_interface=$1
     CURRENT_VLANS=""
     PROC_DIR="/proc/net/vlan/"
-    test -d $PROC_DIR || $MODPROBE 8021q || {
+    test -d "$PROC_DIR" || "$MODPROBE" 8021q || {
         echo "$PROC_DIR does not exist. Vlan interfaces are not available."
         exit 1
     }
 
     test -f "/proc/net/vlan/config" && {
         CURRENT_VLANS=$(
-            cat /proc/net/vlan/config | grep -v 'Dev name' | grep $vlan_parent_interface | \
-                while read subint a vlan_id b parent; do
+            cat /proc/net/vlan/config | grep -v 'Dev name' | grep "$vlan_parent_interface" | \
+                while read -r subint a vlan_id b parent; do
                 echo "${subint}@$parent"
             done | sort
         )
     }
-    echo $CURRENT_VLANS
+    echo "$CURRENT_VLANS"
 }
 
 update_vlans_of_interface() {
     args="$1"
-    set $1
+    # shellcheck disable=SC2086
+    set -- $1
     vlan_parent_interface=$1
 
     FWB_VLANS=$(parse_fwb_vlans "$args")
-    CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+    CURRENT_VLANS=$(parse_current_vlans "$vlan_parent_interface")
 
-    $IP link set $vlan_parent_interface up
+    "$IP" link set "$vlan_parent_interface" up
     diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
     diff_intf missing_vlan "$CURRENT_VLANS" "$FWB_VLANS" rem
 }
 
 add_vlans() {
     args="$1"
-    set $1
+    # shellcheck disable=SC2086
+    set -- $1
     vlan_parent_interface=$1
 
-    FWB_VLANS=$(parse_fwb_vlans $args)
-    CURRENT_VLANS=$(parse_current_vlans $vlan_parent_interface)
+    FWB_VLANS=$(parse_fwb_vlans "$args")
+    CURRENT_VLANS=$(parse_current_vlans "$vlan_parent_interface")
 
-    $IP link set $vlan_parent_interface up
+    "$IP" link set "$vlan_parent_interface" up
     diff_intf missing_vlan "$FWB_VLANS" "$CURRENT_VLANS" add
 }
 
