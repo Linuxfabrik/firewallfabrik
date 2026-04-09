@@ -15,12 +15,18 @@
 import shutil
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
+from html import escape as _html_escape
 from pathlib import Path
 from typing import NamedTuple
 
 from PySide6.QtCore import QObject, QProcess, QSettings, Signal
 
 from firewallfabrik.driver._configlet import Configlet
+
+
+def _esc(text):
+    """HTML-escape without mangling apostrophes."""
+    return _html_escape(str(text), quote=False)
 
 
 class JobType(IntEnum):
@@ -195,7 +201,7 @@ class FirewallInstaller(QObject):
         """Build the job list and start executing."""
         self._jobs = build_job_list(self._config)
         if not self._jobs:
-            self.log_message.emit('No install jobs to run.')
+            self.log_message.emit('<b>No install jobs to run.</b>')
             self.job_finished.emit()
             return
         self._run_next()
@@ -214,17 +220,21 @@ class FirewallInstaller(QObject):
             self._run_external_script(job.arg1, job.arg2)
 
     def _copy_file(self, local: str, remote: str) -> None:
-        self.log_message.emit(f'Copying {Path(local).name} -> {remote}')
+        self.log_message.emit(
+            f'<b>Copying {_esc(Path(local).name)} -> {_esc(remote)}</b>'
+        )
         args = self._pack_scp_args(local, remote)
         self._start_process(args[0], args[1:])
 
     def _activate_policy(self, cmd: str) -> None:
-        self.log_message.emit(f'Activating policy on {self._config.mgmt_address}')
+        self.log_message.emit(
+            f'<b>Activating policy on {_esc(self._config.mgmt_address)}</b>'
+        )
         args = self._pack_ssh_args(cmd)
         self._start_process(args[0], args[1:])
 
     def _run_external_script(self, script: str, script_args: str) -> None:
-        self.log_message.emit(f'Running external script: {script}')
+        self.log_message.emit(f'<b>Running external script: {_esc(script)}</b>')
         args = script_args.split() if script_args else []
         self._start_process(script, args)
 
@@ -243,7 +253,11 @@ class FirewallInstaller(QObject):
         data = self._process.readAllStandardOutput().data()
         text = data.decode('utf-8', errors='replace').rstrip()
         if text:
-            self.log_message.emit(text)
+            indented = '\n'.join(f'    {line}' for line in text.splitlines())
+            self.log_message.emit(
+                f'<pre style="margin: 0; color: gray;'
+                f' font-size: small;">{_esc(indented)}</pre>'
+            )
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
         self._process = None

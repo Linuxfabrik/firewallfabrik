@@ -10,7 +10,8 @@
    subtle for Qt apps.  A thin application-side border keeps the window edge
    clearly visible. */
 
-QMainWindow {
+QMainWindow,
+QDialog {
     border: 1px solid palette(dark);
 }
 

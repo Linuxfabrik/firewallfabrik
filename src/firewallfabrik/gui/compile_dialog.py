@@ -521,7 +521,10 @@ class CompileDialog(QDialog):
         body = '<br>'.join(
             f'&nbsp;&nbsp;&nbsp;&nbsp;{escape(ln.strip())}' for ln in lines
         )
-        parts.append(f'<span style="color: gray; font-size: small;">{body}</span>')
+        parts.append(
+            f'<span style="color: gray; font-size: small; font-family: monospace;">'
+            f'{body}</span>'
+        )
 
     def _resize_sidebar(self):
         """Resize the sidebar to fit its content."""
@@ -929,7 +932,13 @@ class CompileDialog(QDialog):
 
     @Slot(str)
     def _on_install_log(self, msg):
-        self.procLogDisplay.append(msg)
+        # SSH output arrives pre-formatted (with <pre> tags) from the
+        # installer.  Plain-text status messages need an explicit
+        # margin reset so QTextBrowser does not inherit the <pre> indent.
+        if msg.startswith('<'):
+            self.procLogDisplay.append(msg)
+        else:
+            self.procLogDisplay.append(f'<p style="margin-left: 0;">{escape(msg)}</p>')
 
     @Slot()
     def _on_install_success(self):

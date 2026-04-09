@@ -136,6 +136,22 @@ If the options of a particular rule have been changed from their default values,
 
 You can set multiple options and combine them with the policy's action so that the firewall performs multiple operations within a single policy rule. For example, where supported, you can tag, classify, and accept a packet within a single rule by configuring the Tag and Classify options and setting the action to Accept. For more information on configuring policies to perform multiple operations, see [Configuring Multiple Operations per Rule](#configuring-multiple-operations-per-rule).
 
+#### When to Use the Stateless Option
+
+By default, every Accept rule includes a connection tracking match (`-m state --state NEW` for iptables, `ct state new` for nftables). This ensures that only new connections are evaluated against the full rule set, while established return traffic is handled by the global `ESTABLISHED,RELATED` rule at the top of the chain.
+
+The "Stateless" checkbox in the Rule Options dialog removes this connection tracking match. This is useful in the following cases:
+
+- **Default deny rules at the end of the policy** (e.g. "Any / Any / Deny / Both"): Packets reaching these rules have no valid conntrack entry, otherwise they would have been accepted by the ESTABLISHED,RELATED rule earlier. The `ct state new` check is unnecessary overhead here.
+
+- **Anti-spoofing rules** (e.g. "internal-network / Any / Deny / Inbound / outside-interface"): These rules drop packets with forged source addresses arriving on the wrong interface. Making them stateless ensures they drop all spoofed packets regardless of their conntrack state, including packets in the INVALID state that would not match `ct state new`.
+
+- **Loopback rules** (e.g. "Any / Any / Accept / lo"): Traffic on the loopback interface is always local. Stateless simplifies the generated code without any security impact.
+
+- **DHCP broadcast rules**: DHCP uses UDP broadcasts that are typically not tracked by conntrack. Stateless avoids creating unnecessary conntrack entries.
+
+In general, if a rule's action is Deny at the end of your policy, or if the rule matches traffic that does not benefit from connection tracking, enabling "Stateless" is recommended. It produces cleaner generated scripts and avoids unnecessary conntrack lookups.
+
 ### Working with Multiple Policy Rule Sets
 
 Every firewall object created in FirewallFabrik begins with a single policy rule set. For many firewalls, this is all you need. However, FirewallFabrik allows you to create multiple access policy rule sets for a single firewall object and, if your platform supports it, branch between the rule sets. This can help you modularize your policy.
