@@ -635,6 +635,7 @@ class CompileDialog(QDialog):
                 f'<a name="{escape(fw_id)}"></a>'
                 f'<p><b>Compiling {escape(fw_name)} ...</b></p>'
             )
+            has_warnings = False
             for line in output_lines:
                 if line.lower().startswith('error'):
                     # Make error lines clickable for rule navigation
@@ -649,14 +650,25 @@ class CompileDialog(QDialog):
                         self.procLogDisplay.append(
                             f'<span style="color: red;">{escape(line)}</span>'
                         )
+                elif line.lower().startswith('warning'):
+                    has_warnings = True
+                    self.procLogDisplay.append(
+                        f'<span style="color: orange;">{escape(line)}</span>'
+                    )
                 else:
                     self.procLogDisplay.append(line)
 
             if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
-                self.procLogDisplay.append(
-                    f'<p style="color: green;"><b>{escape(fw_name)}: '
-                    f'compiled successfully.</b></p>'
-                )
+                if has_warnings:
+                    self.procLogDisplay.append(
+                        f'<p style="color: orange;"><b>{escape(fw_name)}: '
+                        f'compiled with warnings.</b></p>'
+                    )
+                else:
+                    self.procLogDisplay.append(
+                        f'<p style="color: green;"><b>{escape(fw_name)}: '
+                        f'compiled successfully.</b></p>'
+                    )
             else:
                 self.procLogDisplay.append(
                     f'<p style="color: red;"><b>{escape(fw_name)}: '

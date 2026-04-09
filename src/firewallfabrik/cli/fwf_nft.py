@@ -305,6 +305,8 @@ def main(argv=None):
                 print(f'Error: {err}', file=sys.stderr)
         else:
             compiled_ok += 1
+        for warn in driver.all_warnings:
+            print(f'Warning: {warn}', file=sys.stderr)
 
     elapsed = time.monotonic() - t_start
     hours, remainder = divmod(int(elapsed), 3600)

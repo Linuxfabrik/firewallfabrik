@@ -288,7 +288,7 @@ class CompilerDriver_nft(CompilerDriver):
 
                     if routing_compiler.get_errors() or routing_compiler.get_warnings():
                         self.all_errors.extend(routing_compiler.get_errors())
-                        self.all_errors.extend(routing_compiler.get_warnings())
+                        self.all_warnings.extend(routing_compiler.get_warnings())
 
                 # --- Assemble nft rules body ---
                 nft_rules_body = self._assemble_nft_rules_body(
@@ -328,6 +328,8 @@ class CompilerDriver_nft(CompilerDriver):
                         out_p.chmod(0o755)
                         if self.all_errors:
                             self.info(' Compiled with errors')
+                        elif self.all_warnings:
+                            self.info(' Compiled with warnings')
                         else:
                             self.info(' Compiled successfully')
                     except OSError as ex:
@@ -385,7 +387,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         if nat_compiler.get_errors() or nat_compiler.get_warnings():
             self.all_errors.extend(nat_compiler.get_errors())
-            self.all_errors.extend(nat_compiler.get_warnings())
+            self.all_warnings.extend(nat_compiler.get_warnings())
 
     def _process_policy_rule_set(
         self,
@@ -429,7 +431,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         if policy_compiler.get_errors() or policy_compiler.get_warnings():
             self.all_errors.extend(policy_compiler.get_errors())
-            self.all_errors.extend(policy_compiler.get_warnings())
+            self.all_warnings.extend(policy_compiler.get_warnings())
 
     def _assemble_nft_rules_body(
         self,
@@ -595,9 +597,10 @@ class CompilerDriver_nft(CompilerDriver):
         comment = _prepend('#  ', comment_text) if comment_text else ''
 
         # Build errors/warnings block
+        all_messages = self.all_errors + self.all_warnings
         errors_and_warnings = ''
-        if self.all_errors:
-            errors_and_warnings = '\n'.join(f'# {err}' for err in self.all_errors)
+        if all_messages:
+            errors_and_warnings = '\n'.join(f'# {err}' for err in all_messages)
 
         # Management access for block action
         mgmt_access = bool(options.get('mgmt_access', False))

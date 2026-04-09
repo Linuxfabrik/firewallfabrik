@@ -392,7 +392,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                     if routing_compiler.get_errors() or routing_compiler.get_warnings():
                         self.all_errors.extend(routing_compiler.get_errors())
-                        self.all_errors.extend(routing_compiler.get_warnings())
+                        self.all_warnings.extend(routing_compiler.get_warnings())
 
                 # Single-rule compile mode
                 if self.single_rule_compile_on:
@@ -671,8 +671,9 @@ class CompilerDriver_ipt(CompilerDriver):
                 )
 
                 script_skeleton.set_variable('top_comment', top_comment.expand())
+                all_messages = self.all_errors + self.all_warnings
                 script_skeleton.set_variable(
-                    'errors_and_warnings', _prepend('# ', '\n'.join(self.all_errors))
+                    'errors_and_warnings', _prepend('# ', '\n'.join(all_messages))
                 )
 
                 # Write output file
@@ -686,6 +687,8 @@ class CompilerDriver_ipt(CompilerDriver):
                         out_p.chmod(0o755)
                         if self.all_errors:
                             self.info(' Compiled with errors')
+                        elif self.all_warnings:
+                            self.info(' Compiled with warnings')
                         else:
                             self.info(' Compiled successfully')
                     except OSError as ex:
@@ -765,13 +768,13 @@ class CompilerDriver_ipt(CompilerDriver):
 
             if nat_compiler.get_errors() or nat_compiler.get_warnings():
                 self.all_errors.extend(nat_compiler.get_errors())
-                self.all_errors.extend(nat_compiler.get_warnings())
+                self.all_warnings.extend(nat_compiler.get_warnings())
 
             return False  # not empty
 
         if nat_compiler.get_errors() or nat_compiler.get_warnings():
             self.all_errors.extend(nat_compiler.get_errors())
-            self.all_errors.extend(nat_compiler.get_warnings())
+            self.all_warnings.extend(nat_compiler.get_warnings())
 
         return True  # empty
 
@@ -846,7 +849,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
             if mangle_compiler.get_errors() or mangle_compiler.get_warnings():
                 self.all_errors.extend(mangle_compiler.get_errors())
-                self.all_errors.extend(mangle_compiler.get_warnings())
+                self.all_warnings.extend(mangle_compiler.get_warnings())
 
         # --- Filter table compilation ---
         policy_compiler = PolicyCompiler_ipt(
@@ -886,7 +889,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
             if policy_compiler.get_errors() or policy_compiler.get_warnings():
                 self.all_errors.extend(policy_compiler.get_errors())
-                self.all_errors.extend(policy_compiler.get_warnings())
+                self.all_warnings.extend(policy_compiler.get_warnings())
 
         # Automatic rules for filter table (only for top rule set, once)
         auto_pos = automatic_rules_stream.tell()
