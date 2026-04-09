@@ -8632,7 +8632,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771880787
+              lastModified: 1775741129
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -8729,6 +8729,9 @@ libraries:
                 ipv4: true
                 rules:
                   - type: 'PolicyRule'
+                    options:
+                      stateless: true
+                      ulog_nlgroup: 1
                     action: 'Accept'
                     direction: 'Both'
                     itf:
@@ -9013,7 +9016,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1773692990
+              lastModified: 1775741123
               lastCompiled: 1771356919
             interfaces:
               - name: 'eth0'
@@ -9144,6 +9147,9 @@ libraries:
                         Network 192.0.2.0'
                   - type: 'PolicyRule'
                     position: 1
+                    options:
+                      stateless: true
+                      ulog_nlgroup: 1
                     action: 'Accept'
                     direction: 'Both'
                     itf:
@@ -9557,7 +9563,7 @@ libraries:
               platform: 'iptables'
               version: ''
               inactive: false
-              lastModified: 1771949030
+              lastModified: 1775741145
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -9656,6 +9662,9 @@ libraries:
                 ipv4: true
                 rules:
                   - type: 'PolicyRule'
+                    options:
+                      stateless: true
+                      ulog_nlgroup: 1
                     action: 'Accept'
                     direction: 'Both'
                     itf:
@@ -9910,7 +9919,7 @@ libraries:
               platform: 'iptables'
               version: ''
               inactive: false
-              lastModified: 1771445086
+              lastModified: 1775741151
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -10009,6 +10018,9 @@ libraries:
                 ipv4: true
                 rules:
                   - type: 'PolicyRule'
+                    options:
+                      stateless: true
+                      ulog_nlgroup: 1
                     action: 'Accept'
                     direction: 'Both'
                     itf:
@@ -10249,7 +10261,7 @@ libraries:
               platform: 'nftables'
               version: ''
               inactive: false
-              lastModified: 1771445094
+              lastModified: 1775741156
               lastCompiled: 1771356799
             options:
               firewall_is_part_of_any_and_networks: false
@@ -10346,6 +10358,9 @@ libraries:
                 ipv4: true
                 rules:
                   - type: 'PolicyRule'
+                    options:
+                      stateless: true
+                      ulog_nlgroup: 1
                     action: 'Accept'
                     direction: 'Both'
                     itf:
