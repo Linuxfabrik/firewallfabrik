@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.4.5] - 2026-04-09
+
 ### Changed
 
 * Compile dialog: "Compile Firewalls" moved from an in-dialog label to the window title bar; firewall sidebar width adapts dynamically to content
+* Compile dialog: compiler detail output (ruleset names, etc.) is shown in small gray text; each firewall block is visually grouped with an underlined heading
 * Compile dialog: progress column shows "Compiled with Warnings" (orange) or "Compile Error" (red) instead of generic status text
 
 ### Fixed
@@ -330,7 +336,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.4...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.5...HEAD
+[v1.4.5]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.4...v1.4.5
 [v1.4.4]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.3...v1.4.4
 [v1.4.3]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.2...v1.4.3
 [v1.4.2]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.1...v1.4.2
