@@ -22,7 +22,7 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QByteArray, QProcess, QSettings, Qt, QUrl, Slot
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -146,7 +146,7 @@ class CompileDialog(QDialog):
         if install_mode:
             # Show install column, keep batch install frame visible.
             self.warning_space.hide()
-            self.titleLabel.setText('Compile and Install Firewalls')
+            self.setWindowTitle('Compile and Install Firewalls')
             self.selectInfoLabel.setText(
                 '<p align="center"><b><font size="+2">'
                 'Select firewalls to compile and install.'
@@ -157,7 +157,7 @@ class CompileDialog(QDialog):
             self.selectTable.hideColumn(2)  # Install column
             self.batchInstFlagFrame.hide()
             self.warning_space.hide()
-            self.titleLabel.setText('Compile Firewalls')
+            self.setWindowTitle('Compile Firewalls')
             self.selectInfoLabel.setText(
                 '<p align="center"><b><font size="+2">'
                 'Select firewalls to compile.'
@@ -176,6 +176,8 @@ class CompileDialog(QDialog):
         # Resize columns for selectTable
         header = self.selectTable.header()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.setMinimumSectionSize(50)
+        self.selectTable.setColumnWidth(0, 250)
         for col in (1, 2, 3, 4, 5):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
 
@@ -395,6 +397,12 @@ class CompileDialog(QDialog):
         self.backButton.setEnabled(False)
         self.finishButton.setEnabled(False)
 
+        # Resize columns for fwWorkList sidebar
+        wl_header = self.fwWorkList.header()
+        wl_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        wl_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        wl_header.setStretchLastSection(False)
+
         # Populate fwWorkList sidebar
         self.fwWorkList.clear()
         self._work_items = {}
@@ -416,6 +424,8 @@ class CompileDialog(QDialog):
                 item.setText(1, 'Waiting')
                 self.fwWorkList.addTopLevelItem(item)
                 self._work_items[fw_id] = item
+
+        self._resize_sidebar()
 
         # Set up the overall progress bar
         total = len(self._compile_queue) + len(self._install_queue)
@@ -496,6 +506,18 @@ class CompileDialog(QDialog):
         )
         self.backButton.setEnabled(True)
         self.finishButton.setEnabled(True)
+
+    def _resize_sidebar(self):
+        """Resize the sidebar to fit its content."""
+        self.fwWorkList.resizeColumnToContents(0)
+        self.fwWorkList.resizeColumnToContents(1)
+        sidebar_width = (
+            self.fwWorkList.columnWidth(0)
+            + self.fwWorkList.columnWidth(1)
+            + self.fwWorkList.frameWidth() * 2
+            + 60
+        )
+        self.firewallListFrame.setFixedWidth(sidebar_width)
 
     def _fill_compile_slots(self):
         """Start up to ``_max_workers`` concurrent compilation processes."""
@@ -589,18 +611,27 @@ class CompileDialog(QDialog):
         self._active_jobs.pop(fw_id, None)
 
         # Update sidebar and track result
+        output_lines = self._output_buffers.get(fw_id, [])
+        has_warnings = any(line.lower().startswith('warning') for line in output_lines)
         work_item = self._work_items.get(fw_id)
         if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
             self._compiled_fw_ids.append(fw_id)
             if work_item is not None:
-                work_item.setText(1, 'Compiled')
+                if has_warnings:
+                    work_item.setText(1, 'Compiled with Warnings')
+                    work_item.setForeground(1, QColor('orange'))
+                else:
+                    work_item.setText(1, 'Compiled')
         else:
             if work_item is not None:
                 work_item.setText(1, 'Compile Error')
+                work_item.setForeground(1, QColor('red'))
             if self._install_mode:
                 self._install_queue = [
                     entry for entry in self._install_queue if entry[0] != fw_id
                 ]
+
+        self._resize_sidebar()
 
         # Store completed job for ordered log flushing
         self._completed_jobs[fw_id] = (
@@ -879,6 +910,7 @@ class CompileDialog(QDialog):
         work_item = self._work_items.get(self._current_fw_id)
         if work_item is not None:
             work_item.setText(1, 'Install Error')
+            work_item.setForeground(1, QColor('red'))
         self.procLogDisplay.append(
             f'<p style="color: red;"><b>{escape(self._current_fw_name)}: '
             f'installation failed: {escape(error)}</b></p>'

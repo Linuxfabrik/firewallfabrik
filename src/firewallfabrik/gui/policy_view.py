@@ -726,6 +726,13 @@ class PolicyView(QTreeView):
         model = self.model()
         if model is None:
             return
+        scroll_pos = self.verticalScrollBar().value()
+        self._do_double_click(index, model)
+        # Restore scroll position — opening the editor dock resizes the
+        # viewport, which can reset the scroll offset to the top.
+        self.verticalScrollBar().setValue(scroll_pos)
+
+    def _do_double_click(self, index, model):
         if model.is_group(index):
             old_name = model.group_name(index)
             new_name, ok = QInputDialog.getText(

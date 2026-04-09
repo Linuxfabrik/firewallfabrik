@@ -1938,9 +1938,6 @@ FirewallFabrik. User libraries and firewall rules are preserved.</string>
    <property name="toolTip">
     <string>Remove the selected rule</string>
    </property>
-   <property name="shortcut">
-    <string>Del</string>
-   </property>
   </action>
   <action name="ruleDisableAction">
    <property name="enabled">

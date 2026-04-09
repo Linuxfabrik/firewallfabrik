@@ -2937,9 +2937,9 @@ class FWWindow(QMainWindow):
         for action in menu.actions():
             text = action.text().replace('&', '')
             if text == 'Copy':
-                action.setShortcut(QKeySequence.StandardKey.Copy)
+                action.setText('Copy\tCtrl+C')
             elif text == 'Select All':
-                action.setShortcut(QKeySequence.StandardKey.SelectAll)
+                action.setText('Select All\tCtrl+A')
         menu.exec(self.output_box.mapToGlobal(pos))
 
     def _show_output_panel(self):

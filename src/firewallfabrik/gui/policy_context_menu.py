@@ -19,8 +19,7 @@ without being methods on the view itself.
 
 import contextlib
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QPixmap
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import QInputDialog
 
 from firewallfabrik.core.objects import Direction, NATAction, PolicyAction
@@ -150,27 +149,23 @@ def build_row_menu(menu, view, model, index):
     )
     menu.addAction('Remove Rule', lambda: model.delete_rules([index]))
     menu.addSeparator()
-    up = menu.addAction(
-        'Move Rule Up',
+    menu.addAction(
+        'Move Rule Up\tCtrl+PgUp',
         lambda: view._move_and_select(model.move_rule_up(index)),
     )
-    up.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageUp))
-    down = menu.addAction(
-        'Move Rule Down',
+    menu.addAction(
+        'Move Rule Down\tCtrl+PgDn',
         lambda: view._move_and_select(model.move_rule_down(index)),
     )
-    down.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_PageDown))
     menu.addSeparator()
-    copy_act = menu.addAction(
-        f'Copy {rule_label}',
+    menu.addAction(
+        f'Copy {rule_label}\tCtrl+C',
         lambda sel=selected: model.copy_rules(sel),
     )
-    copy_act.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_C))
-    cut_act = menu.addAction(
-        f'Cut {rule_label}',
+    menu.addAction(
+        f'Cut {rule_label}\tCtrl+X',
         lambda sel=selected: model.cut_rules(sel),
     )
-    cut_act.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_X))
     clipboard_count = len(PolicyTreeModel._clipboard)
     paste_label = 'Rules' if clipboard_count > 1 else 'Rule'
     paste_above = menu.addAction(
@@ -178,10 +173,9 @@ def build_row_menu(menu, view, model, index):
         lambda: view._paste_and_scroll(model, index, before=True),
     )
     paste_below = menu.addAction(
-        f'Paste {paste_label} Below',
+        f'Paste {paste_label} Below\tCtrl+V',
         lambda: view._paste_and_scroll(model, index),
     )
-    paste_below.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_V))
     paste_above.setEnabled(clipboard_count > 0)
     paste_below.setEnabled(clipboard_count > 0)
     menu.addSeparator()
@@ -482,10 +476,9 @@ def add_compile_action(menu, view, model, index):
     row_data = model.get_row_data(index)
     enabled = len(selected) == 1 and row_data is not None and not row_data.disabled
     action = menu.addAction(
-        'Compile Rule',
+        'Compile Rule\tX',
         lambda: view._do_compile_rule(model, index),
     )
-    action.setShortcut(QKeySequence('X'))
     action.setEnabled(enabled)
 
 

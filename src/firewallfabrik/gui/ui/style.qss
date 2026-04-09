@@ -101,63 +101,6 @@ QMenu::separator {
 }
 
 
-/* --- Scrollbars (vertical) --- */
-
-QScrollBar:vertical {
-    width: 8px;
-    background: transparent;
-    margin: 0;
-}
-
-QScrollBar::handle:vertical {
-    background: palette(mid);
-    border-radius: 4px;
-    min-height: 20px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background: palette(dark);
-}
-
-QScrollBar::add-line:vertical,
-QScrollBar::sub-line:vertical {
-    height: 0;
-}
-
-QScrollBar::add-page:vertical,
-QScrollBar::sub-page:vertical {
-    background: transparent;
-}
-
-
-/* --- Scrollbars (horizontal) --- */
-
-QScrollBar:horizontal {
-    height: 8px;
-    background: transparent;
-    margin: 0;
-}
-
-QScrollBar::handle:horizontal {
-    background: palette(mid);
-    border-radius: 4px;
-    min-width: 20px;
-}
-
-QScrollBar::handle:horizontal:hover {
-    background: palette(dark);
-}
-
-QScrollBar::add-line:horizontal,
-QScrollBar::sub-line:horizontal {
-    width: 0;
-}
-
-QScrollBar::add-page:horizontal,
-QScrollBar::sub-page:horizontal {
-    background: transparent;
-}
-
 
 /* --- Tab bar --- */
 

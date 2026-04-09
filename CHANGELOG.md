@@ -8,11 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+* Compile dialog: "Compile Firewalls" moved from an in-dialog label to the window title bar; firewall sidebar width adapts dynamically to content
+* Compile dialog: progress column shows "Compiled with Warnings" (orange) or "Compile Error" (red) instead of generic status text
+
 ### Fixed
 
 * Compiler warnings (e.g. "Making rule stateless because it matches ICMPv6") no longer cause the compilation to be reported as failed; they are now shown as orange warnings in the GUI and CLI while the exit code remains 0
+* Delete key on selected elements in the policy editor was silently ignored due to ambiguous keyboard shortcut registration between Edit menu and Rules menu
+* Double-clicking an Options, Action or Comment cell in the policy editor no longer scrolls back to the first rule
 * Fix `--require-hashes` pip installs in CI workflows by using pinned versions instead
 * Generated iptables shell scripts are now fully POSIX sh compliant and pass shellcheck without warnings: proper variable quoting, `read -r` for backslash safety, `local` replaced with plain variables, backticks replaced with `$()`, `test "X$var"` idiom modernized ([#36](https://github.com/Linuxfabrik/firewallfabrik/issues/36))
+* Scrollbars in the object tree and policy editor are now visible (removed custom QSS scrollbar styling that was invisible on some desktop themes)
 
 
 ## [v1.4.4] - 2026-04-08

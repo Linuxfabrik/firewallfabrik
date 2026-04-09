@@ -20,7 +20,7 @@ Menu order matches fwbuilder's ``ObjectManipulator::contextMenuRequested()``
 exactly.
 """
 
-from PySide6.QtGui import QIcon, QKeySequence
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMenu
 
 from firewallfabrik.gui.object_tree_data import (
@@ -273,8 +273,7 @@ def build_object_context_menu(
     else:
         can_copy = obj_type not in NO_COPY_TYPES and not is_sys
 
-    act = menu.addAction('Copy')
-    act.setShortcut(QKeySequence.StandardKey.Copy)
+    act = menu.addAction('Copy\tCtrl+C')
     act.setEnabled(can_copy)
     handlers[act] = ('_ctx_copy',)
 
@@ -284,14 +283,12 @@ def build_object_context_menu(
     else:
         can_cut = is_deletable_fn(item)
 
-    act = menu.addAction('Cut')
-    act.setShortcut(QKeySequence.StandardKey.Cut)
+    act = menu.addAction('Cut\tCtrl+X')
     act.setEnabled(can_cut)
     handlers[act] = ('_ctx_cut',)
 
     can_paste = clipboard is not None and not effective_ro
-    act = menu.addAction('Paste')
-    act.setShortcut(QKeySequence.StandardKey.Paste)
+    act = menu.addAction('Paste\tCtrl+V')
     act.setEnabled(can_paste)
     handlers[act] = ('_ctx_paste', item)
 
@@ -299,14 +296,12 @@ def build_object_context_menu(
     menu.addSeparator()
     if multi:
         can_delete = any(is_deletable_fn(it) for it in selection)
-        act = menu.addAction('Delete')
-        act.setShortcut(QKeySequence.StandardKey.Delete)
+        act = menu.addAction('Delete\tDel')
         act.setEnabled(can_delete)
         handlers[act] = ('_delete_selected',)
     else:
         can_delete = is_deletable_fn(item)
-        act = menu.addAction('Delete')
-        act.setShortcut(QKeySequence.StandardKey.Delete)
+        act = menu.addAction('Delete\tDel')
         act.setEnabled(can_delete)
         handlers[act] = ('_ctx_delete', item)
 
@@ -480,8 +475,7 @@ def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_sel
     handlers = {}
 
     # Delete folder.
-    act = menu.addAction('Delete')
-    act.setShortcut(QKeySequence.StandardKey.Delete)
+    act = menu.addAction('Delete\tDel')
     act.setEnabled(not disabled)
     handlers[act] = ('_ctx_delete_folder', item)
 
@@ -493,8 +487,7 @@ def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_sel
     # Paste.
     menu.addSeparator()
     can_paste = clipboard is not None and not effective_ro
-    act = menu.addAction('Paste')
-    act.setShortcut(QKeySequence.StandardKey.Paste)
+    act = menu.addAction('Paste\tCtrl+V')
     act.setEnabled(can_paste)
     handlers[act] = ('_ctx_paste', item)
 
