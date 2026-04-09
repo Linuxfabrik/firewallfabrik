@@ -17,7 +17,7 @@ import re
 import shutil
 import uuid
 from datetime import UTC, datetime
-from html import escape
+from html import escape as _html_escape
 from pathlib import Path
 
 import sqlalchemy
@@ -34,6 +34,12 @@ from PySide6.QtWidgets import (
 from firewallfabrik.core._util import escape_obj_name
 from firewallfabrik.core.objects import Firewall
 from firewallfabrik.gui.ui_loader import FWFUiLoader
+
+
+def escape(text):
+    """HTML-escape without mangling apostrophes."""
+    return _html_escape(str(text), quote=False)
+
 
 # Platform -> CLI tool mapping
 _PLATFORM_CLI = {
@@ -507,6 +513,16 @@ class CompileDialog(QDialog):
         self.backButton.setEnabled(True)
         self.finishButton.setEnabled(True)
 
+    @staticmethod
+    def _flush_detail_lines(lines, parts):
+        """Append buffered indented compiler detail lines as a muted block."""
+        if not lines:
+            return
+        body = '<br>'.join(
+            f'&nbsp;&nbsp;&nbsp;&nbsp;{escape(ln.strip())}' for ln in lines
+        )
+        parts.append(f'<span style="color: gray; font-size: small;">{body}</span>')
+
     def _resize_sidebar(self):
         """Resize the sidebar to fit its content."""
         self.fwWorkList.resizeColumnToContents(0)
@@ -662,49 +678,72 @@ class CompileDialog(QDialog):
                 break  # This firewall hasn't finished yet
             fw_name, exit_code, exit_status, output_lines = info
 
-            self.procLogDisplay.append(
-                f'<a name="{escape(fw_id)}"></a>'
-                f'<p><b>Compiling {escape(fw_name)} ...</b></p>'
-            )
+            # Build the body lines (indented block between heading and status).
             has_warnings = False
+            body_parts = []
+            detail_lines = []
             for line in output_lines:
-                if line.lower().startswith('error'):
-                    # Make error lines clickable for rule navigation
+                lowered = line.lower()
+                if lowered.startswith('error'):
+                    self._flush_detail_lines(detail_lines, body_parts)
+                    detail_lines = []
                     rule_match = _RULE_ERROR_RE.search(line)
                     if rule_match:
                         rule_num = rule_match.group(1)
-                        self.procLogDisplay.append(
+                        body_parts.append(
                             f'<a href="rule:{escape(fw_id)}:{rule_num}" '
                             f'style="color: red;">{escape(line)}</a>'
                         )
                     else:
-                        self.procLogDisplay.append(
+                        body_parts.append(
                             f'<span style="color: red;">{escape(line)}</span>'
                         )
-                elif line.lower().startswith('warning'):
+                elif lowered.startswith('warning'):
+                    self._flush_detail_lines(detail_lines, body_parts)
+                    detail_lines = []
                     has_warnings = True
-                    self.procLogDisplay.append(
+                    body_parts.append(
                         f'<span style="color: orange;">{escape(line)}</span>'
                     )
+                elif line.startswith(' '):
+                    detail_lines.append(line)
                 else:
-                    self.procLogDisplay.append(line)
+                    self._flush_detail_lines(detail_lines, body_parts)
+                    detail_lines = []
+                    body_parts.append(escape(line))
+            self._flush_detail_lines(detail_lines, body_parts)
 
+            # Build status line.
             if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
                 if has_warnings:
-                    self.procLogDisplay.append(
-                        f'<p style="color: orange;"><b>{escape(fw_name)}: '
-                        f'compiled with warnings.</b></p>'
+                    status_html = (
+                        f'<span style="color: orange;"><b>{escape(fw_name)}: '
+                        f'compiled with warnings.</b></span>'
                     )
                 else:
-                    self.procLogDisplay.append(
-                        f'<p style="color: green;"><b>{escape(fw_name)}: '
-                        f'compiled successfully.</b></p>'
+                    status_html = (
+                        f'<span style="color: green;"><b>{escape(fw_name)}: '
+                        f'compiled successfully.</b></span>'
                     )
             else:
-                self.procLogDisplay.append(
-                    f'<p style="color: red;"><b>{escape(fw_name)}: '
-                    f'compilation failed (exit code {exit_code}).</b></p>'
+                status_html = (
+                    f'<span style="color: red;"><b>{escape(fw_name)}: '
+                    f'compilation failed (exit code {exit_code}).</b></span>'
                 )
+
+            # Assemble: spacer, underlined heading, indented body + status.
+            if self._display_pos > 0:
+                self.procLogDisplay.append('<br>')
+            self.procLogDisplay.append(
+                f'<a name="{escape(fw_id)}"></a>'
+                f'<b><u>Compiling {escape(fw_name)} ...</u></b>'
+            )
+            body_parts.append(status_html)
+            self.procLogDisplay.append(
+                '<blockquote style="margin: 0 0 0 20px;">'
+                + '<br>'.join(body_parts)
+                + '</blockquote>'
+            )
 
             self._display_pos += 1
 
@@ -717,7 +756,8 @@ class CompileDialog(QDialog):
         compile_total = total - len(self._install_queue)
         failed = compile_total - ok
         self.procLogDisplay.append(
-            f'<p><b>Compilation done: {ok} succeeded, {failed} failed.</b></p>'
+            f'<p style="margin-top: 20px;">'
+            f'<b>Compilation done: {ok} succeeded, {failed} failed.</b></p>'
         )
 
         if self._compiled_fw_ids:
