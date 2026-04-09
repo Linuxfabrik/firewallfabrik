@@ -29,6 +29,8 @@ def build_options_display(opts, rule_set_type='Policy'):
         return []
     if rule_set_type == 'Routing':
         return _build_routing_options_display(opts)
+    if rule_set_type == 'NAT':
+        return _build_nat_options_display(opts)
     result = []
     if opt_str(opts, 'counter_name') or opt_str(opts, 'rule_name_accounting'):
         result.append(('__opt_accounting__', 'accounting', 'Accounting'))
@@ -46,6 +48,13 @@ def build_options_display(opts, rule_set_type='Policy'):
     return result
 
 
+def _build_nat_options_display(opts):
+    """Build options display for NAT rules."""
+    if has_nondefault_nat_options(opts):
+        return [('__opt_options__', 'options', 'Options')]
+    return []
+
+
 def _build_routing_options_display(opts):
     """Build options display for Routing rules.
 
@@ -58,45 +67,76 @@ def _build_routing_options_display(opts):
 
 
 def has_nondefault_options(opts):
-    """Check whether any non-default iptables rule options are set.
+    """Check whether any non-default iptables policy rule options are set.
 
-    Mirrors fwbuilder's ``isDefaultPolicyRuleOptions()`` for iptables.
+    Returns ``True`` when any option from the Rule Options dialog deviates
+    from its default value, so the "Options" icon appears in the Options
+    column.  Covers all widgets in ``rule_options_dialog.py``.
     """
-    if opt_int(opts, 'connlimit_value') > 0:
-        return True
-    if opt_bool(opts, 'connlimit_above_not'):
-        return True
-    if opt_int(opts, 'connlimit_masklen') > 0:
-        return True
-    if opt_str(opts, 'firewall_is_part_of_any_and_networks'):
-        return True
-    if opt_int(opts, 'hashlimit_burst') > 0:
-        return True
-    if opt_int(opts, 'hashlimit_expire') > 0:
-        return True
-    if opt_int(opts, 'hashlimit_gcinterval') > 0:
-        return True
-    if opt_int(opts, 'hashlimit_max') > 0:
-        return True
-    if opt_str(opts, 'hashlimit_name'):
-        return True
-    if opt_int(opts, 'hashlimit_size') > 0:
-        return True
-    if opt_int(opts, 'hashlimit_value') > 0:
-        return True
-    if opt_int(opts, 'limit_burst') > 0:
-        return True
-    if opt_str(opts, 'limit_suffix'):
-        return True
-    if opt_int(opts, 'limit_value') > 0:
-        return True
-    if opt_bool(opts, 'limit_value_not'):
-        return True
-    if opt_str(opts, 'log_level'):
-        return True
-    if opt_str(opts, 'log_prefix'):
-        return True
+    # Checkboxes (default: False)
+    for key in (
+        'connlimit_above_not',
+        'hashlimit_dstip',
+        'hashlimit_dstlimit',
+        'hashlimit_dstport',
+        'hashlimit_srcip',
+        'hashlimit_srcport',
+        'ipt_continue',
+        'ipt_mark_connections',
+        'ipt_tee',
+        'limit_value_not',
+        'stateless',
+    ):
+        if opt_bool(opts, key):
+            return True
+    # Combo boxes (default: empty string)
+    for key in (
+        'firewall_is_part_of_any_and_networks',
+        'hashlimit_suffix',
+        'ipt_iif',
+        'ipt_oif',
+        'limit_suffix',
+        'log_level',
+    ):
+        if opt_str(opts, key):
+            return True
+    # Line edits (default: empty string)
+    for key in ('ipt_gw', 'hashlimit_name', 'log_prefix'):
+        if opt_str(opts, key):
+            return True
+    # Spin boxes (default: 0)
+    for key in (
+        'connlimit_masklen',
+        'connlimit_value',
+        'hashlimit_burst',
+        'hashlimit_expire',
+        'hashlimit_gcinterval',
+        'hashlimit_max',
+        'hashlimit_size',
+        'hashlimit_value',
+        'limit_burst',
+        'limit_value',
+    ):
+        if opt_int(opts, key) > 0:
+            return True
+    # ulog_nlgroup default is 1, not 0
     return opt_int(opts, 'ulog_nlgroup') > 1
+
+
+def has_nondefault_nat_options(opts):
+    """Check whether any non-default NAT rule options are set.
+
+    Covers all widgets in ``nat_rule_options_dialog.py``.
+    """
+    for key in (
+        'ipt_nat_persistent',
+        'ipt_nat_random',
+        'ipt_use_masq',
+        'ipt_use_snat_instead_of_masq',
+    ):
+        if opt_bool(opts, key):
+            return True
+    return False
 
 
 def opt_bool(opts, key):
