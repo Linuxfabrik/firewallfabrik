@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 tbd
 
 
+## [v1.4.6] - 2026-04-09
+
+### Added
+
+* User guide: "When to Use the Stateless Option" best practices section covering default deny rules, anti-spoofing rules, loopback rules and DHCP broadcasts
+
+### Changed
+
+* Compile dialog: compiler detail output (ruleset names, etc.) shown in small gray monospace text; each firewall block visually grouped with an underlined heading
+* Install dialog: SSH output (banners, MOTD, script output) displayed in small gray monospace text, indented to distinguish it from installer status messages
+
+### Fixed
+
+* All popup dialogs now have a visible border on GNOME/Wayland
+* HTML entity `&#x27;` no longer appears instead of apostrophes in the compile log
+* Options column in the policy editor now shows the "Options" icon when non-default rule options are set (e.g. stateless, limit, connlimit, hashlimit); also works for NAT and Routing rules
+* Rule options icon for `stateless` was missing because `has_nondefault_options()` did not check for it
+
+
 ## [v1.4.5] - 2026-04-09
 
 ### Changed
@@ -336,7 +355,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.5...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.6...HEAD
+[v1.4.6]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.4...v1.4.5
 [v1.4.4]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.3...v1.4.4
 [v1.4.3]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.2...v1.4.3
