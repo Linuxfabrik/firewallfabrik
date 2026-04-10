@@ -141,6 +141,7 @@ tbd
 - Platform settings dialogs: Script tab shows inline descriptions for each option; Help buttons removed; dialog size reduced.
 - Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
 - Removed XCB/XWayland fallback; fwf runs natively on Wayland.
+- Timestamps removed from generated shell scripts to ensure idempotent deployments.
 - "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
 
 ### Fixed
