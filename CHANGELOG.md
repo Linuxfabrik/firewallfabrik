@@ -8,7 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+* Add bandit (security) and vulture (dead code) to pre-commit hooks
+
+### Security
+
+* Annotate the Jinja2 environment in `_jinja2_template.py` with `# nosec B701`: firewallfabrik renders iptables/nftables shell scripts, not HTML, so Jinja2 autoescape must stay off. HTML autoescape would corrupt the output by replacing e.g. `&` and `<` with entities
 
 
 ## [v1.4.6] - 2026-04-09

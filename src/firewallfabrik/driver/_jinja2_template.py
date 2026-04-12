@@ -48,7 +48,10 @@ class Jinja2Template:
         search_paths.append(str(pkg_dir))
 
         loader = jinja2.FileSystemLoader(search_paths)
-        self._env = jinja2.Environment(
+        # autoescape is intentionally disabled: firewallfabrik renders shell
+        # scripts and iptables/nftables rules, not HTML. HTML autoescape would
+        # corrupt the output by replacing e.g. `&` and `<` with entities.
+        self._env = jinja2.Environment(  # nosec B701
             loader=loader,
             undefined=jinja2.StrictUndefined,
             trim_blocks=True,

@@ -115,3 +115,9 @@ known-first-party = ["firewallfabrik"]
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.bandit]
+# B110 (try/except/pass) and B112 (try/except/continue): intentional patterns
+# for graceful degradation in a GUI/CLI tool.
+# B311 (pseudo-random): not used for cryptographic purposes.
+skips = ["B110", "B112", "B311"]
