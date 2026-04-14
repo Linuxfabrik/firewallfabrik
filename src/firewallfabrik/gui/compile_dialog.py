@@ -895,14 +895,19 @@ class CompileDialog(QDialog):
             base_name = fw_name.replace(' ', '_').replace('/', '_')
             config.script_path = str(self._dest_dir / f'{base_name}.fw')
 
-        # Determine remote script name from options.
+        # Determine remote script name from options. A relative value
+        # in "script_name_on_firewall" is treated as a filename and
+        # combined with the installer directory; an absolute path is
+        # used as-is.
+        fw_dir = config.firewall_dir.rstrip('/')
         script_on_fw = options.get('script_name_on_firewall', '')
         if script_on_fw:
-            config.remote_script = script_on_fw
+            if script_on_fw.startswith('/'):
+                config.remote_script = script_on_fw
+            else:
+                config.remote_script = f'{fw_dir}/{script_on_fw}'
         else:
-            config.remote_script = (
-                f'{config.firewall_dir}/{Path(config.script_path).name}'
-            )
+            config.remote_script = f'{fw_dir}/{Path(config.script_path).name}'
 
         # In batch mode, reuse the saved config (skip the dialog).
         if self._batch_config is not None:

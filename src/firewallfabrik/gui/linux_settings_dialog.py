@@ -95,7 +95,14 @@ class LinuxSettingsDialog(QDialog):
                 widget.setToolTip(entry.get('description', ''))
 
     def _apply_placeholders(self):
-        """Set placeholder text on QLineEdits showing the YAML default."""
+        """Set placeholder text on QLineEdits from the YAML ``placeholder``.
+
+        Only schema entries that explicitly declare a ``placeholder`` key
+        produce hint text. The ``default`` value is used at compile/
+        install time, not as a hint in the dialog — otherwise empty
+        fields look pre-filled in Qt's muted placeholder colour and are
+        easily mistaken for disabled fields.
+        """
         for entry in _SCHEMA.values():
             if entry['type'] != 'str':
                 continue
@@ -104,7 +111,7 @@ class LinuxSettingsDialog(QDialog):
                 continue
             widget = getattr(self, widget_name, None)
             if isinstance(widget, QLineEdit):
-                text = entry.get('placeholder') or entry.get('default', '')
+                text = entry.get('placeholder', '')
                 if text:
                     widget.setPlaceholderText(str(text))
 

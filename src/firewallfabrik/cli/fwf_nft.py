@@ -299,7 +299,7 @@ def main(argv=None):
         if result:
             print(f'Compiler returned: {result}', file=sys.stderr)
 
-        if driver.all_errors:
+        if driver.all_errors or result:
             compiled_err += 1
             for err in driver.all_errors:
                 print(f'Error: {err}', file=sys.stderr)

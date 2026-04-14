@@ -184,12 +184,22 @@ class CompilerDriver(BaseCompiler):
         output_dir = self.wdir if self.wdir else '.'
         self.file_names[str(fw.id)] = str(Path(output_dir) / file_name)
 
-        # Compute remote file name from firewall options
-        firewall_dir = fw.get_option('firewall_dir') or '/etc/fw'
-        script_name = fw.get_option('script_name_on_firewall')
+        # Compute remote file name from firewall options. The installer
+        # directory ("Installer > Directory on the firewall") is combined
+        # with either the user-supplied "Compiler > Script name on the
+        # firewall" (as a filename) or the basename of the local output
+        # file. An absolute value in "Script name on the firewall" is
+        # honoured as-is. Only the basename of file_name is used, so a
+        # full path in "Compiler > Output file name" does not leak into
+        # the remote path.
+        firewall_dir = (fw.get_option('firewall_dir') or '/etc/fw').rstrip('/')
+        script_name = fw.get_option('script_name_on_firewall') or ''
         if script_name:
-            remote_file_name = str(script_name)
+            if script_name.startswith('/'):
+                remote_file_name = script_name
+            else:
+                remote_file_name = f'{firewall_dir}/{script_name}'
         else:
-            remote_file_name = f'{firewall_dir}/{file_name}'
+            remote_file_name = f'{firewall_dir}/{Path(file_name).name}'
 
         self.remote_file_names[str(fw.id)] = remote_file_name

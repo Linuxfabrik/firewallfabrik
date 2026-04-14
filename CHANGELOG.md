@@ -12,9 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Add bandit (security) and vulture (dead code) to pre-commit hooks
 
+### Changed
+
+* iptables and nftables firewall settings: the Compiler tab now lists "Table name", "Compiler", "Compiler command line options", "Output file name" and "Script name on the firewall" in a single aligned grid, all input fields line up and render with normal (non-disabled) text. Two inline hint paragraphs were dropped and their content merged into the tooltips of the affected fields
+* iptables, nftables and Linux settings dialogs: empty text fields no longer show the schema default as greyed-out placeholder text. The placeholder fell back to the default value when no explicit placeholder was configured, which made empty fields like "Output file name" or "Script name on the firewall" look pre-filled and disabled. Only schema entries with an explicit `placeholder` key (e.g. "Table name", Linux binary paths like `/sbin/iptables`) still show hint text
+
 ### Fixed
 
 * Custom services with platform code defined for `iptables` or `nftables` are now correctly recognized by the compiler. Previously, using a custom service in a rule always aborted with "Custom service ... is not configured for the platform ..." even when the code was set ([#71](https://github.com/Linuxfabrik/firewallfabrik/issues/71))
+* Compile Firewalls: a compiler that crashed while writing its output file (e.g. permission denied on the destination path) was reported as "compiled successfully" instead of "compilation failed", because only sub-compiler errors were counted. Fatal driver errors (returned as a message from `driver.run()`) are now also treated as a failed compilation and the process exits with a non-zero status
+* Install rules: when "Compiler > Output file name" contained a full path (e.g. `/home/user/fw/example.fw`) and "Installer > Directory on the firewall" was also set, the remote copy destination was built by concatenating both, producing a duplicated path such as `/home/user/fw//home/user/fw/example.fw` and aborting scp with exit code 1. The remote path is now always `<installer directory>/<filename>`, where the filename is taken from "Compiler > Script name on the firewall" if set and otherwise from the local output file. An absolute path in "Script name on the firewall" (e.g. `/opt/custom/myfw.fw`) is still honoured as-is. The tooltips now clearly separate the three fields: "Output file name" is the local filename of the compiled script on the workstation (e.g. `example.fw`), "Directory on the firewall" is the remote directory path on the firewall (e.g. `/etc/fw`), and "Script name on the firewall" is the remote filename inside that directory (e.g. `myfw.fw`) ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 
 ### Security
 
