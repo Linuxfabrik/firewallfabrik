@@ -191,12 +191,23 @@ class Service(Base):
             proto = self._ipservice_protocol_str()
             return not proto or proto == '0'
         if isinstance(self, (TCPService, UDPService)):
-            return (
-                (self.src_range_start or 0) == 0
-                and (self.src_range_end or 0) == 0
-                and (self.dst_range_start or 0) == 0
-                and (self.dst_range_end or 0) == 0
-            )
+            if (
+                (self.src_range_start or 0) != 0
+                or (self.src_range_end or 0) != 0
+                or (self.dst_range_start or 0) != 0
+                or (self.dst_range_end or 0) != 0
+            ):
+                return False
+            # A TCP service that inspects flags or requires the "established"
+            # option is no longer "any TCP" — it matches a specific subset.
+            if isinstance(self, TCPService):
+                masks = self.tcp_flags_masks or {}
+                if any(masks.values()):
+                    return False
+                established = (self.data or {}).get('established', False)
+                if str(established).lower() in ('true', '1'):
+                    return False
+            return True
         return False
 
 
