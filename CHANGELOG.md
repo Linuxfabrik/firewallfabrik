@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 * Annotate the Jinja2 environment in `_jinja2_template.py` with `# nosec B701`: firewallfabrik renders iptables/nftables shell scripts, not HTML, so Jinja2 autoescape must stay off. HTML autoescape would corrupt the output by replacing e.g. `&` and `<` with entities
+* Harden the CI supply chain: the `pre-commit` install in the pre-commit-autoupdate workflow is now hash-pinned via `.github/pre-commit/requirements.txt` (generated with `pip-compile --generate-hashes --strip-extras`), and `dependabot/fetch-metadata` is pinned to a commit SHA so all GitHub Actions used in `.github/workflows/` are now pinned by hash. The policy is documented in CONTRIBUTING.md under "CI Supply Chain"
 * Harden the Firewall Builder (`.fwb`) XML importer against malformed or malicious input files by switching to the `defusedxml` parser. Regular `.fwb` files continue to import unchanged
 
 
