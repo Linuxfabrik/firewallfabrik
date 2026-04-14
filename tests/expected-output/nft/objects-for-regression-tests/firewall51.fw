@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall51.fw fwf.sh
+# files: * firewall51.fw /etc/fw/fwf.sh
 #
 #  testing branching rules that point
 #  at rule sets defined in object

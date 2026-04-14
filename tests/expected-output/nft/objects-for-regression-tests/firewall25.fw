@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall25.fw fwf.sh
+# files: * firewall25.fw /etc/fw/fwf.sh
 #
 #  this firewall uses iptables-restore format. Firewall has wildcard interface ppp*; script is generated dynamically and then piped to iptables-restore
 

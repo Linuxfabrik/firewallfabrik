@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall2-3.fw fwf.sh
+# files: * firewall2-3.fw /etc/fw/fwf.sh
 #
 #  copy of firewall2, version >= 1.2.6
 #

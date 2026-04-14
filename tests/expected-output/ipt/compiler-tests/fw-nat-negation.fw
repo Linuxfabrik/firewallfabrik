@@ -7,7 +7,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-nat-negation.fw fwf.sh
+# files: * fw-nat-negation.fw /etc/fwf.sh
 #
 # Compiled for iptables (any version)
 #

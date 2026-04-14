@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall6.fw fwf.sh
+# files: * firewall6.fw /etc/fwf.sh
 #
 #  testing rule with firewall in dst and negation
 #  also testing "Destination NAT Onto the Same Network" per Turorial chapter 3.5

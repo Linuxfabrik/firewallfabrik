@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall10.fw fwf.sh
+# files: * firewall10.fw /etc/fw/fwf.sh
 #
 #  testing rules with  action-on-reject "TCP reset"
 #  in this firewall, unlike in firewall9, this option is set globally instead of setting it

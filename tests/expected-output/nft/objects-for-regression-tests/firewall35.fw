@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall35.fw fwf.sh
+# files: * firewall35.fw /etc/fw/fwf.sh
 #
 #  testing AddressTable object
 

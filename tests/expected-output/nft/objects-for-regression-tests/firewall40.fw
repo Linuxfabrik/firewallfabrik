@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall40.fw fwf.sh
+# files: * firewall40.fw /etc/fwf.sh
 #
 
 #  more complex and realistic combination of Tag and Route rules

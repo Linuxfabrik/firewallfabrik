@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * optitest.fw fwf.sh
+# files: * optitest.fw /etc/fwf.sh
 #
 
 FWBDEBUG=""

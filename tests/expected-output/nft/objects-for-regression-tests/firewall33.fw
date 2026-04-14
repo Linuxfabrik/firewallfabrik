@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall33.fw fwf.sh
+# files: * firewall33.fw /etc/fw/fwf.sh
 #
 #  testing DNSName object
 #
@@ -382,9 +382,9 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0.100" ip daddr 151.101.67.5 masquerade
         oifname "eth0.100" ip daddr 151.101.195.5 masquerade
         oifname "eth0.100" ip daddr 151.101.3.5 masquerade
+        oifname "eth0.100" ip daddr 151.101.67.5 masquerade
         oifname "eth0.100" ip daddr 151.101.131.5 masquerade
         #
         # Rule 2 (NAT)

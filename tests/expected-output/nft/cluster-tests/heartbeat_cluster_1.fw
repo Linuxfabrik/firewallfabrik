@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * heartbeat_cluster_1.fw fwf.sh
+# files: * heartbeat_cluster_1.fw /etc/fwf.sh
 #
 #  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
 #

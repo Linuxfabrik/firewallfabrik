@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall41.fw fwf.sh
+# files: * firewall41.fw /etc/fwf.sh
 #
 #  testing rule shadowing with run-time objects, rules with such objects should be ignored
 #

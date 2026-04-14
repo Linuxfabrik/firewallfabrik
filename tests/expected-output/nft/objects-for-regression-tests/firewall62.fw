@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall62.fw fwf.sh
+# files: * firewall62.fw /etc/fwf.sh
 #
 #  testing rules using UserService object
 #  Note that iptables does not allow entering

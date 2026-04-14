@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall37.fw fwf.sh
+# files: * firewall37.fw /etc/fw/fwf.sh
 #
 #  testing TAG and CLASSIFY rules
 

@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall93.fw fwf.sh
+# files: * firewall93.fw /etc/fwf.sh
 #
 #  testing shell code generated for dynamic interface with "-" in the name
 #

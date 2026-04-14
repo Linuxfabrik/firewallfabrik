@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall63.fw fwf.sh
+# files: * firewall63.fw /etc/fwf.sh
 #
 #  testing TOS and DSCP matching
 #

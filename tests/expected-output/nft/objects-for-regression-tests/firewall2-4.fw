@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall2-4.fw fwf.sh
+# files: * firewall2-4.fw /etc/fw/fwf.sh
 #
 #  tests for error conditions in NATCompiler_ipt::VerifyRules
 #

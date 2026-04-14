@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall-ipv6-6.fw fwf.sh
+# files: * firewall-ipv6-6.fw /etc/fwf.sh
 #
 #  one interfaces with both ipv4 and ipv6 addresses
 #

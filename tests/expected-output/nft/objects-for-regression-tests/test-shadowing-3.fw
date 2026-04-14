@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * test-shadowing-3.fw fwf.sh
+# files: * test-shadowing-3.fw /etc/fwf.sh
 #
 #  testing shadowing detection
 #  compiler runs with -xt flag

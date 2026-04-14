@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall72-1.3.x.fw fwf.sh
+# files: * firewall72-1.3.x.fw /etc/fw/fwf.sh
 #
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #
@@ -18,10 +18,6 @@
 # Rule 15 (global): Service type UserService not yet supported by nftables compiler
 # Rule 15 (global): Service type UserService not yet supported by nftables compiler
 # Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 4 shadows Rule 5 below it
-# Rule 4 shadows Rule 7 below it
-# Rule 4 shadows Rule 9 below it
-# Rule 4 shadows Rule 15 below it
 
 FWBDEBUG=""
 

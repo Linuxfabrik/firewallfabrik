@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall-base-rulesets.fw fwf.sh
+# files: * firewall-base-rulesets.fw /etc/fwf.sh
 #
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #

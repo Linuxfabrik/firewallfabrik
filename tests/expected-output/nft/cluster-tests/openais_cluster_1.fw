@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * openais_cluster_1.fw fwf.sh
+# files: * openais_cluster_1.fw /etc/fwf.sh
 #
 
 FWBDEBUG=""

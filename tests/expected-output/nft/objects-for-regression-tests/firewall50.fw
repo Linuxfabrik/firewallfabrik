@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall50.fw fwf.sh
+# files: * firewall50.fw /etc/fw/fwf.sh
 #
 #  testing action 'Continue'
 #

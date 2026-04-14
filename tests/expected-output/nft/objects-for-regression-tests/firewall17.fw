@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall17.fw fwf.sh
+# files: * firewall17.fw /etc/fwf.sh
 #
 #  doing SNAT with virtual addresses of two external interface
 #

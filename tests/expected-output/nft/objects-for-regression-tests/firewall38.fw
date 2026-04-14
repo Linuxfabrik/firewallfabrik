@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall38.fw fwf.sh
+# files: * firewall38.fw /etc/fw/fwf.sh
 #
 #  testing TAG rules
 

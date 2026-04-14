@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * vrrp_cluster_1.fw fwf.sh
+# files: * vrrp_cluster_1.fw /etc/fwf.sh
 #
 
 FWBDEBUG=""

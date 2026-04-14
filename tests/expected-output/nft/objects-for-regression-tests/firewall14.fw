@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall14.fw fwf.sh
+# files: * firewall14.fw /etc/fwf.sh
 #
 #  special configuration with overlapping subnets on external and dmz interfaces
 #  testing NAT rules (especially choice of interfaces for -o )

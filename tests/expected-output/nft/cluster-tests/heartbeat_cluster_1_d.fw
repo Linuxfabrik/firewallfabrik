@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * heartbeat_cluster_1_d.fw fwf.sh
+# files: * heartbeat_cluster_1_d.fw /etc/fwf.sh
 #
 # Rule 0 (NAT): Interface "eth0" has no addresses
 # Rule 1 (NAT): Interface "eth0" has no addresses

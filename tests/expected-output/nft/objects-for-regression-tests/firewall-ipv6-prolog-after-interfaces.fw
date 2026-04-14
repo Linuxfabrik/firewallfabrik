@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall-ipv6-prolog-after-interfaces.fw fwf.sh
+# files: * firewall-ipv6-prolog-after-interfaces.fw /etc/fwf.sh
 #
 #  Policy is configured as dual address family. Prolog is after configuration of interfaces
 #

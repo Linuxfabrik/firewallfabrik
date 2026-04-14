@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall61-1.2.5.fw fwf.sh
+# files: * firewall61-1.2.5.fw /etc/fwf.sh
 #
 #  testing time litmiting for iptables 1.2.5
 #

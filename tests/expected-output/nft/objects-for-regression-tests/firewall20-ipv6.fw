@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall20-ipv6.fw fwf.sh
+# files: * firewall20-ipv6.fw /etc/fwf.sh
 #
 #  testing firewall_is_part_of_any_and_networks
 #  also testing SNAT and DNAT rules when external interface has dynamic address

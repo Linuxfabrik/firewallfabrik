@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall3.fw fwf.sh
+# files: * firewall3.fw /etc/fw/fwf.sh
 #
 #  this object is used to test negation in policy rules with "Assume firewall is part of 'Any'" turned OFF
 #

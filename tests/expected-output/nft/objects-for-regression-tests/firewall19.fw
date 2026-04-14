@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall19.fw fwf.sh
+# files: * firewall19.fw /etc/fwf.sh
 #
 #  testing different cmbinations of objects in the policy rules on loopback interface
 #

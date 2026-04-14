@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall81.fw fwf.sh
+# files: * firewall81.fw /etc/fwf.sh
 #
 #  This firewall has no "top" rule set objects.
 #

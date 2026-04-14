@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall36-2.fw fwf.sh
+# files: * firewall36-2.fw /etc/fwf.sh
 #
 #  Testing routing configuration where routing rules install simple (not ECMP) default route
 #

@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall30.fw fwf.sh
+# files: * firewall30.fw /etc/fwf.sh
 #
 #  testing shading of rules using MAC addresses
 #

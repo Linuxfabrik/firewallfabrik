@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall9.fw fwf.sh
+# files: * firewall9.fw /etc/fwf.sh
 #
 #  testing rules with  action-on-reject "TCP reset"
 #

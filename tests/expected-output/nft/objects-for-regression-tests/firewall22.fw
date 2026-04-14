@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall22.fw fwf.sh
+# files: * firewall22.fw /etc/fwf.sh
 #
 #  testing NAT rules using custom services
 #

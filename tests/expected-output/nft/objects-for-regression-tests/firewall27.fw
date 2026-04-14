@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall27.fw fwf.sh
+# files: * firewall27.fw /etc/fw/fwf.sh
 #
 #  this firewall uses iptables-restore format
 #  all interfaces have static addresses, script pipes iptables commands straight to iptables-restore

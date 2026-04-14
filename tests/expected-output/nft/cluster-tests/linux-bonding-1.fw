@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * linux-bonding-1.fw fwf.sh
+# files: * linux-bonding-1.fw /etc/fwf.sh
 #
 #  VLAN and bonding interface configuration
 #

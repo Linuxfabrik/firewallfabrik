@@ -7,7 +7,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-test.fw fwf.sh
+# files: * fw-test.fw /etc/fwf.sh
 #
 # Compiled for iptables (any version)
 #

@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall15.fw fwf.sh
+# files: * firewall15.fw /etc/fwf.sh
 #
 #  Testing "Accept TCP sessions opened prior to firewall restart flag"
 #  in combination with "Assume firewall is part of any" - both

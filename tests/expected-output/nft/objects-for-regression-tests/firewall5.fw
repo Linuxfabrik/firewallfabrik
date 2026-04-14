@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall5.fw fwf.sh
+# files: * firewall5.fw /etc/fwf.sh
 #
 #  testing firewall_is_part_of_any_and_networks. Also testing SNAT and DNAT rules when external interface has dynamic address.
 

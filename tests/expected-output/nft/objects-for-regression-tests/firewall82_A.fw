@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall82_A.fw fwf.sh
+# files: * firewall82_A.fw /etc/fwf.sh
 #
 #  this object is used to hold branch rulesets for firewall82
 #

@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall31.fw fwf.sh
+# files: * firewall31.fw /etc/fw/fwf.sh
 #
 #  used to test time matching rules
 #

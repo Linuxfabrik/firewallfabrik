@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall12.fw fwf.sh
+# files: * firewall12.fw /etc/fwf.sh
 #
 #  This firewall does not do NAT for addresses, but translates port for a server
 #

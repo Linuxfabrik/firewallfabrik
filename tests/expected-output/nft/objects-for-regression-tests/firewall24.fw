@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall24.fw fwf.sh
+# files: * firewall24.fw /etc/fwf.sh
 #
 #  testing rules on unnumbered interface tun*
 #

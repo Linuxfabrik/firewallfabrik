@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * host.fw fwf.sh
+# files: * host.fw /etc/fwf.sh
 #
 #  firewall protects host it is running on
 #

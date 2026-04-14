@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall42.fw fwf.sh
+# files: * firewall42.fw /etc/fw/fwf.sh
 #
 #  simple test for a rule that matches local broadcast and should go into INPUT chain, but internal interface of the firewall is dynamic so compiler can not determine that given address is broadcast. Using fake interface to make this address match.
 #

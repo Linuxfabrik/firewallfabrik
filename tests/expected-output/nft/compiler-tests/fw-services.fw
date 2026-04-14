@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * fw-services.fw fwf.sh
+# files: * fw-services.fw /etc/fwf.sh
 #
 
 FWBDEBUG=""

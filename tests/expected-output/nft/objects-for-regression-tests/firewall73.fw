@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall73.fw fwf.sh
+# files: * firewall73.fw /etc/fw/fwf.sh
 #
 #  testing for "-i +" that is generated
 #  when interface rule element is "any"

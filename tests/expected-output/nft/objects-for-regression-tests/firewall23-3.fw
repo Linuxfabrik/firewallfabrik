@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall23-3.fw fwf.sh
+# files: * firewall23-3.fw /etc/fw/fwf.sh
 #
 
 #  This is BRIDGING FIREWALL

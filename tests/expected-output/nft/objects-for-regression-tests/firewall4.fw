@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall4.fw fwf.sh
+# files: * firewall4.fw /etc/fw/fwf.sh
 #
 #  this object is used to test a configuration where firewall has dynamic address
 #

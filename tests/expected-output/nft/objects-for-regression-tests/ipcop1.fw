@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * ipcop1.fw fwf.sh
+# files: * ipcop1.fw /etc/rc.d/fwf.sh
 #
 #  Endian firewall appliance, 2 interfaces:
 #  br0 is GREEN

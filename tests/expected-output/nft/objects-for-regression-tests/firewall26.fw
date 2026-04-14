@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall26.fw fwf.sh
+# files: * firewall26.fw /etc/fw/fwf.sh
 #
 #  this firewall uses iptables-restore format
 #  One interface has dynamic address, script uses echo to generated iptables commands and then pipes them to iptables-restore

@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall13.fw fwf.sh
+# files: * firewall13.fw /etc/fwf.sh
 #
 #  Testing empty groups thing
 #

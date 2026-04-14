@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * fw-negation.fw fwf.sh
+# files: * fw-negation.fw /etc/fwf.sh
 #
 
 FWBDEBUG=""

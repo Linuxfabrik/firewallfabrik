@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * fw-nat.fw fwf.sh
+# files: * fw-nat.fw /etc/fwf.sh
 #
 # Unsupported NAT rule
 # Unsupported NAT rule

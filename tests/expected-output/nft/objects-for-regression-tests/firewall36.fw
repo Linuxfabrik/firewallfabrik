@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall36.fw fwf.sh
+# files: * firewall36.fw /etc/fwf.sh
 #
 #  testing routing rules
 #  routing ruleset installs ECMP default

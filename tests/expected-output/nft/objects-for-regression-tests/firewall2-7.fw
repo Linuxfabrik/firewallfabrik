@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall2-7.fw fwf.sh
+# files: * firewall2-7.fw /etc/fw/fwf.sh
 #
 #  tests for nat rules with inbound and outbound interfaces with complex interface configuration
 #

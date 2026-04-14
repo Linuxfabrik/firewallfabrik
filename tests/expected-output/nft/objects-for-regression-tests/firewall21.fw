@@ -6,7 +6,7 @@
 #
 #  Generated TIMESTAMP
 #
-# files: * firewall21.fw fwf.sh
+# files: * firewall21.fw /etc/fwf.sh
 #
 #  two dynamic interfaces in the same policy or NAT rule
 #

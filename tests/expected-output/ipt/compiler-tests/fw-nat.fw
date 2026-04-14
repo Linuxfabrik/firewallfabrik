@@ -7,7 +7,7 @@
 #
 # Generated TIMESTAMP
 #
-# files: * fw-nat.fw fwf.sh
+# files: * fw-nat.fw /etc/fwf.sh
 #
 # Compiled for iptables (any version)
 #
