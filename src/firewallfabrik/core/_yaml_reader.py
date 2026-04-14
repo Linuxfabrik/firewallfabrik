@@ -395,11 +395,17 @@ class YamlReader:
 
         # Rules
         for rule_data in data.get('rules', []):
-            self._parse_rule(rule_data, rs, type_name)
+            self._parse_rule(rule_data, rs)
 
         return rs
 
-    def _parse_rule(self, data, rule_set, rs_type):
+    def _parse_rule(self, data, rule_set):
+        # Historical note: this method used to take a third `rs_type` argument
+        # carrying the enclosing rule-set type, but it was shadowed by the
+        # local `type_name` below and never read. If rule-type resolution ever
+        # misbehaves (e.g. a YAML rule without an explicit `type:` field inside
+        # a NAT/Routing rule-set), revisit whether the rule-set type should
+        # drive the default instead of hard-coding `'PolicyRule'`.
         type_name = data.get('type', 'PolicyRule')
         cls = _RULE_CLASSES.get(type_name, objects.PolicyRule)
         rule = cls()

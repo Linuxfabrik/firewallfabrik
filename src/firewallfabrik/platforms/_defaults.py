@@ -83,21 +83,13 @@ def get_default_values(platform: str) -> dict[str, Any]:
     Only includes options where ``supported`` is ``true`` (or absent).
     """
     schema = get_platform_defaults(platform)
-    return {
-        k: v['default']
-        for k, v in schema.items()
-        if v.get('supported', True)
-    }
+    return {k: v['default'] for k, v in schema.items() if v.get('supported', True)}
 
 
 def get_os_default_values(os_name: str) -> dict[str, Any]:
     """Return ``{key: default_value}`` for OS-level options."""
     schema = get_os_defaults(os_name)
-    return {
-        k: v['default']
-        for k, v in schema.items()
-        if v.get('supported', True)
-    }
+    return {k: v['default'] for k, v in schema.items() if v.get('supported', True)}
 
 
 def get_option_default(

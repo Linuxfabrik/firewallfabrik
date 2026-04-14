@@ -123,3 +123,21 @@ quote-style = "single"
 skips = ["B110", "B112", "B311"]
 # Tests legitimately use assert and pytest fixtures; bandit scans production code.
 exclude_dirs = ["tests"]
+
+[tool.vulture]
+min_confidence = 80
+paths = ["src/firewallfabrik"]
+# GUI dialogs are excluded: PySide6 .ui-driven widgets have many attributes
+# accessed dynamically by Qt, which vulture cannot see.
+exclude = ["src/firewallfabrik/gui"]
+# API-required parameters of framework override methods (SQLAlchemy
+# TypeDecorator / event listeners, yaml.SafeDumper override, base-class
+# compiler driver signatures). They are named positionally by the framework,
+# so we cannot rename them away, and they are part of the contract.
+ignore_names = [
+    "attached_networks",
+    "cluster_id",
+    "connection_record",
+    "dialect",
+    "indentless",
+]
