@@ -20,7 +20,8 @@ is parsed.
 
 import logging
 import uuid
-import xml.etree.ElementTree
+
+import defusedxml.ElementTree
 
 from . import objects
 from ._util import (
@@ -340,7 +341,7 @@ class XmlReader:
         self._deferred_memberships.clear()
         self._deferred_rule_elements.clear()
 
-        tree = xml.etree.ElementTree.parse(path)
+        tree = defusedxml.ElementTree.parse(path)
         database = self._parse_database(tree.getroot(), exclude_libraries or set())
         self._resolve_deferred()
         return ParseResult(

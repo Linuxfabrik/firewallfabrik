@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 * Annotate the Jinja2 environment in `_jinja2_template.py` with `# nosec B701`: firewallfabrik renders iptables/nftables shell scripts, not HTML, so Jinja2 autoescape must stay off. HTML autoescape would corrupt the output by replacing e.g. `&` and `<` with entities
+* Harden the Firewall Builder (`.fwb`) XML importer against malformed or malicious input files by switching to the `defusedxml` parser. Regular `.fwb` files continue to import unchanged
 
 
 ## [v1.4.6] - 2026-04-09

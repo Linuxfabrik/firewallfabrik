@@ -18,6 +18,7 @@ classifiers = [
 ]
 description = "Modern fwbuilder successor: Qt GUI for managing iptables/nftables policies. Centralized policy DB with reusable objects, scales to hundreds of firewalls, generates deployment-ready shell scripts."
 dependencies = [
+    "defusedxml~=0.7.1",
     "jinja2~=3.1",
     "pyyaml~=6.0.3",
     "sqlalchemy~=2.0.46",

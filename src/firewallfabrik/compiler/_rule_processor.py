@@ -41,7 +41,8 @@ class BasicRuleProcessor:
     @property
     def compiler(self) -> Compiler:
         """Return the compiler context; raises if not yet set."""
-        assert self._compiler is not None, 'compiler context not set'
+        if self._compiler is None:
+            raise RuntimeError('compiler context not set')
         return self._compiler
 
     @compiler.setter
@@ -51,7 +52,8 @@ class BasicRuleProcessor:
     @property
     def prev_processor(self) -> BasicRuleProcessor:
         """Return the upstream processor; raises if not yet set."""
-        assert self._prev_processor is not None, 'prev_processor not set'
+        if self._prev_processor is None:
+            raise RuntimeError('prev_processor not set')
         return self._prev_processor
 
     @prev_processor.setter
