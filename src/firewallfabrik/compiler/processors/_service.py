@@ -184,7 +184,7 @@ class VerifyCustomServices(BasicRuleProcessor):
 
         for srv in services:
             if isinstance(srv, CustomService):
-                code = (srv.data or {}).get(platform, '')
+                code = (srv.codes or {}).get(platform, '')
                 if not code:
                     self.compiler.abort(
                         rule,

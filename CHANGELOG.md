@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Add bandit (security) and vulture (dead code) to pre-commit hooks
 
+### Fixed
+
+* Custom services with platform code defined for `iptables` or `nftables` are now correctly recognized by the compiler. Previously, using a custom service in a rule always aborted with "Custom service ... is not configured for the platform ..." even when the code was set ([#71](https://github.com/Linuxfabrik/firewallfabrik/issues/71))
+
 ### Security
 
 * Annotate the Jinja2 environment in `_jinja2_template.py` with `# nosec B701`: firewallfabrik renders iptables/nftables shell scripts, not HTML, so Jinja2 autoescape must stay off. HTML autoescape would corrupt the output by replacing e.g. `&` and `<` with entities

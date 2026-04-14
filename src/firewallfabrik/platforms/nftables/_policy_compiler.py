@@ -1433,7 +1433,7 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         to_separate: list = []
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.data or {}).get(platform, '')
+                code = (srv.codes or {}).get(platform, '')
                 if code and (
                     'established' in code.lower() or 'related' in code.lower()
                 ):
@@ -1463,7 +1463,7 @@ class VerifyCustomServices(PolicyRuleProcessor):
         platform = self.compiler.my_platform_name()
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.data or {}).get(platform, '')
+                code = (srv.codes or {}).get(platform, '')
                 if not code:
                     self.compiler.abort(
                         rule,

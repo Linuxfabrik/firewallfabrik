@@ -12,7 +12,7 @@
 
 """IPTables platform: compilers, print rules, OS configurator, and driver."""
 
-__compiler_version__ = '1.5.1'
+__compiler_version__ = '1.5.2'
 
 from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
 from firewallfabrik.platforms.iptables._mangle_compiler import MangleTableCompiler_ipt

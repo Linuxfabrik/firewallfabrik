@@ -961,7 +961,7 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         to_separate = []
         for srv in rule.srv:
             if isinstance(srv, CustomService):
-                code = (srv.data or {}).get(platform, '')
+                code = (srv.codes or {}).get(platform, '')
                 if code and ('ESTABLISHED' in code or 'RELATED' in code):
                     to_separate.append(srv)
 
