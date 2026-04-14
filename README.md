@@ -71,6 +71,20 @@ For the full installation guide (pipx, pip, development setup, native themes, de
 Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https://linuxfabrik.github.io/firewallfabrik/). It is automatically built and deployed on every push to `main`.
 
 
+## Feedback from our Community
+
+Some comments from the community about our successor to FirewallBuilder:
+
+> ... Danke, das Du/Ihr FirewallFabrik ins Leben gerufen habt! Ich liebe FirewallBuilder und finde es wirklich ganz toll, ein Nachfolgeprodukt in FirewallFabrik gefunden zu haben. nftables-Unterstützung ist SUPER!
+
+-- [Klaus Tachtler](https://github.com/tachtler)
+
+
+> Thank you for this software, I loved FirewallBuilder, I imagine I'll love this one too.
+
+-- [David Mercereau](https://github.com/kepon85)
+
+
 ## License
 
 ```python
