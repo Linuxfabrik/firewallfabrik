@@ -122,8 +122,11 @@ quote-style = "single"
 # for graceful degradation in a GUI/CLI tool.
 # B311 (pseudo-random): not used for cryptographic purposes.
 skips = ["B110", "B112", "B311"]
-# Tests legitimately use assert and pytest fixtures; bandit scans production code.
-exclude_dirs = ["tests"]
+
+[tool.bandit.assert_used]
+# pytest-style asserts are idiomatic in tests/, but bandit still scans the
+# directory for other real issues.
+skips = ["*/tests/*.py", "tests/*.py"]
 
 [tool.vulture]
 min_confidence = 80

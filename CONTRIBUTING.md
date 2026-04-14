@@ -90,6 +90,55 @@ Common scopes for this project:
 - `refactor:` -- code restructuring without behaviour change
 
 
+### Static Analysis
+
+The repository runs `bandit` (security) and `vulture` (dead code) as pre-commit hooks. Both are configured in `pyproject.toml` and must pass cleanly before a commit is accepted.
+
+**Acceptance rules:**
+
+- `bandit -c pyproject.toml --severity-level=low --confidence-level=low` runs clean over `src/` **and** `tests/`.
+- Every `# nosec` annotation has a short comment explaining why the rule does not apply in that context.
+- Globally skipped checks (currently `B110`, `B112`, `B311`) live in `[tool.bandit]` in `pyproject.toml` and require a comment in the same table.
+- Test-only relaxations (currently `B101` for pytest-style asserts in `tests/`) live in `[tool.bandit.assert_used]` so that the rest of the rule set still runs over the test tree.
+
+**How to write `# nosec` comments:**
+
+Bandit parses everything after `# nosec` on the same line as a space-separated list of test IDs. Descriptive text on the same line produces `Test in comment: ... is not a test name or id, ignoring` warnings and is silently swallowed. Use this format:
+
+```python
+# Short justification on its own comment line above the offending line.
+offending_call(...)  # nosec BXXX
+```
+
+Never mix the two on one line:
+
+```python
+# WRONG — bandit treats "address" and "comparison" as unknown test IDs.
+if ip == _ipa.ip_address('0.0.0.0'):  # nosec B104 - address comparison, not bind
+```
+
+For multiple rule IDs on one line, separate them with spaces, not commas:
+
+```python
+subprocess.run([...], check=True)  # nosec B603 B607
+```
+
+**How to run the checks locally:**
+
+```bash
+pre-commit run --all-files
+```
+
+Or individually:
+
+```bash
+pre-commit run bandit --all-files
+pre-commit run vulture --all-files
+```
+
+When adding a new `nosec` annotation, always run bandit once and grep the output for the `Test in comment:` warning before committing.
+
+
 ### Developer Guide
 
 Detailed developer documentation lives in [`docs/developer-guide/`](docs/developer-guide/):

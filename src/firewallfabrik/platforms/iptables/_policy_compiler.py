@@ -1093,7 +1093,8 @@ class BridgingFw(PolicyRuleProcessor):
             ip = _ipa.ip_address(addr_str)
         except ValueError:
             return False
-        if ip == _ipa.ip_address('0.0.0.0'):  # nosec B104 - address comparison, not bind
+        # Address comparison against the "any" literal, not a socket bind.
+        if ip == _ipa.ip_address('0.0.0.0'):  # nosec B104
             return False  # "any" is not broadcast/multicast
         return ip == _ipa.ip_address('255.255.255.255') or ip.is_multicast
 

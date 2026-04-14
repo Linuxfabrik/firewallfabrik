@@ -1242,8 +1242,8 @@ class CheckForZeroAddr(PolicyRuleProcessor):
                 if isinstance(obj, Address):
                     addr_s = obj.get_address()
                     mask_s = obj.get_netmask()
-                    # nosec B104 - address/mask comparisons against '0.0.0.0' are
-                    # detection logic for user-configured "any" addresses, not
+                    # Address/mask comparisons against the "any" literal below
+                    # are detection logic for user-configured addresses, not
                     # socket binds. We reject rules that would match everything.
                     if addr_s == '0.0.0.0' and mask_s == '0.0.0.0':  # nosec B104
                         self.compiler.abort(

@@ -13,7 +13,7 @@
 # Build step: compile Qt resources via pyside6-rcc. All arguments are static,
 # no user input is forwarded to the subprocess. pyside6-rcc is resolved from
 # PATH at build time in the developer / CI environment only.
-import subprocess  # nosec B404 - build tooling only, static args
+import subprocess  # nosec B404
 
 from setuptools import setup
 from setuptools.command.build_py import build_py

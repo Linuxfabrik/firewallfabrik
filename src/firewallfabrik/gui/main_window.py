@@ -16,7 +16,10 @@ import contextlib
 import importlib.resources
 import logging
 import shutil
-import subprocess  # nosec B404 - only invoked with absolute pyside6-rcc path
+
+# subprocess is only invoked with an absolute pyside6-rcc path resolved
+# via shutil.which() or sys.prefix/bin. No user input reaches the call.
+import subprocess  # nosec B404
 import sys
 import traceback
 import uuid
@@ -864,7 +867,7 @@ class FWWindow(QMainWindow):
                 # rcc_bin is resolved via shutil.which() or sys.prefix/bin,
                 # qrc/rcc are internal package paths. No user input reaches
                 # the subprocess call, shell=False is explicit and correct.
-                result = subprocess.run(  # nosec B603 - trusted resolved paths, no shell
+                result = subprocess.run(  # nosec B603
                     [rcc_bin, '--binary', str(qrc), '-o', str(rcc)],
                     capture_output=True,
                     text=True,
