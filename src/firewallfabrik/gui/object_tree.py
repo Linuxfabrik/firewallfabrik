@@ -13,13 +13,24 @@
 """Object tree panel for the main window."""
 
 import json
+import logging
 import uuid
 
 import sqlalchemy
 from PySide6.QtCore import QMimeData, QSettings, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QDrag, QFont, QIcon, QKeySequence, QPainter, QShortcut
+from PySide6.QtGui import (
+    QColor,
+    QDrag,
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPixmap,
+    QShortcut,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QHeaderView,
     QLineEdit,
     QTreeWidget,
@@ -62,6 +73,8 @@ from firewallfabrik.gui.object_tree_menu import (
 from firewallfabrik.gui.object_tree_ops import TreeOperations
 from firewallfabrik.gui.policy_model import FWF_MIME_TYPE
 from firewallfabrik.gui.tooltip_helpers import get_library_name, obj_tooltip
+
+logger = logging.getLogger(__name__)
 
 # Re-export for backward compatibility (main_window.py imports these).
 __all__ = ['ICON_MAP', 'ObjectTree', 'create_library_folder_structure']
@@ -111,8 +124,15 @@ class _DraggableTree(QTreeWidget):
     def startDrag(self, supported_actions):
         """Start a drag with the object's type icon as cursor pixmap.
 
-        When dragging 2+ items, a red circle with the count number is
-        drawn on top of the first item's icon (matches fwbuilder's
+        We create our own :class:`QDrag` instead of calling
+        ``super().startDrag()`` because Qt's default implementation
+        would treat the completed drop as an internal move and
+        remove the source item from the tree.  Drops into the
+        policy view are reference-only and must never delete the
+        source object.
+
+        When dragging 2+ items, a red circle with the count is
+        drawn on top of the icon (matches fwbuilder's
         ``ObjectTreeView::startDrag`` badge).
         """
         items = self.selectedItems()
@@ -134,30 +154,41 @@ class _DraggableTree(QTreeWidget):
         drag = QDrag(self)
         drag.setMimeData(mime)
 
-        icon_path = ICON_MAP.get(obj_type)
-        if icon_path:
-            pm = QIcon(icon_path).pixmap(25, 25)
-            if len(valid_items) > 1:
-                # Composite pixmap with red count badge.
-                from PySide6.QtGui import QPixmap
+        # Build the drag pixmap from the item's tree icon.
+        pm = first.icon(0).pixmap(25, 25)
+        if not pm.isNull() and len(valid_items) > 1:
+            npm = QPixmap(32, 32)
+            npm.fill(QColor(0, 0, 0, 0))
+            p = QPainter(npm)
+            p.drawPixmap(0, 32 - pm.height(), pm)
+            p.setPen(QColor('red'))
+            p.setBrush(QColor('red'))
+            p.drawEllipse(16, 0, 16, 16)
+            txt = str(len(valid_items))
+            p.setPen(QColor('white'))
+            p.setFont(QFont('sans-serif', 8, QFont.Weight.Bold))
+            br = p.boundingRect(
+                16,
+                0,
+                16,
+                16,
+                Qt.AlignmentFlag.AlignCenter,
+                txt,
+            )
+            p.drawText(br, Qt.AlignmentFlag.AlignCenter, txt)
+            p.end()
+            pm = npm
 
-                npm = QPixmap(32, 32)
-                npm.fill(QColor(0, 0, 0, 0))
-                p = QPainter(npm)
-                p.drawPixmap(0, 32 - pm.height(), pm)
-                p.setPen(QColor('red'))
-                p.setBrush(QColor('red'))
-                p.drawEllipse(16, 0, 16, 16)
-                txt = str(len(valid_items))
-                p.setPen(QColor('white'))
-                p.setFont(QFont('sans-serif', 8, QFont.Weight.Bold))
-                br = p.boundingRect(16, 0, 16, 16, Qt.AlignmentFlag.AlignCenter, txt)
-                p.drawText(br, Qt.AlignmentFlag.AlignCenter, txt)
-                p.end()
-                drag.setPixmap(npm)
-            else:
-                drag.setPixmap(pm)
-
+        if not pm.isNull():
+            drag.setPixmap(pm)
+            drag.setHotSpot(pm.rect().center())
+        logger.debug(
+            'startDrag: %d items, type=%s, pixmap_null=%s, platform=%s',
+            len(valid_items),
+            obj_type,
+            pm.isNull(),
+            QApplication.instance().platformName(),
+        )
         drag.exec(supported_actions)
 
     # -- Drop handling --------------------------------------------------

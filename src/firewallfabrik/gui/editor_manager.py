@@ -260,6 +260,93 @@ def _device_prefix(obj):
     return ''
 
 
+def _has_renameable_children(obj):
+    """Return True if *obj* has child addresses or sub-interfaces.
+
+    Matches fwbuilder's check: the dialog only appears when there
+    are actual IPv4/IPv6/MAC objects or sub-interfaces to rename,
+    not merely because interfaces exist.
+    """
+    if isinstance(obj, Host):
+        return any(iface.addresses or iface.sub_interfaces for iface in obj.interfaces)
+    if isinstance(obj, Interface):
+        return bool(obj.addresses or obj.sub_interfaces)
+    return False
+
+
+def _autorename_interface(iface, host_name):
+    """Rename addresses and sub-interfaces under *iface*.
+
+    Naming scheme (matching fwbuilder):
+      - IPv4:  ``host:iface:ip``
+      - IPv6:  ``host:iface:ip6``
+      - MAC:   ``host:iface:mac``
+      - Sub-interfaces are processed recursively.
+    """
+    prefix = f'{host_name}:{iface.name}'
+    type_suffix = {
+        'IPv4': 'ip',
+        'IPv6': 'ip6',
+        'PhysAddress': 'mac',
+    }
+    for addr in iface.addresses:
+        suffix = type_suffix.get(addr.type, 'ip')
+        addr.name = f'{prefix}:{suffix}'
+    for sub in iface.sub_interfaces:
+        _autorename_interface(sub, host_name)
+
+
+def _offer_autorename_children(obj, old_name, parent_widget):
+    """Show a rename-children warning if applicable.
+
+    Called after a Firewall/Host/Interface name change.  If the user
+    accepts, child addresses and sub-interfaces are renamed using the
+    standard ``host:interface:suffix`` naming scheme (matching
+    fwbuilder behaviour).
+    """
+    if not isinstance(obj, (Host, Interface)):
+        return
+    if not _has_renameable_children(obj):
+        return
+
+    label = 'interface' if isinstance(obj, Interface) else 'object'
+    msg = (
+        f"The name of the {label} '{old_name}' has changed.\n\n"
+        f'The program can also rename IP address objects that '
+        f'belong to this {label}, using the standard naming '
+        f"scheme 'host_name:interface_name:ip'. This makes it "
+        f'easier to distinguish what host or firewall a given '
+        f'IP address object belongs to when it is used in a '
+        f'policy or NAT rule. The program also renames MAC '
+        f'address objects using the scheme '
+        f"'host_name:interface_name:mac'.\n\n"
+        f'Do you want to rename child IP and MAC address '
+        f'objects now?\n\n'
+        f"(If you click 'No', names of all address objects "
+        f"that belong to {label} '{obj.name}' will stay "
+        f'the same.)'
+    )
+    result = QMessageBox.warning(
+        parent_widget,
+        'FirewallFabrik',
+        msg,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.Yes,
+    )
+    if result != QMessageBox.StandardButton.Yes:
+        return
+
+    if isinstance(obj, Interface):
+        # Walk up to find the host name.
+        device = obj.device
+        host_name = device.name if device else obj.name
+        _autorename_interface(obj, host_name)
+    else:
+        # Host/Firewall: rename all interfaces and their children.
+        for iface in obj.interfaces:
+            _autorename_interface(iface, obj.name)
+
+
 def _undo_desc(action, obj_type, name, old_name=None, prefix=''):
     """Build a short undo description.
 
@@ -470,6 +557,21 @@ class EditorManager(QObject):
         # potential rollback which would expire all ORM state).
         obj = getattr(editor, '_obj', None)
         obj_path = _build_editor_path(obj) if obj else None
+
+        # If a Firewall/Host/Interface was renamed and has children
+        # (addresses, sub-interfaces), offer to auto-rename them
+        # using the standard host:interface:suffix naming scheme
+        # (matching fwbuilder behaviour).
+        # Update _editor_obj_name immediately so that a re-entrant
+        # on_editor_changed() (triggered by the QMessageBox stealing
+        # focus → editingFinished) does not show the dialog again
+        # (fwbuilder #1171).
+        old_name = self._editor_obj_name or ''
+        if obj is not None and old_name and obj.name != old_name:
+            self._editor_obj_name = obj.name
+            editor.blockSignals(True)
+            _offer_autorename_children(obj, old_name, self.parent())
+            editor.blockSignals(False)
 
         # Only persist when attribute values actually differ from their
         # committed state.  apply_all() unconditionally re-assigns
