@@ -1255,29 +1255,25 @@ class ObjectTree(QWidget):
     def _get_paste_context(item):
         """Determine the paste target from *item*'s position in the tree.
 
-        Returns ``(interface_id, group_id)`` — at most one is non-None.
+        Returns ``(interface_id, group_id, device_id)`` — at most one
+        is non-None.
         """
         current = item
         while current is not None:
             obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
             obj_id = current.data(0, Qt.ItemDataRole.UserRole)
             if obj_type == 'Interface' and obj_id:
-                return uuid.UUID(obj_id), None
+                return uuid.UUID(obj_id), None, None
             if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup') and obj_id:
-                return None, uuid.UUID(obj_id)
+                return None, uuid.UUID(obj_id), None
+            if obj_type in ('Cluster', 'Firewall', 'Host') and obj_id:
+                return None, None, uuid.UUID(obj_id)
             if obj_type == 'Library':
                 break
-            if obj_type in (
-                'Cluster',
-                'Firewall',
-                'Host',
-                'NAT',
-                'Policy',
-                'Routing',
-            ):
+            if obj_type in ('NAT', 'Policy', 'Routing'):
                 break
             current = current.parent()
-        return None, None
+        return None, None, None
 
     @staticmethod
     def _is_system_group(item):

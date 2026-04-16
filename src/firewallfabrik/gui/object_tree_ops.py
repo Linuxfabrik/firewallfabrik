@@ -345,13 +345,15 @@ class TreeOperations:
         *,
         folder=None,
         prefix='',
+        target_device_id=None,
         target_group_id=None,
         target_interface_id=None,
     ):
         """Deep-copy *source_id* into *target_lib_id*. Returns new UUID or None.
 
-        Optional *target_interface_id* / *target_group_id* place the clone
-        under a specific interface or group instead of the library root.
+        Optional *target_interface_id* / *target_group_id* /
+        *target_device_id* place the clone under a specific interface,
+        group, or device instead of the library root.
         When *folder* is given, the clone's ``data.folder`` is set to that
         value (used when pasting into a user subfolder).
         """
@@ -375,8 +377,29 @@ class TreeOperations:
                 new_obj.group_id = None
             if hasattr(new_obj, 'parent_group_id'):
                 new_obj.parent_group_id = None
+            if hasattr(new_obj, 'parent_interface_id'):
+                new_obj.parent_interface_id = None
 
-            if target_interface_id is not None and hasattr(new_obj, 'interface_id'):
+            if target_interface_id is not None and isinstance(new_obj, Interface):
+                # Pasting an interface onto another interface creates
+                # a subinterface, matching fwbuilder behaviour.
+                new_obj.parent_interface_id = target_interface_id
+                # Inherit device_id from the parent interface.
+                parent_iface = session.get(Interface, target_interface_id)
+                if parent_iface is not None:
+                    new_obj.device_id = parent_iface.device_id
+                # Reset type to ethernet and clear management flag
+                # to avoid duplicates (fwbuilder #299, #391).
+                opts = copy.deepcopy(new_obj.options or {})
+                opts['type'] = 'ethernet'
+                opts['management'] = False
+                new_obj.options = opts
+            elif target_device_id is not None and isinstance(new_obj, Interface):
+                # Pasting an interface onto a device adds it as a
+                # top-level interface of that device.
+                new_obj.device_id = target_device_id
+                new_obj.library_id = None
+            elif target_interface_id is not None and hasattr(new_obj, 'interface_id'):
                 new_obj.interface_id = target_interface_id
                 # Addresses under interfaces don't carry library_id.
                 if hasattr(new_obj, 'library_id'):
@@ -528,6 +551,7 @@ class TreeOperations:
         *,
         folder=None,
         prefix='',
+        target_device_id=None,
         target_group_id=None,
         target_interface_id=None,
     ):
@@ -560,8 +584,25 @@ class TreeOperations:
                 new_obj.group_id = None
             if hasattr(new_obj, 'parent_group_id'):
                 new_obj.parent_group_id = None
+            if hasattr(new_obj, 'parent_interface_id'):
+                new_obj.parent_interface_id = None
 
-            if target_interface_id is not None and hasattr(new_obj, 'interface_id'):
+            if target_interface_id is not None and isinstance(new_obj, Interface):
+                new_obj.parent_interface_id = target_interface_id
+                parent_iface = target_session.get(
+                    Interface,
+                    target_interface_id,
+                )
+                if parent_iface is not None:
+                    new_obj.device_id = parent_iface.device_id
+                opts = copy.deepcopy(new_obj.options or {})
+                opts['type'] = 'ethernet'
+                opts['management'] = False
+                new_obj.options = opts
+            elif target_device_id is not None and isinstance(new_obj, Interface):
+                new_obj.device_id = target_device_id
+                new_obj.library_id = None
+            elif target_interface_id is not None and hasattr(new_obj, 'interface_id'):
                 new_obj.interface_id = target_interface_id
                 if hasattr(new_obj, 'library_id'):
                     new_obj.library_id = None

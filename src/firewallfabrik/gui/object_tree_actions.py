@@ -29,6 +29,8 @@ from firewallfabrik.gui.object_tree_data import (
     NO_DELETE_TYPES,
     RULE_SET_TYPES,
     SERVICE_OBJ_TYPES,
+    SYSTEM_GROUP_PATHS,
+    find_group_by_path,
 )
 from firewallfabrik.gui.object_tree_ops import TreeOperations
 
@@ -43,6 +45,9 @@ class TreeActionHandler:
 
     _PASTE_CONTAINER_TYPES = frozenset(
         {
+            'Cluster',
+            'Firewall',
+            'Host',
             'IntervalGroup',
             'Interface',
             'Library',
@@ -229,7 +234,10 @@ class TreeActionHandler:
             return
 
         # When duplicating within the same library, preserve the parent
-        # context so the clone appears at the same hierarchy level.
+        # context so the clone appears at the same hierarchy level —
+        # except for addresses under interfaces: fwbuilder places those
+        # duplicates into the library root (User > Addresses) so they
+        # become standalone objects rather than device-bound copies.
         kwargs = {}
         source_lib_id = self._ot._get_item_library_id(item)
         if source_lib_id is not None and source_lib_id == target_lib_id:
@@ -237,7 +245,16 @@ class TreeActionHandler:
                 source = session.get(model_cls, uuid.UUID(obj_id))
                 if source is not None:
                     if hasattr(source, 'interface_id') and source.interface_id:
-                        kwargs['target_interface_id'] = source.interface_id
+                        # Place in the canonical system group
+                        # (e.g. Objects/Addresses for IPv4).
+                        path = SYSTEM_GROUP_PATHS.get(obj_type)
+                        grp = find_group_by_path(
+                            session,
+                            target_lib_id,
+                            path,
+                        )
+                        if grp is not None:
+                            kwargs['target_group_id'] = grp.id
                     elif hasattr(source, 'group_id') and source.group_id:
                         kwargs['target_group_id'] = source.group_id
                     elif hasattr(source, 'parent_group_id') and source.parent_group_id:
@@ -307,8 +324,10 @@ class TreeActionHandler:
         current = item
         while current is not None:
             obj_type = current.data(0, Qt.ItemDataRole.UserRole + 1)
+            if obj_type in ('Cluster', 'Firewall', 'Host'):
+                return frozenset({'Interface'})
             if obj_type == 'Interface':
-                return frozenset({'IPv4', 'IPv6', 'physAddress'})
+                return frozenset({'IPv4', 'IPv6', 'Interface', 'physAddress'})
             if obj_type in ('IntervalGroup', 'ObjectGroup', 'ServiceGroup'):
                 group_name = current.text(0)
                 entries = NEW_TYPES_FOR_GROUP_NODE.get(
@@ -391,7 +410,9 @@ class TreeActionHandler:
         if not entries:
             return
 
-        target_iface_id, target_group_id = self._ot._get_paste_context(item)
+        target_iface_id, target_group_id, target_device_id = (
+            self._ot._get_paste_context(item)
+        )
         prefix = self._ot._get_device_prefix(item)
 
         # When pasting into a category folder, store the folder path
@@ -425,6 +446,7 @@ class TreeActionHandler:
                     target_lib_id,
                     folder=target_folder,
                     prefix=prefix,
+                    target_device_id=target_device_id,
                     target_interface_id=target_iface_id,
                     target_group_id=target_group_id,
                 )
@@ -448,6 +470,7 @@ class TreeActionHandler:
                     target_lib_id,
                     folder=target_folder,
                     prefix=prefix,
+                    target_device_id=target_device_id,
                     target_interface_id=target_iface_id,
                     target_group_id=target_group_id,
                 )
