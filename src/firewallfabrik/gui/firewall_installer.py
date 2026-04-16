@@ -19,7 +19,7 @@ from html import escape as _html_escape
 from pathlib import Path
 from typing import NamedTuple
 
-from PySide6.QtCore import QObject, QProcess, QSettings, Signal
+from PySide6.QtCore import QByteArray, QObject, QProcess, QSettings, Signal
 
 from firewallfabrik.driver._configlet import Configlet
 
@@ -46,6 +46,7 @@ class InstallConfig:
     """Per-firewall installation configuration."""
 
     user: str = 'root'
+    password: str = ''
     mgmt_address: str = ''
     firewall_dir: str = '/etc/fw'
     ssh_args: str = ''
@@ -184,6 +185,20 @@ def build_job_list(config: InstallConfig) -> list[InstallJob]:
     return jobs
 
 
+# Prompts that indicate the remote side is asking for a password or
+# passphrase.  Matching is case-sensitive and checked against the tail
+# end of the accumulated process output (same approach as fwbuilder's
+# SSHUnx state machine).
+_PASSWORD_PROMPTS = (
+    "'s password: ",
+    'Enter passphrase for key ',
+    'Password or swipe finger:',
+    'Password: ',
+    'Password:',
+    '[sudo] password for ',
+)
+
+
 class FirewallInstaller(QObject):
     """Runs install jobs (SCP + SSH) via QProcess."""
 
@@ -196,6 +211,7 @@ class FirewallInstaller(QObject):
         self._config = config
         self._jobs: list[InstallJob] = []
         self._process: QProcess | None = None
+        self._output_buf = ''
 
     def run_jobs(self) -> None:
         """Build the job list and start executing."""
@@ -252,15 +268,35 @@ class FirewallInstaller(QObject):
             return
         data = self._process.readAllStandardOutput().data()
         text = data.decode('utf-8', errors='replace').rstrip()
-        if text:
-            indented = '\n'.join(f'    {line}' for line in text.splitlines())
-            self.log_message.emit(
-                f'<pre style="margin: 0; color: gray;'
-                f' font-size: small;">{_esc(indented)}</pre>'
+        if not text:
+            return
+
+        # Accumulate output for password prompt detection.
+        self._output_buf += text
+
+        if self._config.password and self._detect_password_prompt():
+            self._process.write(
+                QByteArray(
+                    (self._config.password + '\n').encode('utf-8'),
+                ),
             )
+            self._output_buf = ''
+            return
+
+        indented = '\n'.join(f'    {line}' for line in text.splitlines())
+        self.log_message.emit(
+            f'<pre style="margin: 0; color: gray;'
+            f' font-size: small;">{_esc(indented)}</pre>'
+        )
+
+    def _detect_password_prompt(self) -> bool:
+        """Check whether the accumulated output contains a
+        password or passphrase prompt."""
+        return any(prompt in self._output_buf for prompt in _PASSWORD_PROMPTS)
 
     def _on_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
         self._process = None
+        self._output_buf = ''
         if exit_code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
             self._run_next()
         else:

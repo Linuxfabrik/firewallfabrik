@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Add bandit (security) and vulture (dead code) to pre-commit hooks
+* Install options dialog: add "Password or passphrase" field and "Remember passwords" checkbox. Users with passphrase-protected SSH keys or password-based authentication can now enter their credentials directly in the dialog before installation. Passwords are cached in memory for the session duration (never stored on disk) when "Remember passwords" is enabled in Preferences. The installer automatically detects SSH/SCP/sudo password prompts and responds with the entered password ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 
 ### Changed
 

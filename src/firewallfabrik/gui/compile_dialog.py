@@ -911,11 +911,12 @@ class CompileDialog(QDialog):
 
         # In batch mode, reuse the saved config (skip the dialog).
         if self._batch_config is not None:
+            config.batch_install = True
+            config.copy_fwb = self._batch_config.copy_fwb
+            config.password = self._batch_config.password
+            config.quiet = self._batch_config.quiet
             config.user = self._batch_config.user
             config.verbose = self._batch_config.verbose
-            config.quiet = self._batch_config.quiet
-            config.copy_fwb = self._batch_config.copy_fwb
-            config.batch_install = True
             return config
 
         installing_many = len(self._install_queue) > 0
