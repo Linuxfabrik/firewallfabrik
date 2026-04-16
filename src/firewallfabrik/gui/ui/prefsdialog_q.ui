@@ -783,27 +783,6 @@ keepalive messages (not recommended). Default: 10.</string>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="labelPassCacheWarning">
-         <property name="text">
-          <string>Warning: using this feature creates a security risk if the FirewallFabrik GUI is left unattended on an unlocked workstation. Someone could make changes to the firewall using cached credentials from a previous session. Always lock the screen or exit the application when leaving the computer.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="rememberSshPass">
-         <property name="toolTip">
-          <string>Enable password caching for the duration of the session
-(passwords are never stored permanently).</string>
-         </property>
-         <property name="text">
-          <string>Enable password caching</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="installerSpacer2">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -1376,7 +1355,6 @@ Easier to distinguish object types at a glance.</string>
   <tabstop>scpPath</tabstop>
   <tabstop>browseForSCP</tabstop>
   <tabstop>sshTimeout</tabstop>
-  <tabstop>rememberSshPass</tabstop>
   <tabstop>buttonOk</tabstop>
   <tabstop>buttonCancel</tabstop>
   <tabstop>color1Btn</tabstop>

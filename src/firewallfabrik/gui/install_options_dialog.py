@@ -14,7 +14,7 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Slot
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QDialog
 
 from firewallfabrik.gui.firewall_installer import InstallConfig
@@ -66,27 +66,10 @@ class InstallOptionsDialog(QDialog):
         self.copyFWB.setChecked(config.copy_fwb)
         self.batchInstall.setChecked(config.batch_install)
 
-        # Password / passphrase handling.
-        remember_enabled = QSettings().value(
-            'Environment/RememberSshPassEnabled',
-            False,
-            type=bool,
-        )
-        if remember_enabled and config.user:
-            self.rememberPass.setEnabled(True)
-            self.rememberPass.setChecked(True)
-            cached = _password_cache.get(
-                (fw_name, config.user),
-                '',
-            )
-            self.pwd.setText(cached)
-        else:
-            self.rememberPass.setEnabled(False)
-            self.rememberPass.setChecked(False)
-
-        # Pre-fill from config if already set (e.g. batch mode).
-        if config.password:
-            self.pwd.setText(config.password)
+        # Pre-fill password from session cache or config.
+        cached = _password_cache.get((fw_name, config.user), '')
+        self.pwd.setText(config.password or cached)
+        self.rememberPass.setChecked(bool(cached))
 
         # If we already have a username, focus the password field
         # so the user can type right away.

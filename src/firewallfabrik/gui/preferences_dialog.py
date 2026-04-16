@@ -138,9 +138,6 @@ class PreferencesDialog(QDialog):
         self.sshTimeout.setValue(
             settings.value('SSH/SSHTimeout', 10, type=int),
         )
-        self.rememberSshPass.setChecked(
-            settings.value('Environment/RememberSshPassEnabled', False, type=bool),
-        )
 
         # Appearance tab.
         self._rules_font = _load_font(settings, 'UI/Fonts/RulesFont')
@@ -216,7 +213,6 @@ class PreferencesDialog(QDialog):
         self.sshPath.setText(shutil.which('ssh') or 'ssh')
         self.scpPath.setText(shutil.which('scp') or 'scp')
         self.sshTimeout.setValue(10)
-        self.rememberSshPass.setChecked(False)
 
         # Reset appearance defaults.
         self._rules_font = QFont()
@@ -423,10 +419,6 @@ class PreferencesDialog(QDialog):
         settings.setValue('SSH/SSHPath', self.sshPath.text())
         settings.setValue('SSH/SCPPath', self.scpPath.text())
         settings.setValue('SSH/SSHTimeout', self.sshTimeout.value())
-        settings.setValue(
-            'Environment/RememberSshPassEnabled',
-            self.rememberSshPass.isChecked(),
-        )
 
         # Persist label colors and texts.
         for key in LABEL_KEYS:

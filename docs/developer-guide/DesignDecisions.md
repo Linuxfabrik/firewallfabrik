@@ -82,6 +82,10 @@ PySide6's `QUiLoader` always creates a new top-level widget -- it cannot populat
 
 The .ui files reference roughly 35 custom C++ widget class names (e.g. `FirewallDialog`, `InterfaceDialog`). `CUSTOM_WIDGET_MAP` in the same module maps each name to either a plain Qt base class (as a placeholder) or the real Python implementation once it has been ported. The loader consults this map whenever it encounters an unknown class name.
 
+### Tooltips in .ui Files
+
+Tooltip strings in `.ui` files must wrap after 80 characters. Qt renders `\n` inside `<string>` elements as line breaks in the tooltip popup, so hard wraps in the XML source translate directly to the displayed text. This keeps the `.ui` source readable and prevents overly wide tooltip popups at runtime.
+
 ### Main Window Layout
 
 `FWBMainWindow_q.ui` defines the overall structure:

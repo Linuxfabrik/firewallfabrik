@@ -46,7 +46,9 @@
      <item row="1" column="1">
       <widget class="QLineEdit" name="pwd">
        <property name="toolTip">
-        <string>Enter the SSH password or the passphrase for the SSH key used to authenticate to the firewall. Leave empty when using an SSH agent or a key without passphrase.</string>
+        <string>Enter the SSH password or the passphrase for the SSH key
+used to authenticate to the firewall. Leave empty when
+using an SSH agent or a key without passphrase.</string>
        </property>
        <property name="echoMode">
         <enum>QLineEdit::EchoMode::Password</enum>
@@ -78,7 +80,9 @@
    <item>
     <widget class="QCheckBox" name="rememberPass">
      <property name="toolTip">
-      <string>Remember passwords for the duration of the session. Passwords are never stored permanently on disk.</string>
+      <string>Cache the password in memory for the duration of the
+application session. The password is lost when
+FirewallFabrik is closed and is never written to disk.</string>
      </property>
      <property name="text">
       <string>Remember passwords</string>
