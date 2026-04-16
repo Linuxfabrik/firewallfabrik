@@ -74,14 +74,27 @@ class ClipboardRouter:
         # Ignore focus changes that belong to a different FWWindow.
         if self._parent_window is not None and new.window() is not self._parent_window:
             return
-        if isinstance(new, (QLineEdit, QTextEdit)):
-            self._focus_owner = FocusOwner.TEXT
-            return
         tree_widget = self._object_tree._tree
         if new is tree_widget or tree_widget.isAncestorOf(new):
             self._focus_owner = FocusOwner.TREE
             return
-        self._focus_owner = FocusOwner.POLICY
+        if isinstance(new, (QLineEdit, QTextEdit)):
+            self._focus_owner = FocusOwner.TEXT
+            return
+        # Only treat focus as POLICY when the focused widget actually
+        # lives inside the MDI area (the central rule-set workspace).
+        # Widgets in the editor dock, toolbar, or other panels must not
+        # steal clipboard routing from the tree — they keep the previous
+        # focus owner so that Ctrl+C/V still operates on the last active
+        # logical component (tree or policy view).
+        from PySide6.QtWidgets import QMdiArea
+
+        parent = new.parent()
+        while parent is not None:
+            if isinstance(parent, QMdiArea):
+                self._focus_owner = FocusOwner.POLICY
+                return
+            parent = parent.parent()
 
     def copy(self):
         """Route a *copy* operation."""
