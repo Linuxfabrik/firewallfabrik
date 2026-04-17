@@ -1374,6 +1374,9 @@
    <property name="toolTip">
     <string>Discard all unsaved changes and reload the file from disk</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
   </action>
   <action name="fileExitAction">
    <property name="text">

@@ -53,8 +53,10 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMenu,
+    QMenuBar,
     QMessageBox,
     QSplitter,
+    QToolBar,
     QTreeWidgetItem,
     QVBoxLayout,
 )
@@ -510,6 +512,19 @@ class FWWindow(QMainWindow):
         ui_path = ui_path / 'FWBMainWindow_q.ui'
         loader = FWFUiLoader(self)
         loader.load(str(ui_path))
+
+        # PySide6 does not hold strong Python references to QObjects
+        # created by QUiLoader.  Opening a menu or tool bar can drop the
+        # existing wrappers and destroy the underlying C++ objects, even
+        # though Python attributes (e.g. ``self.ruleColorMenu``) still
+        # point at them - subsequent access then raises "Internal C++
+        # object already deleted", which PySide6 silently swallows in
+        # ``@Slot`` handlers.  Pinning the wrappers once here keeps them
+        # alive for the lifetime of the window.
+        self._pinned_ui_menus = self.findChildren(QMenu)
+        self._pinned_ui_menubars = self.findChildren(QMenuBar)
+        self._pinned_ui_toolbars = self.findChildren(QToolBar)
+        self._pinned_ui_actions = self.findChildren(QAction)
 
         self._closing = False
         self._current_file = None
@@ -1006,7 +1021,12 @@ class FWWindow(QMainWindow):
         self.editPasteAction.setEnabled(True)
         self.fileCloseAction.setEnabled(True)
         self.filePropAction.setEnabled(True)
-        self.fileReloadAction.setEnabled(self._current_file is not None)
+        # Reload is valid as long as any source file is loaded - for an
+        # imported .fwb the save target (.fwf) does not yet exist, but
+        # the .fwb itself on _display_file can still be re-read.
+        self.fileReloadAction.setEnabled(
+            (self._display_file or self._current_file) is not None,
+        )
         self.fileSaveAction.setEnabled(True)
         self.fileSaveAsAction.setEnabled(True)
         self.findAction.setEnabled(True)
@@ -1365,8 +1385,14 @@ class FWWindow(QMainWindow):
     @Slot()
     def fileReload(self):
         """Re-read the current file from disk, discarding unsaved changes."""
-        if self._current_file is None or not self._current_file.is_file():
+        # Reload operates on the file the user actually opened
+        # (``_display_file``).  For imported .fwb files the save target
+        # (``_current_file``) is a .fwf that does not yet exist on disk,
+        # so we must not key off that.
+        source = self._display_file or self._current_file
+        if source is None or not source.is_file():
             return
+        self._flush_editor_changes()
         if self._db_manager.is_dirty:
             result = QMessageBox.question(
                 self,
@@ -1379,51 +1405,10 @@ class FWWindow(QMainWindow):
             )
             if result != QMessageBox.StandardButton.Yes:
                 return
-        file_path = self._current_file
-        # Save tree state, close editors and MDI windows.
-        display = getattr(self, '_display_file', None)
-        if display:
-            self._object_tree.save_tree_state(str(display))
-            self._rs_mgr.save_state()
-        self._close_editor()
-        self._rs_mgr.close_all()
-        # Reload.
-        try:
-            self._db_manager = DatabaseManager()
-            self._db_manager.on_history_changed = self._on_history_changed
-            self._editor_mgr.set_db_manager(self._db_manager)
-            self._rs_mgr.set_db_manager(self._db_manager)
-            self._db_manager.load(file_path)
-        except Exception:
-            logger.exception('Failed to reload %s', file_path)
-            QMessageBox.critical(
-                self,
-                'FirewallFabrik',
-                self.tr(f"Failed to reload '{file_path}'"),
-            )
-            return
-        self._update_title()
-        with self._db_manager.session() as session:
-            self._object_tree.populate(session, file_key=str(display or file_path))
-        self._object_tree.set_db_manager(self._db_manager)
-        self._find_panel.set_tree(self._object_tree._tree)
-        self._find_panel.set_db_manager(self._db_manager)
-        self._find_panel.set_reload_callback(self._rs_mgr.reload_views)
-        self._find_panel.set_open_rule_set_ids_callback(
-            self._rs_mgr.get_active_firewall_rule_set_ids,
-        )
-        self._find_panel.reset()
-        self._where_used_panel.set_tree(self._object_tree._tree)
-        self._where_used_panel.set_db_manager(self._db_manager)
-        self._where_used_panel.reset()
-        self.newObjectAction.setEnabled(
-            bool(self._object_tree._actions._get_writable_libraries())
-        )
-        self._update_undo_actions()
-        self._rs_mgr.restore_state(str(display or file_path))
-        if not self.m_space.subWindowList():
-            self._rs_mgr.open_first_firewall_policy()
-        self._object_tree.focus_filter()
+        # Mark the current db state as "saved" so _load_file's own dirty
+        # check (via _save_if_modified) does not prompt again.
+        self._db_manager._saved_index = self._db_manager._current_index
+        self._load_file(source)
 
     @Slot()
     def fileExit(self):
@@ -2774,7 +2759,14 @@ class FWWindow(QMainWindow):
             self.menuOpen_Recent.addAction(action)
             self._recent_actions.append(action)
 
-        self._recent_separator = self.menuOpen_Recent.addSeparator()
+        # Create the separator with an explicit parent (``self``) so its
+        # Python wrapper keeps the C++ QAction alive.  ``QMenu.addSeparator()``
+        # returns a QAction whose ownership is unstable in PySide6 - simply
+        # iterating ``menu.actions()`` can drop the wrapper and destroy the
+        # C++ object, which later crashed File > Reload.
+        self._recent_separator = QAction(self)
+        self._recent_separator.setSeparator(True)
+        self.menuOpen_Recent.addAction(self._recent_separator)
         self.menuOpen_Recent.addAction(self.actionClearRecentFiles)
 
         self._update_recent_actions()

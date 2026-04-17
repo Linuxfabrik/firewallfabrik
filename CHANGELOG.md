@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 * Add bandit (security) and vulture (dead code) to pre-commit hooks
+* File > Reload now has the keyboard shortcut Ctrl+R
 * Install options dialog: add "Password or passphrase" field and "Remember passwords" checkbox. Users with passphrase-protected SSH keys or password-based authentication can now enter their credentials directly in the dialog before installation. Passwords are cached in memory for the session duration (never stored on disk) when "Remember passwords" is enabled in Preferences. The installer automatically detects SSH/SCP/sudo password prompts and responds with the entered password ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 * Renaming a firewall, host, or interface that has child objects (IP addresses, MAC addresses, sub-interfaces) now shows a warning dialog offering to auto-rename the children using the standard `host:interface:ip` / `host:interface:mac` naming scheme (matching fwbuilder behaviour)
 
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Clipboard shortcuts (Ctrl+C, Ctrl+X, Ctrl+V) now work reliably for tree objects. Previously, clicking any widget outside the object tree (e.g. a combo box or checkbox in the editor panel) silently rerouted clipboard operations to the policy view, causing copy/paste on tree objects to do nothing. Focus is now only set to "policy view" when the focused widget lives inside the MDI area; other panels (editor dock, toolbar) keep the previous routing target
 * Drag & drop from the object tree: the drag pixmap is set from the item's tree icon (with a red count badge for multi-select). On X11 the icon follows the cursor during the drag; on Wayland compositors `QDrag.setPixmap()` is currently not rendered (Qt6 limitation)
+* File > Reload now works reliably for both native `.fwf` files and imported `.fwb` files: the policy view is refreshed from disk, the "modified" marker (`*`) is cleared from the title bar, and the confirmation prompt appears before unsaved changes are discarded. Previously Reload silently did nothing
 * Copy/paste an interface onto another interface now creates a subinterface under the target (matching fwbuilder behaviour). The pasted interface's type is reset to "ethernet" and its management flag is cleared to prevent duplicates. Pasting an interface onto a firewall/host adds it as a top-level interface of that device
 * Duplicating an address under an interface now places the copy in the canonical system group (e.g. User > Objects > Addresses for IPv4) instead of under the same interface, matching fwbuilder behaviour
 * AddressRange objects in iptables policy rules now emit `-m iprange --src-range`/`--dst-range` matching. Previously, AddressRange destinations (e.g. 192.168.4.0-192.168.4.255) were silently dropped from compiled rules, making OUTPUT rules less restrictive than intended

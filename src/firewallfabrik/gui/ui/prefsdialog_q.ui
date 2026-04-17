@@ -1473,22 +1473,6 @@ Easier to distinguish object types at a glance.</string>
    </hints>
   </connection>
   <connection>
-   <sender>objTooltips</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>prefsDialog_q</receiver>
-   <slot>objTooltipsEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>57</x>
-     <y>67</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>3</x>
-     <y>71</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>btCompilerOutputFont</sender>
    <signal>clicked()</signal>
    <receiver>prefsDialog_q</receiver>
@@ -1639,6 +1623,5 @@ Easier to distinguish object types at a glance.</string>
   <slot>changeCompilerOutputFont()</slot>
   <slot>findSCP()</slot>
   <slot>findSSH()</slot>
-  <slot>objTooltipsEnabled(bool)</slot>
  </slots>
 </ui>
