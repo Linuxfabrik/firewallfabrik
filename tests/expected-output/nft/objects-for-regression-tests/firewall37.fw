@@ -12,65 +12,11 @@
 
 #  normal script mode (not using  iptables-restore)
 #
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
-# Rule 20 (global): Service type TagService not yet supported by nftables compiler
 # Rule 21 (global): Pipe action not yet supported by nftables compiler
 # Rule 21 (global): Pipe action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 0: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 2: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 5: Service type TagService not yet supported by nftables compiler
-# Rule 5: Service type TagService not yet supported by nftables compiler
-# Rule 5: Service type TagService not yet supported by nftables compiler
-# Rule 5: Service type TagService not yet supported by nftables compiler
-# Rule 8: Service type TagService not yet supported by nftables compiler
-# Rule 8: Service type TagService not yet supported by nftables compiler
-# Rule 8: Service type TagService not yet supported by nftables compiler
-# Rule 8: Service type TagService not yet supported by nftables compiler
-# Rule 9: Service type TagService not yet supported by nftables compiler
-# Rule 9: Service type TagService not yet supported by nftables compiler
-# Rule 9: Service type TagService not yet supported by nftables compiler
-# Rule 9: Service type TagService not yet supported by nftables compiler
-# Rule 10: Service type TagService not yet supported by nftables compiler
-# Rule 10: Service type TagService not yet supported by nftables compiler
-# Rule 10: Service type TagService not yet supported by nftables compiler
-# Rule 10: Service type TagService not yet supported by nftables compiler
-# Rule 11: Service type TagService not yet supported by nftables compiler
-# Rule 11: Service type TagService not yet supported by nftables compiler
-# Rule 11: Service type TagService not yet supported by nftables compiler
-# Rule 11: Service type TagService not yet supported by nftables compiler
-# Rule 12: Service type TagService not yet supported by nftables compiler
-# Rule 12: Service type TagService not yet supported by nftables compiler
-# Rule 12: Service type TagService not yet supported by nftables compiler
-# Rule 12: Service type TagService not yet supported by nftables compiler
-# Rule 13: Service type TagService not yet supported by nftables compiler
-# Rule 13: Service type TagService not yet supported by nftables compiler
-# Rule 13: Service type TagService not yet supported by nftables compiler
-# Rule 13: Service type TagService not yet supported by nftables compiler
-# Rule 14: Service type TagService not yet supported by nftables compiler
-# Rule 14: Service type TagService not yet supported by nftables compiler
-# Rule 14: Service type TagService not yet supported by nftables compiler
-# Rule 14: Service type TagService not yet supported by nftables compiler
 # firewall37:mangle_rules:6: warning: Empty group or address table object 'DNS objects'
 # firewall37:mangle_rules:6: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 6 (global) because option 'Ignore rules with empty groups' is in effect
 # firewall37:mangle_rules:7: warning: Empty group or address table object 'empty Ogroup'
@@ -355,7 +301,6 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        # # Rule 20 (global): Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule 22 (global)
@@ -436,7 +381,6 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        # # Rule 0: Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule mangle_rules 1 (global)
@@ -445,52 +389,38 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        # # Rule 2: Service type TagService not yet supported by nftables compiler
         accept
         #
         # Rule mangle_rules 4 (global)
         #
-        # # Rule 4: Service type TagService not yet supported by nftables compiler
         ip saddr 157.112.176.24 ct state new accept
         #
         # Rule mangle_rules 5 (global)
         #
-        # # Rule 5: Service type TagService not yet supported by nftables compiler
         ip saddr 6bone.net ct state new accept
         #
         # Rule mangle_rules 8 (global)
         #
-        # # Rule 8: Service type TagService not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } ct state new accept
         #
         # Rule mangle_rules 9 (global)
         #
-        # # Rule 9: Service type TagService not yet supported by nftables compiler
         ip saddr 22.22.23.22 ct state new accept
-        #
-        # Rule mangle_rules 10 (global)
-        #
-        # # Rule 10: Service type TagService not yet supported by nftables compiler
-        ct state new accept
         #
         # Rule mangle_rules 11 (global)
         #
-        # # Rule 11: Service type TagService not yet supported by nftables compiler
         ip saddr != 192.168.1.0/24 ct state new accept
         #
         # Rule mangle_rules 12 (global)
         #
-        # # Rule 12: Service type TagService not yet supported by nftables compiler
         ip saddr != 1.1.1.1 ct state new accept
         #
         # Rule mangle_rules 13 (global)
         #
-        # # Rule 13: Service type TagService not yet supported by nftables compiler
         ip saddr != 157.112.176.24 ct state new accept
         #
         # Rule mangle_rules 14 (global)
         #
-        # # Rule 14: Service type TagService not yet supported by nftables compiler
         ip saddr != 6bone.net ct state new accept
     }
 
@@ -543,7 +473,6 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        # # Rule 20 (global): Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule 21 (global)
@@ -631,7 +560,6 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        # # Rule 0: Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule mangle_rules 1 (global)
@@ -640,37 +568,30 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        # # Rule 2: Service type TagService not yet supported by nftables compiler
         accept
         #
         # Rule mangle_rules 4 (global)
         #
-        # # Rule 4: Service type TagService not yet supported by nftables compiler
         ip saddr 157.112.176.24 ct state new accept
         #
         # Rule mangle_rules 5 (global)
         #
-        # # Rule 5: Service type TagService not yet supported by nftables compiler
         ip saddr 6bone.net ct state new accept
         #
         # Rule mangle_rules 11 (global)
         #
-        # # Rule 11: Service type TagService not yet supported by nftables compiler
         ip saddr != 192.168.1.0/24 ct state new accept
         #
         # Rule mangle_rules 12 (global)
         #
-        # # Rule 12: Service type TagService not yet supported by nftables compiler
         ip saddr != 1.1.1.1 ct state new accept
         #
         # Rule mangle_rules 13 (global)
         #
-        # # Rule 13: Service type TagService not yet supported by nftables compiler
         ip saddr != 157.112.176.24 ct state new accept
         #
         # Rule mangle_rules 14 (global)
         #
-        # # Rule 14: Service type TagService not yet supported by nftables compiler
         ip saddr != 6bone.net ct state new accept
     }
 
@@ -741,7 +662,6 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        # # Rule 20 (global): Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule 21 (global)
@@ -826,7 +746,6 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        # # Rule 0: Service type TagService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule mangle_rules 1 (global)
@@ -835,22 +754,14 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        # # Rule 2: Service type TagService not yet supported by nftables compiler
         accept
-        #
-        # Rule mangle_rules 8 (global)
-        #
-        # # Rule 8: Service type TagService not yet supported by nftables compiler
-        ct state new accept
         #
         # Rule mangle_rules 9 (global)
         #
-        # # Rule 9: Service type TagService not yet supported by nftables compiler
         ip saddr 22.22.23.22 ct state new accept
         #
         # Rule mangle_rules 10 (global)
         #
-        # # Rule 10: Service type TagService not yet supported by nftables compiler
         ip daddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } ct state new accept
     }
 }

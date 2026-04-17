@@ -15,79 +15,6 @@
 #  how control passes to user defined chain and blocks command if
 #  it appears that user defined chain gets control not from OUTPUT)
 #
-# Rule 0 (global): Service type UserService not yet supported by nftables compiler
-# Rule 0 (global): Service type UserService not yet supported by nftables compiler
-# Rule 0 (global): Service type UserService not yet supported by nftables compiler
-# Rule 0 (global): Service type UserService not yet supported by nftables compiler
-# Rule 1 (global): Service type UserService not yet supported by nftables compiler
-# Rule 1 (global): Service type UserService not yet supported by nftables compiler
-# Rule 2 (global): Service type UserService not yet supported by nftables compiler
-# Rule 2 (global): Service type UserService not yet supported by nftables compiler
-# Rule 2 (global): Service type UserService not yet supported by nftables compiler
-# Rule 2 (global): Service type UserService not yet supported by nftables compiler
-# Rule 3 (global): Service type UserService not yet supported by nftables compiler
-# Rule 3 (global): Service type UserService not yet supported by nftables compiler
-# Rule 4 (global): Service type UserService not yet supported by nftables compiler
-# Rule 4 (global): Service type UserService not yet supported by nftables compiler
-# Rule 4 (global): Service type UserService not yet supported by nftables compiler
-# Rule 4 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 5 (global): Service type UserService not yet supported by nftables compiler
-# Rule 6 (global): Service type UserService not yet supported by nftables compiler
-# Rule 6 (global): Service type UserService not yet supported by nftables compiler
-# Rule 6 (global): Service type UserService not yet supported by nftables compiler
-# Rule 6 (global): Service type UserService not yet supported by nftables compiler
-# Rule 7 (global): Service type UserService not yet supported by nftables compiler
-# Rule 7 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 8 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 9 (global): Service type UserService not yet supported by nftables compiler
-# Rule 10 (global): Service type UserService not yet supported by nftables compiler
-# Rule 10 (global): Service type UserService not yet supported by nftables compiler
-# Rule 10 (global): Service type UserService not yet supported by nftables compiler
-# Rule 10 (global): Service type UserService not yet supported by nftables compiler
-# Rule 11 (global): Service type UserService not yet supported by nftables compiler
-# Rule 11 (global): Service type UserService not yet supported by nftables compiler
-# Rule 11 (global): Service type UserService not yet supported by nftables compiler
-# Rule 11 (global): Service type UserService not yet supported by nftables compiler
-# Rule 12 (global): Service type UserService not yet supported by nftables compiler
-# Rule 12 (global): Service type UserService not yet supported by nftables compiler
-# Rule 12 (global): Service type UserService not yet supported by nftables compiler
-# Rule 12 (global): Service type UserService not yet supported by nftables compiler
-# Rule 13 (global): Service type UserService not yet supported by nftables compiler
-# Rule 13 (global): Service type UserService not yet supported by nftables compiler
-# Rule 13 (global): Service type UserService not yet supported by nftables compiler
-# Rule 13 (global): Service type UserService not yet supported by nftables compiler
-# Rule 14 (global): Service type UserService not yet supported by nftables compiler
-# Rule 14 (global): Service type UserService not yet supported by nftables compiler
-# Rule 14 (global): Service type UserService not yet supported by nftables compiler
-# Rule 14 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 16 (global): Service type UserService not yet supported by nftables compiler
-# Rule 16 (global): Service type UserService not yet supported by nftables compiler
-# Rule 16 (global): Service type UserService not yet supported by nftables compiler
-# Rule 16 (global): Service type UserService not yet supported by nftables compiler
-# Rule 17 (global): Service type UserService not yet supported by nftables compiler
-# Rule 17 (global): Service type UserService not yet supported by nftables compiler
-# Rule 17 (global): Service type UserService not yet supported by nftables compiler
-# Rule 17 (global): Service type UserService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -323,95 +250,41 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new accept
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        # # Rule 2 (global): Service type UserService not yet supported by nftables compiler
         ip saddr { 192.168.1.1, 222.222.222.222 } tcp dport 80 ct state new accept
         #
         # Rule 4 (global)
         #
-        # # Rule 4 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr 192.168.1.1 ct state new accept
+        ip saddr 192.168.1.1 meta skuid 2000 ct state new accept
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 6 (global)
         #
-        # # Rule 6 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 7 (global)
-        #
-        # direction inbound -
-        # can not use user service in INPUT chain
-        # # Rule 7 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        meta skuid 2000 ct state new accept
         #
         # Rule 8 (global)
         #
-        # # Rule 8 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr != 192.168.1.0/24 ct state new accept
+        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 9 (global)
         #
-        # # Rule 9 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 10 (global)
-        #
-        # bug 2186568
-        # # Rule 10 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 11 (global)
-        #
-        # bug 2186568
-        # # Rule 11 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        ip daddr != { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new accept
         #
         # Rule 12 (global)
         #
         # bug 2186568
-        # # Rule 12 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new accept
         #
         # Rule 13 (global)
         #
         # bug 2186568
-        # # Rule 13 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 14 (global)
-        #
-        # bug 2186568
-        # # Rule 14 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 15 (global)
-        #
-        # bug 2186568
-        # # Rule 15 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 16 (global)
-        #
-        # bug 2186568
-        # # Rule 16 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 17 (global)
-        #
-        # bug 2186568
-        # # Rule 17 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        meta skuid != 2000 ct state new accept
         #
         # Rule 18 (global)
         #
@@ -424,18 +297,15 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 8 (global)
         #
-        # # Rule 8 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr != 192.168.1.0/24 ct state new accept
+        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 9 (global)
         #
-        # # Rule 9 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        meta skuid 2000 ct state new accept
         #
         # Rule 18 (global)
         #
@@ -448,102 +318,37 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        meta skuid 2000 ct state new accept
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        # # Rule 1 (global): Service type UserService not yet supported by nftables compiler
-        tcp dport 80 ct state new accept
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        # # Rule 2 (global): Service type UserService not yet supported by nftables compiler
-        tcp dport 80 ct state new accept
-        #
-        # Rule 3 (global)
-        #
-        # # Rule 3 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        # # Rule 3 (global): Service type UserService not yet supported by nftables compiler
         tcp dport 80 ct state new accept
         #
         # Rule 4 (global)
         #
-        # # Rule 4 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr 192.168.1.1 ct state new accept
+        ip saddr 192.168.1.1 meta skuid 2000 ct state new accept
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 6 (global)
         #
-        # # Rule 6 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new accept
         #
         # Rule 8 (global)
         #
-        # # Rule 8 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr != 192.168.1.0/24 ct state new accept
-        #
-        # Rule 9 (global)
-        #
-        # # Rule 9 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 10 (global)
-        #
-        # bug 2186568
-        # # Rule 10 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 11 (global)
-        #
-        # bug 2186568
-        # # Rule 11 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 12 (global)
         #
         # bug 2186568
-        # # Rule 12 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
+        meta skuid != 2000 ct state new accept
         #
         # Rule 13 (global)
         #
         # bug 2186568
-        # # Rule 13 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 14 (global)
-        #
-        # bug 2186568
-        # # Rule 14 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 15 (global)
-        #
-        # bug 2186568
-        # # Rule 15 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        #
-        # Rule 16 (global)
-        #
-        # bug 2186568
-        # # Rule 16 (global): Service type UserService not yet supported by nftables compiler
-        ct state new accept
-        #
-        # Rule 17 (global)
-        #
-        # bug 2186568
-        # # Rule 17 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new accept
         #
         # Rule 18 (global)
         #

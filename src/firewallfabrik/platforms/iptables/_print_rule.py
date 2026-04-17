@@ -29,6 +29,8 @@ from firewallfabrik.compiler._interval_helpers import (
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
+    CustomService,
     Direction,
     DNSName,
     Host,
@@ -39,8 +41,10 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
     PolicyAction,
+    TagService,
     TCPService,
     UDPService,
+    UserService,
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
@@ -142,6 +146,7 @@ class PrintRule(PolicyRuleProcessor):
 
         if srv:
             command_line += self._print_ip_service_options(rule, srv)
+            command_line += self._print_custom_services(rule, srv)
 
         command_line += self._print_modules(rule, command_line)
         command_line += self._print_time_interval(rule)
@@ -316,7 +321,24 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(res)
 
     def _print_protocol(self, srv) -> str:
-        """Print protocol matching."""
+        """Print protocol matching.
+
+        CustomService: check if the platform code already contains
+        ``-p`` to avoid duplicating the protocol flag.
+        TagService/UserService: skip protocol output (they are
+        protocol-independent).
+        """
+        if isinstance(srv, CustomService):
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            if '-p ' in code:
+                return ''
+            proto = srv.get_protocol_name()
+            if proto and proto != 'any':
+                return ''
+            return ''
+        if isinstance(srv, (TagService, UserService)):
+            return ''
         if isinstance(srv, TCPService):
             return '-p tcp -m tcp '
         elif isinstance(srv, UDPService):
@@ -341,21 +363,46 @@ class PrintRule(PolicyRuleProcessor):
         if rule.is_src_any():
             return ''
         obj = rule.src[0] if rule.src else None
-        if obj is not None:
-            addr = self._print_addr(obj)
-            if addr:
-                return self._print_single_option_with_negation(' -s', rule, 'src', addr)
+        if obj is None:
+            return ''
+        if isinstance(obj, AddressRange):
+            return self._print_address_range(obj, rule, 'src')
+        addr = self._print_addr(obj)
+        if addr:
+            return self._print_single_option_with_negation(' -s', rule, 'src', addr)
         return ''
 
     def _print_dst_addr_from_rule(self, rule: CompRule) -> str:
         if rule.is_dst_any():
             return ''
         obj = rule.dst[0] if rule.dst else None
-        if obj is not None:
-            addr = self._print_addr(obj)
-            if addr:
-                return self._print_single_option_with_negation(' -d', rule, 'dst', addr)
+        if obj is None:
+            return ''
+        if isinstance(obj, AddressRange):
+            return self._print_address_range(obj, rule, 'dst')
+        addr = self._print_addr(obj)
+        if addr:
+            return self._print_single_option_with_negation(' -d', rule, 'dst', addr)
         return ''
+
+    def _print_address_range(self, obj: AddressRange, rule: CompRule, slot: str) -> str:
+        """Print AddressRange with ``-m iprange``.
+
+        Corresponds to fwbuilder's AddressRange handling in
+        ``_printSrcAddrFromRule`` / ``_printDstAddrFromRule``.
+        Uses ``-m iprange --src-range``/``--dst-range`` when
+        start != end, plain ``-s``/``-d`` when start == end.
+        """
+        start = obj.get_start_address()
+        end = obj.get_end_address()
+        if not start:
+            return ''
+        neg = self._print_single_object_negation(rule, slot)
+        if end and start != end:
+            flag = '--src-range' if slot == 'src' else '--dst-range'
+            return f'-m iprange {neg}{flag} {start}-{end} '
+        flag = '-s' if slot == 'src' else '-d'
+        return f'{neg}{flag} {start} '
 
     def _print_addr(self, obj) -> str:
         """Print an address object in iptables format."""
@@ -532,6 +579,37 @@ class PrintRule(PolicyRuleProcessor):
             if flags:
                 parts.append(flags)
         return ' '.join(parts)
+
+    def _print_custom_services(self, rule: CompRule, srv) -> str:
+        """Print CustomService, TagService and UserService matching.
+
+        Corresponds to the CustomService/TagService/UserService blocks
+        inside fwbuilder's PolicyCompiler_PrintRule::_printDstService().
+        """
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        neg = self._print_single_object_negation(rule, 'srv')
+
+        if isinstance(srv, CustomService):
+            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            if code:
+                return f'{neg}{code} '
+            return ''
+
+        if isinstance(srv, TagService):
+            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
+            if not tag_code:
+                tag_code = (srv.data or {}).get('tagvalue', '')
+            if tag_code:
+                return f'-m mark {neg}--mark {tag_code} '
+            return ''
+
+        if isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid:
+                return f'-m owner {neg}--uid-owner {uid} '
+            return ''
+
+        return ''
 
     def _print_ipv4_options(self, data: dict) -> str:
         """Print ``-m ipv4options`` matching.

@@ -11,15 +11,6 @@
 
 #  more complex and realistic combination of Tag and Route rules that are in the separate Policy rule set. Here the top Policy rule set is empty
 #
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 3: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
-# Rule 4: Service type TagService not yet supported by nftables compiler
 # Rule 6: Tagging not yet supported by nftables compiler
 
 FWBDEBUG=""

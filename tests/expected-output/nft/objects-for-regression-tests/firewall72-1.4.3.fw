@@ -10,14 +10,6 @@
 #
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #
-# Rule 9 (global): Service type TagService not yet supported by nftables compiler
-# Rule 9 (global): Service type TagService not yet supported by nftables compiler
-# Rule 9 (global): Service type TagService not yet supported by nftables compiler
-# Rule 9 (global): Service type TagService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
-# Rule 15 (global): Service type UserService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -269,13 +261,11 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        # # Rule 9 (global): Service type TagService not yet supported by nftables compiler
         ip daddr 172.16.1.1 drop
         #
         # Rule 15 (global)
         #
-        # # Rule 15 (global): Service type UserService not yet supported by nftables compiler
-        ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr 172.16.1.1 drop
+        ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr 172.16.1.1 meta skuid != 500 drop
     }
 
     chain forward {
@@ -315,7 +305,6 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        # # Rule 9 (global): Service type TagService not yet supported by nftables compiler
         ip daddr 172.16.1.1 drop
         #
         # Rule 12 (eth1)
@@ -325,8 +314,7 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
-        # # Rule 15 (global): Service type UserService not yet supported by nftables compiler
-        ip daddr 172.16.1.1 drop
+        ip daddr 172.16.1.1 meta skuid != 500 drop
     }
 }
 

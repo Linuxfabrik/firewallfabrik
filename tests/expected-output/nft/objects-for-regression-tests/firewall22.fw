@@ -10,10 +10,6 @@
 #
 #  testing NAT rules using custom services
 #
-# Rule 0 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 1 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 2 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 2 (NAT): Service type CustomService not yet supported by nftables compiler
 
 FWBDEBUG=""
 

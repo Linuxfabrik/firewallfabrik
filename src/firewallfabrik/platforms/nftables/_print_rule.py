@@ -36,6 +36,7 @@ from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    CustomService,
     Direction,
     DNSName,
     Host,
@@ -46,8 +47,10 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
     PolicyAction,
+    TagService,
     TCPService,
     UDPService,
+    UserService,
 )
 
 if TYPE_CHECKING:
@@ -366,6 +369,26 @@ class PrintRule_nft(PolicyRuleProcessor):
                 parts.append(f'ip tos {tos}')
             if parts:
                 return ' '.join(parts)
+        elif isinstance(srv, CustomService):
+            nft_comp = cast('PolicyCompiler_nft', self.compiler)
+            code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
+            if code:
+                return code
+            return ''
+        elif isinstance(srv, TagService):
+            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
+            if not tag_code:
+                tag_code = (srv.data or {}).get('tagvalue', '')
+            if tag_code:
+                neg = '!= ' if rule.srv_single_object_negation else ''
+                return f'meta mark {neg}{tag_code}'
+            return ''
+        elif isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid:
+                neg = '!= ' if rule.srv_single_object_negation else ''
+                return f'meta skuid {neg}{uid}'
+            return ''
 
         self.compiler.error(
             rule,

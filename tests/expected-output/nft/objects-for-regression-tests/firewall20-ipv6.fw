@@ -28,14 +28,8 @@
 # Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
 # Rule 9 (global): Could not resolve any destination addresses
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -308,7 +302,6 @@ table inet fwf_filter {
         # Rule 18 (global)
         #
         # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
         log drop
         #
         # Rule 19 (global)
@@ -348,7 +341,6 @@ table inet fwf_filter {
         # Rule 18 (global)
         #
         # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
         log drop
         #
         # Rule 19 (global)
@@ -392,7 +384,6 @@ table inet fwf_filter {
         # Rule 18 (global)
         #
         # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Service type CustomService not yet supported by nftables compiler
         log drop
         #
         # Rule 19 (global)

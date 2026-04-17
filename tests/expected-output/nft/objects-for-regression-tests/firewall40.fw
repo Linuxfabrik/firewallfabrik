@@ -11,15 +11,6 @@
 
 #  more complex and realistic combination of Tag and Route rules
 #
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 3 (global): Service type TagService not yet supported by nftables compiler
-# Rule 4 (global): Service type TagService not yet supported by nftables compiler
-# Rule 4 (global): Service type TagService not yet supported by nftables compiler
-# Rule 4 (global): Service type TagService not yet supported by nftables compiler
 # Rule 6 (global): Tagging not yet supported by nftables compiler
 
 FWBDEBUG=""

@@ -27,6 +27,7 @@ from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    CustomService,
     DNSName,
     Host,
     ICMP6Service,
@@ -36,8 +37,10 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    TagService,
     TCPService,
     UDPService,
+    UserService,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
@@ -356,6 +359,14 @@ class NATPrintRule(NATRuleProcessor):
         return name
 
     def _print_protocol(self, srv) -> str:
+        if isinstance(srv, CustomService):
+            ipt_comp = cast('NATCompiler_ipt', self.compiler)
+            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            if '-p ' in code:
+                return ''
+            return ''
+        if isinstance(srv, (TagService, UserService)):
+            return ''
         if isinstance(srv, TCPService):
             return '-p tcp -m tcp '
         elif isinstance(srv, UDPService):
@@ -400,11 +411,37 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_dst_service(self, rule: CompRule) -> str:
-        """Print destination service matching for NAT rules."""
+        """Print destination service matching for NAT rules.
+
+        Handles CustomService, TagService and UserService in addition
+        to the standard TCP/UDP/ICMP/IP types (matching fwbuilder's
+        NATCompiler_PrintRule::_printDestinationPort).
+        """
         if rule.is_osrv_any():
             return ''
         srv = rule.osrv[0] if rule.osrv else None
         if srv is None:
+            return ''
+
+        if isinstance(srv, CustomService):
+            ipt_comp = cast('NATCompiler_ipt', self.compiler)
+            code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
+            if code:
+                return f'{code} '
+            return ''
+
+        if isinstance(srv, TagService):
+            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
+            if not tag_code:
+                tag_code = (srv.data or {}).get('tagvalue', '')
+            if tag_code:
+                return f'-m mark --mark {tag_code} '
+            return ''
+
+        if isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid:
+                return f'-m owner --uid-owner {uid} '
             return ''
 
         if len(rule.osrv) == 1:

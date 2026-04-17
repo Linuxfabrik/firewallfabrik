@@ -27,6 +27,7 @@ from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    CustomService,
     DNSName,
     Host,
     ICMP6Service,
@@ -36,8 +37,10 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    TagService,
     TCPService,
     UDPService,
+    UserService,
 )
 
 if TYPE_CHECKING:
@@ -235,10 +238,29 @@ class NATPrintRule_nft(NATRuleProcessor):
             if p >= 0:
                 return f'meta l4proto {p}'
             return ''
+        elif isinstance(srv, CustomService):
+            nft_comp = cast('NATCompiler_nft', self.compiler)
+            code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
+            if code:
+                return code
+            return ''
+        elif isinstance(srv, TagService):
+            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
+            if not tag_code:
+                tag_code = (srv.data or {}).get('tagvalue', '')
+            if tag_code:
+                return f'meta mark {tag_code}'
+            return ''
+        elif isinstance(srv, UserService):
+            uid = srv.userid or ''
+            if uid:
+                return f'meta skuid {uid}'
+            return ''
         else:
             self.compiler.error(
                 rule,
-                f'Service type {type(srv).__name__} not yet supported by nftables compiler',
+                f'Service type {type(srv).__name__} not yet'
+                f' supported by nftables compiler',
             )
             return ''
 

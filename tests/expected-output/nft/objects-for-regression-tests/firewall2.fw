@@ -16,9 +16,6 @@
 # Unsupported NAT rule
 # Unsupported NAT rule
 # Rule 33 (NAT): No chain assignment for NAT rule type: None
-# Rule 50 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 51 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 52 (NAT): Service type CustomService not yet supported by nftables compiler
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')

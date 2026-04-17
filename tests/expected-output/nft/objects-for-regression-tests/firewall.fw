@@ -22,37 +22,17 @@
 # Rule 22 (NAT): No chain assignment for NAT rule type: None
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -368,7 +348,6 @@ table ip fwf_filter {
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
         log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
@@ -400,10 +379,8 @@ table ip fwf_filter {
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 ct state new accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
         #
         # Rule 49 (global)
@@ -514,7 +491,6 @@ table ip fwf_filter {
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
         log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
@@ -577,28 +553,22 @@ table ip fwf_filter {
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 ct state new accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
         #
         # Rule 47 (global)
         #
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.11-192.168.1.15 ct state new accept
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
         #
         # Rule 48 (global)
         #
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
         #
         # Rule 50 (global)
@@ -683,7 +653,6 @@ table ip fwf_filter {
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Service type CustomService not yet supported by nftables compiler
         log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
@@ -704,28 +673,22 @@ table ip fwf_filter {
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 ct state new accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
         #
         # Rule 47 (global)
         #
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.11-192.168.1.15 ct state new accept
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
         #
         # Rule 48 (global)
         #
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Service type CustomService not yet supported by nftables compiler
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
         #
         # Rule 50 (global)

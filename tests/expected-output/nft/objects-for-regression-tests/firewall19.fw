@@ -15,14 +15,8 @@
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
 # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
 # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
 # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
@@ -312,7 +306,6 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 11 (global)
@@ -353,7 +346,6 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 12 (global)
@@ -407,7 +399,6 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 11 (global)

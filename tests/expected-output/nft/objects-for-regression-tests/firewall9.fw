@@ -11,32 +11,14 @@
 #  testing rules with  action-on-reject "TCP reset"
 #
 # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -317,28 +299,22 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 
@@ -370,28 +346,22 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 
@@ -456,28 +426,22 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Service type CustomService not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 }

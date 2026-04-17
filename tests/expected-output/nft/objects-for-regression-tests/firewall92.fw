@@ -12,20 +12,11 @@
 #  https://trac.torproject.org/projects/tor/wiki/TheOnionRouter/TransparentProxy
 #  See ticket 1685
 #
-# Rule 0 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 1 (NAT): Service type CustomService not yet supported by nftables compiler
-# Rule 2 (NAT): Service type CustomService not yet supported by nftables compiler
 # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-# Rule 0 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 0 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 1 (global): Branch action not yet supported by nftables compiler
 # Rule 1 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-# Rule 1 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 1 (global): Service type CustomService not yet supported by nftables compiler
 # Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-# Rule 2 (global): Service type CustomService not yet supported by nftables compiler
-# Rule 2 (global): Service type CustomService not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -280,7 +271,6 @@ table ip fwf_filter {
         #
         # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-# Rule 0 (global): Service type CustomService not yet supported by nftables compiler
         ct state new accept
         #
         # Rule 1 (global)
@@ -292,7 +282,6 @@ table ip fwf_filter {
         #
         # this only matches module owner
         # # Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-# Rule 2 (global): Service type CustomService not yet supported by nftables compiler
         log prefix "RULE 2 -- DENY " level info drop
     }
 }
