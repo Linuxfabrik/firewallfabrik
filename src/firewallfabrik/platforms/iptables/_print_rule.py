@@ -45,6 +45,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
@@ -389,19 +390,25 @@ class PrintRule(PolicyRuleProcessor):
         """Print AddressRange with ``-m iprange``.
 
         Corresponds to fwbuilder's AddressRange handling in
-        ``_printSrcAddrFromRule`` / ``_printDstAddrFromRule``.
-        Uses ``-m iprange --src-range``/``--dst-range`` when
-        start != end, plain ``-s``/``-d`` when start == end.
+        ``_printSrcAddrFromRule`` / ``_printDstAddrFromRule``.  When
+        start and end align with an exact CIDR block the shorter
+        ``-s <cidr>`` / ``-d <cidr>`` form is emitted (matching
+        fwbuilder and avoiding the ``xt_iprange`` kernel module).
+        Otherwise ``-m iprange --src-range``/``--dst-range`` is used;
+        a single address falls back to plain ``-s``/``-d``.
         """
         start = obj.get_start_address()
         end = obj.get_end_address()
         if not start:
             return ''
         neg = self._print_single_object_negation(rule, slot)
-        if end and start != end:
-            flag = '--src-range' if slot == 'src' else '--dst-range'
-            return f'-m iprange {neg}{flag} {start}-{end} '
         flag = '-s' if slot == 'src' else '-d'
+        if end and start != end:
+            cidr = range_to_cidr(start, end)
+            if cidr:
+                return f'{neg}{flag} {cidr} '
+            range_flag = '--src-range' if slot == 'src' else '--dst-range'
+            return f'-m iprange {neg}{range_flag} {start}-{end} '
         return f'{neg}{flag} {start} '
 
     def _print_addr(self, obj) -> str:

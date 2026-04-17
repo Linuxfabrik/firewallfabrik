@@ -347,20 +347,20 @@ table ip fwf_filter {
         # testing choice of chains in case when several
         # interfaces are used and rule matches 'any' or
         # broadcast
-        iifname "eth1" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        iifname "eth3" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth1" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 5 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 0.0.0.0 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        iifname "eth3" ip saddr 0.0.0.0 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth1" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth3" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 6 (eth1,eth3)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 7 (global)
         #
@@ -429,13 +429,13 @@ table ip fwf_filter {
         # testing choice of chains in case when several
         # interfaces are used and rule matches 'any' or
         # broadcast
-        oifname "eth1" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 6 (eth1,eth3)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 7 (global)
         #

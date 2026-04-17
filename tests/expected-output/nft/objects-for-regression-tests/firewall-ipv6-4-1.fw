@@ -308,7 +308,7 @@ table inet fwf_filter {
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip daddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip daddr 255.255.255.255 ct state new accept
         #
         # Rule 11 (global)
         #
@@ -322,7 +322,7 @@ table inet fwf_filter {
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip6 daddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip6 daddr 255.255.255.255 ct state new accept
         #
         # Rule 11 (global)
         #

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+* AddressRange objects that happen to cover an exact CIDR block are now compiled to the short CIDR form (`-s 192.168.4.0/24` for iptables, `ip saddr 192.168.4.0/24` for nftables) instead of the verbose range form. The `xt_iprange` kernel module is therefore only loaded when actually needed. Single-host AddressRanges are emitted as a bare address in nftables. Non-CIDR ranges keep the existing range form
 * iptables and nftables firewall settings: the Compiler tab now lists "Table name", "Compiler", "Compiler command line options", "Output file name" and "Script name on the firewall" in a single aligned grid, all input fields line up and render with normal (non-disabled) text. Two inline hint paragraphs were dropped and their content merged into the tooltips of the affected fields
 * iptables, nftables and Linux settings dialogs: empty text fields no longer show the schema default as greyed-out placeholder text. The placeholder fell back to the default value when no explicit placeholder was configured, which made empty fields like "Output file name" or "Script name on the firewall" look pre-filled and disabled. Only schema entries with an explicit `placeholder` key (e.g. "Table name", Linux binary paths like `/sbin/iptables`) still show hint text
 

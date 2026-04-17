@@ -276,11 +276,6 @@ table ip fwf_filter {
         # compiler should place rule in INPUT chain because this is broadcast destination
         ip daddr 192.168.1.255 udp dport 68 ct state new accept
         #
-        # Rule 10 (global)
-        #
-        # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 255.255.255.255-255.255.255.255 udp dport 68 ct state new accept
-        #
         # Rule 11 (global)
         #
         ip daddr 224.0.1.141 ct state new log level debug accept
@@ -327,11 +322,6 @@ table ip fwf_filter {
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
         ip daddr 192.168.1.255 udp dport 68 ct state new accept
-        #
-        # Rule 10 (global)
-        #
-        # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 255.255.255.255-255.255.255.255 udp dport 68 ct state new accept
         #
         # Rule 11 (global)
         #

@@ -260,19 +260,19 @@ table inet fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip saddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip saddr 255.255.255.255 ct state new accept
         #
         # Rule 9 (global)
         #
-        ip saddr 255.255.255.255-255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
         #
         # Rule 12 (global)
         #
-        ip saddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip saddr 0.0.0.0 ct state new accept
         #
         # Rule 13 (global)
         #
-        ip saddr 0.0.0.0-0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
         #
         # Rule 0 (global)
         #
@@ -285,11 +285,11 @@ table inet fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip6 saddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip6 saddr 255.255.255.255 ct state new accept
         #
         # Rule 12 (global)
         #
-        ip6 saddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip6 saddr 0.0.0.0 ct state new accept
     }
 
     chain forward {
@@ -316,35 +316,35 @@ table inet fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip saddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip saddr 255.255.255.255 ct state new accept
         #
         # Rule 9 (global)
         #
-        ip saddr 255.255.255.255-255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 255.255.255.255 ip daddr 192.168.1.0/24 ct state new accept
         #
         # Rule 12 (global)
         #
-        ip saddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip saddr 0.0.0.0 ct state new accept
         #
         # Rule 13 (global)
         #
-        ip saddr 0.0.0.0-0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 0.0.0.0 ip daddr 192.168.1.0/24 ct state new accept
         #
         # Rule 16 (global)
         #
-        ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip daddr 0.0.0.0 ct state new accept
         #
         # Rule 17 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0 ct state new accept
         #
         # Rule 18 (global)
         #
-        ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
         #
         # Rule 19 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
         #
         # Rule 0 (global)
         #
@@ -366,19 +366,19 @@ table inet fwf_filter {
         #
         # Rule 8 (global)
         #
-        ip6 saddr 255.255.255.255-255.255.255.255 ct state new accept
+        ip6 saddr 255.255.255.255 ct state new accept
         #
         # Rule 12 (global)
         #
-        ip6 saddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip6 saddr 0.0.0.0 ct state new accept
         #
         # Rule 16 (global)
         #
-        ip6 daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip6 daddr 0.0.0.0 ct state new accept
         #
         # Rule 18 (global)
         #
-        ip6 daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip6 daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
     }
 
     chain output {
@@ -396,19 +396,19 @@ table inet fwf_filter {
         #
         # Rule 16 (global)
         #
-        ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip daddr 0.0.0.0 ct state new accept
         #
         # Rule 17 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr 0.0.0.0 ct state new accept
         #
         # Rule 18 (global)
         #
-        ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
         #
         # Rule 19 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
         #
         # Rule 4 (global)
         #
@@ -421,11 +421,11 @@ table inet fwf_filter {
         #
         # Rule 16 (global)
         #
-        ip6 daddr 0.0.0.0-0.0.0.0 ct state new accept
+        ip6 daddr 0.0.0.0 ct state new accept
         #
         # Rule 18 (global)
         #
-        ip6 daddr { 255.255.255.255-255.255.255.255, 0.0.0.0-0.0.0.0 } ct state new accept
+        ip6 daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
     }
 }
 

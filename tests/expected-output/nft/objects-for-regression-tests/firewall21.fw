@@ -316,7 +316,7 @@ table ip fwf_filter {
         #
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 3 (global)
         #
@@ -351,7 +351,7 @@ table ip fwf_filter {
         udp dport { 68, 67 } ct state new accept
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 255.255.255.255-255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
         #
         # Rule 3 (global)
         #

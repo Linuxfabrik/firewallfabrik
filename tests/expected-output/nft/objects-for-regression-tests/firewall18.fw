@@ -263,7 +263,7 @@ table ip fwf_filter {
         # Rule 3 (ppp0)
         #
         # but old broadcast is permitted
-        iifname "ppp0" ip saddr 0.0.0.0-0.0.0.0 ct state new accept
+        iifname "ppp0" ip saddr 0.0.0.0 ct state new accept
         #
         # Rule 4 (global)
         #
@@ -278,8 +278,8 @@ table ip fwf_filter {
         #
         # using address range object
         # 255.255.255.255-255.255.255.255
-        iifname "eth0" ip daddr 255.255.255.255-255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
-        oifname "eth0" ip daddr 255.255.255.255-255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
+        iifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
+        oifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 2 (ppp0)
         #
@@ -299,7 +299,7 @@ table ip fwf_filter {
         #
         # using address range object
         # 255.255.255.255-255.255.255.255
-        oifname "eth0" ip daddr 255.255.255.255-255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
+        oifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (lo)
         #

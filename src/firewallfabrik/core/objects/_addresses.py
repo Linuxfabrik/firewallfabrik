@@ -253,3 +253,29 @@ class MultiAddressRunTime(Address):
     """Run-time variant of MultiAddress, used internally by compilers."""
 
     __mapper_args__ = {'polymorphic_identity': 'MultiAddressRunTime'}
+
+
+def range_to_cidr(start: str, end: str) -> str | None:
+    """Return the ``addr/prefixlen`` CIDR string when *start*..*end* is
+    an exact CIDR block, else ``None``.
+
+    Example: ``range_to_cidr('192.168.4.0', '192.168.4.255')`` returns
+    ``'192.168.4.0/24'``; ``range_to_cidr('192.168.4.10',
+    '192.168.4.50')`` returns ``None``.  Both addresses must share the
+    same IP version.  Invalid input returns ``None``.
+    """
+    if not start or not end:
+        return None
+    try:
+        start_addr = ipaddress.ip_address(start)
+        end_addr = ipaddress.ip_address(end)
+    except ValueError:
+        return None
+    if start_addr.version != end_addr.version:
+        return None
+    if int(start_addr) > int(end_addr):
+        return None
+    networks = list(ipaddress.summarize_address_range(start_addr, end_addr))
+    if len(networks) != 1:
+        return None
+    return str(networks[0])

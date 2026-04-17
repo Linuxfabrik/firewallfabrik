@@ -26,6 +26,7 @@ from ._addresses import (
     Network,
     NetworkIPv6,
     PhysAddress,
+    range_to_cidr,
 )
 from ._base import (
     Base,
@@ -154,5 +155,6 @@ __all__ = [
     'UserService',
     'enable_sqlite_fks',
     'group_membership',
+    'range_to_cidr',
     'rule_elements',
 ]
