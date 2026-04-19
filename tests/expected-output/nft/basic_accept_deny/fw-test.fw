@@ -57,11 +57,12 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 203.0.113.1 } tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr 203.0.113.1 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.1 tcp dport 22 ct state new accept
         #
         # Rule 1 (global)
         #
-        ip daddr { 192.168.1.1, 203.0.113.1 } icmp type echo-request icmp code 0 ct state new accept
+        ip daddr { 203.0.113.1, 192.168.1.1 } icmp type echo-request icmp code 0 ct state new accept
         #
         # Rule 2 (global)
         #

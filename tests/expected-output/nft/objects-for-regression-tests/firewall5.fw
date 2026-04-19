@@ -77,15 +77,17 @@
 # Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 3 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+# Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 4 (global): Could not resolve any destination addresses
 
@@ -492,6 +494,9 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
+        # # Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        tcp dport 22 ct state new accept
         # # Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)

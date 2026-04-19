@@ -46,6 +46,7 @@ from firewallfabrik.compiler.processors._generic import (
 )
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
     CustomService,
     Direction,
     Firewall,
@@ -190,6 +191,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SplitIfDstAny('split rule if dst is any'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Src', 'src'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Dst', 'dst'))
+        self.add(
+            SplitIfSrcMatchingAddressRange('split if Src has matching address range')
+        )
+        self.add(
+            SplitIfDstMatchingAddressRange('split if Dst has matching address range')
+        )
         self.add(SplitIfSrcMatchesFw('split if src matches FW'))
         self.add(SplitIfDstMatchesFw('split if dst matches FW'))
         self.add(SpecialCaseWithFW1('split fw-to-fw rules'))
@@ -687,8 +694,89 @@ class SplitIfDstAny(PolicyRuleProcessor):
         return True
 
 
+class SplitIfSrcMatchingAddressRange(PolicyRuleProcessor):
+    """Split rule if src has an AddressRange matching the firewall.
+
+    Mirrors iptables' ``SplitIfSrcMatchingAddressRange``.  If src
+    contains an AddressRange whose range includes a firewall interface
+    address, clone the rule into the ``output`` chain so the policy
+    also covers traffic the firewall sends out itself.  The original
+    rule stays in place and eventually lands in ``forward``.
+
+    Skipped when the destination already matches the firewall: the
+    resulting output->fw self-loop rule would never actually match
+    (kernel routes such packets via ``lo``) and fwbuilder omits it too.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+
+        if (
+            rule.direction != Direction.Inbound
+            and src is not None
+            and isinstance(src, AddressRange)
+            and nft_comp.complex_match(src, nft_comp.fw)
+            and not (dst is not None and nft_comp.complex_match(dst, nft_comp.fw))
+        ):
+            r = rule.clone()
+            r.ipt_chain = 'output'
+            r.direction = Direction.Outbound
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfDstMatchingAddressRange(PolicyRuleProcessor):
+    """Split rule if dst has an AddressRange matching the firewall.
+
+    See :class:`SplitIfSrcMatchingAddressRange`; this is the
+    destination-side counterpart.  Creates an ``input`` clone so
+    firewall-directed traffic covered by the range is not missed.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        src = rule.src[0] if rule.src else None
+        dst = rule.dst[0] if rule.dst else None
+
+        if (
+            rule.direction != Direction.Outbound
+            and dst is not None
+            and isinstance(dst, AddressRange)
+            and nft_comp.complex_match(dst, nft_comp.fw)
+            and not (src is not None and nft_comp.complex_match(src, nft_comp.fw))
+        ):
+            r = rule.clone()
+            r.ipt_chain = 'input'
+            r.direction = Direction.Inbound
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
 class SplitIfSrcMatchesFw(PolicyRuleProcessor):
-    """Split rule if src contains the firewall object."""
+    """Split rule if src contains the firewall object.
+
+    Mirrors C++ ``Compiler::splitIfRuleElementMatchesFW``: iterate src
+    objects, splitting each firewall-matching object into its own
+    clone, but stop once only one element remains in the original
+    src (``nre > 1`` guard).  Without that guard an AddressRange
+    overlapping a firewall interface IP would be pulled out together
+    with the firewall object, leaving the original rule with an empty
+    src.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -701,24 +789,31 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        to_extract = []
-        for obj in rule.src:
+        remaining = list(rule.src)
+        extracted = []
+        for obj in list(remaining):
+            if len(remaining) <= 1:
+                break
             if nft_comp.complex_match(obj, nft_comp.fw):
-                to_extract.append(obj)
+                extracted.append(obj)
+                remaining.remove(obj)
 
-        if to_extract and len(rule.src) > len(to_extract):
-            for obj in to_extract:
-                r = rule.clone()
-                r.src = [obj]
-                self.tmp_queue.append(r)
-                rule.src.remove(obj)
+        for obj in extracted:
+            r = rule.clone()
+            r.src = [obj]
+            self.tmp_queue.append(r)
 
+        rule.src = remaining
         self.tmp_queue.append(rule)
         return True
 
 
 class SplitIfDstMatchesFw(PolicyRuleProcessor):
-    """Split rule if dst contains the firewall object."""
+    """Split rule if dst contains the firewall object.
+
+    See :class:`SplitIfSrcMatchesFw` for the rationale behind the
+    ``len(remaining) > 1`` guard.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -731,18 +826,21 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        to_extract = []
-        for obj in rule.dst:
+        remaining = list(rule.dst)
+        extracted = []
+        for obj in list(remaining):
+            if len(remaining) <= 1:
+                break
             if nft_comp.complex_match(obj, nft_comp.fw):
-                to_extract.append(obj)
+                extracted.append(obj)
+                remaining.remove(obj)
 
-        if to_extract and len(rule.dst) > len(to_extract):
-            for obj in to_extract:
-                r = rule.clone()
-                r.dst = [obj]
-                self.tmp_queue.append(r)
-                rule.dst.remove(obj)
+        for obj in extracted:
+            r = rule.clone()
+            r.dst = [obj]
+            self.tmp_queue.append(r)
 
+        rule.dst = remaining
         self.tmp_queue.append(rule)
         return True
 
@@ -762,7 +860,11 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             return True
 
         dst = rule.dst[0] if rule.dst else None
-        if dst is not None:
+        if dst is not None and not isinstance(dst, AddressRange):
+            # AddressRange handling is delegated to
+            # SplitIfDstMatchingAddressRange so the original rule can
+            # still become FORWARD.  Hijacking it into INPUT here
+            # would drop the FORWARD variant (fwbuilder #2650).
             direction = rule.direction
             matches_fw = nft_comp.complex_match(dst, nft_comp.fw)
 
@@ -826,7 +928,9 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             return True
 
         src = rule.src[0] if rule.src else None
-        if src is not None:
+        if src is not None and not isinstance(src, AddressRange):
+            # See :class:`DecideOnChainIfDstFW` for the AddressRange
+            # exclusion rationale (fwbuilder #2650).
             direction = rule.direction
             matches_fw = nft_comp.complex_match(src, nft_comp.fw)
 
@@ -966,16 +1070,31 @@ class FinalizeChain(PolicyRuleProcessor):
         direction = rule.direction
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
+        # Exclude AddressRange from chain hijacking - same reasoning
+        # as in DecideOnChainIfSrcFW / DecideOnChainIfDstFW
+        # (fwbuilder #2650).  The dedicated split processor emits the
+        # INPUT or OUTPUT clone; leave the original free for FORWARD.
+        src_matches = (
+            src is not None
+            and not isinstance(src, AddressRange)
+            and nft_comp.complex_match(src, nft_comp.fw)
+        )
+        dst_matches = (
+            dst is not None
+            and not isinstance(dst, AddressRange)
+            and nft_comp.complex_match(dst, nft_comp.fw)
+        )
+
         if direction == Direction.Inbound:
-            if dst is not None and nft_comp.complex_match(dst, nft_comp.fw):
+            if dst_matches:
                 rule.ipt_chain = 'input'
         elif direction == Direction.Outbound:
-            if src is not None and nft_comp.complex_match(src, nft_comp.fw):
+            if src_matches:
                 rule.ipt_chain = 'output'
         else:
-            if dst is not None and nft_comp.complex_match(dst, nft_comp.fw):
+            if dst_matches:
                 rule.ipt_chain = 'input'
-            elif src is not None and nft_comp.complex_match(src, nft_comp.fw):
+            elif src_matches:
                 rule.ipt_chain = 'output'
 
         self.tmp_queue.append(rule)

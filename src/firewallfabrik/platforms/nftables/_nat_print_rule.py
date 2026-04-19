@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    range_to_cidr,
 )
 
 if TYPE_CHECKING:
@@ -175,6 +176,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             start = obj.get_start_address()
             end = obj.get_end_address()
             if start and end:
+                if start == end:
+                    return start
+                cidr = range_to_cidr(start, end)
+                if cidr:
+                    return cidr
                 return f'{start}-{end}'
 
         if isinstance(obj, Interface):

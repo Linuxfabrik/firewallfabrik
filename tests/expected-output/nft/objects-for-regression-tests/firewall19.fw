@@ -11,9 +11,13 @@
 #  testing different cmbinations of objects in the policy rules on loopback interface
 #
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (lo): Could not resolve any destination addresses
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
@@ -274,12 +278,10 @@ table ip fwf_filter {
         #
         # Rule 1 (lo)
         #
-        # # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
         iif "lo" ip daddr { 192.168.1.1, 66.66.66.130, 66.66.66.1, 127.0.0.1 } ct state new accept
-        #
-        # Rule 2 (lo)
-        #
-        iif "lo" ip daddr 192.168.1.1 ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        iif "lo" ct state new accept
         #
         # Rule 4 (global)
         #
@@ -363,8 +365,21 @@ table ip fwf_filter {
         #
         # Rule 1 (lo)
         #
-        # # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ip daddr { 192.168.1.1, 66.66.66.130, 66.66.66.1, 127.0.0.1 } ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        oif "lo" ip daddr 192.168.1.1 ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        oif "lo" ip daddr 66.66.66.130 ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        oif "lo" ip daddr 66.66.66.1 ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        oif "lo" ip daddr 127.0.0.1 ct state new accept
+        # # Rule 1 (lo): Could not resolve any destination addresses
+# Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        oif "lo" ct state new accept
         #
         # Rule 2 (lo)
         #
