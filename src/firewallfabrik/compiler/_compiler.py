@@ -517,6 +517,75 @@ class Compiler(BaseCompiler):
             return False
         return obj.id == self.fw.id
 
+    def expand_address_ranges(self, rule, slot: str) -> None:
+        """Replace every AddressRange in *slot* with a list of Networks.
+
+        Mirrors fwbuilder's ``Compiler::_expandAddressRanges``: each
+        AddressRange is decomposed into the minimum set of CIDR blocks
+        that cover its [start, end] span.  Non-AddressRange objects are
+        left in place.  The rule's slot is rewritten to the combined
+        list.
+
+        iptables' ``-s`` / ``-d`` only accept a single address or CIDR
+        prefix, so ranges that do not align with a CIDR boundary (e.g.
+        192.168.4.10-192.168.4.50) must be pre-expanded into multiple
+        Networks before atomisation and printing; otherwise the
+        generated shell script would emit syntactically invalid lines.
+        """
+        import uuid as _uuid
+
+        elements = getattr(rule, slot, None)
+        if not elements:
+            return
+        new_elements = []
+        changed = False
+        for obj in elements:
+            if not isinstance(obj, AddressRange):
+                new_elements.append(obj)
+                continue
+            start = obj.get_start_address()
+            end = obj.get_end_address()
+            if not start or not end:
+                new_elements.append(obj)
+                continue
+            try:
+                start_ip = ipaddress.ip_address(start)
+                end_ip = ipaddress.ip_address(end)
+            except ValueError:
+                new_elements.append(obj)
+                continue
+            if start_ip.version != end_ip.version:
+                new_elements.append(obj)
+                continue
+            if int(start_ip) > int(end_ip):
+                new_elements.append(obj)
+                continue
+            networks = list(
+                ipaddress.summarize_address_range(start_ip, end_ip),
+            )
+            if not networks:
+                new_elements.append(obj)
+                continue
+            for net in networks:
+                if net.version == 6:
+                    stand_in = NetworkIPv6(
+                        id=_uuid.uuid4(),
+                        name=f'{obj.name} %n-{net.with_prefixlen}%',
+                    )
+                else:
+                    stand_in = Network(
+                        id=_uuid.uuid4(),
+                        name=f'{obj.name} %n-{net.with_prefixlen}%',
+                    )
+                stand_in.inet_addr_mask = {
+                    'address': str(net.network_address),
+                    'netmask': str(net.netmask),
+                }
+                new_elements.append(stand_in)
+            changed = True
+        if changed:
+            setattr(rule, slot, new_elements)
+
     def complex_match(
         self,
         obj,

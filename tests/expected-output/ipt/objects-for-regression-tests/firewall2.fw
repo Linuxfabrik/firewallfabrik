@@ -16,7 +16,6 @@
 # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
 # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
 # Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
-# firewall2:NAT:22: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule 0 shadows Rule 3 below it
 # Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 6 below it

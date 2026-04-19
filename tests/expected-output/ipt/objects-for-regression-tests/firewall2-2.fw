@@ -13,7 +13,6 @@
 #
 # another copy of firewall2 but new iptables version
 
-# firewall2-2:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule 0 shadows Rule 3 below it
 # Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 6 below it

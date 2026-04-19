@@ -13,7 +13,6 @@
 #
 # this is simple firewall with two interfaces. Test regular policy rules, including IP_fragments rule
 
-# firewall:NAT:2: warning: Adding of virtual address for address range is not implemented (object r-222.222.222.0)
 # firewall:NAT:11: warning: SNAT rule can not match MAC address. Object 'host-with-mac-1:1-pa' removed from the rule
 # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-1:1-pa' removed from the rule
 
@@ -456,8 +455,20 @@ script_body() {
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10-192.168.1.100 -j SNAT --to-source 222.222.222.10-222.222.222.100
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10-192.168.1.100 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10/31 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10/31 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.12/30 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.12/30 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.16/28 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.16/28 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.32/27 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.32/27 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.64/27 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.64/27 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.96/30 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.96/30 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.100/32 -j SNAT --to-source 222.222.222.10-222.222.222.100
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.100/32 -j SNAT --to-source 222.222.222.10-222.222.222.100
  #
  # Rule 4 (NAT)
  #
