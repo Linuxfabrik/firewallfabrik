@@ -17,25 +17,9 @@
 # Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 7: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 2 below it
 # Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 3 below it
 # Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 2 below it
 # Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 2 below it
-# Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 2 below it
-# Rule 2 shadows Rule 3 below it
-# Rule 0 shadows Rule 3 below it
 # Rule 2 shadows Rule 3 below it
 
 FWBDEBUG=""
@@ -535,8 +519,8 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IPTABLES -N fw-ipv6-3_9 2>/dev/null
- $IPTABLES -A OUTPUT -j fw-ipv6-3_9
- $IPTABLES -A FORWARD -j fw-ipv6-3_9
+ $IPTABLES -A OUTPUT -m iprange --dst-range 192.168.1.1-192.168.1.100 -j fw-ipv6-3_9
+ $IPTABLES -A FORWARD -m iprange --dst-range 192.168.1.1-192.168.1.100 -j fw-ipv6-3_9
  $IPTABLES -A fw-ipv6-3_9 -j LOG --log-level info --log-prefix "RULE 9 -- DENY "
  $IPTABLES -A fw-ipv6-3_9 -j DROP
  #
@@ -546,8 +530,8 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IPTABLES -N fw-ipv6-3_10 2>/dev/null
- $IPTABLES -A OUTPUT -j fw-ipv6-3_10
- $IPTABLES -A FORWARD -j fw-ipv6-3_10
+ $IPTABLES -A OUTPUT -d 255.255.255.255 -j fw-ipv6-3_10
+ $IPTABLES -A FORWARD -d 255.255.255.255 -j fw-ipv6-3_10
  $IPTABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
  $IPTABLES -A fw-ipv6-3_10 -j DROP
  #
@@ -601,8 +585,8 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IP6TABLES -N fw-ipv6-3_9 2>/dev/null
- $IP6TABLES -A OUTPUT -j fw-ipv6-3_9
- $IP6TABLES -A FORWARD -j fw-ipv6-3_9
+ $IP6TABLES -A OUTPUT -m iprange --dst-range 192.168.1.1-192.168.1.100 -j fw-ipv6-3_9
+ $IP6TABLES -A FORWARD -m iprange --dst-range 192.168.1.1-192.168.1.100 -j fw-ipv6-3_9
  $IP6TABLES -A fw-ipv6-3_9 -j LOG --log-level info --log-prefix "RULE 9 -- DENY "
  $IP6TABLES -A fw-ipv6-3_9 -j DROP
  #
@@ -612,8 +596,8 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IP6TABLES -N fw-ipv6-3_10 2>/dev/null
- $IP6TABLES -A OUTPUT -j fw-ipv6-3_10
- $IP6TABLES -A FORWARD -j fw-ipv6-3_10
+ $IP6TABLES -A OUTPUT -d 255.255.255.255 -j fw-ipv6-3_10
+ $IP6TABLES -A FORWARD -d 255.255.255.255 -j fw-ipv6-3_10
  $IP6TABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
  $IP6TABLES -A fw-ipv6-3_10 -j DROP
  #

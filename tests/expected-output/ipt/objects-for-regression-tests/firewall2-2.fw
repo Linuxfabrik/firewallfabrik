@@ -7,16 +7,13 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall2.fw /etc/fw/fwf.sh
+# files: * firewall2-2.fw /etc/fw/fwf.sh
 #
-# Compiled for iptables (any version)
+# Compiled for iptables 1.4.0
 #
-# this object has several interfaces and shows different rules for NAT. Also testing policy rule options
+# another copy of firewall2 but new iptables version
 
-# Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
-# Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
-# Rule 29 (global): Object 'net-err' has address or netmask 0.0.0.0, which is equivalent to 'any'. This is likely an error.
-# firewall2:NAT:22: warning: Adding of virtual address for address range is not implemented (object ext_range)
+# firewall2-2:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
 # Rule 0 shadows Rule 3 below it
 # Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 6 below it
@@ -43,7 +40,7 @@
 # Rule 8 shadows Rule 21 below it
 # Rule 8 shadows Rule 27 below it
 # Rule 8 shadows Rule 28 below it
-# firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 RETVAL=0
@@ -462,6 +459,8 @@ script_body() {
  $IPTABLES -A FORWARD -m state --state INVALID -j drop_invalid
  $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
  $IPTABLES -A drop_invalid -j DROP
+ # ================ Table 'mangle', automatic rules
+ $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'nat', rule set NAT
  #
@@ -580,18 +579,18 @@ script_body() {
  #
  echo "Rule 7 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23 --random
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23 --random
- $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23 --random
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23 --random
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24 --random
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24 --random
- $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24 --random
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24 --random
- $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25 --random
- $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25 --random
- $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25 --random
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25 --random
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.23
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.24
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25
+ $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25
+ $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.10 -j SNAT --to-source 22.22.22.25
  #
  # Rule 8 (NAT)
  #
@@ -605,19 +604,6 @@ script_body() {
  # Rule 9 (NAT)
  #
  echo "Rule 9 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -d 192.168.2.0/24 -j SNAT --to-source 192.168.2.1
- #
- # Rule 10 (NAT)
- #
- echo "Rule 10 (NAT)"
- #
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -d 192.168.2.0/24 -j SNAT --to-source 192.168.2.1
- $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -d 192.168.2.0/24 -j SNAT --to-source 192.168.2.40
- #
- # Rule 11 (NAT)
- #
- echo "Rule 11 (NAT)"
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A POSTROUTING -d 192.168.2.10 -j CHAIN
@@ -641,9 +627,9 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j ACCEPT
  $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j ACCEPT
  #
- # Rule 12 (NAT)
+ # Rule 10 (NAT)
  #
- echo "Rule 12 (NAT)"
+ echo "Rule 10 (NAT)"
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A POSTROUTING -s 192.168.1.10 -j CHAIN
@@ -654,9 +640,9 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -d 192.168.2.11 -j RETURN
  $IPTABLES -t nat -A CHAIN -j ACCEPT
  #
- # Rule 13 (NAT)
+ # Rule 11 (NAT)
  #
- echo "Rule 13 (NAT)"
+ echo "Rule 11 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p 88 -d 22.22.22.23 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A PREROUTING -p 50 -d 22.22.22.23 -j DNAT --to-destination 192.168.1.10
@@ -673,9 +659,9 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p icmp -m icmp -d 22.22.22.23 --icmp-type 11/1 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 14 (NAT)
+ # Rule 12 (NAT)
  #
- echo "Rule 14 (NAT)"
+ echo "Rule 12 (NAT)"
  #
  $IPTABLES -t nat -A OUTPUT -p icmp -m icmp -d 22.22.22.23 --icmp-type 3 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p icmp -m icmp -d 22.22.22.23 --icmp-type 0/0 -j DNAT --to-destination 192.168.1.10
@@ -683,23 +669,23 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p icmp -m icmp -d 22.22.22.23 --icmp-type 11/1 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 15 (NAT)
+ # Rule 13 (NAT)
  #
- echo "Rule 15 (NAT)"
+ echo "Rule 13 (NAT)"
  #
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -s 22.22.23.23 -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -s 22.22.25.50 -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 16 (NAT)
+ # Rule 14 (NAT)
  #
- echo "Rule 16 (NAT)"
+ echo "Rule 14 (NAT)"
  #
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -m multiport -s 200.200.200.200 -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 18 (NAT)
+ # Rule 16 (NAT)
  #
- echo "Rule 18 (NAT)"
+ echo "Rule 16 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -m multiport -d 22.22.22.23 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -m multiport -d 22.22.22.24 --dports 80,119 -j DNAT --to-destination 192.168.1.10
@@ -708,55 +694,55 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -d 22.22.22.24 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -m multiport -d 22.22.22.25 --dports 80,119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 19 (NAT)
+ # Rule 17 (NAT)
  #
- echo "Rule 19 (NAT)"
+ echo "Rule 17 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 119 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 119 -j DNAT --to-destination 192.168.1.10
  #
- # Rule 20 (NAT)
+ # Rule 18 (NAT)
  #
- echo "Rule 20 (NAT)"
+ echo "Rule 18 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.20 -j SNAT --to-source 22.22.23.24
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.20 -j SNAT --to-source 22.22.23.24
  $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.20 -j SNAT --to-source 22.22.23.24
  $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.20 -j SNAT --to-source 22.22.23.24
  #
- # Rule 21 (NAT)
+ # Rule 19 (NAT)
  #
- echo "Rule 21 (NAT)"
+ echo "Rule 19 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -d 22.22.23.24 -j DNAT --to-destination 192.168.1.20
  $IPTABLES -t nat -A OUTPUT -d 22.22.23.24 -j DNAT --to-destination 192.168.1.20
  #
- # Rule 22 (NAT)
+ # Rule 20 (NAT)
  #
- echo "Rule 22 (NAT)"
+ echo "Rule 20 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.100-22.22.22.110
  $IPTABLES -t nat -A POSTROUTING -o eth1 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.100-22.22.22.110
  $IPTABLES -t nat -A POSTROUTING -o eth3 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.100-22.22.22.110
  $IPTABLES -t nat -A POSTROUTING -o eth2 -s 192.168.1.0/24 -j SNAT --to-source 22.22.22.100-22.22.22.110
  #
- # Rule 23 (NAT)
+ # Rule 21 (NAT)
  #
- echo "Rule 23 (NAT)"
+ echo "Rule 21 (NAT)"
  #
  # NETMAP
  $IPTABLES -t nat -A POSTROUTING -s 192.168.1.0/24 -j NETMAP --to 22.22.22.0/24
  #
- # Rule 24 (NAT)
+ # Rule 22 (NAT)
  #
- echo "Rule 24 (NAT)"
+ echo "Rule 22 (NAT)"
  #
  # NETMAP
  $IPTABLES -t nat -A PREROUTING -d 22.22.22.0/24 -j NETMAP --to 192.168.1.0/24
  #
- # Rule 25 (NAT)
+ # Rule 23 (NAT)
  #
- echo "Rule 25 (NAT)"
+ echo "Rule 23 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 10000:11000 -j DNAT --to-destination 192.168.1.10:10000-11000
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.23 --dport 10000:11000 -j DNAT --to-destination 192.168.1.10:10000-11000
@@ -771,9 +757,9 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 192.168.2.1 --dport 10000:11000 -j DNAT --to-destination 192.168.1.10:10000-11000
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 192.168.2.40 --dport 10000:11000 -j DNAT --to-destination 192.168.1.10:10000-11000
  #
- # Rule 26 (NAT)
+ # Rule 24 (NAT)
  #
- echo "Rule 26 (NAT)"
+ echo "Rule 24 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 80 -j DNAT --to-destination 192.168.1.10
@@ -783,16 +769,16 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.25.50 --dport 80 -j DNAT --to-destination 192.168.1.10
  $IPTABLES -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -d 192.168.1.10 --dport 80 -j SNAT --to-source 192.168.1.1
  #
- # Rule 27 (NAT)
+ # Rule 25 (NAT)
  #
- echo "Rule 27 (NAT)"
+ echo "Rule 25 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.23 --dport 80 -j DNAT --to-destination 192.168.1.10:25
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.23 --dport 80 -j DNAT --to-destination 192.168.1.10:25
  #
- # Rule 28 (NAT)
+ # Rule 26 (NAT)
  #
- echo "Rule 28 (NAT)"
+ echo "Rule 26 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 80 -j REDIRECT --to-ports 3128
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.23.23 --dport 80 -j REDIRECT --to-ports 3128
@@ -807,16 +793,16 @@ script_body() {
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.2.1 --dport 443 -j REDIRECT --to-ports 3128
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.2.40 --dport 443 -j REDIRECT --to-ports 3128
  #
- # Rule 29 (NAT)
+ # Rule 27 (NAT)
  #
- echo "Rule 29 (NAT)"
+ echo "Rule 27 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.10-192.168.1.100
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.10-192.168.1.100
  #
- # Rule 30 (NAT)
+ # Rule 28 (NAT)
  #
- echo "Rule 30 (NAT)"
+ echo "Rule 28 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.11
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.12
@@ -829,9 +815,9 @@ script_body() {
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.14
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 8080 -j DNAT --to-destination 192.168.1.15
  #
- # Rule 31 (NAT)
+ # Rule 29 (NAT)
  #
- echo "Rule 31 (NAT)"
+ echo "Rule 29 (NAT)"
  #
  # transparent proxy rule
  $IPTABLES -t nat -N CHAIN
@@ -839,29 +825,29 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -d 22.22.22.23 -j RETURN
  $IPTABLES -t nat -A CHAIN -j DNAT --to-destination 192.168.2.10
  #
- # Rule 33 (NAT)
+ # Rule 31 (NAT)
  #
- echo "Rule 33 (NAT)"
+ echo "Rule 31 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination :8080
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j DNAT --to-destination :8080
  #
- # Rule 34 (NAT)
+ # Rule 32 (NAT)
  #
- echo "Rule 34 (NAT)"
+ echo "Rule 32 (NAT)"
  #
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.10 --dport 80 -j DNAT --to-destination 192.168.1.10:8080
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp -d 192.168.1.10 --dport 80 -j DNAT --to-destination 192.168.1.10:8080
  #
- # Rule 35 (NAT)
+ # Rule 33 (NAT)
  #
- echo "Rule 35 (NAT)"
+ echo "Rule 33 (NAT)"
  #
  $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
  #
- # Rule 36 (NAT)
+ # Rule 34 (NAT)
  #
- echo "Rule 36 (NAT)"
+ echo "Rule 34 (NAT)"
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
@@ -873,9 +859,9 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
  $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 3128 -j SNAT --to-source 192.168.1.1
  #
- # Rule 37 (NAT)
+ # Rule 35 (NAT)
  #
- echo "Rule 37 (NAT)"
+ echo "Rule 35 (NAT)"
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
@@ -886,9 +872,9 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
  $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.50:3128
  #
- # Rule 38 (NAT)
+ # Rule 36 (NAT)
  #
- echo "Rule 38 (NAT)"
+ echo "Rule 36 (NAT)"
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A POSTROUTING -o eth0 -j CHAIN
@@ -899,19 +885,34 @@ script_body() {
  $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j RETURN
  $IPTABLES -t nat -A CHAIN -j SNAT --to-source 192.168.1.1
  #
+ # Rule 37 (NAT)
+ #
+ echo "Rule 37 (NAT)"
+ #
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j DNAT --to-destination 192.168.1.10:3128
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.10 --dport 3128 -j SNAT --to-source 192.168.1.1
+ #
+ # Rule 38 (NAT)
+ #
+ echo "Rule 38 (NAT)"
+ #
+ # this is the "exception" rule
+ # used in support req. originally
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.20 --dport 80 -j SNAT --to-source 22.22.22.22
+ #
  # Rule 39 (NAT)
  #
  echo "Rule 39 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j DNAT --to-destination 192.168.1.10:3128
- $IPTABLES -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.10 --dport 3128 -j SNAT --to-source 192.168.1.1
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j DNAT --to-destination 192.168.1.1:3128
  #
  # Rule 40 (NAT)
  #
  echo "Rule 40 (NAT)"
  #
- # this is the "exception" rule
- # used in support req. originally
+ # "exception" rule in the pair
+ # from a support req.
  $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
  $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.20 --dport 80 -j SNAT --to-source 22.22.22.22
  #
@@ -919,16 +920,27 @@ script_body() {
  #
  echo "Rule 41 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j DNAT --to-destination 192.168.1.1:3128
+ # testing transparent proxy
+ # roules for a support req.
+ $IPTABLES -t nat -N CHAIN
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
+ $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
+ $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
+ $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.1:3128
  #
  # Rule 42 (NAT)
  #
  echo "Rule 42 (NAT)"
  #
- # "exception" rule in the pair
- # from a support req.
- $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
- $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.20 --dport 80 -j SNAT --to-source 22.22.22.22
+ # testing transparent proxy
+ # roules for a support req.
+ $IPTABLES -t nat -N CHAIN
+ $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
+ $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
+ $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
+ $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
+ $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.1:3128
  #
  # Rule 43 (NAT)
  #
@@ -938,23 +950,18 @@ script_body() {
  # roules for a support req.
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
  $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
  $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
- $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.1:3128
+ $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 3128
  #
  # Rule 44 (NAT)
  #
  echo "Rule 44 (NAT)"
  #
- # testing transparent proxy
- # roules for a support req.
- $IPTABLES -t nat -N CHAIN
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
- $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
- $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.1:3128
+ # "exception" rule in the pair
+ # from a support req.
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
+ $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.20 --dport 80 -j SNAT --to-source 22.22.22.22
  #
  # Rule 45 (NAT)
  #
@@ -964,65 +971,10 @@ script_body() {
  # roules for a support req.
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
- $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
- $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
- $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 3128
- #
- # Rule 46 (NAT)
- #
- echo "Rule 46 (NAT)"
- #
- # "exception" rule in the pair
- # from a support req.
- $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.10 --dport 80 -j SNAT --to-source 22.22.22.22
- $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.20 --dport 80 -j SNAT --to-source 22.22.22.22
- #
- # Rule 47 (NAT)
- #
- echo "Rule 47 (NAT)"
- #
- # testing transparent proxy
- # roules for a support req.
- $IPTABLES -t nat -N CHAIN
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j CHAIN
  $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 80 -j CHAIN
  $IPTABLES -t nat -A CHAIN -s 192.168.1.10 -j RETURN
  $IPTABLES -t nat -A CHAIN -s 192.168.1.20 -j RETURN
  $IPTABLES -t nat -A CHAIN -p tcp -m tcp --dport 80 -j DNAT --to-destination 192.168.1.50:3128
- #
- # Rule 48 (NAT)
- #
- echo "Rule 48 (NAT)"
- #
- $IPTABLES -t nat -A PREROUTING -p tcp -m tcp -s 192.168.1.0/24 --dport 3050:3051 -j DNAT --to-destination :700
- $IPTABLES -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -s 192.168.1.0/24 --dport 700 -j SNAT --to-source 192.168.1.10
- $IPTABLES -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.0/24 --dport 700 -j SNAT --to-source 192.168.1.10
- $IPTABLES -t nat -A POSTROUTING -o eth3 -p tcp -m tcp -s 192.168.1.0/24 --dport 700 -j SNAT --to-source 192.168.1.10
- $IPTABLES -t nat -A POSTROUTING -o eth2 -p tcp -m tcp -s 192.168.1.0/24 --dport 700 -j SNAT --to-source 192.168.1.10
- #
- # Rule 49 (NAT)
- #
- echo "Rule 49 (NAT)"
- #
- $IPTABLES -t nat -A OUTPUT -p tcp -m tcp --dport 9040 -j REDIRECT --to-ports 9040
- #
- # Rule 50 (NAT)
- #
- echo "Rule 50 (NAT)"
- #
- $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 9040
- #
- # Rule 51 (NAT)
- #
- echo "Rule 51 (NAT)"
- #
- $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 9040
- #
- # Rule 52 (NAT)
- #
- echo "Rule 52 (NAT)"
- #
- $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 53
 
  # ================ Table 'filter', rule set Policy
  #
@@ -1363,9 +1315,9 @@ script_body() {
  #
  # 'catch all' rule
  $IPTABLES -N RULE_29 2>/dev/null
- $IPTABLES -A INPUT -s 1.2.3.0/0 -j RULE_29
- $IPTABLES -A OUTPUT -s 1.2.3.0/0 -j RULE_29
- $IPTABLES -A FORWARD -s 1.2.3.0/0 -j RULE_29
+ $IPTABLES -A OUTPUT -j RULE_29
+ $IPTABLES -A INPUT -j RULE_29
+ $IPTABLES -A FORWARD -j RULE_29
  $IPTABLES -A RULE_29 -j LOG --log-level debug --log-prefix "RULE 29 - DENY **"
  $IPTABLES -A RULE_29 -j DROP
 }

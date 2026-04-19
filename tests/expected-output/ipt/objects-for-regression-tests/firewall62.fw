@@ -459,7 +459,7 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
@@ -479,25 +479,25 @@ script_body() {
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -A OUTPUT -s 192.168.1.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.1 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
- $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -A OUTPUT -s ! 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s ! 192.168.1.0/24 -m owner --uid-owner 2000 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
  #
@@ -514,6 +514,7 @@ script_body() {
  # bug 2186568
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j CHAIN
+ $IPTABLES -A OUTPUT -m owner --uid-owner 500 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
  #
@@ -522,7 +523,8 @@ script_body() {
  # bug 2186568
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A CHAIN -m owner --uid-owner 2000 -j ACCEPT
+ $IPTABLES -A CHAIN -m owner --uid-owner 500 -j ACCEPT
  #
  # Rule 12 (global)
  #
@@ -579,7 +581,8 @@ script_body() {
  # bug 2186568
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -d 192.168.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A CHAIN -m owner --uid-owner 2000 -j ACCEPT
+ $IPTABLES -A CHAIN -m owner --uid-owner 500 -j ACCEPT
  #
  # Rule 18 (global)
  #

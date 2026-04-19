@@ -521,22 +521,18 @@ script_body() {
  #
  echo "Rule 10 (global)"
  #
- $IPTABLES -A INPUT -s 192.168.1.0/24 -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A INPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A FORWARD -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
  #
  # Rule 11 (global)
  #
  echo "Rule 11 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 3128 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 66.66.66.130 -j ACCEPT
- $IPTABLES -A CHAIN -d 127.0.0.1 -j ACCEPT
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -p tcp -m tcp --dport 3128 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d 66.66.66.130 -j ACCEPT
- $IPTABLES -A CHAIN -d 127.0.0.1 -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 66.66.66.130 --dport 3128 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d 127.0.0.1 --dport 3128 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d 66.66.66.130 --dport 3128 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d 127.0.0.1 --dport 3128 -m state --state NEW -j ACCEPT
  #
  # Rule 12 (global)
  #

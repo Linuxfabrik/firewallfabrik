@@ -490,12 +490,6 @@ table ip fwf_filter {
         # also test for bug #2526173
         ip saddr 0.0.0.0 log prefix "RULE 19 - DENY **" level debug drop
         #
-        # Rule 20 (global)
-        #
-        # using module iprange if
-        # iptables version is >= 1.2.11
-        ip saddr 192.168.1.1-192.168.1.100 udp dport 161 ct state new accept
-        #
         # Rule 22 (global)
         #
         ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 211.11.11.11 ct state new accept
@@ -594,6 +588,12 @@ table ip fwf_filter {
         # using module iprange if
         # iptables version is >= 1.2.11
         ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new accept
+        #
+        # Rule 20 (global)
+        #
+        # using module iprange if
+        # iptables version is >= 1.2.11
+        ip saddr 192.168.1.1-192.168.1.100 udp dport 161 ct state new accept
         #
         # Rule 24 (global)
         #

@@ -486,8 +486,8 @@ script_body() {
  echo "Rule 10 (global)"
  #
  # compiler should place rule in INPUT chain because this is broadcast destination
- $IPTABLES -A OUTPUT -p udp -m udp --dport 68 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p udp -m udp --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp -d 255.255.255.255 --dport 68 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
  #

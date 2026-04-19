@@ -18,10 +18,8 @@
 # Rule 1 shadows Rule 2 below it
 # Rule 1 shadows Rule 3 below it
 # Rule 1 shadows Rule 5 below it
-# Rule 1 shadows Rule 5 below it
 # Rule 1 shadows Rule 2 below it
 # Rule 1 shadows Rule 3 below it
-# Rule 1 shadows Rule 5 below it
 # Rule 1 shadows Rule 5 below it
 
 FWBDEBUG=""

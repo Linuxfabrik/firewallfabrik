@@ -518,14 +518,10 @@ script_body() {
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d $i_ppp0 -j ACCEPT
- $IPTABLES -A CHAIN -d $i_ppp1 -j ACCEPT
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -d $i_ppp0 -j ACCEPT
- $IPTABLES -A CHAIN -d $i_ppp1 -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d $i_ppp0 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p tcp -m tcp -d $i_ppp1 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d $i_ppp0 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p tcp -m tcp -d $i_ppp1 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (global)
  #

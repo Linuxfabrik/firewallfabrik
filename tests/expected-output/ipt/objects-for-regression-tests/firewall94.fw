@@ -433,29 +433,81 @@ script_body() {
  echo "Rule 0 (global)"
  #
  # address range in src includes firewall
- $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ $IPTABLES -A INPUT -m iprange --src-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -m iprange --src-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
  # address range in dst includes firewall
- $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ #
+ # Rule 5 (global)
+ #
+ echo "Rule 5 (global)"
+ #
+ $IPTABLES -A OUTPUT -m iprange --dst-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -m iprange --dst-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ #
+ # Rule 8 (global)
+ #
+ echo "Rule 8 (global)"
+ #
+ $IPTABLES -A INPUT -s 255.255.255.255 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 255.255.255.255 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
  #
  echo "Rule 9 (global)"
  #
- $IPTABLES -A INPUT -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -s 255.255.255.255 -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 255.255.255.255 -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ #
+ # Rule 12 (global)
+ #
+ echo "Rule 12 (global)"
+ #
+ $IPTABLES -A INPUT -s 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 0.0.0.0 -m state --state NEW -j ACCEPT
+ #
+ # Rule 13 (global)
+ #
+ echo "Rule 13 (global)"
+ #
+ $IPTABLES -A INPUT -s 0.0.0.0 -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 0.0.0.0 -d 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ #
+ # Rule 16 (global)
+ #
+ echo "Rule 16 (global)"
+ #
+ $IPTABLES -A OUTPUT -d 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 0.0.0.0 -m state --state NEW -j ACCEPT
  #
  # Rule 17 (global)
  #
  echo "Rule 17 (global)"
  #
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -d 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -s 192.168.1.0/24 -d 0.0.0.0 -m state --state NEW -j ACCEPT
+ #
+ # Rule 18 (global)
+ #
+ echo "Rule 18 (global)"
+ #
+ $IPTABLES -A OUTPUT -d 255.255.255.255 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -d 255.255.255.255 -m state --state NEW -j ACCEPT
  #
  # Rule 19 (global)
  #
@@ -463,10 +515,12 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A CHAIN -d 255.255.255.255 -j ACCEPT
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j ACCEPT
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A CHAIN -d 255.255.255.255 -j ACCEPT
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j ACCEPT
 
  # ================ IPv6
 
@@ -483,15 +537,60 @@ script_body() {
  echo "Rule 0 (global)"
  #
  # address range in src includes firewall
- $IP6TABLES -A INPUT -m state --state NEW -j ACCEPT
- $IP6TABLES -A FORWARD -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A OUTPUT -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m iprange --src-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ $IP6TABLES -A INPUT -m iprange --src-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m iprange --src-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
  # address range in dst includes firewall
- $IP6TABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IP6TABLES -A OUTPUT -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A INPUT -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m iprange --dst-range 192.168.1.1-192.168.1.3 -m state --state NEW -j ACCEPT
+ #
+ # Rule 5 (global)
+ #
+ echo "Rule 5 (global)"
+ #
+ $IP6TABLES -A OUTPUT -m iprange --dst-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -m iprange --dst-range 192.168.1.3-192.168.1.5 -m state --state NEW -j ACCEPT
+ #
+ # Rule 8 (global)
+ #
+ echo "Rule 8 (global)"
+ #
+ $IP6TABLES -A INPUT -s 255.255.255.255 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -s 255.255.255.255 -m state --state NEW -j ACCEPT
+ #
+ # Rule 12 (global)
+ #
+ echo "Rule 12 (global)"
+ #
+ $IP6TABLES -A INPUT -s 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -s 0.0.0.0 -m state --state NEW -j ACCEPT
+ #
+ # Rule 16 (global)
+ #
+ echo "Rule 16 (global)"
+ #
+ $IP6TABLES -A OUTPUT -d 0.0.0.0 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -d 0.0.0.0 -m state --state NEW -j ACCEPT
+ #
+ # Rule 18 (global)
+ #
+ echo "Rule 18 (global)"
+ #
+ $IP6TABLES -A OUTPUT -d 255.255.255.255 -m state --state NEW -j ACCEPT
+ $IP6TABLES -A FORWARD -d 255.255.255.255 -m state --state NEW -j ACCEPT
 }
 
 ip_forward() {

@@ -607,9 +607,9 @@ script_body() {
  #
  echo "Rule 12 (global)"
  #
- $IPTABLES -A INPUT -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A INPUT -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A FORWARD -s 192.168.1.0/24 -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
  #
  # Rule 14 (global)
  #
@@ -617,15 +617,15 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A CHAIN -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A CHAIN -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -j CHAIN
- $IPTABLES -A CHAIN -j REJECT --reject-with icmp-net-unreachable
+ $IPTABLES -A CHAIN -m tcp --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j REJECT --reject-with icmp-net-unreachable
  $IPTABLES -A CHAIN -p udp -m udp --dport 53 -j REJECT --reject-with icmp-net-unreachable
 }
 

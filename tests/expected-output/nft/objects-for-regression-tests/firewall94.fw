@@ -258,6 +258,11 @@ table inet fwf_filter {
         #
         ip saddr 192.168.1.3-192.168.1.5 ct state new accept
         #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
         # Rule 8 (global)
         #
         ip saddr 255.255.255.255 ct state new accept
@@ -283,6 +288,11 @@ table inet fwf_filter {
         #
         ip6 saddr 192.168.1.3-192.168.1.5 ct state new accept
         #
+        # Rule 4 (global)
+        #
+        # address range in dst includes firewall
+        ip6 daddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
         # Rule 8 (global)
         #
         ip6 saddr 255.255.255.255 ct state new accept
@@ -296,19 +306,9 @@ table inet fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
-        #
-        # address range in src includes firewall
-        ip saddr 192.168.1.1-192.168.1.3 ct state new accept
-        #
         # Rule 1 (global)
         #
         ip saddr 192.168.1.3-192.168.1.5 ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        # address range in dst includes firewall
-        ip daddr 192.168.1.1-192.168.1.3 ct state new accept
         #
         # Rule 5 (global)
         #
@@ -346,19 +346,9 @@ table inet fwf_filter {
         #
         ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
         #
-        # Rule 0 (global)
-        #
-        # address range in src includes firewall
-        ip6 saddr 192.168.1.1-192.168.1.3 ct state new accept
-        #
         # Rule 1 (global)
         #
         ip6 saddr 192.168.1.3-192.168.1.5 ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        # address range in dst includes firewall
-        ip6 daddr 192.168.1.1-192.168.1.3 ct state new accept
         #
         # Rule 5 (global)
         #
@@ -385,6 +375,11 @@ table inet fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (global)
+        #
+        # address range in src includes firewall
+        ip saddr 192.168.1.1-192.168.1.3 ct state new accept
+        #
         # Rule 4 (global)
         #
         # address range in dst includes firewall
@@ -409,6 +404,11 @@ table inet fwf_filter {
         # Rule 19 (global)
         #
         ip saddr 192.168.1.0/24 ip daddr { 255.255.255.255, 0.0.0.0 } ct state new accept
+        #
+        # Rule 0 (global)
+        #
+        # address range in src includes firewall
+        ip6 saddr 192.168.1.1-192.168.1.3 ct state new accept
         #
         # Rule 4 (global)
         #

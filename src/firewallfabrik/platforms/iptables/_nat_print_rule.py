@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import get_interface_var_name
@@ -579,10 +580,23 @@ class NATPrintRule(NATRuleProcessor):
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:
         """Print an address object in iptables format."""
-        if print_range and isinstance(obj, AddressRange):
+        if isinstance(obj, AddressRange):
             start = obj.get_start_address()
             end = obj.get_end_address()
             if start and end:
+                # NAT target (--to-source / --to-destination) only
+                # accepts "ipaddr-ipaddr" syntax, not CIDR.
+                if print_range:
+                    return f'{start}-{end}'
+                # NAT match (-s / -d): prefer the short CIDR form when
+                # the range covers an exact subnet, otherwise fall
+                # back to "ipaddr-ipaddr" so the caller can wrap it
+                # in "-m iprange --src-range/--dst-range".
+                if start == end:
+                    return start
+                cidr = range_to_cidr(start, end)
+                if cidr:
+                    return cidr
                 return f'{start}-{end}'
 
         if isinstance(obj, Interface):

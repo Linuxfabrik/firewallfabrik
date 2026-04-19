@@ -14,8 +14,6 @@
 
 # Rule 0 shadows Rule 1 below it
 # Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 1 below it
-# Rule 0 shadows Rule 1 below it
 
 FWBDEBUG=""
 RETVAL=0

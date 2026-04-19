@@ -541,9 +541,9 @@ script_body() {
  echo "Rule 18 (global)"
  #
  $IP6TABLES -N RULE_18 2>/dev/null
- $IP6TABLES -A OUTPUT -j RULE_18
- $IP6TABLES -A INPUT -j RULE_18
- $IP6TABLES -A FORWARD -j RULE_18
+ $IP6TABLES -A OUTPUT -m rt --rt-type 0 -j RULE_18
+ $IP6TABLES -A INPUT -m rt --rt-type 0 -j RULE_18
+ $IP6TABLES -A FORWARD -m rt --rt-type 0 -j RULE_18
  $IP6TABLES -A RULE_18 -j LOG
  $IP6TABLES -A RULE_18 -j DROP
  #

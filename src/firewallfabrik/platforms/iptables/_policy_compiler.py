@@ -2171,7 +2171,11 @@ class ProcessMultiAddressObjectsInDst(ProcessMultiAddressObjectsInRE):
 
 
 class SplitIfSrcMatchesFw(PolicyRuleProcessor):
-    """Split rule if src contains the firewall object."""
+    """Split rule if src contains the firewall object.
+
+    See :class:`SplitIfDstMatchesFw` for the rationale behind the
+    ``len(remaining) > 1`` guard.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -2184,24 +2188,36 @@ class SplitIfSrcMatchesFw(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        to_extract = []
-        for obj in rule.src:
+        remaining = list(rule.src)
+        extracted = []
+        for obj in list(remaining):
+            if len(remaining) <= 1:
+                break
             if ipt_comp.complex_match(obj, ipt_comp.fw):
-                to_extract.append(obj)
+                extracted.append(obj)
+                remaining.remove(obj)
 
-        if to_extract and len(rule.src) > len(to_extract):
-            for obj in to_extract:
-                r = rule.clone()
-                r.src = [obj]
-                self.tmp_queue.append(r)
-                rule.src.remove(obj)
+        for obj in extracted:
+            r = rule.clone()
+            r.src = [obj]
+            self.tmp_queue.append(r)
 
+        rule.src = remaining
         self.tmp_queue.append(rule)
         return True
 
 
 class SplitIfDstMatchesFw(PolicyRuleProcessor):
-    """Split rule if dst contains the firewall object."""
+    """Split rule if dst contains the firewall object.
+
+    Mirrors C++ ``Compiler::splitIfRuleElementMatchesFW``: iterate
+    dst objects, splitting each firewall-matching object into its own
+    clone, but stop as soon as exactly one element remains in the
+    original dst (``nre > 1`` guard in the C++ source).  Without that
+    guard an AddressRange that overlaps the firewall (e.g. a /24 that
+    contains the fw interface IP) would be pulled out together with
+    the firewall object, leaving the original rule with an empty dst.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -2214,18 +2230,21 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        to_extract = []
-        for obj in rule.dst:
+        remaining = list(rule.dst)
+        extracted = []
+        for obj in list(remaining):
+            if len(remaining) <= 1:
+                break
             if ipt_comp.complex_match(obj, ipt_comp.fw):
-                to_extract.append(obj)
+                extracted.append(obj)
+                remaining.remove(obj)
 
-        if to_extract and len(rule.dst) > len(to_extract):
-            for obj in to_extract:
-                r = rule.clone()
-                r.dst = [obj]
-                self.tmp_queue.append(r)
-                rule.dst.remove(obj)
+        for obj in extracted:
+            r = rule.clone()
+            r.dst = [obj]
+            self.tmp_queue.append(r)
 
+        rule.dst = remaining
         self.tmp_queue.append(rule)
         return True
 
@@ -2350,7 +2369,12 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             return True
 
         dst = rule.dst[0] if rule.dst else None
-        if dst is not None:
+        if dst is not None and not isinstance(dst, AddressRange):
+            # AddressRange is handled by SplitIfDstMatchingAddressRange,
+            # which emits a dedicated INPUT clone and leaves the
+            # original rule free to become FORWARD.  Matching it here
+            # (fwbuilder #2650) would hijack the only original copy
+            # into INPUT and drop the FORWARD variant.
             direction = rule.direction
             matches_fw = ipt_comp.complex_match(dst, ipt_comp.fw)
 
@@ -2380,7 +2404,12 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             return True
 
         src = rule.src[0] if rule.src else None
-        if src is not None:
+        if src is not None and not isinstance(src, AddressRange):
+            # AddressRange is handled by SplitIfSrcMatchingAddressRange,
+            # which emits a dedicated OUTPUT clone and leaves the
+            # original rule free to become FORWARD.  Matching it here
+            # (fwbuilder #2650) would hijack the only original copy
+            # into OUTPUT and drop the FORWARD variant.
             direction = rule.direction
             matches_fw = ipt_comp.complex_match(src, ipt_comp.fw)
 
@@ -2459,16 +2488,33 @@ class FinalizeChain(PolicyRuleProcessor):
             dst = rule.dst[0] if rule.dst else None
             direction = rule.direction
 
+            # AddressRange matches the firewall only partially (some of
+            # the addresses in the range are on the firewall, others
+            # are not).  SplitIfSrc/DstMatchingAddressRange already
+            # emitted a dedicated INPUT or OUTPUT clone, so the
+            # original rule must stay on the FORWARD chain to keep
+            # covering the non-firewall addresses (fwbuilder #2650).
+            src_matches = (
+                src is not None
+                and not isinstance(src, AddressRange)
+                and ipt_comp.complex_match(src, ipt_comp.fw)
+            )
+            dst_matches = (
+                dst is not None
+                and not isinstance(dst, AddressRange)
+                and ipt_comp.complex_match(dst, ipt_comp.fw)
+            )
+
             if direction == Direction.Inbound:
-                if dst is not None and ipt_comp.complex_match(dst, ipt_comp.fw):
+                if dst_matches:
                     ipt_comp.set_chain(rule, 'INPUT')
             elif direction == Direction.Outbound:
-                if src is not None and ipt_comp.complex_match(src, ipt_comp.fw):
+                if src_matches:
                     ipt_comp.set_chain(rule, 'OUTPUT')
             else:
-                if dst is not None and ipt_comp.complex_match(dst, ipt_comp.fw):
+                if dst_matches:
                     ipt_comp.set_chain(rule, 'INPUT')
-                elif src is not None and ipt_comp.complex_match(src, ipt_comp.fw):
+                elif src_matches:
                     ipt_comp.set_chain(rule, 'OUTPUT')
 
         self.tmp_queue.append(rule)

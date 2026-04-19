@@ -15,10 +15,6 @@
 # Rule 4 (NAT): Can not build rule using dynamic interface 'eth0' of another object
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of the object 'linux-1-d' because its address in unknown.
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of the object 'linux-1-d' because its address in unknown.
-# Rule 5 shadows Rule 6 below it
-# Rule 8 shadows Rule 9 below it
-# Rule 5 shadows Rule 6 below it
-# Rule 8 shadows Rule 9 below it
 
 FWBDEBUG=""
 RETVAL=0

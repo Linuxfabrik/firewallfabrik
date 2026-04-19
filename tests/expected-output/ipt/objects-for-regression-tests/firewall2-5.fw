@@ -14,9 +14,7 @@
 # various tests for the "-o itf" clause in SNAT rules
 
 # firewall2-5:NAT:4: warning: Adding of virtual address for address range is not implemented (object r-222.222.222.0)
-# firewall2-5:NAT:5: warning: Adding of virtual address for address range is not implemented (object range 33 1-3)
 # firewall2-5:NAT:7: warning: Adding of virtual address for address range is not implemented (object range 33 30-33)
-# firewall2-5:NAT:8: warning: Adding of virtual address for address range is not implemented (object range 33 1-33)
 
 FWBDEBUG=""
 RETVAL=0

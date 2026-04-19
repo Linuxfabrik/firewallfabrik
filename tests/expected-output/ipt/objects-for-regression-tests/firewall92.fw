@@ -428,19 +428,19 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A OUTPUT -j REDIRECT --to-ports 53
+ $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 53
  #
  # Rule 1 (NAT)
  #
  echo "Rule 1 (NAT)"
  #
- $IPTABLES -t nat -A OUTPUT -j REDIRECT --to-ports 9040
+ $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 9040
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A OUTPUT -j REDIRECT --to-ports 9040
+ $IPTABLES -t nat -A OUTPUT -m owner --uid-owner anonymous -j REDIRECT --to-ports 9040
 
  # ================ Table 'filter', rule set Policy_1
  #
@@ -459,7 +459,7 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m owner --uid-owner anonymous -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
@@ -467,7 +467,7 @@ script_body() {
  #
  # matching module owner here
  # and tcp and udp ports in the branch
- $IPTABLES -A OUTPUT
+ $IPTABLES -A OUTPUT -m owner --uid-owner anonymous
  #
  # Rule 2 (global)
  #
@@ -475,7 +475,7 @@ script_body() {
  #
  # this only matches module owner
  $IPTABLES -N Out_RULE_2 2>/dev/null
- $IPTABLES -A OUTPUT -j Out_RULE_2
+ $IPTABLES -A OUTPUT -m owner --uid-owner anonymous -j Out_RULE_2
  $IPTABLES -A Out_RULE_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
  $IPTABLES -A Out_RULE_2 -j DROP
 }

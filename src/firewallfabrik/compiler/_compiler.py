@@ -32,6 +32,7 @@ from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
     AddressTable,
     DNSName,
     DynamicGroup,
@@ -538,6 +539,38 @@ class Compiler(BaseCompiler):
             return obj.device_id == fw.id
 
         if isinstance(obj, Host):
+            return False
+
+        if isinstance(obj, AddressRange):
+            # Matches if any of the firewall's interface addresses
+            # falls inside the [start, end] range.  Mirrors fwbuilder's
+            # InetAddrMask range comparison inside complexMatch()
+            # (#2650).  Broadcast / multicast recognition does not
+            # apply to AddressRange.
+            start = obj.get_start_address()
+            end = obj.get_end_address()
+            if not start or not end:
+                return False
+            try:
+                start_ip = ipaddress.ip_address(start)
+                end_ip = ipaddress.ip_address(end)
+            except ValueError:
+                return False
+            for iface in fw.interfaces:
+                for addr in getattr(iface, 'addresses', []):
+                    addr_str = (
+                        addr.get_address() if hasattr(addr, 'get_address') else ''
+                    )
+                    if not addr_str:
+                        continue
+                    try:
+                        ip = ipaddress.ip_address(addr_str)
+                    except ValueError:
+                        continue
+                    if ip.version != start_ip.version:
+                        continue
+                    if start_ip <= ip <= end_ip:
+                        return True
             return False
 
         if isinstance(obj, Address):

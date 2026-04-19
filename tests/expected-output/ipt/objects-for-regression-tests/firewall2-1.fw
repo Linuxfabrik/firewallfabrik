@@ -7,14 +7,40 @@
 #
 # Generated TIMESTAMP
 #
-# files: * firewall2-3.fw /etc/fw/fwf.sh
+# files: * firewall2-1.fw /etc/fw/fwf.sh
 #
-# Compiled for iptables ge_1.2.6
+# Compiled for iptables lt_1.2.6
 #
-# copy of firewall2, version >= 1.2.6
+# copy of firewall2 but old iptables version
 
-# firewall2-3:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
-# firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall2-1:NAT:20: warning: Adding of virtual address for address range is not implemented (object ext_range)
+# Rule 0 shadows Rule 3 below it
+# Rule 4 shadows Rule 5 below it
+# Rule 4 shadows Rule 6 below it
+# Rule 8 shadows Rule 9 below it
+# Rule 8 shadows Rule 10 below it
+# Rule 8 shadows Rule 11 below it
+# Rule 8 shadows Rule 12 below it
+# Rule 8 shadows Rule 13 below it
+# Rule 8 shadows Rule 14 below it
+# Rule 8 shadows Rule 20 below it
+# Rule 8 shadows Rule 21 below it
+# Rule 8 shadows Rule 27 below it
+# Rule 8 shadows Rule 28 below it
+# Rule 0 shadows Rule 3 below it
+# Rule 4 shadows Rule 5 below it
+# Rule 4 shadows Rule 6 below it
+# Rule 8 shadows Rule 9 below it
+# Rule 8 shadows Rule 10 below it
+# Rule 8 shadows Rule 11 below it
+# Rule 8 shadows Rule 12 below it
+# Rule 8 shadows Rule 13 below it
+# Rule 8 shadows Rule 14 below it
+# Rule 8 shadows Rule 20 below it
+# Rule 8 shadows Rule 21 below it
+# Rule 8 shadows Rule 27 below it
+# Rule 8 shadows Rule 28 below it
+# firewall2-1:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 RETVAL=0
@@ -1092,32 +1118,137 @@ script_body() {
  #
  echo "Rule 11 (global)"
  #
- $IPTABLES -w -N RULE_11 2>/dev/null
- $IPTABLES -w -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 -m conntrack --ctstate NEW -j RULE_11
- $IPTABLES -w -A RULE_11 -j LOG --log-level debug --log-prefix "RULE 11 - ACCEPT **"
- $IPTABLES -w -A RULE_11 -j ACCEPT
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A OUTPUT -p udp -m udp -m iprange --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A INPUT -p udp -m udp -m iprange --src-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange --src-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 13 (global)
+ #
+ echo "Rule 13 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange --src-range 222.222.222.10-222.222.222.100 -m iprange --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 14 (global)
+ #
+ echo "Rule 14 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange --src-range 192.168.1.10-192.168.1.100 -m iprange --dst-range 222.222.222.10-222.222.222.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 15 (global)
+ #
+ echo "Rule 15 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A OUTPUT -p udp -m udp -m iprange ! --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -p udp -m udp -m iprange ! --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange ! --dst-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 16 (global)
+ #
+ echo "Rule 16 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A OUTPUT -p udp -m udp -m iprange ! --src-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -p udp -m udp -m iprange ! --src-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange ! --src-range 192.168.1.10-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 17 (global)
+ #
+ echo "Rule 17 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -N CHAIN 2>/dev/null
+ $IPTABLES -w -A OUTPUT -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A INPUT -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A FORWARD -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A CHAIN -d 192.168.1.0 -j RETURN
+ $IPTABLES -w -A CHAIN -m iprange --dst-range 192.168.1.10-192.168.1.100 -j RETURN
+ $IPTABLES -w -A CHAIN -j ACCEPT
+ #
+ # Rule 18 (global)
+ #
+ echo "Rule 18 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -N CHAIN 2>/dev/null
+ $IPTABLES -w -A OUTPUT -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A INPUT -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A FORWARD -p udp -m udp --dport 161 -m conntrack --ctstate NEW -j CHAIN
+ $IPTABLES -w -A CHAIN -s 192.168.1.0 -j RETURN
+ $IPTABLES -w -A CHAIN -m iprange --src-range 192.168.1.10-192.168.1.100 -j RETURN
+ $IPTABLES -w -A CHAIN -j ACCEPT
+ #
+ # Rule 19 (global)
+ #
+ echo "Rule 19 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ # also test for bug #2526173
+ $IPTABLES -w -N RULE_19 2>/dev/null
+ $IPTABLES -w -A INPUT -s 0.0.0.0 -j RULE_19
+ $IPTABLES -w -A FORWARD -s 0.0.0.0 -j RULE_19
+ $IPTABLES -w -A RULE_19 -j LOG --log-level debug --log-prefix "RULE 19 - DENY **"
+ $IPTABLES -w -A RULE_19 -j DROP
+ #
+ # Rule 20 (global)
+ #
+ echo "Rule 20 (global)"
+ #
+ # using module iprange if
+ # iptables version is >= 1.2.11
+ $IPTABLES -w -A INPUT -p udp -m udp -m iprange --src-range 192.168.1.1-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A OUTPUT -p udp -m udp -m iprange --src-range 192.168.1.1-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A FORWARD -p udp -m udp -m iprange --src-range 192.168.1.1-192.168.1.100 --dport 161 -m conntrack --ctstate NEW -j ACCEPT
+ #
+ # Rule 21 (global)
+ #
+ echo "Rule 21 (global)"
+ #
+ $IPTABLES -w -N RULE_21 2>/dev/null
+ $IPTABLES -w -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 -m conntrack --ctstate NEW -j RULE_21
+ $IPTABLES -w -A RULE_21 -j LOG --log-level debug --log-prefix "RULE 21 - ACCEPT **"
+ $IPTABLES -w -A RULE_21 -j ACCEPT
+ #
+ # Rule 22 (global)
+ #
+ echo "Rule 22 (global)"
  #
  $IPTABLES -w -N CHAIN 2>/dev/null
  $IPTABLES -w -A FORWARD -d 211.11.11.11 -m conntrack --ctstate NEW -j CHAIN
  $IPTABLES -w -A CHAIN -s 192.168.1.10 -j ACCEPT
  $IPTABLES -w -A CHAIN -s 192.168.1.20 -j ACCEPT
  #
- # Rule 13 (global)
+ # Rule 23 (global)
  #
- echo "Rule 13 (global)"
+ echo "Rule 23 (global)"
  #
  $IPTABLES -w -N CHAIN 2>/dev/null
  $IPTABLES -w -A FORWARD -s 211.11.11.11 -m conntrack --ctstate NEW -j CHAIN
  $IPTABLES -w -A CHAIN -d 192.168.1.10 -j ACCEPT
  $IPTABLES -w -A CHAIN -d 192.168.1.20 -j ACCEPT
  #
- # Rule 14 (global)
+ # Rule 24 (global)
  #
- echo "Rule 14 (global)"
+ echo "Rule 24 (global)"
  #
  $IPTABLES -w -N CHAIN 2>/dev/null
  $IPTABLES -w -A OUTPUT -p tcp -m tcp -j CHAIN
@@ -1134,9 +1265,9 @@ script_body() {
  $IPTABLES -w -A CHAIN -s 192.168.2.0/24 -j RETURN
  $IPTABLES -w -A CHAIN -j REJECT --reject-with icmp-net-unreachable
  #
- # Rule 15 (global)
+ # Rule 25 (global)
  #
- echo "Rule 15 (global)"
+ echo "Rule 25 (global)"
  #
  $IPTABLES -w -A INPUT -s 192.168.1.0/24 -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w -A INPUT -s 192.168.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
@@ -1145,50 +1276,50 @@ script_body() {
  $IPTABLES -w -A FORWARD -s 192.168.1.0/24 -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w -A FORWARD -s 192.168.2.0/24 -m conntrack --ctstate NEW -j ACCEPT
  #
- # Rule 16 (global)
+ # Rule 26 (global)
  #
- echo "Rule 16 (global)"
+ echo "Rule 26 (global)"
  #
- $IPTABLES -w -N RULE_16 2>/dev/null
- $IPTABLES -w -A INPUT -s 192.168.1.0/24 -j RULE_16
- $IPTABLES -w -A OUTPUT -s 192.168.1.0/24 -j RULE_16
- $IPTABLES -w -A FORWARD -s 192.168.1.0/24 -j RULE_16
- $IPTABLES -w -A RULE_16 -j LOG --log-level debug --log-prefix "RULE 16 - DENY **"
- $IPTABLES -w -A RULE_16 -j DROP
+ $IPTABLES -w -N RULE_26 2>/dev/null
+ $IPTABLES -w -A INPUT -s 192.168.1.0/24 -j RULE_26
+ $IPTABLES -w -A OUTPUT -s 192.168.1.0/24 -j RULE_26
+ $IPTABLES -w -A FORWARD -s 192.168.1.0/24 -j RULE_26
+ $IPTABLES -w -A RULE_26 -j LOG --log-level debug --log-prefix "RULE 26 - DENY **"
+ $IPTABLES -w -A RULE_26 -j DROP
  #
- # Rule 17 (global)
+ # Rule 27 (global)
  #
- echo "Rule 17 (global)"
+ echo "Rule 27 (global)"
  #
  # host-fw2 has the same address as
  # one of the firewall's interfaces
- $IPTABLES -w -N RULE_17 2>/dev/null
- $IPTABLES -w -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 21 -m conntrack --ctstate NEW -m limit --limit 5/minute --limit-burst 10 -j RULE_17
- $IPTABLES -w -A FORWARD -p tcp -m tcp -d 22.22.22.22 --dport 21 -m conntrack --ctstate NEW -m limit --limit 5/minute --limit-burst 10 -j RULE_17
- $IPTABLES -w -A RULE_17 -j LOG --log-level debug --log-prefix "RULE 17 - ACCEPT **"
- $IPTABLES -w -A RULE_17 -j ACCEPT
+ $IPTABLES -w -N RULE_27 2>/dev/null
+ $IPTABLES -w -A OUTPUT -p tcp -m tcp -d 22.22.22.22 --dport 21 -m conntrack --ctstate NEW -m limit --limit 5/minute --limit-burst 10 -j RULE_27
+ $IPTABLES -w -A FORWARD -p tcp -m tcp -d 22.22.22.22 --dport 21 -m conntrack --ctstate NEW -m limit --limit 5/minute --limit-burst 10 -j RULE_27
+ $IPTABLES -w -A RULE_27 -j LOG --log-level debug --log-prefix "RULE 27 - ACCEPT **"
+ $IPTABLES -w -A RULE_27 -j ACCEPT
  #
- # Rule 18 (global)
+ # Rule 28 (global)
  #
- echo "Rule 18 (global)"
+ echo "Rule 28 (global)"
  #
- $IPTABLES -w -N RULE_18 2>/dev/null
- $IPTABLES -w -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 21 -m conntrack --ctstate NEW -j RULE_18
- $IPTABLES -w -A INPUT -p tcp -m tcp --dport 21 -m conntrack --ctstate NEW -j RULE_18
- $IPTABLES -w -A RULE_18 -j LOG --log-level debug --log-prefix "RULE 18 - ACCEPT **"
- $IPTABLES -w -A RULE_18 -j ACCEPT
+ $IPTABLES -w -N RULE_28 2>/dev/null
+ $IPTABLES -w -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 21 -m conntrack --ctstate NEW -j RULE_28
+ $IPTABLES -w -A INPUT -p tcp -m tcp --dport 21 -m conntrack --ctstate NEW -j RULE_28
+ $IPTABLES -w -A RULE_28 -j LOG --log-level debug --log-prefix "RULE 28 - ACCEPT **"
+ $IPTABLES -w -A RULE_28 -j ACCEPT
  #
- # Rule 19 (global)
+ # Rule 29 (global)
  #
- echo "Rule 19 (global)"
+ echo "Rule 29 (global)"
  #
  # 'catch all' rule
- $IPTABLES -w -N RULE_19 2>/dev/null
- $IPTABLES -w -A OUTPUT -j RULE_19
- $IPTABLES -w -A INPUT -j RULE_19
- $IPTABLES -w -A FORWARD -j RULE_19
- $IPTABLES -w -A RULE_19 -j LOG --log-level debug --log-prefix "RULE 19 - DENY **"
- $IPTABLES -w -A RULE_19 -j DROP
+ $IPTABLES -w -N RULE_29 2>/dev/null
+ $IPTABLES -w -A OUTPUT -j RULE_29
+ $IPTABLES -w -A INPUT -j RULE_29
+ $IPTABLES -w -A FORWARD -j RULE_29
+ $IPTABLES -w -A RULE_29 -j LOG --log-level debug --log-prefix "RULE 29 - DENY **"
+ $IPTABLES -w -A RULE_29 -j DROP
 }
 
 ip_forward() {

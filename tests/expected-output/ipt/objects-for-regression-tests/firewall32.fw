@@ -441,8 +441,8 @@ script_body() {
  #
  echo "Rule Policy_fw32 2 (global)"
  #
- $IPTABLES -A OUTPUT -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p udp -m udp -m multiport --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_fw32 3 (global)
  #
