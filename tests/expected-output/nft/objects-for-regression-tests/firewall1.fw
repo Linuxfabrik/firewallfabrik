@@ -22,16 +22,9 @@
 # Rule 11 (global): Accounting action not yet supported by nftables compiler
 # Rule 17 (global): Accounting action not yet supported by nftables compiler
 # Rule 17 (global): Accounting action not yet supported by nftables compiler
-# Rule 15 shadows Rule 16 below it
-# Rule 15 shadows Rule 18 below it
-# Rule 24 shadows Rule 25 below it
-# Rule 24 shadows Rule 26 below it
-# Rule 27 shadows Rule 28 below it
-# Rule 29 shadows Rule 30 below it
-# Rule 15 shadows Rule 33 below it
+# Rule 12 shadows Rule 13 below it
 # Rule 15 shadows Rule 38 below it
 # Rule 15 shadows Rule 39 below it
-# Rule 37 shadows Rule 40 below it
 # Rule 32 shadows Rule 40 below it
 # Rule 15 shadows Rule 41 below it
 

@@ -10,6 +10,12 @@
 #
 #  this firewall is used to test a rule in the global policy of object "firewall"
 #
+# Rule 5 shadows Rule 6 below it
+# Rule 10 shadows Rule 11 below it
+# Rule 10 shadows Rule 13 below it
+# Rule 12 shadows Rule 13 below it
+# Rule 10 shadows Rule 14 below it
+# Rule 12 shadows Rule 14 below it
 
 FWBDEBUG=""
 

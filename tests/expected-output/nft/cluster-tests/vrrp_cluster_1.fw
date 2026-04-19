@@ -8,6 +8,7 @@
 #
 # files: * vrrp_cluster_1.fw /etc/fwf.sh
 #
+# Rule 3 shadows Rule 4 below it
 
 FWBDEBUG=""
 

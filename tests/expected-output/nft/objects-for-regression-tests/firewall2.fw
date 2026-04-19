@@ -21,10 +21,8 @@
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 0 shadows Rule 2 below it
 # Rule 0 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
 # Rule 4 shadows Rule 5 below it
 # Rule 1 shadows Rule 6 below it
-# Rule 4 shadows Rule 6 below it
 # Rule 8 shadows Rule 9 below it
 # Rule 8 shadows Rule 10 below it
 # Rule 8 shadows Rule 11 below it

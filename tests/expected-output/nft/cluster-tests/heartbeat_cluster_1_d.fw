@@ -39,7 +39,11 @@
 # Rule 7 (global): Could not resolve any source addresses
 # Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 6 below it
+# Rule 4 shadows Rule 7 below it
 # Rule 4 shadows Rule 8 below it
+# Rule 4 shadows Rule 9 below it
+# Rule 2 shadows Rule 10 below it
+# Rule 4 shadows Rule 11 below it
 
 FWBDEBUG=""
 

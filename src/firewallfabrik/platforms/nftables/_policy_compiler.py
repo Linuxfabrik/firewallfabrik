@@ -174,6 +174,17 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(NftNegation('process negation'))
         self.add(TimeNegation('process time negation'))
 
+        # Run shadow detection BEFORE the chain-assignment splits.
+        # SplitIfSrcAny / SplitIfDstAny duplicate rules into INPUT and
+        # OUTPUT copies to drive chain selection downstream; running
+        # shadow detection after them makes every logical rule look
+        # like several distinct atomic variants and produces "Rule X
+        # shadows Rule Y" false positives.  Matches fwbuilder's
+        # pattern of running the shadow pipeline without the "split
+        # any" helpers.
+        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
+            self.add(DetectShadowing('detect rule shadowing'))
+
         # Chain assignment
         self.add(SplitIfSrcAny('split rule if src is any'))
         self.add(SplitIfDstAny('split rule if dst is any'))
@@ -228,9 +239,6 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(CheckForZeroAddr('check for zero addresses'))
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
-
-        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
-            self.add(DetectShadowing('detect rule shadowing'))
 
         # Print rule
         self.add(self.create_print_rule_processor())

@@ -214,11 +214,16 @@ class PolicyCompiler_ipt(PolicyCompiler):
         saved_processors = self.rule_processors
         self.rule_processors = []
 
-        # Build the shadowing detection pipeline
+        # Build the shadowing detection pipeline.  Mirrors fwbuilder's
+        # PolicyCompiler_ipt.cpp shadow pass: SplitIfSrcAnyForShadowing
+        # and SplitIfDstAnyForShadowing are intentionally skipped
+        # (#if 0 in the C++ source).  Including them produced
+        # synthetic fw->fw atomic variants from rules with "any"
+        # source or destination, which then appeared to be shadowed
+        # by earlier rules that legitimately targeted the firewall
+        # itself - emitting "Rule X shadows Rule Y" false positives.
         self.add(Begin('Detecting rule shadowing'))
         self.add(ConvertAnyToNotFWForShadowing("convert 'any' to '!fw'"))
-        self.add(SplitIfSrcAnyForShadowing('split rule if src is any'))
-        self.add(SplitIfDstAnyForShadowing('split rule if dst is any'))
         self.add(ConvertToAtomic('convert to atomic rules'))
         self.add(DetectShadowing('Detect shadowing'))
 

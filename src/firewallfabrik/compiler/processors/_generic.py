@@ -686,6 +686,18 @@ class DetectShadowing(BasicRuleProcessor):
             if prev.abs_rule_number == rule.abs_rule_number:
                 continue
             if self._rule_shadows(prev, rule):
+                # Atomic expansion of "any" destinations (e.g.
+                # SplitIfDstAnyForShadowing splitting an outbound
+                # "any" rule into a firewall-targeting INPUT copy)
+                # can produce two atomic variants from different
+                # logical rules that carry identical match elements.
+                # Matching fwbuilder's ``!(*r == *rule)`` guard in
+                # PolicyCompiler::DetectShadowing::processNext, skip
+                # the warning when the two atomics are equivalent:
+                # they encode the same effective match, not a real
+                # shadow relationship.
+                if self._rules_equivalent(prev, rule):
+                    continue
                 key = (prev.position, rule.position)
                 if key not in self._reported_shadows:
                     self._reported_shadows.add(key)
@@ -695,6 +707,28 @@ class DetectShadowing(BasicRuleProcessor):
                 break
 
         self._rules_seen.append(rule)
+        return True
+
+    @staticmethod
+    def _rules_equivalent(r1: CompRule, r2: CompRule) -> bool:
+        """Return True if two atomic rules carry identical match content."""
+        d1 = r1.direction or Direction.Both
+        d2 = r2.direction or Direction.Both
+        if d1 != d2:
+            return False
+        if r1.action != r2.action:
+            return False
+        if (r1.ipt_chain or '') != (r2.ipt_chain or ''):
+            return False
+        for slot in ('src', 'dst', 'srv', 'itf'):
+            e1 = getattr(r1, slot) or []
+            e2 = getattr(r2, slot) or []
+            if len(e1) != len(e2):
+                return False
+            ids1 = sorted(getattr(o, 'id', id(o)) for o in e1)
+            ids2 = sorted(getattr(o, 'id', id(o)) for o in e2)
+            if ids1 != ids2:
+                return False
         return True
 
     def _rule_shadows(self, r1: CompRule, r2: CompRule) -> bool:

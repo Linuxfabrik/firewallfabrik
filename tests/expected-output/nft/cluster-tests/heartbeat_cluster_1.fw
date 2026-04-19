@@ -14,16 +14,20 @@
 # Rule 6 (global): Branch action not yet supported by nftables compiler
 # Rule 7 (global): Branch action not yet supported by nftables compiler
 # Rule 7 (global): Branch action not yet supported by nftables compiler
+# Rule 3 shadows Rule 4 below it
 # Rule 8 shadows Rule 10 below it
+# Rule 8 shadows Rule 11 below it
 # Rule 8 shadows Rule 12 below it
-# Rule 10 shadows Rule 12 below it
+# Rule 10 shadows Rule 13 below it
 # Rule 8 shadows Rule 14 below it
 # Rule 10 shadows Rule 14 below it
+# Rule 10 shadows Rule 15 below it
 # Rule 8 shadows Rule 16 below it
 # Rule 8 shadows Rule 17 below it
-# Rule 16 shadows Rule 17 below it
+# Rule 10 shadows Rule 17 below it
+# Rule 10 shadows Rule 18 below it
 # Rule 8 shadows Rule 19 below it
-# Rule 10 shadows Rule 20 below it
+# Rule 8 shadows Rule 20 below it
 
 FWBDEBUG=""
 

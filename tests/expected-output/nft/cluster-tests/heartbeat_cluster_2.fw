@@ -16,6 +16,7 @@
 # Rule 6 (global): Branch action not yet supported by nftables compiler
 # Rule 7 (global): Branch action not yet supported by nftables compiler
 # Rule 7 (global): Branch action not yet supported by nftables compiler
+# Rule 3 shadows Rule 4 below it
 
 FWBDEBUG=""
 
