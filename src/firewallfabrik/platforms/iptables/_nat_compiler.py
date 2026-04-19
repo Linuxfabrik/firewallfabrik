@@ -2451,13 +2451,15 @@ class AddVirtualAddress(NATRuleProcessor):
                 return True
 
             if not nat_comp.complex_match(a, nat_comp.fw):
-                if isinstance(a, AddressRange):
-                    self.compiler.warning(
-                        rule,
-                        'Adding of virtual address for address range '
-                        f'is not implemented (object {getattr(a, "name", "")})',
-                    )
-                elif nat_comp.oscnf is not None:
+                # AddressRange targets cannot be turned into interface
+                # aliases (neither fwf nor fwbuilder implement that),
+                # so we simply skip the virtual-address hook for them.
+                # The DNAT/SNAT rule itself is still compiled; the
+                # kernel only needs the virtual address when a local
+                # process actually has to bind to the mapped IP, which
+                # is not the common case.  No warning - it is just
+                # informational noise.
+                if not isinstance(a, AddressRange) and nat_comp.oscnf is not None:
                     nat_comp.oscnf.add_virtual_address_for_nat(a)
 
             return True
