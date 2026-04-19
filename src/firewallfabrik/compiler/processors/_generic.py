@@ -655,6 +655,12 @@ class DetectShadowing(BasicRuleProcessor):
     def __init__(self, name: str = 'Detect shadowing') -> None:
         super().__init__(name)
         self._rules_seen: list[CompRule] = []
+        # Each logical rule may expand into several compiled variants
+        # (e.g. one per interface / address family).  Without deduplication
+        # the same "Rule X shadows Rule Y below it" message is emitted
+        # once per expanded variant pair, which is noise.  Track reported
+        # (prev.position, rule.position) pairs and warn at most once.
+        self._reported_shadows: set[tuple] = set()
 
     def process_next(self) -> bool:
         rule = self.prev_processor.get_next_rule()
@@ -680,9 +686,12 @@ class DetectShadowing(BasicRuleProcessor):
             if prev.abs_rule_number == rule.abs_rule_number:
                 continue
             if self._rule_shadows(prev, rule):
-                self.compiler.warning(
-                    f'Rule {prev.position} shadows Rule {rule.position} below it',
-                )
+                key = (prev.position, rule.position)
+                if key not in self._reported_shadows:
+                    self._reported_shadows.add(key)
+                    self.compiler.warning(
+                        f'Rule {prev.position} shadows Rule {rule.position} below it',
+                    )
                 break
 
         self._rules_seen.append(rule)

@@ -3009,11 +3009,11 @@ class FWWindow(QMainWindow):
         parts = [f'<p><b>{header}</b></p>']
         if driver.all_errors:
             parts.append('<pre style="color: red;">')
-            parts.append(escape('\n'.join(driver.all_errors)))
+            parts.append(escape('\n'.join(dict.fromkeys(driver.all_errors))))
             parts.append('</pre>')
         if driver.all_warnings:
             parts.append('<pre style="color: orange;">')
-            parts.append(escape('\n'.join(driver.all_warnings)))
+            parts.append(escape('\n'.join(dict.fromkeys(driver.all_warnings))))
             parts.append('</pre>')
         if result:
             parts.append(f'<pre>{escape(result)}</pre>')

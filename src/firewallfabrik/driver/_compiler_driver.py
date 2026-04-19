@@ -154,11 +154,12 @@ class CompilerDriver(BaseCompiler):
         skeleton.set_variable('prolog_script', prolog_output)
         skeleton.set_variable('epilog_script', epilog_output)
 
-        # Error/warning section
+        # Error/warning section — drop duplicates (e.g. shadow warnings
+        # emitted once per table pass) while preserving insertion order.
         messages = []
-        for e in self.all_errors:
+        for e in dict.fromkeys(self.all_errors):
             messages.append(f'# Error: {e}')
-        for w in self.all_warnings:
+        for w in dict.fromkeys(self.all_warnings):
             messages.append(f'# Warning: {w}')
         skeleton.set_variable('errors_and_warnings', '\n'.join(messages))
 

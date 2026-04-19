@@ -13,15 +13,8 @@
 #  firewall is assumed to be part of any
 #
 # Rule 2 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
-# Rule 4 shadows Rule 5 below it
-# Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 5 below it
 # Rule 4 shadows Rule 7 below it
-# Rule 4 shadows Rule 7 below it
-# Rule 4 shadows Rule 7 below it
-# Rule 4 shadows Rule 9 below it
-# Rule 4 shadows Rule 9 below it
 # Rule 4 shadows Rule 9 below it
 
 FWBDEBUG=""

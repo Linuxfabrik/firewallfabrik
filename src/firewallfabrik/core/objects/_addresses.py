@@ -212,6 +212,21 @@ class Address(Base):
         """True if this is a broadcast address (255.255.255.255)."""
         return self.get_address() == '255.255.255.255'
 
+    def is_multicast(self) -> bool:
+        """True if this is a multicast address (224.0.0.0/4 or ff00::/8).
+
+        Returns ``False`` for objects without a single address (e.g. an
+        AddressRange whose address lives in ``start_address``/
+        ``end_address`` rather than in ``inet_addr_mask``).
+        """
+        addr = self.get_address()
+        if not addr:
+            return False
+        try:
+            return ipaddress.ip_address(addr).is_multicast
+        except ValueError:
+            return False
+
 
 class IPv4(Address):
     """IPv4 address object."""

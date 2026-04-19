@@ -334,11 +334,11 @@ def main(argv=None):
 
         if driver.all_errors or result:
             compiled_err += 1
-            for err in driver.all_errors:
+            for err in dict.fromkeys(driver.all_errors):
                 print(f'Error: {err}', file=sys.stderr)
         else:
             compiled_ok += 1
-        for warn in driver.all_warnings:
+        for warn in dict.fromkeys(driver.all_warnings):
             print(f'Warning: {warn}', file=sys.stderr)
 
     elapsed = time.monotonic() - t_start

@@ -20,45 +20,24 @@
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 0 shadows Rule 2 below it
-# Rule 0 shadows Rule 2 below it
-# Rule 0 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
 # Rule 0 shadows Rule 3 below it
 # Rule 2 shadows Rule 3 below it
 # Rule 4 shadows Rule 5 below it
-# Rule 4 shadows Rule 5 below it
-# Rule 1 shadows Rule 6 below it
-# Rule 4 shadows Rule 6 below it
 # Rule 1 shadows Rule 6 below it
 # Rule 4 shadows Rule 6 below it
 # Rule 8 shadows Rule 9 below it
-# Rule 8 shadows Rule 9 below it
-# Rule 8 shadows Rule 9 below it
-# Rule 8 shadows Rule 10 below it
-# Rule 8 shadows Rule 10 below it
 # Rule 8 shadows Rule 10 below it
 # Rule 8 shadows Rule 11 below it
-# Rule 8 shadows Rule 11 below it
-# Rule 8 shadows Rule 12 below it
 # Rule 8 shadows Rule 12 below it
 # Rule 8 shadows Rule 13 below it
 # Rule 8 shadows Rule 14 below it
 # Rule 8 shadows Rule 15 below it
-# Rule 8 shadows Rule 15 below it
-# Rule 8 shadows Rule 15 below it
-# Rule 8 shadows Rule 16 below it
-# Rule 8 shadows Rule 16 below it
 # Rule 8 shadows Rule 16 below it
 # Rule 8 shadows Rule 17 below it
-# Rule 8 shadows Rule 17 below it
 # Rule 8 shadows Rule 18 below it
-# Rule 8 shadows Rule 18 below it
-# Rule 8 shadows Rule 20 below it
 # Rule 8 shadows Rule 20 below it
 # Rule 8 shadows Rule 21 below it
 # Rule 8 shadows Rule 27 below it
-# Rule 8 shadows Rule 27 below it
-# Rule 8 shadows Rule 28 below it
 # Rule 8 shadows Rule 28 below it
 
 FWBDEBUG=""
