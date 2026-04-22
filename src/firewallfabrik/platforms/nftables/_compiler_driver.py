@@ -520,6 +520,23 @@ class CompilerDriver_nft(CompilerDriver):
             )
             if auto_rules:
                 out.write(auto_rules)
+            # TCPMSS clamping on forwarded traffic — nft equivalent of
+            # the iptables "-t mangle -A FORWARD -p tcp --tcp-flags
+            # SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu" rule.  Guarded
+            # by `clamp_mss_to_mtu` firewall option and by the
+            # platform's IP-forwarding option (matching fwbuilder's
+            # PolicyCompiler_PrintRule::_clampTcpToMssRule).
+            if fw.get_option('clamp_mss_to_mtu'):
+                ipv4_fwd_raw = fw.get_option('linux24_ip_forward')
+                ipv6_fwd_raw = fw.get_option('linux24_ipv6_forward')
+                _fwd_on = lambda s: str(s or '').strip() in (  # noqa: E731
+                    '', '1', 'On', 'on', 'True', 'true'
+                )
+                if _fwd_on(ipv4_fwd_raw) or (have_ipv6 and _fwd_on(ipv6_fwd_raw)):
+                    out.write(
+                        '        tcp flags syn / syn,rst '
+                        'tcp option maxseg size set rt mtu\n'
+                    )
             if forward_rules.strip():
                 out.write(forward_rules)
             out.write('    }\n')

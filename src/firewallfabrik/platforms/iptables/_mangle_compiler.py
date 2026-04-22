@@ -104,15 +104,29 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
                 f'-A OUTPUT -j CONNMARK --restore-mark\n'
             )
 
-        # TCPMSS clamping for iptables >= 1.3.0
+        # TCPMSS clamping.  Matches fwbuilder's
+        # PolicyCompiler_PrintRule::_clampTcpToMssRule (and
+        # MangleTableCompiler_ipt::print_automatic_rules): the rule is
+        # emitted on the FORWARD chain (not POSTROUTING) of the mangle
+        # table, guarded by the platform's IP-forwarding option.  For
+        # IPv6 the TCPMSS target requires ip6tables >= 1.3.8.
         if _version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
             'clamp_mss_to_mtu'
         ):
-            result += (
-                f'{iptables_cmd} {opt_wait}-t mangle '
-                f'-A POSTROUTING -p tcp --tcp-flags SYN,RST SYN '
-                f'-j TCPMSS --clamp-mss-to-pmtu\n'
-            )
+            if ipv6:
+                ipforw_raw = self.fw.get_option('linux24_ipv6_forward')
+                min_version_ok = _version_compare(version, '1.3.8') >= 0
+            else:
+                ipforw_raw = self.fw.get_option('linux24_ip_forward')
+                min_version_ok = True
+            ipforw_str = str(ipforw_raw or '').strip()
+            ipforw = ipforw_str in ('', '1', 'On', 'on', 'True', 'true')
+            if ipforw and min_version_ok:
+                result += (
+                    f'{iptables_cmd} {opt_wait}-t mangle '
+                    f'-A FORWARD -p tcp --tcp-flags SYN,RST SYN '
+                    f'-j TCPMSS --clamp-mss-to-pmtu\n'
+                )
 
         return result
 

@@ -307,6 +307,7 @@ table ip fwf_filter {
         ct state established,related accept
         ct state invalid drop
         tcp flags != syn ct state new drop
+        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
         #
         # Rule 0 (ppp)
         #

@@ -302,6 +302,7 @@ table inet fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
         ct state invalid log prefix "INVALID " drop
+        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
         #
         # Rule Policy_OSPF 2 (global)
         #
