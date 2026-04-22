@@ -612,10 +612,14 @@ class Compiler(BaseCompiler):
 
         if isinstance(obj, AddressRange):
             # Matches if any of the firewall's interface addresses
-            # falls inside the [start, end] range.  Mirrors fwbuilder's
-            # InetAddrMask range comparison inside complexMatch()
-            # (#2650).  Broadcast / multicast recognition does not
-            # apply to AddressRange.
+            # falls inside the [start, end] range (fwbuilder's
+            # InetAddrMask range comparison, #2650).  Also matches
+            # broadcast / multicast ranges when those flags are set -
+            # fwbuilder recognises the standard-library "broadcast"
+            # AddressRange (255.255.255.255-255.255.255.255) and any
+            # range falling into the multicast space as "matches fw"
+            # so that rules targeting them land in INPUT rather than
+            # FORWARD (fwbuilder #811860, b=m=true).
             start = obj.get_start_address()
             end = obj.get_end_address()
             if not start or not end:
@@ -625,6 +629,18 @@ class Compiler(BaseCompiler):
                 end_ip = ipaddress.ip_address(end)
             except ValueError:
                 return False
+            if (
+                recognize_broadcasts
+                and start_ip == end_ip
+                and str(start_ip) == '255.255.255.255'
+            ):
+                return True
+            if recognize_multicasts:
+                try:
+                    if start_ip.is_multicast and end_ip.is_multicast:
+                        return True
+                except AttributeError:
+                    pass
             for iface in fw.interfaces:
                 for addr in getattr(iface, 'addresses', []):
                     addr_str = (

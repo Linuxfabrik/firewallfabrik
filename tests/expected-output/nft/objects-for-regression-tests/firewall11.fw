@@ -270,6 +270,10 @@ table ip fwf_filter {
         #
         iifname "br0" log level debug drop
         #
+        # Rule 16 (global)
+        #
+        ip daddr 224.0.0.18 ct state new accept
+        #
         # Rule 19 (global)
         #
         # this rule should generate commands

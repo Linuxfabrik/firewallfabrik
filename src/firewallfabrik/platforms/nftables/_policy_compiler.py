@@ -865,8 +865,17 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             # SplitIfDstMatchingAddressRange so the original rule can
             # still become FORWARD.  Hijacking it into INPUT here
             # would drop the FORWARD variant (fwbuilder #2650).
+            #
+            # Broadcast (255.255.255.255) and multicast (224.0.0.0/4,
+            # ff00::/8) destinations must count as "matches fw" so
+            # Inbound rules targeting them land in input rather than
+            # forward (fwbuilder #811860, b=m=true).
             direction = rule.direction
-            matches_fw = nft_comp.complex_match(dst, nft_comp.fw)
+            matches_fw = nft_comp.complex_match(
+                dst, nft_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
 
             if direction == Direction.Inbound:
                 if matches_fw:
@@ -930,9 +939,14 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
         src = rule.src[0] if rule.src else None
         if src is not None and not isinstance(src, AddressRange):
             # See :class:`DecideOnChainIfDstFW` for the AddressRange
-            # exclusion rationale (fwbuilder #2650).
+            # exclusion rationale (fwbuilder #2650) and the broadcast /
+            # multicast recognition (#811860).
             direction = rule.direction
-            matches_fw = nft_comp.complex_match(src, nft_comp.fw)
+            matches_fw = nft_comp.complex_match(
+                src, nft_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
 
             if direction == Direction.Outbound:
                 if matches_fw:
@@ -1074,15 +1088,28 @@ class FinalizeChain(PolicyRuleProcessor):
         # as in DecideOnChainIfSrcFW / DecideOnChainIfDstFW
         # (fwbuilder #2650).  The dedicated split processor emits the
         # INPUT or OUTPUT clone; leave the original free for FORWARD.
+        #
+        # Recognise broadcast / multicast destinations as matching the
+        # firewall so e.g. DHCPv6 link-local -> ff00::/8 with
+        # direction=Inbound ends up in ``input`` rather than
+        # ``forward`` (fwbuilder #811860, b=m=true).
         src_matches = (
             src is not None
             and not isinstance(src, AddressRange)
-            and nft_comp.complex_match(src, nft_comp.fw)
+            and nft_comp.complex_match(
+                src, nft_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
         )
         dst_matches = (
             dst is not None
             and not isinstance(dst, AddressRange)
-            and nft_comp.complex_match(dst, nft_comp.fw)
+            and nft_comp.complex_match(
+                dst, nft_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
         )
 
         if direction == Direction.Inbound:

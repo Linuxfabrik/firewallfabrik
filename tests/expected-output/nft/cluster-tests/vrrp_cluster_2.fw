@@ -58,6 +58,10 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
+        # Rule 0 (eth0)
+        #
+        iifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
+        #
         # Rule 1 (eth0)
         #
         # anti spoofing rule
@@ -98,7 +102,6 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
         oifname "eth0" ip daddr 224.0.0.18 meta l4proto 112 ct state new accept
         #
         # Rule 1 (eth0)

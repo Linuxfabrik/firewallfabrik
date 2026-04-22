@@ -240,6 +240,14 @@ table ip fwf_filter {
         # Rule 6 (eth2)
         #
         iifname "eth2" ip saddr 192.168.2.10 ip daddr 192.168.1.1 udp dport 67 ct state new accept
+        #
+        # Rule 14 (global)
+        #
+        ip daddr 224.0.0.18 ct state new accept
+        #
+        # Rule 15 (global)
+        #
+        ip daddr 224.0.0.0/4 drop
     }
 
     chain forward {
@@ -287,14 +295,6 @@ table ip fwf_filter {
         # Rule 13 (global)
         #
         ip daddr 224.0.0.5 ct state new accept
-        #
-        # Rule 14 (global)
-        #
-        ip daddr 224.0.0.18 ct state new accept
-        #
-        # Rule 15 (global)
-        #
-        ip daddr 224.0.0.0/4 drop
     }
 
     chain output {

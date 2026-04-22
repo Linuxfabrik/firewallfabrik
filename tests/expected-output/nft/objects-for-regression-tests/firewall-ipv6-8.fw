@@ -282,6 +282,11 @@ table inet fwf_filter {
         # see #1523
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
         #
+        # Rule Policy_v6 1 (eth0)
+        #
+        # see #1523
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
+        #
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
@@ -320,11 +325,6 @@ table inet fwf_filter {
         # see #1523
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
         oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
-        #
-        # Rule Policy_v6 1 (eth0)
-        #
-        # see #1523
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
         #
         # Rule Policy_v6 2 (eth0)
         #

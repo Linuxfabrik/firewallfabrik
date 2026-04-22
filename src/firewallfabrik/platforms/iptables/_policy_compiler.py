@@ -2375,8 +2375,18 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             # original rule free to become FORWARD.  Matching it here
             # (fwbuilder #2650) would hijack the only original copy
             # into INPUT and drop the FORWARD variant.
+            #
+            # Broadcast (255.255.255.255) and multicast (224.0.0.0/4,
+            # ff00::/8) destinations must be treated as "matches fw"
+            # too so Inbound rules that target them land in INPUT, not
+            # FORWARD.  fwbuilder sets b=m=true here (see
+            # PolicyCompiler_ipt.cpp, bug #811860).
             direction = rule.direction
-            matches_fw = ipt_comp.complex_match(dst, ipt_comp.fw)
+            matches_fw = ipt_comp.complex_match(
+                dst, ipt_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
 
             if direction == Direction.Inbound:
                 if matches_fw:
@@ -2411,7 +2421,11 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             # (fwbuilder #2650) would hijack the only original copy
             # into OUTPUT and drop the FORWARD variant.
             direction = rule.direction
-            matches_fw = ipt_comp.complex_match(src, ipt_comp.fw)
+            matches_fw = ipt_comp.complex_match(
+                src, ipt_comp.fw,
+                recognize_broadcasts=True,
+                recognize_multicasts=True,
+            )
 
             if direction == Direction.Outbound:
                 if matches_fw:
@@ -2494,15 +2508,28 @@ class FinalizeChain(PolicyRuleProcessor):
             # emitted a dedicated INPUT or OUTPUT clone, so the
             # original rule must stay on the FORWARD chain to keep
             # covering the non-firewall addresses (fwbuilder #2650).
+            #
+            # Recognise broadcast / multicast destinations as matching
+            # the firewall here too: an Inbound rule that allows
+            # e.g. DHCPv6 link-local -> ff00::/8 belongs in INPUT,
+            # not FORWARD (fwbuilder #811860, b=m=true).
             src_matches = (
                 src is not None
                 and not isinstance(src, AddressRange)
-                and ipt_comp.complex_match(src, ipt_comp.fw)
+                and ipt_comp.complex_match(
+                    src, ipt_comp.fw,
+                    recognize_broadcasts=True,
+                    recognize_multicasts=True,
+                )
             )
             dst_matches = (
                 dst is not None
                 and not isinstance(dst, AddressRange)
-                and ipt_comp.complex_match(dst, ipt_comp.fw)
+                and ipt_comp.complex_match(
+                    dst, ipt_comp.fw,
+                    recognize_broadcasts=True,
+                    recognize_multicasts=True,
+                )
             )
 
             if direction == Direction.Inbound:
@@ -2717,17 +2744,32 @@ class SpecialCaseAddressRangeInRE(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        import ipaddress as _ipa
+
         new_elements: list = []
         for obj in elements:
+            # Note: ``is_any()`` on an AddressRange spuriously returns
+            # True because AddressRange keeps its addresses in
+            # ``start_address`` / ``end_address`` rather than
+            # ``inet_addr_mask``; the base Address.is_any() checks the
+            # latter and so treats every AddressRange as "any".  Guard
+            # the conversion with an explicit start != "" test.
             if (
                 isinstance(obj, AddressRange)
-                and not obj.is_any()
                 and obj.get_start_address() == obj.get_end_address()
                 and obj.get_start_address()
             ):
-                # Single address -- replace with IPv4 or IPv6
+                # Single address -- replace with IPv4 or IPv6.  The
+                # base Address.is_v4() queries ``inet_addr_mask`` which
+                # is empty for AddressRange, so derive the family from
+                # the start address directly.
                 start_addr = obj.get_start_address()
-                if obj.is_v4():
+                try:
+                    ip_obj = _ipa.ip_address(start_addr)
+                    is_v4 = ip_obj.version == 4
+                except ValueError:
+                    is_v4 = True
+                if is_v4:
                     new_addr = IPv4(
                         id=uuid.uuid4(),
                         name=f'{obj.name}_addr',
