@@ -3181,11 +3181,17 @@ class FWWindow(QMainWindow):
         self._rs_mgr.reload_views()
 
     def _on_firewall_modified(self, fw_id):
-        """Update the Firewall tree item after a rule mutation stamped it."""
+        """Update the Firewall tree item after a rule mutation stamped it.
+
+        Also refresh the rule-set children so the Attribute column's
+        "N rules" text follows insertions/deletions.
+        """
         with self._db_manager.session() as session:
             fw = session.get(Firewall, fw_id)
             if fw is not None:
                 self._object_tree.update_item(fw)
+                for rs in fw.rule_sets:
+                    self._object_tree.update_item(rs)
 
     def _show_traceback_error(self, summary):
         """Show a critical error dialog with the current traceback.

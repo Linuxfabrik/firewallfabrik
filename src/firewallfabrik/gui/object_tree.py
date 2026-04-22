@@ -661,6 +661,7 @@ class ObjectTree(QWidget):
                 rs.type,
                 str(rs.id),
                 parent_item,
+                attrs=obj_brief_attrs(rs),
                 effective_readonly=effective_ro,
                 inactive=is_inactive(rs),
                 obj=rs,

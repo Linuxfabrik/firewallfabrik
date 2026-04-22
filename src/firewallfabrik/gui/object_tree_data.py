@@ -685,4 +685,10 @@ def obj_brief_attrs(obj, under_interface=False):
             return '(read only)'
         return ''
 
+    # -- Rule sets (Policy / NAT / Routing) --
+    if type_str in ('NAT', 'Policy', 'Routing'):
+        rules = getattr(obj, 'rules', None) or []
+        n = len(rules)
+        return f'{n} rule' if n == 1 else f'{n} rules'
+
     return ''

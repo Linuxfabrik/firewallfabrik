@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Add bandit (security) and vulture (dead code) to pre-commit hooks
 * File > Reload now has the keyboard shortcut Ctrl+R
+* Object tree: NAT / Policy / Routing rule-set nodes show their rule count (e.g. "60 rules") in the Attribute column, so an admin can size a rule set at a glance without opening it. The count updates live as rules are added, deleted or pasted
 * Install options dialog: add "Password or passphrase" field and "Remember passwords" checkbox. Users with passphrase-protected SSH keys or password-based authentication can now enter their credentials directly in the dialog before installation. Passwords are cached in memory for the session duration (never stored on disk) when "Remember passwords" is enabled in Preferences. The installer automatically detects SSH/SCP/sudo password prompts and responds with the entered password ([#72](https://github.com/Linuxfabrik/firewallfabrik/issues/72))
 * Renaming a firewall, host, or interface that has child objects (IP addresses, MAC addresses, sub-interfaces) now shows a warning dialog offering to auto-rename the children using the standard `host:interface:ip` / `host:interface:mac` naming scheme (matching fwbuilder behaviour)
 
