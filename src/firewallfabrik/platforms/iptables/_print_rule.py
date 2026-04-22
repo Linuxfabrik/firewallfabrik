@@ -809,28 +809,59 @@ class PrintRule(PolicyRuleProcessor):
         if not reject_with:
             return ''
 
-        # Map GUI display names and aliases to iptables --reject-with values.
-        # The GUI stores human-readable names like "ICMP host unreachable";
-        # the C++ compiler maps these via substring matching (see
-        # PolicyCompiler_PrintRule.cpp:_printActionOnReject).
-        reject_map = {
-            'ICMP host unreachable': 'icmp-host-unreachable',
-            'ICMP net unreachable': 'icmp-net-unreachable',
-            'ICMP port unreachable': 'icmp-port-unreachable',
-            'ICMP protocol unreachable': 'icmp-proto-unreachable',
-            'ICMP admin prohibited': 'icmp-admin-prohibited',
-            'ICMP-unreachable': 'icmp-host-unreachable',
-            'TCP RST': 'tcp-reset',
-        }
-        reject_with = reject_map.get(reject_with, reject_with)
+        # Map GUI display names and aliases to iptables --reject-with
+        # values, matching PolicyCompiler_PrintRule.cpp:
+        # _printActionOnReject in fwbuilder.  The GUI stores
+        # human-readable names like "ICMP host unreachable"; the C++
+        # compiler matches on the presence of substrings ("net",
+        # "host", "port", "proto", "prohibited", ...).  Because ip6tables
+        # only accepts icmp6-* reject types (icmp-* is silently wrong
+        # and iptables-restore rejects the file), the mapping depends
+        # on ``self.compiler.ipv6_policy``.
+        is_ipv6 = getattr(self.compiler, 'ipv6_policy', False)
 
-        # icmp-admin-prohibited requires iptables >= 1.2.9
-        if (
-            reject_with == 'icmp-admin-prohibited'
-            and _version_compare(self.version, '1.2.9') < 0
-        ):
+        if reject_with == 'TCP RST':
+            return '--reject-with tcp-reset'
+
+        if reject_with.startswith('ICMP') or reject_with == 'ICMP-unreachable':
+            s = reject_with.lower()
+            if is_ipv6:
+                if 'unreachable' in s:
+                    if 'net' in s or 'host' in s:
+                        return '--reject-with icmp6-addr-unreachable'
+                    if 'port' in s or 'proto' in s:
+                        return '--reject-with icmp6-port-unreachable'
+                    # Default fallback (legacy "ICMP-unreachable" alias).
+                    return '--reject-with icmp6-addr-unreachable'
+                if 'prohibited' in s:
+                    return '--reject-with icmp6-adm-prohibited'
+            else:
+                if 'unreachable' in s:
+                    if 'net' in s:
+                        return '--reject-with icmp-net-unreachable'
+                    if 'host' in s:
+                        return '--reject-with icmp-host-unreachable'
+                    if 'port' in s:
+                        return '--reject-with icmp-port-unreachable'
+                    if 'proto' in s:
+                        return '--reject-with icmp-proto-unreachable'
+                    return '--reject-with icmp-host-unreachable'
+                if 'prohibited' in s:
+                    if 'net' in s:
+                        return '--reject-with icmp-net-prohibited'
+                    if 'host' in s:
+                        return '--reject-with icmp-host-prohibited'
+                    # icmp-admin-prohibited requires iptables >= 1.2.9
+                    if 'admin' in s:
+                        if _version_compare(self.version, '1.2.9') < 0:
+                            return ''
+                        return '--reject-with icmp-admin-prohibited'
+
+        # Caller already gave us the iptables token (e.g. an explicit
+        # "icmp-port-unreachable"); pass through for IPv4 only so we
+        # never emit IPv4 tokens into an ip6tables rule.
+        if is_ipv6:
             return ''
-
         return f'--reject-with {reject_with}'
 
     def _print_log_parameters(self, rule: CompRule) -> str:
