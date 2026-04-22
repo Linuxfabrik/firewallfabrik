@@ -19,6 +19,7 @@ is parsed.
 """
 
 import logging
+import socket
 import uuid
 
 import defusedxml.ElementTree
@@ -249,6 +250,11 @@ def _service_type_attrs(svc, elem, known):
         svc.protocol = elem.get('protocol')
         known.add('protocol')
     if elem.get('address_family') is not None:
+        af_str = elem.get('address_family', '').strip().lower()
+        if af_str == 'ipv4':
+            svc.custom_address_family = socket.AF_INET
+        elif af_str == 'ipv6':
+            svc.custom_address_family = socket.AF_INET6
         known.add('address_family')
 
     # ICMPService / ICMP6Service

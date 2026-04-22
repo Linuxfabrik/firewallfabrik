@@ -28,6 +28,7 @@ from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
+    CustomService,
     Direction,
     Group,
     ICMP6Service,
@@ -508,7 +509,18 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         return False
 
     def _filter_srv_slot(self, rule: CompRule, slot: str) -> bool:
-        """Filter ICMP services by address family. Returns True if rule should be dropped."""
+        """Filter ICMP / CustomService objects by address family.
+
+        Matches fwbuilder ``Compiler::DropByServiceFamily``
+        (libfwbuilder/fwcompiler/Compiler.cpp around line 1626), which
+        uses ``Service::isV4Only()`` / ``isV6Only()``.  For
+        ``CustomService`` those are driven by the ``address_family``
+        XML attribute, stored as ``custom_address_family`` in fwf.
+
+        Returns True if the rule should be dropped.
+        """
+        import socket
+
         elements = getattr(rule, slot)
         if not elements:
             return False
@@ -520,6 +532,12 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
                     continue  # drop ICMPv4 when compiling for IPv6
             elif isinstance(obj, ICMP6Service) and self._drop_ipv6:
                 continue  # drop ICMPv6 when compiling for IPv4
+            elif isinstance(obj, CustomService):
+                caf = getattr(obj, 'custom_address_family', None)
+                if caf == socket.AF_INET and not self._drop_ipv6:
+                    continue  # v4-only CustomService in IPv6 compile
+                if caf == socket.AF_INET6 and self._drop_ipv6:
+                    continue  # v6-only CustomService in IPv4 compile
             new_elements.append(obj)
 
         if elements and not new_elements:

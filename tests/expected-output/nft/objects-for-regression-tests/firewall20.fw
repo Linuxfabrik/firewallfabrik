@@ -29,9 +29,6 @@
 # Rule 9 (global): Could not resolve any destination addresses
 # Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
 # Rule 9 (global): Could not resolve any destination addresses
-# Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 
 FWBDEBUG=""
 
@@ -321,11 +318,6 @@ table ip fwf_filter {
         # for both FORWARD and INPUT chains
         ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new accept
         #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        log drop
-        #
         # Rule 19 (global)
         #
         # Automatically generated 'catch all' rule
@@ -407,11 +399,6 @@ table ip fwf_filter {
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
         #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        log drop
-        #
         # Rule 19 (global)
         #
         # Automatically generated 'catch all' rule
@@ -462,11 +449,6 @@ table ip fwf_filter {
         # Rule 17 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
-        #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        log drop
         #
         # Rule 19 (global)
         #
