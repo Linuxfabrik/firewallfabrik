@@ -728,36 +728,61 @@ class PrintRule_nft(PolicyRuleProcessor):
         return verdict
 
     def _print_reject(self, rule: CompRule) -> str:
-        """Print reject with specific type."""
+        """Print ``reject`` with the correct reject type for the family.
+
+        nftables' reject syntax is family-specific:
+          * IPv4 policies use ``icmp <name>`` (e.g. ``icmp port-unreachable``)
+          * IPv6 policies use ``icmpv6 <name>`` (e.g. ``icmpv6 port-unreachable``)
+        A ``reject with icmp <name>`` line inside an ``ip6`` or ``inet``
+        table that applies to IPv6 traffic is rejected by ``nft -f`` as
+        invalid, so the family is selected from ``ipv6_policy`` here.
+        """
         action_on_reject = rule.get_option('action_on_reject', '')
 
         if not action_on_reject:
             return 'reject'
 
-        # Map reject type names to nftables syntax.
-        # Values come from the GUI ("ICMP host unreachable"),
-        # iptables syntax ("icmp-host-unreachable"), or legacy aliases.
-        # The GUI names are defined in platforms.cpp:actionsOnReject.
-        reject_map = {
-            'ICMP host unreachable': 'reject with icmp host-unreachable',
-            'ICMP net unreachable': 'reject with icmp net-unreachable',
-            'ICMP port unreachable': 'reject with icmp port-unreachable',
-            'ICMP protocol unreachable': 'reject with icmp prot-unreachable',
-            'ICMP admin prohibited': 'reject with icmp admin-prohibited',
-            'ICMP-unreachable': 'reject with icmp host-unreachable',
-            'TCP RST': 'reject with tcp reset',
-            'icmp-host-unreachable': 'reject with icmp host-unreachable',
-            'icmp-net-unreachable': 'reject with icmp net-unreachable',
-            'icmp-port-unreachable': 'reject with icmp port-unreachable',
-            'icmp-proto-unreachable': 'reject with icmp prot-unreachable',
-            'icmp-admin-prohibited': 'reject with icmp admin-prohibited',
-            'tcp-reset': 'reject with tcp reset',
-            'TCP-RST': 'reject with tcp reset',
-        }
+        is_ipv6 = getattr(self.compiler, 'ipv6_policy', False)
+        icmp_kw = 'icmpv6' if is_ipv6 else 'icmp'
 
-        nft_reject = reject_map.get(action_on_reject)
-        if nft_reject:
-            return nft_reject
+        s = action_on_reject.lower()
+
+        if 'tcp' in s and ('rst' in s or 'reset' in s):
+            return 'reject with tcp reset'
+
+        if 'icmp' in s or 'unreachable' in s or 'prohibited' in s:
+            if is_ipv6:
+                # IPv6: only addr-/port-unreachable and adm-prohibited
+                # are meaningful.  "net" and "host" map to
+                # addr-unreachable; "proto" (unreachable) has no exact
+                # IPv6 equivalent and is closest to port-unreachable.
+                if 'unreachable' in s:
+                    if 'net' in s or 'host' in s or 'addr' in s:
+                        return f'reject with {icmp_kw} addr-unreachable'
+                    if 'port' in s or 'proto' in s:
+                        return f'reject with {icmp_kw} port-unreachable'
+                    return f'reject with {icmp_kw} addr-unreachable'
+                if 'prohibited' in s:
+                    return f'reject with {icmp_kw} admin-prohibited'
+            else:
+                if 'unreachable' in s:
+                    if 'net' in s:
+                        return f'reject with {icmp_kw} net-unreachable'
+                    if 'host' in s:
+                        return f'reject with {icmp_kw} host-unreachable'
+                    if 'port' in s:
+                        return f'reject with {icmp_kw} port-unreachable'
+                    if 'proto' in s:
+                        return f'reject with {icmp_kw} prot-unreachable'
+                    return f'reject with {icmp_kw} host-unreachable'
+                if 'prohibited' in s:
+                    if 'net' in s:
+                        return f'reject with {icmp_kw} net-prohibited'
+                    if 'host' in s:
+                        return f'reject with {icmp_kw} host-prohibited'
+                    if 'admin' in s:
+                        return f'reject with {icmp_kw} admin-prohibited'
+
         self.compiler.warning(
             rule,
             f'Unknown reject type "{action_on_reject}", falling back to generic reject',

@@ -36,12 +36,6 @@
 # Rule 20 (eth0): Branch action not yet supported by nftables compiler
 # Rule 21 (eth0): Branch action not yet supported by nftables compiler
 # Rule 21 (eth0): Branch action not yet supported by nftables compiler
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
 
 FWBDEBUG=""
 
@@ -291,8 +285,7 @@ table ip fwf_filter {
         #
         # SF bug report 3034628
         # "iptables does not allow target REJECT in mangle table"
-        # # firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport 70 log reject
+        tcp dport 70 log reject with icmp host-prohibited
         #
         # Rule policy_2_mangle 2 (global)
         #
@@ -403,8 +396,7 @@ table ip fwf_filter {
         #
         # SF bug report 3034628
         # "iptables does not allow target REJECT in mangle table"
-        # # firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport 70 log reject
+        tcp dport 70 log reject with icmp host-prohibited
         #
         # Rule policy_2_mangle 2 (global)
         #
@@ -532,8 +524,7 @@ table ip fwf_filter {
         #
         # SF bug report 3034628
         # "iptables does not allow target REJECT in mangle table"
-        # # firewall25:policy_2_mangle:1: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport 70 log reject
+        tcp dport 70 log reject with icmp host-prohibited
         #
         # Rule policy_2_mangle 2 (global)
         #

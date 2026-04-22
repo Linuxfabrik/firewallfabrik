@@ -21,18 +21,6 @@
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-# firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
 
 FWBDEBUG=""
 
@@ -297,13 +285,11 @@ table ip fwf_filter {
         #
         # Rule 8 (global)
         #
-        # # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject
+        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        # # firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport != 5190 reject
+        tcp dport != 5190 reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
@@ -337,13 +323,11 @@ table ip fwf_filter {
         #
         # Rule 8 (global)
         #
-        # # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject
+        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        # # firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport != 5190 reject
+        tcp dport != 5190 reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
@@ -403,13 +387,11 @@ table ip fwf_filter {
         #
         # Rule 8 (global)
         #
-        # # firewall19:Policy:8: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject
+        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        # # firewall19:Policy:9: warning: Unknown reject type "ICMP host prohibited", falling back to generic reject
-        tcp dport != 5190 reject
+        tcp dport != 5190 reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
