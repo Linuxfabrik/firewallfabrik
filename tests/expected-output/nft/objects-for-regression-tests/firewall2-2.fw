@@ -20,6 +20,7 @@
 # Rule 4 shadows Rule 5 below it
 # Rule 1 shadows Rule 6 below it
 # Rule 8 shadows Rule 9 below it
+# firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 # Rule 8 shadows Rule 10 below it
 # Rule 8 shadows Rule 11 below it
 # Rule 8 shadows Rule 12 below it
@@ -303,7 +304,8 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 12 (global)
         #
@@ -348,6 +350,7 @@ table ip fwf_filter {
         #
         # Rule 24 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 25 (global)
@@ -433,7 +436,8 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -506,6 +510,7 @@ table ip fwf_filter {
         #
         # Rule 24 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 25 (global)
@@ -569,7 +574,8 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -603,6 +609,7 @@ table ip fwf_filter {
         #
         # Rule 24 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 25 (global)

@@ -59,6 +59,8 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PhysAddress,
     PolicyAction,
+    TCPService,
+    UserService,
 )
 
 if TYPE_CHECKING:
@@ -162,8 +164,25 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(CheckForTCPEstablished('check for TCP established flag'))
 
-        # Reject settings
+        # Reject settings.  Match fwbuilder iptables order: split
+        # srv=any reject into tcp-reset + generic, then fill
+        # action_on_reject from global option, then split tcp-reset
+        # rules with mixed tcp/non-tcp services.
+        self.add(
+            SplitRuleIfSrvAnyActionReject('split if srv is any and action is Reject')
+        )
         self.add(FillActionOnReject('fill action_on_reject'))
+        self.add(
+            SplitServicesIfRejectWithTCPReset(
+                'split if action on reject is TCP reset'
+            )
+        )
+        self.add(FillActionOnReject('fill action_on_reject 2'))
+        self.add(
+            SplitServicesIfRejectWithTCPReset(
+                'split if action on reject is TCP reset (pass 2)'
+            )
+        )
 
         # Logging — inline in nftables, no temp chain needed
         self.add(Logging_nft('process logging'))
@@ -216,6 +235,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(ExpandLoopbackInterfaceAddress('replace loopback with address'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
+        self.add(
+            CheckInterfaceAgainstAddressFamily(
+                'check if interface matches address family'
+            )
+        )
+
         # Address family filtering
         if self.ipv6_policy:
             self.add(DropIPv4Rules('drop ipv4 rules'))
@@ -243,6 +268,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(Optimize3('optimization 3'))
         self.add(CheckMACInOUTPUTChain('check MAC in output chain'))
+        self.add(CheckUserServiceInWrongChains('check for UserService in wrong chains'))
 
         self.add(CheckForZeroAddr('check for zero addresses'))
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
@@ -275,6 +301,22 @@ class PolicyCompiler_nft(PolicyCompiler):
         if self.source_ruleset:
             return self.source_ruleset.name
         return 'Policy'
+
+    # -- Action helpers (mirror PolicyCompiler_ipt) --
+
+    def get_action_on_reject(self, rule) -> str:
+        return rule.get_option('action_on_reject', '') or ''
+
+    def is_action_on_reject_tcp_rst(self, rule) -> bool:
+        s = self.get_action_on_reject(rule)
+        return bool(s and 'TCP ' in s)
+
+    def reset_action_on_reject(self, rule) -> None:
+        """Reset action_on_reject to a non-TCP value."""
+        go = self.fw.get_option('action_on_reject') or ''
+        if go and 'TCP ' in go:
+            go = ''
+        rule.set_option('action_on_reject', go)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -434,6 +476,181 @@ class FillActionOnReject(PolicyRuleProcessor):
             global_reject = self.compiler.fw.get_option('action_on_reject')
             if global_reject:
                 rule.set_option('action_on_reject', global_reject)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitRuleIfSrvAnyActionReject(PolicyRuleProcessor):
+    """Split Reject rules with srv=any into TCP RST + original.
+
+    Mirrors ``PolicyCompiler_ipt::splitRuleIfSrvAnyActionReject``.  When
+    a Reject rule has no explicit ``action_on_reject`` and its service
+    element is "any", emit an additional TCP-only clone with
+    ``action_on_reject='TCP RST'`` so TCP connections get a reset while
+    other protocols fall back to the generic reject action.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        aor = nft_comp.get_action_on_reject(rule)
+
+        if rule.action == PolicyAction.Reject and not aor and rule.is_srv_any():
+            import uuid
+
+            any_tcp = TCPService(id=uuid.uuid4(), name='Any TCP')
+            any_tcp.src_range_start = 0
+            any_tcp.src_range_end = 0
+            any_tcp.dst_range_start = 0
+            any_tcp.dst_range_end = 0
+
+            r = rule.clone()
+            r.srv = [any_tcp]
+            r.set_option('action_on_reject', 'TCP RST')
+            self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
+    """Split Reject + TCP RST rules with mixed TCP/non-TCP services.
+
+    Mirrors ``PolicyCompiler_ipt::splitServicesIfRejectWithTCPReset``.
+    When the action is Reject and ``action_on_reject`` is a TCP reset:
+
+    - only non-TCP services: warn and clear ``action_on_reject``
+    - only TCP services: pass through unchanged
+    - both: split into a non-TCP clone (without TCP RST) and a TCP
+      clone (keeps TCP RST)
+    """
+
+    def __init__(self, name: str = '') -> None:
+        super().__init__(name)
+        self._seen_rules: set[int] = set()
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+
+        if (
+            rule.action != PolicyAction.Reject
+            or not nft_comp.is_action_on_reject_tcp_rst(rule)
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        if not rule.srv:
+            self.tmp_queue.append(rule)
+            return True
+
+        tcp_services: list = []
+        other_services: list = []
+        for srv in rule.srv:
+            if srv.get_protocol_name() == 'tcp':
+                tcp_services.append(srv)
+            else:
+                other_services.append(srv)
+
+        if other_services and not tcp_services:
+            if rule.position not in self._seen_rules:
+                self.compiler.warning(
+                    rule,
+                    "Rule action 'Reject' with TCP RST can be used "
+                    'only with TCP services.',
+                )
+            nft_comp.reset_action_on_reject(rule)
+            self.tmp_queue.append(rule)
+            self._seen_rules.add(rule.position)
+            return True
+
+        if not other_services and tcp_services:
+            self.tmp_queue.append(rule)
+            return True
+
+        r1 = rule.clone()
+        r1.srv = other_services
+        r1.set_option('action_on_reject', '')
+        r1.subrule_suffix = '1'
+        self.tmp_queue.append(r1)
+
+        r2 = rule.clone()
+        r2.srv = tcp_services
+        r2.subrule_suffix = '2'
+        self.tmp_queue.append(r2)
+
+        return True
+
+
+class CheckInterfaceAgainstAddressFamily(PolicyRuleProcessor):
+    """Drop rules whose interface has no addresses in the active family.
+
+    Mirrors ``PolicyCompiler_ipt::checkInterfaceAgainstAddressFamily``.
+    Rules on regular (non-dynamic, non-unnumbered, non-bridge-port)
+    interfaces that lack any IPv4 / IPv6 address for the compile target
+    are dropped, matching fwbuilder behaviour.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+
+        rule_iface = rule.itf[0] if rule.itf else None
+        if not isinstance(rule_iface, Interface):
+            self.tmp_queue.append(rule)
+            return True
+
+        if not rule_iface.is_regular():
+            self.tmp_queue.append(rule)
+            return True
+
+        has_matching = False
+        for addr in rule_iface.addresses:
+            if nft_comp.ipv6_policy and isinstance(addr, IPv6):
+                has_matching = True
+                break
+            if not nft_comp.ipv6_policy and isinstance(addr, IPv4):
+                has_matching = True
+                break
+
+        if has_matching:
+            self.tmp_queue.append(rule)
+        return True
+
+
+class CheckUserServiceInWrongChains(PolicyRuleProcessor):
+    """Warn and drop rules with UserService outside OUTPUT.
+
+    Mirrors ``PolicyCompiler_ipt::checkUserServiceInWrongChains``.  The
+    Linux ``meta skuid`` match (corresponding to iptables ``-m owner``)
+    is only meaningful on locally-generated traffic, so UserService
+    rules must be placed in the OUTPUT chain.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        srv = rule.srv[0] if rule.srv else None
+        chain = (rule.ipt_chain or '').upper()
+
+        if isinstance(srv, UserService) and chain != 'OUTPUT':
+            self.compiler.warning(
+                rule,
+                "nftables matches 'meta skuid' only in the OUTPUT chain",
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True

@@ -15,6 +15,17 @@
 #  how control passes to user defined chain and blocks command if
 #  it appears that user defined chain gets control not from OUTPUT)
 #
+# firewall62:Policy:0: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:6: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:13: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 
 FWBDEBUG=""
 
@@ -248,43 +259,9 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (global)
-        #
-        ip saddr { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new accept
-        #
         # Rule 2 (global)
         #
         ip saddr { 192.168.1.1, 222.222.222.222 } tcp dport 80 ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        ip saddr 192.168.1.1 meta skuid 2000 ct state new accept
-        #
-        # Rule 5 (global)
-        #
-        ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
-        #
-        # Rule 6 (global)
-        #
-        meta skuid 2000 ct state new accept
-        #
-        # Rule 8 (global)
-        #
-        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
-        #
-        # Rule 9 (global)
-        #
-        ip daddr != { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new accept
-        #
-        # Rule 12 (global)
-        #
-        # bug 2186568
-        ip saddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new accept
-        #
-        # Rule 13 (global)
-        #
-        # bug 2186568
-        meta skuid != 2000 ct state new accept
         #
         # Rule 18 (global)
         #
@@ -294,18 +271,6 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 5 (global)
-        #
-        ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
-        #
-        # Rule 8 (global)
-        #
-        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
-        #
-        # Rule 9 (global)
-        #
-        meta skuid 2000 ct state new accept
         #
         # Rule 18 (global)
         #
@@ -318,18 +283,22 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
+        # # firewall62:Policy:0: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         meta skuid 2000 ct state new accept
         #
         # Rule 1 (global)
         #
+        meta skuid 2000 ct state new accept
         tcp dport 80 ct state new accept
         #
         # Rule 4 (global)
         #
+        # # firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         ip saddr 192.168.1.1 meta skuid 2000 ct state new accept
         #
         # Rule 5 (global)
         #
+        # # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         ip saddr 192.168.1.0/24 meta skuid 2000 ct state new accept
         #
         # Rule 6 (global)
@@ -339,16 +308,29 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
+        # # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+        ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new accept
+        #
+        # Rule 9 (global)
+        #
+        # # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+        meta skuid 2000 ct state new accept
         #
         # Rule 12 (global)
         #
         # bug 2186568
+        # # firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         meta skuid != 2000 ct state new accept
         #
         # Rule 13 (global)
         #
         # bug 2186568
         ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new accept
+        #
+        # Rule 14 (global)
+        #
+        # bug 2186568
+        meta skuid != 2000 ct state new accept
         #
         # Rule 18 (global)
         #

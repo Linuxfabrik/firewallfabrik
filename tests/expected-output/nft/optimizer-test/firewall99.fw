@@ -243,7 +243,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
@@ -264,7 +264,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
@@ -285,7 +285,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #

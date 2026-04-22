@@ -19,6 +19,9 @@
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
+# firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# firewall9:Policy:12: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 
@@ -248,37 +251,40 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        udp dport 53 log prefix "RULE 1 -- REJECT global" level debug reject with tcp reset
+        # # firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 53 log prefix "RULE 1 -- REJECT global" level debug reject with icmp net-unreachable
         #
         # Rule 2 (global)
         #
-        meta l4proto 1 log prefix "RULE 2 -- REJECT global" level debug reject with tcp reset
-        meta l4proto 50 log prefix "RULE 2 -- REJECT global" level debug reject with tcp reset
+        # # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        meta l4proto 1 log prefix "RULE 2 -- REJECT global" level debug reject with icmp net-unreachable
+        # # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        meta l4proto 50 log prefix "RULE 2 -- REJECT global" level debug reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
+        udp dport { 53, 161 } log prefix "RULE 3 -- REJECT global" level debug reject with icmp net-unreachable
         tcp dport { 113, 10000-11000 } log prefix "RULE 3 -- REJECT global" level debug reject with tcp reset
-        udp dport { 53, 161 } log prefix "RULE 3 -- REJECT global" level debug reject with tcp reset
         #
         # Rule 4 (global)
         #
+        udp dport { 53, 161 } reject with icmp net-unreachable
         tcp dport { 113, 10000-11000 } reject with tcp reset
-        udp dport { 53, 161 } reject with tcp reset
         #
         # Rule 5 (global)
         #
+        ip daddr != { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with icmp net-unreachable
         ip daddr != { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } reject with tcp reset
-        ip daddr != { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with tcp reset
         #
         # Rule 6 (global)
         #
+        udp dport != { 53, 161 } reject with icmp net-unreachable
         tcp dport != { 113, 10000-11000 } reject with tcp reset
-        udp dport != { 53, 161 } reject with tcp reset
         #
         # Rule 7 (global)
         #
+        udp dport != { 53, 161 } log prefix "RULE 7 -- REJECT global" level debug reject with icmp net-unreachable
         tcp dport != { 113, 10000-11000 } log prefix "RULE 7 -- REJECT global" level debug reject with tcp reset
-        udp dport != { 53, 161 } log prefix "RULE 7 -- REJECT global" level debug reject with tcp reset
         #
         # Rule 8 (global)
         #
@@ -290,7 +296,7 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -299,23 +305,24 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall9:Policy:12: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
+        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
+        ip saddr 192.168.1.0/24 udp dport 53 reject with icmp net-unreachable
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 
     chain forward {
@@ -324,8 +331,8 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
+        udp dport { 53, 161 } reject with icmp net-unreachable
         tcp dport { 113, 10000-11000 } reject with tcp reset
-        udp dport { 53, 161 } reject with tcp reset
         #
         # Rule 8 (global)
         #
@@ -337,7 +344,7 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -346,23 +353,24 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall9:Policy:12: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
+        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
+        ip saddr 192.168.1.0/24 udp dport 53 reject with icmp net-unreachable
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 
     chain output {
@@ -375,37 +383,40 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport 53 log prefix "RULE 1 -- REJECT global" level debug reject with tcp reset
+        # # firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport 53 log prefix "RULE 1 -- REJECT global" level debug reject with icmp net-unreachable
         #
         # Rule 2 (global)
         #
-        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 1 log prefix "RULE 2 -- REJECT global" level debug reject with tcp reset
-        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 50 log prefix "RULE 2 -- REJECT global" level debug reject with tcp reset
+        # # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 1 log prefix "RULE 2 -- REJECT global" level debug reject with icmp net-unreachable
+        # # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip daddr { 22.22.22.22, 192.168.1.1 } meta l4proto 50 log prefix "RULE 2 -- REJECT global" level debug reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } log prefix "RULE 3 -- REJECT global" level debug reject with icmp net-unreachable
         ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } log prefix "RULE 3 -- REJECT global" level debug reject with tcp reset
-        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } log prefix "RULE 3 -- REJECT global" level debug reject with tcp reset
         #
         # Rule 4 (global)
         #
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with icmp net-unreachable
         ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport { 113, 10000-11000 } reject with tcp reset
-        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport { 53, 161 } reject with tcp reset
         #
         # Rule 5 (global)
         #
+        udp dport { 53, 161 } reject with icmp net-unreachable
         tcp dport { 113, 10000-11000 } reject with tcp reset
-        udp dport { 53, 161 } reject with tcp reset
         #
         # Rule 6 (global)
         #
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } reject with icmp net-unreachable
         ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport != { 113, 10000-11000 } reject with tcp reset
-        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } reject with tcp reset
         #
         # Rule 7 (global)
         #
+        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } log prefix "RULE 7 -- REJECT global" level debug reject with icmp net-unreachable
         ip daddr { 22.22.22.22, 192.168.1.1 } tcp dport != { 113, 10000-11000 } log prefix "RULE 7 -- REJECT global" level debug reject with tcp reset
-        ip daddr { 22.22.22.22, 192.168.1.1 } udp dport != { 53, 161 } log prefix "RULE 7 -- REJECT global" level debug reject with tcp reset
         #
         # Rule 8 (global)
         #
@@ -417,7 +428,7 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -426,23 +437,24 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall9:Policy:12: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         #
         # Rule 13 (global)
         #
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
         #
         # Rule 14 (global)
         #
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+        ip saddr 192.168.1.0/24 reject with icmp net-unreachable
+        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
+        ip saddr 192.168.1.0/24 udp dport 53 reject with icmp net-unreachable
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 udp dport 53 reject with tcp reset
     }
 }
 

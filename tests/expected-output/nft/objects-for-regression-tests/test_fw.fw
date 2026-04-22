@@ -313,15 +313,6 @@ table inet fwf_filter {
         #
         iifname "eth1" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
         #
-        # Rule 0 (eth0)
-        #
-        # anti spoofing rule
-        iifname "eth0" ip6 saddr fe80::20c:29ff:fed2:cca1 ct state new log prefix "RULE 0 -- DENY " level info drop
-        #
-        # Rule 1 (lo)
-        #
-        iif "lo" ct state new accept
-        #
         # Rule 4 (global)
         #
         # All other attempts to connect to
@@ -406,11 +397,6 @@ table inet fwf_filter {
         #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
         #
-        # Rule 0 (eth0)
-        #
-        # anti spoofing rule
-        iifname "eth0" ip6 saddr fe80::20c:29ff:fed2:cca1 ct state new log prefix "RULE 0 -- DENY " level info drop
-        #
         # Rule 5 (global)
         #
         # Quickly reject attempts to connect
@@ -494,10 +480,6 @@ table inet fwf_filter {
         # Rule Policy_OSPF 1 (eth1)
         #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
-        #
-        # Rule 1 (lo)
-        #
-        oif "lo" ct state new accept
         #
         # Rule 3 (global)
         #

@@ -21,6 +21,7 @@
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
+# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 
@@ -294,7 +295,8 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #
@@ -332,7 +334,8 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
         #
         # Rule 12 (global)
         #
@@ -396,7 +399,8 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 reject with tcp reset
+# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #

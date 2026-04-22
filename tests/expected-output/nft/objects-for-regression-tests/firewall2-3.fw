@@ -16,6 +16,7 @@
 # Unsupported NAT rule
 # Unsupported NAT rule
 # Rule 31 (NAT): No chain assignment for NAT rule type: None
+# firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 
@@ -286,7 +287,8 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -294,6 +296,7 @@ table ip fwf_filter {
         #
         # Rule 14 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 15 (global)
@@ -379,7 +382,8 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 12 (global)
         #
@@ -391,6 +395,7 @@ table ip fwf_filter {
         #
         # Rule 14 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 15 (global)
@@ -454,10 +459,12 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with tcp reset
+        # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 14 (global)
         #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
         #
         # Rule 15 (global)

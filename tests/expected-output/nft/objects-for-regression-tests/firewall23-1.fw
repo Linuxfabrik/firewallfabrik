@@ -237,25 +237,6 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (eth2,eth3)
-        #
-        iifname "eth2" ct state new accept
-        iifname "eth3" ct state new accept
-        #
-        # Rule 7 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 192.168.1.0/24 ct state new accept
-        iifname "eth3" ip daddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 9 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr != 192.168.1.0/24 drop
-        iifname "eth3" ip daddr != 192.168.1.0/24 drop
-        #
-        # Rule 11 (eth2)
-        #
-        iifname "eth2" ip saddr 192.168.1.10 ip daddr 224.0.0.0/4 ct state new accept
-        #
         # Rule 22 (global)
         #
         # this rule should generate commands
@@ -272,77 +253,6 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 1 (eth2,eth3)
-        #
-        iifname "eth2" ct state new accept
-        iifname "eth3" ct state new accept
-        #
-        # Rule 2 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr { 192.168.1.10, 192.168.1.20 } ct state new log level debug accept
-        iifname "eth3" ip daddr { 192.168.1.10, 192.168.1.20 } ct state new log level debug accept
-        #
-        # Rule 3 (eth2,eth3)
-        #
-        # testing for bug 1593221
-        iifname "eth2" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new log level debug accept
-        iifname "eth3" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new log level debug accept
-        #
-        # Rule 4 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 192.168.1.255 ct state new accept
-        iifname "eth3" ip daddr 192.168.1.255 ct state new accept
-        #
-        # Rule 5 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 255.255.255.255 ct state new accept
-        iifname "eth3" ip daddr 255.255.255.255 ct state new accept
-        #
-        # Rule 6 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 224.0.1.141 ct state new accept
-        iifname "eth3" ip daddr 224.0.1.141 ct state new accept
-        #
-        # Rule 7 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 192.168.1.0/24 ct state new accept
-        iifname "eth3" ip daddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 8 (eth2,eth3)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 ct state new accept
-        oifname "eth3" ip daddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 9 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr != 192.168.1.0/24 drop
-        iifname "eth3" ip daddr != 192.168.1.0/24 drop
-        #
-        # Rule 10 (eth2)
-        #
-        oifname "eth2" ip daddr 224.0.0.0/4 ct state new accept
-        #
-        # Rule 11 (eth2)
-        #
-        iifname "eth2" ip saddr 192.168.1.10 ip daddr 224.0.0.0/4 ct state new accept
-        #
-        # Rule 12 (eth3)
-        #
-        oifname "eth3" ip saddr 192.168.1.10 ip daddr 224.0.0.0/4 ct state new accept
-        #
-        # Rule 13 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22
-        #
-        # Rule 14 (eth3)
-        #
-        oifname "eth3" ip daddr 192.168.1.0/24 tcp dport 22
-        #
-        # Rule 15 (eth2)
-        #
-        # # Rule 15 (eth2): Classification not yet supported by nftables compiler
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 log level debug
         #
         # Rule 16 (global)
         #
@@ -379,28 +289,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule 8 (eth2,eth3)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 ct state new accept
-        oifname "eth3" ip daddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 10 (eth2)
-        #
-        oifname "eth2" ip daddr 224.0.0.0/4 ct state new accept
-        #
-        # Rule 13 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22
-        #
-        # Rule 14 (eth3)
-        #
-        oifname "eth3" ip daddr 192.168.1.0/24 tcp dport 22
-        #
-        # Rule 15 (eth2)
-        #
-        # # Rule 15 (eth2): Classification not yet supported by nftables compiler
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 log level debug
         #
         # Rule 16 (global)
         #

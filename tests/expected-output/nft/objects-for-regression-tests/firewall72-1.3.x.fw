@@ -16,6 +16,7 @@
 # Rule 12 shadows Rule 13 below it
 # Rule 10 shadows Rule 14 below it
 # Rule 12 shadows Rule 14 below it
+# firewall72-1.3.x:Policy:15: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 
 FWBDEBUG=""
 
@@ -268,10 +269,6 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         ip daddr 172.16.1.1 drop
-        #
-        # Rule 15 (global)
-        #
-        ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr 172.16.1.1 meta skuid != 500 drop
     }
 
     chain forward {
@@ -320,6 +317,7 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
+        # # firewall72-1.3.x:Policy:15: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         ip daddr 172.16.1.1 meta skuid != 500 drop
     }
 }

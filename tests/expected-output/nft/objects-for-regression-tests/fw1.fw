@@ -27,6 +27,7 @@
 # Rule 1 shadows Rule 2 below it
 # Rule 1 shadows Rule 3 below it
 # Rule 1 shadows Rule 5 below it
+# Rule 1 shadows Rule 6 below it
 
 FWBDEBUG=""
 
@@ -292,6 +293,7 @@ table ip fwf_filter {
         #
         # Rule 6 (global)
         #
+        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
         log prefix "RULE 6 -- REJECT " level info reject
     }
 
@@ -314,6 +316,7 @@ table ip fwf_filter {
         #
         # Rule 6 (global)
         #
+        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
         log prefix "RULE 6 -- REJECT " level info reject
     }
 
@@ -343,6 +346,7 @@ table ip fwf_filter {
         #
         # Rule 6 (global)
         #
+        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
         log prefix "RULE 6 -- REJECT " level info reject
     }
 }

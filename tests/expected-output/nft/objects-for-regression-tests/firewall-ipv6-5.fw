@@ -249,13 +249,9 @@ table inet fwf_filter {
         #
         iifname "eth0" tcp dport 22 accept
         #
-        # Rule 1 (eth1)
+        # Rule 2 (eth0,eth1)
         #
         iifname "eth1" tcp dport 22 accept
-        #
-        # Rule 0 (eth0)
-        #
-        iifname "eth0" tcp dport 22 accept
         #
         # Rule 1 (eth1)
         #
