@@ -377,8 +377,6 @@ table ip fwf_filter {
         # Anti-spoofing rule
         # # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
         oifname "eth1" ip saddr != { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } log level debug drop
-        # # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-        oifname "eth1" ip saddr != 192.168.1.0/24 log level debug drop
         #
         # Rule 2 (eth1)
         #

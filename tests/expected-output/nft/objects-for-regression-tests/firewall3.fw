@@ -247,10 +247,6 @@ table ip fwf_filter {
         #
         ip daddr != { 192.168.1.1, 192.168.2.1 } ct state new accept
         #
-        # Rule 21 (global)
-        #
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
-        #
         # Rule 22 (global)
         #
         ip saddr 192.168.1.0/24 ip daddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
@@ -372,31 +368,14 @@ table ip fwf_filter {
         #
         oif "lo" ct state new accept
         #
-        # Rule 8 (eth0)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        #
-        # Rule 9 (eth0,eth2)
-        #
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        #
         # Rule 11 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1, 192.168.1.0/24 } log level debug drop
-        #
-        # Rule 19 (global)
-        #
-        # 'masquerading' rule
-        ip saddr 192.168.1.0/24 ct state new accept
+        oifname "eth1" ip saddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1 } log level debug drop
         #
         # Rule 21 (global)
         #
         ip saddr != { 22.22.22.22, 192.168.1.1, 192.168.2.1 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
-        #
-        # Rule 22 (global)
-        #
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
     }
 }
 

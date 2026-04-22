@@ -237,10 +237,6 @@ table ip fwf_filter {
         #
         iifname "eth*" ct state new accept
         #
-        # Rule 5 (eth*)
-        #
-        iifname "eth*" ip daddr 192.168.1.0/24 ct state new accept
-        #
         # Rule 6 (eth*)
         #
         iifname "eth*" ip daddr != 192.168.1.0/24 ct state new accept

@@ -1106,7 +1106,12 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
 
 
 class SplitIfSrcFWNetwork(PolicyRuleProcessor):
-    """Split rule if src contains a network the FW has an interface on."""
+    """Split rule if src contains a network the FW has an interface on.
+
+    Gated on ``firewall_is_part_of_any_and_networks`` (rule then fw
+    option), plus ``no_output_chain`` (rule) and ``bridging_fw`` (fw) —
+    matching fwbuilder ``PolicyCompiler_ipt::splitIfSrcFWNetwork``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1116,6 +1121,21 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain or rule.is_src_any():
+            self.tmp_queue.append(rule)
+            return True
+
+        if nft_comp.fw.get_option('bridging_fw'):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_option('no_output_chain', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = nft_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        if not afpa:
             self.tmp_queue.append(rule)
             return True
 
@@ -1177,7 +1197,13 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
 
 
 class SplitIfDstFWNetwork(PolicyRuleProcessor):
-    """Split rule if dst contains a network the FW has an interface on."""
+    """Split rule if dst contains a network the FW has an interface on.
+
+    Gated on the same options as :class:`SplitIfSrcFWNetwork`
+    (``firewall_is_part_of_any_and_networks``, ``no_input_chain``,
+    ``bridging_fw``), matching fwbuilder
+    ``PolicyCompiler_ipt::splitIfDstFWNetwork``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1187,6 +1213,21 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
         if rule.ipt_chain or rule.is_dst_any():
+            self.tmp_queue.append(rule)
+            return True
+
+        if nft_comp.fw.get_option('bridging_fw'):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_option('no_input_chain', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = nft_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        if not afpa:
             self.tmp_queue.append(rule)
             return True
 

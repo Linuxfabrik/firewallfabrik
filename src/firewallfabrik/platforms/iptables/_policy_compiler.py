@@ -2250,7 +2250,18 @@ class SplitIfDstMatchesFw(PolicyRuleProcessor):
 
 
 class SplitIfSrcFWNetwork(PolicyRuleProcessor):
-    """Split rule if src contains a network the FW has an interface on."""
+    """Split rule if src contains a network the FW has an interface on.
+
+    Emits an OUTPUT-chain clone in addition to the original FORWARD rule
+    when src references a Network object whose subnet covers one of the
+    firewall's own interface addresses.
+
+    Gated on ``firewall_is_part_of_any_and_networks`` (rule option, fw
+    option fallback), plus ``no_output_chain`` (rule option) and
+    ``bridging_fw`` (fw option) early exits — matching fwbuilder
+    ``PolicyCompiler_ipt::splitIfSrcFWNetwork`` in
+    ``PolicyCompiler_ipt.cpp:2528``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -2260,6 +2271,21 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain or rule.is_src_any():
+            self.tmp_queue.append(rule)
+            return True
+
+        if ipt_comp.fw.get_option('bridging_fw'):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_option('no_output_chain', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = ipt_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        if not afpa:
             self.tmp_queue.append(rule)
             return True
 
@@ -2284,7 +2310,17 @@ class SplitIfSrcFWNetwork(PolicyRuleProcessor):
 
 
 class SplitIfDstFWNetwork(PolicyRuleProcessor):
-    """Split rule if dst contains a network the FW has an interface on."""
+    """Split rule if dst contains a network the FW has an interface on.
+
+    Symmetric counterpart to :class:`SplitIfSrcFWNetwork`: emits an
+    INPUT-chain clone in addition to the original FORWARD rule when dst
+    references a Network object whose subnet covers one of the
+    firewall's own interface addresses.
+
+    Gated on the same options (``firewall_is_part_of_any_and_networks``,
+    ``no_input_chain``, ``bridging_fw``), matching fwbuilder
+    ``PolicyCompiler_ipt::splitIfDstFWNetwork``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -2294,6 +2330,21 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
         if rule.ipt_chain or rule.is_dst_any():
+            self.tmp_queue.append(rule)
+            return True
+
+        if ipt_comp.fw.get_option('bridging_fw'):
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_option('no_input_chain', False):
+            self.tmp_queue.append(rule)
+            return True
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = ipt_comp.fw.get_option('firewall_is_part_of_any_and_networks')
+        if not afpa:
             self.tmp_queue.append(rule)
             return True
 

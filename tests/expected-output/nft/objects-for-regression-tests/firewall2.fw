@@ -548,7 +548,7 @@ table ip fwf_filter {
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
+        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
         #
         # Rule 4 (eth1,eth3)
         #

@@ -323,48 +323,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
-        #
-        # Rule Policy_1 0 (eth0)
-        #
-        # connlimit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule Policy_1 1 (eth0)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 drop
-        #
-        # Rule Policy_2 0 (eth0)
-        #
-        # hashlimit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule Policy_2 1 (eth0)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 drop
-        #
-        # Rule Policy_3 0 (eth0)
-        #
-        # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule Policy_4 0 (eth0)
-        #
-        # 30/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule Policy_5 0 (eth0)
-        #
-        # 50/sec
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 0 (eth0)
-        #
-        # limit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
-        # Rule 1 (eth0)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 drop
     }
 }
 

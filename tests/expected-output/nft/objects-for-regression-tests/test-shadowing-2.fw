@@ -293,11 +293,6 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related accept
         #
-        # Rule 0 (eth0)
-        #
-        # shades rule below
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
-        #
         # Rule 2 (global)
         #
         # firewall is part
@@ -307,10 +302,6 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         tcp dport 80 drop
-        #
-        # Rule 5 (global)
-        #
-        ip saddr 192.168.1.0/24 tcp dport 6667 drop
     }
 }
 

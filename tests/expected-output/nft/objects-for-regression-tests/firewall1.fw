@@ -330,7 +330,6 @@ table ip fwf_filter {
         #
         ip saddr { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } ip daddr != { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
         ip saddr 192.168.2.0/24 ip daddr != { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
-        ip saddr 192.168.2.0/24 ip daddr != 192.168.1.0/24 tcp dport 22 ct state new accept
         #
         # Rule 36 (global)
         #
@@ -571,7 +570,7 @@ table ip fwf_filter {
         #
         # Rule 20 (global)
         #
-        ip saddr != { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1, 192.168.2.0/24 } ip daddr 192.168.1.0/24 log level debug drop
+        ip saddr != { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } ip daddr 192.168.1.0/24 log level debug drop
         #
         # Rule 21 (global)
         #

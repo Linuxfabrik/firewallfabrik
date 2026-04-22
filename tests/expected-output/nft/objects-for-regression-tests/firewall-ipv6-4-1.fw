@@ -272,11 +272,6 @@ table inet fwf_filter {
         #
         ct state new log prefix "RULE 0 -- ACCEPT " level info accept
         #
-        # Rule 5 (global)
-        #
-        # INPUT, OUTPUT, FORWARD
-        ip daddr 1.1.1.0/24 ct state new accept
-        #
         # Rule 0 (global)
         #
         ct state new log prefix "RULE 0 -- ACCEPT " level info accept
@@ -342,11 +337,6 @@ table inet fwf_filter {
         # Rule 1 (global)
         #
         ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new accept
-        #
-        # Rule 4 (global)
-        #
-        # INPUT, OUTPUT, FORWARD
-        ip saddr 1.1.1.0/24 ct state new accept
         #
         # Rule 6 (global)
         #
