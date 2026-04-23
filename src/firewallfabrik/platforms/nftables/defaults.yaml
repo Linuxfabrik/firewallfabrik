@@ -60,16 +60,6 @@ options:
       Custom command executed on the firewall after the script has
       been copied. Leave empty to use the built-in activation.
 
-  add_mgmt_ssh_rule_when_stoped:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'add_mgmt_ssh_rule_when_stoped'
-    description: >-
-      Install the rule for SSH access from the management workstation
-      even when the firewall script is run with the "block" command.
-      Not supported by the nftables compiler.
-
   admUser:
     type: 'str'
     default: ''
@@ -140,15 +130,6 @@ options:
       Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
-  configure_bonding_interfaces:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'configure_bonding_interfaces'
-    description: >-
-      Configure bonding interfaces.
-      Not supported by the nftables compiler.
-
   configure_bridge_interfaces:
     type: 'bool'
     default: false
@@ -166,15 +147,6 @@ options:
     description: >-
       Configure IP addresses on interfaces of the firewall machine
       as part of the generated script.
-
-  configure_vlan_interfaces:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'configure_vlan_interfaces'
-    description: >-
-      Configure VLAN interfaces.
-      Not supported by the nftables compiler.
 
   debug:
     type: 'bool'
@@ -282,15 +254,6 @@ options:
       Order in which IPv4 and IPv6 rules are generated in the
       output script.
 
-  ipv6_neighbor_discovery:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'ipv6NeighborDiscovery'
-    description: >-
-      Automatically generate rules to permit ICMPv6 Neighbor
-      Discovery packets. Not supported by the nftables compiler.
-
   limit_suffix:
     type: 'enum'
     default: '/second'
@@ -313,14 +276,6 @@ options:
     description: >-
       Maximum number of log messages per time unit.
       Not supported by the nftables compiler.
-
-  load_modules:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'loadModules'
-    description: >-
-      Load kernel modules. Not applicable to nftables.
 
   local_nat:
     type: 'bool'
@@ -350,15 +305,6 @@ options:
       Only effective when "Drop packets associated with no known
       connection" is also enabled.
 
-  log_ip_opt:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logIPopt'
-    description: >-
-      Include IP options in log messages.
-      Not supported by the nftables compiler.
-
   log_level:
     type: 'enum'
     default: 'info'
@@ -387,33 +333,6 @@ options:
       Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
-
-  log_tcp_opt:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logTCPopt'
-    description: >-
-      Include TCP options in log messages.
-      Not supported by the nftables compiler.
-
-  log_tcp_seq:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logTCPseq'
-    description: >-
-      Include TCP sequence numbers in log messages.
-      Not supported by the nftables compiler.
-
-  manage_virtual_addr:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'addVirtualsforNAT'
-    description: >-
-      Manage virtual addresses for NAT.
-      Not supported by the nftables compiler.
 
   mgmt_addr:
     type: 'str'
@@ -513,30 +432,6 @@ options:
       recreated, so rules created by other tools (e.g. Docker,
       CrowdSec, fail2ban) remain untouched.
 
-  use_iptables_restore:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'iptablesRestoreActivation'
-    description: >-
-      Use iptables-restore. Not applicable to nftables.
-
-  use_kerneltz:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'useKernelTz'
-    description: >-
-      Use kernel timezone. Not supported by the nftables compiler.
-
-  use_m_set:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'useModuleSet'
-    description: >-
-      Use ipset module. Not applicable to nftables.
-
   use_NFLOG:
     type: 'bool'
     default: false
@@ -548,31 +443,6 @@ options:
       (ulogd2, rsyslog, syslog-ng) for flexible log routing.
       In nftables, generates 'log group N' instead of plain 'log'.
 
-  use_numeric_log_levels:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logNumsyslog'
-    description: >-
-      Use numeric syslog levels.
-      Not supported by the nftables compiler.
-
-  use_ULOG:
-    type: 'bool'
-    default: false
-    supported: false
-    description: >-
-      Deprecated. ULOG has been removed from modern Linux kernels.
-      Imported .fwb files with this option are silently migrated to LOG.
-
-  ulog_cprange:
-    type: 'int'
-    default: 0
-    supported: false
-    widget: 'cprange'
-    description: >-
-      NFLOG copy range. Not applicable to nftables.
-
   ulog_nlgroup:
     type: 'int'
     default: 1
@@ -581,14 +451,6 @@ options:
     description: >-
       NFLOG netlink multicast group number (1-65535).
       Used when use_NFLOG is enabled.
-
-  ulog_qthreshold:
-    type: 'int'
-    default: 1
-    supported: false
-    widget: 'qthreshold'
-    description: >-
-      NFLOG queue threshold. Not applicable to nftables.
 
   verify_interfaces:
     type: 'bool'

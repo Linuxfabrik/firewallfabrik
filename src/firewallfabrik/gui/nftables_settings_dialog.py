@@ -153,7 +153,7 @@ class NftablesSettingsDialog(QDialog):
             idx = 0
         self.prologPlace.setCurrentIndex(idx)
 
-        # LOG / NFLOG radio buttons (legacy use_ULOG falls back to LOG)
+        # LOG / NFLOG radio buttons
         if str(opts.get('use_NFLOG', '')).lower() == 'true':
             self.useNFLOG.setChecked(True)
         else:
@@ -241,7 +241,6 @@ class NftablesSettingsDialog(QDialog):
         opts['prolog_place'] = prolog_values[idx] if idx < len(prolog_values) else 'top'
 
         # LOG / NFLOG
-        opts['use_ULOG'] = False
         opts['use_NFLOG'] = self.useNFLOG.isChecked()
 
         # Log options

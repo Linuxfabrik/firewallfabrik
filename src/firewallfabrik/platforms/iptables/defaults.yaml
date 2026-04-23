@@ -543,14 +543,6 @@ options:
       Use numeric syslog levels instead of symbolic names
       in log rules.
 
-  use_ULOG:
-    type: 'bool'
-    default: false
-    supported: false
-    description: >-
-      Deprecated. ULOG has been removed from modern Linux kernels.
-      Imported .fwb files with this option are silently migrated to LOG.
-
   ulog_cprange:
     type: 'int'
     default: 0
