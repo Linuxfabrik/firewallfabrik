@@ -75,6 +75,11 @@ Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https:
 
 Some comments from the community about our successor to FirewallBuilder:
 
+> First of all, we're so glad that there's finally a successor to Firewall Builder. Great porting job, guys! We've been using Firewall Builder on macOS to generate iptables firewalls for our various servers we're running out there. But with the ascent of nftables we began fearing that we might run into a problem in the future. Running FirewallFabrik under macOS works without a fuzz...
+
+-- [Jürgen Nagel](https://github.com/juergennagel)
+
+
 > ... Danke, das Du/Ihr FirewallFabrik ins Leben gerufen habt! Ich liebe FirewallBuilder und finde es wirklich ganz toll, ein Nachfolgeprodukt in FirewallFabrik gefunden zu haben. nftables-Unterstützung ist SUPER!
 
 -- [Klaus Tachtler](https://github.com/tachtler)
