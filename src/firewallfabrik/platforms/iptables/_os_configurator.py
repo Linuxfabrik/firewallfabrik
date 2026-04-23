@@ -150,6 +150,14 @@ class OSConfigurator_linux24(OSConfigurator):
                 val = int(val)
             except (ValueError, TypeError):
                 val = -1
+            # fwbuilder convention: 0 means "not set" for these two options
+            # (see OSConfigurator_linux24.cpp).  Setting them to 0 in the
+            # kernel would be destructive: tcp_fin_timeout=0 closes TIME_WAIT
+            # sockets instantly and tcp_keepalive_intvl=0 disables probe
+            # spacing.  `.fwb` imports frequently carry a literal 0 even
+            # when the admin left the GUI field empty.
+            if val == 0:
+                val = -1
             self._set_configlet_macro_int(val, kernel_vars, opt_name)
 
         result += kernel_vars.expand()
