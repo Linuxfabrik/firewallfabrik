@@ -19,6 +19,7 @@ firewall policy rules into iptables commands.
 
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
@@ -612,8 +613,21 @@ class PolicyCompiler_ipt(PolicyCompiler):
     # -- Chain management --
 
     def get_new_tmp_chain_name(self, rule: CompRule) -> str:
-        """Generate a new temporary chain name."""
-        chain_id = str(rule.id).replace('-', '')[:12]
+        """Generate a new temporary chain name.
+
+        fwbuilder derives the chain name from the rule's persistent XML
+        string ID.  fwf regenerates Rule UUIDs on every `.fwb` / `.fwf`
+        load, so deriving the hash from `rule.id` would give a different
+        iptables script on every run -- breaking byte-level idempotency.
+        Instead we hash the stable rule metadata (ruleset name, rule
+        position, subrule suffix).
+        """
+        ruleset_name = self.get_rule_set_name()
+        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        chain_id = hashlib.md5(  # nosec B324
+            stable_key.encode(),
+            usedforsecurity=False,
+        ).hexdigest()[:12]
         n = self.tmp_chain_counters.get(chain_id, 0)
         name = f'C{chain_id}.{n}'
         self.tmp_chain_counters[chain_id] = n + 1
@@ -2434,7 +2448,8 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             # PolicyCompiler_ipt.cpp, bug #811860).
             direction = rule.direction
             matches_fw = ipt_comp.complex_match(
-                dst, ipt_comp.fw,
+                dst,
+                ipt_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )
@@ -2473,7 +2488,8 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             # into OUTPUT and drop the FORWARD variant.
             direction = rule.direction
             matches_fw = ipt_comp.complex_match(
-                src, ipt_comp.fw,
+                src,
+                ipt_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )
@@ -2568,7 +2584,8 @@ class FinalizeChain(PolicyRuleProcessor):
                 src is not None
                 and not isinstance(src, AddressRange)
                 and ipt_comp.complex_match(
-                    src, ipt_comp.fw,
+                    src,
+                    ipt_comp.fw,
                     recognize_broadcasts=True,
                     recognize_multicasts=True,
                 )
@@ -2577,7 +2594,8 @@ class FinalizeChain(PolicyRuleProcessor):
                 dst is not None
                 and not isinstance(dst, AddressRange)
                 and ipt_comp.complex_match(
-                    dst, ipt_comp.fw,
+                    dst,
+                    ipt_comp.fw,
                     recognize_broadcasts=True,
                     recognize_multicasts=True,
                 )

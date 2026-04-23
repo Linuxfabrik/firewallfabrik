@@ -19,6 +19,7 @@ NAT rules into iptables -t nat commands.
 
 from __future__ import annotations
 
+import hashlib
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
@@ -150,11 +151,22 @@ class NATCompiler_ipt(NATCompiler):
     def my_platform_name(self) -> str:
         return 'iptables'
 
-    @staticmethod
-    def get_new_tmp_chain_name(rule: CompRule) -> str:
-        """Generate a unique temporary chain name for a rule."""
+    def get_new_tmp_chain_name(self, rule: CompRule) -> str:
+        """Generate a unique temporary chain name for a rule.
+
+        Uses a stable content-based hash (ruleset name + rule position
+        + subrule suffix) so the generated iptables script is
+        deterministic across fresh loads of the same `.fwb` / `.fwf`.
+        See `PolicyCompiler_ipt.get_new_tmp_chain_name` for the
+        rationale.
+        """
         global _tmp_chain_no
-        chain_id = str(rule.id).replace('-', '')[:12]
+        ruleset_name = self.get_rule_set_name()
+        stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
+        chain_id = hashlib.md5(  # nosec B324
+            stable_key.encode(),
+            usedforsecurity=False,
+        ).hexdigest()[:12]
         n = _tmp_chain_no.get(chain_id, 0)
         name = f'C{chain_id}.{n}'
         _tmp_chain_no[chain_id] = n + 1
@@ -1742,7 +1754,7 @@ class DoOSrcNegation(NATRuleProcessor):
         nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('osrc', False)
 
-        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+        new_chain = self.compiler.get_new_tmp_chain_name(rule)
 
         # Jump rule: keep everything except osrc -> jump to temp chain
         r_jump = rule.clone()
@@ -1807,7 +1819,7 @@ class DoODstNegation(NATRuleProcessor):
         nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('odst', False)
 
-        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+        new_chain = self.compiler.get_new_tmp_chain_name(rule)
 
         # Jump rule: keep everything except odst -> jump to temp chain
         r_jump = rule.clone()
@@ -1872,7 +1884,7 @@ class DoOSrvNegation(NATRuleProcessor):
         nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('osrv', False)
 
-        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+        new_chain = self.compiler.get_new_tmp_chain_name(rule)
 
         # Jump rule: keep everything except osrv -> jump to temp chain
         r_jump = rule.clone()
@@ -2450,17 +2462,18 @@ class AddVirtualAddress(NATRuleProcessor):
             if isinstance(a, Interface) and not a.is_regular():
                 return True
 
-            if not nat_comp.complex_match(a, nat_comp.fw):
-                # AddressRange targets cannot be turned into interface
-                # aliases (neither fwf nor fwbuilder implement that),
-                # so we simply skip the virtual-address hook for them.
-                # The DNAT/SNAT rule itself is still compiled; the
-                # kernel only needs the virtual address when a local
-                # process actually has to bind to the mapped IP, which
-                # is not the common case.  No warning - it is just
-                # informational noise.
-                if not isinstance(a, AddressRange) and nat_comp.oscnf is not None:
-                    nat_comp.oscnf.add_virtual_address_for_nat(a)
+            # AddressRange targets cannot be turned into interface aliases
+            # (neither fwf nor fwbuilder implement that), so we simply skip
+            # the virtual-address hook for them.  The DNAT/SNAT rule itself
+            # is still compiled; the kernel only needs the virtual address
+            # when a local process actually has to bind to the mapped IP,
+            # which is not the common case.
+            if (
+                not nat_comp.complex_match(a, nat_comp.fw)
+                and not isinstance(a, AddressRange)
+                and nat_comp.oscnf is not None
+            ):
+                nat_comp.oscnf.add_virtual_address_for_nat(a)
 
             return True
 
@@ -2543,7 +2556,7 @@ class SplitMultiSrcAndDst(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        new_chain = NATCompiler_ipt.get_new_tmp_chain_name(rule)
+        new_chain = self.compiler.get_new_tmp_chain_name(rule)
 
         # Create jump rule pointing to temp chain
         r_jump = rule.clone()
