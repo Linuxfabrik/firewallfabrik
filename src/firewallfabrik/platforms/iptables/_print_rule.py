@@ -60,6 +60,23 @@ def _is_true(val) -> bool:
     return str(val) == 'True'
 
 
+# Map symbolic syslog level names to numeric values.  Matches the order
+# iptables expects for --log-level and the numeric form fwbuilder emits.
+_LOG_LEVEL_MAP = {
+    'alert': '1',
+    'crit': '2',
+    'debug': '7',
+    'emerg': '0',
+    'err': '3',
+    'error': '3',
+    'info': '6',
+    'notice': '5',
+    'panic': '0',
+    'warn': '4',
+    'warning': '4',
+}
+
+
 def _version_compare(v1: str, v2: str) -> int:
     """Compare two version strings. Returns -1, 0, or 1."""
 
@@ -286,10 +303,11 @@ class PrintRule(PolicyRuleProcessor):
             return ''
 
         if rule.is_itf_any():
-            # On FORWARD chain, add wildcard interface match (-i + / -o +)
-            # to indicate traffic direction.  INPUT/OUTPUT chains don't need
-            # this because the chain itself implies direction.
-            if rule.ipt_chain == 'FORWARD':
+            # On FORWARD / PREROUTING / POSTROUTING chains, add wildcard
+            # interface match (-i + / -o +) to indicate traffic direction.
+            # INPUT/OUTPUT chains don't need this because the chain itself
+            # implies direction.  Matches fwbuilder output.
+            if rule.ipt_chain in ('FORWARD', 'PREROUTING', 'POSTROUTING'):
                 if rule.direction == Direction.Inbound:
                     return '-i + '
                 if rule.direction == Direction.Outbound:
@@ -346,7 +364,18 @@ class PrintRule(PolicyRuleProcessor):
             return '-p udp -m udp '
         elif isinstance(srv, (ICMPService, ICMP6Service)):
             if self.compiler.ipv6_policy:
-                return '-p ipv6-icmp '
+                # fwbuilder asymmetry: for ip6tables it only adds
+                # ``-m icmp6`` when a concrete icmpv6-type is set.
+                # A bare ``any`` ICMP6 service stays as ``-p ipv6-icmp``.
+                codes = getattr(srv, 'codes', None) or getattr(srv, 'data', None) or {}
+                raw_type = codes.get('type', -1)
+                try:
+                    icmp_type = int(raw_type) if raw_type is not None else -1
+                except (TypeError, ValueError):
+                    icmp_type = -1
+                if icmp_type < 0:
+                    return '-p ipv6-icmp '
+                return '-p ipv6-icmp -m icmp6 '
             return '-p icmp  -m icmp '
         elif isinstance(srv, IPService):
             proto = srv.get_protocol_number()
@@ -543,7 +572,10 @@ class PrintRule(PolicyRuleProcessor):
 
         flag = '--icmpv6-type' if self.compiler.ipv6_policy else '--icmp-type'
         if icmp_type < 0:
-            return ''
+            # fwbuilder: ``--icmp-type any`` for IPv4, omit for IPv6.
+            if self.compiler.ipv6_policy:
+                return ''
+            return f' {flag} any '
         if icmp_code < 0:
             return f' {flag} {icmp_type} '
         return f' {flag} {icmp_type}/{icmp_code}  '
@@ -879,7 +911,8 @@ class PrintRule(PolicyRuleProcessor):
         if not log_level:
             log_level = self.compiler.fw.get_option('log_level')
         if log_level:
-            parts.append(f'--log-level {log_level}')
+            # Emit numeric syslog level (matches fwbuilder output).
+            parts.append(f'--log-level {_LOG_LEVEL_MAP.get(str(log_level), log_level)}')
 
         log_prefix = rule.get_option('log_prefix', '')
         if not log_prefix:

@@ -124,7 +124,7 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
             if ipforw and min_version_ok:
                 result += (
                     f'{iptables_cmd} {opt_wait}-t mangle '
-                    f'-A FORWARD -p tcp --tcp-flags SYN,RST SYN '
+                    f'-A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
                     f'-j TCPMSS --clamp-mss-to-pmtu\n'
                 )
 

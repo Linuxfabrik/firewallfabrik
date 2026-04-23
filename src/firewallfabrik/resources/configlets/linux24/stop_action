@@ -12,28 +12,21 @@
 ## {{if var}} is conditional operator.
 ##
 ## This configlet defines commands executed when iptables script is ran
-## with command line argument "stop".
-##
-## Full-flush mode:   Flushes all rules via reset_all (policies stay at
-##                    DROP so the server stays protected).
-## Coexistence mode:  Removes only FWF chains and restores policies to
-##                    ACCEPT so that other tools' rules (Docker, CrowdSec,
-##                    fail2ban) keep working.
+## with command line argument "stop".  The rule set is flushed and the
+## built-in chain policies are reset to ACCEPT so the machine keeps
+## responding (matching fwbuilder behaviour).  In coexistence mode this
+## also allows other tools' rules (Docker, CrowdSec, fail2ban) to keep
+## working.
 
 stop_action() {
     reset_all
 
-{{if coexistence_v4}}
-    # Restore permissive policies so other tools' rules keep working.
+    $IPTABLES {{$opt_wait}} -P OUTPUT  ACCEPT
     $IPTABLES {{$opt_wait}} -P INPUT   ACCEPT
     $IPTABLES {{$opt_wait}} -P FORWARD ACCEPT
-    $IPTABLES {{$opt_wait}} -P OUTPUT  ACCEPT
-{{endif}}
-{{if coexistence_v6}}
+    $IP6TABLES {{$opt_wait}} -P OUTPUT  ACCEPT
     $IP6TABLES {{$opt_wait}} -P INPUT   ACCEPT
     $IP6TABLES {{$opt_wait}} -P FORWARD ACCEPT
-    $IP6TABLES {{$opt_wait}} -P OUTPUT  ACCEPT
-{{endif}}
 
 {{if mgmt_access}}
     # backup ssh access

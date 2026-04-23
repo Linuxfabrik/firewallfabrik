@@ -461,7 +461,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_5
  $IPTABLES -A INPUT -j RULE_5
  $IPTABLES -A FORWARD -j RULE_5
- $IPTABLES -A RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
+ $IPTABLES -A RULE_5 -j LOG --log-level 6 --log-prefix "RULE 5 -- DENY "
  $IPTABLES -A RULE_5 -j DROP
 }
 
@@ -482,6 +482,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

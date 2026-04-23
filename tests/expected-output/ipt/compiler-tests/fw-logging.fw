@@ -428,7 +428,7 @@ script_body() {
  #
  $IPTABLES -N In_RULE_0 2>/dev/null
  $IPTABLES -A INPUT -p tcp -m tcp -s 203.0.113.42 --dport 22 -j In_RULE_0
- $IPTABLES -A In_RULE_0 -j LOG --log-level info --log-prefix "SSH_DENIED"
+ $IPTABLES -A In_RULE_0 -j LOG --log-level 6 --log-prefix "SSH_DENIED"
  $IPTABLES -A In_RULE_0 -j DROP
  #
  # Rule 1 (global)
@@ -437,7 +437,7 @@ script_body() {
  #
  $IPTABLES -N In_RULE_1 2>/dev/null
  $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j In_RULE_1
- $IPTABLES -A In_RULE_1 -j LOG --log-level info --log-prefix "HTTP_ACCEPT"
+ $IPTABLES -A In_RULE_1 -j LOG --log-level 6 --log-prefix "HTTP_ACCEPT"
  $IPTABLES -A In_RULE_1 -j ACCEPT
  #
  # Rule 2 (global)
@@ -448,7 +448,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_2
  $IPTABLES -A INPUT -j RULE_2
  $IPTABLES -A FORWARD -j RULE_2
- $IPTABLES -A RULE_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
+ $IPTABLES -A RULE_2 -j LOG --log-level 6 --log-prefix "RULE 2 -- DENY "
  $IPTABLES -A RULE_2 -j DROP
 }
 
@@ -469,6 +469,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {
