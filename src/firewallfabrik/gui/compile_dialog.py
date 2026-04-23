@@ -22,7 +22,7 @@ from pathlib import Path
 
 import sqlalchemy
 from PySide6.QtCore import QByteArray, QProcess, QSettings, Qt, QUrl, Slot
-from PySide6.QtGui import QColor, QDesktopServices
+from PySide6.QtGui import QColor, QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -268,6 +268,7 @@ class CompileDialog(QDialog):
                 item.setData(0, _R_MGMT_ADDRESS, mgmt_address)
 
                 item.setText(0, fw.name)
+                item.setIcon(0, QIcon(':/Icons/Firewall/icon-tree'))
 
                 # Col 1 (Compile): checkbox
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -414,11 +415,13 @@ class CompileDialog(QDialog):
         self._work_items = {}
         # Collect all unique fw_ids that appear in either queue.
         seen = set()
+        fw_icon = QIcon(':/Icons/Firewall/icon-tree')
         for fw_id, fw_name, *_rest in self._compile_queue:
             if fw_id not in seen:
                 seen.add(fw_id)
                 item = QTreeWidgetItem()
                 item.setText(0, fw_name)
+                item.setIcon(0, fw_icon)
                 item.setText(1, 'Waiting')
                 self.fwWorkList.addTopLevelItem(item)
                 self._work_items[fw_id] = item
@@ -427,6 +430,7 @@ class CompileDialog(QDialog):
                 seen.add(fw_id)
                 item = QTreeWidgetItem()
                 item.setText(0, fw_name)
+                item.setIcon(0, fw_icon)
                 item.setText(1, 'Waiting')
                 self.fwWorkList.addTopLevelItem(item)
                 self._work_items[fw_id] = item
