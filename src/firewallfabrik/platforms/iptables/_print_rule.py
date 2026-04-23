@@ -911,8 +911,14 @@ class PrintRule(PolicyRuleProcessor):
         if not log_level:
             log_level = self.compiler.fw.get_option('log_level')
         if log_level:
-            # Emit numeric syslog level (matches fwbuilder output).
-            parts.append(f'--log-level {_LOG_LEVEL_MAP.get(str(log_level), log_level)}')
+            # fwbuilder emits either the symbolic name (e.g. `info`) or the
+            # numeric syslog level (e.g. `6`), controlled by the firewall-level
+            # option `use_numeric_log_levels`.  Match that behaviour exactly so
+            # recompiling the same `.fwb` / `.fwf` produces the expected form.
+            use_numeric = bool(self.compiler.fw.get_option('use_numeric_log_levels'))
+            if use_numeric:
+                log_level = _LOG_LEVEL_MAP.get(str(log_level), log_level)
+            parts.append(f'--log-level {log_level}')
 
         log_prefix = rule.get_option('log_prefix', '')
         if not log_prefix:

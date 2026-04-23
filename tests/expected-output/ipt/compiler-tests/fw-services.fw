@@ -472,7 +472,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_7
  $IPTABLES -A INPUT -j RULE_7
  $IPTABLES -A FORWARD -j RULE_7
- $IPTABLES -A RULE_7 -j LOG --log-level 6 --log-prefix "RULE 7 -- DENY "
+ $IPTABLES -A RULE_7 -j LOG --log-level info --log-prefix "RULE 7 -- DENY "
  $IPTABLES -A RULE_7 -j DROP
 }
 

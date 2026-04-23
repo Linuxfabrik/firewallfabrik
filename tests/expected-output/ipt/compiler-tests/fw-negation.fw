@@ -455,7 +455,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_3
  $IPTABLES -A INPUT -j RULE_3
  $IPTABLES -A FORWARD -j RULE_3
- $IPTABLES -A RULE_3 -j LOG --log-level 6 --log-prefix "RULE 3 -- DENY "
+ $IPTABLES -A RULE_3 -j LOG --log-level info --log-prefix "RULE 3 -- DENY "
  $IPTABLES -A RULE_3 -j DROP
 }
 
