@@ -1,28 +1,18 @@
 # Rule Processor Developer Documentation
 
-This document describes the rule processor pipeline architecture used by the FirewallFabrik compilers, covering the base (platform-independent) processors and the iptables- and nftables-specific processors. The Python implementation follows the same architecture as the original C++ code.
+This document is the per-processor reference. For the surrounding
+orchestration (driver, configlets, script assembly, end-to-end flow), see
+[Compilation Pipeline](CompilationPipeline.md) first.
+
+The Python implementation follows the same architecture as the original
+C++ fwbuilder code. *Legacy C++ source:
+`src/libfwbuilder/src/fwcompiler/` (upstream reference).*
 
 ---
 
 ## Architecture Overview
 
 The compilation pipeline is a chain of `BasicRuleProcessor` objects. Each processor pulls rules from its predecessor via `get_next_rule()`, transforms them, and pushes results into its own `tmp_queue`. Execution is **pull-based**: `run_rule_processors()` calls `process_next()` on the last processor, which recursively pulls from all predecessors.
-
-### Key source files (Python)
-
-- `src/firewallfabrik/compiler/_rule_processor.py` — `BasicRuleProcessor` base class
-- `src/firewallfabrik/compiler/_compiler.py` — `Compiler.add()`, `run_rule_processors()`
-- `src/firewallfabrik/compiler/processors/_generic.py` — generic/shared processors (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `DetectShadowing`, `CheckForTCPEstablished`, etc.)
-- `src/firewallfabrik/compiler/processors/_policy.py` — policy-specific base processors (`InterfacePolicyRules`, `ExpandMultipleAddresses`, `MACFiltering`, etc.)
-- `src/firewallfabrik/compiler/processors/_service.py` — service separation processors (`SeparateServiceObject` base, `SeparateTCPWithFlags`, `SeparateSrcPort`, `VerifyCustomServices`, etc.)
-- `src/firewallfabrik/platforms/iptables/_policy_compiler.py` — iptables policy processors
-- `src/firewallfabrik/platforms/iptables/_nat_compiler.py` — iptables NAT processors
-- `src/firewallfabrik/platforms/iptables/_print_rule.py` — iptables output generation
-- `src/firewallfabrik/platforms/nftables/_policy_compiler.py` — nftables policy processors
-- `src/firewallfabrik/platforms/nftables/_nat_compiler.py` — nftables NAT processors
-- `src/firewallfabrik/platforms/nftables/_print_rule.py` — nftables output generation
-
-> *Legacy C++ source: `src/libfwbuilder/src/fwcompiler/` (upstream reference)*
 
 ### Class hierarchy
 
@@ -2051,37 +2041,17 @@ NAT action output:
 | Return | `return` |
 | SDNAT | error — not yet supported |
 
-### Compiler driver (`platforms/nftables/_compiler_driver.py`)
+### Compiler driver
 
-`CompilerDriver_nft` orchestrates the full compilation. Both iptables and nftables drivers call `_warn_unsupported_options()` (defined in the base `CompilerDriver`) to emit warnings for recognised but unimplemented firewall options (ULOG/NFLOG, TCP/IP log options, numeric log levels, log_all, kernel timezone, bridge interfaces).
-
-1. Look up firewall object (error if empty `fw_id` or not found)
-2. Create OS configurator
-3. For each address family (IPv4, optionally IPv6):
-   a. Run preprocessor
-   b. Compile all NAT rulesets → `nat_chains` dict
-   c. Compile all policy rulesets → `filter_chains` dict
-4. Compile routing rules (reuses iptables routing compiler)
-5. Assemble nft script via `_assemble_nft_script()`
-6. Write output file (reports "Compiled with errors" or "Compiled successfully")
-
-Output structure:
-```
-#!/usr/sbin/nft -f
-# header comments, errors/warnings
-flush ruleset
-
-table inet filter {
-    chain input { type filter hook input priority filter; policy drop; ... }
-    chain forward { type filter hook forward priority filter; policy drop; ... }
-    chain output { type filter hook output priority filter; policy drop; ... }
-}
-
-table ip nat {
-    chain prerouting { type nat hook prerouting priority dstnat; ... }
-    chain postrouting { type nat hook postrouting priority srcnat; ... }
-}
-```
+`CompilerDriver_nft` (`platforms/nftables/_compiler_driver.py`) orchestrates
+the full nftables compilation. The overall driver flow and the generated
+script structure (`#!/usr/sbin/nft -f`, `flush ruleset`, `table inet
+filter { … }`, `table ip nat { … }`) are documented in
+[Compilation Pipeline](CompilationPipeline.md). Both iptables and nftables
+drivers call `_warn_unsupported_options()` (base `CompilerDriver`) to emit
+warnings for recognised but unimplemented firewall options (ULOG/NFLOG,
+TCP/IP log options, numeric log levels, log_all, kernel timezone, bridge
+interfaces). The nftables driver reuses the iptables routing compiler.
 
 ### Policy pipeline order
 
