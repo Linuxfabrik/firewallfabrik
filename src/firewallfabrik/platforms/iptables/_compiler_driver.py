@@ -149,6 +149,11 @@ class CompilerDriver_ipt(CompilerDriver):
             self.fw = fw
             generated_script = ''
 
+            iface_err = self.check_interface_addresses(fw)
+            if iface_err:
+                self.all_errors.append(iface_err)
+                return ''
+
             try:
                 fw_version = fw.version or '(any version)'
                 options = fw.options or {}

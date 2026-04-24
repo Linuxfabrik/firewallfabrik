@@ -18,6 +18,7 @@ and output file management.
 
 from __future__ import annotations
 
+import ipaddress
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
@@ -77,6 +78,50 @@ class CompilerDriver(BaseCompiler):
         single_rule_id: str,
     ) -> str:
         """Platform-specific compilation. Override in subclasses."""
+        return ''
+
+    def check_interface_addresses(self, fw: Firewall) -> str:
+        """Validate IP addresses of a firewall's regular interfaces.
+
+        Mirrors the pre-compile sanity check in fwbuilder's
+        ``CompilerDriver::processFirewallOrCluster`` (CompilerDriver.cpp).
+        For every regular interface (not dynamic, unnumbered, or bridge
+        port) every IPv4/IPv6 address child must be a routable unicast
+        address with a non-zero netmask. An address of 0.0.0.0 / :: or
+        a netmask of /0 is almost always a misconfiguration and makes
+        the generated rules ambiguous, so the compile is aborted.
+
+        Returns a human-readable error string, or an empty string on
+        success.
+        """
+        for iface in fw.interfaces:
+            if not iface.is_regular():
+                continue
+            for addr in iface.addresses:
+                addr_str = addr.get_address()
+                if not addr_str:
+                    continue
+                try:
+                    ip = ipaddress.ip_address(addr_str)
+                except ValueError:
+                    continue
+                if int(ip) == 0:
+                    return (
+                        f'Interface {iface.name} (id={iface.id}) has IP '
+                        f'address {addr_str}.'
+                    )
+                mask_str = addr.get_netmask()
+                if not mask_str:
+                    continue
+                try:
+                    nm = ipaddress.ip_address(mask_str)
+                except ValueError:
+                    continue
+                if int(nm) == 0:
+                    return (
+                        f'Interface {iface.name} (id={iface.id}) has '
+                        f'invalid netmask {mask_str}.'
+                    )
         return ''
 
     # -- Option validation --

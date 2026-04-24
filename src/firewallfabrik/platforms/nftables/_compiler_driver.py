@@ -114,6 +114,11 @@ class CompilerDriver_nft(CompilerDriver):
 
             self.fw = fw
 
+            iface_err = self.check_interface_addresses(fw)
+            if iface_err:
+                self.all_errors.append(iface_err)
+                return ''
+
             try:
                 options = fw.options or {}
 
@@ -529,8 +534,16 @@ class CompilerDriver_nft(CompilerDriver):
             if fw.get_option('clamp_mss_to_mtu'):
                 ipv4_fwd_raw = fw.get_option('linux24_ip_forward')
                 ipv6_fwd_raw = fw.get_option('linux24_ipv6_forward')
-                _fwd_on = lambda s: str(s or '').strip() in (  # noqa: E731
-                    '', '1', 'On', 'on', 'True', 'true'
+                _fwd_on = lambda s: (  # noqa: E731
+                    str(s or '').strip()
+                    in (
+                        '',
+                        '1',
+                        'On',
+                        'on',
+                        'True',
+                        'true',
+                    )
                 )
                 if _fwd_on(ipv4_fwd_raw) or (have_ipv6 and _fwd_on(ipv6_fwd_raw)):
                     out.write(
