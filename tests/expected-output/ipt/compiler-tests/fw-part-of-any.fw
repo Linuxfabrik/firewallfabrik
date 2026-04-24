@@ -426,7 +426,10 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 198.51.100.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 198.51.100.1 -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)

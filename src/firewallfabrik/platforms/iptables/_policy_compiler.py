@@ -401,6 +401,13 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(CheckForRestoreMarkInOutput('check for CONNMARK restore in OUTPUT'))
 
         self.add(RemoveFW('remove fw'))
+        # Expand any remaining Firewall objects in src/dst to all of their
+        # interface addresses (one rule per address). Required so that
+        # anti-spoofing rules whose source is the firewall object itself
+        # cover every own IP, not just the address of the rule's own
+        # interface. Mirrors fwbuilder's PolicyCompiler_ipt.cpp:4616
+        # ``ExpandMultipleAddresses("expand multiple addresses")``.
+        self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(
             ExpandMultipleAddressesIfNotFWInSrc(
                 'expand multiple addresses if not FW in Src'

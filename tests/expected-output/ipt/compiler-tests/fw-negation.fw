@@ -434,6 +434,7 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
  $IPTABLES -A CHAIN -d 198.51.100.1 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  $IPTABLES -A FORWARD -i + -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
