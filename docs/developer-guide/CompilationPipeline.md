@@ -78,6 +78,14 @@ The key insight: the **compiler driver** is the orchestrator, the
 **configlets** provide the shell-script scaffolding around the generated
 rules.
 
+> **Note on "orchestration":** in this document the term refers to the
+> coordination layer of a single in-process compile run — looking up the
+> firewall, dispatching the address-family loop, calling the sub-compilers
+> in order, collecting their output, and assembling the final script. It
+> has nothing to do with container orchestration (Kubernetes, Swarm) or
+> multi-host coordination. Everything happens sequentially in one Python
+> process.
+
 ---
 
 ## End-to-end flow (iptables)
