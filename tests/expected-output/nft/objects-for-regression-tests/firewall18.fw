@@ -430,16 +430,19 @@ case "$cmd" in
         ;;
 
     stop)
+        check_nft
         stop_action
         RETVAL=$?
         ;;
 
     status)
+        check_nft
         status_action
         RETVAL=$?
         ;;
 
     block)
+        check_nft
         block_action
         RETVAL=$?
         ;;

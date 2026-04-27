@@ -703,16 +703,19 @@ case "$cmd" in
  ;;
 
  stop)
+ check_tools
  stop_action
  RETVAL=$?
  ;;
 
  status)
+ check_tools
  status_action
  RETVAL=$?
  ;;
 
  block)
+ check_tools
  block_action
  RETVAL=$?
  ;;
@@ -724,29 +727,35 @@ case "$cmd" in
  ;;
 
  interfaces)
+ check_tools
  configure_interfaces
  RETVAL=$?
  ;;
 
  test_interfaces)
+ check_tools
  FWBDEBUG="echo"
  configure_interfaces
  RETVAL=$?
  ;;
 
  reload_address_table)
+ check_tools
  reload_address_table "$2" "$3"
  ;;
 
  add_to_address_table)
+ check_tools
  add_to_address_table "$2" "$3" "$4"
  ;;
 
  remove_from_address_table)
+ check_tools
  remove_from_address_table "$2" "$3" "$4"
  ;;
 
  test_address_table)
+ check_tools
  test_address_table "$2" "$3"
  ;;
 

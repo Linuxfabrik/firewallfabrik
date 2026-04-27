@@ -518,16 +518,19 @@ case "$cmd" in
  ;;
 
  stop)
+ check_tools
  stop_action
  RETVAL=$?
  ;;
 
  status)
+ check_tools
  status_action
  RETVAL=$?
  ;;
 
  block)
+ check_tools
  block_action
  RETVAL=$?
  ;;
@@ -539,11 +542,13 @@ case "$cmd" in
  ;;
 
  interfaces)
+ check_tools
  configure_interfaces
  RETVAL=$?
  ;;
 
  test_interfaces)
+ check_tools
  FWBDEBUG="echo"
  configure_interfaces
  RETVAL=$?

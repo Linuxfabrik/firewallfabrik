@@ -109,16 +109,19 @@ case "$cmd" in
         ;;
 
     stop)
+        check_tools
         stop_action
         RETVAL=$?
         ;;
 
     status)
+        check_tools
         status_action
         RETVAL=$?
         ;;
 
     block)
+        check_tools
         block_action
         RETVAL=$?
         ;;
@@ -130,11 +133,13 @@ case "$cmd" in
         ;;
 
     interfaces)
+        check_tools
         configure_interfaces
         RETVAL=$?
         ;;
 
     test_interfaces)
+        check_tools
         FWBDEBUG="echo"
         configure_interfaces
         RETVAL=$?
@@ -143,21 +148,25 @@ case "$cmd" in
 {{if using_ipset}}
 ## Usage:  script.fw reload_address_table <address_table_name> <file_name>
     reload_address_table)
+        check_tools
         reload_address_table "$2" "$3"
         ;;
 
 ## Usage:  script.fw add_to_address_table <address_table_name> <file_name> <address>
     add_to_address_table)
+        check_tools
         add_to_address_table "$2" "$3" "$4"
         ;;
 
 ## Usage:  script.fw remove_from_address_table <address_table_name> <file_name> <address>
     remove_from_address_table)
+        check_tools
         remove_from_address_table "$2" "$3" "$4"
         ;;
 
 ## Usage:  script.fw test_address_table <address_table_name> <address>
     test_address_table)
+        check_tools
         test_address_table "$2" "$3"
         ;;
 {{endif}}
