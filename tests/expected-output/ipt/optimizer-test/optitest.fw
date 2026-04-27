@@ -390,9 +390,6 @@ configure_interfaces() {
 }
 
 script_body() {
- echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
- echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
-
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -540,7 +537,7 @@ script_body() {
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
  $IPTABLES -N In_RULE_10 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -j In_RULE_10
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -j In_RULE_10
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j In_RULE_10
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j In_RULE_10
  $IPTABLES -A In_RULE_10 -j LOG --log-level info --log-prefix "RULE 10 -- ACCEPT "
@@ -548,7 +545,7 @@ script_body() {
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -o eth0 -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
  $IPTABLES -N Out_RULE_10 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -j Out_RULE_10
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -j Out_RULE_10
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j Out_RULE_10
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j Out_RULE_10
  $IPTABLES -A Out_RULE_10 -j LOG --log-level info --log-prefix "RULE 10 -- ACCEPT "
@@ -580,7 +577,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -N In_RULE_12 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
  $IPTABLES -A CHAIN -p 51 -m limit --limit 8/second --limit-burst 4 -j In_RULE_12
@@ -593,7 +590,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -N Out_RULE_12 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
  $IPTABLES -A CHAIN -p 51 -m limit --limit 8/second --limit-burst 4 -j Out_RULE_12
@@ -617,7 +614,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -N In_RULE_13 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
  $IPTABLES -A CHAIN -p 51 -m time --timestart 00:00 --timestop 11:59 -j In_RULE_13
@@ -631,7 +628,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -N Out_RULE_13 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
  $IPTABLES -A CHAIN -p 51 -m time --timestart 00:00 --timestop 11:59 -j Out_RULE_13
@@ -661,8 +658,8 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
@@ -681,8 +678,8 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
@@ -833,7 +830,7 @@ script_body() {
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A FORWARD -s 10.0.1.1 -d 10.0.0.1 -m state --state NEW -j CHAIN
  $IPTABLES -N RULE_29 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -j RULE_29
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -j RULE_29
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 80 -j RULE_29
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -j RULE_29
  $IPTABLES -A RULE_29 -j LOG --log-level info --log-prefix "RULE 29 -- ACCEPT "
@@ -864,7 +861,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m limit --limit 8/second --limit-burst 4 -j CHAIN
  $IPTABLES -N RULE_31 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m limit --limit 8/second --limit-burst 4 -j RULE_31
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m limit --limit 8/second --limit-burst 4 -j RULE_31
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m limit --limit 8/second --limit-burst 4 -j RULE_31
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m limit --limit 8/second --limit-burst 4 -j RULE_31
  $IPTABLES -A CHAIN -p 51 -m limit --limit 8/second --limit-burst 4 -j RULE_31
@@ -888,7 +885,7 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -N RULE_32 2>/dev/null
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j RULE_32
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j RULE_32
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j RULE_32
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 00:00 --timestop 11:59 -j RULE_32
  $IPTABLES -A CHAIN -p 51 -m time --timestart 00:00 --timestop 11:59 -j RULE_32
@@ -918,8 +915,8 @@ script_body() {
  $IPTABLES -A CHAIN -d 10.0.0.2 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 12:00 --timestop 23:59 -j CHAIN
  $IPTABLES -A CHAIN -d 10.0.0.3 -m time --timestart 00:00 --timestop 11:59 -j CHAIN
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
- $IPTABLES -A CHAIN -p icmp -m icmp -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
+ $IPTABLES -A CHAIN -p icmp -m icmp --icmp-type any -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 21 -m time --timestart 00:00 --timestop 11:59 -j ACCEPT
  $IPTABLES -A CHAIN -p udp -m udp --dport 873 -m time --timestart 12:00 --timestop 23:59 -j ACCEPT
@@ -963,6 +960,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

@@ -435,6 +435,7 @@ script_body() {
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 22.22.22.0/24 -j CHAIN
  $IPTABLES -A INPUT -s 33.33.33.0/24 -j CHAIN
+ $IPTABLES -A CHAIN -d 66.66.66.130 -j RETURN
  $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
  $IPTABLES -N In_not_quite_long_ruleset_name_0 2>/dev/null
  $IPTABLES -A CHAIN -j In_not_quite_long_ruleset_name_0
@@ -476,6 +477,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

@@ -420,7 +420,7 @@ script_body() {
  $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
- $IPTABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -w -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'filter', rule set Policy
  #
@@ -454,7 +454,7 @@ script_body() {
  $IP6TABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  # ================ Table 'mangle', automatic rules
- $IP6TABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IP6TABLES -w -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'filter', rule set Policy
  #
@@ -511,6 +511,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -w -P OUTPUT ACCEPT
+ $IPTABLES -w -P INPUT ACCEPT
+ $IPTABLES -w -P FORWARD ACCEPT
+ $IP6TABLES -w -P OUTPUT ACCEPT
+ $IP6TABLES -w -P INPUT ACCEPT
+ $IP6TABLES -w -P FORWARD ACCEPT
 }
 
 status_action() {

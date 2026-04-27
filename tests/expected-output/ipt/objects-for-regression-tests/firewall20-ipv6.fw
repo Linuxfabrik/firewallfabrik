@@ -484,7 +484,10 @@ script_body() {
  #
  echo "Rule 8 (global)"
  #
- $IP6TABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IP6TABLES -N CHAIN 2>/dev/null
+ $IP6TABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
+ $IP6TABLES -A CHAIN -d 2001:470:1f05:590::1 -j ACCEPT
+ $IP6TABLES -A CHAIN -d fe80::1 -j ACCEPT
  $IP6TABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (global)
@@ -498,6 +501,7 @@ script_body() {
  #
  echo "Rule 10 (global)"
  #
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
  $IP6TABLES -A FORWARD -p tcp -m tcp -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 11 (global)
@@ -577,6 +581,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

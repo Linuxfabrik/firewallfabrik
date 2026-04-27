@@ -428,9 +428,6 @@ configure_interfaces() {
 }
 
 script_body() {
- echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
- echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
-
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -476,9 +473,9 @@ script_body() {
  #
  echo "Rule fw-ipv6-3 2 (global)"
  #
- $IPTABLES -A OUTPUT -p icmp -m icmp -m state --state NEW -j ACCEPT
- $IPTABLES -A INPUT -p icmp -m icmp -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -p icmp -m icmp -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type any -m state --state NEW -j ACCEPT
  #
  # Rule fw-ipv6-3 3 (global)
  #
@@ -531,7 +528,7 @@ script_body() {
  # ipv4 address range for bug 2820152
  $IPTABLES -N fw-ipv6-3_10 2>/dev/null
  $IPTABLES -A OUTPUT -d 255.255.255.255 -j fw-ipv6-3_10
- $IPTABLES -A FORWARD -d 255.255.255.255 -j fw-ipv6-3_10
+ $IPTABLES -A INPUT -d 255.255.255.255 -j fw-ipv6-3_10
  $IPTABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
  $IPTABLES -A fw-ipv6-3_10 -j DROP
  #
@@ -596,8 +593,6 @@ script_body() {
  #
  # ipv4 address range for bug 2820152
  $IP6TABLES -N fw-ipv6-3_10 2>/dev/null
- $IP6TABLES -A OUTPUT -d 255.255.255.255 -j fw-ipv6-3_10
- $IP6TABLES -A FORWARD -d 255.255.255.255 -j fw-ipv6-3_10
  $IP6TABLES -A fw-ipv6-3_10 -j LOG --log-level info --log-prefix "RULE 10 -- DENY "
  $IP6TABLES -A fw-ipv6-3_10 -j DROP
  #
@@ -632,6 +627,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

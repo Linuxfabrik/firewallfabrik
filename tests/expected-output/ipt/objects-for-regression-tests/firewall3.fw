@@ -460,7 +460,7 @@ script_body() {
  #
  # testing choice of chains in case when several interfaces
  # are used and rule matches on any or broadcast
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (eth0,eth2)
@@ -469,33 +469,31 @@ script_body() {
  #
  # testing choice of chains in case when several interfaces
  # are used and rule matches on any or broadcast
- $IPTABLES -A FORWARD -i eth2 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth2 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth2 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (eth0)
  #
  echo "Rule 6 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 7 (eth0,eth2)
  #
  echo "Rule 7 (eth0,eth2)"
  #
- $IPTABLES -A FORWARD -i eth2 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth2 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 8 (eth0)
  #
  echo "Rule 8 (eth0)"
  #
- $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -m multiport -s 192.168.1.0/24 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -p udp -m udp -m multiport -s 192.168.1.0/24 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (eth0,eth2)
  #
  echo "Rule 9 (eth0,eth2)"
  #
- $IPTABLES -A OUTPUT -o eth2 -p udp -m udp -m multiport -s 192.168.1.0/24 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth2 -p udp -m udp -m multiport -s 192.168.1.0/24 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 10 (eth1)
@@ -504,7 +502,9 @@ script_body() {
  #
  # Anti-spoofing rule
  $IPTABLES -N In_RULE_10 2>/dev/null
+ $IPTABLES -A FORWARD -i eth1 -s 22.22.22.22 -j In_RULE_10
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_10
+ $IPTABLES -A FORWARD -i eth1 -s 192.168.2.1 -j In_RULE_10
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_10
  $IPTABLES -A In_RULE_10 -j LOG --log-level debug
  $IPTABLES -A In_RULE_10 -j DROP
@@ -516,7 +516,9 @@ script_body() {
  # Anti-spoofing rule
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -A CHAIN -s 22.22.22.22 -j RETURN
  $IPTABLES -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j RETURN
  $IPTABLES -N Out_RULE_11 2>/dev/null
  $IPTABLES -A CHAIN -j Out_RULE_11
  $IPTABLES -A Out_RULE_11 -j LOG --log-level debug
@@ -602,7 +604,6 @@ script_body() {
  echo "Rule 19 (global)"
  #
  # 'masquerading' rule
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule 20 (global)
@@ -621,9 +622,10 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 22.22.22.22 -j RETURN
  $IPTABLES -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
- $IPTABLES -A INPUT -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -d 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 22 (global)
@@ -632,9 +634,10 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RETURN
  $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
- $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 23 (eth0,eth1,eth2)
@@ -665,6 +668,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

@@ -481,9 +481,15 @@ script_body() {
  #
  # Anti-spoofing rule
  $IPTABLES -N In_RULE_0 2>/dev/null
+ $IPTABLES -A INPUT -i eth1 -s 0.0.0.0 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 222.222.222.222 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.0/24 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 0.0.0.0 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 222.222.222.222 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_0
  $IPTABLES -A In_RULE_0 -j LOG --log-level debug
  $IPTABLES -A In_RULE_0 -j DROP
@@ -495,7 +501,10 @@ script_body() {
  # Anti-spoofing rule
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -A CHAIN -s 0.0.0.0 -j RETURN
  $IPTABLES -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -s 222.222.222.222 -j RETURN
  $IPTABLES -N Out_RULE_1 2>/dev/null
  $IPTABLES -A CHAIN -j Out_RULE_1
  $IPTABLES -A Out_RULE_1 -j LOG --log-level debug
@@ -590,7 +599,12 @@ script_body() {
  echo "Rule 11 (global)"
  #
  $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A OUTPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 3 -j CHAIN
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j CHAIN
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j CHAIN
  $IPTABLES -A INPUT -p icmp -m icmp --icmp-type 3 -j CHAIN
  $IPTABLES -A CHAIN -s 192.168.1.10 -j RETURN
  $IPTABLES -A CHAIN -s 192.168.1.20 -j RETURN
@@ -651,7 +665,12 @@ script_body() {
  # that are used in NAT rules
  # and are added as virtual
  # addresses
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 25 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 25 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
  $IPTABLES -A INPUT -p tcp -m tcp --dport 25 -m state --state NEW -j ACCEPT
  #
  # Rule 17 (global)
@@ -669,7 +688,10 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 0.0.0.0 -j RETURN
  $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  #
  # Rule 19 (global)
@@ -702,6 +724,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

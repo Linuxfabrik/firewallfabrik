@@ -480,6 +480,7 @@ script_body() {
  # there should be warning saying the table could not be found
  $IPTABLES -N RULE_5 2>/dev/null
  $IPTABLES -A INPUT -s 1.1.1.1 -j RULE_5
+ $IPTABLES -A INPUT -s 2.2.2.2 -j RULE_5
  $IPTABLES -A OUTPUT -j RULE_5
  $IPTABLES -A RULE_5 -j LOG --log-level info --log-prefix "RULE 5 -- DENY "
  $IPTABLES -A RULE_5 -j DROP
@@ -490,6 +491,7 @@ script_body() {
  #
  $IPTABLES -N RULE_6 2>/dev/null
  $IPTABLES -A INPUT -s 1.1.1.1 -j RULE_6
+ $IPTABLES -A INPUT -s 2.2.2.2 -j RULE_6
  $IPTABLES -A OUTPUT -j RULE_6
  $IPTABLES -A RULE_6 -j LOG --log-level info --log-prefix "RULE 6 -- DENY "
  $IPTABLES -A RULE_6 -j DROP
@@ -512,6 +514,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

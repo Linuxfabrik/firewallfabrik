@@ -465,37 +465,44 @@ script_body() {
  echo "Rule 9 (eth0)"
  #
  $IPTABLES -A OUTPUT -o eth0 -d 33.33.33.33 -j DROP
+ $IPTABLES -A OUTPUT -o eth0 -d 172.16.1.1 -j DROP
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
  $IPTABLES -A OUTPUT -d 33.33.33.33 -j DROP
+ $IPTABLES -A OUTPUT -d 172.16.1.1 -j DROP
  #
  # Rule 14 (global)
  #
  echo "Rule 14 (global)"
  #
  $IPTABLES -A FORWARD -o + -d 33.33.33.33 -j DROP
+ $IPTABLES -A FORWARD -o + -d 172.16.1.1 -j DROP
  #
  # Rule 15 (eth0)
  #
  echo "Rule 15 (eth0)"
  #
  $IPTABLES -A INPUT -i eth0 -s 33.33.33.33 -j DROP
+ $IPTABLES -A INPUT -i eth0 -s 172.16.1.1 -j DROP
  $IPTABLES -A FORWARD -i eth0 -s 33.33.33.33 -j DROP
+ $IPTABLES -A FORWARD -i eth0 -s 172.16.1.1 -j DROP
  #
  # Rule 18 (global)
  #
  echo "Rule 18 (global)"
  #
  $IPTABLES -A INPUT -s 33.33.33.33 -j DROP
+ $IPTABLES -A INPUT -s 172.16.1.1 -j DROP
  #
  # Rule 19 (global)
  #
  echo "Rule 19 (global)"
  #
  $IPTABLES -A FORWARD -i + -s 33.33.33.33 -j DROP
+ $IPTABLES -A FORWARD -i + -s 172.16.1.1 -j DROP
 }
 
 ip_forward() {
@@ -515,6 +522,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

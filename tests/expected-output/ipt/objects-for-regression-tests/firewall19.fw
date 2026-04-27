@@ -439,6 +439,9 @@ script_body() {
  #
  $IPTABLES -A INPUT -i lo -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o lo -d 66.66.66.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o lo -d 66.66.66.130 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o lo -d 127.0.0.1 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o lo -d 192.168.1.1 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (lo)
  #
@@ -449,9 +452,6 @@ script_body() {
  $IPTABLES -A INPUT -i lo -d 66.66.66.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -i lo -d 127.0.0.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -i lo -d $i_ppp0 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -o lo -d 192.168.1.1 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -o lo -d 66.66.66.130 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -o lo -d 127.0.0.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o lo -d $i_ppp0 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (lo)
@@ -502,9 +502,9 @@ script_body() {
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with icmp-host-prohibited
+ $IPTABLES -A OUTPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with icmp-host-prohibited
+ $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 --dport 5190 --tcp-flags ALL SYN -j REJECT --reject-with icmp-host-prohibited
  #
  # Rule 9 (global)
  #
@@ -515,15 +515,15 @@ script_body() {
  $IPTABLES -A INPUT -j CHAIN
  $IPTABLES -A FORWARD -j CHAIN
  $IPTABLES -A CHAIN -p tcp -m tcp --dport 5190 --tcp-flags ALL SYN -j RETURN
- $IPTABLES -A CHAIN -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A CHAIN -j REJECT --reject-with icmp-host-prohibited
  #
  # Rule 10 (global)
  #
  echo "Rule 10 (global)"
  #
- $IPTABLES -A INPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A OUTPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
- $IPTABLES -A FORWARD -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with ICMP host prohibited
+ $IPTABLES -A INPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with icmp-host-prohibited
+ $IPTABLES -A OUTPUT -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with icmp-host-prohibited
+ $IPTABLES -A FORWARD -s 192.168.1.0/24 -p tcp ! --syn -dport 5190 -m state --state NEW -j REJECT --reject-with icmp-host-prohibited
  #
  # Rule 11 (global)
  #
@@ -563,6 +563,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

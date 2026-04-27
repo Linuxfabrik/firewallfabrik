@@ -413,9 +413,6 @@ configure_interfaces() {
 }
 
 script_body() {
- echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
- echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
-
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules
@@ -442,6 +439,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

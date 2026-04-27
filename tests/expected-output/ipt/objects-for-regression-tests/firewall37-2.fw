@@ -669,7 +669,9 @@ script_body() {
  # "Assume fw is part of any" is off for this rule
  # Should create branch in OUTPUT instead of
  # enumerating all ip addresses of the fw in PREROUTING
+ $IPTABLES -A INPUT -s 22.22.23.22
  $IPTABLES -A INPUT -s 192.168.1.22
+ $IPTABLES -A INPUT -s 192.168.2.1
  #
  # Rule 18 (global)
  #
@@ -700,6 +702,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

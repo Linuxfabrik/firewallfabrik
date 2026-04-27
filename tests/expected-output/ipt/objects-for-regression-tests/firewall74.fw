@@ -451,6 +451,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
  # backup ssh access
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.1 --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
  $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --sport 22 -m state --state ESTABLISHED,RELATED -j ACCEPT

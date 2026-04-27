@@ -424,9 +424,6 @@ configure_interfaces() {
 }
 
 script_body() {
- echo 0 > /proc/sys/net/ipv4/tcp_fin_timeout
- echo 0 > /proc/sys/net/ipv4/tcp_keepalive_intvl
-
  # ================ IPv4
 
  (
@@ -451,7 +448,7 @@ script_body() {
 
  echo '*mangle'
  # ================ Table 'mangle', automatic rules
- $IPTABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  echo COMMIT
 
@@ -482,7 +479,7 @@ script_body() {
 
  echo '*mangle'
  # ================ Table 'mangle', automatic rules
- $IP6TABLES -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IP6TABLES -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  echo COMMIT
 
@@ -509,6 +506,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

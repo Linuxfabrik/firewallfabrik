@@ -1031,9 +1031,19 @@ script_body() {
  #
  # Anti-spoofing rule
  $IPTABLES -N In_RULE_0 2>/dev/null
+ $IPTABLES -A INPUT -i eth1 -s 22.22.22.22 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 22.22.23.23 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 22.22.25.50 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -A INPUT -i eth1 -s 192.168.2.40 -j In_RULE_0
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.0/24 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 22.22.22.22 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 22.22.23.23 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 22.22.25.50 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -A FORWARD -i eth1 -s 192.168.2.40 -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_0
  $IPTABLES -A In_RULE_0 -j LOG --log-level debug --log-prefix "Iface: global RULE 0 -- DENY "
  $IPTABLES -A In_RULE_0 -j DROP
@@ -1045,7 +1055,12 @@ script_body() {
  # Anti-spoofing rule
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -A CHAIN -s 22.22.22.22 -j RETURN
+ $IPTABLES -A CHAIN -s 22.22.23.23 -j RETURN
+ $IPTABLES -A CHAIN -s 22.22.25.50 -j RETURN
  $IPTABLES -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.1 -j RETURN
+ $IPTABLES -A CHAIN -s 192.168.2.40 -j RETURN
  $IPTABLES -N Out_RULE_1 2>/dev/null
  $IPTABLES -A CHAIN -j Out_RULE_1
  $IPTABLES -A Out_RULE_1 -j LOG --log-level debug --log-prefix "Iface: global RULE 1 -- DENY "
@@ -1088,8 +1103,8 @@ script_body() {
  # testing choice of chains in case when several
  # interfaces are used and rule matches 'any' or
  # broadcast
- $IPTABLES -A FORWARD -i eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -i eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
@@ -1099,8 +1114,8 @@ script_body() {
  #
  echo "Rule 5 (eth1,eth3)"
  #
- $IPTABLES -A FORWARD -i eth1 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -i eth3 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth1 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth3 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m state --state NEW -j ACCEPT
  #
  # Rule 6 (eth1,eth3)
  #
@@ -1271,7 +1286,7 @@ script_body() {
  echo "Rule 21 (global)"
  #
  $IPTABLES -N RULE_21 2>/dev/null
- $IPTABLES -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 -m state --state NEW -j RULE_21
+ $IPTABLES -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 --icmp-type any -m state --state NEW -j RULE_21
  $IPTABLES -A RULE_21 -j LOG --log-level debug --log-prefix "RULE 21 - ACCEPT **"
  $IPTABLES -A RULE_21 -j ACCEPT
  #
@@ -1350,8 +1365,15 @@ script_body() {
  #
  echo "Rule 28 (global)"
  #
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A OUTPUT -p tcp -m tcp --dport 21 -m state --state NEW -j CHAIN
  $IPTABLES -N RULE_28 2>/dev/null
- $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 21 -m state --state NEW -j RULE_28
+ $IPTABLES -A CHAIN -d 22.22.22.22 -j RULE_28
+ $IPTABLES -A CHAIN -d 22.22.23.23 -j RULE_28
+ $IPTABLES -A CHAIN -d 22.22.25.50 -j RULE_28
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_28
+ $IPTABLES -A CHAIN -d 192.168.2.1 -j RULE_28
+ $IPTABLES -A CHAIN -d 192.168.2.40 -j RULE_28
  $IPTABLES -A INPUT -p tcp -m tcp --dport 21 -m state --state NEW -j RULE_28
  $IPTABLES -A RULE_28 -j LOG --log-level debug --log-prefix "RULE 28 - ACCEPT **"
  $IPTABLES -A RULE_28 -j ACCEPT
@@ -1386,6 +1408,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

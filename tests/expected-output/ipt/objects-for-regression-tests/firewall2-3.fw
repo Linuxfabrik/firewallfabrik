@@ -433,7 +433,7 @@ script_body() {
  $IPTABLES -A drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
  $IPTABLES -A drop_invalid -j DROP
  # ================ Table 'mangle', automatic rules
- $IPTABLES -w -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ $IPTABLES -w -t mangle -A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
  # ================ Table 'nat', rule set NAT
  #
@@ -957,9 +957,19 @@ script_body() {
  #
  # Anti-spoofing rule
  $IPTABLES -w -N In_RULE_0 2>/dev/null
+ $IPTABLES -w -A INPUT -i eth1 -s 22.22.22.22 -j In_RULE_0
+ $IPTABLES -w -A INPUT -i eth1 -s 22.22.23.23 -j In_RULE_0
+ $IPTABLES -w -A INPUT -i eth1 -s 22.22.25.50 -j In_RULE_0
  $IPTABLES -w -A INPUT -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -w -A INPUT -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -w -A INPUT -i eth1 -s 192.168.2.40 -j In_RULE_0
  $IPTABLES -w -A INPUT -i eth1 -s 192.168.1.0/24 -j In_RULE_0
+ $IPTABLES -w -A FORWARD -i eth1 -s 22.22.22.22 -j In_RULE_0
+ $IPTABLES -w -A FORWARD -i eth1 -s 22.22.23.23 -j In_RULE_0
+ $IPTABLES -w -A FORWARD -i eth1 -s 22.22.25.50 -j In_RULE_0
  $IPTABLES -w -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_0
+ $IPTABLES -w -A FORWARD -i eth1 -s 192.168.2.1 -j In_RULE_0
+ $IPTABLES -w -A FORWARD -i eth1 -s 192.168.2.40 -j In_RULE_0
  $IPTABLES -w -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_0
  $IPTABLES -w -A In_RULE_0 -j LOG --log-level debug --log-prefix "Iface: global RULE 0 -- DENY "
  $IPTABLES -w -A In_RULE_0 -j DROP
@@ -971,7 +981,12 @@ script_body() {
  # Anti-spoofing rule
  $IPTABLES -w -N CHAIN 2>/dev/null
  $IPTABLES -w -A OUTPUT -o eth1 -j CHAIN
+ $IPTABLES -w -A CHAIN -s 22.22.22.22 -j RETURN
+ $IPTABLES -w -A CHAIN -s 22.22.23.23 -j RETURN
+ $IPTABLES -w -A CHAIN -s 22.22.25.50 -j RETURN
  $IPTABLES -w -A CHAIN -s 192.168.1.1 -j RETURN
+ $IPTABLES -w -A CHAIN -s 192.168.2.1 -j RETURN
+ $IPTABLES -w -A CHAIN -s 192.168.2.40 -j RETURN
  $IPTABLES -w -N Out_RULE_1 2>/dev/null
  $IPTABLES -w -A CHAIN -j Out_RULE_1
  $IPTABLES -w -A Out_RULE_1 -j LOG --log-level debug --log-prefix "Iface: global RULE 1 -- DENY "
@@ -1014,8 +1029,8 @@ script_body() {
  # testing choice of chains in case when several
  # interfaces are used and rule matches 'any' or
  # broadcast
- $IPTABLES -w -A FORWARD -i eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
- $IPTABLES -w -A FORWARD -i eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -i eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -i eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w -A OUTPUT -o eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w -A OUTPUT -o eth3 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
  $IPTABLES -w -A FORWARD -o eth1 -p udp -m udp -m multiport -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
@@ -1025,8 +1040,8 @@ script_body() {
  #
  echo "Rule 5 (eth1,eth3)"
  #
- $IPTABLES -w -A FORWARD -i eth1 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
- $IPTABLES -w -A FORWARD -i eth3 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -i eth1 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A INPUT -i eth3 -p udp -m udp -m multiport -s 0.0.0.0 -d 255.255.255.255 --dports 68,67 -m conntrack --ctstate NEW -j ACCEPT
  #
  # Rule 6 (eth1,eth3)
  #
@@ -1092,7 +1107,7 @@ script_body() {
  echo "Rule 11 (global)"
  #
  $IPTABLES -w -N RULE_11 2>/dev/null
- $IPTABLES -w -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 -m conntrack --ctstate NEW -j RULE_11
+ $IPTABLES -w -A INPUT -p icmp -m icmp -s 192.168.2.0/24 -d 192.168.2.1 --icmp-type any -m conntrack --ctstate NEW -j RULE_11
  $IPTABLES -w -A RULE_11 -j LOG --log-level debug --log-prefix "RULE 11 - ACCEPT **"
  $IPTABLES -w -A RULE_11 -j ACCEPT
  #
@@ -1171,8 +1186,15 @@ script_body() {
  #
  echo "Rule 18 (global)"
  #
+ $IPTABLES -w -N CHAIN 2>/dev/null
+ $IPTABLES -w -A OUTPUT -p tcp -m tcp --dport 21 -m conntrack --ctstate NEW -j CHAIN
  $IPTABLES -w -N RULE_18 2>/dev/null
- $IPTABLES -w -A OUTPUT -p tcp -m tcp -d 192.168.1.1 --dport 21 -m conntrack --ctstate NEW -j RULE_18
+ $IPTABLES -w -A CHAIN -d 22.22.22.22 -j RULE_18
+ $IPTABLES -w -A CHAIN -d 22.22.23.23 -j RULE_18
+ $IPTABLES -w -A CHAIN -d 22.22.25.50 -j RULE_18
+ $IPTABLES -w -A CHAIN -d 192.168.1.1 -j RULE_18
+ $IPTABLES -w -A CHAIN -d 192.168.2.1 -j RULE_18
+ $IPTABLES -w -A CHAIN -d 192.168.2.40 -j RULE_18
  $IPTABLES -w -A INPUT -p tcp -m tcp --dport 21 -m conntrack --ctstate NEW -j RULE_18
  $IPTABLES -w -A RULE_18 -j LOG --log-level debug --log-prefix "RULE 18 - ACCEPT **"
  $IPTABLES -w -A RULE_18 -j ACCEPT
@@ -1207,6 +1229,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -w -P OUTPUT ACCEPT
+ $IPTABLES -w -P INPUT ACCEPT
+ $IPTABLES -w -P FORWARD ACCEPT
+ $IP6TABLES -w -P OUTPUT ACCEPT
+ $IP6TABLES -w -P INPUT ACCEPT
+ $IP6TABLES -w -P FORWARD ACCEPT
 }
 
 status_action() {

@@ -664,7 +664,7 @@ script_body() {
  $IPTABLES -N In_RULE_0 2>/dev/null
  $IPTABLES -A INPUT -i eth1 -p 0 -f -j In_RULE_0
  $IPTABLES -A FORWARD -i eth1 -p 0 -f -j In_RULE_0
- $IPTABLES -A In_RULE_0 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A In_RULE_0 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A In_RULE_0 -j DROP
  #
  # Rule 1 (eth1)
@@ -674,7 +674,7 @@ script_body() {
  # тестовый комментарий по-русски. Проверяем конвертацию из/в Utf8
  $IPTABLES -N In_RULE_1 2>/dev/null
  $IPTABLES -A INPUT -i eth1 -p 0 -f -j In_RULE_1
- $IPTABLES -A In_RULE_1 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A In_RULE_1 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A In_RULE_1 -j DROP
  #
  # Rule 2 (eth1)
@@ -683,11 +683,13 @@ script_body() {
  #
  # Automatically generated anti-spoofing rule
  $IPTABLES -N In_RULE_2 2>/dev/null
+ $IPTABLES -A INPUT -i eth1 -s 192.168.1.1 -j In_RULE_2
  $IPTABLES -A INPUT -i eth1 -s 222.222.222.222 -j In_RULE_2
  $IPTABLES -A INPUT -i eth1 -s 192.168.1.0/24 -j In_RULE_2
+ $IPTABLES -A FORWARD -i eth1 -s 192.168.1.1 -j In_RULE_2
  $IPTABLES -A FORWARD -i eth1 -s 222.222.222.222 -j In_RULE_2
  $IPTABLES -A FORWARD -i eth1 -s 192.168.1.0/24 -j In_RULE_2
- $IPTABLES -A In_RULE_2 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A In_RULE_2 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A In_RULE_2 -j DROP
  #
  # Rule 3 (eth1)
@@ -695,7 +697,10 @@ script_body() {
  echo "Rule 3 (eth1)"
  #
  $IPTABLES -A INPUT -i eth1 -p udp -m udp --dport 53 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -o eth1 -p udp -m udp -d 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A OUTPUT -o eth1 -p udp -m udp --dport 53 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
  #
  # Rule 4 (eth1)
  #
@@ -705,6 +710,7 @@ script_body() {
  # -o eth1 and dest address of the firewall
  # is pretty much impossible
  $IPTABLES -A INPUT -i eth1 -p udp -m udp -d 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -o eth1 -p udp -m udp -d 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
  #
  # Rule 5 (eth1)
  #
@@ -718,8 +724,14 @@ script_body() {
  #
  echo "Rule 7 (eth1)"
  #
- $IPTABLES -A INPUT -i eth1 -p udp -m udp -s 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
- $IPTABLES -A FORWARD -i eth1 -p udp -m udp -s 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A INPUT -i eth1 -p udp -m udp --dport 53 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -s 222.222.222.222 -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A FORWARD -i eth1 -p udp -m udp --dport 53 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -s 222.222.222.222 -j ACCEPT
  $IPTABLES -A OUTPUT -o eth1 -p udp -m udp --dport 53 -m state --state NEW -j ACCEPT
  #
  # Rule 8 (eth1)
@@ -728,6 +740,8 @@ script_body() {
  #
  # keep FORWARD chain
  # because it is needed for anti-spoofing rules
+ $IPTABLES -A INPUT -i eth1 -p udp -m udp -s 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
+ $IPTABLES -A FORWARD -i eth1 -p udp -m udp -s 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o eth1 -p udp -m udp -s 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
  #
  # Rule 9 (eth1)
@@ -743,7 +757,10 @@ script_body() {
  echo "Rule 10 (eth0)"
  #
  $IPTABLES -A INPUT -i eth0 -p udp -m udp -s 192.168.1.0/24 --dport 53 -m state --state NEW -j ACCEPT
- $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -s 192.168.1.0/24 -d 222.222.222.222 --dport 53 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A OUTPUT -o eth0 -p udp -m udp -s 192.168.1.0/24 --dport 53 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 222.222.222.222 -j ACCEPT
  #
  # Rule 11 (eth0)
  #
@@ -753,7 +770,7 @@ script_body() {
  # address in destination for comparison
  $IPTABLES -N In_RULE_11 2>/dev/null
  $IPTABLES -A FORWARD -i eth0 -p udp -m udp -d 192.168.1.255 --dport 53 -j In_RULE_11
- $IPTABLES -A In_RULE_11 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A In_RULE_11 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A In_RULE_11 -j DROP
  #
  # Rule 12 (eth0)
@@ -827,19 +844,19 @@ script_body() {
  echo "Rule 22 (global)"
  #
  $IPTABLES -N RULE_22 2>/dev/null
- $IPTABLES -A OUTPUT -p icmp -m icmp -j RULE_22
+ $IPTABLES -A OUTPUT -p icmp -m icmp --icmp-type any -j RULE_22
  $IPTABLES -A OUTPUT -p tcp -m tcp --tcp-flags ALL NONE -j RULE_22
  $IPTABLES -A OUTPUT -p tcp -m tcp --tcp-flags ALL SYN -j RULE_22
  $IPTABLES -A OUTPUT -p tcp -m tcp --tcp-flags ALL ACK,RST,SYN,FIN -j RULE_22
- $IPTABLES -A INPUT -p icmp -m icmp -j RULE_22
+ $IPTABLES -A INPUT -p icmp -m icmp --icmp-type any -j RULE_22
  $IPTABLES -A INPUT -p tcp -m tcp --tcp-flags ALL NONE -j RULE_22
  $IPTABLES -A INPUT -p tcp -m tcp --tcp-flags ALL SYN -j RULE_22
  $IPTABLES -A INPUT -p tcp -m tcp --tcp-flags ALL ACK,RST,SYN,FIN -j RULE_22
- $IPTABLES -A FORWARD -p icmp -m icmp -j RULE_22
+ $IPTABLES -A FORWARD -p icmp -m icmp --icmp-type any -j RULE_22
  $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags ALL NONE -j RULE_22
  $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags ALL SYN -j RULE_22
  $IPTABLES -A FORWARD -p tcp -m tcp --tcp-flags ALL ACK,RST,SYN,FIN -j RULE_22
- $IPTABLES -A RULE_22 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_22 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_22 -j DROP
  #
  # Rule 23 (global)
@@ -883,7 +900,7 @@ script_body() {
  $IPTABLES -A INPUT -p tcp -m state --state ESTABLISHED --tcp-flags SYN,FIN,RST,URG,PSH RST -j RULE_26
  $IPTABLES -A FORWARD -p tcp -m state --state ESTABLISHED --tcp-flags SYN,ACK,RST,URG ACK -j RULE_26
  $IPTABLES -A FORWARD -p tcp -m state --state ESTABLISHED --tcp-flags SYN,FIN,RST,URG,PSH RST -j RULE_26
- $IPTABLES -A RULE_26 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_26 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_26 -j DROP
  #
  # Rule 28 (global)
@@ -1012,7 +1029,7 @@ script_body() {
  $IPTABLES -A CHAIN -s 211.22.22.22 -m time --timestart 00:00 --timestop 23:59 --weekdays Sun -j RULE_42
  $IPTABLES -A CHAIN -s 211.22.22.22 -m time --timestart 18:00 --timestop 23:59 -j RULE_42
  $IPTABLES -A CHAIN -s 211.22.22.22 -m time --timestart 01:01 --timestop 02:02 --weekdays Sun,Mon -j RULE_42
- $IPTABLES -A RULE_42 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_42 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_42 -j ACCEPT
  #
  # Rule 43 (global)
@@ -1134,7 +1151,7 @@ script_body() {
  $IPTABLES -A OUTPUT -p tcp -m tcp -m multiport -s 192.168.1.0/24 -m iprange --dst-range 192.168.1.11-192.168.1.15 --dports 113,13,53,2105,21,70,80,443,6667,119,25,3128,22,23,540 -m state --state NEW -j RULE_50
  $IPTABLES -A FORWARD -p tcp -m tcp -s 192.168.1.0/24 -m iprange --dst-range 192.168.1.11-192.168.1.15 --dport 10000:11000 -m state --state NEW -j RULE_50
  $IPTABLES -A FORWARD -p tcp -m tcp -m multiport -s 192.168.1.0/24 -m iprange --dst-range 192.168.1.11-192.168.1.15 --dports 113,13,53,2105,21,70,80,443,6667,119,25,3128,22,23,540 -m state --state NEW -j RULE_50
- $IPTABLES -A RULE_50 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_50 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_50 -j ACCEPT
  #
  # Rule 51 (global)
@@ -1152,7 +1169,7 @@ script_body() {
  $IPTABLES -A OUTPUT -s 222.222.222.222 -m state --state NEW -j CHAIN
  $IPTABLES -A CHAIN -d 192.168.1.1 -j RULE_51
  $IPTABLES -A CHAIN -d 222.222.222.222 -j RULE_51
- $IPTABLES -A RULE_51 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_51 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_51 -j ACCEPT
  #
  # Rule 52 (global)
@@ -1180,6 +1197,7 @@ script_body() {
  echo "Rule 53 (global)"
  #
  # Automatically generated 'masquerading' rule
+ $IPTABLES -A INPUT -s 192.168.1.1 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -s 222.222.222.222 -m state --state NEW -j ACCEPT
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
@@ -1195,6 +1213,7 @@ script_body() {
  # not allow access to the firewall
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
  $IPTABLES -A CHAIN -d 222.222.222.222 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  #
@@ -1204,6 +1223,7 @@ script_body() {
  #
  $IPTABLES -N CHAIN 2>/dev/null
  $IPTABLES -A INPUT -s 192.168.1.0/24 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 192.168.1.1 -j RETURN
  $IPTABLES -A CHAIN -d 222.222.222.222 -j RETURN
  $IPTABLES -A CHAIN -j ACCEPT
  $IPTABLES -N CHAIN 2>/dev/null
@@ -1253,7 +1273,7 @@ script_body() {
  $IPTABLES -A OUTPUT -j RULE_57
  $IPTABLES -A INPUT -j RULE_57
  $IPTABLES -A FORWARD -j RULE_57
- $IPTABLES -A RULE_57 -j LOG --log-level debug --log-prefix "CUSTOM LOGGING"
+ $IPTABLES -A RULE_57 -j LOG --log-level 7 --log-prefix "CUSTOM LOGGING"
  $IPTABLES -A RULE_57 -j DROP
 }
 
@@ -1277,6 +1297,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
  # backup ssh access
  $IPTABLES -A INPUT -p tcp -m tcp -s 192.168.1.100 --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
  $IPTABLES -A OUTPUT -p tcp -m tcp -d 192.168.1.100 --sport 22 -m state --state ESTABLISHED,RELATED -j ACCEPT

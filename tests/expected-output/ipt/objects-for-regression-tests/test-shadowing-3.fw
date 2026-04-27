@@ -430,14 +430,12 @@ script_body() {
  echo "Rule Policy_1 0 (eth0)"
  #
  # connlimit
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_1 1 (eth0)
  #
  echo "Rule Policy_1 1 (eth0)"
  #
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
  # ================ Table 'filter', rule set Policy_2
  #
@@ -446,14 +444,12 @@ script_body() {
  echo "Rule Policy_2 0 (eth0)"
  #
  # hashlimit
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  #
  # Rule Policy_2 1 (eth0)
  #
  echo "Rule Policy_2 1 (eth0)"
  #
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
  # ================ Table 'filter', rule set Policy_3
  #
@@ -462,7 +458,6 @@ script_body() {
  echo "Rule Policy_3 0 (eth0)"
  #
  # 50/sec
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_4
  #
@@ -471,7 +466,6 @@ script_body() {
  echo "Rule Policy_4 0 (eth0)"
  #
  # 30/sec
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_5
  #
@@ -480,7 +474,6 @@ script_body() {
  echo "Rule Policy_5 0 (eth0)"
  #
  # 50/sec
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -j ACCEPT
  # ================ Table 'filter', rule set Policy_6
  #
@@ -530,14 +523,12 @@ script_body() {
  echo "Rule 0 (eth0)"
  #
  # limit
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -m state --state NEW -m limit --limit 10/second -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -m state --state NEW -m limit --limit 10/second -j ACCEPT
  #
  # Rule 1 (eth0)
  #
  echo "Rule 1 (eth0)"
  #
- $IPTABLES -A OUTPUT -o eth0 -s 192.168.1.0/24 -j DROP
  $IPTABLES -A FORWARD -o eth0 -s 192.168.1.0/24 -j DROP
 }
 
@@ -558,6 +549,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {

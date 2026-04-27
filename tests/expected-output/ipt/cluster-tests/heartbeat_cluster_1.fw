@@ -459,7 +459,7 @@ script_body() {
  #
  echo "Rule 0 (eth0)"
  #
- $IPTABLES -A FORWARD -i eth0 -p 112 -d 224.0.0.18 -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -i eth0 -p 112 -d 224.0.0.18 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -o eth0 -p 112 -d 224.0.0.18 -m state --state NEW -j ACCEPT
  $IPTABLES -A FORWARD -o eth0 -p 112 -d 224.0.0.18 -m state --state NEW -j ACCEPT
  #
@@ -470,8 +470,10 @@ script_body() {
  # anti spoofing rule
  $IPTABLES -N In_RULE_1 2>/dev/null
  $IPTABLES -A INPUT -i eth0 -s 172.24.0.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A INPUT -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_1
  $IPTABLES -A INPUT -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_1
  $IPTABLES -A FORWARD -i eth0 -s 172.24.0.1 -m state --state NEW -j In_RULE_1
+ $IPTABLES -A FORWARD -i eth0 -s 192.168.1.1 -m state --state NEW -j In_RULE_1
  $IPTABLES -A FORWARD -i eth0 -s 192.168.1.0/24 -m state --state NEW -j In_RULE_1
  $IPTABLES -A In_RULE_1 -j LOG --log-level info --log-prefix "RULE 1 -- DENY "
  $IPTABLES -A In_RULE_1 -j DROP
@@ -524,6 +526,7 @@ script_body() {
  #
  # branch rule set is different in members linux-1 and linux-2
  $IPTABLES -A OUTPUT -d 172.24.0.1
+ $IPTABLES -A OUTPUT -d 192.168.1.1
  $IPTABLES -A INPUT
  #
  # Rule 7 (global)
@@ -532,13 +535,18 @@ script_body() {
  #
  # branch rule set is different in members linux-1 and linux-2
  $IPTABLES -A OUTPUT -d 172.24.0.2
+ $IPTABLES -A OUTPUT -d 192.168.1.2
+ $IPTABLES -A OUTPUT -d 192.168.100.1
  $IPTABLES -A FORWARD -d 172.24.0.2
+ $IPTABLES -A FORWARD -d 192.168.1.2
+ $IPTABLES -A FORWARD -d 192.168.100.1
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
  $IPTABLES -A OUTPUT -d 172.24.0.1 -j DROP
+ $IPTABLES -A OUTPUT -d 192.168.1.1 -j DROP
  $IPTABLES -A INPUT -j DROP
  #
  # Rule 10 (global)
@@ -546,14 +554,28 @@ script_body() {
  echo "Rule 10 (global)"
  #
  # fw is part of any
- $IPTABLES -A INPUT -p tcp -m tcp -s 172.24.0.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 172.24.0.1 -j ACCEPT
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j ACCEPT
  $IPTABLES -A OUTPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
+ #
+ # Rule 11 (global)
+ #
+ echo "Rule 11 (global)"
+ #
+ # fw is NOT part of any
+ $IPTABLES -N CHAIN 2>/dev/null
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 172.24.0.1 -j ACCEPT
+ $IPTABLES -A CHAIN -s 192.168.1.1 -j ACCEPT
  #
  # Rule 12 (global)
  #
  echo "Rule 12 (global)"
  #
  # fw is NOT part of any
+ $IPTABLES -A INPUT -p tcp -m tcp -s 172.24.0.1 --dport 22 -m state --state NEW -j ACCEPT
  $IPTABLES -A OUTPUT -p tcp -m tcp -s 172.24.0.1 --dport 22 -m state --state NEW -j ACCEPT
  #
  # Rule 14 (eth0)
@@ -660,6 +682,12 @@ block_action() {
 
 stop_action() {
  reset_all
+ $IPTABLES -P OUTPUT ACCEPT
+ $IPTABLES -P INPUT ACCEPT
+ $IPTABLES -P FORWARD ACCEPT
+ $IP6TABLES -P OUTPUT ACCEPT
+ $IP6TABLES -P INPUT ACCEPT
+ $IP6TABLES -P FORWARD ACCEPT
 }
 
 status_action() {
