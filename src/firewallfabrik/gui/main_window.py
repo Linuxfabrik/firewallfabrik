@@ -2769,7 +2769,23 @@ class FWWindow(QMainWindow):
         self.menuOpen_Recent.addAction(self._recent_separator)
         self.menuOpen_Recent.addAction(self.actionClearRecentFiles)
 
+        self._purge_missing_recent_files()
         self._update_recent_actions()
+
+    def _purge_missing_recent_files(self):
+        """Drop entries from the recent-files list whose file no longer exists.
+
+        Called once at window startup so the menu does not list paths that
+        would fail with "file not found" when clicked. Empty/blank entries
+        are also removed.
+        """
+        settings = QSettings()
+        files = settings.value('recentFiles', []) or []
+        if isinstance(files, str):
+            files = [files]
+        kept = [f for f in files if f and Path(f).is_file()]
+        if kept != files:
+            settings.setValue('recentFiles', kept)
 
     def _update_recent_actions(self):
         """Refresh the visible recent-file actions from QSettings."""
