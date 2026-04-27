@@ -282,7 +282,13 @@ def _autorename_interface(iface, host_name):
       - IPv6:  ``host:iface:ip6``
       - MAC:   ``host:iface:mac``
       - Sub-interfaces are processed recursively.
+
+    Returns a list of every object whose ``name`` actually changed, so
+    callers can refresh the corresponding tree items (the editor manager
+    only emits ``object_saved`` for the directly edited object, not for
+    children mutated as a side effect).
     """
+    renamed = []
     prefix = f'{host_name}:{iface.name}'
     type_suffix = {
         'IPv4': 'ip',
@@ -291,9 +297,13 @@ def _autorename_interface(iface, host_name):
     }
     for addr in iface.addresses:
         suffix = type_suffix.get(addr.type, 'ip')
-        addr.name = f'{prefix}:{suffix}'
+        new_name = f'{prefix}:{suffix}'
+        if addr.name != new_name:
+            addr.name = new_name
+            renamed.append(addr)
     for sub in iface.sub_interfaces:
-        _autorename_interface(sub, host_name)
+        renamed.extend(_autorename_interface(sub, host_name))
+    return renamed
 
 
 def _offer_autorename_children(obj, old_name, parent_widget):
@@ -303,11 +313,15 @@ def _offer_autorename_children(obj, old_name, parent_widget):
     accepts, child addresses and sub-interfaces are renamed using the
     standard ``host:interface:suffix`` naming scheme (matching
     fwbuilder behaviour).
+
+    Returns the list of objects whose ``name`` actually changed (empty
+    when the user clicked No or no children needed renaming). The
+    caller uses this list to refresh the corresponding tree items.
     """
     if not isinstance(obj, (Host, Interface)):
-        return
+        return []
     if not _has_renameable_children(obj):
-        return
+        return []
 
     label = 'interface' if isinstance(obj, Interface) else 'object'
     msg = (
@@ -334,17 +348,19 @@ def _offer_autorename_children(obj, old_name, parent_widget):
         QMessageBox.StandardButton.Yes,
     )
     if result != QMessageBox.StandardButton.Yes:
-        return
+        return []
 
+    renamed = []
     if isinstance(obj, Interface):
         # Walk up to find the host name.
         device = obj.device
         host_name = device.name if device else obj.name
-        _autorename_interface(obj, host_name)
+        renamed.extend(_autorename_interface(obj, host_name))
     else:
         # Host/Firewall: rename all interfaces and their children.
         for iface in obj.interfaces:
-            _autorename_interface(iface, obj.name)
+            renamed.extend(_autorename_interface(iface, obj.name))
+    return renamed
 
 
 def _undo_desc(action, obj_type, name, old_name=None, prefix=''):
@@ -566,11 +582,16 @@ class EditorManager(QObject):
         # on_editor_changed() (triggered by the QMessageBox stealing
         # focus → editingFinished) does not show the dialog again
         # (fwbuilder #1171).
+        renamed_children = []
         old_name = self._editor_obj_name or ''
         if obj is not None and old_name and obj.name != old_name:
             self._editor_obj_name = obj.name
             editor.blockSignals(True)
-            _offer_autorename_children(obj, old_name, self.parent())
+            renamed_children = _offer_autorename_children(
+                obj,
+                old_name,
+                self.parent(),
+            )
             editor.blockSignals(False)
 
         # Only persist when attribute values actually differ from their
@@ -659,6 +680,13 @@ class EditorManager(QObject):
         # change detection can miss dict value changes).
         if obj is not None:
             self.object_saved.emit(obj)
+
+        # Refresh tree items for child addresses / sub-interfaces that
+        # were renamed by _offer_autorename_children. Without this the
+        # tree shows the old child names even though the database has
+        # the new ones.
+        for child in renamed_children:
+            self.object_saved.emit(child)
 
         # Also refresh the parent Firewall tree item so its bold state
         # (needs-compile) is updated when a child object was edited.
