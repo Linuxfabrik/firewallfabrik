@@ -767,7 +767,18 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         use_restore = bool(self.fw.get_option('use_iptables_restore'))
 
-        begin_rule = '' if use_restore else f'{iptables_cmd} -A'
+        # iptables-restore mode: each rule must be emitted as
+        # ``echo "-A CHAIN ..."`` so the heredoc piped to
+        # ``iptables-restore`` contains a valid ``-A`` line. Mirrors
+        # fwbuilder's PolicyCompiler_PrintRuleIptRstEcho semantics.
+        # Shell mode: each rule is a direct ``$IPTABLES -A CHAIN ...``
+        # invocation.
+        if use_restore:
+            begin_rule = 'echo "-A'
+            end_rule = '"'
+        else:
+            begin_rule = f'{iptables_cmd} -A'
+            end_rule = ''
 
         if _version_compare(version, '1.4.4') >= 0:
             state_module_option = 'conntrack --ctstate'
@@ -778,7 +789,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         conf.collapse_empty_strings(True)
 
         conf.set_variable('begin_rule', begin_rule)
-        conf.set_variable('end_rule', '')
+        conf.set_variable('end_rule', end_rule)
         conf.set_variable('state_module_option', state_module_option)
 
         # Chain names — prefixed in coexistence mode.

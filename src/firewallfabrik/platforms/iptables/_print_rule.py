@@ -1043,20 +1043,22 @@ class PrintRuleIptRst(PrintRule):
             and chain not in ipt_comp.minus_n_commands
         ):
             ipt_comp.minus_n_commands[chain] = True
-            return f'echo :{chain} - [0:0]'
+            return f'echo :{chain} - [0:0]\n'
         return ''
 
     def _start_rule_line(self) -> str:
-        return 'echo'
+        # fwbuilder PolicyCompiler_PrintRuleIptRst::_startRuleLine: ``-A ``
+        return '-A '
 
     def _end_rule_line(self) -> str:
-        return ''
+        # fwbuilder PolicyCompiler_PrintRuleIptRst::_endRuleLine: newline
+        return '\n'
 
     def _print_rule_label(self, rule: CompRule) -> str:
         label = rule.label
         if label and label != self.current_rule_label:
             self.current_rule_label = label
-            return f'echo "# Rule {label}"'
+            return f'echo "# Rule {label}"\n'
         return ''
 
     def _declare_table(self) -> str:
@@ -1092,14 +1094,16 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
             and chain not in ipt_comp.minus_n_commands
         ):
             ipt_comp.minus_n_commands[chain] = True
-            return f'echo ":{chain} - [0:0]"'
+            return f'echo ":{chain} - [0:0]"\n'
         return ''
 
     def _start_rule_line(self) -> str:
-        return 'echo "'
+        # fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_startRuleLine
+        return 'echo "-A '
 
     def _end_rule_line(self) -> str:
-        return '"'
+        # fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_endRuleLine
+        return '"\n'
 
     def _declare_table(self) -> str:
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
