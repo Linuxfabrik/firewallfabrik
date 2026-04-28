@@ -123,13 +123,16 @@ def _find_folder_context(item):
 def _get_interface_new_types(item):
     """Build the dynamic "New" list for an Interface item.
 
-    Matches fwbuilder's logic:
+    Matches fwbuilder's logic for the parts that are wired through:
     - New Interface (subinterface): only for Firewall interfaces
     - New Address (IPv4), New Address IPv6 (IPv6): always
     - New MAC Address (PhysAddress): always
-    - New Attached Networks: only if not already present
-    - New Failover Group: only for Cluster interfaces, if not
-      already present
+
+    "New Attached Networks" and "New Failover Group" are intentionally
+    omitted: the underlying Group schema has no interface_id /
+    device_id link, so creating one would persist as a stray top-level
+    object instead of a child of the interface. Re-enable once the
+    cluster pipeline tracking issue (#84) and #85 are addressed.
     """
     from PySide6.QtCore import Qt
 
@@ -147,22 +150,6 @@ def _get_interface_new_types(item):
     result.append(('IPv4', 'Address'))
     result.append(('IPv6', 'Address IPv6'))
     result.append(('PhysAddress', 'MAC Address'))
-
-    # Check existing children in the tree to suppress singleton items.
-    has_attached = False
-    has_failover = False
-    for i in range(item.childCount()):
-        child_type = item.child(i).data(0, Qt.ItemDataRole.UserRole + 1)
-        if child_type == 'AttachedNetworks':
-            has_attached = True
-        elif child_type == 'FailoverClusterGroup':
-            has_failover = True
-
-    if not has_attached:
-        result.append(('AttachedNetworks', 'Attached Networks'))
-
-    if parent_type == 'Cluster' and not has_failover:
-        result.append(('FailoverClusterGroup', 'Failover Group'))
 
     return result
 
