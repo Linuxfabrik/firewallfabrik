@@ -247,11 +247,26 @@ def main(argv=None):
                 .scalars()
                 .all()
             )
+            skipped_inactive = 0
             for fw in all_fws:
-                if (fw.data or {}).get('platform', '') == 'iptables':
-                    fw_list.append((str(fw.id), fw.name))
+                fw_data = fw.data or {}
+                if fw_data.get('platform', '') != 'iptables':
+                    continue
+                # Skip inactive firewalls in --all mode (matches fwbuilder
+                # `instDialog::checkIfNeedToCompile`). A user who explicitly
+                # names an inactive firewall on the command line still gets
+                # it compiled.
+                if fw_data.get('inactive') in (True, 'True'):
+                    skipped_inactive += 1
+                    continue
+                fw_list.append((str(fw.id), fw.name))
             print(
-                f'Found {len(fw_list)} iptables firewall(s) to compile',
+                f'Found {len(fw_list)} iptables firewall(s) to compile'
+                + (
+                    f' (skipped {skipped_inactive} inactive)'
+                    if skipped_inactive
+                    else ''
+                ),
                 file=sys.stderr,
             )
         else:
