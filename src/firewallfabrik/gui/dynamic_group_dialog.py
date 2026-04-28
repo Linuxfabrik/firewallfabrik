@@ -192,6 +192,13 @@ class DynamicGroupDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
+        # Default for new groups is AND; .fwb-imported groups carry
+        # an explicit 'OR' marker (set by the XML reader).
+        match_mode = (self._obj.data or {}).get('match_mode', 'AND')
+        self.matchMode.setCurrentText(
+            match_mode if match_mode in ('AND', 'OR') else 'AND'
+        )
+        self.matchMode.currentTextChanged.connect(self._on_match_mode_changed)
         self._load_criteria()
         self._refresh_matched_objects()
 
@@ -224,7 +231,14 @@ class DynamicGroupDialog(BaseObjectDialog):
 
         data = copy.deepcopy(self._obj.data or {})
         data['selection_criteria'] = criteria
+        data['match_mode'] = self.matchMode.currentText()
         self._obj.data = data
+
+    @Slot()
+    def _on_match_mode_changed(self):
+        """Re-evaluate the matched-objects preview when the mode changes."""
+        self._refresh_matched_objects()
+        self.changed.emit()
 
     # ------------------------------------------------------------------
     # Criteria table
@@ -346,18 +360,20 @@ class DynamicGroupDialog(BaseObjectDialog):
             for obj in objs:
                 if obj.id == self_id:
                     continue
-                if not self._is_member(obj, criteria):
+                if not self._is_member(obj, criteria, self.matchMode.currentText()):
                     continue
                 self._add_matched_item(obj)
 
         self.matchedView.resizeColumnToContents(0)
         self.matchedView.resizeColumnToContents(1)
 
-    def _is_member(self, obj, criteria):
-        """Port of fwbuilder's DynamicGroup::isMemberOfGroup().
+    def _is_member(self, obj, criteria, match_mode='AND'):
+        """Return True if *obj* matches *criteria* under *match_mode*.
 
-        Returns True if *obj* matches any of the given *criteria* tuples
-        ``(type_str, keyword_str)``.
+        *criteria* is a list of ``(type_str, keyword_str)`` tuples.
+        *match_mode* is ``'AND'`` (every row must match, default) or
+        ``'OR'`` (at least one row must match - the original fwbuilder
+        semantics from ``DynamicGroup::isMemberOfGroup()``).
         """
         obj_type = getattr(obj, 'type', '')
 
@@ -390,13 +406,17 @@ class DynamicGroupDialog(BaseObjectDialog):
 
         keywords = getattr(obj, 'keywords', None) or set()
 
+        active = []
         for type_val, keyword_val in criteria:
             type_match = type_val == _TYPE_ANY or obj_type == type_val
             keyword_match = keyword_val == _KEYWORD_ANY or keyword_val in keywords
-            if type_match and keyword_match:
-                return True
+            active.append(type_match and keyword_match)
 
-        return False
+        if not active:
+            return False
+        if match_mode == 'OR':
+            return any(active)
+        return all(active)
 
     def _add_matched_item(self, obj):
         """Add a matched object to the tree widget."""

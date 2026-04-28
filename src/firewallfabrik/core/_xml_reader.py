@@ -471,6 +471,14 @@ class XmlReader:
                 self._dispatch_child(
                     child, library, parent_group=group, context_name=group.name
                 )
+
+        # Mark groups imported from .fwb with the historical OR semantics
+        # (fwbuilder's DynamicGroup::isMemberOfGroup only supports OR).
+        # New groups created in fwf default to AND; the user can toggle
+        # this per group in the editor.
+        if 'selection_criteria' in group.data and 'match_mode' not in group.data:
+            group.data['match_mode'] = 'OR'
+
         return group
 
     def _parse_device(self, elem, cls, library, parent_group=None):

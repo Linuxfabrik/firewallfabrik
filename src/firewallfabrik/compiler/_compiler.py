@@ -74,10 +74,16 @@ _DG_DEVICE_TYPES = frozenset({'Cluster', 'Firewall', 'Host'})
 _DG_ELIGIBLE = _DG_ADDRESS_TYPES | _DG_GROUP_TYPES | _DG_DEVICE_TYPES
 
 
-def _matches_dynamic_criteria(obj, criteria: list[dict]) -> bool:
-    """Return True if *obj* matches any criterion in *criteria*.
+def _matches_dynamic_criteria(
+    obj, criteria: list[dict], match_mode: str = 'AND'
+) -> bool:
+    """Return True if *obj* matches the *criteria* under *match_mode*.
 
-    Ports fwbuilder's ``DynamicGroup::isMemberOfGroup()``.
+    *match_mode*:
+      - ``'AND'`` (default for new groups): every criterion must match.
+      - ``'OR'``: at least one criterion must match. Used for groups
+        imported from fwbuilder ``.fwb`` files, since fwbuilder only
+        supports OR semantics in ``DynamicGroup::isMemberOfGroup()``.
     """
     obj_type = getattr(obj, 'type', '')
     if obj_type not in _DG_ELIGIBLE:
@@ -101,6 +107,7 @@ def _matches_dynamic_criteria(obj, criteria: list[dict]) -> bool:
             return False
 
     keywords = getattr(obj, 'keywords', None) or set()
+    active = []
     for entry in criteria:
         type_val = entry.get('type', 'none')
         keyword_val = entry.get('keyword', ',')
@@ -108,9 +115,13 @@ def _matches_dynamic_criteria(obj, criteria: list[dict]) -> bool:
             continue
         type_match = type_val == 'any' or obj_type == type_val
         keyword_match = keyword_val == '' or keyword_val in keywords
-        if type_match and keyword_match:
-            return True
-    return False
+        active.append(type_match and keyword_match)
+
+    if not active:
+        return False
+    if match_mode == 'OR':
+        return any(active)
+    return all(active)
 
 
 class Compiler(BaseCompiler):
@@ -306,12 +317,17 @@ class Compiler(BaseCompiler):
     def _resolve_dynamic_group(self, obj: DynamicGroup) -> list:
         """Resolve a DynamicGroup by evaluating its criteria against the DB.
 
-        Ports fwbuilder's ``DynamicGroup::loadFromSource()`` +
-        ``DynamicGroup::isMemberOfGroup()``.  Returns matching objects.
+        Default match mode is ``AND`` across criteria. Groups imported
+        from a fwbuilder ``.fwb`` file carry an explicit
+        ``match_mode='OR'``, preserving fwbuilder's original semantics
+        (``DynamicGroup::isMemberOfGroup`` only supports OR). Users can
+        toggle the mode per group in the editor afterwards.
         """
-        criteria = (obj.data or {}).get('selection_criteria', [])
+        data = obj.data or {}
+        criteria = data.get('selection_criteria', [])
         if not criteria:
             return []
+        match_mode = data.get('match_mode', 'AND')
 
         self_id = obj.id
         result = []
@@ -320,7 +336,7 @@ class Compiler(BaseCompiler):
             for candidate in objs:
                 if candidate.id == self_id:
                     continue
-                if _matches_dynamic_criteria(candidate, criteria):
+                if _matches_dynamic_criteria(candidate, criteria, match_mode):
                     result.append(candidate)
         result.sort(key=lambda o: getattr(o, 'name', ''))
         return result
