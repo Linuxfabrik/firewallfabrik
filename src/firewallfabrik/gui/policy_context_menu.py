@@ -92,16 +92,20 @@ VALID_TYPES_BY_SLOT = {
 # ------------------------------------------------------------------
 
 # Actions whose Parameters entry should be enabled (have a dialog in fwbuilder).
+# Branch is omitted: the editor's drop area is not wired to write
+# branch_id back to the rule, and no compiler resolves it. See #90.
 ACTIONS_WITH_PARAMS = frozenset(
     {
         PolicyAction.Accounting,
-        PolicyAction.Branch,
         PolicyAction.Custom,
         PolicyAction.Reject,
     }
 )
 
 # Action entries shown in the menu: (enum, display_label, icon_name).
+# Branch is intentionally omitted from both menus: the branch-action
+# pipeline (drag source, drop receiver wiring, branch_id persistence,
+# compiler resolution) is not fully ported from fwbuilder. See #90.
 ACTION_MENU_ENTRIES = (
     (PolicyAction.Accept, 'Accept', 'Accept'),
     (PolicyAction.Deny, 'Deny', 'Deny'),
@@ -109,14 +113,10 @@ ACTION_MENU_ENTRIES = (
     (PolicyAction.Accounting, 'Accounting', 'Accounting'),
     (PolicyAction.Pipe, 'Queue', 'Pipe'),
     (PolicyAction.Custom, 'Custom', 'Custom'),
-    (PolicyAction.Branch, 'Branch', 'Branch'),
     (PolicyAction.Continue, 'Continue', 'Continue'),
 )
 
-NAT_ACTION_MENU_ENTRIES = (
-    (NATAction.Translate, 'Translate', 'Translate'),
-    (NATAction.Branch, 'Branch', 'Branch'),
-)
+NAT_ACTION_MENU_ENTRIES = ((NATAction.Translate, 'Translate', 'Translate'),)
 
 # ------------------------------------------------------------------
 # Menu builder functions
