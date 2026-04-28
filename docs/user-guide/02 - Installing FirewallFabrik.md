@@ -4,6 +4,12 @@
 
 FirewallFabrik requires **Python 3.14** or later. The GUI additionally requires **PySide6** (Qt6 for Python).
 
+If your system Python is older than 3.14 (typical on macOS or RHEL 8/9), use `uv` and pass `--python 3.14`. `uv` will fetch and use a matching Python interpreter for you, leaving the system Python untouched. Example:
+
+``` bash
+uvx --python 3.14 --from 'firewallfabrik[gui]' fwf
+```
+
 ## Installing from PyPI
 
 Make sure to include the `[gui]` extra to pull in PySide6 for the graphical interface.
@@ -73,6 +79,7 @@ pip install --user --pre 'firewallfabrik[gui]'
 Alternatively, you can install a specific RC version directly by pinning the version:
 
 ``` bash
+uvx --from 'firewallfabrik[gui]==<version>' --prerelease allow fwf
 uv tool install 'firewallfabrik[gui]==<version>' --prerelease allow
 pip install --user 'firewallfabrik[gui]==<version>'
 pipx install 'firewallfabrik[gui]==<version>'

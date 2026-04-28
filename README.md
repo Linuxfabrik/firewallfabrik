@@ -59,8 +59,15 @@ To test a pre-release version, either allow pre-releases or pin a specific RC ve
 
 ```bash
 uvx --from 'firewallfabrik[gui]' --prerelease allow fwf
+uvx --from 'firewallfabrik[gui]==<version>' --prerelease allow fwf
 uv tool install 'firewallfabrik[gui]' --prerelease allow
 uv tool install 'firewallfabrik[gui]==<version>' --prerelease allow
+```
+
+If your system Python is older than 3.14 (typical on macOS or RHEL 8/9), prepend `--python 3.14` so `uv` fetches a matching interpreter:
+
+```bash
+uvx --python 3.14 --from 'firewallfabrik[gui]' --prerelease allow fwf
 ```
 
 For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.md).
