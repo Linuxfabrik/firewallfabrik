@@ -35,6 +35,11 @@ FirewallFabrik is a modern successor to [Firewall Builder](https://github.com/fw
 This project was developed with the assistance of Claude Code by Anthropic.
 
 
+## Documentation
+
+Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https://linuxfabrik.github.io/firewallfabrik/). It is automatically built and deployed on every push to `main`.
+
+
 ## Installation
 
 Make sure to include the `[gui]` extra to pull in PySide6 for the graphical interface.
@@ -71,11 +76,6 @@ uvx --python 3.14 --from 'firewallfabrik[gui]' --prerelease allow fwf
 ```
 
 For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.md).
-
-
-## Documentation
-
-Full documentation is available at [linuxfabrik.github.io/firewallfabrik](https://linuxfabrik.github.io/firewallfabrik/). It is automatically built and deployed on every push to `main`.
 
 
 ## Feedback from our Community
