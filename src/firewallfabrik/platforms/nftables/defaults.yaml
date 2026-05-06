@@ -443,6 +443,15 @@ options:
       (ulogd2, rsyslog, syslog-ng) for flexible log routing.
       In nftables, generates 'log group N' instead of plain 'log'.
 
+  ulog_cprange:
+    type: 'int'
+    default: 0
+    supported: false
+    widget: 'cprange'
+    description: >-
+      Number of bytes of each packet to copy to userspace
+      via NFLOG. Not supported by the nftables compiler.
+
   ulog_nlgroup:
     type: 'int'
     default: 1
@@ -451,6 +460,16 @@ options:
     description: >-
       NFLOG netlink multicast group number (1-65535).
       Used when use_NFLOG is enabled.
+
+  ulog_qthreshold:
+    type: 'int'
+    default: 1
+    supported: false
+    widget: 'qthreshold'
+    description: >-
+      Number of packets to queue inside the kernel before
+      sending them to userspace via NFLOG. Not supported
+      by the nftables compiler.
 
   verify_interfaces:
     type: 'bool'

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* GUI: Opening the Platform Settings dialog of an nftables firewall no longer crashes with `KeyError: 'ulog_cprange'`. The nftables schema (`platforms/nftables/defaults.yaml`) was missing the `ulog_cprange` and `ulog_qthreshold` entries that the dialog reads at populate time; both are now declared with `supported: false`.
+
 ### Security
 
 * **ci**: Scope `GITHUB_TOKEN` permissions in the dependabot-auto-merge workflow to the job level, with top-level now `read-all`. Matches the pattern used by the other Linuxfabrik workflows and addresses the OpenSSF Scorecard `Token-Permissions` finding.
