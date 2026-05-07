@@ -646,6 +646,17 @@ class PrintRule_nft(PolicyRuleProcessor):
             if log_level:
                 parts.append(f'level {log_level}')
 
+        # Optional log flags (per-rule overrides firewall-level default).
+        # Each flag becomes its own `flags <category> <flag>` clause; nftables
+        # accepts them in any order at the end of the log statement.
+        fw_opt = self.compiler.fw.get_option
+        if rule.get_option('log_tcp_seq', False) or fw_opt('log_tcp_seq'):
+            parts.append('flags tcp sequence')
+        if rule.get_option('log_tcp_opt', False) or fw_opt('log_tcp_opt'):
+            parts.append('flags tcp options')
+        if rule.get_option('log_ip_opt', False) or fw_opt('log_ip_opt'):
+            parts.append('flags ip options')
+
         return ' '.join(parts)
 
     def _get_log_prefix(self, rule: CompRule) -> str:

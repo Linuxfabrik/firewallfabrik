@@ -752,6 +752,9 @@ class PrintRule(PolicyRuleProcessor):
             day_names = ','.join(DOW_NAMES_SHORT[d] for d in days)
             parts.append(f'--weekdays {day_names}')
 
+        if self.compiler.fw.get_option('use_kerneltz'):
+            parts.append('--kerneltz')
+
         return ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
@@ -927,6 +930,15 @@ class PrintRule(PolicyRuleProcessor):
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]
             parts.append(f'--log-prefix "{log_prefix}"')
+
+        # Per-rule option overrides firewall-level default (matching fwbuilder).
+        fw_opt = self.compiler.fw.get_option
+        if rule.get_option('log_tcp_seq', False) or fw_opt('log_tcp_seq'):
+            parts.append('--log-tcp-sequence')
+        if rule.get_option('log_tcp_opt', False) or fw_opt('log_tcp_opt'):
+            parts.append('--log-tcp-options')
+        if rule.get_option('log_ip_opt', False) or fw_opt('log_ip_opt'):
+            parts.append('--log-ip-options')
 
         return ' '.join(parts)
 

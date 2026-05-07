@@ -349,10 +349,11 @@ options:
   log_ip_opt:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logIPopt'
     description: >-
-      Not yet implemented for iptables.
+      Include IP options in log messages (LOG target's --log-ip-options
+      flag).
 
   log_level:
     type: 'enum'
@@ -386,18 +387,20 @@ options:
   log_tcp_opt:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logTCPopt'
     description: >-
-      Not yet implemented for iptables.
+      Include TCP options in log messages (LOG target's
+      --log-tcp-options flag).
 
   log_tcp_seq:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logTCPseq'
     description: >-
-      Not yet implemented for iptables.
+      Include TCP sequence numbers in log messages (LOG target's
+      --log-tcp-sequence flag).
 
   manage_virtual_addr:
     type: 'bool'
@@ -509,11 +512,12 @@ options:
   use_kerneltz:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'useKernelTz'
     description: >-
-      Not yet implemented for iptables. Time-based rule support is the
-      prerequisite.
+      Use the kernel timezone instead of UTC for time-based rules
+      (-m time --kerneltz). When disabled (default), iptables
+      interprets --timestart/--timestop in UTC.
 
   use_m_set:
     type: 'bool'

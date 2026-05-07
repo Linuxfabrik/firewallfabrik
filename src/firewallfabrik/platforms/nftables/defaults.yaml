@@ -357,10 +357,11 @@ options:
   log_ip_opt:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logIPopt'
     description: >-
-      Not yet implemented for nftables.
+      Include IP options in log messages (nftables "log flags ip
+      options" syntax).
 
   log_level:
     type: 'enum'
@@ -394,18 +395,20 @@ options:
   log_tcp_opt:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logTCPopt'
     description: >-
-      Not yet implemented for nftables.
+      Include TCP options in log messages (nftables "log flags tcp
+      options" syntax).
 
   log_tcp_seq:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logTCPseq'
     description: >-
-      Not yet implemented for nftables.
+      Include TCP sequence numbers in log messages (nftables "log flags
+      tcp sequence" syntax).
 
   manage_virtual_addr:
     type: 'bool'

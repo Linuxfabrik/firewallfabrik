@@ -137,7 +137,6 @@ class CompilerDriver(BaseCompiler):
             'use_ULOG',
             'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
         ),
-        ('use_kerneltz', 'kernel timezone for log timestamps is not supported'),
     ]
 
     def _warn_unsupported_options(self, options: dict) -> None:
