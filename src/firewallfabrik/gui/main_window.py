@@ -15,6 +15,7 @@
 import contextlib
 import importlib.resources
 import logging
+import os.path
 import shutil
 
 # subprocess is only invoked with an absolute pyside6-rcc path resolved
@@ -156,6 +157,29 @@ _NEW_OBJECT_MENU_ENTRIES = (
 
 FILE_FILTERS = 'FirewallFabrik Files *.fwf (*.fwf);;Firewall Builder Files *.fwb (*.fwb);;All Files (*)'
 _MAX_RECENT_FILES = 20
+
+
+def _compute_recent_display_paths(files: list[str]) -> list[str]:
+    """Strip the common parent-path prefix from a list of recent file paths.
+
+    Returns a list parallel to *files*. With a single (or no) entry only
+    the basename is shown. The full path stays available in each menu
+    entry's tooltip.
+    """
+    if not files:
+        return []
+    if len(files) == 1:
+        return [Path(files[0]).name]
+    try:
+        common = os.path.commonpath(files)
+    except ValueError:
+        # Mixed absolute/relative roots, fall back to full paths.
+        return list(files)
+    if not common or common == os.sep:
+        # Stripping just "/" would leave a misleading relative-looking
+        # path; show the full path instead.
+        return list(files)
+    return [f[len(common) + 1 :] for f in files]
 
 
 def _build_library_path_map(session, library):
@@ -2795,8 +2819,9 @@ class FWWindow(QMainWindow):
             files = [files]
 
         num = min(len(files), _MAX_RECENT_FILES)
+        display_paths = _compute_recent_display_paths(files[:num])
         for i in range(num):
-            self._recent_actions[i].setText(Path(files[i]).name)
+            self._recent_actions[i].setText(display_paths[i])
             self._recent_actions[i].setToolTip(files[i])
             self._recent_actions[i].setData(files[i])
             self._recent_actions[i].setVisible(True)

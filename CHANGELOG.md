@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): now honours the "Use kernel timezone" firewall option on time-based rules. When enabled, `--kerneltz` is appended to the `-m time` match so timestamps are interpreted in the kernel timezone instead of UTC. Nftables matching (`meta hour`, `meta day`) already always uses the kernel timezone, so the option has no nftables equivalent.
 * Compiler (iptables, nftables): now honours the "Log IP options", "Log TCP options" and "Log TCP sequence numbers" firewall options on logging rules. Iptables emits the corresponding LOG target flags (`--log-ip-options`, `--log-tcp-options`, `--log-tcp-sequence`), nftables the equivalent `log flags ip options` / `log flags tcp options` / `log flags tcp sequence` clauses. Per-rule settings override the firewall-level default.
 
+### Changed
+
+* GUI: File > Open Recent shows distinguishing path segments per entry, full path stays in the tooltip.
+
 ### Fixed
 
 * Iptables and nftables firewall settings dialogs: corrected checkboxes that were shown as unsupported even though the compiler honoured them. Affected options included "Drop new TCP sessions without SYN", "Log all rules", "Use numeric log levels", "Bridging firewall" and "Clamp MSS to MTU".
