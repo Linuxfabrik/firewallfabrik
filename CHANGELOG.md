@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.6.0] - 2026-05-07
+
 ### Added
 
 * Compiler (iptables): now honours the "Use kernel timezone" firewall option on time-based rules. When enabled, `--kerneltz` is appended to the `-m time` match so timestamps are interpreted in the kernel timezone instead of UTC. Nftables matching (`meta hour`, `meta day`) already always uses the kernel timezone, so the option has no nftables equivalent.
@@ -455,7 +460,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.6.0...HEAD
+[v1.6.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.1...v1.6.0
 [v1.5.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.0...v1.5.1
 [v1.5.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.6...v1.5.0
 [v1.4.6]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.5...v1.4.6
