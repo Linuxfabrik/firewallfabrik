@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+tbd
+
+
+## [v1.5.1] - 2026-05-07
+
 ### Fixed
 
 * GUI: Opening the Platform Settings dialog of an nftables firewall no longer crashes with `KeyError: 'ulog_cprange'`. The nftables schema (`platforms/nftables/defaults.yaml`) was missing the `ulog_cprange` and `ulog_qthreshold` entries that the dialog reads at populate time; both are now declared with `supported: false`.
@@ -437,7 +442,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.1...HEAD
+[v1.5.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.0...v1.5.1
 [v1.5.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.6...v1.5.0
 [v1.4.6]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.5...v1.4.6
 [v1.4.5]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.4...v1.4.5
