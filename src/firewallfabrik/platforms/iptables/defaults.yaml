@@ -58,6 +58,15 @@ options:
       Custom command executed on the firewall after the script has
       been copied. Leave empty to use the built-in activation.
 
+  add_mgmt_ssh_rule_when_stoped:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'add_mgmt_ssh_rule_when_stoped'
+    description: >-
+      Currently always-on whenever management SSH access is enabled. A
+      separate toggle for the block/stop backup rule is on the roadmap.
+
   admUser:
     type: 'str'
     default: ''
@@ -131,6 +140,16 @@ options:
       Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
+  configure_bonding_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_bonding_interfaces'
+    description: >-
+      Not yet implemented. Reserved for cluster support. Modern setups
+      configure bonding via NetworkManager or systemd-networkd outside
+      the firewall script.
+
   configure_bridge_interfaces:
     type: 'bool'
     default: false
@@ -148,6 +167,16 @@ options:
     description: >-
       Configure IP addresses on interfaces of the firewall machine
       as part of the generated script.
+
+  configure_vlan_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_vlan_interfaces'
+    description: >-
+      Not yet implemented. Reserved for cluster support. Modern setups
+      configure VLANs via NetworkManager or systemd-networkd outside
+      the firewall script.
 
   debug:
     type: 'bool'
@@ -317,6 +346,14 @@ options:
       Only effective when "Drop packets associated with no known
       connection" is also enabled.
 
+  log_ip_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logIPopt'
+    description: >-
+      Not yet implemented for iptables.
+
   log_level:
     type: 'enum'
     default: 'info'
@@ -345,6 +382,31 @@ options:
       Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
+
+  log_tcp_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPopt'
+    description: >-
+      Not yet implemented for iptables.
+
+  log_tcp_seq:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPseq'
+    description: >-
+      Not yet implemented for iptables.
+
+  manage_virtual_addr:
+    type: 'bool'
+    default: true
+    supported: true
+    widget: 'addVirtualsforNAT'
+    description: >-
+      Automatically add virtual IP addresses for NAT rules to the
+      corresponding interfaces.
 
   mgmt_addr:
     type: 'str'
@@ -450,10 +512,8 @@ options:
     supported: false
     widget: 'useKernelTz'
     description: >-
-      Use the kernel timezone instead of UTC for time-based rules
-      (-m time --kerneltz). Only available in iptables v1.4.11 and
-      later. Not yet implemented by the iptables compiler (no
-      time-based rule support yet).
+      Not yet implemented for iptables. Time-based rule support is the
+      prerequisite.
 
   use_m_set:
     type: 'bool'

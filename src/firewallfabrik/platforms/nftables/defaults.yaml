@@ -61,6 +61,15 @@ options:
       Custom command executed on the firewall after the script has
       been copied. Leave empty to use the built-in activation.
 
+  add_mgmt_ssh_rule_when_stoped:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'add_mgmt_ssh_rule_when_stoped'
+    description: >-
+      Currently always-on whenever management SSH access is enabled. A
+      separate toggle for the block/stop backup rule is on the roadmap.
+
   admUser:
     type: 'str'
     default: ''
@@ -132,6 +141,16 @@ options:
       Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
+  configure_bonding_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_bonding_interfaces'
+    description: >-
+      Not yet implemented. Reserved for cluster support. Modern setups
+      configure bonding via NetworkManager or systemd-networkd outside
+      the firewall script.
+
   configure_bridge_interfaces:
     type: 'bool'
     default: false
@@ -149,6 +168,16 @@ options:
     description: >-
       Configure IP addresses on interfaces of the firewall machine
       as part of the generated script.
+
+  configure_vlan_interfaces:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'configure_vlan_interfaces'
+    description: >-
+      Not yet implemented. Reserved for cluster support. Modern setups
+      configure VLANs via NetworkManager or systemd-networkd outside
+      the firewall script.
 
   debug:
     type: 'bool'
@@ -262,9 +291,8 @@ options:
     supported: false
     widget: 'ipv6NeighborDiscovery'
     description: >-
-      Automatically generate rules to permit ICMPv6 packets used in
-      IPv6 Neighbor Discovery. Not yet implemented by the nftables
-      compiler.
+      Not yet implemented for nftables. ICMPv6 Neighbor Discovery is
+      required by RFC 4861, IPv6 connectivity breaks without it.
 
   limit_suffix:
     type: 'enum'
@@ -277,9 +305,8 @@ options:
       - '/hour'
       - '/day'
     description: >-
-      Time unit for the logging rate limit. Not yet implemented by
-      the nftables compiler. The nft language has a native
-      "limit rate" directive that could be wired up here.
+      Not yet implemented for nftables. The nft language has a native
+      "limit rate" directive that would be wired up here.
 
   limit_value:
     type: 'int'
@@ -287,9 +314,8 @@ options:
     supported: false
     widget: 'logLimitVal'
     description: >-
-      Maximum number of log messages per time unit. Not yet
-      implemented by the nftables compiler. The nft language has a
-      native "limit rate" directive that could be wired up here.
+      Not yet implemented for nftables. The nft language has a native
+      "limit rate" directive that would be wired up here.
 
   load_modules:
     type: 'bool'
@@ -297,9 +323,8 @@ options:
     supported: false
     widget: 'loadModules'
     description: >-
-      Load required iptables kernel modules at the beginning of the
-      generated script. Not needed for nftables: nft loads required
-      kernel modules on demand.
+      Not needed for nftables: nft loads required kernel modules on
+      demand.
 
   local_nat:
     type: 'bool'
@@ -329,6 +354,14 @@ options:
       Only effective when "Drop packets associated with no known
       connection" is also enabled.
 
+  log_ip_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logIPopt'
+    description: >-
+      Not yet implemented for nftables.
+
   log_level:
     type: 'enum'
     default: 'info'
@@ -357,6 +390,30 @@ options:
       Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
+
+  log_tcp_opt:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPopt'
+    description: >-
+      Not yet implemented for nftables.
+
+  log_tcp_seq:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logTCPseq'
+    description: >-
+      Not yet implemented for nftables.
+
+  manage_virtual_addr:
+    type: 'bool'
+    default: true
+    supported: false
+    widget: 'addVirtualsforNAT'
+    description: >-
+      Not yet implemented for nftables. Reserved for cluster support.
 
   mgmt_addr:
     type: 'str'
@@ -462,9 +519,8 @@ options:
     supported: false
     widget: 'iptablesRestoreActivation'
     description: >-
-      Use iptables-restore to activate the policy in one atomic
-      transaction. Not needed for nftables: the nft compiler always
-      loads the ruleset atomically via "nft -f /dev/stdin".
+      Not needed for nftables: the nft compiler always loads the
+      ruleset atomically via "nft -f /dev/stdin".
 
   use_kerneltz:
     type: 'bool'
@@ -472,9 +528,8 @@ options:
     supported: false
     widget: 'useKernelTz'
     description: >-
-      Use the kernel timezone instead of UTC for time-based rules.
-      Not configurable in nftables: time matching ("meta hour", etc.)
-      always uses the kernel timezone, with no UTC fallback.
+      No equivalent in nftables. "meta hour"/"meta day" matching always
+      uses the kernel timezone, no UTC mode to switch to.
 
   use_m_set:
     type: 'bool'
@@ -482,9 +537,8 @@ options:
     supported: false
     widget: 'useModuleSet'
     description: >-
-      Use the ipset kernel module ("set" match) for run-time address
-      table objects. Not needed for nftables: sets are a native
-      feature of the nft language and are always used.
+      Not needed for nftables: sets are a native feature of the nft
+      language.
 
   use_NFLOG:
     type: 'bool'
@@ -503,8 +557,7 @@ options:
     supported: false
     widget: 'logNumsyslog'
     description: >-
-      Use numeric syslog levels instead of symbolic names in log
-      rules. Not yet implemented by the nftables compiler.
+      Not yet implemented for nftables.
 
   ulog_cprange:
     type: 'int'
@@ -512,8 +565,7 @@ options:
     supported: false
     widget: 'cprange'
     description: >-
-      Number of bytes of each packet to copy to userspace via NFLOG.
-      Not configurable through nftables: "log group N" delegates to
+      Not configurable through nftables. "log group N" delegates to
       ulogd2, rsyslog or syslog-ng, where the copy range is set in
       those daemons' configuration files.
 
@@ -532,11 +584,9 @@ options:
     supported: false
     widget: 'qthreshold'
     description: >-
-      Number of packets to queue inside the kernel before sending
-      them to userspace via NFLOG. Not configurable through
-      nftables: "log group N" delegates to ulogd2, rsyslog or
-      syslog-ng, where the queue threshold is set in those
-      daemons' configuration files.
+      Not configurable through nftables. "log group N" delegates to
+      ulogd2, rsyslog or syslog-ng, where the queue threshold is set in
+      those daemons' configuration files.
 
   verify_interfaces:
     type: 'bool'

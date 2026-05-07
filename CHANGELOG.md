@@ -11,11 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Iptables and nftables firewall settings dialogs: corrected checkboxes that were shown as unsupported even though the compiler honoured them. Affected options included "Drop new TCP sessions without SYN", "Log all rules", "Use numeric log levels", "Bridging firewall" and "Clamp MSS to MTU".
-* Nftables firewall settings dialog: greyed out the checkboxes for options that the nftables compiler does not implement, with tooltips explaining why. Previously these checkboxes accepted clicks but had no effect.
-
-### Removed
-
-* Iptables and nftables firewall settings dialogs: removed seven obsolete options that no longer have an effect on the generated ruleset: "Add SSH rule when stopped", "Add virtual addresses for NAT", "Configure bonding interfaces", "Configure VLAN interfaces", "Log IP options", "Log TCP options" and "Log TCP sequence numbers".
+* Iptables and nftables firewall settings dialogs: greyed-out checkboxes now show a tooltip that explains *why* the option is disabled (not yet implemented, not applicable to the platform, or replaced by automatic behaviour) instead of just repeating the label.
+* Nftables firewall settings dialog: greyed out the checkboxes for options that the nftables compiler does not implement (e.g. "Use iptables-restore", "Use ipset module", "Logging rate limit"). Previously these checkboxes accepted clicks but had no effect.
 
 
 ## [v1.5.1] - 2026-05-07

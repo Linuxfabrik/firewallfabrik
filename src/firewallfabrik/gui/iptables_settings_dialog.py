@@ -96,11 +96,25 @@ class IptablesSettingsDialog(QDialog):
                     widget.setPlaceholderText(str(text))
 
     def _disable_unsupported(self):
-        """Disable widgets for options not supported by the iptables compiler."""
+        """Disable widgets for options not supported by the iptables compiler.
+
+        Also replace the hardcoded .ui tooltip with the schema description
+        so the user sees *why* the option is greyed out.
+        """
+        # Build widget→description map once.
+        desc_by_widget = {
+            entry['widget']: entry.get('description', '').strip()
+            for entry in _SCHEMA.values()
+            if entry.get('widget')
+        }
         for name in _UNSUPPORTED_WIDGETS:
             widget = getattr(self, name, None)
-            if widget is not None:
-                widget.setEnabled(False)
+            if widget is None:
+                continue
+            widget.setEnabled(False)
+            desc = desc_by_widget.get(name)
+            if desc:
+                widget.setToolTip(desc)
 
     def _populate(self):
         opts = self._fw.options or {}

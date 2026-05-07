@@ -456,6 +456,8 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def add_virtual_address_for_nat(self, addr) -> None:
         """Register a virtual address needed for NAT."""
+        if not self.fw.get_option('manage_virtual_addr'):
+            return
         self.virtual_addresses.append(addr)
 
     def register_multi_address_object(self, name: str, source: str) -> None:
