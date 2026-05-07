@@ -24,7 +24,7 @@ options:
   accept_new_tcp_with_no_syn:
     type: 'bool'
     default: true
-    supported: false
+    supported: true
     widget: 'acceptSessions'
     inverted: true
     description: >-
@@ -57,15 +57,6 @@ options:
     description: >-
       Custom command executed on the firewall after the script has
       been copied. Leave empty to use the built-in activation.
-
-  add_mgmt_ssh_rule_when_stoped:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'add_mgmt_ssh_rule_when_stoped'
-    description: >-
-      Install the rule for SSH access from the management workstation
-      even when the firewall script is run with the "block" command.
 
   admUser:
     type: 'str'
@@ -140,16 +131,6 @@ options:
       Path to an alternative compiler binary. Leave empty to use
       the built-in compiler.
 
-  configure_bonding_interfaces:
-    type: 'bool'
-    default: false
-    supported: true
-    widget: 'configure_bonding_interfaces'
-    description: >-
-      Configure bonding (link aggregation) interfaces in the
-      generated script. Uses modprobe to load the bonding module
-      and ifenslave to add/remove slave interfaces.
-
   configure_bridge_interfaces:
     type: 'bool'
     default: false
@@ -167,15 +148,6 @@ options:
     description: >-
       Configure IP addresses on interfaces of the firewall machine
       as part of the generated script.
-
-  configure_vlan_interfaces:
-    type: 'bool'
-    default: false
-    supported: true
-    widget: 'configure_vlan_interfaces'
-    description: >-
-      Configure VLAN (802.1Q) interfaces in the generated script.
-      Requires vconfig.
 
   debug:
     type: 'bool'
@@ -329,7 +301,7 @@ options:
   log_all:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logAll'
     description: >-
       Activate logging in all rules, overriding individual rule
@@ -344,14 +316,6 @@ options:
       Log packets in INVALID conntrack state before dropping them.
       Only effective when "Drop packets associated with no known
       connection" is also enabled.
-
-  log_ip_opt:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logIPopt'
-    description: >-
-      Include IP options in log messages.
 
   log_level:
     type: 'enum'
@@ -381,31 +345,6 @@ options:
       Prefix string for log messages. Supported macros:
       %N = rule number, %A = action, %I = interface name,
       %C = chain name, %R = rule set name.
-
-  log_tcp_opt:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logTCPopt'
-    description: >-
-      Include TCP options in log messages.
-
-  log_tcp_seq:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'logTCPseq'
-    description: >-
-      Include TCP sequence numbers in log messages.
-
-  manage_virtual_addr:
-    type: 'bool'
-    default: true
-    supported: true
-    widget: 'addVirtualsforNAT'
-    description: >-
-      Automatically add virtual IP addresses for NAT rules
-      to the corresponding interfaces.
 
   mgmt_addr:
     type: 'str'
@@ -511,8 +450,10 @@ options:
     supported: false
     widget: 'useKernelTz'
     description: >-
-      Use the kernel timezone instead of UTC for time-based rules.
-      Only available in iptables v1.4.11 and later.
+      Use the kernel timezone instead of UTC for time-based rules
+      (-m time --kerneltz). Only available in iptables v1.4.11 and
+      later. Not yet implemented by the iptables compiler (no
+      time-based rule support yet).
 
   use_m_set:
     type: 'bool'
@@ -537,7 +478,7 @@ options:
   use_numeric_log_levels:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logNumsyslog'
     description: >-
       Use numeric syslog levels instead of symbolic names

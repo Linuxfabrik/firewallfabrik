@@ -27,12 +27,13 @@ options:
   accept_new_tcp_with_no_syn:
     type: 'bool'
     default: true
-    supported: false
+    supported: true
     widget: 'acceptSessions'
     inverted: true
     description: >-
       Accept TCP sessions opened prior to firewall restart.
-      Not supported by the nftables compiler.
+      The checkbox label shows inverted semantics ("Drop new TCP
+      sessions that do not begin with SYN flag").
 
   action_on_reject:
     type: 'enum'
@@ -81,11 +82,10 @@ options:
   bridging_fw:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'bridge'
     description: >-
       Generate rules for a bridging (transparent) firewall.
-      Not supported by the nftables compiler.
 
   check_shading:
     type: 'bool'
@@ -99,10 +99,12 @@ options:
   clamp_mss_to_mtu:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'clampMSStoMTU'
     description: >-
-      Clamp MSS to MTU. Not supported by the nftables compiler.
+      Add a rule at the top of the policy that clamps the TCP MSS
+      to the path MTU. Generation depends on IP forwarding settings
+      in the host OS dialog.
 
   clear_unknown_interfaces:
     type: 'bool'
@@ -254,6 +256,16 @@ options:
       Order in which IPv4 and IPv6 rules are generated in the
       output script.
 
+  ipv6_neighbor_discovery:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'ipv6NeighborDiscovery'
+    description: >-
+      Automatically generate rules to permit ICMPv6 packets used in
+      IPv6 Neighbor Discovery. Not yet implemented by the nftables
+      compiler.
+
   limit_suffix:
     type: 'enum'
     default: '/second'
@@ -265,8 +277,9 @@ options:
       - '/hour'
       - '/day'
     description: >-
-      Time unit for the logging rate limit.
-      Not supported by the nftables compiler.
+      Time unit for the logging rate limit. Not yet implemented by
+      the nftables compiler. The nft language has a native
+      "limit rate" directive that could be wired up here.
 
   limit_value:
     type: 'int'
@@ -274,8 +287,19 @@ options:
     supported: false
     widget: 'logLimitVal'
     description: >-
-      Maximum number of log messages per time unit.
-      Not supported by the nftables compiler.
+      Maximum number of log messages per time unit. Not yet
+      implemented by the nftables compiler. The nft language has a
+      native "limit rate" directive that could be wired up here.
+
+  load_modules:
+    type: 'bool'
+    default: true
+    supported: false
+    widget: 'loadModules'
+    description: >-
+      Load required iptables kernel modules at the beginning of the
+      generated script. Not needed for nftables: nft loads required
+      kernel modules on demand.
 
   local_nat:
     type: 'bool'
@@ -289,11 +313,11 @@ options:
   log_all:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'logAll'
     description: >-
-      Activate logging in all rules.
-      Not supported by the nftables compiler.
+      Activate logging in all rules, overriding individual rule
+      logging options. Use for debugging only.
 
   log_invalid:
     type: 'bool'
@@ -432,6 +456,36 @@ options:
       recreated, so rules created by other tools (e.g. Docker,
       CrowdSec, fail2ban) remain untouched.
 
+  use_iptables_restore:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'iptablesRestoreActivation'
+    description: >-
+      Use iptables-restore to activate the policy in one atomic
+      transaction. Not needed for nftables: the nft compiler always
+      loads the ruleset atomically via "nft -f /dev/stdin".
+
+  use_kerneltz:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'useKernelTz'
+    description: >-
+      Use the kernel timezone instead of UTC for time-based rules.
+      Not configurable in nftables: time matching ("meta hour", etc.)
+      always uses the kernel timezone, with no UTC fallback.
+
+  use_m_set:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'useModuleSet'
+    description: >-
+      Use the ipset kernel module ("set" match) for run-time address
+      table objects. Not needed for nftables: sets are a native
+      feature of the nft language and are always used.
+
   use_NFLOG:
     type: 'bool'
     default: false
@@ -443,14 +497,25 @@ options:
       (ulogd2, rsyslog, syslog-ng) for flexible log routing.
       In nftables, generates 'log group N' instead of plain 'log'.
 
+  use_numeric_log_levels:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'logNumsyslog'
+    description: >-
+      Use numeric syslog levels instead of symbolic names in log
+      rules. Not yet implemented by the nftables compiler.
+
   ulog_cprange:
     type: 'int'
     default: 0
     supported: false
     widget: 'cprange'
     description: >-
-      Number of bytes of each packet to copy to userspace
-      via NFLOG. Not supported by the nftables compiler.
+      Number of bytes of each packet to copy to userspace via NFLOG.
+      Not configurable through nftables: "log group N" delegates to
+      ulogd2, rsyslog or syslog-ng, where the copy range is set in
+      those daemons' configuration files.
 
   ulog_nlgroup:
     type: 'int'
@@ -467,9 +532,11 @@ options:
     supported: false
     widget: 'qthreshold'
     description: >-
-      Number of packets to queue inside the kernel before
-      sending them to userspace via NFLOG. Not supported
-      by the nftables compiler.
+      Number of packets to queue inside the kernel before sending
+      them to userspace via NFLOG. Not configurable through
+      nftables: "log group N" delegates to ulogd2, rsyslog or
+      syslog-ng, where the queue threshold is set in those
+      daemons' configuration files.
 
   verify_interfaces:
     type: 'bool'

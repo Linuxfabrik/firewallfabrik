@@ -560,17 +560,6 @@ specified below.</string>
          </item>
         </layout>
        </item>
-       <item row="9" column="0" colspan="2">
-        <widget class="QCheckBox" name="add_mgmt_ssh_rule_when_stoped">
-         <property name="text">
-          <string>Install the rule for ssh access from the management workstation when the firewall script is run with the "block" command</string>
-         </property>
-         <property name="toolTip">
-          <string>Install the rule for SSH access from the management workstation even when the
-firewall script is run with the "block" command.</string>
-         </property>
-        </widget>
-       </item>
        <item row="10" column="1">
         <spacer>
          <property name="orientation">
@@ -1084,26 +1073,6 @@ github.com/Linuxfabrik/firewallfabrik/issues/18).</string>
               <property name="bottomMargin">
                <number>0</number>
               </property>
-              <item row="0" column="0" colspan="2">
-               <widget class="QCheckBox" name="logTCPseq">
-                <property name="text">
-                 <string>log TCP seq. numbers</string>
-                </property>
-                <property name="toolTip">
-                 <string>Include TCP sequence numbers in log messages.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QCheckBox" name="logIPopt">
-                <property name="text">
-                 <string>log IP options</string>
-                </property>
-                <property name="toolTip">
-                 <string>Include IP options in log messages.</string>
-                </property>
-               </widget>
-              </item>
               <item row="3" column="0" colspan="2">
                <widget class="QCheckBox" name="logNumsyslog">
                 <property name="text">
@@ -1129,16 +1098,6 @@ github.com/Linuxfabrik/firewallfabrik/issues/18).</string>
                 <property name="toolTip">
                  <string>Syslog severity level for packets matched by logging rules. Leave empty to use
 the system default.</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QCheckBox" name="logTCPopt">
-                <property name="text">
-                 <string>log TCP options</string>
-                </property>
-                <property name="toolTip">
-                 <string>Include TCP options in log messages.</string>
                 </property>
                </widget>
               </item>
@@ -1521,19 +1480,6 @@ for debugging only.</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
-        <widget class="QCheckBox" name="configure_vlan_interfaces">
-         <property name="text">
-          <string />
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
        <item row="5" column="1">
         <widget class="QLabel" name="configure_vlan_interfaces_label">
          <property name="text">
@@ -1579,19 +1525,6 @@ for debugging only.</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="0">
-        <widget class="QCheckBox" name="configure_bonding_interfaces">
-         <property name="text">
-          <string />
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
        <item row="7" column="1">
         <widget class="QLabel" name="configure_bonding_interfaces_label">
          <property name="text">
@@ -1605,19 +1538,6 @@ for debugging only.</string>
          </property>
          <property name="buddy">
           <cstring>configure_bonding_interfaces</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="8" column="0">
-        <widget class="QCheckBox" name="addVirtualsforNAT">
-         <property name="text">
-          <string />
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
          </property>
         </widget>
        </item>

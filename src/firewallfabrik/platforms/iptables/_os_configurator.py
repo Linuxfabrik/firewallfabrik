@@ -228,13 +228,7 @@ class OSConfigurator_linux24(OSConfigurator):
 
         load_modules = bool(self.fw.get_option('load_modules'))
         check_utils.set_variable('load_modules', load_modules)
-
-        need_modprobe = (
-            load_modules
-            or bool(self.fw.get_option('configure_vlan_interfaces'))
-            or bool(self.fw.get_option('configure_bonding_interfaces'))
-        )
-        check_utils.set_variable('need_modprobe', need_modprobe)
+        check_utils.set_variable('need_modprobe', load_modules)
 
         use_iptables_restore = bool(self.fw.get_option('use_iptables_restore'))
         check_utils.set_variable('need_iptables_restore', use_iptables_restore)
@@ -462,8 +456,6 @@ class OSConfigurator_linux24(OSConfigurator):
 
     def add_virtual_address_for_nat(self, addr) -> None:
         """Register a virtual address needed for NAT."""
-        if not self.fw.get_option('manage_virtual_addr'):
-            return
         self.virtual_addresses.append(addr)
 
     def register_multi_address_object(self, name: str, source: str) -> None:
