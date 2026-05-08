@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+* Object tree context menu: "Collapse", "Collapse All", "Expand" and "Expand All" entries. The plain variants toggle the clicked node only; the "All" variants recurse over every descendant.
 
 
 ## [v1.6.0] - 2026-05-07

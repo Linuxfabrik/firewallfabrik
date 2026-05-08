@@ -39,6 +39,22 @@ from firewallfabrik.gui.object_tree_data import (
 )
 
 
+def _set_expanded_recursive(item, expanded):
+    """Expand or collapse *item* and every descendant.
+
+    Plain ``setExpanded`` only affects the clicked node, leaving deeper
+    children in their previous state — which is what makes the tree pop
+    open again after the filter cleared.  Walking the whole subtree
+    fixes that.
+    """
+    stack = [item]
+    while stack:
+        node = stack.pop()
+        node.setExpanded(expanded)
+        for i in range(node.childCount()):
+            stack.append(node.child(i))
+
+
 def _get_new_object_types(item, obj_type):
     """Return a list of ``(type_name, display_name)`` for the New menu.
 
@@ -193,13 +209,19 @@ def build_object_context_menu(
     handlers = {}
 
     # ── 1. Expand / Collapse ──────────────────────────────────────────
+    # Static alphabetical order so positions don't shift with the
+    # item's current expand state — preserves muscle memory.  The
+    # base-name actions are no-ops when the item is already in the
+    # requested state.
     if item.childCount() > 0:
-        if item.isExpanded():
-            act = menu.addAction('Collapse')
-            act.triggered.connect(lambda: item.setExpanded(False))
-        else:
-            act = menu.addAction('Expand')
-            act.triggered.connect(lambda: item.setExpanded(True))
+        act = menu.addAction('Collapse')
+        act.triggered.connect(lambda: item.setExpanded(False))
+        act = menu.addAction('Collapse All')
+        act.triggered.connect(lambda: _set_expanded_recursive(item, False))
+        act = menu.addAction('Expand')
+        act.triggered.connect(lambda: item.setExpanded(True))
+        act = menu.addAction('Expand All')
+        act.triggered.connect(lambda: _set_expanded_recursive(item, True))
         menu.addSeparator()
 
     # ── 2. Edit / Inspect — always shown; disabled if multi or system group
@@ -460,6 +482,18 @@ def build_category_context_menu(parent_widget, item, *, clipboard, has_mixed_sel
 
     menu = QMenu(parent_widget)
     handlers = {}
+
+    # Expand / Collapse — same static alphabetical order as the object menu.
+    if item.childCount() > 0:
+        act = menu.addAction('Collapse')
+        act.triggered.connect(lambda: item.setExpanded(False))
+        act = menu.addAction('Collapse All')
+        act.triggered.connect(lambda: _set_expanded_recursive(item, False))
+        act = menu.addAction('Expand')
+        act.triggered.connect(lambda: item.setExpanded(True))
+        act = menu.addAction('Expand All')
+        act.triggered.connect(lambda: _set_expanded_recursive(item, True))
+        menu.addSeparator()
 
     # Delete folder.
     act = menu.addAction('Delete\tDel')
