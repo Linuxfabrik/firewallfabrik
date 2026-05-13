@@ -92,7 +92,7 @@ If your generated script still triggers shellcheck warnings, they are most likel
 
 ## Compiling Cluster Configuration with FirewallFabrik
 
-Cluster compilation works very much like it does for individual firewalls. However, there are a few things to keep in mind.
+Cluster compilation works like compilation for individual firewalls. There are a few things to keep in mind.
 
 Clusters are represented by objects of type "Cluster" located in the object group "Clusters". To generate configuration for all cluster member firewalls and install it on each, you need to compile it just like you would compile a regular standalone firewall object.
 
@@ -287,7 +287,7 @@ SSH session terminated, exit status: 1
 
 This error may happen when you run FirewallFabrik on any platform.
 
-This error means *scp* was able to connect to the firewall but encountered ssh protocol version mismatch. ssh tried to switch back to ssh1 compatibility mode, but failed. This really has nothing to do with FirewallFabrik or even scp on the client side. This happens if you have two versions of ssh package installed on the firewall. ssh daemon accepts connection from scp with ssh protocol v2, starts scp utility (still on the firewall) but the scp utility it gets is from the other package and is probably an older version that does not support ssh2 protocol. To resolve this, try switching to sftp. Here is how to test this from the command line. First, reproduce the error:
+This error means *scp* was able to connect to the firewall but encountered ssh protocol version mismatch. ssh tried to switch back to ssh1 compatibility mode, but failed. This has nothing to do with FirewallFabrik or even scp on the client side. This happens if you have two versions of ssh package installed on the firewall. ssh daemon accepts connection from scp with ssh protocol v2, starts scp utility (still on the firewall) but the scp utility it gets is from the other package and is probably an older version that does not support ssh2 protocol. To resolve this, try switching to sftp. Here is how to test this from the command line. First, reproduce the error:
 
 ``` text
 scp test.txt root@firewall:
