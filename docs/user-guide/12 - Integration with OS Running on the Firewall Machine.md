@@ -65,7 +65,7 @@ sudo systemctl disable --now nftables
 
 ## Coexistence with Docker, CrowdSec, fail2ban and Other Tools
 
-By default, the generated firewall script flushes **all** rules before loading the new policy. This guarantees a clean, deterministic firewall state — FirewallFabrik controls the entire host firewall.
+By default, the generated firewall script flushes **all** rules before loading the new policy. This guarantees a clean, deterministic firewall state in which FirewallFabrik controls the entire host firewall.
 
 On servers running Docker, CrowdSec, fail2ban or similar tools, this full flush destroys the rules those tools manage. To avoid this, disable the **"Flush entire ruleset"** option in the firewall settings dialog. FirewallFabrik then only manages its own tables and chains, leaving everything else untouched.
 
@@ -78,7 +78,7 @@ The table/chain prefix is configurable via **"Table name"** in the firewall sett
 
 ### How nftables Coexistence Works
 
-FirewallFabrik creates two named nftables tables (e.g. `fwf_filter` and `fwf_nat`). When `"Flush entire ruleset"` is disabled, the generated script only deletes and recreates these two tables — other tools' tables are never touched. The `nft` rules file uses an atomic create-then-delete pattern:
+FirewallFabrik creates two named nftables tables (e.g. `fwf_filter` and `fwf_nat`). When `"Flush entire ruleset"` is disabled, the generated script only deletes and recreates these two tables; other tools' tables are never touched. The `nft` rules file uses an atomic create-then-delete pattern:
 
 ``` text
 table ip fwf_filter {}
@@ -148,9 +148,9 @@ WantedBy=multi-user.target
 This produces the following evaluation order in the INPUT chain:
 
 ``` text
-Position 1:  -j f2b-sshd         (fail2ban — started last)
+Position 1:  -j f2b-sshd         (fail2ban - started last)
 Position 2:  -j CROWDSEC_CHAIN   (CrowdSec)
-Position 3:  -j fwf_INPUT        (FirewallFabrik — started first)
+Position 3:  -j fwf_INPUT        (FirewallFabrik - started first)
 Built-in policy: DROP
 ```
 
@@ -259,8 +259,8 @@ This approach ensures that the firewall script is deployed consistently across a
 
 For teams using a CI/CD pipeline, the typical workflow is:
 
-1.  Edit the firewall policy — either in the FirewallFabrik GUI or by modifying the `.fwf` YAML file directly (e.g. via scripts or other automation tools to add rules, objects and attributes).
-2.  Save and compile — either via the GUI (`Rules > Compile`) or on the command line (`fwf compile myfile.fwf`).
+1.  Edit the firewall policy, either in the FirewallFabrik GUI or by modifying the `.fwf` YAML file directly (e.g. via scripts or other automation tools to add rules, objects and attributes).
+2.  Save and compile, either via the GUI (`Rules > Compile`) or on the command line (`fwf compile myfile.fwf`).
 3.  Commit the `.fwf` source file and the generated `.fw` script(s) to Git.
 4.  A CI/CD pipeline (GitLab CI, GitHub Actions, Jenkins, etc.) picks up the change and runs the deployment playbook or script.
 
