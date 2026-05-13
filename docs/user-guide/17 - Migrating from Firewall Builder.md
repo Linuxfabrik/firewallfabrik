@@ -56,7 +56,7 @@ FirewallFabrik imports all objects, rule sets, and settings from a `.fwb` file:
 
 ## Platform Compatibility
 
-Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik ships with **iptables** and **nftables** backends at full feature parity with Firewall Builder, plus the new **nftables** backend that Firewall Builder never had.
+Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik ships with an **iptables** backend at full feature parity with Firewall Builder, plus a new **nftables** backend that Firewall Builder never had.
 
 ### Discontinued Platforms
 
@@ -64,10 +64,10 @@ These platforms have no remaining audience and are not supported:
 
 | Platform | Target | Status |
 |----|----|----|
-| Cisco FWSM | Firewall Services Module | Discontinued by Cisco. No longer deployed. |
-| Cisco PIX | PIX 6.x appliances | Hardware end-of-life since ~2008. Fully replaced by Cisco ASA. |
-| ipfilter (ipf) | Solaris, FreeBSD | Oracle Solaris has virtually no market share left. FreeBSD users have moved to PF. |
-| ipfw | FreeBSD, macOS | Superseded by PF on FreeBSD. macOS also switched to PF. |
+| Cisco FWSM | Firewall Services Module | End-of-sale 2012, end-of-support 2015.[^cisco-fwsm] Effectively gone from production networks. |
+| Cisco PIX | PIX 6.x appliances | End-of-sale 2008, end-of-support 2013.[^cisco-pix] Replaced by Cisco ASA. |
+| ipfilter (ipf) | Solaris, FreeBSD | Oracle Solaris has minimal market share. Still present in FreeBSD base and illumos, but largely supplanted by PF in new deployments.[^ipfilter] |
+| ipfw | FreeBSD, macOS | Still maintained in FreeBSD base alongside PF and ipfilter, but mostly displaced by PF in practice. macOS deprecated ipfw in 10.7 Lion (2011) and removed it in 10.10 Yosemite (2014), in favor of PF.[^ipfw] |
 
 ### Platforms Not Yet Supported
 
@@ -75,18 +75,18 @@ These platforms are still in use but no compiler backend has been implemented ye
 
 | Platform | Target | Notes |
 |----|----|----|
-| Cisco ASA | ASA 7.x--8.3 | Still widely deployed. The Firewall Builder compiler targeted ASA up to version 8.3. Modern ASA 9.x would require a substantially new compiler. Cisco is transitioning to Firepower Threat Defense (FTD). |
-| Cisco IOS ACL | IOS 12.1--12.4 routers | Cisco IOS routers remain common (modern versions run IOS-XE 16.x/17.x). Architecturally possible to add. |
-| Cisco NX-OS ACL | Nexus 4.2--6.1 | Cisco Nexus switches are used in data centers (current NX-OS is 10.x). Architecturally possible to add. |
-| HP ProCurve ACL | ProCurve K.13 switches | Rebranded to HPE Aruba. A niche switch ACL platform. |
-| Juniper JunOS | JunOS 11.2+ | Juniper is a major player in enterprise networking. |
-| PF | OpenBSD, FreeBSD | Actively developed, powers pfSense and OPNsense. Among the unsupported platforms, PF would be the most natural candidate for a future backend. |
+| Cisco ASA | ASA 7.x--8.3 | Still widely deployed. The Firewall Builder compiler targeted ASA up to version 8.3. Modern ASA 9.x would require a substantially new compiler. Cisco is transitioning to Firepower Threat Defense (FTD).[^cisco-asa] |
+| Cisco IOS ACL | IOS 12.1--12.4 routers | Cisco IOS routers remain common (modern versions run IOS-XE 17.x LTS, with Cisco moving to year-based 26.x releases from 2026 onward).[^cisco-ios-xe] Architecturally possible to add. |
+| Cisco NX-OS ACL | Nexus 4.2--6.1 | Cisco Nexus switches are used in data centers (current NX-OS is 10.x).[^cisco-nx-os] Architecturally possible to add. |
+| HP ProCurve ACL | ProCurve K.13 switches | ProCurve brand retired in 2010 (renamed HP Networking), later consolidated under HPE Aruba after the 2015 Aruba acquisition.[^procurve] A niche switch ACL platform. |
+| Juniper JunOS | JunOS 11.2+ | Juniper is a major player in enterprise networking (current Junos OS is in the 25.x series).[^junos] |
+| PF | OpenBSD, FreeBSD | Actively developed, powers pfSense and OPNsense.[^pfsense] Among the unsupported platforms, PF would be the most natural candidate for a future backend. |
 
 ### Added in FirewallFabrik
 
 | Platform | Target | Notes |
 |----|----|----|
-| nftables | Linux (kernel 3.13+) | The successor to iptables and the default firewall framework on all major Linux distributions. Firewall Builder never supported nftables. |
+| nftables | Linux (kernel 3.13+) | The successor to iptables and the default firewall framework on all major Linux distributions. Firewall Builder never supported nftables.[^nftables] |
 
 ## Key Differences from Firewall Builder
 
@@ -106,7 +106,7 @@ No policy import
 Firewall Builder could parse the output of `iptables-save` and create firewall objects and rule sets from it. This feature required a complex ANTLR parser (~47,000 lines of code) and produced a flat, unsorted rule list that needed extensive manual cleanup to be usable. In practice, building a firewall from scratch in the GUI is faster than cleaning up an imported configuration. FirewallFabrik does not include this feature.
 
 ULOG removed, NFLOG supported  
-The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG). The `use_ULOG` firewall option is no longer part of the FirewallFabrik schema; if your `.fwb` file had it enabled, it is silently migrated to the standard LOG target during import. Both compilers fully support NFLOG: the iptables compiler generates `-j NFLOG` rules with `--nflog-group`, `--nflog-prefix`, `--nflog-range`, and `--nflog-threshold` parameters; the nftables compiler generates `log group N` statements. Enable NFLOG via the "Use NFLOG" option in the firewall settings dialog.
+The ULOG logging target has been removed from modern Linux kernels (replaced by NFLOG).[^ulog] The `use_ULOG` firewall option is no longer part of the FirewallFabrik schema; if your `.fwb` file had it enabled, it is silently migrated to the standard LOG target during import. Both compilers fully support NFLOG: the iptables compiler generates `-j NFLOG` rules with `--nflog-group`, `--nflog-prefix`, `--nflog-range`, and `--nflog-threshold` parameters; the nftables compiler generates `log group N` statements. Enable NFLOG via the "Use NFLOG" option in the firewall settings dialog.
 
 Numeric syslog levels  
 The `use_numeric_log_levels` firewall option is honoured by the iptables compiler: when enabled, LOG rules are emitted with `--log-level 5` instead of `--log-level notice`, matching the form every iptables version understands out of the box. The option is not available for nftables, whose native syntax requires the symbolic name.
@@ -137,3 +137,18 @@ On RHEL 8+ and modern distributions, `iptables` uses the nftables backend (`ipta
 
 No generation timestamp  
 Firewall Builder embedded a generation timestamp in every compiled script, which meant that recompiling an unchanged policy always produced a different output file. This broke deterministic builds: checksums changed on every run, `diff` always showed at least one modified line, and CI/CD pipelines could not reliably detect whether the policy had actually changed. FirewallFabrik deliberately omits the generation timestamp so that the same `.fwf` input always produces byte-identical output. If you need to record when a script was deployed, handle this in your deployment process (e.g. Ansible, CI/CD pipeline, or a wrapper script that writes a timestamp to `/etc/fw/deployed-at` on the target host).
+
+## Sources
+
+[^cisco-asa]: Cisco ASA platform history and transition to Firepower Threat Defense: [Cisco ASA on Wikipedia](https://en.wikipedia.org/wiki/Cisco_ASA).
+[^cisco-fwsm]: Cisco Firewall Services Module End-of-Life announcement: [Cisco EoL Notice for FWSM](https://www.cisco.com/c/en/us/products/collateral/interfaces-modules/services-modules/end_of_life_notice_c51-458222.html).
+[^cisco-ios-xe]: Cisco IOS XE 26 release lifecycle and the move to year-based versioning: [Cisco IOS XE 26 Software Release Bulletin](https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/ios-xe-26/bulletin-c25-2378701.html).
+[^cisco-nx-os]: Current Cisco Nexus 9000 NX-OS release trains (10.x): [Cisco Nexus 9000 Series Release Notes](https://www.cisco.com/c/en/us/support/switches/nexus-9000-series-switches/products-release-notes-list.html).
+[^cisco-pix]: Cisco PIX end-of-sale (2008-07-28) and end-of-support (2013-07-29) dates: [Cisco PIX on Wikipedia](https://en.wikipedia.org/wiki/Cisco_PIX).
+[^ipfilter]: IPFilter availability in FreeBSD, illumos, and former Solaris releases: [IPFilter on Wikipedia](https://en.wikipedia.org/wiki/IPFilter).
+[^ipfw]: ipfw maintenance status in FreeBSD and removal from macOS in 10.10 Yosemite: [ipfirewall on Wikipedia](https://en.wikipedia.org/wiki/Ipfirewall).
+[^junos]: Junos OS 25.x release timeline: [Junos OS on Wikipedia](https://en.wikipedia.org/wiki/Junos_OS).
+[^nftables]: nftables introduction in Linux kernel 3.13 (2014-01-19): [Linux 3.13 release notes (kernelnewbies)](https://kernelnewbies.org/Linux_3.13) and [nftables on Wikipedia](https://en.wikipedia.org/wiki/Nftables).
+[^pfsense]: pfSense and OPNsense use the PF firewall on FreeBSD: [pfSense on Wikipedia](https://en.wikipedia.org/wiki/PfSense).
+[^procurve]: ProCurve renaming to HP Networking (2010) and consolidation under HPE Aruba (2015): [ProCurve on Wikipedia](https://en.wikipedia.org/wiki/ProCurve).
+[^ulog]: ULOG netfilter target removal in Linux kernel 3.17: [Linux 3.17 release notes (kernelnewbies)](https://kernelnewbies.org/Linux_3.17).
