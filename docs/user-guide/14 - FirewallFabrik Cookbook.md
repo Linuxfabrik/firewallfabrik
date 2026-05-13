@@ -333,7 +333,7 @@ Obviously, this rule makes the firewall too open because it permits SSH connecti
 
 The generated configuration will follow the same pattern but add matching of the source address of the packet to make sure it comes from local LAN.
 
-We should be careful not to permit more protocols to the firewall than we really intend to. Let's look at the simple rule permitting connects from internal LAN to the Internet (rule \#0 on the screenshot below):
+We should be careful not to permit more protocols to the firewall than we intend to. Let's look at the simple rule permitting connects from internal LAN to the Internet (rule \#0 on the screenshot below):
 
 ![LAN to Anywhere](img/cookbook-023.png)
 
@@ -353,7 +353,7 @@ Three rules shown above are very good at restricting access to the firewall from
 
 I do not include the generated iptables code because it should be clear by now how it should look. It is more important that rules in FirewallFabrik GUI look exactly the same regardless of the specific configuration.
 
-Policy rules demonstrated in these examples are good at restricting access to the firewall while making it possible to manage it remotely via SSH. The problem with these rules is that administrator has to be careful to not break them in any way. One would think it should be hard to make an error in a policy fragment consisting of two rules, but this happens. These two rules are just a small part of a much larger rule set and may not be located in a prominent place right on top of it. As new rules are added to the policy, at some point some rule located above may block access to the whole network or range of addresses that accidentally includes management address of the firewall. This means even though the rules are there, the access to the firewall gets blocked as soon as updated policy is uploaded and activated. This is really bad news if the firewall machine is located far away in a remote office or data center.
+Policy rules demonstrated in these examples are good at restricting access to the firewall while making it possible to manage it remotely via SSH. The problem with these rules is that administrator has to be careful to not break them in any way. One would think it should be hard to make an error in a policy fragment consisting of two rules, but this happens. These two rules are just a small part of a much larger rule set and may not be located in a prominent place right on top of it. As new rules are added to the policy, at some point some rule located above may block access to the whole network or range of addresses that accidentally includes management address of the firewall. This means even though the rules are there, the access to the firewall gets blocked as soon as updated policy is uploaded and activated. This is a serious problem if the firewall machine is located far away in a remote office or data center.
 
 To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Firewall Settings" button. This is described in more details in [04 - FirewallFabrik GUI](04%20-%20FirewallFabrik%20GUI.md). In the dialog that appears, locate controls shown on Figure 14.27.
 
@@ -450,7 +450,7 @@ $IPTABLES -A INPUT -p tcp -m tcp -s 192.0.2.100 -d 192.0.2.1 --dport 22 \
 
 ## Firewall Talking to Itself
 
-Many services running on the firewall machine need to be able to establish connections to the same machine. X11, RPC, DNS are services like that, to name a few. Blocking these services on the firewall can cause various problems, depending on what protocol is being blocked. If it is DNS, then it may take a lot longer than usual to get to a command-line prompt when logging in to the machine using Telnet or SSH. Once logged in, you won't be able to resolve any host names into addresses. If X11 is blocked, then X server and any graphic environment using it (KDE, Gnome etc.) won't start. In any case though the problem can easily be solved by adding a simple any-any rule and specifying the loopback interface of the firewall to permit all sorts of communications. As shown on Figure 14.31, this rule must specify the loopback interface, have action Accept and direction Both.
+Many services running on the firewall machine need to be able to establish connections to the same machine. X11, RPC, DNS are services like that, to name a few. Blocking these services on the firewall can cause various problems, depending on what protocol is being blocked. If it is DNS, then it may take a lot longer than usual to get to a command-line prompt when logging in to the machine using Telnet or SSH. Once logged in, you won't be able to resolve any host names into addresses. If X11 is blocked, then X server and any graphic environment using it (KDE, Gnome etc.) won't start. In any case, the problem is solved by adding an any-any rule that specifies the loopback interface of the firewall to permit all sorts of communications. As shown on Figure 14.31, this rule must specify the loopback interface, have action Accept and direction Both.
 
 ![Rule Permitting Everything on the Loopback Interface](img/cookbook-031.png)
 
@@ -476,7 +476,7 @@ The "ip_fragments" object, which is included in the section "Services/IP" of the
 
 Another potentially harmful type of packets is so called "Christmas tree" packet. This one is just a TCP packet with an impossible combination of TCP flags or even all TCP flags turned on at once (for example SYN, ACK, FIN, RST, PSH). This combination is never used in real communications, so if a packet like that appears at the boundary of your network, it should be considered illegal and blocked. Object "tcp-xmas" is included in the section "Services/TCP" of the standard objects database coming with FirewallFabrik.
 
-Some platforms provide a mechanism to turn on and off stateful inspection on individual rules. Turning it off on those rules which do not require it may improve performance of the firewall. Obviously, we do not need stateful inspection while analysing fragmented packets as we do not really want any session to be established, so we can safely use this option on this rule. One example of firewall platform which supports stateful inspection but provides a way to turn it on and off is iptables. In FirewallFabrik, this can be done in the rule options dialog (which is platform-sensitive and shows different options for different platforms). Figure 14.33 shows rule logging options dialog for iptables:
+Some platforms provide a mechanism to turn on and off stateful inspection on individual rules. Turning it off on those rules which do not require it may improve performance of the firewall. Obviously, we do not need stateful inspection while analysing fragmented packets as we do not want any session to be established, so we can use this option on this rule. One example of firewall platform which supports stateful inspection but provides a way to turn it on and off is iptables. In FirewallFabrik, this can be done in the rule options dialog (which is platform-sensitive and shows different options for different platforms). Figure 14.33 shows rule logging options dialog for iptables:
 
 ![Rule Options Dialog for iptables Firewall](img/cookbook-033.png)
 
@@ -488,7 +488,7 @@ This rule applies to all packets crossing the firewall regardless of their origi
 
 ## Using Action 'Reject': Blocking Ident Protocol
 
-Suppose we want to block connections to certain ports on the server behind the firewall, but want to do it in a "polite" manner that lets the sender host know right away that the connection attempt was blocked so it appears that our server is not listening on that port at all. One of the practical applications of this setup would be blocking Ident connections to a mail relay or a mail server. Sendmail and many other MTAs (Mail Transport Agents) attempt to connect to Ident port (TCP port 113) on the mail relay every time they accept e-mail from that relay. Many believe that the Ident protocol is practically useless and does not really serve as a protection against SPAM or for any other useful purpose. Unfortunately, silent blocking of Ident connections on the firewall using a rule with action "Deny" adds a delay in the e-mail delivery. This happens because when the sender host tries to establish the Ident connection to the recipient, it sends the TCP SYN packet to it (the first packet in three-way TCP handshake) and then waits for TCP ACK packet in response. However, it never sees it because recipient's firewall blocked its first TCP SYN packet. In situations like this, the sender host assumes the reply packet got lost and tries to send the TCP SYN packet again. It repeats this for a few seconds (usually 30 sec) before it gives up. This adds a 30-second delay to e-mail delivery. Our intent is to show how one can construct a policy rule to block Ident without causing this delay.
+Suppose we want to block connections to certain ports on the server behind the firewall, but want to do it in a "polite" manner that lets the sender host know right away that the connection attempt was blocked so it appears that our server is not listening on that port at all. One of the practical applications of this setup would be blocking Ident connections to a mail relay or a mail server. Sendmail and many other MTAs (Mail Transport Agents) attempt to connect to Ident port (TCP port 113) on the mail relay every time they accept e-mail from that relay. The Ident protocol does not serve as a protection against SPAM or any other practical purpose today. Unfortunately, silent blocking of Ident connections on the firewall using a rule with action "Deny" adds a delay in the e-mail delivery. This happens because when the sender host tries to establish the Ident connection to the recipient, it sends the TCP SYN packet to it (the first packet in three-way TCP handshake) and then waits for TCP ACK packet in response. However, it never sees it because recipient's firewall blocked its first TCP SYN packet. In situations like this, the sender host assumes the reply packet got lost and tries to send the TCP SYN packet again. It repeats this for a few seconds (usually 30 sec) before it gives up. This adds a 30-second delay to e-mail delivery. Our intent is to show how one can construct a policy rule to block Ident without causing this delay.
 
 The simplest way to block any protocol is to use a "Deny" action in the policy rule. Since "Deny" causes the firewall to silently drop the packet, the sender never knows what happened to it and keeps waiting for response. To avoid this delay we will set rule Action to "Reject". Normally "Reject" makes the firewall to send ICMP "unreachable" message back to sender, thus indicating that access to requested port is denied by the firewall. This may be insufficient in some cases, because the host trying to connect to our Ident port won't understand this type of ICMP message and will keep trying. In fact, most OSs do not recognize an ICMP "administratively prohibited" message and do keep trying. To make the host on the other side stop its attempts right away, we need to send an TCP RST packet back instead of an ICMP message. This can be done by setting the appropriate parameter for the "Reject" action. To set an Action parameter, change the Action to "Reject," then double-click the Reject icon to get the parameters dialog. (see Figure 14.36). It is also safe to turn stateful inspection off on this rule since we do not want connection to be established and therefore do not need to keep track of it.
 
@@ -800,7 +800,7 @@ The webmin service uses port 10000, so we put this port number in both the begin
 
 ## Using a Firewall as the DHCP and DNS Server for the Local Net
 
-It is often convenient to use a firewall as a DHCP and DNS server for the local net, especially in small installations like that in a home office. It is not really difficult, but building rules properly requires understanding of how DHCP and DNS work.
+It is often convenient to use a firewall as a DHCP and DNS server for the local net, especially in small installations like a home office. Building rules properly requires understanding of how DHCP and DNS work.
 
 The following combination of rules permits machines on the local net to use the firewall as DHCP server:
 
@@ -921,7 +921,7 @@ Branch rule sets created in the FirewallFabrik GUI get translated into user-defi
 2.  If the source IP address of the SSH client that tries to connect was identified as an SSH scanner, block connection
 3.  Permit all other SSH connections from all sources.
 
-This policy is rather permissive but it can easily be modified to suite more strict security requirements.
+This policy is permissive; modify it to suit stricter security requirements.
 
 I start with an existing firewall policy. The rules I am going to add to block SSH scans do not depend on other rules in the policy. First, I create a new policy rule set with name "block_ssh". This rule set is not the "top rule set", so generated iptables rules will be placed in the chain "block_ssh". I do not add any rules here. Rules will be added to this chain by an external script.
 
@@ -1307,7 +1307,7 @@ This chapter is dedicated to high availability (HA) or cluster configurations th
 
 ## Web Server Cluster Running Linux
 
-This example demonstrates how FirewallFabrik can be used to generate firewall configuration for a clustered web server with multiple virtual IP addresses. The firewall is running on each web server in the cluster. This example assumes the cluster is built with heartbeat using "old" style configuration files, but which high availability software is used to build the cluster is not really essential.
+This example demonstrates how FirewallFabrik can be used to generate firewall configuration for a clustered web server with multiple virtual IP addresses. The firewall is running on each web server in the cluster. This example assumes the cluster is built with heartbeat using "old" style configuration files, but the choice of high availability software is not essential.
 
 In this example I am working with redundant web server configuration where each machine has its own IP address, plus three additional virtual addresses that can be used for virtual hosts. FirewallFabrik generates iptables script for both machines. Configuration of the HA agent should be handled either manually or using specialized configuration system such as pacemaker.
 
@@ -1684,7 +1684,7 @@ In this example, we work with two Linux machines running VRRPd for failover that
 
 As shown in Figure 14.119, machines linux-test-1 and linux-test-2 run vrrpd daemon ([VRRPD home page](http://off.net/~jme/vrrpd/)) to create virtual IP address on both subnets. VRRPd adds a virtual IP address to the same interface eth0 or eth1. One of the daemons becomes master and takes ownership of the virtual address by adding it to the interface. It sends a UDP datagram to the multicast address 224.0.0.18 every second or so to declare that it is up and running and owns the address. If the machine it is running on shuts down for any reason, this stream of packets from the master stops and after a predetermined timeout, the second machine becomes the master and assumes the virtual IP address. VRRP daemon also replaces MAC address of the interface with a virtual MAC address so that when the virtual IP address is transferred from one machine to another, all hosts on the corresponding subnet do not have to update their ARP tables because the MAC address stays the same.
 
-VRRPd is very easy to configure. It does not have any configuration file; all configuration is provided by parameters on the command line. Here is the command line for the machine linux-test-1:
+VRRPd has no configuration file; all configuration is provided by parameters on the command line. Here is the command line for the machine linux-test-1:
 
 ``` text
 vrrpd -D -i eth0 -v 1 -a none -p 110 10.3.14.150
@@ -1902,7 +1902,7 @@ update_addresses_of_interface "eth1 fe80::2c:29ff:fe1e:dcb4/64 10.1.1.1/24" "10.
 Here calls to the update_addresses_of_interface shell function try to bring ip addresses of the firewall interfaces in sync with their configuration in FirewallFabrik. IP addresses that are configured in FirewallFabrik but are not present on the firewall will be added and those found on the firewall but are not configured in FirewallFabrik will be removed.
 
 > [!NOTE]
-> This is done to ensure the environment in which generated iptables rules will work really matches assumptions under which these rules were generated. If the program generates rules assuming certain addresses belong to the firewall, but in fact they do not, packets will go into chains different from those used in the generated iptables commands and behavior of the firewall will be wrong.
+> This is done to ensure the environment in which generated iptables rules will work matches the assumptions under which these rules were generated. If the program generates rules assuming certain addresses belong to the firewall, but in fact they do not, packets will go into chains different from those used in the generated iptables commands and behavior of the firewall will be wrong.
 
 When the script adds and removes ip addresses of the firewall interfaces, it should skip those managed by VRRPd. VRRPd (and probably other HA software as well) does not seem to monitor the state of the virtual addresses it adds to interfaces, assuming that it is the only agent that does so. If FirewallFabrik script were to remove virtual addresses while VRRPd is still working, the cluster operation would break until vrrpd would add them back, which only happens when it restarts or failover occurs. So the FirewallFabrik script has to know to avoid these addresses and not remove them. The second argument in the call to the shell function update_addresses_of_interface serves this purpose, it tells the function which addresses it should ignore. The function uses "ip addr show" command to discover addresses that already configured on the interfaces and for the address to match, it should have exactly the same netmask as the one that appears in the output of "ip addr show" command.
 
@@ -2203,7 +2203,7 @@ The interface eth0 used in the "Translated Source" element of this rule is the o
 
 ### Managing IP Addresses of the Interfaces in a Heartbeat Cluster Setup
 
-In order to ensure the environment in which generated iptables rules will work really matches assumptions under which these rules were generated, FirewallFabrik can manage the IP addresses of the interfaces of the firewall machine. This feature is optional and is controlled by the checkbox "Configure interfaces of the firewall machine" in the "Script" tab of the firewall object "advanced settings" dialog:
+To ensure the environment in which generated iptables rules will work matches the assumptions under which these rules were generated, FirewallFabrik can manage the IP addresses of the interfaces of the firewall machine. This feature is optional and is controlled by the checkbox "Configure interfaces of the firewall machine" in the "Script" tab of the firewall object "advanced settings" dialog:
 
 ![Options in the "Script" Tab of the Firewall Object Dialog](img/cookbook-165.png)
 
@@ -2626,7 +2626,7 @@ Since both servers use eth0 as the outside interface leave the interface mapping
 
 Click *Next \>*
 
-To make the cluster interface easy to identify, update the label associated with interfaces eth0 and lo. Since we are not running our servers as a high availability cluster with failover set the Failover protocol to None.
+To identify the cluster interface, update the label associated with interfaces eth0 and lo. Since we are not running our servers as a high availability cluster with failover set the Failover protocol to None.
 
 ![Set Cluster Interface Configuration.](img/cookbook-188.png)
 
@@ -2678,7 +2678,7 @@ $IPTABLES -A INPUT -i eth0 -p tcp -m tcp -m multiport -d 192.0.2.11 \
 
 **Modifying Rules**
 
-Now that you have a cluster setup to generate firewall policies for each of the server firewalls it is easy to make changes that affect all your servers. For example, to add a new rule to all members of the web-servers cluster to allow ICMP from the Trusted Networks object to servers simply add the rule in the cluster policy and compile and install it to the members.
+Now that you have a cluster setup to generate firewall policies for each of the server firewalls, you can make changes that affect all your servers from one place. For example, to add a new rule to all members of the web-servers cluster to allow ICMP from the Trusted Networks object to servers, add the rule in the cluster policy and compile and install it to the members.
 
 **Adding a New Server to the Cluster**
 
@@ -2823,13 +2823,13 @@ This results in the firewall web-03 having the following rules matching applied.
 
 ## Another Way to Generate a Firewall Policy for Many Hosts
 
-This is a simpler, but less powerful and flexible, way to manage multiple hosts requiring the same firewall policy.
+This is a simpler but less flexible way to manage multiple hosts requiring the same firewall policy.
 
 Suppose you use FirewallFabrik to generate a policy for the firewall running on a server. How can FirewallFabrik help you generate a policy for it and how can you do it if you have hundreds of servers like that?
 
 For example, you could run a firewall locally on the web server that should be accessible to anyone on protocol HTTP, but other protocols used to publish content and manage the machine should be open only to a limited number of IP addresses. To configure such a firewall running on a host in FirewallFabrik, create a firewall object and configure it with interfaces as usual. You will need to create a loopback interface and Ethernet (if it's a Linux machine, then it will be "eth0"). This firewall object now represents your server with a firewall running on it. You can then build a policy. Most likely you won't need NAT rules there, although there are some cases where NAT rules may be useful too. Compile the policy and transfer it to the server using the FirewallFabrik installer as usual. That's it.
 
-This procedure gets really tiresome if you need to repeat it many times. This is so if you have a whole farm of servers and need to generate and install a firewall policy on each one of them. The following trick helps simplify the process if the servers are very similar (like a web servers farm) and use identical firewall policies.
+This procedure becomes tiresome if you need to repeat it many times, for example for a farm of servers that each need their own firewall policy. The following trick helps simplify the process if the servers are similar (like a web servers farm) and use identical firewall policies.
 
 You need to create a firewall object as described above, except its interface "eth0" should be marked as "dynamic". Do not add an address object with IP address to it, just make it look like it gets IP address dynamically. Even if in reality it is configured statically, you make FirewallFabrik believe it is dynamic. In this case, the generated firewall script will determine the actual address of the interface and then use it in the policy rules, which allows you to run the same script on many servers with different addresses. You will need to copy the firewall script from the management workstation to the servers by hand or by using some custom script. This should not be difficult though if you use SSH keys.
 
