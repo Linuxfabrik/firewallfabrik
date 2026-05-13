@@ -249,8 +249,8 @@ FirewallFabrik understands and uses the object and service types described in th
 | Library | A library of objects. FirewallFabrik comes with the User and Standard libraries. In addition, you can create your own. |
 | Network | An IPv4 subnet. |
 | Network IPv6 | An IPv6 subnet. |
-| Object Group | A collection of addressable objects (objects that have or contain IP addresses) such as network, interface, and host objects. A group is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule. |
-| Service Group | A collection of services. Grouping services is useful for creating a less cluttered-looking firewall policy and for making sure you have the same objects in every related rule. |
+| Object Group | A collection of addressable objects (objects that have or contain IP addresses) such as network, interface, and host objects. A group reduces rule clutter and keeps the same objects in every related rule. |
+| Service Group | A collection of services. Grouping services reduces rule clutter and keeps the same objects in every related rule. |
 | Tag Service | A service object that lets you examine the tag in an IP header. You can then construct your rule to take appropriate action on a match. |
 | TCP Service | A TCP service such as HTTP, SMTP, or FTP. |
 | Time Interval | A recurring time-of-day and day-of-week schedule such as "weekends" or "work hours". Can be used as part of rule matching in Policy rule sets to provide or deny access based on time. Note that these time intervals are relative to the time on the firewall device itself. |
@@ -289,7 +289,7 @@ While this example showed using subfolders in the Firewalls system folder, you c
 
 ### Filtering the Object Tree
 
-The object tree can hold a great many objects, nested in their respective categories. You can filter the tree to show only certain objects based on a string. For example, typing "eth" in the Filter field causes all the objects with "eth" in the object name to appear. The filter also searches object tags and attributes. Filters are not case sensitive.
+The object tree can hold many objects, nested in their respective categories. You can filter the tree to show only certain objects based on a string. For example, typing "eth" in the Filter field causes all the objects with "eth" in the object name to appear. The filter also searches object tags and attributes. Filters are not case sensitive.
 
 Use Ctrl+F to focus the filter field. Click the X in the filter box to clear the active filter.
 
@@ -333,13 +333,13 @@ FirewallFabrik supports undo and redo functions from the GUI and from the keyboa
 
 The undo stack shows you a list of your changes, and lets you roll back changes you don't want. You can roll back just one change, all changes after a certain point, or all changes.
 
-Press Ctrl+Z to undo an action. The undo stack is essentially unlimited, so you can press Ctrl+Z repeatedly to roll back a series of changes. You can also view the Undo Stack directly by selecting View \> Undo Stack. From that view, you can roll back several changes with a single mouse click.
+Press Ctrl+Z to undo an action. The undo stack has no fixed limit, so you can press Ctrl+Z repeatedly to roll back a series of changes. You can also view the Undo Stack directly by selecting View \> Undo Stack. From that view, you can roll back several changes with a single mouse click.
 
 Note that a change enters the undo stack as soon as you "commit" the change. For dragging and dropping, a change is committed as soon as you drag an object into a new position, at which time that change appears in the undo stack. For field edits, the change appears as soon as you move the GUI focus out of a field by pressing Enter or Tab, or by clicking outside the field.
 
 Rolling back a change does not immediately remove that change from the stack. You can "redo" a change by clicking it. Changes after the current change stay in the stack until you perform a new edit. At that point, the new change appears as current, and all the undone changes after that point are removed from the stack.
 
-Each undo entry includes a description of the change and the name of the firewall it belongs to, making it easy to identify changes in multi-firewall configurations.
+Each undo entry includes a description of the change and the name of the firewall it belongs to, so you can identify changes in multi-firewall configurations.
 
 The following figure shows a portion of an object tree, an access policy, and the undo stack. The stack has been "floated," so it can be moved as its own window. (To make a panel float, click the button next to the close button.)
 
