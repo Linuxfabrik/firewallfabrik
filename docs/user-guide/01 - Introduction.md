@@ -152,12 +152,18 @@ pfSense and OPNsense are complete firewall operating systems based on FreeBSD. T
 FirewallFabrik's architecture is platform-agnostic -- the object model, rule engine, and GUI are independent of any specific firewall backend. Additional compiler backends can be added as the need arises. Currently, two backends are available:
 
 - **iptables** -- the Netfilter firewall framework; the FirewallFabrik compilation pipeline includes 55+ rule processors.
-- **nftables** -- the successor to iptables, default on current Linux distributions; supports sets, maps, and a cleaner rule syntax than iptables.
+- **nftables** -- the successor to iptables, merged in Linux 3.13 (January 2014) and default on current Linux distributions. It addresses several long-standing iptables limitations:
+    - **Kernel/userspace split** -- the kernel runs a small pseudo-VM (inspired by BPF). The `nft` userspace tool parses the rule set, compiles it to bytecode, and hands it to the kernel. Adding support for new protocols or matches only requires a userspace update, not a kernel patch ([Linux 3.13 release notes](https://kernelnewbies.org/Linux_3.13)).
+    - **Unified syntax** -- one tool (`nft`) and one rule language for IPv4, IPv6, ARP, and bridge filtering, instead of `iptables`, `ip6tables`, `arptables`, and `ebtables`.
+    - **Atomic and incremental updates** -- rules can be added, removed, or replaced without flushing and rebuilding the entire table, and changes to tables/chains can emit notifications.
+    - **First-class sets and maps** -- named sets of addresses, ports, or interfaces are part of the language itself, replacing the external `ipset` kernel module used with iptables.
+    - **Less code, fewer kernel extensions** -- the bytecode-based design eliminates large amounts of duplicated match/target code that iptables required per protocol.
+- **Backwards compatibility** -- on modern distributions, the `iptables` command is provided by `iptables-nft`, which translates iptables rules into nftables bytecode. xtables modules continue to work. This is why FirewallFabrik's generated iptables scripts include a `nft flush ruleset` step on systems where `nft` is available (see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md)).
 
 Both backends produce deployment-ready output: shell scripts with individual `iptables` commands or `iptables-restore` batch format for iptables, and `nft` batch files for nftables.
 
 ### Platforms from Firewall Builder Not Carried Forward
 
-Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik currently ships with iptables and nftables backends and adds native nftables support, which Firewall Builder never had. Several legacy platforms (Cisco PIX, FWSM, ipfw, ipfilter) have been dropped entirely, while others (Cisco ASA/IOS/NX-OS, JunOS, PF) are candidates for future backends.
+Firewall Builder supported compilation to ten firewall platforms. FirewallFabrik currently ships with iptables and nftables backends and adds native nftables support, which Firewall Builder never had. Three retired platforms (Cisco FWSM, Cisco PIX, HP ProCurve) have been dropped entirely, while others (Cisco ASA/IOS/NX-OS, ipfilter, ipfw, JunOS, PF) are candidates for future backends.
 
 For a detailed platform compatibility matrix and migration instructions, see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md).

@@ -29,7 +29,7 @@ Firewall Builder stored paths to its own compilers (`fwb_ipt`, `fwb_nft`) in eac
 Review each firewall's platform and host OS settings (right-click the firewall \> Edit). FirewallFabrik provides sensible defaults for all options via its YAML-based defaults system, but you should verify that the imported values match your environment.
 
 **Compile and compare**  
-Compile each firewall and compare the generated `.fw` script to the output from Firewall Builder (iptables only, since Firewall Builder never had an nftables compiler). The FirewallFabrik iptables compiler is at full feature parity with Firewall Builder, so the scripts should be functionally equivalent. Minor formatting differences (e.g. whitespace) are expected but do not affect functionality. Note that FirewallFabrik no longer embeds a generation timestamp in the script header (see [Key Differences from Firewall Builder](#key-differences-from-firewall-builder)).
+Compile each firewall and compare the generated `.fw` script to the output from Firewall Builder (iptables only, since Firewall Builder never had an nftables compiler). For standalone firewalls, the FirewallFabrik iptables compiler produces functionally equivalent scripts. Minor formatting differences (e.g. whitespace) are expected but do not affect functionality. Note that FirewallFabrik no longer embeds a generation timestamp in the script header (see [Key Differences from Firewall Builder](#key-differences-from-firewall-builder)).
 
 **Save as .fwf**  
 Once you are satisfied, save the file (`Ctrl+S`). This creates the `.fwf` file that you will use going forward.
@@ -56,37 +56,37 @@ FirewallFabrik imports all objects, rule sets, and settings from a `.fwb` file:
 
 ## Platform Compatibility
 
-Firewall Builder supported compilation to nine firewall platforms. FirewallFabrik ships with an **iptables** backend at full feature parity with Firewall Builder, plus a new **nftables** backend that Firewall Builder never had.
+Firewall Builder supported compilation to ten firewall platforms (with PIX and ASA sharing one compiler backend). FirewallFabrik ships with an **iptables** backend covering standalone firewalls, plus a new **nftables** backend that Firewall Builder never had.
 
 ### Discontinued Platforms
 
 These platforms are not supported:
 
-| Platform | Target | Status |
-|----|----|----|
-| Cisco FWSM | Firewall Services Module | End-of-sale 2012, end-of-support 2015 ([Cisco EoL notice](https://www.cisco.com/c/en/us/products/collateral/interfaces-modules/services-modules/end_of_life_notice_c51-458222.html)). |
-| Cisco PIX | PIX 6.x appliances | End-of-sale 2008, end-of-support 2013. Replaced by Cisco ASA ([Wikipedia](https://en.wikipedia.org/wiki/Cisco_PIX)). |
-| ipfilter (ipf) | Solaris, FreeBSD | Still present in FreeBSD base and illumos. Removed from Oracle Solaris in 11.4 ([Wikipedia](https://en.wikipedia.org/wiki/IPFilter)). |
-| ipfw | FreeBSD, macOS | Still maintained in FreeBSD base alongside PF and ipfilter. macOS deprecated ipfw in 10.7 Lion (2011) and removed it in 10.10 Yosemite (2014), replaced by PF ([Wikipedia](https://en.wikipedia.org/wiki/Ipfirewall)). |
+| Platform | Supported by FwBuilder | Today (2026) | Why dropped |
+|----|----|----|----|
+| Cisco FWSM | FWSM 2.3, 3.2, 4.x | End-of-support since 2015 ([Cisco EoL notice](https://www.cisco.com/c/en/us/products/collateral/interfaces-modules/services-modules/end_of_life_notice_c51-458222.html)) | Hardware retired; no remaining production install base. |
+| Cisco PIX | PIX 6.1, 6.2, 6.3 | End-of-support since 2013, replaced by Cisco ASA ([Wikipedia](https://en.wikipedia.org/wiki/Cisco_PIX)) | Superseded by ASA; no remaining production install base. |
+| HP ProCurve ACL | ProCurve K.13 | Brand retired in 2010, consolidated under HPE Aruba after the 2015 Aruba acquisition ([Wikipedia](https://en.wikipedia.org/wiki/ProCurve)) | Brand discontinued; Firewall Builder only ever supported a single K.13 release. |
 
 ### Platforms Not Yet Supported
 
 These platforms are still in use but no compiler backend has been implemented yet. Firewall objects for these platforms are imported but cannot be compiled.
 
-| Platform | Target | Notes |
-|----|----|----|
-| Cisco ASA | ASA 7.x--8.3 | The Firewall Builder compiler targeted ASA up to version 8.3. ASA 9.x would require a substantially new compiler. Cisco is migrating customers to Firepower Threat Defense (FTD) ([Wikipedia](https://en.wikipedia.org/wiki/Cisco_ASA)). |
-| Cisco IOS ACL | IOS 12.1--12.4 routers | Current routers run IOS-XE 17.x LTS, with year-based 26.x releases starting in 2026 ([Cisco IOS XE 26 release bulletin](https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/ios-xe-26/bulletin-c25-2378701.html)). Architecturally possible to add. |
-| Cisco NX-OS ACL | Nexus 4.2--6.1 | Current NX-OS train is 10.x ([Cisco Nexus 9000 release notes](https://www.cisco.com/c/en/us/support/switches/nexus-9000-series-switches/products-release-notes-list.html)). Architecturally possible to add. |
-| HP ProCurve ACL | ProCurve K.13 switches | ProCurve brand retired in 2010 (renamed HP Networking), consolidated under HPE Aruba after the 2015 Aruba acquisition ([Wikipedia](https://en.wikipedia.org/wiki/ProCurve)). |
-| Juniper JunOS | JunOS 11.2+ | Current Junos OS is in the 25.x series ([Wikipedia](https://en.wikipedia.org/wiki/Junos_OS)). |
-| PF | OpenBSD, FreeBSD | Used by pfSense and OPNsense ([Wikipedia](https://en.wikipedia.org/wiki/PfSense)). Among the unsupported platforms, the most natural candidate for a future backend. |
+| Platform | Supported by FwBuilder | Today (2026) | Why deferred |
+|----|----|----|----|
+| Cisco ASA | ASA 7.0, 8.0, 8.2, 8.3 | ASA 9.x; Cisco migrating customers to Firepower Threat Defense (FTD) ([Wikipedia](https://en.wikipedia.org/wiki/Cisco_ASA)) | Large version gap; ASA 9.x diverged enough to need a substantially new compiler. |
+| Cisco IOS ACL | IOS 12.1, 12.2, 12.3, 12.4 | IOS-XE 17.x LTS, year-based 26.x releases starting 2026 ([Cisco IOS XE 26 release bulletin](https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/ios-xe-26/bulletin-c25-2378701.html)) | Classic IOS 12.x is two generations behind IOS-XE; ACL syntax has evolved. |
+| Cisco NX-OS ACL | NX-OS 4.2, 5.0--5.2, 6.0--6.1 | NX-OS 10.x ([Cisco Nexus 9000 release notes](https://www.cisco.com/c/en/us/support/switches/nexus-9000-series-switches/products-release-notes-list.html)) | Four major versions behind; the compiler would need substantial rework. |
+| ipfilter (ipf) | Solaris, FreeBSD | In FreeBSD base and illumos; removed from Oracle Solaris 11.4 ([Wikipedia](https://en.wikipedia.org/wiki/IPFilter)) | BSD/illumos-only since Solaris dropped it; outside FirewallFabrik's initial focus on Linux host firewalls. |
+| ipfw | FreeBSD, macOS | In FreeBSD base; removed from macOS in 10.10 Yosemite (2014) ([Wikipedia](https://en.wikipedia.org/wiki/Ipfirewall)) | BSD-only since Apple dropped it from macOS; outside FirewallFabrik's initial focus on Linux host firewalls. |
+| Juniper JunOS | JunOS 11.2 | Junos OS 25.x ([Wikipedia](https://en.wikipedia.org/wiki/Junos_OS)) | Very large version gap; the configuration model has evolved substantially. |
+| PF | OpenBSD, FreeBSD | Used by pfSense and OPNsense ([Wikipedia](https://en.wikipedia.org/wiki/PfSense)) | Among the unsupported platforms, the most natural candidate for a future backend. |
 
 ### Added in FirewallFabrik
 
-| Platform | Target | Notes |
-|----|----|----|
-| nftables | Linux (kernel 3.13+) | The successor to iptables and the default firewall framework on all major Linux distributions. Firewall Builder never supported nftables ([Linux 3.13 release notes](https://kernelnewbies.org/Linux_3.13)). |
+| Platform | Target | Today (2026) | Why added |
+|----|----|----|----|
+| nftables | Linux (kernel 3.13+) | Default firewall framework on all major Linux distributions ([Linux 3.13 release notes](https://kernelnewbies.org/Linux_3.13)) | Successor to iptables; Firewall Builder never supported it. |
 
 ## Key Differences from Firewall Builder
 
@@ -118,7 +118,7 @@ Desktop integration
 FirewallFabrik registers `.fwf` and `.fwb` MIME types for file manager integration. See [02 - Installing FirewallFabrik](02%20-%20Installing%20FirewallFabrik.md) for setup instructions.
 
 Compiler parity  
-The iptables compiler implements all ~130 rule processors from Firewall Builder, including negation via temporary chains, mangle table support (MARK/CLASSIFY/ROUTE/CONNMARK), address range handling, bridging firewall mode, accounting chains, load balancing (NAT), multiport optimization, and comprehensive validation. The nftables compiler provides equivalent functionality using native nftables features (sets instead of multiport, inline negation, etc.). Generated scripts should be functionally identical to Firewall Builder output.
+The iptables compiler implements all ~130 rule processors from Firewall Builder, including negation via temporary chains, mangle table support (MARK/CLASSIFY/ROUTE/CONNMARK), address range handling, bridging firewall mode, accounting chains, load balancing (NAT), multiport optimization, and comprehensive validation. The nftables compiler provides equivalent functionality using native nftables features (sets instead of multiport, inline negation, etc.). For standalone firewalls, generated scripts are functionally identical to Firewall Builder output.
 
 nftables support  
 FirewallFabrik adds native nftables compilation, which Firewall Builder never had.

@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Object tree context menu: "Collapse", "Collapse All", "Expand" and "Expand All" entries. The plain variants toggle the clicked node only; the "All" variants recurse over every descendant.
 
+### Changed
+
+* User guide: expanded the nftables introduction with background from the Linux 3.13 release notes (kernel/userspace split, unified syntax, atomic updates, first-class sets, backwards compatibility via iptables-nft).
+* User guide: revised the "Migrating from Firewall Builder" chapter. Platform compatibility tables now show explicit version coverage (verified against the fwbuilder source), clearer columns ("Supported by FwBuilder", "Today (2026)", "Why dropped/deferred"), and a corrected categorisation (HP ProCurve moved to discontinued; ipfilter and ipfw moved to deferred). Cluster support caveat added.
+
 
 ## [v1.6.0] - 2026-05-07
 
