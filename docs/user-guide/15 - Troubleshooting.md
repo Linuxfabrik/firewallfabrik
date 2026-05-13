@@ -73,7 +73,7 @@ For iptables firewalls, enable the "Clamp MSS to MTU" option in the Firewall Set
 
 For nftables firewalls, a similar MSS clamping rule can be configured.
 
-### Firewall Becomes Very Slow with New Policy
+### Firewall Slow After Loading New Policy
 
 Most likely the firewall needs to perform DNS lookups but your policy is blocking them. Check `/etc/resolv.conf` on the firewall for the name server address and make sure your policy permits DNS queries.
 
