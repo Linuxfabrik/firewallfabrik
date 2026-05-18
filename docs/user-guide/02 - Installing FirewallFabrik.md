@@ -149,28 +149,7 @@ mkdir -p $HOME/.local/share/icons/hicolor/scalable/apps/
 cp src/firewallfabrik/gui/ui/Icons/firewallfabrik.svg \
     $HOME/.local/share/icons/hicolor/scalable/apps/ch.linuxfabrik.firewallfabrik.svg
 update-desktop-database $HOME/.local/share/applications/
-gtk-update-icon-cache $HOME/.local/share/icons/hicolor/
-```
-
-If `gtk-update-icon-cache` reports *No theme index file*, create `$HOME/.local/share/icons/hicolor/index.theme` with the following content:
-
-``` ini
-[Icon Theme]
-Name=Hicolor
-Comment=Fallback Icon Theme
-Directories=scalable/apps
-
-[scalable/apps]
-Size=48
-Type=Scalable
-MinSize=16
-MaxSize=512
-```
-
-Then re-run:
-
-``` bash
-gtk-update-icon-cache $HOME/.local/share/icons/hicolor/
+gtk-update-icon-cache --force --ignore-theme-index $HOME/.local/share/icons/hicolor/
 ```
 
 To register `.fwf` and `.fwb` as known file types so your file manager (Nautilus, Nemo, Thunar, etc.) shows them with the FirewallFabrik icon and offers "Open with \> FirewallFabrik":
