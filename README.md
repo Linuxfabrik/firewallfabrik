@@ -12,7 +12,7 @@
   <span>&#8226;</span>
   <b>made by <a href="https://linuxfabrik.ch/">Linuxfabrik</a></b>
 </p>
-<div align="center">
+<div align="center" markdown>
 
 ![GitHub Stars](https://img.shields.io/github/stars/linuxfabrik/firewallfabrik)
 [![Star History Chart](https://api.star-history.com/svg?repos=Linuxfabrik/firewallfabrik&type=Date)](https://star-history.com/#Linuxfabrik/firewallfabrik&Date)
