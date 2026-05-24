@@ -78,7 +78,7 @@ If your system Python is older than 3.14 (typical on macOS or RHEL 8/9), prepend
 uvx --python 3.14 --from 'firewallfabrik[gui]' --prerelease allow fwf
 ```
 
-For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](docs/user-guide/02%20-%20Installing%20FirewallFabrik.md).
+For the full installation guide (pipx, pip, development setup, native themes, desktop integration), see the [User Guide: Installing FirewallFabrik](https://linuxfabrik.github.io/firewallfabrik/user-guide/02%20-%20Installing%20FirewallFabrik/).
 
 
 ## Feedback from our Community
