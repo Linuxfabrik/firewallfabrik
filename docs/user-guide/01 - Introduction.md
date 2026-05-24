@@ -55,6 +55,29 @@ FirewallFabrik is a port of [Firewall Builder](http://sourceforge.net/projects/f
 
 The core concepts and object model are preserved; the implementation moves from C++ to Python, Qt5 to Qt6, and XML to YAML. FirewallFabrik is an independent project; credit for the underlying design goes to the original Firewall Builder developers.
 
+### A Short History of Firewall Builder
+
+Firewall Builder was originally written by Vadim Kurland (NetCitadel), who is the author of the large majority of the codebase. Active development on the original SourceForge repository stopped in 2012. After that, the project lived on in two community forks, both maintained primarily by Sirius Bakke. FirewallFabrik builds on the most advanced of these, so it inherits the full set of features accumulated across all three lines. All three share the same root commit (2007), and each fork branches off where the previous one stopped.
+
+- **Original SourceForge repository** -- [git.code.sf.net/p/fwbuilder/code](https://sourceforge.net/p/fwbuilder/code)
+
+    - Last commit: 2012-03-22, by Vadim Kurland.
+    - Status: the canonical, now unmaintained Firewall Builder. It established the object model, GUI, and roughly ten platform compilers.
+
+- **First community fork** -- [github.com/Uninett/fwbuilder](https://github.com/Uninett/fwbuilder)
+
+    - Last commit: 2015-07-03, maintained primarily by Sirius Bakke (Uninett).
+    - Status: a short-lived continuation that branches off the SourceForge head.
+    - Added since SourceForge: a JunOS backend and a Cisco NX-OS backend, a diff viewer for rule sets and generated files (with an optional external diff tool and autocompile on load), search by port number or IP address, fragmentation service objects, dummy objects for policy rules, and the first Qt5 support. On the iptables side it switched to the `conntrack` module instead of `state` and added support for the `-w` lock option of newer iptables versions, plus macOS and Windows build fixes.
+
+- **Second community fork** -- [github.com/fwbuilder/fwbuilder](https://github.com/fwbuilder/fwbuilder)
+
+    - Last commit: 2023-07-23, maintained primarily by Sirius Bakke.
+    - Status: the most advanced line and the direct basis for FirewallFabrik.
+    - Added since the first fork: Qt6 support, the qmake/automake build replaced with CMake, CI moved to GitHub Actions, IPv6 entry in address ranges and a set of well-known IPv6 addresses, dark theme support, renaming of object-tree subfolders, and the `FWB_RES_DIR` resource path variable. On the iptables side it added `--kerneltz` support. The remaining work was largely modernization: MSVC 64-bit builds and a move to modern C++.
+
+For the platform compatibility matrix and what FirewallFabrik carries forward, defers, or drops, see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md).
+
 ## How FirewallFabrik Compares to Other Tools
 
 If you are evaluating FirewallFabrik for your environment, it helps to understand how it differs from other firewall management tools. FirewallFabrik is a **centralized firewall policy design, compilation, and audit tool**. It does not run on the firewall itself -- it models your network objects in a database, lets you design and review rules in a desktop GUI, and then compiles them into deployment-ready configurations for your firewalls.
