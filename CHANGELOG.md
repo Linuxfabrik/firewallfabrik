@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * GUI: editing a standalone IPv4 or IPv6 address object no longer shows a Netmask field. A standalone address always matches a single host, so its netmask never affected the generated firewall and only produced confusing, inconsistent values. The field still appears when editing an interface address, where the netmask is relevant.
+* GUI: selecting a predefined Any object (network, service or time interval) in the object tree now shows a short explanation of what Any matches in a rule, instead of an editable form with meaningless values such as address 0.0.0.0.
 
 
 ## [v1.6.0] - 2026-05-07

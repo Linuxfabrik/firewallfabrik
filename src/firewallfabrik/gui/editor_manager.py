@@ -202,6 +202,35 @@ _ANY_ICON_TYPE = {
     'when': 'Interval',
 }
 
+# Predefined "Any" objects shown in the object tree (Standard library).
+# fwbuilder hides their attribute editor and shows an explanation instead
+# (NetworkDialog / IPServiceDialog / TimeDialog), since editing the Any
+# object makes no sense and its stored attributes (e.g. address 0.0.0.0)
+# only confuse users.
+_ANY_TREE_MESSAGES = {
+    'IPService': _ANY_MSG_SERVICE,
+    'Interval': _ANY_MSG_TIME,
+    'Network': _ANY_MSG_ADDRESS,
+}
+
+
+def _system_any_message(obj, obj_type):
+    """Return the explanation text if *obj* is a predefined "Any" object.
+
+    The predefined Any Network/IPService/Interval objects live in the
+    read-only Standard library and are named "Any".  Returns an empty
+    string for every other object.
+    """
+    if getattr(obj, 'name', None) != 'Any':
+        return ''
+    read_only = getattr(obj, 'ro', False) or getattr(
+        getattr(obj, 'library', None), 'ro', False
+    )
+    if not read_only:
+        return ''
+    return _ANY_TREE_MESSAGES.get(obj_type, '')
+
+
 # Map object type discriminator strings to their SQLAlchemy model class.
 _MODEL_MAP = {
     'AddressRange': Address,
@@ -527,6 +556,11 @@ class EditorManager(QObject):
             self._editor_session = None
             return
 
+        any_msg = _system_any_message(obj, obj_type)
+        if any_msg:
+            self._show_object_any_message(any_msg, obj_type)
+            return
+
         all_tags = self.gather_all_tags(self._editor_session)
         dialog_widget.load_object(obj, all_tags=all_tags)
         self._current_editor = dialog_widget
@@ -848,6 +882,32 @@ class EditorManager(QObject):
         pixmap = QIcon(icon_path).pixmap(64, 64)
         if pixmap.isNull():
             pixmap = QIcon(':/Icons/Policy/icon-big').pixmap(64, 64)
+        if not pixmap.isNull():
+            self._ui.icon.setPixmap(pixmap)
+
+    def _show_object_any_message(self, msg, obj_type):
+        """Show the read-only explanation for a predefined "Any" object.
+
+        Mirrors fwbuilder: the Any Network/IPService/Interval objects
+        have no editable attributes, so the attribute editor is replaced
+        by an explanation of what "Any" means in a rule.
+        """
+        # The Any object has no editable attributes -- drop the session.
+        if self._editor_session is not None:
+            self._editor_session.close()
+        self._editor_session = None
+        self._current_editor = None
+        self._editor_obj_id = None
+        self._editor_obj_type = None
+
+        self._blank_label.setText(msg)
+        self._ui.stack.setCurrentWidget(
+            self._ui.blank_dialog.parentWidget(),
+        )
+        self.show_editor_panel()
+        self._ui.dock.setWindowTitle('Any')
+
+        pixmap = QIcon(f':/Icons/{obj_type}/icon-big').pixmap(64, 64)
         if not pixmap.isNull():
             self._ui.icon.setPixmap(pixmap)
 
