@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [v1.7.0] - 2026-06-18
+
 ### Added
 
 * Object tree context menu: "Collapse", "Collapse All", "Expand" and "Expand All" entries. The plain variants toggle the clicked node only; the "All" variants recurse over every descendant.
@@ -473,7 +476,8 @@ Initial public beta pre-release.
 - Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
-[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.7.0...HEAD
+[v1.7.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.6.0...v1.7.0
 [v1.6.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.1...v1.6.0
 [v1.5.1]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.5.0...v1.5.1
 [v1.5.0]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.4.6...v1.5.0
