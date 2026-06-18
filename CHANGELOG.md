@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * User guide: revised the "Migrating from Firewall Builder" chapter. Platform compatibility tables now show explicit version coverage (verified against the fwbuilder source), clearer columns ("Supported by FwBuilder", "Today (2026)", "Why dropped/deferred"), and a corrected categorisation (HP ProCurve moved to discontinued; ipfilter and ipfw moved to deferred). Cluster support caveat added.
 * User guide: update Linux desktop integration instructions so that icons in `$HOME/.local/share/icons/hicolor` can be updated without custom theme index file.
 
+### Fixed
+
+* GUI: editing a standalone IPv4 or IPv6 address object no longer shows a Netmask field. A standalone address always matches a single host, so its netmask never affected the generated firewall and only produced confusing, inconsistent values. The field still appears when editing an interface address, where the netmask is relevant.
+
 
 ## [v1.6.0] - 2026-05-07
 

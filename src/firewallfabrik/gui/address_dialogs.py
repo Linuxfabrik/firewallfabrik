@@ -91,16 +91,54 @@ class _BaseAddressDialog(BaseObjectDialog):
         self.obj_name.setText(self._obj.name or '')
         self.address.setText(inet.get('address', ''))
         self.netmask.setText(inet.get('netmask', ''))
+        self._apply_netmask_visibility()
 
     def _apply_changes(self):
         self._obj.name = self.obj_name.text()
         inet = dict(self._obj.inet_addr_mask or {})
         inet['address'] = self.address.text()
-        inet['netmask'] = self.netmask.text()
+        if self._netmask_applies():
+            inet['netmask'] = self.netmask.text()
         self._obj.inet_addr_mask = inet
 
+    def _netmask_applies(self):
+        """Whether the netmask is meaningful for this object.
 
-class IPv4Dialog(_BaseAddressDialog):
+        Network/NetworkIPv6 always carry a netmask, so the base returns
+        ``True``.  Host-address dialogs override this.
+        """
+        return True
+
+    def _apply_netmask_visibility(self):
+        """Hook to show or hide the netmask field.  No-op by default.
+
+        Overridden by host-address dialogs; the Network dialogs have no
+        ``netmaskLabel`` widget and always keep the netmask visible.
+        """
+
+
+class _HostAddressDialog(_BaseAddressDialog):
+    """Base for the IPv4/IPv6 host-address dialogs.
+
+    Mirrors fwbuilder's ``IPv4Dialog`` / ``IPv6Dialog``: the netmask only
+    applies to an address that belongs to an interface.  A standalone
+    address object under ``Objects/Addresses`` is a single host, and all
+    compilers ignore its netmask (see fwbuilder's ``IPv4.cpp``: "IPv4
+    objects are recognized by compilers as single addresses").  Showing
+    and saving the field there only produces confusing, inconsistent
+    stored values, so the field is hidden and left untouched on save.
+    """
+
+    def _netmask_applies(self):
+        return self._obj is not None and self._obj.interface_id is not None
+
+    def _apply_netmask_visibility(self):
+        visible = self._netmask_applies()
+        self.netmaskLabel.setVisible(visible)
+        self.netmask.setVisible(visible)
+
+
+class IPv4Dialog(_HostAddressDialog):
     def __init__(self, parent=None):
         super().__init__('ipv4dialog_q.ui', parent)
 
@@ -113,14 +151,15 @@ class IPv4Dialog(_BaseAddressDialog):
                 self.tr("Illegal IP address '%1'").replace('%1', addr),
             )
             return
-        nm = self.netmask.text().strip()
-        if nm and _validate_ipv4_netmask(nm) is None:
-            QMessageBox.warning(
-                self,
-                self.tr('Invalid Netmask'),
-                self.tr("Illegal netmask '%1'").replace('%1', nm),
-            )
-            return
+        if self._netmask_applies():
+            nm = self.netmask.text().strip()
+            if nm and _validate_ipv4_netmask(nm) is None:
+                QMessageBox.warning(
+                    self,
+                    self.tr('Invalid Netmask'),
+                    self.tr("Illegal netmask '%1'").replace('%1', nm),
+                )
+                return
         super()._apply_changes()
 
     @Slot()
@@ -159,7 +198,7 @@ class IPv4Dialog(_BaseAddressDialog):
         )
 
 
-class IPv6Dialog(_BaseAddressDialog):
+class IPv6Dialog(_HostAddressDialog):
     def __init__(self, parent=None):
         super().__init__('ipv6dialog_q.ui', parent)
 
@@ -172,19 +211,20 @@ class IPv6Dialog(_BaseAddressDialog):
                 self.tr("Illegal IPv6 address '%1'").replace('%1', addr),
             )
             return
-        nm = self.netmask.text().strip()
-        if nm:
-            try:
-                prefix = int(nm)
-                if prefix < 0 or prefix > 128:
-                    raise ValueError
-            except ValueError:
-                QMessageBox.warning(
-                    self,
-                    self.tr('Invalid Netmask'),
-                    self.tr("Illegal netmask '%1'").replace('%1', nm),
-                )
-                return
+        if self._netmask_applies():
+            nm = self.netmask.text().strip()
+            if nm:
+                try:
+                    prefix = int(nm)
+                    if prefix < 0 or prefix > 128:
+                        raise ValueError
+                except ValueError:
+                    QMessageBox.warning(
+                        self,
+                        self.tr('Invalid Netmask'),
+                        self.tr("Illegal netmask '%1'").replace('%1', nm),
+                    )
+                    return
         super()._apply_changes()
 
     @Slot()
