@@ -42,7 +42,7 @@ gui = ["PySide6~=6.8"]
 
 [dependency-groups]
 dev = [
-    "pytest~=9.0.2",
+    "pytest>=9.0.2,<9.2.0",
 ]
 
 [project.scripts]
