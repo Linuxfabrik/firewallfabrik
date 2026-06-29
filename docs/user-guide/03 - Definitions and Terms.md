@@ -8,16 +8,13 @@ Everything in FirewallFabrik is represented as an **object**. Addresses, network
 
 ## Library
 
-A **library** is a top-level container that organizes objects. FirewallFabrik uses several libraries:
+A **library** is a top-level container that organizes objects. FirewallFabrik uses two libraries:
 
 Standard Library  
 Ships with the application and contains predefined objects such as common services (HTTP, SSH, DNS, etc.) and standard address objects (e.g. "any"). This library is read-only.
 
 User Library  
 The working library where you create and manage your own firewalls, addresses, services, and rules.
-
-Template Library  
-Contains template firewall objects that can be used as a starting point when creating new firewall configurations.
 
 ## Devices
 

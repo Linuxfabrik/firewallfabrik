@@ -258,23 +258,7 @@ $IPTABLES -A FORWARD  -i eth1  -s 172.16.22.0/24  -m state --state NEW  -j ACCEP
 
 Here all iptables commands have an "-i eth0" or "-i eth1" clause, which makes iptables compare the interface and direction.
 
-Here is what we get if we compile the same rules for PF:
-
-``` text
-# Tables: (1)
-table <tbl.r9999.d> { 192.0.2.1 , 172.16.22.1 , 192.168.2.1 }
-
-#
-# Rule  0 (eth0)
-#
-block in    log  quick on en0 inet  from <tbl.r9999.d>  to any
-block in    log  quick on en0 inet  from 172.16.22.0/24  to any
-#
-# Rule  1 (eth1)
-#
-pass in    quick on en1 inet  from 172.16.22.0/24  to any keep state
-#
-```
+FirewallFabrik compiles the same rules for either iptables or nftables; the target platform of the firewall object determines the output format.
 
 So far, the examples in this section have demonstrated how to use Interface objects to associate policy rules with interfaces so as to match packets crossing certain interface. An interface object can be used in the "source" and "destination" of rules just like any other addressable object. In this case, FirewallFabrik replaces the interface object with the set of its addresses, picking only those addresses that match the address family (IPv4 or IPv6 or both) assigned to the rule set.
 
@@ -516,7 +500,7 @@ $IPTABLES -t nat -A POSTROUTING -o eth0 -s 172.16.0.0/24 -j SNAT --to-source 192
 
 The physical address object describes the hardware, or media, address of an interface. Currently only Ethernet MAC addresses are supported, but support for other kinds of physical addresses may be added in the future.
 
-The physical address object can only be a child of an interface; it cannot exist as a stand-alone object. To create this kind of address object, right-click an interface object in the tree, then select Add MAC Address. Only one physical address object is allowed per interface; the program enforces this restriction. If you create a firewall or host object using SNMP discovery, all interfaces are automatically populated with their MAC addresses.
+The physical address object can only be a child of an interface; it cannot exist as a stand-alone object. To create this kind of address object, right-click an interface object in the tree, then select New MAC Address.
 
 - **Name**
 
@@ -784,7 +768,7 @@ $IP6TABLES -A FORWARD -p tcp -m tcp  -s 2001:470:1f0e:162::/64  --dport 80  \
 
 ![The Address Range Object](img/obj-address-range-object.png)
 
-The address range object describes a continuous range of IPv4 addresses. (Arbitrary address ranges for IPv6 is not supported.) To create a new address range object, use the main menu New Object / New Address Range option. Its dialog provides the following entry fields:
+The address range object describes a continuous range of IPv4 or IPv6 addresses. To create a new address range object, use the main menu New Object / New Address Range option. Its dialog provides the following entry fields:
 
 - Name:
 
@@ -1451,7 +1435,7 @@ As in TCP, UDP uses port numbers to distinguish applications from one another. T
 
 ![Figure 5.117. UDP Service: domain (destination port 53)](img/obj-udp-service-dns.png)
 
-Objects in the Standard set of service objects are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the ICMP folder in the User tree and select New ICMP Service to create a service object from scratch.
+Objects in the Standard set of service objects are not editable. However, you can copy and paste a copy of a service object into the User tree and edit it there, or you can right-click the UDP folder in the User tree and select New UDP Service to create a service object from scratch.
 
 The UDP Service dialog provides the following controls:
 
@@ -1699,7 +1683,7 @@ If you want to make the library read-only, leave the Make exported libraries rea
 
 Click OK.
 
-A file system Save dialog appears. Here you can specify a name and location for the file. Be sure the file has a *.fwl* file extension.
+A file system Save dialog appears. Here you can specify a name and location for the file. Be sure the file has a *.fwf* file extension.
 
 ![Figure 5.142. Save Dialog Box](img/obj-save-dialog-box.png)
 

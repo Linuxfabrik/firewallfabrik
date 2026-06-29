@@ -181,7 +181,7 @@ FirewallFabrik's architecture is platform-agnostic -- the object model, rule eng
     - **Atomic and incremental updates** -- rules can be added, removed, or replaced without flushing and rebuilding the entire table, and changes to tables/chains can emit notifications.
     - **First-class sets and maps** -- named sets of addresses, ports, or interfaces are part of the language itself, replacing the external `ipset` kernel module used with iptables.
     - **Less code, fewer kernel extensions** -- the bytecode-based design eliminates large amounts of duplicated match/target code that iptables required per protocol.
-- **Backwards compatibility** -- on modern distributions, the `iptables` command is provided by `iptables-nft`, which translates iptables rules into nftables bytecode. xtables modules continue to work. This is why FirewallFabrik's generated iptables scripts include a `nft flush ruleset` step on systems where `nft` is available (see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md)).
+- **Backwards compatibility** -- on modern distributions, the `iptables` command is provided by `iptables-nft`, which translates iptables rules into nftables bytecode. xtables modules continue to work. This is why FirewallFabrik's generated nftables scripts include a `nft flush ruleset` step on systems where `nft` is available (see [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md)).
 
 Both backends produce deployment-ready output: shell scripts with individual `iptables` commands or `iptables-restore` batch format for iptables, and `nft` batch files for nftables.
 

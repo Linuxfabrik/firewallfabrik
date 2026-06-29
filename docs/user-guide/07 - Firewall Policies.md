@@ -183,7 +183,7 @@ A packet directed to the **mgmt** rule set leaves the main rule set and begins m
 ## Network Address Translation Rules
 
 > [!NOTE]
-> As with access policy rule sets, you can create multiple NAT rule sets. However, in older versions of FirewallFabrik, it was not possible to branch between rule sets; only the rule set marked as "top" was used in v3.x. Beginning with Release 4.0, FirewallFabrik supports building branches in NAT rule sets.
+> As with access policy rule sets, you can create multiple NAT rule sets and branch between them, not only use the rule set marked as "top".
 
 ### Basic NAT Rules
 
@@ -201,9 +201,7 @@ As in firewall policies, NAT rules are inspected by the firewall in the order th
 - **Translated Src** -- If the original source, destination, and service all matched, this object becomes the new source address of the packet.
 - **Translated Dst** -- If the original source, destination, and service all matched, this object becomes the new destination address of the packet.
 - **Translated Srv** -- If the original source, destination, and service all matched, this object becomes the new service (port number) of the packet.
-- **Interface In** -- The inbound interface for the NAT rule. On iptables systems this will result in the `-i` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include. This option is available in FirewallFabrik Release 4.2 and later.
-- **Interface Out** -- The outbound interface for the NAT rule. On iptables systems this will result in the `-o` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include. This option is available in FirewallFabrik Release 4.2 and later.
-- **Options** -- This field lets you specify platform-specific options for the packet. Right-click in the field and select Rule Options to see options for your platform. Click Help in the Options dialog to see help for available parameters for your platform. See [Options and Logging](#options-and-logging) for more information.
+- **Interface In** -- The inbound interface for the NAT rule. On iptables systems this will result in the `-i` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include.- **Interface Out** -- The outbound interface for the NAT rule. On iptables systems this will result in the `-o` parameter being set. The default is Auto, which means FirewallFabrik will attempt to determine the appropriate interface(s) the rule should include.- **Options** -- This field lets you specify platform-specific options for the packet. Right-click in the field and select Rule Options to see options for your platform. Click Help in the Options dialog to see help for available parameters for your platform. See [Options and Logging](#options-and-logging) for more information.
 - **Comment**
 
 Here is how it works:

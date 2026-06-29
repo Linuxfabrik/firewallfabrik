@@ -166,8 +166,7 @@ The context menu for a particular object provides a shortcut to commands for tha
 | Right-Click Menu Entry | Explanation |
 |----|----|
 | Expand / Collapse | Expands or collapses the selected item's children (only visible for items that have children). |
-| Edit | Opens the Editor panel for that object. (You can achieve the same result by double-clicking the object.) |
-| Inspect | Inspects the object. |
+| Edit / Inspect | Opens the object in the Editor panel (double-clicking does the same). This is a single entry whose label is "Inspect" for read-only objects (the Standard library), where the editor opens read-only. |
 | Duplicate | Creates a copy of the object. The new object has the same name as the original object, unless that name is already in use, in which case a numeric suffix is appended. |
 | Move | Moves the object to a different location in the tree. |
 | Copy | Copies an object onto the clipboard. |
@@ -382,8 +381,8 @@ Preferences \> Objects Tab
 | Installer Preferences | Explanation |
 |----|----|
 | SSH and SCP paths | These fields specify the paths to your SSH and SCP programs, or their equivalents. If these paths are already recorded in your PATH system variable, you need not specify paths here. |
-| SSH timeout | The maximum time (in seconds) to wait for an SSH connection before timing out. |
-| Enable password caching | If checked, the program can remember firewall passwords for the duration of the FirewallFabrik GUI session. Passwords are never stored permanently in any form; they are only kept in memory. You need to enter each password once when you activate a generated policy. If you keep the program open and need to modify and activate policy again, the password fields in the installer dialog can be filled automatically. To use this feature, you must also configure a user name in the Installer tab in the Firewall Settings dialog of the firewall object. Caution: using this feature creates a risk if a working FirewallFabrik GUI is left unattended on an unlocked workstation. |
+| SSH timeout | SSH `ServerAliveInterval` in seconds: if no data has been received from the server for this long, the SSH client sends a keepalive message to detect a dead connection. Set to 0 to disable keepalive messages. |
+| Enable password caching | If checked, the program can remember firewall passwords for the duration of the FirewallFabrik GUI session. Passwords are never stored permanently in any form; they are only kept in memory. You need to enter each password once when you activate a generated policy. If you keep the program open and need to modify and activate policy again, the password fields in the installer dialog can be filled automatically. To use this feature, you must also configure a user name in the Installer tab in the Platform Settings dialog of the firewall object. Caution: using this feature creates a risk if a working FirewallFabrik GUI is left unattended on an unlocked workstation. |
 
 Preferences \> Installer Tab
 

@@ -337,7 +337,7 @@ We should be careful not to permit more protocols to the firewall than we intend
 
 ![LAN to Anywhere](img/cookbook-023.png)
 
-Logic says that the destination "any" should match any address, including the ones that belong to the firewall itself. In FirewallFabrik, this can actually be changed using a checkbox in the Compiler tab of the Firewall Settings dialog of the firewall object. If the checkbox "Assume firewall is part of any" is checked, then the compiler generates rules assuming that "any" matches the firewall as well. So, if this option is on, then this rule permits any connections from internal LAN to the firewall, regardless of the protocol. Here is how we can modify the rule permitting access to the Internet to exclude the firewall from it using negation:
+Logic says that the destination "any" should match any address, including the ones that belong to the firewall itself. In FirewallFabrik, this can actually be changed using a checkbox in the Compiler tab of the Platform Settings dialog of the firewall object. If the checkbox "Assume firewall is part of any" is checked, then the compiler generates rules assuming that "any" matches the firewall as well. So, if this option is on, then this rule permits any connections from internal LAN to the firewall, regardless of the protocol. Here is how we can modify the rule permitting access to the Internet to exclude the firewall from it using negation:
 
 ![Negating the Firewall as a Destination from the LAN](img/cookbook-024.png)
 
@@ -355,7 +355,7 @@ I do not include the generated iptables code because it should be clear by now h
 
 Policy rules demonstrated in these examples are good at restricting access to the firewall while making it possible to manage it remotely via SSH. The problem with these rules is that administrator has to be careful to not break them in any way. One would think it should be hard to make an error in a policy fragment consisting of two rules, but this happens. These two rules are just a small part of a much larger rule set and may not be located in a prominent place right on top of it. As new rules are added to the policy, at some point some rule located above may block access to the whole network or range of addresses that accidentally includes management address of the firewall. This means even though the rules are there, the access to the firewall gets blocked as soon as updated policy is uploaded and activated. This is a serious problem if the firewall machine is located far away in a remote office or data center.
 
-To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Firewall Settings" button. This is described in more details in [04 - FirewallFabrik GUI](04%20-%20FirewallFabrik%20GUI.md). In the dialog that appears, locate controls shown on Figure 14.27.
+To help avoid this bad (but all-too-familiar) situation, FirewallFabrik offers another feature. To access it, select the firewall object in the tree and open it in the editor, then click "Platform Settings" button. This is described in more details in [04 - FirewallFabrik GUI](04%20-%20FirewallFabrik%20GUI.md). In the dialog that appears, locate controls shown on Figure 14.27.
 
 ![Option Enabling an Automatic Rule to Permit SSH Access from a Management Workstation](img/cookbook-027.png)
 
@@ -377,7 +377,7 @@ I included rules matching "ESTABLISHED,RELATED" states in the screenshot to demo
 
 The same option is provided in the "Firewall settings" dialog. FirewallFabrik always generates command to permit SSH to the firewall and makes it the very first in the access control rule set.
 
-Now all the administrator needs to do is enter the IP address of the management workstation or address block it belongs to in the "Firewall Settings" dialog, then recompile and update generated policy on the firewall. There is no need to remember to add a special rule to permit SSH to the firewall in the policy rule set since this rule is now generated automatically. The generated rule is always on top of all other rules, so any mistake in the policy rule set will never block SSH access to the firewall. This is a good way to reduce the risk of locking yourself out of your own firewall.
+Now all the administrator needs to do is enter the IP address of the management workstation or address block it belongs to in the "Platform Settings" dialog, then recompile and update generated policy on the firewall. There is no need to remember to add a special rule to permit SSH to the firewall in the policy rule set since this rule is now generated automatically. The generated rule is always on top of all other rules, so any mistake in the policy rule set will never block SSH access to the firewall. This is a good way to reduce the risk of locking yourself out of your own firewall.
 
 > [!TIP]
 > Using the automatic SSH access rule feature is highly recommended. It ensures that a mistake in the policy rule set will never block SSH access to the firewall, reducing the risk of locking yourself out.
@@ -474,7 +474,7 @@ In FirewallFabrik, we provide a way to set flags or options in the IP service ob
 
 The "ip_fragments" object, which is included in the section "Services/IP" of the Standard objects tree, is set to block "short" fragments only.
 
-Another potentially harmful type of packets is so called "Christmas tree" packet. This one is just a TCP packet with an impossible combination of TCP flags or even all TCP flags turned on at once (for example SYN, ACK, FIN, RST, PSH). This combination is never used in real communications, so if a packet like that appears at the boundary of your network, it should be considered illegal and blocked. Object "tcp-xmas" is included in the section "Services/TCP" of the standard objects database coming with FirewallFabrik.
+Another potentially harmful type of packets is so called "Christmas tree" packet. This one is just a TCP packet with an impossible combination of TCP flags or even all TCP flags turned on at once (for example SYN, ACK, FIN, RST, PSH). This combination is never used in real communications, so if a packet like that appears at the boundary of your network, it should be considered illegal and blocked. Object "xmas scan" is included in the section "Services/TCP" of the standard objects database coming with FirewallFabrik.
 
 Some platforms provide a mechanism to turn on and off stateful inspection on individual rules. Turning it off on those rules which do not require it may improve performance of the firewall. Obviously, we do not need stateful inspection while analysing fragmented packets as we do not want any session to be established, so we can use this option on this rule. One example of firewall platform which supports stateful inspection but provides a way to turn it on and off is iptables. In FirewallFabrik, this can be done in the rule options dialog (which is platform-sensitive and shows different options for different platforms). Figure 14.33 shows rule logging options dialog for iptables:
 
@@ -588,9 +588,9 @@ And now the rule:
 
 ![Rule Matching the Tag Service](img/cookbook-042.png)
 
-In order to replicate the rule from the Guide, I leave Source and Destination "any", put outside interface of the firewall in "Interface" column, set direction to "Outbound", set action to "Tag" and make it stateless. The following screenshots demonstrate how this is done:
+In order to replicate the rule from the Guide, I leave Source and Destination "any", put outside interface of the firewall in "Interface" column, set direction to "Outbound", enable the Tag option in the rule's Options dialog and make it stateless. The following screenshots demonstrate how this is done:
 
-![Configuring the Tag Action](img/cookbook-043.png)
+![Configuring the Tag option](img/cookbook-043.png)
 
 ![Configuring Rule Options to Make the Rule Stateless](img/cookbook-044.png)
 
@@ -1611,7 +1611,7 @@ $IPTABLES -A In_RULE_0 -j DROP
 
 The rules attached to loopback are gone.
 
-Last change I am going to do before I upload generated script to my firewalls is switch to iptables-restore format in the generated script. This offers many advantages over entering iptables commands one by one, the most important is that iptables-restore policy update is atomic. If it encounters an error, it aborts without changing running firewall policy. Also the update happens much faster and the firewall does not run in the undefined state with only part of its policy loaded. To switch, find firewall object in the tree, double click it to open it in the editor and click "Firewall Settings" button. Navigate to the tab "Script" and turn on checkbox "Use iptables-restore to activate policy". Do it in both member firewall objects, then recompile again. Generated script now looks like this (this is only relevant part of the script):
+Last change I am going to do before I upload generated script to my firewalls is switch to iptables-restore format in the generated script. This offers many advantages over entering iptables commands one by one, the most important is that iptables-restore policy update is atomic. If it encounters an error, it aborts without changing running firewall policy. Also the update happens much faster and the firewall does not run in the undefined state with only part of its policy loaded. To switch, find firewall object in the tree, double click it to open it in the editor and click "Platform Settings" button. Navigate to the tab "Script" and turn on checkbox "Use iptables-restore to activate policy". Do it in both member firewall objects, then recompile again. Generated script now looks like this (this is only relevant part of the script):
 
 ``` text
 (
@@ -2359,7 +2359,7 @@ The next page of the wizard offers an opportunity to use policy and NAT rules of
 
 ### Managing VLAN Interfaces and Their IP Addresses
 
-FirewallFabrik can generate a shell script to configure VLAN interfaces for both member firewalls. The script is in fact a shell function inside the common firewall configuration script FirewallFabrik creates for each firewall. To activate this feature, open each member firewall object in the editor by double clicking it in the tree and click "Firewall Settings" button, then navigate to the "Script" tab of the dialog. Screenshot Figure 14.173 shows this tab. Turn checkbox "Configure VLAN interfaces" on:
+FirewallFabrik can generate a shell script to configure VLAN interfaces for both member firewalls. The script is in fact a shell function inside the common firewall configuration script FirewallFabrik creates for each firewall. To activate this feature, open each member firewall object in the editor by double clicking it in the tree and click "Platform Settings" button, then navigate to the "Script" tab of the dialog. Screenshot Figure 14.173 shows this tab. Turn checkbox "Configure VLAN interfaces" on:
 
 ![Turn VLAN Configuration On.](img/cookbook-186.png)
 
@@ -2542,10 +2542,10 @@ To create this rule the following was done:
 
 1.  Set Source to firewall object, in our case web-1
 2.  Set the Service to be the HTTP source object we created previously
-3.  Set the Action to be Classify
+3.  Enable the Classify option in the rule's Options dialog
 4.  Turn logging off (optional)
 
-When we set the Action to Classify, the Editor Panel provides an input box where we can set the class ID value. In this case we used 1:10 as shown in Figure 14.177 below.
+When we enable the Classify option, the rule's Options dialog provides an input box where we can set the class ID value. In this case we used 1:10 as shown in Figure 14.177 below.
 
 ![Classify Rule showing class ID setting in the Editor Panel.](img/cookbook-189.png)
 
@@ -2557,7 +2557,7 @@ Once the traffic has been set with the class ID, in our case we used 1:10, you c
 
 In this case we want the tc commands to be run every time the FirewallFabrik generated script is run, so we are going to add them to the Epilog of the web-1 firewall object.
 
-Double-click the firewall object to open it for editing and then click on the Firewall Settings button in the editor panel. Click on the Prolog/Epilog tab and add the following commands in the Epilog window.
+Double-click the firewall object to open it for editing and then click on the Platform Settings button in the editor panel. Click on the Prolog/Epilog tab and add the following commands in the Epilog window.
 
 ``` text
 # rates are in kbit/sec
@@ -2837,7 +2837,7 @@ You need to create a firewall object as described above, except its interface "e
 
 This example shows how the option "Ignore empty groups" can be used to build a rule controlling access to or from an often-changing group of computers. Suppose we need to set up a rule to control access to or from a group of computers. In principle this should be easy: we create a Host object for each computer, then create a group and put all these Host objects in it. We can use this group in the Source or Destination of the policy rule to achieve our goal. If we ever need to add a new machine to the control list, we create a new host object and add it to the group; if we need to remove the machine from the list, we just remove it from the group. But what should happen if after the last machine has been removed the group becomes empty? If the empty group is in the Source of the rule, shouldn't the compiler treat it as Any? This is confusing, to say the least.
 
-Here is how it works in FirewallFabrik. The behavior of the compiler is controlled by the Ignore empty groups in rules checkbox in the "Compiler" tab of the Firewall Settings dialog. If this checkbox is off, then compiler treats empty groups as an error and stops processing of the ruleset as soon as it encounters such group. This is the default setting. However, if this checkbox is on, then compiler simply removes empty group from the rule and continues processing. This makes sense, since an empty group defines no objects and if the rule element has some other objects in it, removing an empty group does not change its meaning. It becomes tricky when the empty group is the only object in the rule element though. In this case, removing the group from the rule element makes it empty, which is equivalent to Any. All of the sudden, instead of controlling access to or from a group of hosts, the rule expands its action to any host. To avoid this unexpected side-effect, compiler drops a rule if rule element becomes empty after the last empty group has been removed. Again, it works this way only if the checkbox "Ignore empty groups" is on.
+Here is how it works in FirewallFabrik. The behavior of the compiler is controlled by the Ignore empty groups in rules checkbox in the "Compiler" tab of the Platform Settings dialog. If this checkbox is off, then compiler treats empty groups as an error and stops processing of the ruleset as soon as it encounters such group. This is the default setting. However, if this checkbox is on, then compiler simply removes empty group from the rule and continues processing. This makes sense, since an empty group defines no objects and if the rule element has some other objects in it, removing an empty group does not change its meaning. It becomes tricky when the empty group is the only object in the rule element though. In this case, removing the group from the rule element makes it empty, which is equivalent to Any. All of the sudden, instead of controlling access to or from a group of hosts, the rule expands its action to any host. To avoid this unexpected side-effect, compiler drops a rule if rule element becomes empty after the last empty group has been removed. Again, it works this way only if the checkbox "Ignore empty groups" is on.
 
 For example, this feature can be used to set up a rule to control Internet access from a number of student computers. Suppose some students may be denied access once in a while, in which case their machine is removed from the group. If at some point of time all machines were removed from the group, the compiler would simply ignore this rule instead of inadvertently creating a hole in the policy.
 

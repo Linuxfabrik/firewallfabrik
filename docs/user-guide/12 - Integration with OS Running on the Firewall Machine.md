@@ -111,7 +111,7 @@ Chain fwf_INPUT (1 references)
  ... FirewallFabrik rules ...
 ```
 
-On `stop`, only the `fwf_*` chains and their jump rules are removed. The built-in chain policies remain at DROP, and other tools' chains are untouched.
+On `stop`, only the `fwf_*` chains and their jump rules are removed. The built-in chain policies are reset to ACCEPT so the machine stays reachable, and other tools' chains are untouched.
 
 > [!WARNING]
 > Disabling "Flush entire ruleset" means FirewallFabrik no longer controls the entire firewall. Other tools may add rules that bypass your policy. Only disable this if you need coexistence with other tools on the same machine.
