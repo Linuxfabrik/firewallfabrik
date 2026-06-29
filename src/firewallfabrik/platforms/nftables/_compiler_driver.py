@@ -653,7 +653,7 @@ class CompilerDriver_nft(CompilerDriver):
         # would silently lose its kernel-hardening options.
         kernel_vars_commands = ''
         if oscnf is not None:
-            raw_kernel_vars = oscnf.process_firewall_options().strip()
+            raw_kernel_vars = oscnf.process_firewall_options(self._any_rs_ipv6).strip()
             if raw_kernel_vars:
                 kernel_vars_commands = textwrap.indent(raw_kernel_vars, '    ')
 

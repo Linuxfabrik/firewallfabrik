@@ -14,7 +14,9 @@
 {{if if_linux24_ip_dynaddr}} echo {{$linux24_ip_dynaddr}} > /proc/sys/net/ipv4/ip_dynaddr {{endif}}
 {{if if_linux24_rp_filter}} echo {{$linux24_rp_filter}} > /proc/sys/net/ipv4/conf/all/rp_filter {{endif}}
 {{if if_linux24_accept_source_route}} echo {{$linux24_accept_source_route}} > /proc/sys/net/ipv4/conf/all/accept_source_route {{endif}}
+{{if if_accept_source_route_v6}} echo {{$linux24_accept_source_route}} > /proc/sys/net/ipv6/conf/all/accept_source_route {{endif}}
 {{if if_linux24_accept_redirects}} echo {{$linux24_accept_redirects}} > /proc/sys/net/ipv4/conf/all/accept_redirects {{endif}}
+{{if if_accept_redirects_v6}} echo {{$linux24_accept_redirects}} > /proc/sys/net/ipv6/conf/all/accept_redirects {{endif}}
 {{if if_linux24_log_martians}} echo {{$linux24_log_martians}} > /proc/sys/net/ipv4/conf/all/log_martians {{endif}}
 {{if if_linux24_icmp_echo_ignore_broadcasts}} echo {{$linux24_icmp_echo_ignore_broadcasts}} > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts {{endif}}
 {{if if_linux24_icmp_echo_ignore_all}} echo {{$linux24_icmp_echo_ignore_all}} > /proc/sys/net/ipv4/icmp_echo_ignore_all {{endif}}

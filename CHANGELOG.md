@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Compiler (iptables, nftables): the "Accept ICMP redirects" and "Accept source-routed packets" hardening settings are now also applied to the IPv6 stack on firewalls that handle IPv6, not just IPv4.
 * Compiler (nftables): the kernel-hardening and conntrack tuning options from the firewall's Host OS settings (reverse-path filtering, SYN cookies, ICMP broadcast handling, conntrack table size and similar) are now applied by the generated script. These are backend-independent `/proc/sys` settings that were previously only honoured by the iptables compiler. The matching fields are now editable for nftables firewalls.
 
 ### Deprecated

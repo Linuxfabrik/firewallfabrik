@@ -500,7 +500,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Script body
                 body_buf = io.StringIO()
 
-                body_buf.write(oscnf.process_firewall_options())
+                body_buf.write(oscnf.process_firewall_options(have_ipv6))
                 body_buf.write(generated_script)
                 body_buf.write(routing_output)
                 body_buf.write('\n')

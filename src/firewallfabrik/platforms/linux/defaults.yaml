@@ -26,7 +26,8 @@ options:
     label: 'label373'
     description: >-
       Accept ICMP redirect messages. Controls
-      /proc/sys/net/ipv4/conf/all/accept_redirects.
+      /proc/sys/net/ipv4/conf/all/accept_redirects, and the IPv6
+      equivalent on firewalls that handle IPv6.
 
   linux24_accept_source_route:
     type: 'tristate'
@@ -37,7 +38,8 @@ options:
     label: 'label371'
     description: >-
       Accept source-routed packets. Controls
-      /proc/sys/net/ipv4/conf/all/accept_source_route.
+      /proc/sys/net/ipv4/conf/all/accept_source_route, and the IPv6
+      equivalent on firewalls that handle IPv6.
 
   linux24_conntrack_hashsize:
     type: 'int'

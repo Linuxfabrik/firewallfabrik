@@ -113,8 +113,15 @@ class OSConfigurator_linux24(OSConfigurator):
 
     # -- Firewall options --
 
-    def process_firewall_options(self) -> str:
-        """Generate kernel parameter settings from firewall options."""
+    def process_firewall_options(self, have_ipv6: bool = False) -> str:
+        """Generate kernel parameter settings from firewall options.
+
+        When *have_ipv6* is true, the redirect / source-route hardening
+        settings are also applied to the IPv6 stack
+        (``/proc/sys/net/ipv6/conf/all/...``). These two knobs are the
+        only IPv4 hardening sysctls with an IPv6 equivalent that exists
+        on supported kernels (RHEL 8+).
+        """
         version = self.fw.version or ''
         result = ''
 
@@ -161,6 +168,20 @@ class OSConfigurator_linux24(OSConfigurator):
             if val == 0:
                 val = -1
             self._set_configlet_macro_int(val, kernel_vars, opt_name)
+
+        # IPv6 counterparts for the two hardening knobs that have one.
+        # The value is shared with the IPv4 setting; the line is only
+        # emitted when the firewall handles IPv6.
+        v6_redirects = have_ipv6 and bool(
+            str(self.fw.get_option('linux24_accept_redirects') or '')
+        )
+        v6_source_route = have_ipv6 and bool(
+            str(self.fw.get_option('linux24_accept_source_route') or '')
+        )
+        kernel_vars.set_variable('if_accept_redirects_v6', '1' if v6_redirects else '0')
+        kernel_vars.set_variable(
+            'if_accept_source_route_v6', '1' if v6_source_route else '0'
+        )
 
         result += kernel_vars.expand()
 
