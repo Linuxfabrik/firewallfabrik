@@ -68,11 +68,7 @@ class UpdateLibraryPreviewDialog(QDialog):
 
         # -- Updated objects -------------------------------------------
         if updated:
-            section = QTreeWidgetItem()
-            section.setText(0, f'Will be updated ({len(updated)})')
-            section.setFont(0, bold_font)
-            section.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.changesTree.addTopLevelItem(section)
+            section = self._add_section(f'Will be updated ({len(updated)})', bold_font)
             for obj_name, obj_type, diff_summary, refs in updated:
                 obj_item = QTreeWidgetItem()
                 icon = QIcon(f':/Icons/{obj_type}/icon-tree')
@@ -80,70 +76,57 @@ class UpdateLibraryPreviewDialog(QDialog):
                     obj_item.setIcon(0, icon)
                 obj_item.setText(0, obj_name)
                 obj_item.setText(1, diff_summary)
-                if refs:
-                    obj_item.setText(3, f'{len(refs)} reference(s)')
-                    for fw_or_group, detail in refs:
-                        ref_child = QTreeWidgetItem()
-                        ref_child.setText(2, fw_or_group)
-                        ref_child.setText(3, detail)
-                        obj_item.addChild(ref_child)
+                for fw_or_group, detail in refs:
+                    ref_child = QTreeWidgetItem()
+                    ref_child.setText(0, fw_or_group)
+                    ref_child.setText(1, detail)
+                    obj_item.addChild(ref_child)
                 section.addChild(obj_item)
             section.setExpanded(True)
 
         # -- Moved to User library ------------------------------------
         if migrated:
-            section = QTreeWidgetItem()
-            section.setText(
-                0,
+            section = self._add_section(
                 f'Will be moved to User library ({len(migrated)})',
+                bold_font,
             )
-            section.setFont(0, bold_font)
-            section.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.changesTree.addTopLevelItem(section)
             for obj_name, obj_type, refs in migrated:
                 obj_item = QTreeWidgetItem()
                 icon = QIcon(f':/Icons/{obj_type}/icon-tree')
                 if not icon.isNull():
                     obj_item.setIcon(0, icon)
                 obj_item.setText(0, obj_name)
-                if refs:
-                    obj_item.setText(3, f'{len(refs)} reference(s)')
-                    for fw_or_group, detail in refs:
-                        ref_child = QTreeWidgetItem()
-                        ref_child.setText(2, fw_or_group)
-                        ref_child.setText(3, detail)
-                        obj_item.addChild(ref_child)
+                for fw_or_group, detail in refs:
+                    ref_child = QTreeWidgetItem()
+                    ref_child.setText(0, fw_or_group)
+                    ref_child.setText(1, detail)
+                    obj_item.addChild(ref_child)
                 section.addChild(obj_item)
             section.setExpanded(True)
 
         # -- Removed (unused) -----------------------------------------
         if removed:
-            section = QTreeWidgetItem()
-            section.setText(0, f'Unused, will be removed ({len(removed)})')
-            section.setFont(0, bold_font)
-            section.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.changesTree.addTopLevelItem(section)
+            section = self._add_section(
+                f'Unused, will be removed ({len(removed)})',
+                bold_font,
+            )
             for obj_name, obj_type in removed:
                 child = QTreeWidgetItem()
                 icon = QIcon(f':/Icons/{obj_type}/icon-tree')
                 if not icon.isNull():
                     child.setIcon(0, icon)
                 child.setText(0, obj_name)
-                child.setText(3, '(no references)')
+                child.setText(1, '(no references)')
                 section.addChild(child)
             section.setExpanded(True)
 
         # -- Similar objects in User library (informational) -----------
         if duplicates:
-            section = QTreeWidgetItem()
-            section.setText(
-                0,
+            section = self._add_section(
                 f'Similar objects in User library \u2014 no action taken'
                 f' ({len(duplicates)})',
+                bold_font,
             )
-            section.setFont(0, bold_font)
-            section.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.changesTree.addTopLevelItem(section)
             for user_name, user_type, std_name in duplicates:
                 child = QTreeWidgetItem()
                 icon = QIcon(f':/Icons/{user_type}/icon-tree')
@@ -152,11 +135,8 @@ class UpdateLibraryPreviewDialog(QDialog):
                 child.setText(0, user_name)
                 child.setText(
                     1,
-                    f'Standard Library now has \u201c{std_name}\u201d',
-                )
-                child.setText(
-                    3,
-                    'Consider switching to the Standard Library version',
+                    f'Standard Library now has \u201c{std_name}\u201d '
+                    '\u2014 consider switching to it',
                 )
                 section.addChild(child)
             section.setExpanded(True)
@@ -174,3 +154,18 @@ class UpdateLibraryPreviewDialog(QDialog):
                 parent_center.x() - self.width() // 2,
                 parent_center.y() - self.height() // 2,
             )
+
+    def _add_section(self, title, bold_font):
+        """Add a bold, full-width section header row and return it.
+
+        The header text is spanned across both columns so the long
+        section labels do not stretch the Object column and push the
+        Details column out of view.
+        """
+        section = QTreeWidgetItem()
+        section.setText(0, title)
+        section.setFont(0, bold_font)
+        section.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        self.changesTree.addTopLevelItem(section)
+        section.setFirstColumnSpanned(True)
+        return section

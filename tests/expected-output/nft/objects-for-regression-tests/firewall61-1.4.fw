@@ -310,7 +310,7 @@ NFT_RULES
 ip_forward() {
     :
     echo 1 > /proc/sys/net/ipv4/ip_forward
-echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+    echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
 }
 
 flush_own_tables() {

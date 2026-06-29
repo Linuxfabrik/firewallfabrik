@@ -69,16 +69,6 @@
      </column>
      <column>
       <property name="text">
-       <string>Changes</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Firewall / Group</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
        <string>Details</string>
       </property>
      </column>

@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Compiler (iptables): the conntrack tuning options (maximum connections, hash table size, liberal TCP tracking) were silently ignored and are now written to the kernel as configured.
 * Compiler (nftables): switching a firewall from iptables to nftables now removes leftover legacy iptables rules when the policy is activated. Previously the old rules could remain in the kernel and shadow the new nftables rules, so a changed rule appeared to have no effect even after a reboot.
+* Compiler (nftables): the IPv4/IPv6 forwarding commands are now indented consistently in the generated script.
 * Compiler (nftables): the backup SSH access rule of the "block" panic action is now generated as intended. It was tied to the wrong setting and never appeared, which could lock an administrator out when blocking a firewall.
+* GUI: the "Update Standard Library" preview now lists the affected firewalls and rules under each object when a row is expanded. Previously those rows appeared blank because their content was placed in columns that were pushed off-screen.
 
 
 ## [v1.7.0] - 2026-06-18

@@ -641,8 +641,12 @@ class CompilerDriver_nft(CompilerDriver):
             ssh_management_address
         )
 
-        # IP forwarding commands
-        ip_forward_commands = self._get_ip_forward_commands(fw)
+        # IP forwarding commands. Indent every line so multi-line output
+        # (IPv4 plus IPv6) lines up inside the ip_forward() function body.
+        ip_forward_commands = textwrap.indent(
+            self._get_ip_forward_commands(fw),
+            '    ',
+        )
 
         # Kernel parameters (sysctl) and conntrack tuning. Backend-agnostic
         # /proc/sys writes; without these a firewall switched to nftables
