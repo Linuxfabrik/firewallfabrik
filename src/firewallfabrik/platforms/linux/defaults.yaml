@@ -21,7 +21,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_accept_redirects'
     label: 'label373'
     description: >-
@@ -32,7 +32,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_accept_source_route'
     label: 'label371'
     description: >-
@@ -43,7 +43,7 @@ options:
     type: 'int'
     default: -1
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'conntrack_hashsize'
     description: >-
       Size of the hash table storing conntrack entry lists.
@@ -55,7 +55,7 @@ options:
     type: 'int'
     default: -1
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'conntrack_max'
     description: >-
       Maximum number of simultaneous connection tracking entries
@@ -66,7 +66,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'conntrack_tcp_be_liberal'
     description: >-
       Disable strict TCP window tracking in conntrack. When
@@ -87,7 +87,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_icmp_echo_ignore_all'
     label: 'label386'
     description: >-
@@ -98,7 +98,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_icmp_echo_ignore_broadcasts'
     label: 'label370'
     description: >-
@@ -109,7 +109,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_icmp_ignore_bogus_error_responses'
     label: 'label374'
     description: >-
@@ -120,7 +120,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_ip_dynaddr'
     label: 'label375'
     description: >-
@@ -151,7 +151,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_log_martians'
     label: 'label380'
     description: >-
@@ -305,7 +305,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_rp_filter'
     label: 'label369'
     description: >-
@@ -316,7 +316,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_ecn'
     description: >-
       Enable TCP Explicit Congestion Notification.
@@ -327,16 +327,19 @@ options:
     default: ''
     supported: true
     nftables_supported: false
+    deprecated: true
     widget: 'linux24_tcp_fack'
     description: >-
-      Enable TCP Forward Acknowledgment.
-      Controls /proc/sys/net/ipv4/tcp_fack.
+      Deprecated: FACK loss detection was removed from the Linux kernel
+      and replaced by RACK. The /proc/sys/net/ipv4/tcp_fack knob still
+      exists on RHEL 8/9/10 and Fedora but is a no-op (the kernel marks
+      it obsolete), so setting it has no effect.
 
   linux24_tcp_fin_timeout:
     type: 'int'
     default: -1
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_fin_timeout'
     description: >-
       TCP FIN wait timeout in seconds. Set to -1 to use the
@@ -347,7 +350,7 @@ options:
     type: 'int'
     default: -1
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_keepalive_interval'
     description: >-
       TCP keepalive probe interval in seconds. Set to -1 to
@@ -358,7 +361,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_sack'
     description: >-
       Enable TCP Selective Acknowledgments.
@@ -368,7 +371,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_syncookies'
     description: >-
       Enable TCP SYN cookies for SYN flood protection.
@@ -378,7 +381,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_timestamps'
     description: >-
       Enable TCP timestamps.
@@ -388,7 +391,7 @@ options:
     type: 'tristate'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_tcp_window_scaling'
     description: >-
       Enable TCP window scaling for high-bandwidth connections.

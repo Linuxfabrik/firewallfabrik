@@ -431,7 +431,11 @@ script_body() {
  echo '*filter'
 
  # ================ Table 'filter', rule set Policy_OSPF
- echo "# Rule Policy_OSPF 2 (global)"echo "OUTPUT -j DROP"echo "INPUT -j DROP"echo "FORWARD -j DROP"#
+ echo "# Rule Policy_OSPF 2 (global)"
+ echo "-A OUTPUT -j DROP"
+ echo "-A INPUT -j DROP"
+ echo "-A FORWARD -j DROP"
+ #
  echo COMMIT
 
  ) | $IPTABLES_RESTORE; IPTABLES_RESTORE_RES=$?
@@ -447,19 +451,109 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # drop packets that do not match any valid state and log them
- OUTPUT -m state --state INVALID -j drop_invalid
- INPUT -m state --state INVALID -j drop_invalid
- FORWARD -m state --state INVALID -j drop_invalid
- drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
- drop_invalid -j DROP
+ echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
+ echo "-A INPUT -m state --state INVALID -j drop_invalid "
+ echo "-A FORWARD -m state --state INVALID -j drop_invalid "
+ echo "-A drop_invalid -j LOG --log-level debug --log-prefix "INVALID ""
+ echo "-A drop_invalid -j DROP "
  # ================ Table 'filter', rule set Policy_OSPF
- echo "# Rule Policy_OSPF 0 (eth0)"echo ":CHAIN - [0:0]"echo "INPUT -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "OUTPUT -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo "# Rule Policy_OSPF 1 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "INPUT -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo "# Rule Policy_OSPF 2 (global)"echo "OUTPUT -j DROP"echo "INPUT -j DROP"echo "FORWARD -j DROP"#
+ echo "# Rule Policy_OSPF 0 (eth0)"
+ echo ":CHAIN - [0:0]"
+ echo "-A INPUT -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A OUTPUT -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_OSPF 1 (global)"
+ echo ":CHAIN - [0:0]"
+ echo "-A OUTPUT -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A INPUT -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_OSPF 2 (global)"
+ echo "-A OUTPUT -j DROP"
+ echo "-A INPUT -j DROP"
+ echo "-A FORWARD -j DROP"
+ #
  # ================ Table 'filter', rule set Policy_v6
- echo "# Rule Policy_v6 0 (eth0)"echo ":CHAIN - [0:0]"echo "INPUT -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "OUTPUT -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 1 (eth0)"echo "INPUT -i eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 2 (eth0)"echo "OUTPUT -o eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"echo "FORWARD -o eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 3 (eth0)"echo "FORWARD -o eth0 -s fe80::21d:9ff:fe8b:aaaa -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 4 (eth0)"echo "OUTPUT -o eth0 -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 5 (eth0)"echo "OUTPUT -o eth0 -s 1.1.1.1 -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 6 (eth0)"echo "OUTPUT -o eth0 -s fe80::21d:9ff:fe8b:8e94 -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 7 (eth0)"echo ":CHAIN - [0:0]"echo "INPUT -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -i eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "OUTPUT -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -o eth0 -s fe80::/10 -j CHAIN"echo "CHAIN -d fe80::/10 -j ACCEPT"echo "CHAIN -d ff00::/8 -j ACCEPT"echo "# Rule Policy_v6 14 (global)"echo "OUTPUT -p 89 "echo "INPUT -p 89 "echo "FORWARD -p 89 "echo "# Rule Policy_v6 15 (eth0)"echo "INPUT -i eth0 -p 89 "echo "FORWARD -i eth0 -p 89 "echo "OUTPUT -o eth0 -p 89 "echo "FORWARD -o eth0 -p 89 "#
+ echo "# Rule Policy_v6 0 (eth0)"
+ echo ":CHAIN - [0:0]"
+ echo "-A INPUT -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A OUTPUT -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 1 (eth0)"
+ echo "-A INPUT -i eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 2 (eth0)"
+ echo "-A OUTPUT -o eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"
+ echo "-A FORWARD -o eth0 -s fe80::/10 -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 3 (eth0)"
+ echo "-A FORWARD -o eth0 -s fe80::21d:9ff:fe8b:aaaa -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 4 (eth0)"
+ echo "-A OUTPUT -o eth0 -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 5 (eth0)"
+ echo "-A OUTPUT -o eth0 -s 1.1.1.1 -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 6 (eth0)"
+ echo "-A OUTPUT -o eth0 -s fe80::21d:9ff:fe8b:8e94 -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 7 (eth0)"
+ echo ":CHAIN - [0:0]"
+ echo "-A INPUT -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -i eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A OUTPUT -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -o eth0 -s fe80::/10 -j CHAIN"
+ echo "-A CHAIN -d fe80::/10 -j ACCEPT"
+ echo "-A CHAIN -d ff00::/8 -j ACCEPT"
+ echo "# Rule Policy_v6 14 (global)"
+ echo "-A OUTPUT -p 89 "
+ echo "-A INPUT -p 89 "
+ echo "-A FORWARD -p 89 "
+ echo "# Rule Policy_v6 15 (eth0)"
+ echo "-A INPUT -i eth0 -p 89 "
+ echo "-A FORWARD -i eth0 -p 89 "
+ echo "-A OUTPUT -o eth0 -p 89 "
+ echo "-A FORWARD -o eth0 -p 89 "
+ #
  echo COMMIT
 
  echo '*mangle'

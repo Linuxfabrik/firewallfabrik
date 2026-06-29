@@ -133,11 +133,13 @@ class OSConfigurator_linux24(OSConfigurator):
             'linux24_icmp_ignore_bogus_error_responses',
             'linux24_tcp_window_scaling',
             'linux24_tcp_sack',
-            'linux24_tcp_fack',
             'linux24_tcp_syncookies',
             'linux24_tcp_ecn',
             'linux24_tcp_timestamps',
         ]:
+            # linux24_tcp_fack is intentionally omitted: FACK was removed
+            # from the kernel (replaced by RACK) and the sysctl is a no-op
+            # on supported kernels, so emitting it is pointless.
             val = str(self.fw.get_option(opt_name) or '')
             self._set_configlet_macro_str(val, kernel_vars, opt_name)
 
@@ -173,17 +175,23 @@ class OSConfigurator_linux24(OSConfigurator):
             conntrack.set_variable('iptables_version_ge_1_4', '0')
             conntrack.set_variable('iptables_version_lt_1_4', '1')
 
-        for opt_name in [
-            'linux24_conntrack_max',
-            'linux24_conntrack_hashsize',
-            'linux24_conntrack_tcp_be_liberal',
+        # The conntrack configlet uses unprefixed macro names
+        # ({{$conntrack_max}}), unlike kernel_vars which keeps the
+        # "linux24_" prefix.  Map each firewall option key to the macro
+        # name the configlet actually expects, otherwise the sysctl
+        # lines are silently dropped (the {{if}} block evaluates to
+        # false for an unknown variable).
+        for opt_name, macro_name in [
+            ('linux24_conntrack_max', 'conntrack_max'),
+            ('linux24_conntrack_hashsize', 'conntrack_hashsize'),
+            ('linux24_conntrack_tcp_be_liberal', 'conntrack_tcp_be_liberal'),
         ]:
             val = self.fw.get_option(opt_name)
             try:
                 val = int(val)
             except (ValueError, TypeError):
                 val = -1
-            self._set_configlet_macro_int(val, conntrack, opt_name)
+            self._set_configlet_macro_int(val, conntrack, macro_name)
 
         result += conntrack.expand()
         return result

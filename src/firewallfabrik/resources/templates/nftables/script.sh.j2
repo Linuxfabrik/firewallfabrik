@@ -93,6 +93,12 @@ ip_forward() {
     :
     {{ ip_forward_commands }}
 }
+{% if kernel_vars_commands %}
+
+set_kernel_variables() {
+{{ kernel_vars_commands }}
+}
+{% endif %}
 
 flush_own_tables() {
     # remove only our own tables, leaving other tools' tables untouched
@@ -101,10 +107,32 @@ flush_own_tables() {
     $NFT delete table inet {{ nat_table }} 2>/dev/null
     $NFT delete table ip {{ nat_table }} 2>/dev/null
 }
+{% if flush_ruleset %}
+
+flush_legacy_iptables() {
+    # Remove stale legacy (xtables) iptables rules left over from a
+    # previous iptables-based policy. "nft flush ruleset" only clears
+    # the nft backend, so on systems still using the legacy backend the
+    # old iptables rules would otherwise survive and shadow the nft
+    # rules. All filtering is delegated to nftables, so the built-in
+    # policies are reset to ACCEPT and every chain is flushed/deleted.
+    for ipt in iptables ip6tables; do
+        command -v "$ipt" >/dev/null 2>&1 || continue
+        "$ipt" -P INPUT ACCEPT 2>/dev/null
+        "$ipt" -P FORWARD ACCEPT 2>/dev/null
+        "$ipt" -P OUTPUT ACCEPT 2>/dev/null
+        for table in filter nat mangle raw; do
+            "$ipt" -t "$table" -F 2>/dev/null
+            "$ipt" -t "$table" -X 2>/dev/null
+        done
+    done
+}
+{% endif %}
 
 block_action() {
 {% if flush_ruleset %}
     $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
 {% else %}
     flush_own_tables
 {% endif %}
@@ -123,6 +151,7 @@ block_action() {
 stop_action() {
 {% if flush_ruleset %}
     $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
 {% else %}
     flush_own_tables
 {% endif %}
@@ -174,6 +203,9 @@ case "$cmd" in
         stop_action
 {% if prolog_place == 'after_flush' %}
         prolog_commands
+{% endif %}
+{% if kernel_vars_commands %}
+        set_kernel_variables
 {% endif %}
         script_body || run_epilog_and_exit 1
 {% if routing_output %}

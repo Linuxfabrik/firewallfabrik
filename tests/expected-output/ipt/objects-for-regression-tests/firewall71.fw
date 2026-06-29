@@ -418,21 +418,51 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # drop TCP sessions opened prior firewall restart
- INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ echo "-A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
+ echo "-A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
+ echo "-A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
  # drop packets that do not match any valid state
- OUTPUT -m state --state INVALID -j DROP
- INPUT -m state --state INVALID -j DROP
- FORWARD -m state --state INVALID -j DROP
+ echo "-A OUTPUT -m state --state INVALID -j DROP "
+ echo "-A INPUT -m state --state INVALID -j DROP "
+ echo "-A FORWARD -m state --state INVALID -j DROP "
  # ================ Table 'filter', rule set fw71_policy_2
- echo "# Rule fw71_policy_2 0 (global)"echo ":fw71_policy_2_0 - [0:0]"echo "OUTPUT -j fw71_policy_2_0"echo "INPUT -j fw71_policy_2_0"echo "FORWARD -j fw71_policy_2_0"echo "fw71_policy_2_0 -j LOG"echo "fw71_policy_2_0 -j DROP"#
+ echo "# Rule fw71_policy_2 0 (global)"
+ echo ":fw71_policy_2_0 - [0:0]"
+ echo "-A OUTPUT -j fw71_policy_2_0"
+ echo "-A INPUT -j fw71_policy_2_0"
+ echo "-A FORWARD -j fw71_policy_2_0"
+ echo "-A fw71_policy_2_0 -j LOG"
+ echo "-A fw71_policy_2_0 -j DROP"
+ #
  # ================ Table 'filter', rule set Policy
- echo "# Rule 0 (global)"echo ":CHAIN - [0:0]"echo "OUTPUT -d 200.200.200.200 -m state --state NEW -j CHAIN"echo "CHAIN -s 192.168.1.0/24 -j ACCEPT"echo "CHAIN -s 192.168.2.0/24 -j ACCEPT"echo ":CHAIN - [0:0]"echo "FORWARD -d 200.200.200.200 -m state --state NEW -j CHAIN"echo "CHAIN -s 192.168.1.0/24 -j ACCEPT"echo "CHAIN -s 192.168.2.0/24 -j ACCEPT"echo "# Rule 1 (global)"echo ":RULE_1 - [0:0]"echo "OUTPUT -j RULE_1"echo "INPUT -j RULE_1"echo "FORWARD -j RULE_1"echo "RULE_1 -j LOG"echo "RULE_1 "echo "# Rule 2 (global)"echo ":RULE_2 - [0:0]"echo "OUTPUT -j RULE_2"echo "INPUT -j RULE_2"echo "FORWARD -j RULE_2"echo "RULE_2 -j LOG"echo "RULE_2 -j DROP"#
+ echo "# Rule 0 (global)"
+ echo ":CHAIN - [0:0]"
+ echo "-A OUTPUT -d 200.200.200.200 -m state --state NEW -j CHAIN"
+ echo "-A CHAIN -s 192.168.1.0/24 -j ACCEPT"
+ echo "-A CHAIN -s 192.168.2.0/24 -j ACCEPT"
+ echo ":CHAIN - [0:0]"
+ echo "-A FORWARD -d 200.200.200.200 -m state --state NEW -j CHAIN"
+ echo "-A CHAIN -s 192.168.1.0/24 -j ACCEPT"
+ echo "-A CHAIN -s 192.168.2.0/24 -j ACCEPT"
+ echo "# Rule 1 (global)"
+ echo ":RULE_1 - [0:0]"
+ echo "-A OUTPUT -j RULE_1"
+ echo "-A INPUT -j RULE_1"
+ echo "-A FORWARD -j RULE_1"
+ echo "-A RULE_1 -j LOG"
+ echo "-A RULE_1 "
+ echo "# Rule 2 (global)"
+ echo ":RULE_2 - [0:0]"
+ echo "-A OUTPUT -j RULE_2"
+ echo "-A INPUT -j RULE_2"
+ echo "-A FORWARD -j RULE_2"
+ echo "-A RULE_2 -j LOG"
+ echo "-A RULE_2 -j DROP"
+ #
  echo COMMIT
 
  echo '*nat'

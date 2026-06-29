@@ -413,6 +413,9 @@ configure_interfaces() {
 }
 
 script_body() {
+ echo 0 > /proc/sys/net/ipv4/netfilter/ip_conntrack_max
+ echo 0 > /sys/module/ip_conntrack/parameters/hashsize
+
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules

@@ -413,17 +413,17 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # drop TCP sessions opened prior firewall restart
- INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
- FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ echo "-A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
+ echo "-A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
+ echo "-A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP "
  # drop packets that do not match any valid state
- OUTPUT -m state --state INVALID -j DROP
- INPUT -m state --state INVALID -j DROP
- FORWARD -m state --state INVALID -j DROP
+ echo "-A OUTPUT -m state --state INVALID -j DROP "
+ echo "-A INPUT -m state --state INVALID -j DROP "
+ echo "-A FORWARD -m state --state INVALID -j DROP "
 
  echo COMMIT
 

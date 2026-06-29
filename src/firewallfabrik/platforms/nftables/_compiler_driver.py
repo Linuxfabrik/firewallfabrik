@@ -632,12 +632,26 @@ class CompilerDriver_nft(CompilerDriver):
         if all_messages:
             errors_and_warnings = '\n'.join(f'# {err}' for err in all_messages)
 
-        # Management access for block action
-        mgmt_access = bool(options.get('mgmt_access', False))
+        # Management access for block action. The GUI / .fwb store this
+        # as the "mgmt_ssh" boolean plus "mgmt_addr" (same keys as the
+        # iptables compiler and fwbuilder); the backup SSH rule is only
+        # emitted when both are set.
         ssh_management_address = options.get('mgmt_addr', '')
+        mgmt_access = bool(options.get('mgmt_ssh', False)) and bool(
+            ssh_management_address
+        )
 
         # IP forwarding commands
         ip_forward_commands = self._get_ip_forward_commands(fw)
+
+        # Kernel parameters (sysctl) and conntrack tuning. Backend-agnostic
+        # /proc/sys writes; without these a firewall switched to nftables
+        # would silently lose its kernel-hardening options.
+        kernel_vars_commands = ''
+        if oscnf is not None:
+            raw_kernel_vars = oscnf.process_firewall_options().strip()
+            if raw_kernel_vars:
+                kernel_vars_commands = textwrap.indent(raw_kernel_vars, '    ')
 
         # Interface configuration
         configure_interfaces = options.get('configure_interfaces', False)
@@ -705,6 +719,7 @@ class CompilerDriver_nft(CompilerDriver):
             'nft_rules_body': nft_rules_body,
             'routing_output': routing_output,
             'ip_forward_commands': ip_forward_commands,
+            'kernel_vars_commands': kernel_vars_commands,
             'mgmt_access': mgmt_access,
             'ssh_management_address': ssh_management_address,
             'shell_functions': shell_functions,

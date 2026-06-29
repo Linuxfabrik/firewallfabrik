@@ -142,6 +142,117 @@ class OSConfigurator_nft(OSConfigurator):
 
         return '\n'.join(rules) + '\n' if rules else ''
 
+    # -- Kernel parameters (sysctl) --
+
+    def process_firewall_options(self) -> str:
+        """Generate kernel-parameter and conntrack sysctl settings.
+
+        These are plain ``/proc/sys`` writes and therefore independent of
+        the firewalling backend. The deprecated ``linux24_tcp_fack`` knob
+        is intentionally not emitted (it is a no-op on supported kernels).
+        """
+        result = ''
+
+        # These are linux24 host-OS options. A firewall with an
+        # unsupported host_OS (e.g. a legacy ipcop appliance) has no
+        # defaults package, so the lookup would raise; in that case the
+        # kernel tuning does not apply and the option counts as unset.
+        def opt(key):
+            try:
+                return self.fw.get_option(key)
+            except (KeyError, ModuleNotFoundError):
+                return None
+
+        # Kernel variables. The kernel_vars configlet keeps the "linux24_"
+        # prefix in its macro names, so the option key doubles as the macro.
+        kernel_vars = Configlet('linux24', 'kernel_vars')
+        kernel_vars.collapse_empty_strings(True)
+
+        for opt_name in [
+            'linux24_accept_redirects',
+            'linux24_accept_source_route',
+            'linux24_icmp_echo_ignore_all',
+            'linux24_icmp_echo_ignore_broadcasts',
+            'linux24_icmp_ignore_bogus_error_responses',
+            'linux24_ip_dynaddr',
+            'linux24_log_martians',
+            'linux24_rp_filter',
+            'linux24_tcp_ecn',
+            'linux24_tcp_sack',
+            'linux24_tcp_syncookies',
+            'linux24_tcp_timestamps',
+            'linux24_tcp_window_scaling',
+        ]:
+            val = str(opt(opt_name) or '')
+            self._set_configlet_macro_str(val, kernel_vars, opt_name)
+
+        for opt_name in [
+            'linux24_tcp_fin_timeout',
+            'linux24_tcp_keepalive_interval',
+        ]:
+            val = opt(opt_name)
+            try:
+                val = int(val)
+            except (ValueError, TypeError):
+                val = -1
+            # fwbuilder convention: 0 means "not set" for these two options.
+            # Writing 0 would be destructive (tcp_fin_timeout=0 closes
+            # TIME_WAIT sockets instantly), and .fwb imports frequently
+            # carry a literal 0 even when the GUI field was left empty.
+            if val == 0:
+                val = -1
+            self._set_configlet_macro_int(val, kernel_vars, opt_name)
+
+        result += kernel_vars.expand()
+
+        # Conntrack settings. The conntrack configlet uses unprefixed macro
+        # names ({{$conntrack_max}}), so the option key is mapped to the
+        # macro name explicitly. nftables runs on modern kernels, so the
+        # nf_conntrack (>= iptables 1.4.0) sysctl paths are always used.
+        conntrack = Configlet('linux24', 'conntrack')
+        conntrack.collapse_empty_strings(True)
+        conntrack.set_variable('iptables_version_ge_1_4', '1')
+        conntrack.set_variable('iptables_version_lt_1_4', '0')
+
+        for opt_name, macro_name in [
+            ('linux24_conntrack_hashsize', 'conntrack_hashsize'),
+            ('linux24_conntrack_max', 'conntrack_max'),
+            ('linux24_conntrack_tcp_be_liberal', 'conntrack_tcp_be_liberal'),
+        ]:
+            val = opt(opt_name)
+            try:
+                val = int(val)
+            except (ValueError, TypeError):
+                val = -1
+            self._set_configlet_macro_int(val, conntrack, macro_name)
+
+        result += conntrack.expand()
+        return result
+
+    @staticmethod
+    def _set_configlet_macro_str(
+        val: str,
+        configlet: Configlet,
+        macro_name: str,
+    ) -> None:
+        if val:
+            configlet.set_variable(f'if_{macro_name}', '1')
+            configlet.set_variable(macro_name, val)
+        else:
+            configlet.set_variable(f'if_{macro_name}', '0')
+
+    @staticmethod
+    def _set_configlet_macro_int(
+        val: int,
+        configlet: Configlet,
+        macro_name: str,
+    ) -> None:
+        if val >= 0:
+            configlet.set_variable(f'if_{macro_name}', '1')
+            configlet.set_variable(macro_name, str(val))
+        else:
+            configlet.set_variable(f'if_{macro_name}', '0')
+
     # -- Shell functions (reuses linux24 configlets) --
 
     def print_shell_functions(self) -> str:

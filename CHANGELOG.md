@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+* Compiler (nftables): the kernel-hardening and conntrack tuning options from the firewall's Host OS settings (reverse-path filtering, SYN cookies, ICMP broadcast handling, conntrack table size and similar) are now applied by the generated script. These are backend-independent `/proc/sys` settings that were previously only honoured by the iptables compiler. The matching fields are now editable for nftables firewalls.
+
+### Deprecated
+
+* Host OS setting "TCP fack": FACK loss detection was removed from the Linux kernel (replaced by RACK), and the `/proc/sys/net/ipv4/tcp_fack` knob is a no-op on all supported kernels (RHEL 8/9/10, Fedora). The option is greyed out in the GUI and is no longer written to the generated script.
+
+### Fixed
+
+* Compiler (iptables): the conntrack tuning options (maximum connections, hash table size, liberal TCP tracking) were silently ignored and are now written to the kernel as configured.
+* Compiler (nftables): switching a firewall from iptables to nftables now removes leftover legacy iptables rules when the policy is activated. Previously the old rules could remain in the kernel and shadow the new nftables rules, so a changed rule appeared to have no effect even after a reboot.
+* Compiler (nftables): the backup SSH access rule of the "block" panic action is now generated as intended. It was tied to the wrong setting and never appeared, which could lock an administrator out when blocking a firewall.
+
 
 ## [v1.7.0] - 2026-06-18
 

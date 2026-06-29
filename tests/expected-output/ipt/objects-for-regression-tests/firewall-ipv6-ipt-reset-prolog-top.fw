@@ -431,17 +431,20 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # drop packets that do not match any valid state and log them
- OUTPUT -m state --state INVALID -j drop_invalid
- INPUT -m state --state INVALID -j drop_invalid
- FORWARD -m state --state INVALID -j drop_invalid
- drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
- drop_invalid -j DROP
+ echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
+ echo "-A INPUT -m state --state INVALID -j drop_invalid "
+ echo "-A FORWARD -m state --state INVALID -j drop_invalid "
+ echo "-A drop_invalid -j LOG --log-level debug --log-prefix "INVALID ""
+ echo "-A drop_invalid -j DROP "
  # ================ Table 'filter', rule set Policy
- echo "# Rule 0 (global)"echo "INPUT -m state --state NEW -j ACCEPT"echo "FORWARD -i + -m state --state NEW -j ACCEPT"#
+ echo "# Rule 0 (global)"
+ echo "-A INPUT -m state --state NEW -j ACCEPT"
+ echo "-A FORWARD -i + -m state --state NEW -j ACCEPT"
+ #
  echo COMMIT
 
  echo '*nat'
@@ -467,17 +470,20 @@ script_body() {
  echo :FORWARD DROP [0:0]
  echo :OUTPUT DROP [0:0]
  # accept established sessions
- INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ echo "-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT "
+ echo "-A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT "
  # drop packets that do not match any valid state and log them
- OUTPUT -m state --state INVALID -j drop_invalid
- INPUT -m state --state INVALID -j drop_invalid
- FORWARD -m state --state INVALID -j drop_invalid
- drop_invalid -j LOG --log-level debug --log-prefix "INVALID "
- drop_invalid -j DROP
+ echo "-A OUTPUT -m state --state INVALID -j drop_invalid "
+ echo "-A INPUT -m state --state INVALID -j drop_invalid "
+ echo "-A FORWARD -m state --state INVALID -j drop_invalid "
+ echo "-A drop_invalid -j LOG --log-level debug --log-prefix "INVALID ""
+ echo "-A drop_invalid -j DROP "
  # ================ Table 'filter', rule set Policy
- echo "# Rule 0 (global)"echo "INPUT -m state --state NEW -j ACCEPT"echo "FORWARD -i + -m state --state NEW -j ACCEPT"#
+ echo "# Rule 0 (global)"
+ echo "-A INPUT -m state --state NEW -j ACCEPT"
+ echo "-A FORWARD -i + -m state --state NEW -j ACCEPT"
+ #
  echo COMMIT
 
  ) | $IP6TABLES_RESTORE; IPTABLES_RESTORE_RES=$?

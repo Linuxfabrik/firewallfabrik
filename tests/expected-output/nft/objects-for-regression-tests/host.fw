@@ -126,6 +126,11 @@ ip_forward() {
     echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
+set_kernel_variables() {
+    echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout
+    echo 1800 > /proc/sys/net/ipv4/tcp_keepalive_intvl
+}
+
 flush_own_tables() {
     # remove only our own tables, leaving other tools' tables untouched
     $NFT delete table inet fwf_filter 2>/dev/null
@@ -134,8 +139,28 @@ flush_own_tables() {
     $NFT delete table ip fwf_nat 2>/dev/null
 }
 
+flush_legacy_iptables() {
+    # Remove stale legacy (xtables) iptables rules left over from a
+    # previous iptables-based policy. "nft flush ruleset" only clears
+    # the nft backend, so on systems still using the legacy backend the
+    # old iptables rules would otherwise survive and shadow the nft
+    # rules. All filtering is delegated to nftables, so the built-in
+    # policies are reset to ACCEPT and every chain is flushed/deleted.
+    for ipt in iptables ip6tables; do
+        command -v "$ipt" >/dev/null 2>&1 || continue
+        "$ipt" -P INPUT ACCEPT 2>/dev/null
+        "$ipt" -P FORWARD ACCEPT 2>/dev/null
+        "$ipt" -P OUTPUT ACCEPT 2>/dev/null
+        for table in filter nat mangle raw; do
+            "$ipt" -t "$table" -F 2>/dev/null
+            "$ipt" -t "$table" -X 2>/dev/null
+        done
+    done
+}
+
 block_action() {
     $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
     # block all traffic by default (always use inet to block both IPv4 and IPv6)
     $NFT add table inet fwf_filter
     $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
@@ -145,6 +170,7 @@ block_action() {
 
 stop_action() {
     $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
 }
 
 check_nft_status() {
@@ -180,6 +206,7 @@ case "$cmd" in
         check_nft
         prolog_commands
         stop_action
+        set_kernel_variables
         script_body || run_epilog_and_exit 1
         ip_forward
         epilog_commands

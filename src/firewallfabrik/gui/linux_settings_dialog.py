@@ -31,6 +31,8 @@ _SPINBOXES: dict[str, str] = {}
 _LINE_EDITS: dict[str, str] = {}
 _NFTABLES_UNSUPPORTED_WIDGETS: list[str] = []
 _NFTABLES_UNSUPPORTED_LABELS: list[str] = []
+_DEPRECATED_WIDGETS: list[str] = []
+_DEPRECATED_LABELS: list[str] = []
 
 for _key, _entry in _SCHEMA.items():
     _widget = _entry.get('widget')
@@ -48,6 +50,11 @@ for _key, _entry in _SCHEMA.items():
         _label = _entry.get('label')
         if _label:
             _NFTABLES_UNSUPPORTED_LABELS.append(_label)
+    if _entry.get('deprecated', False):
+        _DEPRECATED_WIDGETS.append(_widget)
+        _label = _entry.get('label')
+        if _label:
+            _DEPRECATED_LABELS.append(_label)
 
 # Mapping from combo text to stored option value.
 _COMBO_TEXT_TO_VALUE = {
@@ -80,6 +87,7 @@ class LinuxSettingsDialog(QDialog):
         self._apply_tooltips()
         self._apply_placeholders()
         self._populate()
+        self._disable_deprecated()
         if platform == 'nftables':
             self._disable_for_nftables()
         self.accepted.connect(self._save_settings)
@@ -115,6 +123,20 @@ class LinuxSettingsDialog(QDialog):
                 if text:
                     widget.setPlaceholderText(str(text))
 
+    def _disable_deprecated(self):
+        """Grey out deprecated options on every platform and note why.
+
+        Deprecated kernel knobs (e.g. tcp_fack) still exist but are
+        no-ops on supported kernels, so they are left visible with their
+        stored value but cannot be changed.
+        """
+        for name in _DEPRECATED_WIDGETS + _DEPRECATED_LABELS:
+            widget = getattr(self, name, None)
+            if widget is not None:
+                widget.setEnabled(False)
+                tip = widget.toolTip()
+                widget.setToolTip(f'{tip}\n\n(deprecated)' if tip else '(deprecated)')
+
     def _disable_for_nftables(self):
         """Disable widgets that are not supported by the nftables compiler."""
         for name in _NFTABLES_UNSUPPORTED_WIDGETS:
@@ -126,8 +148,11 @@ class LinuxSettingsDialog(QDialog):
             if widget is not None:
                 widget.setEnabled(False)
 
-        # Disable entire tabs: TCP (1), Path (2), conntrack (3), Data (4).
-        for idx in (1, 2, 3, 4):
+        # Disable the iptables-only tabs: Path (2) and Data (4). The TCP
+        # and conntrack tabs hold backend-independent /proc/sys settings
+        # and stay enabled; individual unsupported widgets on them are
+        # handled by the per-widget loop above.
+        for idx in (2, 4):
             self.tabWidget.setTabEnabled(idx, False)
 
     def _populate(self):

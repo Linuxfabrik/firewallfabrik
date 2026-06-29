@@ -426,7 +426,9 @@ script_body() {
  echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
  echo 0 > /proc/sys/net/ipv4/icmp_echo_ignore_all
  echo 0 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
- echo 1 > /proc/sys/net/ipv4/tcp_syncookies
+ echo 1 > /proc/sys/net/ipv4/tcp_syncookiesecho 250000 > /proc/sys/net/ipv4/netfilter/ip_conntrack_max
+ echo 250000 > /sys/module/ip_conntrack/parameters/hashsize
+ echo 1 > /proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_be_liberal
 
  # ================ IPv4
 
