@@ -256,6 +256,15 @@ class ObjectTree(QWidget):
     install_requested = Signal(list)
     """Emitted when "Install" is chosen: list of selected firewall names."""
 
+    about_to_repopulate = Signal()
+    """Emitted at the start of populate(), before the tree is cleared.
+
+    Consumers that cache references to QTreeWidgetItem (e.g. the find and
+    where-used panels) must drop them here. clear() destroys the underlying
+    C++ items; a Python wrapper that outlives clear() becomes dangling and
+    a later access double-frees it in ~QTreeWidgetItem (hard SEGV).
+    """
+
     def __init__(self, clipboard_store=None, parent=None):
         super().__init__(parent)
         self._clipboard_store = clipboard_store
@@ -320,6 +329,10 @@ class ObjectTree(QWidget):
         """
         had_tree = self._tree.topLevelItemCount() > 0
         expanded = self._save_expanded_state()
+        # Let cached-item holders (find/where-used panels) release their
+        # QTreeWidgetItem references before clear() destroys the C++ items.
+        # A wrapper surviving clear() dangles and double-frees on next access.
+        self.about_to_repopulate.emit()
         # Block signals and detach selection before clearing to prevent a
         # segfault: clear() destroys QTreeWidgetItems which can trigger
         # itemSelectionChanged while items are partially freed.

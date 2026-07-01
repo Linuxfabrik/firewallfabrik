@@ -726,6 +726,9 @@ class FWWindow(QMainWindow):
         self._find_panel.object_found.connect(self._open_object_editor)
         self._find_panel.navigate_to_rule.connect(self._rs_mgr.navigate_to_rule_match)
         self.findAction.triggered.connect(self._show_find_panel)
+        # Drop cached tree-item references before every tree rebuild, so no
+        # panel holds a wrapper that outlives clear() and double-frees it.
+        self._object_tree.about_to_repopulate.connect(self._find_panel.reset)
 
         # Where Used panel — embedded in the "Where Used" tab.
         self._where_used_panel = FindWhereUsedPanel()
