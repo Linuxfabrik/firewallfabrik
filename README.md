@@ -15,7 +15,7 @@
 <div align="center" markdown>
 
 ![GitHub Stars](https://img.shields.io/github/stars/linuxfabrik/firewallfabrik)
-[![Star History Chart](https://api.star-history.com/svg?repos=Linuxfabrik/firewallfabrik&type=Date)](https://star-history.com/#Linuxfabrik/firewallfabrik&Date)
+[![Star History Chart](https://api.star-history.com/chart?repos=Linuxfabrik/firewallfabrik&type=date&legend=top-left&sealed_token=6SUm1801mnVVflh1FjdwjwI1jTKV5frTQxeT9BI5GQvcCSalOiWVA9ZX6pLrUmxtmvs1v6KGVThzjW1gGciZf7jpiQbS4713HMIMiGkG-9v7I5GQhnnPIw)](https://www.star-history.com/?repos=Linuxfabrik%2Ffirewallfabrik&type=date&legend=top-left)
 ![License](https://img.shields.io/github/license/linuxfabrik/firewallfabrik)
 ![Version](https://img.shields.io/github/v/release/linuxfabrik/firewallfabrik?sort=semver)
 [![PyPI](https://img.shields.io/pypi/v/firewallfabrik)](https://pypi.org/project/firewallfabrik/)
