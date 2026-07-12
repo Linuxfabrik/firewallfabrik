@@ -8,7 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Changed
+
+* FirewallFabrik now runs on Python 3.11 and newer; it previously required Python 3.14. This lets it install on current enterprise and desktop distributions without a custom Python build.
+
+### Fixed
+
+* Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 
 
 ## [v1.9.0] - 2026-07-12

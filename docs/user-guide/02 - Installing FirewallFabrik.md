@@ -2,12 +2,12 @@
 
 ## Requirements
 
-FirewallFabrik requires **Python 3.14** or later. The GUI additionally requires **PySide6** (Qt6 for Python).
+FirewallFabrik requires **Python 3.11** or later. The GUI additionally requires **PySide6** (Qt6 for Python).
 
-If your system Python is older than 3.14 (typical on macOS or RHEL 8/9), use `uv` and pass `--python 3.14`. `uv` will fetch and use a matching Python interpreter for you, leaving the system Python untouched. Example:
+If your system Python is older than 3.11 (typical on macOS or RHEL 8/9), use `uv` and pass `--python 3.11`. `uv` will fetch and use a matching Python interpreter for you, leaving the system Python untouched. Example:
 
 ``` bash
-uvx --python 3.14 --from 'firewallfabrik[gui]' fwf
+uvx --python 3.11 --from 'firewallfabrik[gui]' fwf
 ```
 
 ## Installing from PyPI
@@ -108,7 +108,7 @@ pip install firewallfabrik
 For development or to run the latest code from the repository:
 
 ``` bash
-python3.14 -m venv $HOME/venvs/firewallfabrik
+python3.11 -m venv $HOME/venvs/firewallfabrik
 source $HOME/venvs/firewallfabrik/bin/activate
 pip install --upgrade pip
 pip install --editable '.[gui]'

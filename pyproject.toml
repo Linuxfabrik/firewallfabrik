@@ -12,16 +12,19 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Security",
     "Topic :: System :: Networking :: Firewalls",
 ]
 description = "Modern fwbuilder successor: Qt GUI for managing iptables/nftables policies. Centralized policy DB with reusable objects, scales to hundreds of firewalls, generates deployment-ready shell scripts."
 dependencies = [
-    "defusedxml~=0.7.1",
-    "jinja2~=3.1",
-    "pyyaml~=6.0.3",
-    "sqlalchemy~=2.0.46",
+    "defusedxml>=0.7",
+    "jinja2>=3.1",
+    "pyyaml>=6.0",
+    "sqlalchemy>=2.0",
 ]
 dynamic = [
     "version",
@@ -35,10 +38,10 @@ keywords = [
 license-files = ["LICENSE", "COPYRIGHT"]
 name = "firewallfabrik"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
-gui = ["PySide6~=6.8"]
+gui = ["PySide6>=6.8"]
 
 [dependency-groups]
 dev = [
@@ -87,7 +90,7 @@ testpaths = ["tests"]
 exclude = ["src/firewallfabrik/gui", "venv"]
 
 [tool.ruff]
-target-version = "py313" # py314 does not exist yet as of 2026-02-09
+target-version = "py311" # minimum supported Python
 
 [tool.ruff.lint]
 select = [

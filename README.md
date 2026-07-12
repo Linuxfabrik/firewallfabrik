@@ -19,7 +19,7 @@
 ![License](https://img.shields.io/github/license/linuxfabrik/firewallfabrik)
 ![Version](https://img.shields.io/github/v/release/linuxfabrik/firewallfabrik?sort=semver)
 [![PyPI](https://img.shields.io/pypi/v/firewallfabrik)](https://pypi.org/project/firewallfabrik/)
-![Python](https://img.shields.io/badge/Python-3.14+-3776ab)
+![Python](https://img.shields.io/badge/Python-3.11+-3776ab)
 ![GitHub Issues](https://img.shields.io/github/issues/linuxfabrik/firewallfabrik)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Linuxfabrik/firewallfabrik/badge)](https://scorecard.dev/viewer/?uri=github.com/Linuxfabrik/firewallfabrik)
 [![GitHubSponsors](https://img.shields.io/github/sponsors/Linuxfabrik?label=GitHub%20Sponsors)](https://github.com/sponsors/Linuxfabrik)
