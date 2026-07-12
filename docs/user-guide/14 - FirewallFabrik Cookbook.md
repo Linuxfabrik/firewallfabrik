@@ -2851,3 +2851,25 @@ With PPPoE, the connection is established using the PPP protocol that works on t
 2.  Add interfaces ppp0 and eth1. You can simply skip eth0 as it does not have an IP address and never sees IP packets.
 3.  If you have a static IP address with your Internet connection, mark ppp0 as "static" and add an address object to it. Configure the address object with the IP address.
 4.  If your Internet connection uses dynamic IP address, mark ppp0 as "dynamic" and do not add an address object to it. Create a script /etc/ppp/ip-up to restart the firewall every time IP address of ppp0 changes.
+
+## Batch-Upgrading .fwf Files to the Current Format
+
+The `.fwf` on-disk format evolves between FirewallFabrik releases. To bring many existing `.fwf` files up to the current schema without opening each one in the GUI, use the `fwf-upgrade` command. Loading applies the current defaults and schema, and re-saving writes the file in the current format.
+
+Point `fwf-upgrade` at a directory and it scans it recursively. Start with `--dry-run` to see exactly which files would be upgraded, converted, or skipped, without writing anything:
+
+``` bash
+fwf-upgrade /path/to/configs --dry-run
+```
+
+Once the plan looks right, drop `--dry-run` to perform the upgrade:
+
+``` bash
+fwf-upgrade /path/to/configs
+```
+
+Every `.fwf` file is upgraded in place. In the same pass, every `.fwb` file that does not yet have a `.fwf` sibling is converted to `.fwf`. A `.fwb` whose `.fwf` sibling already exists is left untouched, so an already-migrated `.fwf` is never overwritten by a stale `.fwb`. A summary line reports how many files were upgraded, converted, or skipped.
+
+The operation is deterministic: a file that is already in the current format is rewritten byte-identically, so re-running the command causes no spurious changes. If the files are tracked in Git, run the command and then inspect `git diff` to review exactly which files changed.
+
+The same command also converts a single Firewall Builder `.fwb` file to `.fwf`. See [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md) for the migration workflow.

@@ -48,6 +48,7 @@ dev = [
 [project.scripts]
 fwf-ipt = "firewallfabrik.cli.fwf_ipt:main"
 fwf-nft = "firewallfabrik.cli.fwf_nft:main"
+fwf-upgrade = "firewallfabrik.cli.fwf_upgrade:main"
 # to be implemented
 # fwf-edit = "firewallfabrik.cli.fwfedit:main"
 # fwf-iosacl = "firewallfabrik.cli.fwf_iosacl:main"

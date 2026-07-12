@@ -97,7 +97,7 @@ pip install --user 'firewallfabrik[gui]' --force-reinstall
 
 ## CLI-Only Installation (No GUI)
 
-If you only need the command-line compilers (`fwf-ipt`, `fwf-nft`) and do not need the graphical interface, you can install without the `[gui]` extra. This avoids pulling in PySide6:
+If you only need the command-line tools (`fwf-ipt`, `fwf-nft`, `fwf-upgrade`) and do not need the graphical interface, you can install without the `[gui]` extra. This avoids pulling in PySide6:
 
 ``` bash
 pip install firewallfabrik
@@ -218,3 +218,6 @@ Command-line compiler for iptables configurations.
 
 `fwf-nft`
 Command-line compiler for nftables configurations.
+
+`fwf-upgrade`
+Command-line file upgrader. Writes a `.fwf` file in the current format without launching the GUI. It upgrades an older `.fwf` file to the current schema and converts a Firewall Builder `.fwb` file to `.fwf`. Given a directory instead of a file, it scans recursively and processes every `.fwf` and `.fwb` below it, which is useful for batch-upgrading many files. See [17 - Migrating from Firewall Builder](17%20-%20Migrating%20from%20Firewall%20Builder.md) for details and examples.

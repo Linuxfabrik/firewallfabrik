@@ -18,6 +18,33 @@ This chapter explains the import process, what to expect, and where FirewallFabr
 >
 > If a `.fwf` file with the same base name already exists, FirewallFabrik will warn you before overwriting it.
 
+## Converting a .fwb File Without the GUI
+
+If you only need the converted `.fwf` file (for scripting, batch conversion, or a CI/CD pipeline), use the `fwf-upgrade` command instead of opening the GUI:
+
+```bash
+fwf-upgrade firewall.fwb
+```
+
+This reads `firewall.fwb` and writes `firewall.fwf` next to it. If `firewall.fwf` already exists, the command refuses to overwrite it (it may be your migrated working copy); pass `--output` to write to a different path instead:
+
+```bash
+fwf-upgrade firewall.fwb --output /path/to/converted.fwf
+```
+
+The same command also upgrades an existing `.fwf` file to the current format: loading applies the current defaults and schema, so re-saving migrates a `.fwf` written by an older FirewallFabrik version.
+
+To process many files at once, pass a directory. `fwf-upgrade` then scans it recursively, upgrading every `.fwf` in place and converting every `.fwb` that does not already have a `.fwf` sibling. Start with `--dry-run` to preview which files would be changed, without writing anything, then drop it to perform the upgrade:
+
+```bash
+fwf-upgrade /path/to/configs --dry-run
+fwf-upgrade /path/to/configs
+```
+
+See the [Batch-Upgrading .fwf Files](14%20-%20FirewallFabrik%20Cookbook.md#batch-upgrading-fwf-files-to-the-current-format) recipe in the cookbook for details.
+
+The operation is deterministic: processing the same file twice produces byte-identical `.fwf` output. This makes it safe to convert a whole Git history of `.fwb` files, for example with `git filter-repo`, and get clean diffs that reflect real configuration changes rather than reshuffled identifiers.
+
 ## Post-Import Checklist
 
 After importing a `.fwb` file, verify the following:

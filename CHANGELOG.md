@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-tbd
+### Added
+
+* CLI: `fwf-upgrade` writes a `.fwf` file in the current format without opening the GUI. It converts a Firewall Builder `.fwb` file and upgrades an older `.fwf` file to the current schema. Given a directory, it scans recursively and processes every `.fwf` and `.fwb` below it, which allows batch-upgrading many files at once. A `--dry-run` option lists which files would be upgraded or converted without writing anything. Output is deterministic, so processing the same file repeatedly produces identical results, which suits scripting and rewriting a git history of `.fwb` files ([#132](https://github.com/Linuxfabrik/firewallfabrik/issues/132)).
 
 
 ## [v1.8.1] - 2026-07-01
