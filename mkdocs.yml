@@ -56,9 +56,7 @@ exclude_docs: |
 not_in_nav: |
   CHANGELOG.md
   CODE_OF_CONDUCT.md
-  contributing.md
   object-tree-spec.md
-  security.md
 
 nav:
   - 'Home': 'index.md'
@@ -87,3 +85,5 @@ nav:
       - 'Platform Defaults': 'developer-guide/PlatformDefaults.md'
       - 'Rule Processors': 'developer-guide/RuleProcessors.md'
       - 'Testing': 'developer-guide/Testing.md'
+  - 'Contributing': 'contributing.md'
+  - 'Security': 'security.md'

@@ -144,6 +144,15 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Symlinks created by the docs.yml workflow before mkdocs build. These live
+# under docs/ at runtime so mkdocs-material can render the top-level files as
+# documentation pages; only docs/index.md and the authored docs/ tree are
+# tracked.
+/docs/CHANGELOG.md
+/docs/CODE_OF_CONDUCT.md
+/docs/contributing.md
+/docs/security.md
+
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -162,6 +171,4 @@ cython_debug/
 *.rcc
 
 CLAUDE.md
-docs/*.md
-!docs/index.md
 examples/*.fw

@@ -18,6 +18,11 @@ jobs:
   build:
     runs-on: 'ubuntu-latest'
     steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920' # v2.20.0
+        with:
+          egress-policy: 'audit'
+
       - name: 'Checkout repository'
         uses: 'actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0' # v7.0.0
 
@@ -27,7 +32,7 @@ jobs:
           python-version: '3.12'
 
       - name: 'Install dependencies'
-        run: 'pip install mkdocs==1.6.1 mkdocs-material==9.7.6'
+        run: 'pip install --require-hashes --requirement .github/docs/requirements.txt'
 
       - name: 'Create doc symlinks'
         run: |
