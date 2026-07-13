@@ -7,7 +7,7 @@ Reference document for rewriting the FirewallFabrik object tree, based on analys
 1. [Global Behavior](#global-behavior)
 2. [Per-Object-Type Specification](#per-object-type-specification)
 3. [Context Menu State Logic](#context-menu-state-logic)
-4. [Drag & Drop Rules](#drag--drop-rules)
+4. [Drag & Drop Rules](#drag-drop-rules)
 5. [Multi-Selection Rules](#multi-selection-rules)
 
 ---
