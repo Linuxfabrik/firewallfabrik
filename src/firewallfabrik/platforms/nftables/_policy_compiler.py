@@ -1641,7 +1641,24 @@ class CheckForUnnumbered(PolicyRuleProcessor):
 
 
 class CheckForZeroAddr(PolicyRuleProcessor):
-    """Check for zero addresses and hosts without interfaces."""
+    """Check for zero addresses and hosts without interfaces.
+
+    A /0 netmask is detected family-independently: ``int(netmask) == 0``
+    catches both the IPv4 literal ``0.0.0.0`` and the IPv6 literal ``::``.
+    """
+
+    @staticmethod
+    def _is_zero(value: str) -> bool:
+        """Return True if an address/netmask string is numerically zero (any family)."""
+        if not value:
+            return False
+        import ipaddress as _ipa
+
+        # Numeric zero check, not a socket bind; detects the 'any' address/mask.
+        try:
+            return int(_ipa.ip_address(value)) == 0  # nosec B104
+        except ValueError:
+            return False
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1652,21 +1669,18 @@ class CheckForZeroAddr(PolicyRuleProcessor):
                 if isinstance(obj, Host) and not obj.interfaces:
                     self.compiler.abort(rule, f"Object '{obj.name}' has no interfaces")
                 if isinstance(obj, Address):
-                    addr_s = obj.get_address()
-                    mask_s = obj.get_netmask()
-                    # Address/mask comparisons against the "any" literal below
-                    # are detection logic for user-configured addresses, not
-                    # socket binds. We reject rules that would match everything.
-                    if addr_s == '0.0.0.0' and mask_s == '0.0.0.0':  # nosec B104
+                    addr_zero = self._is_zero(obj.get_address())
+                    mask_zero = self._is_zero(obj.get_netmask())
+                    if addr_zero and mask_zero:
                         self.compiler.abort(
                             rule,
                             f"Object '{obj.name}' has address 0.0.0.0/0.0.0.0",
                         )
                     if (
                         isinstance(obj, (Network, NetworkIPv6))
-                        and addr_s
-                        and addr_s != '0.0.0.0'  # nosec B104
-                        and mask_s == '0.0.0.0'  # nosec B104
+                        and obj.get_address()
+                        and not addr_zero
+                        and mask_zero
                     ):
                         self.compiler.abort(
                             rule,
@@ -1692,8 +1706,21 @@ class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
             changed = False
             for obj in elements:
                 if isinstance(obj, Interface) and obj.is_loopback():
-                    for addr in obj.addresses:
-                        new_elements.append(addr)
+                    if not obj.addresses:
+                        # Address-less loopback used in a rule is a
+                        # misconfiguration; abort instead of silently
+                        # dropping the rule (parity with iptables).
+                        self.compiler.abort(
+                            rule,
+                            'Loopback interface of the firewall object does '
+                            'not have IP address but is used in the rule',
+                        )
+                        new_elements.append(obj)
+                    else:
+                        # Append all addresses; the wrong address family is
+                        # removed downstream by DropIPv4Rules/DropIPv6Rules.
+                        for addr in obj.addresses:
+                            new_elements.append(addr)
                     changed = True
                 else:
                     new_elements.append(obj)
@@ -1719,21 +1746,102 @@ class Accounting(PolicyRuleProcessor):
 
 
 class BridgingFw(PolicyRuleProcessor):
-    """Handle bridging firewall broadcast/multicast forwarding."""
+    """Handle bridging firewall cases.
+
+    For rules in the input chain whose destination is a broadcast or
+    multicast address, split the rule so that a copy goes into the forward
+    chain as well.  This handles broadcasts forwarded by a bridge that must
+    also be accepted by the firewall itself.
+
+    If the rule's interface is unnumbered or a bridge port, the rule is
+    simply moved to forward (no split needed).
+
+    Corresponds to C++ ``PolicyCompiler_ipt::bridgingFw`` (kept in parity
+    with the iptables compiler's ``BridgingFw``).
+    """
+
+    @staticmethod
+    def _is_broadcast_or_multicast(addr: Address) -> bool:
+        """Check if an address is broadcast (255.255.255.255) or multicast (224.0.0.0/4)."""
+        import ipaddress as _ipa
+
+        if not isinstance(addr, Address):
+            return False
+        addr_str = addr.get_address()
+        if not addr_str:
+            return False
+        try:
+            ip = _ipa.ip_address(addr_str)
+        except ValueError:
+            return False
+        # Address comparison against the "any" literal, not a socket bind.
+        if ip == _ipa.ip_address('0.0.0.0'):  # nosec B104
+            return False  # "any" is not broadcast/multicast
+        return ip == _ipa.ip_address('255.255.255.255') or ip.is_multicast
+
+    @staticmethod
+    def _matches_interface_broadcast(addr: Address, fw) -> bool:
+        """Check if address matches the network or broadcast address of a firewall interface."""
+        import ipaddress as _ipa
+
+        if not isinstance(addr, Address):
+            return False
+        addr_str = addr.get_address()
+        if not addr_str:
+            return False
+        try:
+            obj_addr = _ipa.ip_address(addr_str)
+        except ValueError:
+            return False
+
+        for iface in fw.interfaces:
+            if not iface.is_regular():
+                continue
+            for iface_addr in iface.addresses:
+                if not isinstance(iface_addr, IPv4):
+                    continue
+                ip_str = iface_addr.get_address()
+                mask_str = iface_addr.get_netmask()
+                if not ip_str or not mask_str:
+                    continue
+                try:
+                    mask = _ipa.ip_address(mask_str)
+                    # Skip host masks (255.255.255.255) -- bug #780345
+                    if int(mask) == 0xFFFFFFFF:
+                        continue
+                    net = _ipa.ip_network(f'{ip_str}/{mask_str}', strict=False)
+                    if obj_addr in (net.network_address, net.broadcast_address):
+                        return True
+                except ValueError:
+                    continue
+        return False
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        # nftables bridge family handles this natively.
-        # For ip family with bridging, forward broadcast/multicast.
+
         dst = rule.dst[0] if rule.dst else None
-        if rule.ipt_chain == 'input' and dst is not None and isinstance(dst, Address):
-            addr_s = dst.get_address()
-            if addr_s and (addr_s == '255.255.255.255' or addr_s.startswith('224.')):
-                r = rule.clone()
-                r.ipt_chain = 'forward'
-                self.tmp_queue.append(r)
+
+        if rule.ipt_chain == 'input' and isinstance(dst, Address):
+            is_bcast_mcast = self._is_broadcast_or_multicast(
+                dst
+            ) or self._matches_interface_broadcast(dst, self.compiler.fw)
+
+            if is_bcast_mcast:
+                rule_iface = rule.itf[0] if rule.itf else None
+
+                if isinstance(rule_iface, Interface) and (
+                    rule_iface.is_unnumbered() or rule_iface.is_bridge_port()
+                ):
+                    # Unnumbered or bridge port: just move to forward.
+                    rule.ipt_chain = 'forward'
+                else:
+                    # Regular interface: split into input + forward copy.
+                    r = rule.clone()
+                    r.ipt_chain = 'forward'
+                    self.tmp_queue.append(r)
+
         self.tmp_queue.append(rule)
         return True
 
