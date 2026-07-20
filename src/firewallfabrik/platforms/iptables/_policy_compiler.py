@@ -29,9 +29,7 @@ from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
     Begin,
     CheckForTCPEstablished,
-    ConvertToAtomic,
     ConvertToAtomicForAddresses,
-    DetectShadowing,
     DropIPv4Rules,
     DropIPv6Rules,
     DropRuleWithEmptyRE,
@@ -197,42 +195,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
                     self.have_dynamic_interfaces = True
 
         return n
-
-    def run_shadowing_pass(self) -> None:
-        """Run a separate shadowing detection pass before the main compilation.
-
-        Corresponds to fwbuilder's separate shadowing detection pass
-        (PolicyCompiler_ipt.cpp lines 4302-4386).  This builds its own
-        processor pipeline that only produces warnings/errors via
-        ``self.warning()`` / ``self.abort()`` without affecting the main
-        compilation output.
-
-        The pipeline is: Begin -> ConvertAnyToNotFWForShadowing ->
-        SplitIfSrcAnyForShadowing -> SplitIfDstAnyForShadowing ->
-        ConvertToAtomic (full Cartesian product) -> DetectShadowing.
-        """
-        # Save the main processor chain
-        saved_processors = self.rule_processors
-        self.rule_processors = []
-
-        # Build the shadowing detection pipeline.  Mirrors fwbuilder's
-        # PolicyCompiler_ipt.cpp shadow pass: SplitIfSrcAnyForShadowing
-        # and SplitIfDstAnyForShadowing are intentionally skipped
-        # (#if 0 in the C++ source).  Including them produced
-        # synthetic fw->fw atomic variants from rules with "any"
-        # source or destination, which then appeared to be shadowed
-        # by earlier rules that legitimately targeted the firewall
-        # itself - emitting "Rule X shadows Rule Y" false positives.
-        self.add(Begin('Detecting rule shadowing'))
-        self.add(ConvertAnyToNotFWForShadowing("convert 'any' to '!fw'"))
-        self.add(ConvertToAtomic('convert to atomic rules'))
-        self.add(DetectShadowing('Detect shadowing'))
-
-        # Run the shadowing pipeline (only produces warnings/errors)
-        self.run_rule_processors()
-
-        # Restore the main processor chain
-        self.rule_processors = saved_processors
 
     def compile(self) -> None:
         """Main compilation: sets up the full rule processor pipeline."""
@@ -2002,44 +1964,6 @@ class SplitIfDstAny(PolicyRuleProcessor):
             ipt_comp.set_chain(r, 'INPUT')
             r.direction = Direction.Inbound
             self.tmp_queue.append(r)
-
-        self.tmp_queue.append(rule)
-        return True
-
-
-class ConvertAnyToNotFWForShadowing(PolicyRuleProcessor):
-    """Create Return rules for fw when src/dst is 'any' and fw-is-part-of-any is off.
-
-    For the shadowing detection pass: when 'firewall_is_part_of_any_and_networks'
-    is off, 'any' does NOT include the firewall. To model this for shadowing,
-    create a Return rule with fw in the relevant element.
-
-    Corresponds to C++ PolicyCompiler_ipt::convertAnyToNotFWForShadowing.
-    """
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
-        if not afpa:
-            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
-
-        if not afpa:
-            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-
-            if rule.is_src_any():
-                r = rule.clone()
-                r.action = PolicyAction.Return
-                r.src = [ipt_comp.fw]
-                self.tmp_queue.append(r)
-
-            if rule.is_dst_any():
-                r = rule.clone()
-                r.action = PolicyAction.Return
-                r.dst = [ipt_comp.fw]
-                self.tmp_queue.append(r)
 
         self.tmp_queue.append(rule)
         return True

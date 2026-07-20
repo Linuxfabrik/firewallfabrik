@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): rule shadowing detection no longer reports false "Rule X shadows Rule Y below it" warnings when a rule negates its source or destination. The nftables compiler now runs the same shadowing detection as the iptables compiler, so both platforms report identical shadowing for the same firewall ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 
 

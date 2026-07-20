@@ -24,6 +24,12 @@ import sqlalchemy
 
 from firewallfabrik.compiler._comp_rule import load_rules
 from firewallfabrik.compiler._compiler import Compiler
+from firewallfabrik.compiler.processors._generic import (
+    Begin,
+    ConvertAnyToNotFWForShadowing,
+    ConvertToAtomic,
+    DetectShadowing,
+)
 from firewallfabrik.core.objects import (
     Firewall,
     Interface,
@@ -96,3 +102,42 @@ class PolicyCompiler(Compiler):
     def compile(self) -> None:
         """Override in platform-specific subclasses to add processors."""
         pass
+
+    def run_shadowing_pass(self) -> None:
+        """Run a separate shadowing detection pass before the main compilation.
+
+        Shadowing detection is platform-independent: it reasons about the
+        logical coverage of one rule by another, not about iptables- or
+        nftables-specific output. It therefore lives in the base class so
+        both backends run the exact same detection and can never diverge
+        (see issue #136).
+
+        The pass builds its own processor pipeline that only produces
+        warnings/errors via ``self.warning()`` / ``self.abort()`` without
+        affecting the main compilation output. It runs before any negation
+        processing so negated rule elements are still flagged as negated and
+        are correctly skipped by DetectShadowing.
+
+        Pipeline: Begin -> ConvertAnyToNotFWForShadowing ->
+        ConvertToAtomic (full Cartesian product) -> DetectShadowing.
+
+        Corresponds to fwbuilder's separate shadowing detection pass.
+        """
+        # Save the main processor chain and build the shadowing pipeline on a
+        # fresh one, then restore the original chain afterwards.
+        saved_processors = self.rule_processors
+        self.rule_processors = []
+
+        # The SplitIf*AnyForShadowing helpers are intentionally omitted (they
+        # are ``#if 0`` in the C++ source): including them produced synthetic
+        # fw->fw atomic variants from rules with "any" source or destination,
+        # which then appeared to be shadowed by earlier rules that legitimately
+        # targeted the firewall itself - emitting false positives.
+        self.add(Begin('Detecting rule shadowing'))
+        self.add(ConvertAnyToNotFWForShadowing("convert 'any' to '!fw'"))
+        self.add(ConvertToAtomic('convert to atomic rules'))
+        self.add(DetectShadowing('Detect shadowing'))
+
+        self.run_rule_processors()
+
+        self.rule_processors = saved_processors

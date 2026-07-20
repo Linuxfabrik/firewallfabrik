@@ -29,7 +29,6 @@ from firewallfabrik.compiler.processors._generic import (
     Begin,
     CheckForTCPEstablished,
     ConvertToAtomicForInterfaces,
-    DetectShadowing,
     DropIPv4Rules,
     DropIPv6Rules,
     DropRuleWithEmptyRE,
@@ -128,6 +127,12 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         super().compile()
 
+        # Run the shared shadowing detection pass before the main pipeline,
+        # exactly like iptables. It runs before negation processing so negated
+        # rule elements are still flagged and correctly skipped (issue #136).
+        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
+            self.run_shadowing_pass()
+
         # -- Processor pipeline --
         self.add(Begin('Begin compilation'))
         self.add(SingleRuleFilter('single rule filter'))
@@ -173,9 +178,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         )
         self.add(FillActionOnReject('fill action_on_reject'))
         self.add(
-            SplitServicesIfRejectWithTCPReset(
-                'split if action on reject is TCP reset'
-            )
+            SplitServicesIfRejectWithTCPReset('split if action on reject is TCP reset')
         )
         self.add(FillActionOnReject('fill action_on_reject 2'))
         self.add(
@@ -193,17 +196,6 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SplitIfDstNegAndFw('split if dst negated and fw'))
         self.add(NftNegation('process negation'))
         self.add(TimeNegation('process time negation'))
-
-        # Run shadow detection BEFORE the chain-assignment splits.
-        # SplitIfSrcAny / SplitIfDstAny duplicate rules into INPUT and
-        # OUTPUT copies to drive chain selection downstream; running
-        # shadow detection after them makes every logical rule look
-        # like several distinct atomic variants and produces "Rule X
-        # shadows Rule Y" false positives.  Matches fwbuilder's
-        # pattern of running the shadow pipeline without the "split
-        # any" helpers.
-        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
-            self.add(DetectShadowing('detect rule shadowing'))
 
         # Chain assignment
         self.add(SplitIfSrcAny('split rule if src is any'))
@@ -1089,7 +1081,8 @@ class DecideOnChainIfDstFW(PolicyRuleProcessor):
             # forward (fwbuilder #811860, b=m=true).
             direction = rule.direction
             matches_fw = nft_comp.complex_match(
-                dst, nft_comp.fw,
+                dst,
+                nft_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )
@@ -1180,7 +1173,8 @@ class DecideOnChainIfSrcFW(PolicyRuleProcessor):
             # multicast recognition (#811860).
             direction = rule.direction
             matches_fw = nft_comp.complex_match(
-                src, nft_comp.fw,
+                src,
+                nft_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )
@@ -1355,7 +1349,8 @@ class FinalizeChain(PolicyRuleProcessor):
             src is not None
             and not isinstance(src, AddressRange)
             and nft_comp.complex_match(
-                src, nft_comp.fw,
+                src,
+                nft_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )
@@ -1364,7 +1359,8 @@ class FinalizeChain(PolicyRuleProcessor):
             dst is not None
             and not isinstance(dst, AddressRange)
             and nft_comp.complex_match(
-                dst, nft_comp.fw,
+                dst,
+                nft_comp.fw,
                 recognize_broadcasts=True,
                 recognize_multicasts=True,
             )

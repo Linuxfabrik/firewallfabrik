@@ -23,7 +23,10 @@ import ipaddress as _ipa
 import sqlalchemy
 
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
-from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
+from firewallfabrik.compiler._rule_processor import (
+    BasicRuleProcessor,
+    PolicyRuleProcessor,
+)
 from firewallfabrik.core._util import SLOT_VALUES
 from firewallfabrik.core.objects import (
     Address,
@@ -690,7 +693,19 @@ class DetectShadowing(BasicRuleProcessor):
         # Skip rules that shouldn't participate in shadowing checks
         if rule.fallback or rule.hidden:
             return True
-        if rule.get_neg('src') or rule.get_neg('dst') or rule.get_neg('srv'):
+        # Negated elements never participate in shadowing.  Cover both the
+        # raw negation flag and the single_object_negation flag: a platform
+        # may already have moved the negation into single_object_negation
+        # (e.g. nftables' native '!=') before shadowing runs, and a negated
+        # element must not be treated as a plain match (see issue #136).
+        if (
+            rule.get_neg('src')
+            or rule.get_neg('dst')
+            or rule.get_neg('srv')
+            or rule.src_single_object_negation
+            or rule.dst_single_object_negation
+            or rule.srv_single_object_negation
+        ):
             return True
         if rule.action in (
             PolicyAction.Branch,
@@ -751,8 +766,17 @@ class DetectShadowing(BasicRuleProcessor):
 
     def _rule_shadows(self, r1: CompRule, r2: CompRule) -> bool:
         """Return True if r1 is more general than r2 (r1 shadows r2)."""
-        # Skip r1 candidates with special properties
-        if r1.get_neg('src') or r1.get_neg('dst') or r1.get_neg('srv'):
+        # Skip r1 candidates with special properties.  As in process_next,
+        # cover single_object_negation too so a negated shadower cannot be
+        # mistaken for a plain match (see issue #136).
+        if (
+            r1.get_neg('src')
+            or r1.get_neg('dst')
+            or r1.get_neg('srv')
+            or r1.src_single_object_negation
+            or r1.dst_single_object_negation
+            or r1.srv_single_object_negation
+        ):
             return False
         if r1.action in (
             PolicyAction.Branch,
@@ -993,6 +1017,46 @@ def _srv_contains(s1, s2) -> bool:
         return True
 
     return False
+
+
+class ConvertAnyToNotFWForShadowing(PolicyRuleProcessor):
+    """Create Return rules for fw when src/dst is 'any' and fw-is-part-of-any is off.
+
+    For the shadowing detection pass: when 'firewall_is_part_of_any_and_networks'
+    is off, 'any' does NOT include the firewall. To model this for shadowing,
+    create a Return rule with fw in the relevant element.
+
+    Corresponds to C++ PolicyCompiler::convertAnyToNotFWForShadowing. Shared by
+    every platform's shadowing pass, so it lives here rather than in a specific
+    backend.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        afpa = rule.get_option('firewall_is_part_of_any_and_networks', False)
+        if not afpa:
+            afpa = self.compiler.fw.get_option('firewall_is_part_of_any_and_networks')
+
+        if not afpa:
+            fw = self.compiler.fw
+
+            if rule.is_src_any():
+                r = rule.clone()
+                r.action = PolicyAction.Return
+                r.src = [fw]
+                self.tmp_queue.append(r)
+
+            if rule.is_dst_any():
+                r = rule.clone()
+                r.action = PolicyAction.Return
+                r.dst = [fw]
+                self.tmp_queue.append(r)
+
+        self.tmp_queue.append(rule)
+        return True
 
 
 class CheckForTCPEstablished(BasicRuleProcessor):

@@ -22,11 +22,6 @@
 # Rule 11 (global): Accounting action not yet supported by nftables compiler
 # Rule 17 (global): Accounting action not yet supported by nftables compiler
 # Rule 17 (global): Accounting action not yet supported by nftables compiler
-# Rule 12 shadows Rule 13 below it
-# Rule 15 shadows Rule 38 below it
-# Rule 15 shadows Rule 39 below it
-# Rule 32 shadows Rule 40 below it
-# Rule 15 shadows Rule 41 below it
 
 FWBDEBUG=""
 
