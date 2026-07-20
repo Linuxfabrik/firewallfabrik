@@ -274,23 +274,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto tcp accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin accept
         #
         # Rule 5 (global)
         #
-        meta l4proto tcp log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
@@ -313,23 +317,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto tcp accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin accept
         #
         # Rule 5 (global)
         #
-        meta l4proto tcp log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
@@ -378,23 +386,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        meta l4proto tcp accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin accept
         #
         # Rule 5 (global)
         #
-        meta l4proto tcp log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        #
+        # Rule 6 (global)
+        #
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #

@@ -404,6 +404,40 @@ class PrintRule_nft(PolicyRuleProcessor):
         )
         return ''
 
+    _TCP_FLAG_ORDER: ClassVar[tuple[str, ...]] = (
+        'urg',
+        'ack',
+        'psh',
+        'rst',
+        'syn',
+        'fin',
+    )
+
+    def _print_tcp_flags(self, srv, negated: bool = False) -> str:
+        """Format TCP flag inspection for nftables.
+
+        Reads the ORM attributes ``tcp_flags_masks`` (which flags to
+        inspect, the MASK) and ``tcp_flags`` (which of those must be set,
+        the COMP). nftables writes ``tcp flags <value> / <mask>`` with the
+        value before the slash and the mask after, the reverse order of
+        iptables' ``--tcp-flags MASK COMP`` (see nftables doc/data-types.txt
+        and tests/py/inet/tcp.t).
+        """
+        masks = srv.tcp_flags_masks or {}
+        flags = srv.tcp_flags or {}
+        mask_names = [f for f in self._TCP_FLAG_ORDER if masks.get(f)]
+        if not mask_names:
+            return ''
+        comp_names = [f for f in self._TCP_FLAG_ORDER if flags.get(f)]
+        mask_pipe = ' | '.join(mask_names)
+        if negated:
+            comp_pipe = ' | '.join(comp_names) if comp_names else '0x0'
+            return f'tcp flags & ({mask_pipe}) != {comp_pipe}'
+        if not comp_names:
+            # COMP is empty (iptables "NONE"): none of the inspected flags set.
+            return f'tcp flags & ({mask_pipe}) == 0x0'
+        return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+
     def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
         """Print TCP/UDP service matching.
 
@@ -445,12 +479,20 @@ class PrintRule_nft(PolicyRuleProcessor):
         else:
             dst_ports = self._format_port_range(dst_start, dst_end)
 
+            flags = ''
+            if proto == 'tcp' and isinstance(srv, TCPService):
+                flags = self._print_tcp_flags(
+                    srv, negated=bool(rule.srv_single_object_negation)
+                )
+
             if src_ports:
                 parts.append(f'{proto} sport {neg}{src_ports}')
             if dst_ports:
                 parts.append(f'{proto} dport {neg}{dst_ports}')
-            elif not src_ports:
-                # Just the protocol, no ports
+            if flags:
+                parts.append(flags)
+            if not parts:
+                # Just the protocol, no ports, no flags
                 parts.append(f'meta l4proto {proto}')
 
         return ' '.join(parts)

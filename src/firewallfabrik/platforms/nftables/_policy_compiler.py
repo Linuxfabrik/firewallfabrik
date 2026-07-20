@@ -43,6 +43,9 @@ from firewallfabrik.compiler.processors._generic import (
     SimplePrintProgress,
     SingleRuleFilter,
 )
+from firewallfabrik.compiler.processors._service import (
+    SeparateTCPWithFlags,
+)
 from firewallfabrik.core.objects import (
     Address,
     AddressRange,
@@ -251,6 +254,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(ConvertToAtomicForInterfaces('convert to atomic by interfaces'))
         self.add(ConvertToAtomicForIntervals('convert to atomic by intervals'))
         self.add(GroupServicesByProtocol('split on services'))
+        self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         self.add(VerifyCustomServices('verify custom services'))
         self.add(
             SpecialCasesWithCustomServices('handle custom service ESTABLISHED/RELATED')
@@ -1806,7 +1810,18 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
 
 
 class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
-    """Drop outbound rules where dst matches fw in non-output chain."""
+    """Drop outbound rules where dst matches fw in non-output chain.
+
+    In outbound direction with a non-output chain and an interface
+    belonging to the firewall: if src does not match fw but dst does,
+    the packet would go to input (not be forwarded), so the rule is
+    dropped. Preserves rules with negated src or bridging fw with
+    broadcast/multicast dst.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseWithFWInDstAndOutbound``
+    and mirrors the iptables port; the only platform difference is the
+    lowercase chain name (``output`` vs ``OUTPUT``).
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -1821,6 +1836,15 @@ class SpecialCaseWithFWInDstAndOutbound(PolicyRuleProcessor):
             and isinstance(itf, Interface)
             and rule.ipt_chain != 'output'
         ):
+            # Negated src: keep rule. If src does not match fw but dst
+            # does, a non-negated rule is dropped below; a negated src,
+            # however, may match the firewall itself and thus generate
+            # legitimate outbound traffic, so the rule must be preserved
+            # (mirrors PolicyCompiler_ipt::specialCaseWithFWInDstAndOutbound).
+            if rule.get_neg('src') or rule.src_single_object_negation:
+                self.tmp_queue.append(rule)
+                return True
+
             src_matches = src is not None and nft_comp.complex_match(src, nft_comp.fw)
             dst_matches = dst is not None and nft_comp.complex_match(dst, nft_comp.fw)
             if not src_matches and dst_matches:

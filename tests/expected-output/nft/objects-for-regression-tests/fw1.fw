@@ -288,7 +288,7 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
         #
         # Rule 6 (global)
         #
@@ -311,7 +311,7 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
         #
         # Rule 6 (global)
         #
@@ -341,7 +341,7 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
         #
         # Rule 6 (global)
         #

@@ -252,7 +252,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        ip daddr 172.16.1.1 meta l4proto tcp drop
+        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != syn drop
         #
         # Rule 5 (global)
         #
@@ -261,6 +261,10 @@ table ip fwf_filter {
         # Rule 7 (global)
         #
         ip daddr 172.16.1.1 meta l4proto 47 drop
+        #
+        # Rule 8 (global)
+        #
+        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 drop
         #
         # Rule 9 (global)
         #
@@ -275,6 +279,10 @@ table ip fwf_filter {
         #
         iif "lo" ip saddr 127.0.0.1 drop
         #
+        # Rule 1 (eth1)
+        #
+        oifname "eth1" ip saddr != 192.168.1.0/24 ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        #
         # Rule 2 (eth1)
         #
         iifname "eth1" ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr != 192.168.1.0/24 drop
@@ -282,12 +290,17 @@ table ip fwf_filter {
         # Rule 10 (eth1)
         #
         # Should use ! -i eth1 eventually
-        iifname "eth1" ip daddr 192.168.1.0/24 meta l4proto tcp drop
+        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
+        #
+        # Rule 11 (eth1)
+        #
+        # Should use ! -i eth1 eventually
+        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 drop
         #
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 meta l4proto tcp drop
+        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
     }
 
     chain output {
@@ -309,7 +322,7 @@ table ip fwf_filter {
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 meta l4proto tcp drop
+        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
         #
         # Rule 15 (global)
         #

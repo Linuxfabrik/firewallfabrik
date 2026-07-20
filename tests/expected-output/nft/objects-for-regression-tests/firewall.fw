@@ -334,7 +334,9 @@ table ip fwf_filter {
         # Rule 22 (global)
         #
         meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
@@ -416,6 +418,11 @@ table ip fwf_filter {
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        #
+        # Rule 57 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log prefix "CUSTOM LOGGING" level debug drop
     }
 
     chain forward {
@@ -477,7 +484,9 @@ table ip fwf_filter {
         # Rule 22 (global)
         #
         meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
@@ -594,6 +603,11 @@ table ip fwf_filter {
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        #
+        # Rule 57 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log prefix "CUSTOM LOGGING" level debug drop
     }
 
     chain output {
@@ -639,7 +653,9 @@ table ip fwf_filter {
         # Rule 22 (global)
         #
         meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
@@ -724,6 +740,11 @@ table ip fwf_filter {
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        #
+        # Rule 57 (global)
+        #
+        # Automatically generated 'catch all' rule
+        log prefix "CUSTOM LOGGING" level debug drop
     }
 }
 
