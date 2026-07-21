@@ -371,10 +371,23 @@ class PrintRule_nft(PolicyRuleProcessor):
             data = srv.data or {}
             tos = data.get('tos', '')
             dscp = data.get('dscp', '')
+            af = 'ip6' if self.compiler.ipv6_policy else 'ip'
             if dscp:
-                parts.append(f'ip dscp {dscp}')
+                # nftables' dscp symbols (cs0, af11, be, ef, ...) are
+                # lowercase and resolved case-sensitively; the DiffServ class
+                # names fwbuilder stores are uppercase (BE, CS0, AF11).
+                # Numeric values (0x20) are unaffected by lower().
+                parts.append(f'{af} dscp {dscp.lower()}')
             elif tos:
-                parts.append(f'ip tos {tos}')
+                # nftables has no ToS-byte matcher: the IPv4 ToS field was
+                # split into dscp + ecn, so iptables' `-m tos --tos` has no
+                # nftables equivalent. Fail loudly instead of emitting an
+                # `ip tos` expression that nft rejects.
+                self.compiler.error(
+                    rule,
+                    'IP service with a ToS value is not supported by nftables; '
+                    'use a DSCP value instead',
+                )
             if parts:
                 return ' '.join(parts)
         elif isinstance(srv, CustomService):

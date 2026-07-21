@@ -10,6 +10,12 @@
 #
 #  testing TOS and DSCP matching
 #
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 
 FWBDEBUG=""
 
@@ -245,7 +251,8 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta l4proto 0 ip tos 0x20 ct state new accept
+        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+        meta l4proto 0 ct state new accept
         #
         # Rule 1 (global)
         #
@@ -253,7 +260,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta l4proto 0 ip dscp BE ct state new accept
+        meta l4proto 0 ip dscp be ct state new accept
     }
 
     chain forward {
@@ -263,7 +270,8 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta l4proto 0 ip tos 0x20 ct state new accept
+        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+        meta l4proto 0 ct state new accept
         #
         # Rule 1 (global)
         #
@@ -271,7 +279,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta l4proto 0 ip dscp BE ct state new accept
+        meta l4proto 0 ip dscp be ct state new accept
     }
 
     chain output {
@@ -280,7 +288,8 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta l4proto 0 ip tos 0x20 ct state new accept
+        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
+        meta l4proto 0 ct state new accept
         #
         # Rule 1 (global)
         #
@@ -288,7 +297,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        meta l4proto 0 ip dscp BE ct state new accept
+        meta l4proto 0 ip dscp be ct state new accept
     }
 }
 

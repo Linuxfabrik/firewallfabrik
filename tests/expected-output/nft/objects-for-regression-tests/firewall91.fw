@@ -249,7 +249,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta l4proto 0 ip dscp AF4 drop
+        meta l4proto 0 ip dscp af4 drop
         #
         # Rule 1 (global)
         #
