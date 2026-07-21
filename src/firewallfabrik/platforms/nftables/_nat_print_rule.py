@@ -358,12 +358,16 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.NONAT:
             return 'accept'
 
-        flags = self._nat_flags(rule)
+        # Flags mirror what the iptables compiler emits per rule type:
+        # MASQUERADE takes only --random; SNAT/DNAT take --random and
+        # --persistent; NETMAP (SNetnat/DNetnat) and REDIRECT take none.
+        random_only = ' random' if rule.get_option('ipt_nat_random', False) else ''
 
         if rt == NATRuleType.Masq:
-            return f'masquerade{flags}'
+            return f'masquerade{random_only}'
 
         if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
+            flags = self._nat_flags(rule) if rt == NATRuleType.SNAT else ''
             if tsrc:
                 addr = self._print_addr(tsrc, rule)
                 if addr:
@@ -372,11 +376,12 @@ class NATPrintRule_nft(NATRuleProcessor):
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
                         return f'snat to {addr}:{ports}{flags}'
                     return f'snat to {addr}{flags}'
-            return f'masquerade{flags}'
+            return f'masquerade{random_only}'
 
         if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
             if rule.get_option('nft_load_balance'):
                 return self._print_load_balance_action(rule, tsrv)
+            flags = self._nat_flags(rule) if rt == NATRuleType.DNAT else ''
             if tdst:
                 addr = self._print_addr(tdst, rule)
                 if addr:
@@ -391,8 +396,8 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.Redirect:
             ports = self._print_translated_ports(tsrv, src=False)
             if ports:
-                return f'redirect to :{ports}{flags}'
-            return f'redirect{flags}'
+                return f'redirect to :{ports}'
+            return 'redirect'
 
         if rt == NATRuleType.SDNAT:
             self.compiler.error(
