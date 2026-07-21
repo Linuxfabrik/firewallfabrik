@@ -331,6 +331,22 @@ class NATPrintRule_nft(NATRuleProcessor):
             return addr
         return '-'.join(f'[{part}]' for part in addr.split('-'))
 
+    @staticmethod
+    def _nat_flags(rule: CompRule) -> str:
+        """Return the trailing nftables NAT flags (` random,persistent`).
+
+        Mirrors the iptables NAT options: `--random` -> `random`,
+        `--persistent` -> `persistent`. nftables appends them after the
+        action, comma-joined (see iptables-translate output and
+        nftables tests/py/*/masquerade.t).
+        """
+        flags = []
+        if rule.get_option('ipt_nat_random', False):
+            flags.append('random')
+        if rule.get_option('ipt_nat_persistent', False):
+            flags.append('persistent')
+        return f' {",".join(flags)}' if flags else ''
+
     def _print_nat_action(self, rule: CompRule) -> str:
         """Print the NAT action (snat/dnat/masquerade/redirect)."""
         rt = rule.nat_rule_type
@@ -342,8 +358,10 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.NONAT:
             return 'accept'
 
+        flags = self._nat_flags(rule)
+
         if rt == NATRuleType.Masq:
-            return 'masquerade'
+            return f'masquerade{flags}'
 
         if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
             if tsrc:
@@ -352,9 +370,9 @@ class NATPrintRule_nft(NATRuleProcessor):
                     ports = self._print_translated_ports(tsrv, src=True)
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
-                        return f'snat to {addr}:{ports}'
-                    return f'snat to {addr}'
-            return 'masquerade'
+                        return f'snat to {addr}:{ports}{flags}'
+                    return f'snat to {addr}{flags}'
+            return f'masquerade{flags}'
 
         if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
             if rule.get_option('nft_load_balance'):
@@ -365,16 +383,16 @@ class NATPrintRule_nft(NATRuleProcessor):
                     ports = self._print_translated_ports(tsrv, src=False)
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
-                        return f'dnat to {addr}:{ports}'
-                    return f'dnat to {addr}'
+                        return f'dnat to {addr}:{ports}{flags}'
+                    return f'dnat to {addr}{flags}'
             self.compiler.error(rule, 'DNAT rule has no translated destination address')
             return ''
 
         if rt == NATRuleType.Redirect:
             ports = self._print_translated_ports(tsrv, src=False)
             if ports:
-                return f'redirect to :{ports}'
-            return 'redirect'
+                return f'redirect to :{ports}{flags}'
+            return f'redirect{flags}'
 
         if rt == NATRuleType.SDNAT:
             self.compiler.error(

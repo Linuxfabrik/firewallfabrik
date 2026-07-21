@@ -371,8 +371,8 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        counter dnat to 192.168.1.10
-        counter dnat to 192.168.1.10
+        counter dnat to 192.168.1.10 random,persistent
+        counter dnat to 192.168.1.10 random,persistent
     }
 
     chain postrouting {
@@ -380,19 +380,19 @@ table ip fwf_nat {
         #
         # Rule 2 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade persistent
         #
         # Rule 3 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade random,persistent
         #
         # Rule 4 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade persistent
         #
         # Rule 5 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade random,persistent
     }
 }
 
