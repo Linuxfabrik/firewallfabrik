@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): IPv6 SNAT and DNAT rules that also translate the port now bracket the address (for example `[fec0::1]:80`), so the generated ruleset loads. Without the brackets the port was read as part of the IPv6 address.
 * Compiler (nftables): a rule that uses a loopback interface which has no IP address now aborts compilation with a clear error instead of silently dropping the rule, matching the iptables compiler.
 * Compiler (nftables): an IPv6 network object with a /0 netmask (equivalent to "any") is now reported as a likely configuration error, matching the iptables compiler which already caught the IPv4 case.
 * Compiler (nftables): firewall rules with a negated source that are directed outbound to a firewall address are no longer silently dropped. The nftables compiler now keeps them, matching the iptables compiler.

@@ -56,6 +56,20 @@ def _is_true(val) -> bool:
     return str(val) == 'True'
 
 
+def _bracket_v6(addr_part: str) -> str:
+    """Wrap an IPv6 NAT target in square brackets before a `:port`.
+
+    iptables' NAT target parser (extensions/libxt_NAT.c: parse_to) treats a
+    lone colon as a port separator, so an IPv6 target with a port must be
+    bracketed: `--to-source [fec0::1]:80`. A range is wrapped as a whole,
+    `[start-end]:port` (the parser splits on the dash inside the brackets).
+    IPv4 addresses, which never contain a colon, are returned unchanged.
+    """
+    if ':' not in addr_part:
+        return addr_part
+    return f'[{addr_part}]'
+
+
 def _version_compare(v1: str, v2: str) -> int:
     """Compare two version strings. Returns -1, 0, or 1."""
 
@@ -210,7 +224,7 @@ class NATPrintRule(NATRuleProcessor):
                 ).strip()
             ports = self._print_snat_ports(tsrv) if tsrv else ''
             if ports:
-                parts.append(f'{addr_part}:{ports}')
+                parts.append(f'{_bracket_v6(addr_part)}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
             if rule.get_option('ipt_nat_random', False):
@@ -230,7 +244,7 @@ class NATPrintRule(NATRuleProcessor):
                 ).strip()
             ports = self._print_dnat_ports(tsrv) if tsrv else ''
             if ports:
-                parts.append(f'{addr_part}:{ports}')
+                parts.append(f'{_bracket_v6(addr_part)}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
             if rule.get_option('ipt_nat_random', False):

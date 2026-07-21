@@ -315,6 +315,20 @@ class NATPrintRule_nft(NATRuleProcessor):
             return str(start)
         return f'{start}-{end}'
 
+    @staticmethod
+    def _bracket_v6_for_port(addr: str, ipv6: bool) -> str:
+        """Wrap an IPv6 NAT target in square brackets before a `:port`.
+
+        nftables (like `[addr]:port` in a URL) needs the IPv6 address
+        bracketed so the trailing colon is not read as part of the address:
+        `snat to [fec0::1]:80`. A range brackets each endpoint,
+        `[start]-[end]:port` (see nftables tests/py/ip6/{snat,dnat}.t).
+        IPv4 addresses and bracket-less forms (prefixes) are returned as-is.
+        """
+        if not ipv6 or ':' not in addr or '/' in addr:
+            return addr
+        return '-'.join(f'[{part}]' for part in addr.split('-'))
+
     def _print_nat_action(self, rule: CompRule) -> str:
         """Print the NAT action (snat/dnat/masquerade/redirect)."""
         rt = rule.nat_rule_type
@@ -335,6 +349,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 if addr:
                     ports = self._print_translated_ports(tsrv, src=True)
                     if ports:
+                        addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
                         return f'snat to {addr}:{ports}'
                     return f'snat to {addr}'
             return 'masquerade'
@@ -347,6 +362,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 if addr:
                     ports = self._print_translated_ports(tsrv, src=False)
                     if ports:
+                        addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
                         return f'dnat to {addr}:{ports}'
                     return f'dnat to {addr}'
             self.compiler.error(rule, 'DNAT rule has no translated destination address')
