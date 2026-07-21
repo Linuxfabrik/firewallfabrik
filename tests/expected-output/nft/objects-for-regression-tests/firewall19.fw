@@ -259,168 +259,168 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (lo)
         #
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
         #
         # Rule 1 (lo)
         #
-        iif "lo" ip daddr { 192.168.1.1, 66.66.66.130, 66.66.66.1, 127.0.0.1 } ct state new accept
+        iif "lo" ip daddr { 192.168.1.1, 66.66.66.130, 66.66.66.1, 127.0.0.1 } ct state new counter accept
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #
-        ip daddr { 66.66.66.130, 127.0.0.1 } tcp dport 3128 ct state new accept
+        ip daddr { 66.66.66.130, 127.0.0.1 } tcp dport 3128 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        log prefix "RULE 12 -- DENY " level info drop
+        counter log prefix "RULE 12 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
         #
         # Rule 12 (global)
         #
-        log prefix "RULE 12 -- DENY " level info drop
+        counter log prefix "RULE 12 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (lo)
         #
-        oif "lo" ip daddr { 66.66.66.1, 66.66.66.130, 127.0.0.1, 192.168.1.1 } ct state new accept
+        oif "lo" ip daddr { 66.66.66.1, 66.66.66.130, 127.0.0.1, 192.168.1.1 } ct state new counter accept
         #
         # Rule 1 (lo)
         #
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ip daddr 192.168.1.1 ct state new accept
+        oif "lo" ip daddr 192.168.1.1 ct state new counter accept
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ip daddr 66.66.66.130 ct state new accept
+        oif "lo" ip daddr 66.66.66.130 ct state new counter accept
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ip daddr 66.66.66.1 ct state new accept
+        oif "lo" ip daddr 66.66.66.1 ct state new counter accept
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ip daddr 127.0.0.1 ct state new accept
+        oif "lo" ip daddr 127.0.0.1 ct state new counter accept
         # # Rule 1 (lo): Could not resolve any destination addresses
 # Rule 1 (lo): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
         #
         # Rule 2 (lo)
         #
-        oif "lo" ip daddr 192.168.1.1 ct state new accept
+        oif "lo" ip daddr 192.168.1.1 ct state new counter accept
         #
         # Rule 3 (lo)
         #
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn accept
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
         #
         # Rule 10 (global)
         #
         # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #
-        ip daddr { 66.66.66.130, 127.0.0.1 } tcp dport 3128 ct state new accept
+        ip daddr { 66.66.66.130, 127.0.0.1 } tcp dport 3128 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        log prefix "RULE 12 -- DENY " level info drop
+        counter log prefix "RULE 12 -- DENY " level info drop
     }
 }
 

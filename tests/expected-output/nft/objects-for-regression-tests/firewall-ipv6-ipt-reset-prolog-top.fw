@@ -253,36 +253,36 @@ delete table ip6 fwf_nat
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
     }
 }
 
@@ -296,7 +296,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 1.1.1.0/24 snat to 22.22.22.22
+        oifname "eth1" ip saddr 1.1.1.0/24 counter snat to 22.22.22.22
     }
 }
 
@@ -310,7 +310,7 @@ table ip6 fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip6 saddr fe80::/64 snat to 22.22.22.22
+        oifname "eth1" ip6 saddr fe80::/64 counter snat to 22.22.22.22
     }
 }
 

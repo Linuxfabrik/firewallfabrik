@@ -151,13 +151,20 @@ class PrintRule_nft(PolicyRuleProcessor):
         if time_match:
             parts.append(time_match)
 
-        # Logging
+        # Logging and verdict
         log_match = self._print_log(rule)
+        verdict = self._print_verdict(rule)
+
+        # Counter: every iptables rule keeps implicit packet/byte counters, so
+        # emit `counter` here (before any log or verdict, the order
+        # iptables-translate uses) to give the nftables ruleset the same
+        # visible hit counts. Skip it only for an otherwise empty rule.
+        if parts or log_match or verdict:
+            parts.append('counter')
+
         if log_match:
             parts.append(log_match)
 
-        # Verdict/target
-        verdict = self._print_verdict(rule)
         if verdict:
             parts.append(verdict)
 

@@ -268,116 +268,116 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 2 (global)
         #
         # SSH Access to firewall is permitted
         # only from internal network
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 4 (global)
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        ct state new log prefix "RULE 4 -- DENY " level info drop
+        ct state new counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new counter accept
         #
         # Rule 6 (global)
         #
-        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
-        log prefix "RULE 6 -- REJECT " level info reject
+        meta l4proto tcp counter log prefix "RULE 6 -- REJECT " level info reject with tcp reset
+        counter log prefix "RULE 6 -- REJECT " level info reject
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # anti spoofing rule
-        ip saddr { 192.0.2.1, 192.168.1.1, 192.168.1.0/24 } ip daddr 192.168.171.2 ct state new log prefix "RULE 0 -- DENY " level info drop
+        ip saddr { 192.0.2.1, 192.168.1.1, 192.168.1.0/24 } ip daddr 192.168.171.2 ct state new counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new counter accept
         #
         # Rule 6 (global)
         #
-        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
-        log prefix "RULE 6 -- REJECT " level info reject
+        meta l4proto tcp counter log prefix "RULE 6 -- REJECT " level info reject with tcp reset
+        counter log prefix "RULE 6 -- REJECT " level info reject
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 3 (global)
         #
         # Firewall uses one of the machines
         # on internal network for DNS
-        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        ip daddr { 192.0.2.1, 192.168.1.1 } ct state new log prefix "RULE 4 -- DENY " level info drop
+        ip daddr { 192.0.2.1, 192.168.1.1 } ct state new counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 1 tcp flags syn / syn ct state new counter accept
         #
         # Rule 6 (global)
         #
-        meta l4proto tcp log prefix "RULE 6 -- REJECT " level info reject with tcp reset
-        log prefix "RULE 6 -- REJECT " level info reject
+        meta l4proto tcp counter log prefix "RULE 6 -- REJECT " level info reject with tcp reset
+        counter log prefix "RULE 6 -- REJECT " level info reject
     }
 }
 
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        ip saddr 192.168.1.0/24 accept
+        ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 3 (NAT)
         #
         # SDNAT
-        ip daddr 192.0.2.1 tcp dport 22 dnat to 192.168.1.10
-        ip daddr 192.168.1.1 tcp dport 22 dnat to 192.168.1.10
+        ip daddr 192.0.2.1 tcp dport 22 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10
         #
         # Rule 4 (NAT)
         #
         # SDNAT with source port
-        ip daddr 192.0.2.1 udp sport 123 dnat to 192.168.1.10
-        ip daddr 192.168.1.1 udp sport 123 dnat to 192.168.1.10
+        ip daddr 192.0.2.1 udp sport 123 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 udp sport 123 counter dnat to 192.168.1.10
         #
         # Rule 5 (NAT)
         #
         # SDNAT with dest port
-        ip saddr 192.168.1.0/24 udp dport 53 dnat to 192.168.1.10:1053
+        ip saddr 192.168.1.0/24 udp dport 53 counter dnat to 192.168.1.10:1053
         #
         # Rule 6 (NAT)
         #
         # SDNAT
         # translate src and dst addresses
         # and src and dst ports
-        ip saddr 192.168.1.0/24 udp sport 1024-65535 udp dport 53 dnat to 192.168.1.10:1053
+        ip saddr 192.168.1.0/24 udp sport 1024-65535 udp dport 53 counter dnat to 192.168.1.10:1053
     }
 
     chain postrouting {
@@ -385,25 +385,25 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        ip saddr 192.168.1.0/24 accept
+        ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 1 (NAT)
         #
         # source port only
-        ip saddr 192.168.1.0/24 udp sport 123 accept
+        ip saddr 192.168.1.0/24 udp sport 123 counter accept
         #
         # Rule 2 (NAT)
         #
         # dest port only
-        ip saddr 192.168.1.0/24 udp dport 53 accept
-        oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 snat to 192.168.1.1
-        oifname "eth1" ip daddr 192.168.1.10 udp sport 123 snat to 192.168.1.1:5050
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 53 snat to 192.168.1.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 1024-65535 udp dport 53 snat to 192.168.1.1:32767-65535
+        ip saddr 192.168.1.0/24 udp dport 53 counter accept
+        oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
+        oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 53 counter snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 1024-65535 udp dport 53 counter snat to 192.168.1.1:32767-65535
         #
         # Rule 7 (NAT)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 accept
+        ip saddr 192.168.1.0/24 udp dport 53 counter accept
     }
 }
 

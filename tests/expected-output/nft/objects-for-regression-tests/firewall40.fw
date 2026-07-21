@@ -247,83 +247,83 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ct state new
+        iifname "eth0" ct state new counter
         #
         # Rule 1 (eth2)
         #
-        iifname "eth2" ct state new
+        iifname "eth2" ct state new counter
         #
         # Rule 2 (global)
         #
         # This permits access from internal net
         # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 3 (global)
         #
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY " level info drop
+        counter log prefix "RULE 5 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ct state new
+        iifname "eth0" ct state new counter
         #
         # Rule 1 (eth2)
         #
-        iifname "eth2" ct state new
+        iifname "eth2" ct state new counter
         #
         # Rule 2 (global)
         #
         # This permits access from internal net
         # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 3 (global)
         #
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY " level info drop
+        counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Tagging not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new log prefix "RULE 6 -- CONTINUE " level info
+        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter log prefix "RULE 6 -- CONTINUE " level info
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
         # This permits access from internal net
         # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 3 (global)
         #
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY " level info drop
+        counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Tagging not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new log prefix "RULE 6 -- CONTINUE " level info
+        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter log prefix "RULE 6 -- CONTINUE " level info
     }
 }
 
@@ -339,7 +339,7 @@ table ip fwf_nat {
         #
         # Translate source address
         # for outgoing connections
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
     }
 }
 

@@ -84,86 +84,86 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
         # SSH Access to firewall is permitted
         # only from internal network
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Could not resolve any source addresses
 # Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 12 (global)
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        log prefix "RULE 12 -- DENY " level info drop
+        counter log prefix "RULE 12 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Could not resolve any source addresses
 # Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr { 192.168.1.1, 192.168.1.2 } ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 3 (global)
         #
         # Firewall uses one of the machines
         # on internal network for DNS
-        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new log prefix "RULE 3 -- ACCEPT " level info accept
+        ip daddr 192.168.1.0/24 meta l4proto { tcp, udp } th dport 53 ct state new counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 5 (global)
         #
         # fw is part of any and networks
         # # Rule 5 (global): Could not resolve any source addresses
 # Rule 5 (global): Interface "eth0" has no addresses
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 6 (global)
         #
         # fw is NOT part of any and networks
         # # Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Interface "eth0" has no addresses
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 8 (global)
         #
         # fw is part of any
-        ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 12 (global)
         #
         # All other attempts to connect to
         # the firewall are denied and logged
-        ip daddr 192.168.1.254 log prefix "RULE 12 -- DENY " level info drop
+        ip daddr 192.168.1.254 counter log prefix "RULE 12 -- DENY " level info drop
     }
 }
 
@@ -173,11 +173,11 @@ table ip fwf_nat {
         #
         # Rule 3 (NAT)
         #
-        dnat to 192.168.1.100
+        counter dnat to 192.168.1.100
         #
         # Rule 4 (NAT)
         #
-        dnat to 192.168.1.100
+        counter dnat to 192.168.1.100
     }
 
     chain postrouting {
@@ -185,15 +185,15 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 2 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
     }
 }
 

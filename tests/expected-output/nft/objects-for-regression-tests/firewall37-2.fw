@@ -238,79 +238,79 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule classify_2 0 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24
+        iifname "eth0" ip saddr 192.168.1.0/24 counter
         #
         # Rule 1 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter
         #
         # Rule 3 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 accept
+        iifname "eth0" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 4 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter
         #
         # Rule 5 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 6 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter
         #
         # Rule 7 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 accept
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter accept
         #
         # Rule 8 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 }
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 9 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new accept
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
         #
         # Rule 10 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter
         #
         # Rule 11 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } accept
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
         #
         # Rule 12 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter
         #
         # Rule 13 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new accept
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter accept
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter accept
         #
         # Rule 14 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter
         #
         # Rule 15 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 accept
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 accept
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter accept
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
         # Rule 16 (global)
         #
@@ -328,88 +328,88 @@ table ip fwf_filter {
         # Should create branch in OUTPUT instead of
         # enumerating all ip addresses of the fw in PREROUTING
         # # Rule 17 (global): Branch action not yet supported by nftables compiler
-        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 }
+        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter
         #
         # Rule 18 (global)
         #
-        log prefix "RULE 18 -- DENY " level info drop
+        counter log prefix "RULE 18 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule classify_2 0 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24
+        iifname "eth0" ip saddr 192.168.1.0/24 counter
         #
         # Rule 1 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter
         #
         # Rule 3 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 accept
+        iifname "eth0" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 4 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter
         #
         # Rule 5 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 6 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter
         #
         # Rule 7 (eth0)
         #
-        iifname "eth0" ip saddr != 192.168.1.0/24 accept
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter accept
         #
         # Rule 8 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 }
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 9 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new accept
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
         #
         # Rule 10 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter
         #
         # Rule 11 (eth0)
         #
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } accept
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
         #
         # Rule 12 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter
         #
         # Rule 13 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new accept
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new accept
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter accept
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter accept
         #
         # Rule 14 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter
         #
         # Rule 15 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 accept
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 accept
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter accept
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
         # Rule 16 (global)
         #
@@ -420,16 +420,16 @@ table ip fwf_filter {
         #
         # Rule 18 (global)
         #
-        log prefix "RULE 18 -- DENY " level info drop
+        counter log prefix "RULE 18 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule classify_2 0 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 16 (global)
         #
@@ -440,7 +440,7 @@ table ip fwf_filter {
         #
         # Rule 18 (global)
         #
-        log prefix "RULE 18 -- DENY " level info drop
+        counter log prefix "RULE 18 -- DENY " level info drop
     }
 }
 

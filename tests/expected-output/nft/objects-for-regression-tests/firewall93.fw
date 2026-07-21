@@ -255,65 +255,65 @@ delete table inet fwf_filter
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (ppp0)
         #
-        iifname "ppp0" ip saddr 192.0.2.1 ct state new accept
+        iifname "ppp0" ip saddr 192.0.2.1 ct state new counter accept
         #
         # Rule 1 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new accept
+        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new counter accept
         #
         # Rule Policy_v6 0 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule Policy_v6 1 (ppp0)
         #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule 0 (ppp0)
         #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule 1 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (ppp0)
         #
-        iifname "ppp0" ip saddr 192.0.2.1 ct state new accept
+        iifname "ppp0" ip saddr 192.0.2.1 ct state new counter accept
         #
         # Rule 1 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new accept
+        iifname "ppp-dsl" ip saddr 192.0.2.1 ct state new counter accept
         #
         # Rule Policy_v6 0 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule Policy_v6 1 (ppp0)
         #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule 0 (ppp0)
         #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
         #
         # Rule 1 (ppp-dsl)
         #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new accept
+        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 }
 

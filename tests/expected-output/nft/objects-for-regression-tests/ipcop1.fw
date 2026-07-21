@@ -254,49 +254,49 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Cannot resolve address for object type AddressTable
 # Rule 2 (global): Could not resolve any source addresses
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip daddr 10.3.14.40 tcp dport 80 ct state new accept
+        ip daddr 10.3.14.40 tcp dport 80 ct state new counter accept
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Cannot resolve address for object type AddressTable
 # Rule 2 (global): Could not resolve any source addresses
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip daddr 10.3.14.40 tcp dport 80 ct state new accept
+        ip daddr 10.3.14.40 tcp dport 80 ct state new counter accept
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        counter log prefix "RULE 1 -- DENY " level info drop
     }
 }
 

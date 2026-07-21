@@ -558,7 +558,7 @@ class CompilerDriver_nft(CompilerDriver):
                 if _fwd_on(ipv4_fwd_raw) or (have_ipv6 and _fwd_on(ipv6_fwd_raw)):
                     out.write(
                         '        tcp flags syn / syn,rst '
-                        'tcp option maxseg size set rt mtu\n'
+                        'counter tcp option maxseg size set rt mtu\n'
                     )
             if forward_rules.strip():
                 out.write(forward_rules)

@@ -263,164 +263,164 @@ delete table ip6 fwf_nat
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule 0 (global)
         #
-        ct state new log prefix "RULE 0 -- ACCEPT " level info accept
+        ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 1 (global)
         #
-        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new accept
+        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 2 (global)
         #
-        meta l4proto icmp ct state new accept
+        meta l4proto icmp ct state new counter accept
         #
         # Rule 3 (global)
         #
-        icmp type echo-request icmp code 0 ct state new accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 4 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip saddr 1.1.1.0/24 ct state new accept
+        ip saddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 5 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip daddr 1.1.1.0/24 ct state new accept
+        ip daddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
-        ct state new log prefix "RULE 0 -- ACCEPT " level info accept
+        ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule 2 (global)
         #
-        meta l4proto icmp ct state new accept
+        meta l4proto icmp ct state new counter accept
         #
         # Rule 3 (global)
         #
-        icmp type echo-request icmp code 0 ct state new accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 4 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip saddr 1.1.1.0/24 ct state new accept
+        ip saddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 5 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip daddr 1.1.1.0/24 ct state new accept
+        ip daddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 9 (global)
         #
         # ipv4 address range for bug 2820152
-        ip daddr 192.168.1.1-192.168.1.100 ct state new accept
+        ip daddr 192.168.1.1-192.168.1.100 ct state new counter accept
         #
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip daddr 255.255.255.255 ct state new accept
+        ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 9 (global)
         #
         # ipv4 address range for bug 2820152
-        ip6 daddr 192.168.1.1-192.168.1.100 ct state new accept
+        ip6 daddr 192.168.1.1-192.168.1.100 ct state new counter accept
         #
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip6 daddr 255.255.255.255 ct state new accept
+        ip6 daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule 1 (global)
         #
-        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new accept
+        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 2 (global)
         #
-        meta l4proto icmp ct state new accept
+        meta l4proto icmp ct state new counter accept
         #
         # Rule 3 (global)
         #
-        icmp type echo-request icmp code 0 ct state new accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 4 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip saddr 1.1.1.0/24 ct state new accept
+        ip saddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 5 (global)
         #
         # INPUT, OUTPUT, FORWARD
-        ip daddr 1.1.1.0/24 ct state new accept
+        ip daddr 1.1.1.0/24 ct state new counter accept
         #
         # Rule 6 (global)
         #
         # for bug 2047082
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 9 (global)
         #
         # ipv4 address range for bug 2820152
-        ip daddr 192.168.1.1-192.168.1.100 ct state new accept
+        ip daddr 192.168.1.1-192.168.1.100 ct state new counter accept
         #
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip daddr 255.255.255.255 ct state new accept
+        ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
         # for bug 2047082
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 9 (global)
         #
         # ipv4 address range for bug 2820152
-        ip6 daddr 192.168.1.1-192.168.1.100 ct state new accept
+        ip6 daddr 192.168.1.1-192.168.1.100 ct state new counter accept
         #
         # Rule 10 (global)
         #
         # ipv4 address range for bug 2820152
-        ip6 daddr 255.255.255.255 ct state new accept
+        ip6 daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY " level info drop
+        counter log prefix "RULE 11 -- DENY " level info drop
     }
 }
 
@@ -434,7 +434,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 1.1.1.0/24 masquerade
+        oifname "eth1" ip saddr 1.1.1.0/24 counter masquerade
     }
 }
 
@@ -448,7 +448,7 @@ table ip6 fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip6 saddr fe80::/64 masquerade
+        oifname "eth1" ip6 saddr fe80::/64 counter masquerade
     }
 }
 

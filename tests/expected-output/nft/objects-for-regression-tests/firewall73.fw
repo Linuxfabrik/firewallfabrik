@@ -235,78 +235,78 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" drop
+        iifname "eth0" counter drop
         #
         # Rule 3 (lo)
         #
-        iif "lo" drop
+        iif "lo" counter drop
         #
         # Rule 6 (global)
         #
-        drop
+        counter drop
         #
         # Rule 15 (eth0)
         #
-        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 18 (global)
         #
-        ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" drop
-        oifname "eth0" drop
+        iifname "eth0" counter drop
+        oifname "eth0" counter drop
         #
         # Rule 6 (global)
         #
-        drop
+        counter drop
         #
         # Rule 14 (global)
         #
-        ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 15 (eth0)
         #
-        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 19 (global)
         #
-        ip saddr { 33.33.33.33, 172.16.1.1 } drop
+        ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        oifname "eth0" drop
+        oifname "eth0" counter drop
         #
         # Rule 3 (lo)
         #
-        oif "lo" drop
+        oif "lo" counter drop
         #
         # Rule 6 (global)
         #
-        drop
+        counter drop
         #
         # Rule 9 (eth0)
         #
-        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 12 (global)
         #
-        ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
     }
 }
 

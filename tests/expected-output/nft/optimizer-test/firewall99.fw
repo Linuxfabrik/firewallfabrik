@@ -231,65 +231,65 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 1 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 1 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 reject with tcp reset
+        ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 1 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 2 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 reject with tcp reset
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
     }
 }
 

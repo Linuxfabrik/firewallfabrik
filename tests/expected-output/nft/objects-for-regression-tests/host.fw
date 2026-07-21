@@ -55,66 +55,66 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 22.22.22.22 log level debug drop
+        iifname "eth0" ip saddr 22.22.22.22 counter log level debug drop
         #
         # Rule 1 (lo)
         #
         # allow everything on loopback
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
         #
         # Rule 3 (lo)
         #
-        iif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new log level debug accept
+        iif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new counter log level debug accept
         #
         # Rule 7 (global)
         #
-        ip saddr 22.22.22.22 ct state new accept
+        ip saddr 22.22.22.22 ct state new counter accept
         #
         # Rule 8 (global)
         #
         # 'catch all' rule
-        log prefix "CATCH ALL RULE" level debug drop
+        counter log prefix "CATCH ALL RULE" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip saddr 22.22.22.22 log level debug drop
+        iifname "eth0" ip saddr 22.22.22.22 counter log level debug drop
         #
         # Rule 8 (global)
         #
         # 'catch all' rule
-        log prefix "CATCH ALL RULE" level debug drop
+        counter log prefix "CATCH ALL RULE" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (lo)
         #
         # allow everything on loopback
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
         #
         # Rule 3 (lo)
         #
-        oif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new log level debug accept
+        oif "lo" ip saddr { 22.22.22.22, 127.0.0.1 } ip daddr { 22.22.22.22, 127.0.0.1 } ct state new counter log level debug accept
         #
         # Rule 7 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 8 (global)
         #
         # 'catch all' rule
-        log prefix "CATCH ALL RULE" level debug drop
+        counter log prefix "CATCH ALL RULE" level debug drop
     }
 }
 

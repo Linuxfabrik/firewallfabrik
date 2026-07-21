@@ -53,65 +53,65 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 reject
+        ip saddr 192.168.1.0/24 udp dport 53 counter reject
         #
         # Rule 1 (global)
         #
-        ip saddr 203.0.113.42 tcp dport 80 reject with icmp host-unreachable
+        ip saddr 203.0.113.42 tcp dport 80 counter reject with icmp host-unreachable
         #
         # Rule 2 (global)
         #
-        ip saddr 203.0.113.42 udp dport 53 reject with icmp net-unreachable
+        ip saddr 203.0.113.42 udp dport 53 counter reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 22 reject with icmp admin-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 22 counter reject with icmp admin-prohibited
         #
         # Rule 4 (global)
         #
-        ip saddr 203.0.113.42 tcp dport 22 reject with tcp reset
+        ip saddr 203.0.113.42 tcp dport 22 counter reject with tcp reset
         #
         # Rule 5 (global)
         #
-        drop
+        counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 reject
+        ip saddr 192.168.1.0/24 udp dport 53 counter reject
         #
         # Rule 1 (global)
         #
-        ip saddr 203.0.113.42 tcp dport 80 reject with icmp host-unreachable
+        ip saddr 203.0.113.42 tcp dport 80 counter reject with icmp host-unreachable
         #
         # Rule 2 (global)
         #
-        ip saddr 203.0.113.42 udp dport 53 reject with icmp net-unreachable
+        ip saddr 203.0.113.42 udp dport 53 counter reject with icmp net-unreachable
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 22 reject with icmp admin-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 22 counter reject with icmp admin-prohibited
         #
         # Rule 4 (global)
         #
-        ip saddr 203.0.113.42 tcp dport 22 reject with tcp reset
+        ip saddr 203.0.113.42 tcp dport 22 counter reject with tcp reset
         #
         # Rule 5 (global)
         #
-        drop
+        counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 }
 

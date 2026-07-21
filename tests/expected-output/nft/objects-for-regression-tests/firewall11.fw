@@ -254,25 +254,25 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 7 (br0)
         #
-        iifname "br0" tcp dport 22 ct state new accept
+        iifname "br0" tcp dport 22 ct state new counter accept
         #
         # Rule 9 (br0)
         #
         # # Rule 9 (br0): Could not resolve any destination addresses
 # Rule 9 (br0): Dynamic interface address not yet supported by nftables compiler (interface: br0)
-        iifname "br0" tcp dport 22 ct state new accept
+        iifname "br0" tcp dport 22 ct state new counter accept
         #
         # Rule 10 (br0)
         #
-        iifname "br0" log level debug drop
+        iifname "br0" counter log level debug drop
         #
         # Rule 16 (global)
         #
-        ip daddr 224.0.0.18 ct state new accept
+        ip daddr 224.0.0.18 ct state new counter accept
         #
         # Rule 19 (global)
         #
@@ -280,102 +280,102 @@ table ip fwf_filter {
         # in both INPUT and FORWARD chains
         # because this is a bridging firewall
         # see bug #811860
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 20 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 21 (global)
         #
-        ip daddr 10.1.1.1 ct state new accept
+        ip daddr 10.1.1.1 ct state new counter accept
         #
         # Rule 24 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip daddr 192.168.1.255 ct state new accept
+        iifname "eth0" ip daddr 192.168.1.255 ct state new counter accept
         #
         # Rule 1 (eth0)
         #
-        iifname "eth0" ip daddr 255.255.255.255 ct state new accept
+        iifname "eth0" ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 2 (eth0)
         #
-        oifname "eth0" ip daddr 255.255.255.255 ct state new accept
+        oifname "eth0" ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 4 (eth0)
         #
-        iifname "eth0" ip daddr 224.0.1.141 ct state new accept
+        iifname "eth0" ip daddr 224.0.1.141 ct state new counter accept
         #
         # Rule 5 (eth0)
         #
-        iifname "eth0" ip daddr 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 6 (eth0)
         #
-        iifname "eth0" ip daddr != 192.168.1.0/24 ct state new accept
+        iifname "eth0" ip daddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 10 (br0)
         #
-        iifname "br0" log level debug drop
-        oifname "br0" log level debug drop
+        iifname "br0" counter log level debug drop
+        oifname "br0" counter log level debug drop
         #
         # Rule 11 (global)
         #
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
         #
         # Rule 13 (global)
         #
-        ip daddr 192.168.1.0 udp dport 68 ct state new accept
+        ip daddr 192.168.1.0 udp dport 68 ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
         #
         # Rule 15 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip daddr 224.0.0.18 ct state new accept
+        ip daddr 224.0.0.18 ct state new counter accept
         #
         # Rule 17 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new counter accept
         #
         # Rule 18 (global)
         #
-        ip daddr 192.168.1.10 log level debug drop
+        ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 23 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 10 (br0)
         #
-        oifname "br0" log level debug drop
+        oifname "br0" counter log level debug drop
         #
         # Rule 24 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 }
 
@@ -394,16 +394,16 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        oifname "eth2" ip saddr 192.168.1.0/24 masquerade
-        oifname "br0" ip saddr 192.168.1.0/24 masquerade
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 10.1.1.1
+        oifname "eth2" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "br0" ip saddr 192.168.1.0/24 counter masquerade
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 10.1.1.1
         #
         # Rule 2 (NAT)
         #
         # see bug #1693 , SF bug 3048516
         # combination of using SNAT instead of MASQ,
         # source port translation and dynamic interface
-        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 masquerade
+        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter masquerade
     }
 }
 

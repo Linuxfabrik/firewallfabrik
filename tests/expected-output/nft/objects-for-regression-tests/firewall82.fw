@@ -252,7 +252,7 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
@@ -260,7 +260,7 @@ table ip fwf_filter {
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
@@ -268,7 +268,7 @@ table ip fwf_filter {
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
@@ -285,7 +285,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 masquerade
+        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
     }
 }
 

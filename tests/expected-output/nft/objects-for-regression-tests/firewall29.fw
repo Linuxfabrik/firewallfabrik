@@ -268,93 +268,93 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        ct state new accept
+        ct state new counter accept
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ct state new accept
+        ct state new counter accept
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        udp dport { 68, 67 } ct state new accept
+        udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 3 (global)
         #
         # should be --connlimit-above 10
-        tcp dport 22 ct state new accept
+        tcp dport 22 ct state new counter accept
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 5 -- DENY on interface global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 5 -- DENY on interface global " level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0.200)
         #
         # # Rule 0 (eth0.200): Could not resolve any source addresses
 # Rule 0 (eth0.200): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        oifname "eth0.200" ct state new accept
+        oifname "eth0.200" ct state new counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ct state new accept
+        ct state new counter accept
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        udp dport { 68, 67 } ct state new accept
+        udp dport { 68, 67 } ct state new counter accept
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (global)
         #
-        log prefix "RULE 5 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 5 -- DENY on interface global " level debug drop
     }
 }
 
@@ -364,8 +364,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        dnat to 192.168.1.10
-        dnat to 192.168.1.10
+        counter dnat to 192.168.1.10
+        counter dnat to 192.168.1.10
     }
 
     chain postrouting {

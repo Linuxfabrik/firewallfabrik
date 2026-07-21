@@ -241,69 +241,69 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # anti spoofing rule
-        iifname "eth0" ip saddr 10.3.14.58 log prefix "RULE 0 -- DENY " level info drop
+        iifname "eth0" ip saddr 10.3.14.58 counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (lo)
         #
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
         #
         # Rule 2 (global)
         #
         # SSH Access to the host; useful ICMP
         # types; ping request
-        icmp type destination-unreachable ct state new accept
-        tcp dport 22 ct state new accept
+        icmp type destination-unreachable ct state new counter accept
+        tcp dport 22 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr 10.3.14.58 ct state new accept
+        ip saddr 10.3.14.58 ct state new counter accept
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # anti spoofing rule
-        iifname "eth0" ip saddr 10.3.14.58 log prefix "RULE 0 -- DENY " level info drop
+        iifname "eth0" ip saddr 10.3.14.58 counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (lo)
         #
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
         #
         # Rule 2 (global)
         #
         # SSH Access to the host; useful ICMP
         # types; ping request
-        ip daddr 10.3.14.58 icmp type destination-unreachable ct state new accept
-        ip daddr 10.3.14.58 tcp dport 22 ct state new accept
+        ip daddr 10.3.14.58 icmp type destination-unreachable ct state new counter accept
+        ip daddr 10.3.14.58 tcp dport 22 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 }
 

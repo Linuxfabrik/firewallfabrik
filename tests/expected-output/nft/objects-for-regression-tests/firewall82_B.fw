@@ -224,25 +224,25 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_B 0 (global)
         #
-        ip daddr 192.0.2.100 ct state new accept
+        ip daddr 192.0.2.100 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_B 0 (global)
         #
-        ip daddr 192.0.2.100 ct state new accept
+        ip daddr 192.0.2.100 ct state new counter accept
     }
 }
 

@@ -240,37 +240,37 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 203.0.113.42 tcp dport 22 log prefix "SSH_DENIED" level info drop
+        ip saddr 203.0.113.42 tcp dport 22 counter log prefix "SSH_DENIED" level info drop
         #
         # Rule 1 (global)
         #
-        tcp dport 80 ct state new log prefix "HTTP_ACCEPT" level info accept
+        tcp dport 80 ct state new counter log prefix "HTTP_ACCEPT" level info accept
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 }
 

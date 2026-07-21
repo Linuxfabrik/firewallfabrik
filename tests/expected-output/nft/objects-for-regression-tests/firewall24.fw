@@ -230,141 +230,141 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (tun*)
         #
-        iifname "tun*" ct state new accept
+        iifname "tun*" ct state new counter accept
         #
         # Rule 4 (tun*)
         #
-        iifname "tun*" udp dport { 68, 67 } ct state new accept
+        iifname "tun*" udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 8 (tun*)
         #
-        iifname "tun*" ip daddr 192.168.1.0/24 ct state new accept
+        iifname "tun*" ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 9 (tun*)
         #
-        iifname "tun*" ip daddr != 192.168.1.0/24 ct state new accept
+        iifname "tun*" ip daddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 17 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 18 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 19 (global)
         #
-        ip daddr 192.168.1.1 ct state new accept
+        ip daddr 192.168.1.1 ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (tun*)
         #
-        iifname "tun*" ct state new accept
+        iifname "tun*" ct state new counter accept
         #
         # Rule 2 (tun*)
         #
-        oifname "tun*" ct state new accept
+        oifname "tun*" ct state new counter accept
         #
         # Rule 4 (tun*)
         #
-        iifname "tun*" udp dport { 68, 67 } ct state new accept
+        iifname "tun*" udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (tun*)
         #
-        iifname "tun*" ip daddr 192.168.1.255 ct state new accept
+        iifname "tun*" ip daddr 192.168.1.255 ct state new counter accept
         #
         # Rule 6 (tun*)
         #
-        iifname "tun*" ip daddr 255.255.255.255 ct state new accept
+        iifname "tun*" ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 7 (tun*)
         #
-        iifname "tun*" ip daddr 224.0.1.141 ct state new accept
+        iifname "tun*" ip daddr 224.0.1.141 ct state new counter accept
         #
         # Rule 8 (tun*)
         #
-        iifname "tun*" ip daddr 192.168.1.0/24 ct state new accept
+        iifname "tun*" ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 9 (tun*)
         #
-        iifname "tun*" ip daddr != 192.168.1.0/24 ct state new accept
+        iifname "tun*" ip daddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr 192.168.1.0 udp dport 68 ct state new accept
+        ip daddr 192.168.1.0 udp dport 68 ct state new counter accept
         #
         # Rule 13 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 15 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip daddr 192.168.1.10 log level debug drop
+        ip daddr 192.168.1.10 counter log level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (tun*)
         #
-        oifname "tun*" ct state new accept
+        oifname "tun*" ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr 192.168.1.0 udp dport 68 ct state new accept
+        ip daddr 192.168.1.0 udp dport 68 ct state new counter accept
         #
         # Rule 13 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 15 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip daddr 192.168.1.10 log level debug drop
+        ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 18 (global)
         #
-        ip daddr 192.168.1.1 ct state new accept
+        ip daddr 192.168.1.1 ct state new counter accept
     }
 }
 

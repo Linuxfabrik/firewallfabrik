@@ -233,38 +233,38 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (lo)
         #
         # option 'assume firewall is part of any'
         # is off, but this rule should go into
         # INPUT/OUTPUT chains anyway
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        tcp flags != syn ct state new counter drop
         #
         # Rule 1 (global)
         #
-        log prefix "RULE 1 -- DENY " level info drop
+        counter log prefix "RULE 1 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (lo)
         #
         # option 'assume firewall is part of any'
         # is off, but this rule should go into
         # INPUT/OUTPUT chains anyway
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
     }
 }
 

@@ -53,27 +53,27 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # test for ticket #1338
-        ip saddr 192.168.1.100 drop
+        ip saddr 192.168.1.100 counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # test for ticket #1338
-        ip saddr 192.168.1.100 drop
+        ip saddr 192.168.1.100 counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 }
 

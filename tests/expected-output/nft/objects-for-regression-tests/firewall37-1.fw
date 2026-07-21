@@ -240,51 +240,51 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule27_branch 0 (global)
         #
-        tcp flags ack / urg,ack,psh,rst,syn,fin accept
+        tcp flags ack / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule rule27_branch 1 (global)
         #
-        tcp dport 80 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        tcp dport 80 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 0 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new accept
-        meta l4proto 51 ct state new accept
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
         # terminating target
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
         #
         # Rule 3 (eth1)
         #
         # terminating target
-        iifname "eth1" meta l4proto 50 ct state new accept
-        iifname "eth1" meta l4proto 51 ct state new accept
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
-        meta l4proto 50 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
         #
         # Rule 7 (global)
         #
         # terminating and  CONNMARK
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
@@ -292,22 +292,22 @@ table ip fwf_filter {
         # this rule, and the next one, should place
         # CLASSIFY rule in a separate chain
         # and pass control to it using -g
-        icmp type destination-unreachable accept
+        icmp type destination-unreachable counter accept
         #
         # Rule 12 (eth0)
         #
         # second rule for bug #1618381
-        iifname "eth0" accept
+        iifname "eth0" counter accept
         #
         # Rule 13 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 14 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
         #
@@ -315,8 +315,8 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
-        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } accept
-        iifname "eth0" udp dport { 53, 161 } accept
+        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        iifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 22 (global)
         #
@@ -324,75 +324,75 @@ table ip fwf_filter {
         # should generate branching code
         # in both filter and mangle tables
         # # Rule 22 (global): Branch action not yet supported by nftables compiler
-        meta l4proto tcp
+        meta l4proto tcp counter
         #
         # Rule 23 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
         #
-        log prefix "RULE 24 -- DENY " level info drop
+        counter log prefix "RULE 24 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule27_branch 0 (global)
         #
-        tcp flags ack / urg,ack,psh,rst,syn,fin accept
+        tcp flags ack / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule rule27_branch 1 (global)
         #
-        tcp dport 80 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        tcp dport 80 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 0 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new accept
-        meta l4proto 51 ct state new accept
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
         # terminating target
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
         #
         # Rule 3 (eth1)
         #
         # terminating target
-        iifname "eth1" meta l4proto 50 ct state new accept
-        iifname "eth1" meta l4proto 51 ct state new accept
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 4 (eth1)
         #
         # temrinating target
-        oifname "eth1" meta l4proto 50 ct state new accept
-        oifname "eth1" meta l4proto 51 ct state new accept
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
-        meta l4proto 50 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
         #
         # Rule 7 (global)
         #
         # terminating and  CONNMARK
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 10 (global)
         #
         # # Rule 10 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80
+        ip daddr 192.168.2.10 tcp dport 80 counter
         #
         # Rule 11 (global)
         #
@@ -400,23 +400,23 @@ table ip fwf_filter {
         # this rule, and the next one, should place
         # CLASSIFY rule in a separate chain
         # and pass control to it using -g
-        icmp type destination-unreachable accept
+        icmp type destination-unreachable counter accept
         #
         # Rule 12 (eth0)
         #
         # second rule for bug #1618381
-        iifname "eth0" accept
-        oifname "eth0" accept
+        iifname "eth0" counter accept
+        oifname "eth0" counter accept
         #
         # Rule 13 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 14 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
         #
@@ -424,14 +424,14 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
-        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } accept
-        iifname "eth0" udp dport { 53, 161 } accept
-        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } accept
-        oifname "eth0" udp dport { 53, 161 } accept
+        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        iifname "eth0" udp dport { 53, 161 } counter accept
+        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 18 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 log prefix "RULE 18 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 192.168.1.0/24 counter log prefix "RULE 18 -- ACCEPT " level info accept
         #
         # Rule 22 (global)
         #
@@ -439,69 +439,69 @@ table ip fwf_filter {
         # should generate branching code
         # in both filter and mangle tables
         # # Rule 22 (global): Branch action not yet supported by nftables compiler
-        meta l4proto tcp
+        meta l4proto tcp counter
         #
         # Rule 23 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
         #
-        log prefix "RULE 24 -- DENY " level info drop
+        counter log prefix "RULE 24 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule27_branch 0 (global)
         #
-        tcp flags ack / urg,ack,psh,rst,syn,fin accept
+        tcp flags ack / urg,ack,psh,rst,syn,fin counter accept
         #
         # Rule rule27_branch 1 (global)
         #
-        tcp dport 80 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        tcp dport 80 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 0 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new accept
-        meta l4proto 51 ct state new accept
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
         # terminating target
-        meta l4proto 50 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
         # terminating target
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
         #
         # Rule 4 (eth1)
         #
         # temrinating target
-        oifname "eth1" meta l4proto 50 ct state new accept
-        oifname "eth1" meta l4proto 51 ct state new accept
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
-        meta l4proto 50 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
-        meta l4proto 51 ct state new log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 50 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
+        meta l4proto 51 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
         #
         # Rule 7 (global)
         #
         # terminating and  CONNMARK
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 10 (global)
         #
         # # Rule 10 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80
+        ip daddr 192.168.2.10 tcp dport 80 counter
         #
         # Rule 11 (global)
         #
@@ -509,22 +509,22 @@ table ip fwf_filter {
         # this rule, and the next one, should place
         # CLASSIFY rule in a separate chain
         # and pass control to it using -g
-        icmp type destination-unreachable accept
+        icmp type destination-unreachable counter accept
         #
         # Rule 12 (eth0)
         #
         # second rule for bug #1618381
-        oifname "eth0" accept
+        oifname "eth0" counter accept
         #
         # Rule 13 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 14 (global)
         #
         # testing for bug #1618381
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
         #
@@ -532,12 +532,12 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
-        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } accept
-        oifname "eth0" udp dport { 53, 161 } accept
+        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 18 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 log prefix "RULE 18 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr 192.168.1.0/24 counter log prefix "RULE 18 -- ACCEPT " level info accept
         #
         # Rule 22 (global)
         #
@@ -545,27 +545,27 @@ table ip fwf_filter {
         # should generate branching code
         # in both filter and mangle tables
         # # Rule 22 (global): Branch action not yet supported by nftables compiler
-        meta l4proto tcp
+        meta l4proto tcp counter
         #
         # Rule 23 (global)
         #
-        ip saddr 192.168.1.0/24
+        ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
         #
-        log prefix "RULE 24 -- DENY " level info drop
+        counter log prefix "RULE 24 -- DENY " level info drop
     }
 }
 
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        ip saddr 192.168.1.0/24 accept
+        ip saddr 192.168.1.0/24 counter accept
     }
 
     chain output {
         type nat hook output priority dstnat;
-        accept
+        counter accept
     }
 
     chain postrouting {
@@ -573,8 +573,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        ip saddr 192.168.1.22 accept
-        ip saddr 192.168.1.0/24 accept
+        ip saddr 192.168.1.22 counter accept
+        ip saddr 192.168.1.0/24 counter accept
     }
 }
 

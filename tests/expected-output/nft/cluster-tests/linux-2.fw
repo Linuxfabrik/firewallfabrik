@@ -240,32 +240,32 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule to_fw 0 (global)
         #
         # hashlimit 20/sec
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule to_fw 0 (global)
         #
         # hashlimit 20/sec
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule to_fw 0 (global)
         #
         # hashlimit 20/sec
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

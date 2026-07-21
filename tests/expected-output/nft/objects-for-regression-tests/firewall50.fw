@@ -58,92 +58,92 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule2_branch 0 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 0 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 }
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.0.0/16 log level debug drop
+        ip saddr 192.168.0.0/16 counter log level debug drop
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16
+        ip saddr 192.168.0.0/16 counter
         #
         # Rule 3 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 4 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule2_branch 0 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 0 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 }
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.0.0/16 log level debug drop
+        ip saddr 192.168.0.0/16 counter log level debug drop
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16
+        ip saddr 192.168.0.0/16 counter
         #
         # Rule 3 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 4 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule rule2_branch 0 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 0 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 }
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.0.0/16 log level debug drop
+        ip saddr 192.168.0.0/16 counter log level debug drop
         #
         # Rule 2 (global)
         #
         # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16
+        ip saddr 192.168.0.0/16 counter
         #
         # Rule 3 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } log level debug drop
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
         #
         # Rule 4 (global)
         #
-        log level debug drop
+        counter log level debug drop
     }
 }
 

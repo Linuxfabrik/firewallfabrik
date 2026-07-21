@@ -235,21 +235,21 @@ table ip fwf_nat {
         # Rule NAT_1 0 (NAT)
         #
         # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
         #
         # Rule 0 (NAT)
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
-        ip saddr 192.0.2.1 tcp dport 10000-11000 accept
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        counter accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
     }
 
     chain output {
         type nat hook output priority dstnat;
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        tcp dport 10000-11000 accept
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        tcp dport 10000-11000 counter accept
     }
 
     chain postrouting {
@@ -258,22 +258,22 @@ table ip fwf_nat {
         # Rule NAT_1 1 (NAT)
         #
         # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
         #
         # Rule 1 (NAT)
         #
         # DNAT Rule
-        accept
+        counter accept
         #
         # Rule 2 (NAT)
         #
         # for #1686
-        ip saddr 192.0.2.1 tcp dport 10000-11000 accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
         #
         # Rule 3 (NAT)
         #
         # for #1686
-        ip saddr 192.0.2.1 tcp dport 10000-11000 accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
     }
 }
 

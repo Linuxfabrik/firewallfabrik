@@ -228,39 +228,39 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip daddr 192.168.1.255 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 67 ct state new counter accept
         #
         # Rule 1 (eth0)
         #
-        iifname "eth0" ip daddr 255.255.255.255 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 255.255.255.255 udp dport 67 ct state new counter accept
         #
         # Rule 2 (eth0)
         #
-        iifname "eth0" ip daddr 224.0.1.141 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 224.0.1.141 udp dport 67 ct state new counter accept
         #
         # Rule 3 (eth0)
         #
-        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport 67 ct state new accept
+        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport 67 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 4 (eth0)
         #
         # # Rule 4 (eth0): Could not resolve any source addresses
 # Rule 4 (eth0): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        oifname "eth0" ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        oifname "eth0" ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
     }
 }
 

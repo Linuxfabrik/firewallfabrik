@@ -246,11 +246,11 @@ table ip fwf_filter {
         #
         # Rule 0 (eth1)
         #
-        iifname "eth1" ip saddr != 192.168.2.0/24 log drop
+        iifname "eth1" ip saddr != 192.168.2.0/24 counter log drop
         #
         # Rule 1 (global)
         #
-        log level err drop
+        counter log level err drop
     }
 
     chain forward {
@@ -258,11 +258,11 @@ table ip fwf_filter {
         #
         # Rule 0 (eth1)
         #
-        iifname "eth1" ip saddr != 192.168.2.0/24 log drop
+        iifname "eth1" ip saddr != 192.168.2.0/24 counter log drop
         #
         # Rule 1 (global)
         #
-        log level err drop
+        counter log level err drop
     }
 
     chain output {
@@ -270,7 +270,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        log level err drop
+        counter log level err drop
     }
 }
 
@@ -280,11 +280,11 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        ip daddr 192.168.2.1 dnat to 192.168.1.10
+        ip daddr 192.168.2.1 counter dnat to 192.168.1.10
         #
         # Rule 2 (NAT)
         #
-        ip saddr 192.168.1.0/24 dnat to 200.200.200.200
+        ip saddr 192.168.1.0/24 counter dnat to 200.200.200.200
     }
 
     chain postrouting {
@@ -292,8 +292,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 200.200.200.200 snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 200.200.200.200 counter snat to 192.168.2.1
     }
 }
 

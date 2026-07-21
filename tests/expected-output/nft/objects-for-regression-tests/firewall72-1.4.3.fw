@@ -236,98 +236,98 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (lo)
         #
-        iif "lo" ip saddr 127.0.0.1 drop
+        iif "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 2 (eth1)
         #
-        iifname "eth1" ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr != 192.168.1.0/24 drop
+        iifname "eth1" ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr != 192.168.1.0/24 counter drop
         #
         # Rule 3 (global)
         #
-        ip daddr 172.16.1.1 tcp dport != 80 drop
+        ip daddr 172.16.1.1 tcp dport != 80 counter drop
         #
         # Rule 4 (global)
         #
-        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != syn drop
+        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
         #
         # Rule 5 (global)
         #
-        ip daddr 172.16.1.1 icmp type destination-unreachable icmp code 1 drop
+        ip daddr 172.16.1.1 icmp type destination-unreachable icmp code 1 counter drop
         #
         # Rule 7 (global)
         #
-        ip daddr 172.16.1.1 meta l4proto 47 drop
+        ip daddr 172.16.1.1 meta l4proto 47 counter drop
         #
         # Rule 8 (global)
         #
-        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 drop
+        ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
         #
         # Rule 9 (global)
         #
-        ip daddr 172.16.1.1 drop
+        ip daddr 172.16.1.1 counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (lo)
         #
-        iif "lo" ip saddr 127.0.0.1 drop
+        iif "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 1 (eth1)
         #
-        oifname "eth1" ip saddr != 192.168.1.0/24 ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        oifname "eth1" ip saddr != 192.168.1.0/24 ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 2 (eth1)
         #
-        iifname "eth1" ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr != 192.168.1.0/24 drop
+        iifname "eth1" ip saddr { 33.33.33.33, 172.16.1.1 } ip daddr != 192.168.1.0/24 counter drop
         #
         # Rule 10 (eth1)
         #
         # Should use ! -i eth1 eventually
-        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
+        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
         #
         # Rule 11 (eth1)
         #
         # Should use ! -i eth1 eventually
-        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 drop
+        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
         #
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
+        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (lo)
         #
-        oif "lo" ip saddr 127.0.0.1 drop
+        oif "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 1 (eth1)
         #
-        oifname "eth1" ip saddr != 192.168.1.0/24 ip daddr { 33.33.33.33, 172.16.1.1 } drop
+        oifname "eth1" ip saddr != 192.168.1.0/24 ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 9 (global)
         #
-        ip daddr 172.16.1.1 drop
+        ip daddr 172.16.1.1 counter drop
         #
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 drop
+        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
         #
         # Rule 15 (global)
         #
         # # firewall72-1.4.3:Policy:15: warning: nftables matches 'meta skuid' only in the OUTPUT chain
-        ip daddr 172.16.1.1 meta skuid != 500 drop
+        ip daddr 172.16.1.1 meta skuid != 500 counter drop
     }
 }
 
@@ -337,7 +337,7 @@ table ip fwf_nat {
         #
         # Rule 5 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.1 tcp dport 80 redirect to :3128
+        ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.1 tcp dport 80 counter redirect to :3128
     }
 
     chain postrouting {
@@ -345,30 +345,30 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth0" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 snat to 22.22.22.23
-        oifname "eth1" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 snat to 22.22.22.23
+        oifname "eth0" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 counter snat to 22.22.22.23
+        oifname "eth1" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 counter snat to 22.22.22.23
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 tcp dport 80 snat to 22.22.22.23
-        oifname "eth1" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 tcp dport 80 snat to 22.22.22.23
+        oifname "eth0" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 tcp dport 80 counter snat to 22.22.22.23
+        oifname "eth1" ip saddr ! 192.168.1.0/24 ip daddr 200.200.200.200 tcp dport 80 counter snat to 22.22.22.23
         #
         # Rule 2 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 snat to 33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 snat to 172.16.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 172.16.1.1
         #
         # Rule 3 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 tcp dport 80 snat to 33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 tcp dport 80 snat to 172.16.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 tcp dport 80 counter snat to 33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 tcp dport 80 counter snat to 172.16.1.1
         #
         # Rule 4 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.0/24 snat to 33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.0/24 snat to 172.16.1.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 snat to 33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 snat to 172.16.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.0/24 counter snat to 33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.1.0/24 counter snat to 172.16.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 172.16.1.1
     }
 }
 

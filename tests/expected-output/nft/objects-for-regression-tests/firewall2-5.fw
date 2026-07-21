@@ -242,39 +242,39 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 0 - DENY **" level debug drop
+        counter log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 0 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 0 - DENY **" level debug drop
+        counter log prefix "RULE 0 - DENY **" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 0 - DENY **" level debug drop
+        counter log prefix "RULE 0 - DENY **" level debug drop
     }
 }
 
@@ -289,66 +289,66 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         # NETMAP and no -o itf
-        ip saddr 192.168.1.0/24 snat to 22.22.22.0/24
+        ip saddr 192.168.1.0/24 counter snat to 22.22.22.0/24
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.40
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.40
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.40
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.40
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
         #
         # Rule 2 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.222
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.222
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
         #
         # Rule 3 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
         #
         # Rule 4 (NAT)
         #
         # should be -o eth1
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 222.222.222.10-222.222.222.100
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.10-222.222.222.100
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 222.222.222.10-222.222.222.100
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 222.222.222.10-222.222.222.100
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.10-222.222.222.100
         #
         # Rule 5 (NAT)
         #
         # should be -o eth2
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.3
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.3
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.3
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.3
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.3
         #
         # Rule 6 (NAT)
         #
-        ip saddr 192.168.1.0/24 snat to 33.33.33.24/29
+        ip saddr 192.168.1.0/24 counter snat to 33.33.33.24/29
         #
         # Rule 7 (NAT)
         #
         # partially matches eth3
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.30-33.33.33.33
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 33.33.33.30-33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 33.33.33.30-33.33.33.33
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 33.33.33.30-33.33.33.33
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 33.33.33.30-33.33.33.33
         #
         # Rule 8 (NAT)
         #
         # should be two rules: -o eth2 and -o eth3
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.1-33.33.33.33
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.33
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.33
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.33
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 33.33.33.1-33.33.33.33
         #
         # Rule 9 (NAT)
         #
         # should be -o eth2
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 33.33.33.3
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 33.33.33.3
     }
 }
 

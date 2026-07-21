@@ -247,84 +247,84 @@ delete table inet fwf_filter
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Branch action not yet supported by nftables compiler
-        log prefix "RULE 0 -- BRANCH " level info
+        counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "RULE 1 -- DENY " level info drop
+        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

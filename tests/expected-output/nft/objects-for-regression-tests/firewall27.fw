@@ -245,194 +245,194 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (ppp)
         #
         # ppp clients get addresses on 10.1.1.0
-        iifname "ppp" ip saddr != 10.1.1.0/24 log drop
+        iifname "ppp" ip saddr != 10.1.1.0/24 counter log drop
         #
         # Rule 1 (ppp)
         #
         # ppp clients can not connect to the firewall
-        iifname "ppp" ip daddr 192.0.2.1 log drop
+        iifname "ppp" ip daddr 192.0.2.1 counter log drop
         #
         # Rule 2 (ppp)
         #
-        iifname "ppp" log drop
+        iifname "ppp" counter log drop
         #
         # Rule 4 (ppp)
         #
         # ppp clients can not connect to
         # anything else on DMZ and
         # internal net
-        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } log drop
+        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } counter log drop
         #
         # Rule 5 (eth2)
         #
-        iifname "eth2" ip saddr != 192.168.2.0/24 log drop
+        iifname "eth2" ip saddr != 192.168.2.0/24 counter log drop
         #
         # Rule 7 (global)
         #
-        tcp dport 22 ct state new accept
+        tcp dport 22 ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip daddr 192.0.2.1 tcp dport 22 ct state new accept
+        ip daddr 192.0.2.1 tcp dport 22 ct state new counter accept
         #
         # Rule 14 (global)
         #
         # firewall is part of Any, compiler should
         # generate code for both FORWARD and
         # INPUT chains
-        ip saddr 200.200.200.200 ct state new accept
+        ip saddr 200.200.200.200 ct state new counter accept
         #
         # Rule 15 (global)
         #
         # because firewall has interface on network
         # internal_net, compiler should generate code
         # for both FORWARD and INPUT chains
-        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 17 (global)
         #
         # Automatically generated 'catch all' rule
-        log drop
+        counter log drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid drop
-        tcp flags != syn ct state new drop
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        ct state invalid counter drop
+        tcp flags != syn ct state new counter drop
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 0 (ppp)
         #
         # ppp clients get addresses on 10.1.1.0
-        iifname "ppp" ip saddr != 10.1.1.0/24 log drop
+        iifname "ppp" ip saddr != 10.1.1.0/24 counter log drop
         #
         # Rule 3 (ppp)
         #
         # ppp clients can only connect to the mail
         # server and web proxy on DMZ
-        iifname "ppp" ip daddr 192.168.2.10 tcp dport { 25, 3128 } ct state new accept
+        iifname "ppp" ip daddr 192.168.2.10 tcp dport { 25, 3128 } ct state new counter accept
         #
         # Rule 4 (ppp)
         #
         # ppp clients can not connect to
         # anything else on DMZ and
         # internal net
-        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } log drop
+        iifname "ppp" ip daddr { 192.168.1.0/24, 192.168.2.0/24 } counter log drop
         #
         # Rule 5 (eth2)
         #
-        iifname "eth2" ip saddr != 192.168.2.0/24 log drop
+        iifname "eth2" ip saddr != 192.168.2.0/24 counter log drop
         #
         # Rule 6 (global)
         #
         # hostF has the same IP address as firewal.
-        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new log accept
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new counter log accept
         #
         # Rule 9 (global)
         #
-        ip daddr 192.168.1.1 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.1 tcp dport 22 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new accept
+        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new accept
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new log accept
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new counter log accept
         #
         # Rule 13 (global)
         #
         # firewall is part of Any, so compiler should
         # generate code in both FORWARD and
         # OUTPUT chains
-        ip daddr 200.200.200.200 ct state new accept
+        ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 14 (global)
         #
         # firewall is part of Any, compiler should
         # generate code for both FORWARD and
         # INPUT chains
-        ip saddr 200.200.200.200 ct state new accept
+        ip saddr 200.200.200.200 ct state new counter accept
         #
         # Rule 15 (global)
         #
         # because firewall has interface on network
         # internal_net, compiler should generate code
         # for both FORWARD and INPUT chains
-        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.10 ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 17 (global)
         #
         # Automatically generated 'catch all' rule
-        log drop
+        counter log drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 6 (global)
         #
         # hostF has the same IP address as firewal.
-        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new log accept
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 ct state new counter log accept
         #
         # Rule 7 (global)
         #
-        ip daddr { 192.0.2.1, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new accept
+        ip daddr { 192.0.2.1, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip daddr 192.0.2.1 tcp dport 22 ct state new accept
+        ip daddr 192.0.2.1 tcp dport 22 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr 192.168.1.1 tcp dport 22 ct state new accept
+        ip daddr 192.168.1.1 tcp dport 22 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new accept
+        ip daddr 192.168.1.1 tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new accept
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new log accept
+        ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport { 22, 23 } ct state new counter log accept
         #
         # Rule 13 (global)
         #
         # firewall is part of Any, so compiler should
         # generate code in both FORWARD and
         # OUTPUT chains
-        ip daddr 200.200.200.200 ct state new accept
+        ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 17 (global)
         #
         # Automatically generated 'catch all' rule
-        log drop
+        counter log drop
     }
 }
 
@@ -442,13 +442,13 @@ table ip fwf_nat {
         #
         # Rule 2 (NAT)
         #
-        ip daddr 192.0.2.1 tcp dport 22 dnat to 192.168.1.10:22
-        ip daddr 192.168.1.1 tcp dport 22 dnat to 192.168.1.10:22
-        ip daddr 192.168.2.1 tcp dport 22 dnat to 192.168.1.10:22
+        ip daddr 192.0.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
         #
         # Rule 3 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr ! 200.200.200.200 dnat to 192.168.2.10
+        ip saddr 192.168.1.0/24 ip daddr ! 200.200.200.200 counter dnat to 192.168.2.10
     }
 
     chain postrouting {
@@ -456,15 +456,15 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "ppp" ip saddr 192.168.1.0/24 snat to 192.0.2.1
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 192.168.2.1
+        oifname "ppp" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
         #
         # Rule 1 (NAT)
         #
-        oifname "ppp" ip saddr 192.168.1.0/24 snat to 22.22.22.23
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 192.168.2.10 snat to 192.168.2.1
+        oifname "ppp" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 192.168.2.10 counter snat to 192.168.2.1
     }
 }
 

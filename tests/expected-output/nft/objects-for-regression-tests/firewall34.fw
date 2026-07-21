@@ -363,41 +363,41 @@ delete table ip6 fwf_nat
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 5 (global)
         #
         # # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
-        log prefix "RULE 5 -- DENY on global " level debug drop
+        counter log prefix "RULE 5 -- DENY on global " level debug drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Cannot resolve address for object type AddressTable
-        ip saddr 61.150.47.112 log prefix "RULE 6 -- DENY on global " level debug drop
+        ip saddr 61.150.47.112 counter log prefix "RULE 6 -- DENY on global " level debug drop
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Cannot resolve address for object type AddressTable
-        ip saddr != 61.150.47.112 ct state new accept
+        ip saddr != 61.150.47.112 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 14 (global)
         #
@@ -405,111 +405,111 @@ table inet fwf_filter {
         # option. Connlimit
         # is only valid in combination
         # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 5 (global)
         #
         # # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
-        log prefix "RULE 5 -- DENY on global " level debug drop
+        counter log prefix "RULE 5 -- DENY on global " level debug drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
-        log prefix "RULE 6 -- DENY on global " level debug drop
+        counter log prefix "RULE 6 -- DENY on global " level debug drop
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
         #
         # Rule 2 (global)
         #
-        ip daddr 61.150.47.112 log prefix "RULE 2 -- DENY on global " level debug drop
+        ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
         #
         # # Rule 3 (global): Cannot resolve address for object type AddressTable
-        ip daddr 61.150.47.112 tcp dport 25 drop
+        ip daddr 61.150.47.112 tcp dport 25 counter drop
         #
         # Rule 5 (global)
         #
         # # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
-        log prefix "RULE 5 -- DENY on global " level debug drop
+        counter log prefix "RULE 5 -- DENY on global " level debug drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Cannot resolve address for object type AddressTable
-        ip saddr 61.150.47.112 log prefix "RULE 6 -- DENY on global " level debug drop
+        ip saddr 61.150.47.112 counter log prefix "RULE 6 -- DENY on global " level debug drop
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Cannot resolve address for object type AddressTable
-        ip saddr != 61.150.47.112 ct state new accept
+        ip saddr != 61.150.47.112 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 25 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 25 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #
         # using address table
         # object with no addresses
-        ip daddr 22.22.22.0/24 log prefix "RULE 13 -- DENY on global " level debug drop
+        ip daddr 22.22.22.0/24 counter log prefix "RULE 13 -- DENY on global " level debug drop
         #
         # Rule 14 (global)
         #
@@ -517,137 +517,137 @@ table inet fwf_filter {
         # option. Connlimit
         # is only valid in combination
         # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
         #
         # Rule 15 (global)
         #
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
         #
         # # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Could not resolve any destination addresses
-        tcp dport 25 drop
+        tcp dport 25 counter drop
         #
         # Rule 5 (global)
         #
         # # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
-        log prefix "RULE 5 -- DENY on global " level debug drop
+        counter log prefix "RULE 5 -- DENY on global " level debug drop
         #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
-        log prefix "RULE 6 -- DENY on global " level debug drop
+        counter log prefix "RULE 6 -- DENY on global " level debug drop
         #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 9 (global)
         #
-        tcp dport 25 ct state new accept
+        tcp dport 25 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 15 (global)
         #
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
         #
         # Rule 2 (global)
         #
-        ip daddr 61.150.47.112 log prefix "RULE 2 -- DENY on global " level debug drop
+        ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
         #
         # # Rule 3 (global): Cannot resolve address for object type AddressTable
-        ip daddr 61.150.47.112 tcp dport 25 drop
+        ip daddr 61.150.47.112 tcp dport 25 counter drop
         #
         # Rule 4 (global)
         #
         # # Rule 4 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Could not resolve any source addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        ip daddr 61.150.47.112 tcp dport 25 drop
+        ip daddr 61.150.47.112 tcp dport 25 counter drop
         #
         # Rule 8 (global)
         #
         # # Rule 8 (global): Cannot resolve address for object type AddressTable
 # Rule 8 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        ip daddr != 61.150.47.112 ct state new accept
+        ip daddr != 61.150.47.112 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 25 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 25 ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #
         # using address table
         # object with no addresses
-        ip daddr 22.22.22.0/24 log prefix "RULE 13 -- DENY on global " level debug drop
+        ip daddr 22.22.22.0/24 counter log prefix "RULE 13 -- DENY on global " level debug drop
         #
         # Rule 14 (global)
         #
@@ -655,29 +655,29 @@ table inet fwf_filter {
         # option. Connlimit
         # is only valid in combination
         # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
         #
         # Rule 15 (global)
         #
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 1 (global)
         #
         # # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
         #
         # # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Could not resolve any destination addresses
-        tcp dport 25 drop
+        tcp dport 25 counter drop
         #
         # Rule 4 (global)
         #
@@ -685,7 +685,7 @@ table inet fwf_filter {
 # Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Could not resolve any source addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        tcp dport 25 drop
+        tcp dport 25 counter drop
         #
         # Rule 8 (global)
         #
@@ -693,35 +693,35 @@ table inet fwf_filter {
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 9 (global)
         #
-        tcp dport 25 ct state new accept
+        tcp dport 25 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        log prefix "RULE 11 -- DENY on global " level debug drop
+        counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        log prefix "RULE 12 -- DENY on global " level debug drop
+        counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 15 (global)
         #
         # # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
-        log prefix "RULE 1 -- DENY on global " level debug drop
+        counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 }
 
@@ -731,7 +731,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        tcp dport 25 dnat to 192.168.1.10
+        tcp dport 25 counter dnat to 192.168.1.10
     }
 
     chain postrouting {
@@ -739,7 +739,7 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0.100" ip saddr 192.168.1.0/24 masquerade
+        oifname "eth0.100" ip saddr 192.168.1.0/24 counter masquerade
     }
 }
 
@@ -749,7 +749,7 @@ table ip6 fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        tcp dport 25 dnat to 192.168.1.10
+        tcp dport 25 counter dnat to 192.168.1.10
     }
 
     chain postrouting {

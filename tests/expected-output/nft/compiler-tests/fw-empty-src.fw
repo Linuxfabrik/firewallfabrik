@@ -240,21 +240,21 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth1)
         #
-        iifname "eth1" ip saddr { 192.168.1.1, 198.51.100.1 } tcp dport 22 ct state new accept
+        iifname "eth1" ip saddr { 192.168.1.1, 198.51.100.1 } tcp dport 22 ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 }
 

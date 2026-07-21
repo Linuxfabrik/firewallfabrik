@@ -246,67 +246,67 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_fw32 0 (eth0.100)
         #
         # # Rule 0: Could not resolve any source addresses
 # Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        iifname "eth0.100" drop
+        iifname "eth0.100" counter drop
         # # Rule 0: Could not resolve any source addresses
 # Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        iifname "eth0.100" ip saddr 192.168.1.0/24 drop
+        iifname "eth0.100" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule Policy_fw32 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_fw32 3 (global)
         #
-        log prefix "RULE 3 -- DENY on global " level debug drop
+        counter log prefix "RULE 3 -- DENY on global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_fw32 0 (eth0.100)
         #
         # # Rule 0: Could not resolve any source addresses
 # Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        iifname "eth0.100" drop
+        iifname "eth0.100" counter drop
         # # Rule 0: Could not resolve any source addresses
 # Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        iifname "eth0.100" ip saddr 192.168.1.0/24 drop
+        iifname "eth0.100" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule Policy_fw32 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_fw32 2 (global)
         #
-        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule Policy_fw32 3 (global)
         #
-        log prefix "RULE 3 -- DENY on global " level debug drop
+        counter log prefix "RULE 3 -- DENY on global " level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_fw32 1 (global)
         #
-        ct state new accept
+        ct state new counter accept
         #
         # Rule Policy_fw32 2 (global)
         #
-        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule Policy_fw32 3 (global)
         #
-        log prefix "RULE 3 -- DENY on global " level debug drop
+        counter log prefix "RULE 3 -- DENY on global " level debug drop
     }
 }
 
@@ -316,7 +316,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        dnat to 192.168.1.10
+        counter dnat to 192.168.1.10
     }
 
     chain postrouting {

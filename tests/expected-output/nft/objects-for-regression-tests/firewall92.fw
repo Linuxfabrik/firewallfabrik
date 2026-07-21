@@ -250,28 +250,28 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule Policy_1 0 (global)
         #
-        tcp dport 9040 log prefix "RULE 0 -- DENY " level info drop
-        udp dport 53 log prefix "RULE 0 -- DENY " level info drop
+        tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
+        udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
         # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-        ct state new accept
+        ct state new counter accept
         #
         # Rule 1 (global)
         #
@@ -282,7 +282,7 @@ table ip fwf_filter {
         #
         # this only matches module owner
         # # Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-        log prefix "RULE 2 -- DENY " level info drop
+        counter log prefix "RULE 2 -- DENY " level info drop
     }
 }
 
@@ -296,15 +296,15 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        redirect to :53
+        counter redirect to :53
         #
         # Rule 1 (NAT)
         #
-        redirect to :9040
+        counter redirect to :9040
         #
         # Rule 2 (NAT)
         #
-        redirect to :9040
+        counter redirect to :9040
     }
 
     chain postrouting {

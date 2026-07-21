@@ -249,422 +249,422 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
         #
         # Rule 2 ()
         #
         # testing group in "interface"
         # this rule should be identical to rule 3
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 2 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
         #
         # Rule 3 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 3 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
         #
         # Rule 10 (global)
         #
         # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
-        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new log prefix "RULE 11 - ACCEPT **" level debug accept
+        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new counter log prefix "RULE 11 - ACCEPT **" level debug accept
         #
         # Rule 14 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp counter reject with tcp reset
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter reject with icmp net-unreachable
         #
         # Rule 15 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip saddr 192.168.1.0/24 log prefix "RULE 16 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 counter log prefix "RULE 16 - DENY **" level debug drop
         #
         # Rule 18 (global)
         #
-        tcp dport 21 ct state new log prefix "RULE 18 - ACCEPT **" level debug accept
+        tcp dport 21 ct state new counter log prefix "RULE 18 - ACCEPT **" level debug accept
         #
         # Rule 19 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 19 - DENY **" level debug drop
+        counter log prefix "RULE 19 - DENY **" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
         #
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != 192.168.1.0/24 log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
+        oifname "eth1" ip saddr != 192.168.1.0/24 counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
         #
         # Rule 2 ()
         #
         # testing group in "interface"
         # this rule should be identical to rule 3
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 2 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
         #
         # Rule 3 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 3 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
         #
         # Rule 4 (eth1,eth3)
         #
         # testing choice of chains in case when several
         # interfaces are used and rule matches 'any' or
         # broadcast
-        iifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        iifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        iifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        iifname "eth3" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        iifname "eth1" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        iifname "eth3" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 6 (eth1,eth3)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
         #
         # Rule 10 (global)
         #
         # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 12 (global)
         #
-        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 211.11.11.11 ct state new accept
+        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 211.11.11.11 ct state new counter accept
         #
         # Rule 13 (global)
         #
-        ip saddr 211.11.11.11 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new accept
+        ip saddr 211.11.11.11 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp counter reject with tcp reset
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter reject with icmp net-unreachable
         #
         # Rule 15 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip saddr 192.168.1.0/24 log prefix "RULE 16 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 counter log prefix "RULE 16 - DENY **" level debug drop
         #
         # Rule 17 (global)
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new log prefix "RULE 17 - ACCEPT **" level debug accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new counter log prefix "RULE 17 - ACCEPT **" level debug accept
         #
         # Rule 19 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 19 - DENY **" level debug drop
+        counter log prefix "RULE 19 - DENY **" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
+        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
         #
         # Rule 4 (eth1,eth3)
         #
         # testing choice of chains in case when several
         # interfaces are used and rule matches 'any' or
         # broadcast
-        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth3" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 6 (eth1,eth3)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new accept
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
         #
         # Rule 10 (global)
         #
         # # firewall2-3:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
         #
         # Rule 14 (global)
         #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp reject with tcp reset
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } reject with icmp net-unreachable
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto tcp counter reject with tcp reset
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter reject with icmp net-unreachable
         #
         # Rule 15 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
         #
         # Rule 16 (global)
         #
-        ip saddr 192.168.1.0/24 log prefix "RULE 16 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 counter log prefix "RULE 16 - DENY **" level debug drop
         #
         # Rule 17 (global)
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new log prefix "RULE 17 - ACCEPT **" level debug accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new counter log prefix "RULE 17 - ACCEPT **" level debug accept
         #
         # Rule 18 (global)
         #
-        ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new log prefix "RULE 18 - ACCEPT **" level debug accept
+        ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new counter log prefix "RULE 18 - ACCEPT **" level debug accept
         #
         # Rule 19 (global)
         #
         # 'catch all' rule
-        log prefix "RULE 19 - DENY **" level debug drop
+        counter log prefix "RULE 19 - DENY **" level debug drop
     }
 }
 
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        ip saddr 192.168.1.10 ip daddr 192.168.2.10 accept
-        ip saddr 192.168.1.10 ip daddr 192.168.2.11 accept
-        ip saddr 192.168.1.20 ip daddr 192.168.2.10 accept
-        ip saddr 192.168.1.20 ip daddr 192.168.2.11 accept
-        ip saddr 192.168.1.10 ip daddr ! 192.168.2.10 accept
-        ip saddr 192.168.1.10 ip daddr ! 192.168.2.11 accept
-        ip saddr 192.168.1.20 ip daddr ! 192.168.2.10 accept
-        ip saddr 192.168.1.20 ip daddr ! 192.168.2.11 accept
+        ip saddr 192.168.1.10 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.1.10 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.1.20 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.1.20 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.1.10 ip daddr ! 192.168.2.10 counter accept
+        ip saddr 192.168.1.10 ip daddr ! 192.168.2.11 counter accept
+        ip saddr 192.168.1.20 ip daddr ! 192.168.2.10 counter accept
+        ip saddr 192.168.1.20 ip daddr ! 192.168.2.11 counter accept
         #
         # Rule 11 (NAT)
         #
-        ip daddr 22.22.22.23 meta l4proto 88 dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto 50 dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
-        ip saddr 200.200.200.200 ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto 88 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto 50 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip saddr 200.200.200.200 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 16 (NAT)
         #
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 119 dnat to 192.168.1.10
+        ip daddr 22.22.22.22 tcp dport 119 counter dnat to 192.168.1.10
         #
         # Rule 19 (NAT)
         #
-        ip daddr 22.22.23.24 dnat to 192.168.1.20
+        ip daddr 22.22.23.24 counter dnat to 192.168.1.20
         #
         # Rule 22 (NAT)
         #
         # NETMAP
-        ip daddr 22.22.22.0/24 dnat to 192.168.1.0/24
+        ip daddr 22.22.22.0/24 counter dnat to 192.168.1.0/24
         #
         # Rule 23 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 22.22.22.22 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 22.22.23.23 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 192.168.2.1 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.22.22 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.23.23 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.2.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         #
         # Rule 24 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 80 dnat to 192.168.1.10
-        ip daddr 22.22.23.23 tcp dport 80 dnat to 192.168.1.10
+        ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.10
         #
         # Rule 25 (NAT)
         #
-        ip daddr 22.22.22.23 tcp dport 80 dnat to 192.168.1.10:25
+        ip daddr 22.22.22.23 tcp dport 80 counter dnat to 192.168.1.10:25
         #
         # Rule 27 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.10-192.168.1.100
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.10-192.168.1.100
         #
         # Rule 28 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.11
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.12
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.13
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.14
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.15
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.11
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.12
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
         #
         # Rule 29 (NAT)
         #
         # transparent proxy rule
-        ip saddr 192.168.1.0/24 ip daddr ! 22.22.22.23 dnat to 192.168.2.10
+        ip saddr 192.168.1.0/24 ip daddr ! 22.22.22.23 counter dnat to 192.168.2.10
         #
         # Rule 32 (NAT)
         #
-        ip daddr 192.168.1.10 tcp dport 80 dnat to 192.168.1.10:8080
+        ip daddr 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.10:8080
         #
         # Rule 34 (NAT)
         #
-        ip saddr ! 192.168.1.10 tcp dport 80 dnat to 192.168.1.10:3128
+        ip saddr ! 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.10:3128
         #
         # Rule 35 (NAT)
         #
-        ip saddr ! 192.168.1.10 ip daddr ! 192.168.1.50 tcp dport 80 dnat to 192.168.1.50:3128
-        ip saddr ! 192.168.1.20 ip daddr ! 192.168.1.50 tcp dport 80 dnat to 192.168.1.50:3128
+        ip saddr ! 192.168.1.10 ip daddr ! 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
+        ip saddr ! 192.168.1.20 ip daddr ! 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
         #
         # Rule 37 (NAT)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 dnat to 192.168.1.10:3128
+        ip saddr 192.168.1.0/24 tcp dport 80 counter dnat to 192.168.1.10:3128
         #
         # Rule 39 (NAT)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 dnat to 192.168.1.1:3128
+        ip saddr 192.168.1.0/24 tcp dport 80 counter dnat to 192.168.1.1:3128
         #
         # Rule 41 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr ! 192.168.1.10 tcp dport 80 dnat to 192.168.1.1:3128
-        ip saddr ! 192.168.1.20 tcp dport 80 dnat to 192.168.1.1:3128
+        ip saddr ! 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.1:3128
+        ip saddr ! 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.1:3128
         #
         # Rule 42 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr ! 192.168.1.10 tcp dport 80 dnat to 192.168.1.1:3128
-        ip saddr ! 192.168.1.20 tcp dport 80 dnat to 192.168.1.1:3128
+        ip saddr ! 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.1:3128
+        ip saddr ! 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.1:3128
         #
         # Rule 43 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr ! 192.168.1.10 tcp dport 80 redirect to :3128
-        ip saddr ! 192.168.1.20 tcp dport 80 redirect to :3128
+        ip saddr ! 192.168.1.10 tcp dport 80 counter redirect to :3128
+        ip saddr ! 192.168.1.20 tcp dport 80 counter redirect to :3128
         #
         # Rule 45 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr ! 192.168.1.10 tcp dport 80 dnat to 192.168.1.50:3128
-        ip saddr ! 192.168.1.20 tcp dport 80 dnat to 192.168.1.50:3128
+        ip saddr ! 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.50:3128
+        ip saddr ! 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.50:3128
     }
 
     chain output {
         type nat hook output priority dstnat;
-        ip daddr 192.168.2.10 accept
-        ip daddr 192.168.2.11 accept
-        ip daddr 22.22.22.23 meta l4proto 88 dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto 50 dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
+        ip daddr 192.168.2.10 counter accept
+        ip daddr 192.168.2.11 counter accept
+        ip daddr 22.22.22.23 meta l4proto 88 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto 50 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 12 (NAT)
         #
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 13 (NAT)
         #
-        ip saddr 22.22.23.23 ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
+        ip saddr 22.22.23.23 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 14 (NAT)
         #
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
-        ip daddr 22.22.22.23 tcp dport { 80, 119 } dnat to 192.168.1.10
-        ip daddr 22.22.22.22 tcp dport 119 dnat to 192.168.1.10
-        ip daddr 22.22.23.24 dnat to 192.168.1.20
-        ip daddr 192.168.1.1 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 22.22.22.22 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 22.22.23.23 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 192.168.2.1 tcp dport 10000-11000 dnat to 192.168.1.10:10000-11000
-        ip daddr 22.22.22.22 tcp dport 80 dnat to 192.168.1.10
-        ip daddr 22.22.23.23 tcp dport 80 dnat to 192.168.1.10
-        ip daddr 22.22.22.23 tcp dport 80 dnat to 192.168.1.10:25
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.10-192.168.1.100
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.11
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.12
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.13
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.14
-        ip daddr 22.22.22.22 tcp dport 8080 dnat to 192.168.1.15
-        ip daddr 192.168.1.10 tcp dport 80 dnat to 192.168.1.10:8080
-        tcp dport 80 dnat to 192.168.1.10:3128
-        ip daddr ! 192.168.1.50 tcp dport 80 dnat to 192.168.1.50:3128
-        tcp dport 80 dnat to 192.168.1.1:3128
-        tcp dport 80 dnat to 192.168.1.1:3128
-        tcp dport 80 dnat to 192.168.1.50:3128
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.22 tcp dport 119 counter dnat to 192.168.1.10
+        ip daddr 22.22.23.24 counter dnat to 192.168.1.20
+        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.22.22 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.23.23 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.2.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport 80 counter dnat to 192.168.1.10:25
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.10-192.168.1.100
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.11
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.12
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
+        ip daddr 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.10:8080
+        tcp dport 80 counter dnat to 192.168.1.10:3128
+        ip daddr ! 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
+        tcp dport 80 counter dnat to 192.168.1.1:3128
+        tcp dport 80 counter dnat to 192.168.1.1:3128
+        tcp dport 80 counter dnat to 192.168.1.50:3128
     }
 
     chain postrouting {
@@ -672,166 +672,166 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
         #
         # Rule 1 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1
         #
         # Rule 2 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 88 snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 88 snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 88 snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 50 snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 50 snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 50 snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1
         #
         # Rule 3 (NAT)
         #
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.23.23
         #
         # Rule 4 (NAT)
         #
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 22.22.25.50
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
         #
         # Rule 5 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 22.22.25.50
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 22.22.25.50
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 22.22.25.50
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 22.22.25.50
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
         #
         # Rule 6 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth1" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth3" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.10 snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 22.22.22.23
         #
         # Rule 7 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth1" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth3" ip saddr 192.168.1.10 snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.10 snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 22.22.22.23
         #
         # Rule 8 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 snat to 192.168.1.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 snat to 192.168.1.1
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 snat to 192.168.1.1
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 counter snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 counter snat to 192.168.1.1
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 counter snat to 192.168.1.1
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 counter snat to 192.168.1.1
         #
         # Rule 9 (NAT)
         #
-        ip saddr 192.168.1.1 ip daddr 192.168.2.10 accept
-        ip saddr 192.168.1.1 ip daddr 192.168.2.11 accept
-        ip saddr 192.168.1.10 ip daddr 192.168.2.10 accept
-        ip saddr 192.168.1.10 ip daddr 192.168.2.11 accept
-        ip saddr 192.168.1.20 ip daddr 192.168.2.10 accept
-        ip saddr 192.168.1.20 ip daddr 192.168.2.11 accept
+        ip saddr 192.168.1.1 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.1.1 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.1.10 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.1.10 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.1.20 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.1.20 ip daddr 192.168.2.11 counter accept
         #
         # Rule 10 (NAT)
         #
-        ip saddr 192.168.1.10 ip daddr ! 192.168.2.10 accept
-        ip saddr 192.168.1.10 ip daddr ! 192.168.2.11 accept
-        ip saddr 192.168.1.20 ip daddr ! 192.168.2.10 accept
-        ip saddr 192.168.1.20 ip daddr ! 192.168.2.11 accept
+        ip saddr 192.168.1.10 ip daddr ! 192.168.2.10 counter accept
+        ip saddr 192.168.1.10 ip daddr ! 192.168.2.11 counter accept
+        ip saddr 192.168.1.20 ip daddr ! 192.168.2.10 counter accept
+        ip saddr 192.168.1.20 ip daddr ! 192.168.2.11 counter accept
         #
         # Rule 18 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.20 snat to 22.22.23.24
-        oifname "eth1" ip saddr 192.168.1.20 snat to 22.22.23.24
-        oifname "eth3" ip saddr 192.168.1.20 snat to 22.22.23.24
-        oifname "eth2" ip saddr 192.168.1.20 snat to 22.22.23.24
+        oifname "eth0" ip saddr 192.168.1.20 counter snat to 22.22.23.24
+        oifname "eth1" ip saddr 192.168.1.20 counter snat to 22.22.23.24
+        oifname "eth3" ip saddr 192.168.1.20 counter snat to 22.22.23.24
+        oifname "eth2" ip saddr 192.168.1.20 counter snat to 22.22.23.24
         #
         # Rule 20 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 22.22.22.100-22.22.22.110
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 22.22.22.100-22.22.22.110
-        oifname "eth3" ip saddr 192.168.1.0/24 snat to 22.22.22.100-22.22.22.110
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 22.22.22.100-22.22.22.110
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 22.22.22.100-22.22.22.110
         #
         # Rule 21 (NAT)
         #
         # NETMAP
-        ip saddr 192.168.1.0/24 snat to 22.22.22.0/24
-        oifname "eth0" ip daddr 192.168.1.10 tcp dport 80 snat to 192.168.1.1
+        ip saddr 192.168.1.0/24 counter snat to 22.22.22.0/24
+        oifname "eth0" ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 26 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport { 80, 443 } accept
-        ip daddr 22.22.22.22 tcp dport { 80, 443 } accept
-        ip daddr 22.22.23.23 tcp dport { 80, 443 } accept
-        ip daddr 192.168.2.1 tcp dport { 80, 443 } accept
+        ip daddr 192.168.1.1 tcp dport { 80, 443 } counter accept
+        ip daddr 22.22.22.22 tcp dport { 80, 443 } counter accept
+        ip daddr 22.22.23.23 tcp dport { 80, 443 } counter accept
+        ip daddr 192.168.2.1 tcp dport { 80, 443 } counter accept
         #
         # Rule 31 (NAT)
         #
-        tcp dport 80 accept
+        tcp dport 80 counter accept
         #
         # Rule 33 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 snat to 22.22.22.22
-        oifname "eth0" ip saddr ! 192.168.1.10 ip daddr 192.168.1.10 tcp dport 80 snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth0" ip saddr ! 192.168.1.10 ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 36 (NAT)
         #
-        oifname "eth0" ip saddr ! 192.168.1.10 tcp dport 80 snat to 192.168.1.1
-        oifname "eth0" ip saddr ! 192.168.1.20 tcp dport 80 snat to 192.168.1.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 80 snat to 192.168.1.1
+        oifname "eth0" ip saddr ! 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr ! 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 38 (NAT)
         #
         # this is the "exception" rule
         # used in support req. originally
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 snat to 22.22.22.22
-        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 counter snat to 22.22.22.22
         #
         # Rule 40 (NAT)
         #
         # "exception" rule in the pair
         # from a support req.
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 snat to 22.22.22.22
-        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 counter snat to 22.22.22.22
         #
         # Rule 44 (NAT)
         #
         # "exception" rule in the pair
         # from a support req.
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 snat to 22.22.22.22
-        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
+        oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 counter snat to 22.22.22.22
     }
 }
 

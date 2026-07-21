@@ -244,37 +244,37 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule not_quite_long_ruleset_name 0 (global)
         #
-        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } ip daddr != { 66.66.66.130, 192.168.1.1 } log prefix "RULE 0 -- DENY " level info drop
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } ip daddr != { 66.66.66.130, 192.168.1.1 } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule not_quite_long_ruleset_name 0 (global)
         #
-        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } log prefix "RULE 0 -- DENY " level info drop
+        ip saddr { 22.22.22.0/24, 33.33.33.0/24 } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule very_long_ruleset_name_should_be_gt_30_chars 0 (global)
         #
-        log prefix "RULE 0 -- DENY " level info drop
+        counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

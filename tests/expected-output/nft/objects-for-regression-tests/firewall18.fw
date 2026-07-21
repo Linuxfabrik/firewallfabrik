@@ -249,65 +249,65 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 1 (lo)
         #
-        iif "lo" ct state new accept
+        iif "lo" ct state new counter accept
         #
         # Rule 2 (ppp0)
         #
         # anti-spoofing rule
-        iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } log prefix "RULE 2 -- DENY " level info drop
+        iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 3 (ppp0)
         #
         # but old broadcast is permitted
-        iifname "ppp0" ip saddr 0.0.0.0 ct state new accept
+        iifname "ppp0" ip saddr 0.0.0.0 ct state new counter accept
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # using address range object
         # 255.255.255.255-255.255.255.255
-        iifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
-        oifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
+        iifname "eth0" ip daddr 255.255.255.255 counter log prefix "RULE 0 -- DENY " level info drop
+        oifname "eth0" ip daddr 255.255.255.255 counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 2 (ppp0)
         #
         # anti-spoofing rule
-        iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } log prefix "RULE 2 -- DENY " level info drop
+        iifname "ppp0" ip saddr { 66.66.66.1, 66.66.66.130, 192.168.1.1 } counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # using address range object
         # 255.255.255.255-255.255.255.255
-        oifname "eth0" ip daddr 255.255.255.255 log prefix "RULE 0 -- DENY " level info drop
+        oifname "eth0" ip daddr 255.255.255.255 counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (lo)
         #
-        oif "lo" ct state new accept
+        oif "lo" ct state new counter accept
         #
         # Rule 4 (global)
         #
-        log prefix "RULE 4 -- DENY " level info drop
+        counter log prefix "RULE 4 -- DENY " level info drop
     }
 }
 
@@ -321,40 +321,40 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 66.66.66.1 snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
         #
         # Rule 1 (NAT)
         #
-        oifname "eth1" ip saddr 66.66.66.1 snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
         #
         # Rule 2 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
         #
         # Rule 3 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
         #
         # Rule 4 (NAT)
         #
-        oifname "eth2" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "eth0" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "eth1" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "ppp0" ip saddr 66.66.66.1 snat to 66.66.66.130
+        oifname "eth2" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "ppp0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
         #
         # Rule 5 (NAT)
         #
-        oifname "eth2" ip saddr 192.168.1.0/24 snat to 66.66.66.130
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 66.66.66.130
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 66.66.66.130
-        oifname "ppp0" ip saddr 192.168.1.0/24 snat to 66.66.66.130
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
+        oifname "ppp0" ip saddr 192.168.1.0/24 counter snat to 66.66.66.130
         #
         # Rule 6 (NAT)
         #
-        oifname "eth2" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "eth0" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "eth1" ip saddr 66.66.66.1 snat to 66.66.66.130
-        oifname "ppp0" ip saddr 66.66.66.1 snat to 66.66.66.130
+        oifname "eth2" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "ppp0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
     }
 }
 

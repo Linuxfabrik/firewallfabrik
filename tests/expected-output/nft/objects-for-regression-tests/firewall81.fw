@@ -233,29 +233,29 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        log prefix "RULE 0 -- DENY on interface global " level debug drop
+        counter log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 }
 
@@ -266,14 +266,14 @@ table ip fwf_nat {
         # Rule NAT_1 0 (NAT)
         #
         # DNAT Rule
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
         #
         # Rule NAT_2 0 (NAT)
         #
         # Branch rule with actual translation.
         # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 dnat to 192.168.1.10
-        accept
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        counter accept
     }
 
     chain postrouting {
@@ -282,12 +282,12 @@ table ip fwf_nat {
         # Rule NAT_1 1 (NAT)
         #
         # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 snat to 192.0.2.1
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
         #
         # Rule NAT_2 1 (NAT)
         #
         # DNAT Rule
-        accept
+        counter accept
     }
 }
 

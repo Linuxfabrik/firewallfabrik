@@ -235,113 +235,113 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 6 (eth2)
         #
-        iifname "eth2" ip saddr 192.168.2.10 ip daddr 192.168.1.1 udp dport 67 ct state new accept
+        iifname "eth2" ip saddr 192.168.2.10 ip daddr 192.168.1.1 udp dport 67 ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip daddr 224.0.0.18 ct state new accept
+        ip daddr 224.0.0.18 ct state new counter accept
         #
         # Rule 15 (global)
         #
-        ip daddr 224.0.0.0/4 drop
+        ip daddr 224.0.0.0/4 counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" ip daddr 192.168.1.255 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 67 ct state new counter accept
         #
         # Rule 1 (eth0)
         #
-        iifname "eth0" ip daddr 255.255.255.255 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 255.255.255.255 udp dport 67 ct state new counter accept
         #
         # Rule 2 (eth0)
         #
-        iifname "eth0" ip daddr 224.0.1.141 udp dport 67 ct state new accept
+        iifname "eth0" ip daddr 224.0.1.141 udp dport 67 ct state new counter accept
         #
         # Rule 3 (eth0)
         #
-        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport 67 ct state new accept
+        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport 67 ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip daddr { 192.168.1.255, 255.255.255.255 } log level debug drop
+        ip daddr { 192.168.1.255, 255.255.255.255 } counter log level debug drop
         #
         # Rule 8 (global)
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 192.168.1.255 udp dport 68 ct state new accept
+        ip daddr 192.168.1.255 udp dport 68 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr 224.0.1.141 ct state new log level debug accept
+        ip daddr 224.0.1.141 ct state new counter log level debug accept
         #
         # Rule 12 (global)
         #
-        ip daddr 224.0.0.5 ct state new log level debug accept
+        ip daddr 224.0.0.5 ct state new counter log level debug accept
         #
         # Rule 13 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 4 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.1 ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        oifname "eth0" ip saddr 192.168.1.1 ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 5 (eth2)
         #
-        oifname "eth2" ip saddr 192.168.2.1 ip daddr 192.168.2.10 udp dport 67 ct state new accept
+        oifname "eth2" ip saddr 192.168.2.1 ip daddr 192.168.2.10 udp dport 67 ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip daddr { 192.168.1.255, 255.255.255.255 } log level debug drop
+        ip daddr { 192.168.1.255, 255.255.255.255 } counter log level debug drop
         #
         # Rule 8 (global)
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 192.168.1.255 udp dport 68 ct state new accept
+        ip daddr 192.168.1.255 udp dport 68 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr 224.0.1.141 ct state new log level debug accept
+        ip daddr 224.0.1.141 ct state new counter log level debug accept
         #
         # Rule 12 (global)
         #
-        ip daddr 224.0.0.5 ct state new log level debug accept
+        ip daddr 224.0.0.5 ct state new counter log level debug accept
         #
         # Rule 13 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ip daddr 224.0.0.18 ct state new accept
+        ip daddr 224.0.0.18 ct state new counter accept
         #
         # Rule 15 (global)
         #
-        ip daddr 224.0.0.0/4 drop
+        ip daddr 224.0.0.0/4 counter drop
     }
 }
 

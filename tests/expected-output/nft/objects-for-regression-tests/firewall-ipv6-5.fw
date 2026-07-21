@@ -243,29 +243,29 @@ delete table inet fwf_filter
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
-        iifname "eth0" tcp dport 22 accept
+        iifname "eth0" tcp dport 22 counter accept
         #
         # Rule 2 (eth0,eth1)
         #
-        iifname "eth1" tcp dport 22 accept
+        iifname "eth1" tcp dport 22 counter accept
         #
         # Rule 1 (eth1)
         #
-        iifname "eth1" tcp dport 22 accept
+        iifname "eth1" tcp dport 22 counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
     }
 }
 

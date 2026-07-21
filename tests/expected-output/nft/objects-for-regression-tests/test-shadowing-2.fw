@@ -246,62 +246,62 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # shades rule below
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 1 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.10 drop
+        oifname "eth0" ip saddr 192.168.1.10 counter drop
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule 4 (global)
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        meta l4proto 0 ct state new accept
+        meta l4proto 0 ct state new counter accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 6667 drop
+        ip saddr 192.168.1.0/24 tcp dport 6667 counter drop
         #
         # Rule 6 (global)
         #
-        log prefix "RULE 6 -- DENY " level info drop
+        counter log prefix "RULE 6 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        tcp dport 80 drop
+        tcp dport 80 counter drop
     }
 }
 

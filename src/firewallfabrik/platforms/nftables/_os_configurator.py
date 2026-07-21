@@ -123,22 +123,25 @@ class OSConfigurator_nft(OSConfigurator):
         """
         rules = []
 
-        # Accept established/related connections
+        # Accept established/related connections. `counter` matches the
+        # implicit per-rule counters of the equivalent iptables rules.
         if self.fw.get_option('accept_established'):
-            rules.append('        ct state established,related accept')
+            rules.append('        ct state established,related counter accept')
 
         # Drop invalid packets
         drop_invalid = self.fw.get_option('drop_invalid')
         log_invalid = self.fw.get_option('log_invalid')
         if drop_invalid:
             if log_invalid:
-                rules.append('        ct state invalid log prefix "INVALID " drop')
+                rules.append(
+                    '        ct state invalid counter log prefix "INVALID " drop'
+                )
             else:
-                rules.append('        ct state invalid drop')
+                rules.append('        ct state invalid counter drop')
 
         # Drop new TCP without SYN
         if not self.fw.get_option('accept_new_tcp_with_no_syn'):
-            rules.append('        tcp flags != syn ct state new drop')
+            rules.append('        tcp flags != syn ct state new counter drop')
 
         return '\n'.join(rules) + '\n' if rules else ''
 

@@ -231,103 +231,103 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule base-ruleset 0 (global)
         #
-        tcp dport 22 ct state new accept
+        tcp dport 22 ct state new counter accept
         #
         # Rule mail_server_inbound 0 (global)
         #
-        tcp dport 25 ct state new accept
+        tcp dport 25 ct state new counter accept
         #
         # Rule mail_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_inbound 0 (global)
         #
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule web_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
-        tcp dport 3306 log prefix "web_server_inbound/2 -- DENY" level info drop
+        tcp dport 3306 counter log prefix "web_server_inbound/2 -- DENY" level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule mail_server_inbound 0 (global)
         #
-        tcp dport 25 ct state new accept
+        tcp dport 25 ct state new counter accept
         #
         # Rule mail_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule mail_server_outbound 0 (global)
         #
-        tcp dport { 53, 25 } ct state new accept
-        udp dport 53 ct state new accept
+        tcp dport { 53, 25 } ct state new counter accept
+        udp dport 53 ct state new counter accept
         #
         # Rule mail_server_outbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_inbound 0 (global)
         #
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule web_server_inbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
-        tcp dport 3306 log prefix "web_server_inbound/2 -- DENY" level info drop
+        tcp dport 3306 counter log prefix "web_server_inbound/2 -- DENY" level info drop
         #
         # Rule web_server_outbound 0 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_outbound 1 (global)
         #
-        meta l4proto { tcp, udp } th dport 53 ct state new accept
+        meta l4proto { tcp, udp } th dport 53 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule base-ruleset 0 (global)
         #
-        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } tcp dport 22 ct state new accept
+        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } tcp dport 22 ct state new counter accept
         #
         # Rule mail_server_outbound 0 (global)
         #
-        tcp dport { 53, 25 } ct state new accept
-        udp dport 53 ct state new accept
+        tcp dport { 53, 25 } ct state new counter accept
+        udp dport 53 ct state new counter accept
         #
         # Rule mail_server_outbound 1 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
-        tcp dport 3306 log prefix "web_server_inbound/2 -- DENY" level info drop
+        tcp dport 3306 counter log prefix "web_server_inbound/2 -- DENY" level info drop
         #
         # Rule web_server_outbound 0 (global)
         #
-        icmp type destination-unreachable ct state new accept
+        icmp type destination-unreachable ct state new counter accept
         #
         # Rule web_server_outbound 1 (global)
         #
-        meta l4proto { tcp, udp } th dport 53 ct state new accept
+        meta l4proto { tcp, udp } th dport 53 ct state new counter accept
     }
 }
 

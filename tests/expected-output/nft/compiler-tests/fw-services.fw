@@ -240,57 +240,57 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport { 80, 443 } ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport { 80, 443 } ct state new counter accept
         #
         # Rule 2 (global)
         #
-        tcp dport 8080-8089 ct state new accept
+        tcp dport 8080-8089 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 udp sport 1024-65535 udp dport 5000 ct state new accept
+        ip saddr 192.168.1.0/24 udp sport 1024-65535 udp dport 5000 ct state new counter accept
         #
         # Rule 4 (global)
         #
-        icmp type echo-request icmp code 0 ct state new accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule 6 (global)
         #
-        icmp type time-exceeded icmp code 0 ct state new accept
+        icmp type time-exceeded icmp code 0 ct state new counter accept
         #
         # Rule 7 (global)
         #
-        log prefix "RULE 7 -- DENY " level info drop
+        counter log prefix "RULE 7 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 7 (global)
         #
-        log prefix "RULE 7 -- DENY " level info drop
+        counter log prefix "RULE 7 -- DENY " level info drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 5 (global)
         #
-        icmp type echo-reply icmp code 0 ct state new accept
+        icmp type echo-reply icmp code 0 ct state new counter accept
         #
         # Rule 7 (global)
         #
-        log prefix "RULE 7 -- DENY " level info drop
+        counter log prefix "RULE 7 -- DENY " level info drop
     }
 }
 

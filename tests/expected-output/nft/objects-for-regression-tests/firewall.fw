@@ -266,124 +266,124 @@ delete table ip fwf_nat
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" meta l4proto 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #
         # Automatically generated anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 3 (eth1)
         #
-        iifname "eth1" udp dport 53 ct state new accept
+        iifname "eth1" udp dport 53 ct state new counter accept
         #
         # Rule 4 (eth1)
         #
         # rule in FORWARD chain with
         # -o eth1 and dest address of the firewall
         # is pretty much impossible
-        iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new accept
+        iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
         # Rule 7 (eth1)
         #
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 8 (eth1)
         #
         # keep FORWARD chain
         # because it is needed for anti-spoofing rules
-        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
         # Rule 9 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
+        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
         # Rule 10 (eth0)
         #
-        iifname "eth0" ip saddr 192.168.1.0/24 udp dport 53 ct state new accept
+        iifname "eth0" ip saddr 192.168.1.0/24 udp dport 53 ct state new counter accept
         #
         # Rule 12 (eth0)
         #
-        iifname "eth0" tcp dport 80 ct state new accept
+        iifname "eth0" tcp dport 80 ct state new counter accept
         #
         # Rule 13 (eth0,eth1)
         #
         # reject using connlimit
-        iifname "eth0" drop
-        iifname "eth1" drop
+        iifname "eth0" counter drop
+        iifname "eth1" counter drop
         #
         # Rule 15 (eth0,eth1)
         #
-        iifname "eth0" ct state new accept
-        iifname "eth1" ct state new accept
+        iifname "eth0" ct state new counter accept
+        iifname "eth1" ct state new counter accept
         #
         # Rule 17 (global)
         #
         # INTPUT with "-i +"
         # "-i +" is redundant if chain is INPUT,
         # optimization removes it
-        ip saddr 1.1.1.1 accept
+        ip saddr 1.1.1.1 counter accept
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
-        meta l4proto 0 drop
+        meta l4proto 0 counter drop
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 drop
+        meta l4proto 0 ip dscp af4 counter drop
         #
         # Rule 26 (global)
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
         #
         # both src and dst have multiple interfaces
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
+        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
         #
         # Rule 30 (global)
         #
-        ip saddr 192.168.1.10 ct state new accept
+        ip saddr 192.168.1.10 ct state new counter accept
         #
         # Rule 32 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ct state new accept
+        ip saddr 00:10:4b:de:e9:70 ct state new counter accept
         #
         # Rule 34 (global)
         #
-        ip saddr 192.168.1.15 ct state new accept
+        ip saddr 192.168.1.15 ct state new counter accept
         #
         # Rule 35 (global)
         #
-        ip saddr aa:bb:cc:dd:ee:ff ct state new accept
+        ip saddr aa:bb:cc:dd:ee:ff ct state new counter accept
         #
         # Rule 40 (global)
         #
-        ip saddr 192.168.1.10 tcp dport 80 ct state new accept
+        ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
         #
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 ct state new accept
+        ip daddr 192.168.1.0/24 ct state new counter accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
         #
         # Rule 49 (global)
         #
@@ -392,193 +392,193 @@ table ip fwf_filter {
         # plus "ALL UDP" service, which has
         # empty ports specs. This is special
         # case for multiport.
-        ip saddr 192.168.1.0/24 udp dport { 68, 67 } ct state new accept
+        ip saddr 192.168.1.0/24 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 51 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 52 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new counter accept
         #
         # Rule 53 (global)
         #
         # Automatically generated 'masquerading' rule
-        ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } ct state new counter accept
         #
         # Rule 54 (global)
         #
         # similar to a standard 'masquerading'
         # rule, but not so permissive as it does
         # not allow access to the firewall
-        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 56 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new counter accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new counter accept
         #
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" meta l4proto 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #
         # Automatically generated anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 5 (eth1)
         #
-        iifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
-        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
+        iifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
+        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
         # Rule 7 (eth1)
         #
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 8 (eth1)
         #
         # keep FORWARD chain
         # because it is needed for anti-spoofing rules
-        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        iifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
         # Rule 9 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
-        oifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new accept
+        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
+        oifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
         # Rule 11 (eth0)
         #
         # code should go into INPUT chain with
         # address in destination for comparison
-        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 12 (eth0)
         #
-        iifname "eth0" tcp dport 80 ct state new accept
+        iifname "eth0" tcp dport 80 ct state new counter accept
         #
         # Rule 18 (global)
         #
         # OUTPUT + FORWARD
-        ip daddr 1.1.1.1 accept
+        ip daddr 1.1.1.1 counter accept
         #
         # Rule 19 (global)
         #
         # INPUT + FORWARD
-        ip saddr 1.1.1.1 accept
+        ip saddr 1.1.1.1 counter accept
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
-        meta l4proto 0 drop
+        meta l4proto 0 counter drop
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 drop
+        meta l4proto 0 ip dscp af4 counter drop
         #
         # Rule 26 (global)
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
         #
         # both src and dst have multiple interfaces
-        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        ip saddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
         #
         # Rule 29 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new accept
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 31 (global)
         #
-        ip daddr 192.168.1.10 ct state new accept
+        ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 33 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new accept
+        ip saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 37 (global)
         #
-        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.10 ct state new accept
+        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 38 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp sport 53 ct state new accept
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
         #
         # Rule 39 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new accept
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new counter accept
         #
         # Rule 40 (global)
         #
-        ip saddr 192.168.1.10 tcp dport 80 ct state new accept
+        ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
         #
         # Rule 41 (global)
         #
-        ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new accept
+        ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 42 (global)
         #
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "18:00"-"23:59" log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "18:00"-"23:59" counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 43 (global)
         #
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new counter accept
         #
         # Rule 44 (global)
         #
-        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new accept
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new counter accept
         #
         # Rule 45 (global)
         #
         # Rule #20 test: from Rock
-        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new accept
+        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new counter accept
         #
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 ct state new accept
+        ip daddr 192.168.1.0/24 ct state new counter accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
         #
         # Rule 47 (global)
         #
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.11-192.168.1.15 ct state new accept
+        ip daddr 192.168.1.11-192.168.1.15 ct state new counter accept
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 48 (global)
         #
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new counter accept
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 50 (global)
         #
@@ -588,124 +588,124 @@ table ip fwf_filter {
         # rule with a single service should use "--dports".
         # It may be acceptable to not use multiport
         # in the rule with a single service at all.
-        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 53 (global)
         #
         # Automatically generated 'masquerading' rule
-        ip saddr 192.168.1.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 55 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new counter accept
         #
         # Rule 56 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new counter accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new counter accept
         #
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags != syn ct state new drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags != syn ct state new counter drop
         #
         # Rule 3 (eth1)
         #
-        oifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        oifname "eth1" ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 4 (eth1)
         #
         # rule in FORWARD chain with
         # -o eth1 and dest address of the firewall
         # is pretty much impossible
-        oifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new accept
+        oifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
         # Rule 5 (eth1)
         #
-        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new accept
+        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
         # Rule 7 (eth1)
         #
-        oifname "eth1" udp dport 53 ct state new accept
+        oifname "eth1" udp dport 53 ct state new counter accept
         #
         # Rule 8 (eth1)
         #
         # keep FORWARD chain
         # because it is needed for anti-spoofing rules
-        oifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new accept
+        oifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
         # Rule 10 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
         #
         # Rule 16 (global)
         #
         # OUTPUT
-        ip daddr 1.1.1.1 accept
+        ip daddr 1.1.1.1 counter accept
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 23 (global)
         #
-        meta l4proto 0 drop
+        meta l4proto 0 counter drop
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 drop
+        meta l4proto 0 ip dscp af4 counter drop
         #
         # Rule 26 (global)
         #
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 28 (global)
         #
         # both src and dst have multiple interfaces
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new accept
-        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
+        ip daddr { 33.33.33.33, 172.16.1.1, 192.168.100.1 } ct state new counter accept
         #
         # Rule 44 (global)
         #
-        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new accept
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new counter accept
         #
         # Rule 45 (global)
         #
         # Rule #20 test: from Rock
-        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new accept
+        ip daddr 192.168.1.10 tcp dport { 53, 3128, 80 } ct state new counter accept
         #
         # Rule 46 (global)
         #
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 ct state new accept
+        ip daddr 192.168.1.0/24 ct state new counter accept
         # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new accept
+        ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
         #
         # Rule 47 (global)
         #
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.11-192.168.1.15 ct state new accept
+        ip daddr 192.168.1.11-192.168.1.15 ct state new counter accept
         # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 48 (global)
         #
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new accept
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } ct state new counter accept
         # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
-        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new accept
+        ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 50 (global)
         #
@@ -715,36 +715,36 @@ table ip fwf_filter {
         # rule with a single service should use "--dports".
         # It may be acceptable to not use multiport
         # in the rule with a single service at all.
-        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 51 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 52 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new accept
-        ip daddr 200.200.200.200 udp dport 161 ct state new accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 161 ct state new counter accept
+        ip daddr 200.200.200.200 udp dport 161 ct state new counter accept
         #
         # Rule 53 (global)
         #
         # Automatically generated 'masquerading' rule
-        ct state new accept
-        ip saddr 192.168.1.0/24 ct state new accept
+        ct state new counter accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 55 (global)
         #
-        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new accept
+        ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new counter accept
         #
         # Rule 56 (global)
         #
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new accept
-        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new counter accept
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } udp dport { 53, 161 } ct state new counter accept
         #
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        log prefix "CUSTOM LOGGING" level debug drop
+        counter log prefix "CUSTOM LOGGING" level debug drop
     }
 }
 
@@ -754,66 +754,66 @@ table ip fwf_nat {
         #
         # Rule 6 (NAT)
         #
-        ip daddr 222.222.222.222 tcp dport 25 dnat to 192.168.1.10:25
-        ip daddr 192.168.1.1 tcp dport 25 dnat to 192.168.1.10:25
+        ip daddr 222.222.222.222 tcp dport 25 counter dnat to 192.168.1.10:25
+        ip daddr 192.168.1.1 tcp dport 25 counter dnat to 192.168.1.10:25
         #
         # Rule 7 (NAT)
         #
-        ip daddr 222.222.222.222 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 192.168.1.1 meta l4proto icmp dnat to 192.168.1.10
+        ip daddr 222.222.222.222 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 meta l4proto icmp counter dnat to 192.168.1.10
         #
         # Rule 8 (NAT)
         #
-        ip daddr 222.222.222.222 meta l4proto icmp dnat to 192.168.1.10
-        ip daddr 192.168.1.1 meta l4proto icmp dnat to 192.168.1.10
+        ip daddr 222.222.222.222 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 meta l4proto icmp counter dnat to 192.168.1.10
         #
         # Rule 9 (NAT)
         #
-        ip daddr 222.222.222.222 tcp sport 1000-1010 dnat to 192.168.1.10
-        ip daddr 192.168.1.1 tcp sport 1000-1010 dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp sport 1000-1010 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp sport 1000-1010 counter dnat to 192.168.1.10
         #
         # Rule 12 (NAT)
         #
-        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.40 tcp dport 25 dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.40 tcp dport 25 counter dnat to 192.168.1.10
         #
         # Rule 13 (NAT)
         #
-        ip saddr 192.168.1.15 ip daddr 222.222.222.40 tcp dport 25 dnat to 192.168.1.10
+        ip saddr 192.168.1.15 ip daddr 222.222.222.40 tcp dport 25 counter dnat to 192.168.1.10
         #
         # Rule 14 (NAT)
         #
         # hsould match mac and ip addresses
-        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:71 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:71 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
-        ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:71 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 00:10:4b:de:e9:71 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
         #
         # Rule 15 (NAT)
         #
         # ensure generated rules match different mac addresses
-        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 192.168.1.15 ip daddr 222.222.222.222 tcp dport 80 dnat to 192.168.1.10
-        ip saddr 192.168.1.15 ip daddr 192.168.1.1 tcp dport 80 dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 192.168.1.15 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ip saddr 192.168.1.15 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)
         #
-        ip daddr 222.222.222.222 tcp sport 1024-65535 tcp dport 80 dnat to 192.168.1.10:80
-        ip daddr 192.168.1.1 tcp sport 1024-65535 tcp dport 80 dnat to 192.168.1.10:80
+        ip daddr 222.222.222.222 tcp sport 1024-65535 tcp dport 80 counter dnat to 192.168.1.10:80
+        ip daddr 192.168.1.1 tcp sport 1024-65535 tcp dport 80 counter dnat to 192.168.1.10:80
         #
         # Rule 18 (NAT)
         #
-        ip daddr 222.222.222.222 tcp sport 53 dnat to 192.168.1.10
-        ip daddr 192.168.1.1 tcp sport 53 dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp sport 53 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 tcp sport 53 counter dnat to 192.168.1.10
         #
         # Rule 19 (NAT)
         #
-        ip daddr 222.222.222.222 tcp dport 4000-4010 dnat to 192.168.1.10:4000-4010
-        ip daddr 192.168.1.1 tcp dport 4000-4010 dnat to 192.168.1.10:4000-4010
+        ip daddr 222.222.222.222 tcp dport 4000-4010 counter dnat to 192.168.1.10:4000-4010
+        ip daddr 192.168.1.1 tcp dport 4000-4010 counter dnat to 192.168.1.10:4000-4010
         #
         # Rule 23 (NAT)
         #
@@ -821,7 +821,7 @@ table ip fwf_nat {
         # and account for
         # no more than 15 ports
         # per rule
-        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } counter dnat to 192.168.1.10
         #
         # Rule 24 (NAT)
         #
@@ -829,7 +829,7 @@ table ip fwf_nat {
         # and account for
         # no more than 15 ports
         # per rule
-        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } dnat to 192.168.1.10
+        ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } counter dnat to 192.168.1.10
     }
 
     chain postrouting {
@@ -837,60 +837,60 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 222.222.222.222
         #
         # Rule 1 (NAT)
         #
-        ip saddr 192.168.1.0/24 snat to 222.222.222.0/24
+        ip saddr 192.168.1.0/24 counter snat to 222.222.222.0/24
         #
         # Rule 2 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.10-192.168.1.100 snat to 222.222.222.10-222.222.222.100
-        oifname "eth0" ip saddr 192.168.1.10-192.168.1.100 snat to 222.222.222.10-222.222.222.100
+        oifname "eth1" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
+        oifname "eth0" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
         #
         # Rule 4 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 snat to 192.168.1.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 5 (NAT)
         #
-        oifname "eth1" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } snat to 192.168.1.10
-        oifname "eth0" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } snat to 192.168.1.10
+        oifname "eth1" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } counter snat to 192.168.1.10
+        oifname "eth0" ip daddr 22.22.22.23 tcp dport { 3128, 4000-4010 } counter snat to 192.168.1.10
         #
         # Rule 10 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.10 tcp sport 1000-1010 snat to 222.222.222.222:1000-1010
-        oifname "eth0" ip saddr 192.168.1.10 tcp sport 1000-1010 snat to 192.168.1.1:1000-1010
+        oifname "eth1" ip saddr 192.168.1.10 tcp sport 1000-1010 counter snat to 222.222.222.222:1000-1010
+        oifname "eth0" ip saddr 192.168.1.10 tcp sport 1000-1010 counter snat to 192.168.1.1:1000-1010
         #
         # Rule 11 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 25 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 25 counter snat to 222.222.222.222
         #
         # Rule 16 (NAT)
         #
         # should match mac and ip addresses
-        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip daddr ! 223.223.223.223 tcp dport 80 snat to 222.222.222.222
-        oifname "eth1" ip daddr ! 61.150.47.112 tcp dport 80 snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 ip daddr ! 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr ! 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr ! 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip daddr ! 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip daddr ! 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
         #
         # Rule 20 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.10 tcp dport 4000-4010 snat to 222.222.222.222
-        oifname "eth0" ip saddr 192.168.1.10 tcp dport 4000-4010 snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.10 tcp dport 4000-4010 counter snat to 222.222.222.222
+        oifname "eth0" ip saddr 192.168.1.10 tcp dport 4000-4010 counter snat to 192.168.1.1
         #
         # Rule 21 (NAT)
         #
-        ip saddr 192.168.1.10 tcp dport 3128 accept
+        ip saddr 192.168.1.10 tcp dport 3128 counter accept
         #
         # Rule 22 (NAT)
         #
-        ip saddr 222.222.222.222 tcp dport 3128 accept
+        ip saddr 222.222.222.222 tcp dport 3128 counter accept
     }
 }
 

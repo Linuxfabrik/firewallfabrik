@@ -258,153 +258,153 @@ delete table inet fwf_filter
 table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 1 (global)
         #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
         # see #1523
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_v6 1 (eth0)
         #
         # see #1523
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89
+        meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        iifname "eth0" meta l4proto 89
+        iifname "eth0" meta l4proto 89 counter
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 1 (global)
         #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
         # see #1523
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_v6 2 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 3 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:aaaa ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:aaaa ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89
+        meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        iifname "eth0" meta l4proto 89
+        iifname "eth0" meta l4proto 89 counter
         # # Rule 15: Branch action not yet supported by nftables compiler
-        oifname "eth0" meta l4proto 89
+        oifname "eth0" meta l4proto 89 counter
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
-        ct state invalid log prefix "INVALID " drop
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 1 (global)
         #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_OSPF 2 (global)
         #
-        drop
+        counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
         # Rule Policy_v6 2 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 4 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 5 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr 1.1.1.1 ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 saddr 1.1.1.1 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 6 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 accept
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89
+        meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        oifname "eth0" meta l4proto 89
+        oifname "eth0" meta l4proto 89 counter
     }
 }
 

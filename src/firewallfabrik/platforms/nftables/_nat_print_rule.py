@@ -122,9 +122,11 @@ class NATPrintRule_nft(NATRuleProcessor):
             if srv_match:
                 parts.append(srv_match)
 
-        # NAT action
+        # NAT action, preceded by `counter` to match iptables' implicit
+        # per-rule counters (iptables-translate emits `... counter snat to`).
         nat_action = self._print_nat_action(rule)
         if nat_action:
+            parts.append('counter')
             parts.append(nat_action)
 
         if not parts:

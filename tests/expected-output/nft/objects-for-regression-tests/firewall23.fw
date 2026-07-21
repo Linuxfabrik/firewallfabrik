@@ -231,11 +231,11 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth*)
         #
-        iifname "eth*" ct state new accept
+        iifname "eth*" ct state new counter accept
         #
         # Rule 13 (global)
         #
@@ -243,112 +243,112 @@ table ip fwf_filter {
         # in both INPUT and FORWARD chains
         # because this is a bridging firewall
         # see bug #811860
-        ip saddr 192.168.1.0/24 tcp dport 22 ct state new accept
+        ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 14 (global)
         #
-        ct state new accept
+        ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
-        tcp flags syn / syn,rst tcp option maxseg size set rt mtu
+        ct state established,related counter accept
+        tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
         # Rule 1 (eth*)
         #
-        iifname "eth*" ct state new accept
+        iifname "eth*" ct state new counter accept
         #
         # Rule 2 (eth*)
         #
-        iifname "eth*" ip daddr 192.168.1.255 ct state new accept
+        iifname "eth*" ip daddr 192.168.1.255 ct state new counter accept
         #
         # Rule 3 (eth*)
         #
-        iifname "eth*" ip daddr 255.255.255.255 ct state new accept
+        iifname "eth*" ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 4 (eth*)
         #
-        iifname "eth*" ip daddr 224.0.1.141 ct state new accept
+        iifname "eth*" ip daddr 224.0.1.141 ct state new counter accept
         #
         # Rule 5 (eth*)
         #
-        iifname "eth*" ip daddr 192.168.1.0/24 ct state new accept
+        iifname "eth*" ip daddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 6 (eth*)
         #
-        iifname "eth*" ip daddr != 192.168.1.0/24 ct state new accept
+        iifname "eth*" ip daddr != 192.168.1.0/24 ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr 192.168.1.10 log level debug drop
+        ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 15 (global)
         #
         # interface of another firewall
         # (firewall11)
         # Why do we need to test for this?
-        ip daddr 10.1.1.1 ct state new accept
+        ip daddr 10.1.1.1 ct state new counter accept
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 7 (global)
         #
-        ip daddr 255.255.255.255 udp dport 68 ct state new accept
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new accept
+        ip daddr { 192.168.1.10, 192.168.1.255 } udp dport 68 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new accept
+        ip daddr { 192.168.1.20, 224.0.1.141 } ct state new counter accept
         #
         # Rule 10 (global)
         #
-        ip daddr 224.0.0.5 ct state new accept
+        ip daddr 224.0.0.5 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        ip daddr 192.168.1.10 tcp dport 6667 ct state new accept
+        ip daddr 192.168.1.10 tcp dport 6667 ct state new counter accept
         #
         # Rule 12 (global)
         #
-        ip daddr 192.168.1.10 log level debug drop
+        ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 14 (global)
         #
-        ip daddr 192.168.1.1 ct state new accept
+        ip daddr 192.168.1.1 ct state new counter accept
         #
         # Rule 15 (global)
         #
         # interface of another firewall
         # (firewall11)
         # Why do we need to test for this?
-        ip daddr 10.1.1.1 ct state new accept
+        ip daddr 10.1.1.1 ct state new counter accept
     }
 }
 

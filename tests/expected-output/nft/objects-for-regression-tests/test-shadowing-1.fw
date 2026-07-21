@@ -248,135 +248,135 @@ delete table ip fwf_filter
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr { 22.22.22.22, 192.168.1.1, 192.168.2.1 } tcp dport 80 drop
+        ip saddr { 22.22.22.22, 192.168.1.1, 192.168.2.1 } tcp dport 80 counter drop
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new counter accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 21 drop
+        ip saddr 192.168.1.0/24 tcp dport 21 counter drop
         #
         # Rule 6 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto udp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto udp ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 udp dport 123 drop
+        ip saddr 192.168.1.0/24 udp dport 123 counter drop
         #
         # Rule 8 (global)
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 drop
+        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # shades rule below
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 1 (eth0)
         #
-        oifname "eth0" ip saddr 192.168.1.10 log prefix "RULE 1 -- DENY " level info drop
+        oifname "eth0" ip saddr 192.168.1.10 counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new counter accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 21 drop
+        ip saddr 192.168.1.0/24 tcp dport 21 counter drop
         #
         # Rule 6 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto udp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto udp ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 udp dport 123 drop
+        ip saddr 192.168.1.0/24 udp dport 123 counter drop
         #
         # Rule 8 (global)
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 drop
+        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
-        ct state established,related accept
+        ct state established,related counter accept
         #
         # Rule 0 (eth0)
         #
         # shades rule below
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new accept
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 2 (global)
         #
         # firewall is part
         # of any for this rule
-        tcp dport 80 ct state new accept
+        tcp dport 80 ct state new counter accept
         #
         # Rule 3 (global)
         #
-        tcp dport 80 drop
+        tcp dport 80 counter drop
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto tcp ct state new counter accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 21 drop
+        ip saddr 192.168.1.0/24 tcp dport 21 counter drop
         #
         # Rule 6 (global)
         #
-        ip saddr 192.168.1.0/24 meta l4proto udp ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto udp ct state new counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 udp dport 123 drop
+        ip saddr 192.168.1.0/24 udp dport 123 counter drop
         #
         # Rule 8 (global)
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new accept
+        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 drop
+        ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter drop
     }
 }
 
