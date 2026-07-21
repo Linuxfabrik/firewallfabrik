@@ -264,8 +264,8 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table inet fwf_filter {}
 delete table inet fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
+table ip6 fwf_nat {}
+delete table ip6 fwf_nat
 
 table inet fwf_filter {
     chain input {
@@ -393,7 +393,7 @@ table inet fwf_filter {
     }
 }
 
-table ip fwf_nat {
+table ip6 fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
@@ -433,6 +433,7 @@ flush_own_tables() {
     $NFT delete table ip fwf_filter 2>/dev/null
     $NFT delete table inet fwf_nat 2>/dev/null
     $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
 }
 
 flush_legacy_iptables() {

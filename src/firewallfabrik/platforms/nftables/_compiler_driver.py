@@ -176,10 +176,12 @@ class CompilerDriver_nft(CompilerDriver):
                     'forward': [],
                     'output': [],
                 }
-                nat_chains: dict[str, list[str]] = {
-                    'prerouting': [],
-                    'postrouting': [],
-                    'output': [],
+                # NAT rules are kept per address family: nftables rejects an
+                # `ip6` match inside an `ip` table (and vice versa), so each
+                # family needs its own NAT table.
+                nat_chains: dict[str, dict[str, list[str]]] = {
+                    'ip': {'prerouting': [], 'postrouting': [], 'output': []},
+                    'ip6': {'prerouting': [], 'postrouting': [], 'output': []},
                 }
 
                 for policy_af in ipv4_6_runs:
@@ -355,7 +357,7 @@ class CompilerDriver_nft(CompilerDriver):
         fw: Firewall,
         nat_rs: RuleSet,
         single_rule_id: str,
-        nat_chains: dict[str, list[str]],
+        nat_chains: dict[str, dict[str, list[str]]],
         oscnf,
         policy_af: int,
     ) -> None:
@@ -385,10 +387,15 @@ class CompilerDriver_nft(CompilerDriver):
 
         self.have_nat = self.have_nat or (nat_rules_count > 0)
 
-        # Collect per-chain rules from the compiler
+        # Collect per-chain rules from the compiler into this rule set's
+        # address family, so IPv4 and IPv6 NAT rules land in separate tables.
+        family_key = 'ip6' if ipv6_policy else 'ip'
+        fam_chains = nat_chains.setdefault(
+            family_key, {'prerouting': [], 'postrouting': [], 'output': []}
+        )
         for chain_name, rules in nat_compiler.chain_rules.items():
             if rules:
-                nat_chains.setdefault(chain_name, []).extend(rules)
+                fam_chains.setdefault(chain_name, []).extend(rules)
 
         if nat_compiler.get_errors() or nat_compiler.get_warnings():
             self.all_errors.extend(nat_compiler.get_errors())
@@ -443,7 +450,7 @@ class CompilerDriver_nft(CompilerDriver):
         fw: Firewall,
         oscnf,
         filter_chains: dict[str, list[str]],
-        nat_chains: dict[str, list[str]],
+        nat_chains: dict[str, dict[str, list[str]]],
         have_ipv6: bool,
     ) -> str:
         """Assemble the nft rules body for embedding in a heredoc.
@@ -463,7 +470,6 @@ class CompilerDriver_nft(CompilerDriver):
 
         # Determine address family
         family = 'inet' if have_ipv6 else 'ip'
-        nat_family = 'ip'
 
         # Default policy from firewall options
         input_policy = 'drop'
@@ -478,15 +484,19 @@ class CompilerDriver_nft(CompilerDriver):
             input_rules.strip() or forward_rules.strip() or output_rules.strip()
         )
 
-        # --- NAT table ---
-        prerouting_rules = ''.join(nat_chains.get('prerouting', []))
-        postrouting_rules = ''.join(nat_chains.get('postrouting', []))
-        output_nat_rules = ''.join(nat_chains.get('output', []))
-        have_nat = bool(
-            prerouting_rules.strip()
-            or postrouting_rules.strip()
-            or output_nat_rules.strip()
-        )
+        # --- NAT tables (one per address family) ---
+        # nftables rejects an `ip6` payload match inside an `ip` table, so
+        # IPv4 and IPv6 NAT rules go into separate `ip`/`ip6` tables that
+        # share the filter table's name suffix.
+        nat_by_family = []
+        for fam in ('ip', 'ip6'):
+            fam_chains = nat_chains.get(fam, {})
+            pre = ''.join(fam_chains.get('prerouting', []))
+            post = ''.join(fam_chains.get('postrouting', []))
+            outp = ''.join(fam_chains.get('output', []))
+            if pre.strip() or post.strip() or outp.strip():
+                nat_by_family.append((fam, pre, post, outp))
+        have_nat = bool(nat_by_family)
 
         # Atomically delete our tables before recreating them.
         # "create + delete" ensures deletion works even on first run
@@ -494,9 +504,9 @@ class CompilerDriver_nft(CompilerDriver):
         if have_filter:
             out.write(f'table {family} {filter_table} {{}}\n')
             out.write(f'delete table {family} {filter_table}\n')
-        if have_nat:
-            out.write(f'table {nat_family} {nat_table} {{}}\n')
-            out.write(f'delete table {nat_family} {nat_table}\n')
+        for fam, *_ in nat_by_family:
+            out.write(f'table {fam} {nat_table} {{}}\n')
+            out.write(f'delete table {fam} {nat_table}\n')
         if have_filter or have_nat:
             out.write('\n')
 
@@ -569,8 +579,8 @@ class CompilerDriver_nft(CompilerDriver):
             out.write('}\n')
             out.write('\n')
 
-        if have_nat:
-            out.write(f'table {nat_family} {nat_table} {{\n')
+        for fam, prerouting_rules, postrouting_rules, output_nat_rules in nat_by_family:
+            out.write(f'table {fam} {nat_table} {{\n')
 
             # Prerouting chain (DNAT)
             out.write('    chain prerouting {\n')
