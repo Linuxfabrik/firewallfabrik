@@ -250,7 +250,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        log level error drop
+        log level err drop
     }
 
     chain forward {
@@ -262,7 +262,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        log level error drop
+        log level err drop
     }
 
     chain output {
@@ -270,7 +270,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        log level error drop
+        log level err drop
     }
 }
 

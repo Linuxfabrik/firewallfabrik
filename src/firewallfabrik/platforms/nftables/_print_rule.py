@@ -404,6 +404,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         )
         return ''
 
+    # Map iptables/syslog level names to the abbreviated keywords nftables
+    # accepts. Only the two divergent spellings need mapping.
+    _NFT_LOG_LEVELS: ClassVar[dict[str, str]] = {
+        'error': 'err',
+        'warning': 'warn',
+    }
+
     _TCP_FLAG_ORDER: ClassVar[tuple[str, ...]] = (
         'urg',
         'ack',
@@ -686,6 +693,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             if not log_level:
                 log_level = self.compiler.fw.get_option('log_level')
             if log_level:
+                # nftables uses the abbreviated syslog level keywords
+                # (see nftables src/statement.c: syslog_level[]), so map the
+                # spellings iptables accepts to what nft parses. Levels not in
+                # the map (alert, crit, debug, emerg, info, notice) are already
+                # valid nft keywords and pass through unchanged.
+                log_level = self._NFT_LOG_LEVELS.get(log_level, log_level)
                 parts.append(f'level {log_level}')
 
         # Optional log flags (per-rule overrides firewall-level default).
