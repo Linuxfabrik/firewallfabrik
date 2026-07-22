@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): on bridging firewalls, rules whose destination is a broadcast, multicast, or on-link network address are now placed in the forward chain like the iptables compiler, instead of also generating a spurious input-chain rule.
 * Compiler (nftables): rule shadowing detection no longer reports false "Rule X shadows Rule Y below it" warnings when a rule negates its source or destination. The nftables compiler now runs the same shadowing detection as the iptables compiler, so both platforms report identical shadowing for the same firewall ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
 * Compiler (nftables): rules and NAT rules that match an ICMPv6 service with no specific type now produce a ruleset that loads. The generated rule used `meta l4proto icmpv6`, a protocol name nftables does not recognise; it now uses `ipv6-icmp`.
+* Compiler (nftables): rules that carry a rate limit now emit it as a native `limit rate` match, matching the iptables compiler. Previously the limit was silently dropped on nftables, so a rule meant to be rate-limited passed all traffic.
 * Compiler (nftables): rules that match on TCP flags (for example SYN-only or non-SYN packets) now generate the correct flag match instead of matching all TCP traffic, matching the iptables compiler.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 

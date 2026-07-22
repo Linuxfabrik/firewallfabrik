@@ -304,18 +304,22 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
         #
         # Rule 17 (global)
         #
         # testing negation in the policy rule
         # # Rule 17 (global): Accounting action not yet supported by nftables compiler
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } counter log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter log level debug
         #
         # Rule 18 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new counter log level debug accept
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
+        #
+        # Rule 19 (global)
+        #
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
         #
         # Rule 20 (global)
         #
@@ -436,18 +440,18 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
         #
         # Rule 17 (global)
         #
         # testing negation in the policy rule
         # # Rule 17 (global): Accounting action not yet supported by nftables compiler
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } counter log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter log level debug
         #
         # Rule 18 (global)
         #
         # testing negation in the policy rule
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new counter log level debug accept
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
         #
         # Rule 20 (global)
         #

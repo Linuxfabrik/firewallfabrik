@@ -274,7 +274,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #
@@ -317,7 +317,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #
@@ -386,7 +386,7 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter accept
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #

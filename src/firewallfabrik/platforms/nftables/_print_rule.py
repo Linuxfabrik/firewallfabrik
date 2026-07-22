@@ -151,6 +151,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         if time_match:
             parts.append(time_match)
 
+        # Rate limiting (-m limit on iptables -> native `limit rate` on nftables)
+        limit_match = self._print_limit(rule)
+        if limit_match:
+            parts.append(limit_match)
+
         # Logging and verdict
         log_match = self._print_log(rule)
         verdict = self._print_verdict(rule)
@@ -641,6 +646,37 @@ class PrintRule_nft(PolicyRuleProcessor):
         if icmp_code < 0:
             return f'{proto} type {type_str}'
         return f'{proto} type {type_str} {proto} code {icmp_code}'
+
+    def _print_limit(self, rule: CompRule) -> str:
+        """Print native nftables rate limiting.
+
+        Mirrors the iptables ``-m limit --limit N/unit --limit-burst B``
+        match. iptables-translate maps this to nftables' native
+        ``limit rate N/unit burst B packets`` form (see the netfilter
+        ``libxt_limit.txlate`` gold output), so a rule that carries a rate
+        limit produces the same effect on both backends. The stored
+        ``limit_suffix`` (``/second``, ``/minute``, ``/hour``, ``/day``) is
+        already the spelling nftables expects.
+        """
+        limit_val = rule.get_option('limit_value', -1)
+        try:
+            limit_val = int(limit_val)
+        except (ValueError, TypeError):
+            limit_val = -1
+        if limit_val <= 0:
+            return ''
+
+        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
+        burst = rule.get_option('limit_burst', 0)
+        try:
+            burst = int(burst)
+        except (ValueError, TypeError):
+            burst = 0
+
+        result = f'limit rate {limit_val}{limit_suffix}'
+        if burst > 0:
+            result += f' burst {burst} packets'
+        return result
 
     def _print_state(self, rule: CompRule) -> str:
         """Print connection tracking state matching."""
