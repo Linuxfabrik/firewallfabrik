@@ -471,7 +471,7 @@ table ip fwf_nat {
         #
         # Rule 3 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr ! 200.200.200.200 counter dnat to 192.168.2.10
+        ip saddr 192.168.1.0/24 ip daddr != 200.200.200.200 counter dnat to 192.168.2.10
     }
 
     chain postrouting {

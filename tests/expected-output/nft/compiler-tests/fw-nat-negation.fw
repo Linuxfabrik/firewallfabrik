@@ -291,7 +291,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr ! 198.51.100.0/24 counter snat to 10.0.0.1
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != 198.51.100.0/24 counter snat to 10.0.0.1
     }
 }
 

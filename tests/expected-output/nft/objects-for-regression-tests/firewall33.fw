@@ -398,8 +398,8 @@ table ip fwf_nat {
         #
         # Rule 4 (NAT)
         #
-        oifname "eth0.100" ip daddr ! www.cnn.com masquerade
-        oifname "eth0.100" ip daddr ! www.google.com masquerade
+        oifname "eth0.100" ip daddr != www.cnn.com masquerade
+        oifname "eth0.100" ip daddr != www.google.com masquerade
     }
 }
 

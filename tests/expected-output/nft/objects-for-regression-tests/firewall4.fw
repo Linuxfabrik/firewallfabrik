@@ -470,8 +470,8 @@ table ip fwf_nat {
         #
         # Rule 3 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 0.0.0.0
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr ! 192.168.2.0/24 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 0.0.0.0
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 222.222.222.222
         #
         # Rule 4 (NAT)
         #
