@@ -239,7 +239,9 @@ class NATPrintRule_nft(NATRuleProcessor):
             proto = 'udp'
         elif isinstance(srv, (ICMPService, ICMP6Service)):
             if self.compiler.ipv6_policy:
-                return 'meta l4proto icmpv6'
+                # `meta l4proto` resolves via getprotobyname(): the IPv6 ICMP
+                # protocol is `ipv6-icmp` (58); `icmpv6` is not a protocol name.
+                return 'meta l4proto ipv6-icmp'
             return 'meta l4proto icmp'
         elif isinstance(srv, IPService):
             p = srv.get_protocol_number()

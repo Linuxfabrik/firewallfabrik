@@ -633,7 +633,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         type_str = type_names.get(icmp_type, str(icmp_type))
 
         if icmp_type < 0:
-            return f'meta l4proto {proto}'
+            # `meta l4proto` resolves its argument through getprotobyname(),
+            # so it needs the /etc/protocols name `ipv6-icmp` (58); the bare
+            # `icmpv6` keyword only exists as the payload-match protocol below.
+            l4proto = 'ipv6-icmp' if self.compiler.ipv6_policy else 'icmp'
+            return f'meta l4proto {l4proto}'
         if icmp_code < 0:
             return f'{proto} type {type_str}'
         return f'{proto} type {type_str} {proto} code {icmp_code}'
