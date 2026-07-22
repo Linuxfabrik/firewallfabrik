@@ -467,6 +467,12 @@ class NATPrintRule(NATRuleProcessor):
             elif isinstance(srv, (ICMPService, ICMP6Service)):
                 icmp = self._print_icmp(srv)
                 if icmp:
+                    if self.compiler.ipv6_policy:
+                        # ip6tables matches ICMPv6 types via the `icmp6`
+                        # module and `--icmpv6-type`; `--icmp-type` is IPv4
+                        # only and is rejected by ip6tables. Mirrors the
+                        # policy print rule (`-p ipv6-icmp -m icmp6 ...`).
+                        return f'-m icmp6 --icmpv6-type {icmp} '
                     return f'--icmp-type {icmp} '
             elif isinstance(srv, IPService):
                 ip_str = self._print_ip(srv)

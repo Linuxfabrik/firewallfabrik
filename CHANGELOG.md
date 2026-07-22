@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables): ip6tables NAT rules that match a specific ICMPv6 type now produce a valid rule. The rule used the IPv4-only `--icmp-type` option; it now uses `-m icmp6 --icmpv6-type`, matching the policy compiler.
 * Compiler (iptables, nftables): IPv6 SNAT and DNAT rules that also translate the port now bracket the address (for example `[fec0::1]:80`), so the generated ruleset loads. Without the brackets the port was read as part of the IPv6 address.
 * Compiler (nftables): a NAT rule whose original source or destination address is negated now produces a ruleset that loads. The generated rule used an invalid negation (`ip saddr ! ...`) that nftables rejected; it now uses the correct `ip saddr != ...` form.
 * Compiler (nftables): a rule that uses a loopback interface which has no IP address now aborts compilation with a clear error instead of silently dropping the rule, matching the iptables compiler.
