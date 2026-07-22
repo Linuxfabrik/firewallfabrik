@@ -468,6 +468,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not comp_names:
             # COMP is empty (iptables "NONE"): none of the inspected flags set.
             return f'tcp flags & ({mask_pipe}) == 0x0'
+        if len(mask_names) == 1:
+            # nft rejects the `tcp flags <value> / <mask>` form when the mask
+            # is a single symbolic flag (e.g. `tcp flags syn / syn`, which
+            # iptables-translate itself emits for `--tcp-flags SYN SYN`).
+            # Emit the always-valid bitwise form instead; COMP is a subset of
+            # the single-flag MASK, so it is that same flag.
+            comp_pipe = ' | '.join(comp_names)
+            return f'tcp flags & ({mask_pipe}) == {comp_pipe}'
         return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
 
     def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
