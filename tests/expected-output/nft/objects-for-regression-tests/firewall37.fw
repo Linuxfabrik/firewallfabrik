@@ -397,7 +397,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 5 (global)
         #
-        ip saddr 6bone.net ct state new counter accept
+        ip saddr "6bone.net" ct state new counter accept
         #
         # Rule mangle_rules 8 (global)
         #
@@ -421,7 +421,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 14 (global)
         #
-        ip saddr != 6bone.net ct state new counter accept
+        ip saddr != "6bone.net" ct state new counter accept
     }
 
     chain forward {
@@ -576,7 +576,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 5 (global)
         #
-        ip saddr 6bone.net ct state new counter accept
+        ip saddr "6bone.net" ct state new counter accept
         #
         # Rule mangle_rules 11 (global)
         #
@@ -592,7 +592,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 14 (global)
         #
-        ip saddr != 6bone.net ct state new counter accept
+        ip saddr != "6bone.net" ct state new counter accept
     }
 
     chain output {

@@ -205,8 +205,14 @@ class NATPrintRule_nft(NATRuleProcessor):
             return ''
 
         if isinstance(obj, DNSName):
-            # Runtime DNSName — use the DNS record directly as address
-            return (obj.data or {}).get('dnsrec', obj.name)
+            # Runtime DNSName — use the DNS record directly as address, so nft
+            # resolves it at load time. A bare hostname beginning with a digit
+            # (e.g. "6bone.net") is tokenized as a number by the nft parser and
+            # rejected, so quote those to force hostname interpretation.
+            dnsrec = (obj.data or {}).get('dnsrec', obj.name)
+            if dnsrec and dnsrec[:1].isdigit():
+                return f'"{dnsrec}"'
+            return dnsrec
 
         if not isinstance(obj, Address):
             self.compiler.error(
