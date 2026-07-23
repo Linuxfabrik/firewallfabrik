@@ -555,7 +555,6 @@ table ip fwf_nat {
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
         tcp dport 22 counter dnat to 192.168.1.10:22
-        ip daddr fe80::1 tcp dport 22 counter dnat to 192.168.1.10:22
     }
 
     chain postrouting {
@@ -566,7 +565,6 @@ table ip fwf_nat {
         oifname "ppp0" ip saddr 192.168.1.0/24 counter snat to 192.168.1.1
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
         oifname "ppp1" ip saddr 192.168.1.0/24 counter masquerade
-        oifname "sixxs0" ip saddr 192.168.1.0/24 counter snat to fe80::1
         #
         # Rule 1 (NAT)
         #

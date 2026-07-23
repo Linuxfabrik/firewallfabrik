@@ -186,21 +186,23 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return f'{start}-{end}'
 
         if isinstance(obj, Interface):
-            for addr in getattr(obj, 'addresses', []):
-                addr_str = addr.get_address()
-                if addr_str:
-                    return addr_str
+            addr = self._select_af_address(getattr(obj, 'addresses', []))
+            if addr is not None:
+                return addr.get_address()
             self.compiler.error(rule, f'Interface "{obj.name}" has no addresses')
             return ''
 
         if isinstance(obj, Host):
-            for iface in getattr(obj, 'interfaces', []):
-                if iface.is_loopback():
-                    continue
-                for addr in getattr(iface, 'addresses', []):
-                    addr_str = addr.get_address()
-                    if addr_str:
-                        return addr_str
+            host_addrs = [
+                addr
+                for iface in getattr(obj, 'interfaces', [])
+                if not iface.is_loopback()
+                for addr in getattr(iface, 'addresses', [])
+                if addr.get_address()
+            ]
+            addr = self._select_af_address(host_addrs)
+            if addr is not None:
+                return addr.get_address()
             self.compiler.error(rule, f'Host "{obj.name}" has no addresses')
             return ''
 
@@ -236,6 +238,27 @@ class NATPrintRule_nft(NATRuleProcessor):
                     pass
 
         return addr_str
+
+    def _select_af_address(self, addresses):
+        """Pick the address matching the active family from a list.
+
+        A dual-stack Interface / Host holds both an IPv4 and an IPv6
+        address; rendering the first one blindly emits the wrong family in
+        one of the two passes. Prefer the address of the compile target's
+        family and only fall back to the first entry when none matches (so
+        single-stack objects that survived the address-family filter still
+        render).
+        """
+        addresses = list(addresses)
+        if not addresses:
+            return None
+        want_v6 = self.compiler.ipv6_policy
+        for addr in addresses:
+            if want_v6 and addr.is_v6():
+                return addr
+            if not want_v6 and addr.is_v4():
+                return addr
+        return addresses[0]
 
     def _print_service(self, srv, rule: CompRule) -> str:
         """Print service matching for NAT rules."""

@@ -389,11 +389,6 @@ table inet fwf_filter {
         # Rule Policy_v6 5 (eth0)
         #
         # see #1523
-        oifname "eth0" ip6 saddr 1.1.1.1 ip6 daddr ff00::/8 counter accept
-        #
-        # Rule Policy_v6 6 (eth0)
-        #
-        # see #1523
         oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 14 (global)

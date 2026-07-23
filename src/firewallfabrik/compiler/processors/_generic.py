@@ -34,6 +34,7 @@ from firewallfabrik.core.objects import (
     CustomService,
     Direction,
     Group,
+    Host,
     ICMP6Service,
     ICMPService,
     Interface,
@@ -488,6 +489,18 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         super().__init__(name)
         self._drop_ipv6 = drop_ipv6
 
+    @staticmethod
+    def _contained_addresses(obj):
+        """Return the Address objects an Interface / Host carries."""
+        if isinstance(obj, Interface):
+            return list(obj.addresses or [])
+        if isinstance(obj, Host):
+            addrs = []
+            for iface in obj.interfaces or []:
+                addrs.extend(iface.addresses or [])
+            return addrs
+        return []
+
     def _should_drop(self, obj) -> bool:
         """Return True if this address object should be dropped.
 
@@ -498,12 +511,36 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         slip through the filter (and render an IPv4 range in an ip6 rule).
         Objects with no determinable family (e.g. MAC/PhysAddress) report
         neither v4 nor v6 and are always kept.
+
+        Interface and Host objects are not Address instances but carry
+        addresses; a single-stack interface used in the wrong family (e.g. an
+        IPv6-only tunnel in the IPv4 pass, or an IPv4 host in the IPv6 pass)
+        must be dropped, otherwise the print rule renders its only address in
+        the wrong family and the ruleset fails to load. A dual-stack object
+        is kept (the print rule then selects the matching address); an object
+        with no addresses at all (dynamic / unnumbered) is also kept, since
+        its family is only known at run time.
         """
-        if not isinstance(obj, Address):
-            return False
-        if self._drop_ipv6 and obj.is_v6():
-            return True
-        return bool(not self._drop_ipv6 and obj.is_v4())
+        if isinstance(obj, Address):
+            if self._drop_ipv6 and obj.is_v6():
+                return True
+            return bool(not self._drop_ipv6 and obj.is_v4())
+
+        if isinstance(obj, (Interface, Host)):
+            # Consider only real IP addresses. A MAC/PhysAddress reports
+            # neither family; a MAC-only host is link-layer and family
+            # neutral, so it must survive both passes rather than being
+            # dropped as "wrong family".
+            ip_addrs = [
+                a for a in self._contained_addresses(obj) if a.is_v4() or a.is_v6()
+            ]
+            if not ip_addrs:
+                return False
+            want_v6 = not self._drop_ipv6
+            keep = any(a.is_v6() if want_v6 else a.is_v4() for a in ip_addrs)
+            return not keep
+
+        return False
 
     def _filter_slot(self, rule: CompRule, slot: str) -> bool:
         """Filter address objects in a slot. Returns True if rule should be dropped."""

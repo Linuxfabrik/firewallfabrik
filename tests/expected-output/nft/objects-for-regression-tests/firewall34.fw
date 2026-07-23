@@ -65,8 +65,6 @@
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-# Rule 0 (NAT): Cannot resolve address for object type AddressTable
-# Rule 0 (NAT): Interface "eth0.100" has no addresses
 # AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
@@ -357,8 +355,6 @@ table inet fwf_filter {}
 delete table inet fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
-table ip6 fwf_nat {}
-delete table ip6 fwf_nat
 
 table inet fwf_filter {
     chain input {
@@ -740,20 +736,6 @@ table ip fwf_nat {
         # Rule 1 (NAT)
         #
         oifname "eth0.100" ip saddr 192.168.1.0/24 counter masquerade
-    }
-}
-
-table ip6 fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-        #
-        # Rule 0 (NAT)
-        #
-        tcp dport 25 counter dnat to 192.168.1.10
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
     }
 }
 

@@ -625,21 +625,24 @@ class NATPrintRule(NATRuleProcessor):
                 suffix = 'v6' if ipv6 else ''
                 var = get_interface_var_name(obj, suffix=suffix)
                 return f'${var} '
-            for addr in getattr(obj, 'addresses', []):
-                addr_str = addr.get_address()
-                if addr_str:
-                    return addr_str
+            addr = self._select_af_address(getattr(obj, 'addresses', []))
+            if addr is not None:
+                return addr.get_address()
             return ''
 
         if isinstance(obj, Host):
-            # Resolve Host/Firewall to its first non-loopback address
-            for iface in getattr(obj, 'interfaces', []):
-                if iface.is_loopback():
-                    continue
-                for addr in getattr(iface, 'addresses', []):
-                    addr_str = addr.get_address()
-                    if addr_str:
-                        return addr_str
+            # Resolve Host/Firewall to its non-loopback address matching the
+            # active family (dual-stack hosts carry both).
+            host_addrs = [
+                addr
+                for iface in getattr(obj, 'interfaces', [])
+                if not iface.is_loopback()
+                for addr in getattr(iface, 'addresses', [])
+                if addr.get_address()
+            ]
+            addr = self._select_af_address(host_addrs)
+            if addr is not None:
+                return addr.get_address()
             return ''
 
         if isinstance(obj, DNSName):
@@ -664,6 +667,27 @@ class NATPrintRule(NATRuleProcessor):
                     pass
 
         return addr_str
+
+    def _select_af_address(self, addresses):
+        """Pick the address matching the active family from a list.
+
+        A dual-stack Interface / Host holds both an IPv4 and an IPv6
+        address; rendering the first one blindly emits the wrong family in
+        one of the two passes. Prefer the address of the compile target's
+        family and only fall back to the first entry when none matches (so
+        single-stack objects that survived the address-family filter still
+        render).
+        """
+        addresses = list(addresses)
+        if not addresses:
+            return None
+        want_v6 = self.compiler.ipv6_policy
+        for addr in addresses:
+            if want_v6 and addr.is_v6():
+                return addr
+            if not want_v6 and addr.is_v4():
+                return addr
+        return addresses[0]
 
     def _declare_table(self) -> str:
         return ''

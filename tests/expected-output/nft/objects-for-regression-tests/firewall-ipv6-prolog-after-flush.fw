@@ -247,8 +247,6 @@ table inet fwf_filter {}
 delete table inet fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
-table ip6 fwf_nat {}
-delete table ip6 fwf_nat
 
 table inet fwf_filter {
     chain input {
@@ -297,20 +295,6 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         oifname "eth1" ip saddr 1.1.1.0/24 counter snat to 22.22.22.22
-    }
-}
-
-table ip6 fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
-        #
-        # Rule 0 (NAT)
-        #
-        oifname "eth1" ip6 saddr fe80::/64 counter snat to 22.22.22.22
     }
 }
 
