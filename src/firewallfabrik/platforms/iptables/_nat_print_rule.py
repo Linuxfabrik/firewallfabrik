@@ -45,6 +45,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
+    check_chain_name,
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
@@ -85,6 +86,7 @@ class NATPrintRule(NATRuleProcessor):
         self.minus_n_tracker_initialized: bool = False
         self.current_rule_label: str = ''
         self.version: str = ''
+        self.reported_long_chains: set[str] = set()
 
     def initialize(self) -> None:
         self.version = get_iptables_version(self.compiler.fw)
@@ -284,6 +286,7 @@ class NATPrintRule(NATRuleProcessor):
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
+        check_chain_name(self.compiler, chain, self.reported_long_chains)
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:

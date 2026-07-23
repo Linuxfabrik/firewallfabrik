@@ -50,6 +50,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import (
+    check_chain_name,
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
@@ -96,6 +97,7 @@ class PrintRule(PolicyRuleProcessor):
         self.have_m_iprange: bool = False
         self.current_rule_label: str = ''
         self.version: str = ''
+        self.reported_long_chains: set[str] = set()
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -274,7 +276,8 @@ class PrintRule(PolicyRuleProcessor):
         """Apply coexistence chain prefix if configured."""
         prefix = getattr(self.compiler, 'chain_prefix', '')
         if prefix and chain:
-            return f'{prefix}_{chain}'
+            chain = f'{prefix}_{chain}'
+        check_chain_name(self.compiler, chain, self.reported_long_chains)
         return chain
 
     def _print_chain(self, rule: CompRule) -> str:

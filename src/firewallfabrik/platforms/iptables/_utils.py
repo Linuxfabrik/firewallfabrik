@@ -86,6 +86,25 @@ def get_wait_option(version: str) -> str:
     return ''
 
 
+# iptables refuses a chain or target name of XT_EXTENSION_MAXNAMELEN
+# characters or more (include/linux/netfilter/x_tables.h, checked in
+# xshared.c), so 28 characters is the longest name that loads.  fwbuilder
+# only rejects names longer than 30 and lets two unloadable lengths pass.
+MAX_CHAIN_NAME_LENGTH = 28
+
+
+def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
+    """Report chain names iptables would refuse, once per name."""
+    if len(chain) <= MAX_CHAIN_NAME_LENGTH or chain in already_reported:
+        return
+    already_reported.add(chain)
+    compiler.error(
+        f'Chain name "{chain}" is longer than {MAX_CHAIN_NAME_LENGTH} '
+        'characters, iptables refuses to create it. Shorten the name of the '
+        'rule set or branch it is generated from.',
+    )
+
+
 def get_address_table_var_name(at: AddressTable) -> str:
     """Generate a shell variable name for an address table."""
     name = at.name
