@@ -20,6 +20,7 @@ firewall policy rules into iptables commands.
 from __future__ import annotations
 
 import hashlib
+import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
@@ -105,6 +106,32 @@ STANDARD_CHAINS = [
     'CLASSIFY',
     'ROUTE',
 ]
+
+
+def make_any_tcp_service() -> TCPService:
+    """Build a service object that matches any TCP packet.
+
+    Corresponds to fwbuilder's predefined ``ANY_TCP_OBJ_ID`` object.
+    """
+    srv = TCPService(id=uuid.uuid4(), name='Any TCP')
+    srv.src_range_start = 0
+    srv.src_range_end = 0
+    srv.dst_range_start = 0
+    srv.dst_range_end = 0
+    return srv
+
+
+def reset_srv_preserving_tcp(rule: CompRule) -> None:
+    """Reset the service element of *rule*, keeping "any TCP" for TCP rules.
+
+    Processors that move the action of a rule into a temporary chain clear
+    the service element there, because the service was already matched by
+    the jump rule.  That also drops the ``-p tcp`` the REJECT target needs
+    for ``--reject-with tcp-reset``, and iptables refuses such a rule.
+    fwbuilder substitutes its "any TCP" object instead; do the same.
+    """
+    srv = rule.srv[0] if rule.srv else None
+    rule.srv = [make_any_tcp_service()] if isinstance(srv, TCPService) else []
 
 
 class PolicyCompiler_ipt(PolicyCompiler):
@@ -1284,7 +1311,7 @@ class Logging2(PolicyRuleProcessor):
         r3 = rule.clone()
         r3.src = []
         r3.dst = []
-        r3.srv = []
+        reset_srv_preserving_tcp(r3)
         r3.itf = []
         r3.when = []
         r3.ipt_chain = new_chain
@@ -1519,7 +1546,7 @@ class SrcNegation(PolicyRuleProcessor):
         r_action = rule.clone()
         r_action.src = []
         r_action.dst = []
-        r_action.srv = []
+        reset_srv_preserving_tcp(r_action)
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
@@ -1593,7 +1620,7 @@ class DstNegation(PolicyRuleProcessor):
         r_action = rule.clone()
         r_action.src = []
         r_action.dst = []
-        r_action.srv = []
+        reset_srv_preserving_tcp(r_action)
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
@@ -3395,6 +3422,22 @@ class Optimize1(PolicyRuleProcessor):
             if attr != element and len(items) > 1:
                 # Multi-element non-optimized: clear in jump rule
                 setattr(r, attr, [])
+            elif (
+                attr == 'srv'
+                and rule.action == PolicyAction.Reject
+                and ipt_comp.is_action_on_reject_tcp_rst(rule)
+            ):
+                # Keep the protocol on the rule that carries the REJECT:
+                # --reject-with tcp-reset needs a preceding -p tcp match.
+                # Substituting "any TCP" also means there is nothing left
+                # to optimize by service.
+                srv = rule.srv[0] if rule.srv else None
+                if isinstance(srv, TCPService):
+                    rule.srv = [make_any_tcp_service()]
+                    rule.set_option('do_not_optimize_by_srv', True)
+                    r.set_option('do_not_optimize_by_srv', True)
+                else:
+                    rule.srv = []
             else:
                 # Optimized element, or single/any: keep in jump, clear
                 # in original
