@@ -1,0 +1,740 @@
+#!/bin/sh
+#
+#  This file is managed by FirewallFabrik - do not edit
+#
+#  FirewallFabrik fwf-nft VERSION
+#
+#  Generated TIMESTAMP
+#
+# files: * firewall-ipv6-1.fw /etc/firewall-ipv6-1.fw
+#
+#  Using ULOG globally, but ipv6 rules
+#  should fall back to LOG because
+#  there is no ULOG for ip6tables yet
+#  Bug 2141911
+#
+# Rule 20 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 21 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 20 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 21 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 1: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 2: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 8 shadows Rule 12 below it
+# Rule 13 shadows Rule 15 below it
+# Rule 14 shadows Rule 16 below it
+# Rule 14 shadows Rule 17 below it
+# Rule 13 shadows Rule 17 below it
+# Rule 8 shadows Rule 12 below it
+# Rule 13 shadows Rule 15 below it
+# Rule 14 shadows Rule 16 below it
+# Rule 14 shadows Rule 17 below it
+# Rule 13 shadows Rule 17 below it
+# firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+# Rule 6 shadows Rule 7 below it
+# Rule 6 shadows Rule 9 below it
+# Rule 6 shadows Rule 10 below it
+# Rule 7 shadows Rule 11 below it
+# Rule 6 shadows Rule 12 below it
+# firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
+# firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6
+
+FWBDEBUG=""
+
+PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
+export PATH
+
+NFT="/usr/sbin/nft"
+IP="ip"
+LOGGER="logger"
+
+log() {
+    echo "$1"
+    command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+}
+
+getInterfaceVarName() {
+    echo "$1" | sed 's/\./_/'
+}
+
+getaddr_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getnet_internal() {
+    dev=$1
+    name=$2
+    af=$3
+    L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
+    test -z "$L" && {
+        eval "$name=''"
+        return
+    }
+    eval "${name}_list=\"$L\""
+}
+
+getaddr() {
+    getaddr_internal "$1" "$2" "-4"
+}
+
+getaddr6() {
+    getaddr_internal "$1" "$2" "-6"
+}
+
+getnet() {
+    getnet_internal "$1" "$2" "-4"
+}
+
+getnet6() {
+    getnet_internal "$1" "$2" "-6"
+}
+
+# function getinterfaces is used to process wildcard interfaces
+getinterfaces() {
+    NAME=$1
+    "$IP" link show | grep ": $NAME" | while read -r L; do
+        OIFS=$IFS
+        IFS=" :"
+        # shellcheck disable=SC2086
+        set -- $L
+        IFS=$OIFS
+        echo "$2"
+    done
+}
+
+diff_intf() {
+    func=$1
+    list1=$2
+    list2=$3
+    cmd=$4
+    for intf in $list1
+    do
+        echo "$list2" | grep -q "$intf" || {
+        # $intf is absent in list 2
+            "$func" "$intf" "$cmd"
+        }
+    done
+}
+
+P2P_INTERFACE_WARNING=""
+
+missing_address() {
+    address=$1
+    cmd=$2
+
+    oldIFS=$IFS
+    IFS="@"
+    # shellcheck disable=SC2086
+    set -- $address
+    addr=$1
+    interface=$2
+    IFS=$oldIFS
+
+    "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
+        test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
+        P2P_INTERFACE_WARNING="yes"
+        return
+    }
+
+    test "$cmd" = "add" && {
+      echo "# Adding ip address: $interface $addr"
+      if echo "$addr" | grep -q ':'; then
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
+      else
+          $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
+      fi
+    }
+
+    test "$cmd" = "del" && {
+      echo "# Removing ip address: $interface $addr"
+      $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
+    }
+
+    $FWBDEBUG "$IP" link set "$interface" up
+}
+
+list_addresses_by_scope() {
+    interface=$1
+    scope=$2
+    ignore_list=$3
+    "$IP" addr ls dev "$interface" | \
+      awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
+        'BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+         }
+         (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
+        while read -r addr; do
+          echo "${addr}@$interface"
+	done | sort
+}
+
+update_addresses_of_interface() {
+    ignore_list=$2
+    # shellcheck disable=SC2086
+    set -- $1
+    interface=$1
+    shift
+
+    FWB_ADDRS=$(
+      for addr in "$@"; do
+        echo "${addr}@$interface"
+      done | sort
+    )
+
+    CURRENT_ADDRS_ALL_SCOPES=""
+    CURRENT_ADDRS_GLOBAL_SCOPE=""
+
+    if "$IP" link show dev "$interface" >/dev/null 2>&1; then
+      CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
+      CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
+    else
+      echo "# Interface $interface does not exist"
+      # Stop the script if we are not in test mode
+      test -z "$FWBDEBUG" && exit 1
+    fi
+
+    diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
+    diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
+}
+
+clear_addresses_except_known_interfaces() {
+    "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
+        'BEGIN {
+           split(IGNORED,ignored_arr);
+           for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
+         }
+         (/state/ && !($2 in ignored_dict)) {print $2;}' | \
+         while read -r intf; do
+            echo "# Removing addresses not configured in fwbuilder from interface $intf"
+            $FWBDEBUG "$IP" addr flush dev "$intf" scope global
+            $FWBDEBUG "$IP" link set "$intf" down
+         done
+}
+
+check_nft() {
+    if [ ! -x "$NFT" ]; then
+        echo "Error: nft not found at $NFT"
+        exit 1
+    fi
+}
+
+verify_interfaces() {
+    :
+    echo "Verifying interfaces: eth0"
+    for i in eth0 ; do
+        $IP link show "$i" > /dev/null 2>&1 || {
+            log "Interface $i does not exist"
+            exit 1
+        }
+    done
+}
+
+prolog_commands() {
+    echo "Running prolog script"
+
+    echo "Prolog script done"
+}
+
+epilog_commands() {
+    echo "Running epilog script"
+
+    echo "Epilog script done"
+}
+
+run_epilog_and_exit() {
+    epilog_commands
+    exit "$1"
+}
+
+configure_interfaces() {
+    :
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
+    update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
+}
+
+script_body() {
+    $NFT -f /dev/stdin <<'NFT_RULES'
+table inet fwf_filter {}
+delete table inet fwf_filter
+
+table inet fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        #
+        # Rule 4 (global)
+        #
+        ip saddr { 61.150.47.112, 192.168.1.0 } ip daddr 1.1.1.1 tcp dport 22 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        ip saddr { 61.150.47.112, 192.168.1.0 } tcp dport 22 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        #
+        # Rule 10 (global)
+        #
+        ip saddr { 61.150.47.112, 192.168.1.0 } ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
+        #
+        # Rule 11 (global)
+        #
+        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 13 (global)
+        #
+        meta l4proto icmp ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 18 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 19 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 0 (global)
+        #
+        # this rule shadows the next.
+        # Note that we add command line
+        # flag -xt to the compiler
+        ip6 saddr fe80::/64 ip6 daddr fe80::21d:9ff:fe8b:8e94 tcp dport 22 ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        ip6 saddr 2001:5c0:0:2::24 ip6 daddr fe80::21d:9ff:fe8b:8e94 tcp dport 22 ct state new counter accept
+        #
+        # Rule 2 (global)
+        #
+        ip6 saddr 3ffe:1200:2001:1:8000::1 tcp dport 22 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
+        #
+        # Rule 3 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2000::/36, 3ffe:1200:2001:1:8000::1 } ip6 daddr fe80::21d:9ff:fe8b:8e94 tcp dport 22 ct state new counter log prefix "RULE 3 -- ACCEPT " level info accept
+        #
+        # Rule 4 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2001:1:8000::1 } ip6 daddr fe80::21d:9ff:fe8b:8e94 tcp dport 22 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
+        #
+        # Rule 5 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2000::/36, 3ffe:1200:2001:1:8000::1 } tcp dport 22 ct state new counter log prefix "RULE 5 -- ACCEPT " level info accept
+        #
+        # Rule 6 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2001:1:8000::1 } tcp dport 22 ct state new counter log prefix "RULE 6 -- ACCEPT " level info accept
+        #
+        # Rule 7 (global)
+        #
+        ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        #
+        # Rule 8 (global)
+        #
+        ip6 saddr fe80::/64 ct state new counter log prefix "RULE 8 -- ACCEPT " level info accept
+        #
+        # Rule 9 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2000::/36, 3ffe:1200:2001:1:8000::1 } ct state new counter log prefix "RULE 9 -- ACCEPT " level info accept
+        #
+        # Rule 10 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2001:1:8000::1 } ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
+        #
+        # Rule 14 (global)
+        #
+        # # firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule 16 (global)
+        #
+        # # firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule 17 (global)
+        #
+        # # firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule Policy_ipv6 3 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 saddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 daddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 5 (global)
+        #
+        # for bug 2462927, ipv6 networks with /32
+        # netmask
+        ip6 saddr { 2001:db8::, 3fff:ffff::/16, 3fff:ffff:: } counter drop
+        #
+        # Rule Policy_ipv6 6 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 7 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 8 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 9 (global)
+        #
+        tcp dport 993 ct state new counter accept
+        # # firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 10 (global)
+        #
+        tcp dport { 3268, 3269, 445, 42, 53, 88, 389, 636, 135, 139 } ct state new counter accept
+        udp dport { 53, 88, 138, 137 } ct state new counter accept
+        # # firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 11 (global)
+        #
+        meta l4proto ipv6-icmp counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        #
+        # Rule 10 (global)
+        #
+        ip saddr { 61.150.47.112, 192.168.1.0 } ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
+        #
+        # Rule 13 (global)
+        #
+        meta l4proto icmp ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 18 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 19 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip6 saddr fe80::/64 ct state new counter log prefix "RULE 8 -- ACCEPT " level info accept
+        #
+        # Rule 9 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2000::/36, 3ffe:1200:2001:1:8000::1 } ct state new counter log prefix "RULE 9 -- ACCEPT " level info accept
+        #
+        # Rule 10 (global)
+        #
+        ip6 saddr { 2001:5c0:0:2::24, 3ffe:1200:2001:1:8000::1 } ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
+        #
+        # Rule 14 (global)
+        #
+        # # firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule 16 (global)
+        #
+        # # firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule 17 (global)
+        #
+        # # firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule Policy_ipv6 3 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 saddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 daddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 8 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 13 (global)
+        #
+        meta l4proto ipv6-icmp counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+        ct state invalid counter log prefix "INVALID " drop
+        #
+        # Rule 11 (global)
+        #
+        ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 13 (global)
+        #
+        meta l4proto icmp ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 18 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip saddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 19 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip daddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip6 saddr fe80::/64 ct state new counter log prefix "RULE 8 -- ACCEPT " level info accept
+        #
+        # Rule 14 (global)
+        #
+        # # firewall-ipv6-1:Policy:14: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule 16 (global)
+        #
+        # # firewall-ipv6-1:Policy:16: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule 17 (global)
+        #
+        # # firewall-ipv6-1:Policy:17: warning: Making rule stateless because it matches ICMPv6
+        icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule Policy_ipv6 0 (global)
+        #
+        # for bug 2047082
+        ct state new counter accept
+        #
+        # Rule Policy_ipv6 3 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 saddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 4 (global)
+        #
+        # INPUT, OUTPUT, FORWARD
+        ip6 daddr fe80::/64 ct state new counter accept
+        #
+        # Rule Policy_ipv6 6 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+        ip6 daddr fe80::21d:9ff:fe8b:8e94 meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 8 (global)
+        #
+        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 11 (global)
+        #
+        ip6 daddr fe80::21d:9ff:fe8b:8e94 meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 13 (global)
+        #
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 14 (global)
+        #
+        ip6 saddr fe80::21d:9ff:fe8b:8e94 ct state new counter accept
+    }
+}
+
+NFT_RULES
+}
+
+ip_forward() {
+    :
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+    echo 1 > /proc/sys/net/ipv6/conf/all/forwarding
+}
+
+flush_own_tables() {
+    # remove only our own tables, leaving other tools' tables untouched
+    $NFT delete table inet fwf_filter 2>/dev/null
+    $NFT delete table ip fwf_filter 2>/dev/null
+    $NFT delete table inet fwf_nat 2>/dev/null
+    $NFT delete table ip fwf_nat 2>/dev/null
+    $NFT delete table ip6 fwf_nat 2>/dev/null
+}
+
+flush_legacy_iptables() {
+    # Remove stale legacy (xtables) iptables rules left over from a
+    # previous iptables-based policy. "nft flush ruleset" only clears
+    # the nft backend, so on systems still using the legacy backend the
+    # old iptables rules would otherwise survive and shadow the nft
+    # rules. All filtering is delegated to nftables, so the built-in
+    # policies are reset to ACCEPT and every chain is flushed/deleted.
+    for ipt in iptables ip6tables; do
+        command -v "$ipt" >/dev/null 2>&1 || continue
+        "$ipt" -P INPUT ACCEPT 2>/dev/null
+        "$ipt" -P FORWARD ACCEPT 2>/dev/null
+        "$ipt" -P OUTPUT ACCEPT 2>/dev/null
+        for table in filter nat mangle raw; do
+            "$ipt" -t "$table" -F 2>/dev/null
+            "$ipt" -t "$table" -X 2>/dev/null
+        done
+    done
+}
+
+block_action() {
+    $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
+    # block all traffic by default (always use inet to block both IPv4 and IPv6)
+    $NFT add table inet fwf_filter
+    $NFT add chain inet fwf_filter input '{ type filter hook input priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter forward '{ type filter hook forward priority 0; policy drop; }'
+    $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
+    # backup ssh access
+    $NFT add rule inet fwf_filter input tcp dport 22 ip saddr 1.1.1.2 ct state new,established accept
+    $NFT add rule inet fwf_filter output tcp sport 22 ip daddr 1.1.1.2 ct state established accept
+}
+
+stop_action() {
+    $NFT flush ruleset 2>/dev/null
+    flush_legacy_iptables
+}
+
+check_nft_status() {
+    tables=$($NFT list tables 2>/dev/null)
+    if echo "$tables" | grep -q 'fwf_filter'; then
+        return 0
+    fi
+    return 3
+}
+
+status_action() {
+    check_nft_status
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        echo "Firewall is active"
+        return 0
+    fi
+    echo "Firewall is not configured"
+    exit 3
+}
+
+# See how we were called.
+# For backwards compatibility missing argument is equivalent to 'start'
+
+cmd=$1
+test -z "$cmd" && {
+    cmd="start"
+}
+
+case "$cmd" in
+    start)
+        log "Activating firewall script generated TIMESTAMP"
+        check_nft
+        prolog_commands
+        configure_interfaces
+        verify_interfaces
+        stop_action
+        script_body || run_epilog_and_exit 1
+        ip_forward
+        epilog_commands
+        log "Firewall script is done"
+        RETVAL=$?
+        ;;
+
+    stop)
+        check_nft
+        stop_action
+        RETVAL=$?
+        ;;
+
+    status)
+        check_nft
+        status_action
+        RETVAL=$?
+        ;;
+
+    block)
+        check_nft
+        block_action
+        RETVAL=$?
+        ;;
+
+    reload)
+        $0 stop
+        $0 start
+        RETVAL=$?
+        ;;
+
+    interfaces)
+        configure_interfaces
+        RETVAL=$?
+        ;;
+
+    test_interfaces)
+        FWBDEBUG="echo"
+        configure_interfaces
+        RETVAL=$?
+        ;;
+
+    *)
+        echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        ;;
+
+esac
+
+exit "$RETVAL"

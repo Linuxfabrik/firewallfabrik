@@ -182,3 +182,18 @@ class TestAddrContains:
         net = _add_network_ipv6(session, 'fe80::', 64)
         host = _add_address(session, '2001:db8::1')
         assert _addr_contains(net, host) is False
+
+    def test_mixed_family_never_contains(self, session):
+        # An IPv4 and an IPv6 element never contain one another; comparing
+        # them must return False, not raise "not of the same version" (which
+        # would abort the whole shadowing pass).
+        v4_net = _add_network(session, '1.1.1.0', '255.255.255.0')
+        v6_host = _add_address(session, 'fe80::1')
+        assert _addr_contains(v4_net, v6_host) is False
+        assert _addr_contains(v6_host, v4_net) is False
+
+    def test_mixed_family_range_never_contains(self, session):
+        v4_range = _add_range(session, '1.1.1.10', '1.1.1.20')
+        v6_net = _add_network_ipv6(session, 'fe80::', 64)
+        assert _addr_contains(v4_range, v6_net) is False
+        assert _addr_contains(v6_net, v4_range) is False

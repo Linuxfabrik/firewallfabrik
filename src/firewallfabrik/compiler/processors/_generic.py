@@ -922,6 +922,12 @@ def _addr_contains(a1, a2) -> bool:
     if r1 is None or r2 is None:
         return False
 
+    # Addresses of different families never contain one another. Comparing an
+    # IPv4Address with an IPv6Address raises TypeError ("not of the same
+    # version"), which would otherwise abort the whole shadowing pass.
+    if r1[0].version != r2[0].version:
+        return False
+
     return r1[0] <= r2[0] and r2[1] <= r1[1]
 
 
