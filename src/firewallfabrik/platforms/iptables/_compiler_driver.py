@@ -41,7 +41,10 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.platforms.iptables import __compiler_version__
-from firewallfabrik.platforms.iptables._utils import get_iptables_version
+from firewallfabrik.platforms.iptables._utils import (
+    get_iptables_version,
+    get_wait_option,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -50,26 +53,6 @@ if TYPE_CHECKING:
 
 AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
-
-
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
 
 
 def _indent(n: int, text: str) -> str:
@@ -558,15 +541,7 @@ class CompilerDriver_ipt(CompilerDriver):
                 # Coexistence mode: load configlets for prefixed chain
                 # management and wire setup_fwf_jumps into script_body.
                 real_version = get_iptables_version(fw)
-                opt_wait = (
-                    '-w'
-                    if _version_compare(
-                        real_version,
-                        '1.4.20',
-                    )
-                    >= 0
-                    else ''
-                )
+                opt_wait = get_wait_option(real_version)
 
                 # Always include coexistence helper functions so that
                 # switching flush_ruleset on/off produces minimal diffs.

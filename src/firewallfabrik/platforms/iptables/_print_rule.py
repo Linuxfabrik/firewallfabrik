@@ -52,6 +52,8 @@ from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
+    get_wait_option,
+    version_compare,
 )
 
 if TYPE_CHECKING:
@@ -81,26 +83,6 @@ _LOG_LEVEL_MAP = {
 }
 
 
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
-
-
 class PrintRule(PolicyRuleProcessor):
     """Generates iptables shell commands from compiled policy rules.
 
@@ -118,7 +100,7 @@ class PrintRule(PolicyRuleProcessor):
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
         self.version = get_iptables_version(self.compiler.fw)
-        self.have_m_iprange = _version_compare(self.version, '1.2.11') >= 0
+        self.have_m_iprange = version_compare(self.version, '1.2.11') >= 0
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -201,7 +183,7 @@ class PrintRule(PolicyRuleProcessor):
         self, option: str, rule: CompRule, slot: str, arg: str
     ) -> str:
         """Print --option with negation, respecting iptables version."""
-        if _version_compare(self.version, '1.4.3') >= 0:
+        if version_compare(self.version, '1.4.3') >= 0:
             return f'{self._print_single_object_negation(rule, slot)}{option} {arg} '
         else:
             return f'{option} {self._print_single_object_negation(rule, slot)}{arg} '
@@ -244,9 +226,9 @@ class PrintRule(PolicyRuleProcessor):
             ipv6 = ipt_comp.ipv6_policy
             iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
 
-            opt_wait = ''
-            if _version_compare(self.version, '1.4.20') >= 0:
-                opt_wait = '-w '
+            opt_wait = get_wait_option(self.version)
+            if opt_wait:
+                opt_wait += ' '
 
             my_table = getattr(ipt_comp, 'my_table', 'filter')
             table_opt = f' -t {my_table}' if my_table != 'filter' else ''
@@ -697,10 +679,10 @@ class PrintRule(PolicyRuleProcessor):
         new module (>=1.4.3) uses ``--flags`` with comma-separated list.
         """
         if _is_true(data.get('any_opt')):
-            if _version_compare(self.version, '1.4.3') >= 0:
+            if version_compare(self.version, '1.4.3') >= 0:
                 return '-m ipv4options --any'
             return '-m ipv4options --any-opt'
-        if _version_compare(self.version, '1.4.3') >= 0:
+        if version_compare(self.version, '1.4.3') >= 0:
             # New ipv4options module: --flags opt1,opt2,...
             options = []
             if _is_true(data.get('lsrr')):
@@ -755,7 +737,7 @@ class PrintRule(PolicyRuleProcessor):
         stateless = rule.get_option('stateless', False)
         force_state = rule.force_state_check
         if not stateless or force_state:
-            if _version_compare(self.version, '1.4.4') >= 0:
+            if version_compare(self.version, '1.4.4') >= 0:
                 state_module_option = 'conntrack --ctstate'
             else:
                 state_module_option = 'state --state'
@@ -928,7 +910,7 @@ class PrintRule(PolicyRuleProcessor):
                         return '--reject-with icmp-host-prohibited'
                     # icmp-admin-prohibited requires iptables >= 1.2.9
                     if 'admin' in s:
-                        if _version_compare(self.version, '1.2.9') < 0:
+                        if version_compare(self.version, '1.2.9') < 0:
                             return ''
                         return '--reject-with icmp-admin-prohibited'
 
@@ -1063,8 +1045,9 @@ class PrintRule(PolicyRuleProcessor):
         ipv6 = ipt_comp.ipv6_policy
         res = '$IP6TABLES ' if ipv6 else '$IPTABLES '
 
-        if _version_compare(self.version, '1.4.20') >= 0:
-            res += '-w '
+        opt_wait = get_wait_option(self.version)
+        if opt_wait:
+            res += f'{opt_wait} '
 
         my_table = getattr(ipt_comp, 'my_table', 'filter')
         if my_table != 'filter':

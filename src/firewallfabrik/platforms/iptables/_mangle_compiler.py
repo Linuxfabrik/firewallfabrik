@@ -23,33 +23,17 @@ from typing import TYPE_CHECKING
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
-from firewallfabrik.platforms.iptables._utils import get_iptables_version
+from firewallfabrik.platforms.iptables._utils import (
+    get_iptables_version,
+    get_wait_option,
+    version_compare,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
     from firewallfabrik.core.objects import Firewall
-
-
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
 
 
 class MangleTableCompiler_ipt(PolicyCompiler_ipt):
@@ -91,7 +75,9 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         ipv6 = self.ipv6_policy
 
         iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
-        opt_wait = '-w ' if _version_compare(version, '1.4.20') >= 0 else ''
+        opt_wait = get_wait_option(version)
+        if opt_wait:
+            opt_wait += ' '
 
         if have_connmark:
             result += (
@@ -111,12 +97,12 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         # emitted on the FORWARD chain (not POSTROUTING) of the mangle
         # table, guarded by the platform's IP-forwarding option.  For
         # IPv6 the TCPMSS target requires ip6tables >= 1.3.8.
-        if _version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
+        if version_compare(version, '1.3.0') >= 0 and self.fw.get_option(
             'clamp_mss_to_mtu'
         ):
             if ipv6:
                 ipforw_raw = self.fw.get_option('linux24_ipv6_forward')
-                min_version_ok = _version_compare(version, '1.3.8') >= 0
+                min_version_ok = version_compare(version, '1.3.8') >= 0
             else:
                 ipforw_raw = self.fw.get_option('linux24_ip_forward')
                 min_version_ok = True

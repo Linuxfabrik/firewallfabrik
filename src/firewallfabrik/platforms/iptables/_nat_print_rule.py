@@ -47,6 +47,8 @@ from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
+    get_wait_option,
+    version_compare,
 )
 
 if TYPE_CHECKING:
@@ -71,26 +73,6 @@ def _bracket_v6(addr_part: str) -> str:
     if ':' not in addr_part:
         return addr_part
     return f'[{addr_part}]'
-
-
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
 
 
 class NATPrintRule(NATRuleProcessor):
@@ -240,7 +222,7 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(addr_part)
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
-            if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
+            if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
                 'ipt_nat_persistent', False
             ):
                 parts.append('--persistent')
@@ -260,7 +242,7 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(addr_part)
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
-            if _version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
+            if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
                 'ipt_nat_persistent', False
             ):
                 parts.append('--persistent')
@@ -294,7 +276,7 @@ class NATPrintRule(NATRuleProcessor):
     def _print_single_option_with_negation(
         self, option: str, rule: CompRule, slot: str, arg: str
     ) -> str:
-        if _version_compare(self.version, '1.4.3') >= 0:
+        if version_compare(self.version, '1.4.3') >= 0:
             return f'{self._print_single_object_negation(rule, slot)}{option} {arg} '
         else:
             return f'{option} {self._print_single_object_negation(rule, slot)}{arg} '
@@ -312,7 +294,9 @@ class NATPrintRule(NATRuleProcessor):
             and ipt_comp.minus_n_commands is not None
             and chain not in ipt_comp.minus_n_commands
         ):
-            opt_wait = '-w ' if _version_compare(self.version, '1.4.20') >= 0 else ''
+            opt_wait = get_wait_option(self.version)
+            if opt_wait:
+                opt_wait += ' '
             ipt_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
             result = f'{ipt_cmd} {opt_wait}-t nat -N {chain}\n'
             ipt_comp.minus_n_commands[chain] = True
@@ -323,7 +307,9 @@ class NATPrintRule(NATRuleProcessor):
     def _start_rule_line(self) -> str:
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
         ipt_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
-        opt_wait = '-w ' if _version_compare(self.version, '1.4.20') >= 0 else ''
+        opt_wait = get_wait_option(self.version)
+        if opt_wait:
+            opt_wait += ' '
         return f'{ipt_cmd} {opt_wait}-t nat -A '
 
     def _end_rule_line(self) -> str:
@@ -600,11 +586,11 @@ class NATPrintRule(NATRuleProcessor):
         if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
             parts.append('-f')
         if _is_true(data.get('any_opt')):
-            if _version_compare(self.version, '1.4.3') >= 0:
+            if version_compare(self.version, '1.4.3') >= 0:
                 parts.append('-m ipv4options --any')
             else:
                 parts.append('-m ipv4options --any-opt')
-        elif _version_compare(self.version, '1.4.3') >= 0:
+        elif version_compare(self.version, '1.4.3') >= 0:
             options = []
             if _is_true(data.get('lsrr')):
                 options.append('lsrr')

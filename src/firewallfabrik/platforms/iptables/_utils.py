@@ -47,6 +47,45 @@ def get_iptables_version(fw) -> str:
     return fw.version or DEFAULT_IPTABLES_VERSION
 
 
+def version_compare(v1: str, v2: str) -> int:
+    """Compare two version strings. Returns -1, 0, or 1."""
+
+    def _normalize(v):
+        return [int(x) for x in v.split('.') if x.isdigit()]
+
+    parts1 = _normalize(v1) if v1 else [0]
+    parts2 = _normalize(v2) if v2 else [0]
+    for a, b in zip(parts1, parts2, strict=False):
+        if a < b:
+            return -1
+        if a > b:
+            return 1
+    if len(parts1) < len(parts2):
+        return -1
+    if len(parts1) > len(parts2):
+        return 1
+    return 0
+
+
+# Seconds the generated script waits for the xtables lock.  A bare "-w"
+# makes iptables block indefinitely (xtables_lock() only arms the alarm
+# for a positive wait), which would stall an unattended rollout instead
+# of failing; with no "-w" at all iptables gives up on the first lock
+# collision.  Waiting a few seconds and then aborting with a clear
+# message is the useful behaviour for a deployment script.  The bounded
+# form needs iptables 1.6.0; older releases only understand a bare "-w".
+IPTABLES_LOCK_WAIT_SECONDS = 5
+
+
+def get_wait_option(version: str) -> str:
+    """Return the xtables lock option, empty when the version lacks it."""
+    if version_compare(version, '1.6.0') >= 0:
+        return f'-w {IPTABLES_LOCK_WAIT_SECONDS}'
+    if version_compare(version, '1.4.20') >= 0:
+        return '-w'
+    return ''
+
+
 def get_address_table_var_name(at: AddressTable) -> str:
     """Generate a shell variable name for an address table."""
     name = at.name

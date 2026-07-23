@@ -29,30 +29,12 @@ from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
 from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
+    get_wait_option,
+    version_compare,
 )
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
-
-
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
 
 
 class OSConfigurator_linux24(OSConfigurator):
@@ -105,7 +87,7 @@ class OSConfigurator_linux24(OSConfigurator):
         self.known_interfaces: list[str] = []
 
         version = get_iptables_version(fw)
-        if _version_compare(version, '1.4.1.1') >= 0:
+        if version_compare(version, '1.4.1.1') >= 0:
             self.using_ipset = bool(fw.get_option('use_m_set'))
 
     def my_platform_name(self) -> str:
@@ -192,7 +174,7 @@ class OSConfigurator_linux24(OSConfigurator):
         conntrack = Configlet('linux24', 'conntrack')
         conntrack.collapse_empty_strings(True)
 
-        if _version_compare(version, '1.4.0') >= 0:
+        if version_compare(version, '1.4.0') >= 0:
             conntrack.set_variable('iptables_version_ge_1_4', '1')
             conntrack.set_variable('iptables_version_lt_1_4', '0')
         else:
@@ -274,10 +256,7 @@ class OSConfigurator_linux24(OSConfigurator):
         # Reset iptables
         version = get_iptables_version(self.fw)
         reset = Configlet('linux24', 'reset_iptables')
-        if _version_compare(version, '1.4.20') >= 0:
-            reset.set_variable('opt_wait', '-w')
-        else:
-            reset.set_variable('opt_wait', '')
+        reset.set_variable('opt_wait', get_wait_option(version))
         parts.append(reset.expand())
 
         # Update addresses

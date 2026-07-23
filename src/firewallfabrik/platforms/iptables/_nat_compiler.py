@@ -57,32 +57,15 @@ from firewallfabrik.core.objects import (
     TCPUDPService,
     UDPService,
 )
-from firewallfabrik.platforms.iptables._utils import get_iptables_version
+from firewallfabrik.platforms.iptables._utils import (
+    get_iptables_version,
+    version_compare,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
-
-
-def _version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
-
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
-
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
-        if a < b:
-            return -1
-        if a > b:
-            return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
-    return 0
 
 
 # Module-level temp chain counter
@@ -142,7 +125,7 @@ class NATCompiler_ipt(NATCompiler):
 
         # ipset usage flag
         self.using_ipset: bool = False
-        if _version_compare(self.version, '1.4.1.1') >= 0:
+        if version_compare(self.version, '1.4.1.1') >= 0:
             self.using_ipset = bool(fw.get_option('use_m_set'))
 
     @staticmethod
