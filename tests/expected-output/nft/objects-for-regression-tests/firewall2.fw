@@ -819,15 +819,15 @@ table ip fwf_nat {
         #
         # Rule 50 (NAT)
         #
-        counter redirect to :9040
+        meta l4proto tcp counter redirect to :9040
         #
         # Rule 51 (NAT)
         #
-        counter redirect to :9040
+        meta l4proto tcp counter redirect to :9040
         #
         # Rule 52 (NAT)
         #
-        counter redirect to :53
+        meta l4proto udp counter redirect to :53
     }
 
     chain postrouting {

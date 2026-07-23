@@ -21,7 +21,8 @@ Generates nft NAT rule statements like:
 from __future__ import annotations
 
 import ipaddress
-from typing import TYPE_CHECKING, cast
+import re
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
@@ -126,6 +127,9 @@ class NATPrintRule_nft(NATRuleProcessor):
         # per-rule counters (iptables-translate emits `... counter snat to`).
         nat_action = self._print_nat_action(rule)
         if nat_action:
+            l4proto_prefix = self._nat_l4proto_prefix(rule, parts)
+            if l4proto_prefix:
+                parts.append(l4proto_prefix)
             parts.append('counter')
             parts.append(nat_action)
 
@@ -470,6 +474,44 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         mapping = ', '.join(entries)
         return f'dnat to numgen inc mod {count} map {{ {mapping} }}'
+
+    # A transport protocol is already constrained when the assembled match
+    # carries a tcp/udp/sctp/dccp keyword, an explicit `meta l4proto`, or the
+    # merged `th sport`/`th dport` matcher.
+    _HAS_L4PROTO_RE: ClassVar[re.Pattern] = re.compile(
+        r'\b(?:tcp|udp|sctp|dccp|udplite)\b|l4proto|\bth [sd]port\b'
+    )
+
+    def _nat_l4proto_prefix(self, rule: CompRule, existing_parts: list[str]) -> str:
+        """Return a `meta l4proto <proto>` match to inject before the action.
+
+        nftables rejects a port mapping such as ``redirect to :53`` or
+        ``dnat to 10.0.0.1:80`` unless a transport-protocol match precedes
+        it.  The port comes from the translated service, which also pins the
+        protocol; when the rule's own match carries no tcp/udp/l4proto (for
+        example a UserService REDIRECT whose only match is on the owner),
+        derive the protocol from the translated service and inject it so the
+        ruleset loads.  Mirrors the ``-p tcp`` / ``-p udp`` the iptables
+        compiler now emits for the same rules.
+        """
+        nft_comp = cast('NATCompiler_nft', self.compiler)
+        rt = rule.nat_rule_type
+        tsrv = nft_comp.get_first_tsrv(rule)
+        if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
+            ports = self._print_translated_ports(tsrv, src=True)
+        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
+            ports = self._print_translated_ports(tsrv, src=False)
+        else:
+            ports = ''
+        if not ports:
+            return ''
+        if self._HAS_L4PROTO_RE.search(' '.join(existing_parts)):
+            return ''
+        if isinstance(tsrv, TCPService):
+            return 'meta l4proto tcp'
+        if isinstance(tsrv, UDPService):
+            return 'meta l4proto udp'
+        return ''
 
     def _print_translated_ports(self, tsrv, src: bool = False) -> str:
         """Print translated ports for NAT."""

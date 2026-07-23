@@ -157,6 +157,14 @@ class NATPrintRule(NATRuleProcessor):
         if osrv:
             cmd += self._print_protocol(osrv)
 
+        # A REDIRECT / DNAT / SNAT port mapping requires `-p tcp` or
+        # `-p udp`; iptables rejects `--to-ports` / `:port` without it. When
+        # the rule's own service carries no protocol (for example a
+        # UserService REDIRECT, whose only match is on the owner), take the
+        # protocol from the translated service so the rule is valid.
+        if '-p ' not in cmd:
+            cmd += self._nat_l4proto_option(rule)
+
         cmd += self._print_multiport(rule)
 
         # OSrc
@@ -372,6 +380,31 @@ class NATPrintRule(NATRuleProcessor):
         if name.endswith('*'):
             name = name[:-1] + '+'
         return name
+
+    def _nat_l4proto_option(self, rule: CompRule) -> str:
+        """Return `-p tcp `/`-p udp ` for a port mapping that lacks a protocol.
+
+        REDIRECT (`--to-ports`), and DNAT/SNAT that translate a port, need an
+        explicit protocol; the port comes from the translated service, which
+        also pins the protocol. Mirrors the `meta l4proto` the nftables
+        compiler injects for the same rules.
+        """
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
+        rt = rule.nat_rule_type
+        tsrv = ipt_comp.get_first_tsrv(rule)
+        if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
+            has_port = bool(self._print_snat_ports(tsrv)) if tsrv else False
+        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
+            has_port = bool(self._print_dnat_ports(tsrv)) if tsrv else False
+        else:
+            has_port = False
+        if not has_port:
+            return ''
+        if isinstance(tsrv, TCPService):
+            return '-p tcp -m tcp '
+        if isinstance(tsrv, UDPService):
+            return '-p udp -m udp '
+        return ''
 
     def _print_protocol(self, srv) -> str:
         if isinstance(srv, CustomService):
