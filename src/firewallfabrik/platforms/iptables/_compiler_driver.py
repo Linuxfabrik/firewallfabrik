@@ -379,6 +379,12 @@ class CompilerDriver_ipt(CompilerDriver):
 
                     routing_output = routing_compiler.output.getvalue()
 
+                    # Configlet.expand() drops the trailing newline of the
+                    # rule block, so the first routing command would be
+                    # appended to the last iptables command.
+                    if routing_output and not generated_script.endswith('\n'):
+                        generated_script += '\n'
+
                     if routing_compiler.get_errors() or routing_compiler.get_warnings():
                         self.all_errors.extend(routing_compiler.get_errors())
                         self.all_warnings.extend(routing_compiler.get_warnings())
