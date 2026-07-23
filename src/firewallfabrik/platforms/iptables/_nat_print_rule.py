@@ -401,7 +401,16 @@ class NATPrintRule(NATRuleProcessor):
             code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
             if '-p ' in code:
                 return ''
-            return ''
+            proto = srv.get_protocol_name()
+            if not proto or proto == 'any':
+                return ''
+            # The code fragment of a custom service may use a match that
+            # needs the protocol declared first, "-m tcp --tcp-flags" for
+            # example.  The service carries the protocol, so emit it.
+            res = f'-p {proto} '
+            if proto in ('tcp', 'udp'):
+                res += f'-m {proto} '
+            return res
         if isinstance(srv, (TagService, UserService)):
             return ''
         if isinstance(srv, TCPService):

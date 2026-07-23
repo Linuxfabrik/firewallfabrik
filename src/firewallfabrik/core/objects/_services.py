@@ -145,8 +145,12 @@ class Service(Base):
     }
 
     def get_protocol_name(self) -> str:
-        """Return the protocol name string for this service type."""
-        if isinstance(self, IPService):
+        """Return the protocol name string for this service type.
+
+        A CustomService carries its protocol in the same attribute as an
+        IPService, so both are resolved the same way.
+        """
+        if isinstance(self, (CustomService, IPService)):
             proto = self._ipservice_protocol_str()
             if proto:
                 return proto

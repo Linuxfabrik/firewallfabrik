@@ -12,6 +12,7 @@
 #  https://trac.torproject.org/projects/tor/wiki/TheOnionRouter/TransparentProxy
 #  See ticket 1685
 #
+# Rule 2 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
 # Rule 1 (global): Branch action not yet supported by nftables compiler
@@ -299,10 +300,6 @@ table ip fwf_nat {
         meta l4proto udp counter redirect to :53
         #
         # Rule 1 (NAT)
-        #
-        meta l4proto tcp counter redirect to :9040
-        #
-        # Rule 2 (NAT)
         #
         meta l4proto tcp counter redirect to :9040
     }
