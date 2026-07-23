@@ -337,16 +337,6 @@ table inet fwf_filter {
         #
         counter log prefix "RULE 11 -- DENY " level info drop
         #
-        # Rule fw-ipv6-3 9 (global)
-        #
-        # ipv4 address range for bug 2820152
-        ip6 daddr 192.168.1.1-192.168.1.100 counter log prefix "RULE 9 -- DENY " level info drop
-        #
-        # Rule fw-ipv6-3 10 (global)
-        #
-        # ipv4 address range for bug 2820152
-        ip6 daddr 255.255.255.255 counter log prefix "RULE 10 -- DENY " level info drop
-        #
         # Rule fw-ipv6-3 11 (global)
         #
         counter log prefix "RULE 11 -- DENY " level info drop
@@ -402,16 +392,6 @@ table inet fwf_filter {
         #
         # for bug 2047082
         ct state new counter accept
-        #
-        # Rule fw-ipv6-3 9 (global)
-        #
-        # ipv4 address range for bug 2820152
-        ip6 daddr 192.168.1.1-192.168.1.100 counter log prefix "RULE 9 -- DENY " level info drop
-        #
-        # Rule fw-ipv6-3 10 (global)
-        #
-        # ipv4 address range for bug 2820152
-        ip6 daddr 255.255.255.255 counter log prefix "RULE 10 -- DENY " level info drop
         #
         # Rule fw-ipv6-3 11 (global)
         #

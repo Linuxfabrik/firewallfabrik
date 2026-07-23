@@ -489,11 +489,17 @@ class DropRulesByAddressFamily(BasicRuleProcessor):
         self._drop_ipv6 = drop_ipv6
 
     def _should_drop(self, obj) -> bool:
-        """Return True if this address object should be dropped."""
+        """Return True if this address object should be dropped.
+
+        Family detection goes through ``is_v4()`` / ``is_v6()`` rather than
+        ``get_address()``: an AddressRange keeps its endpoints in
+        ``start_address`` / ``end_address`` and has an empty
+        ``get_address()``, so gating on that would let a wrong-family range
+        slip through the filter (and render an IPv4 range in an ip6 rule).
+        Objects with no determinable family (e.g. MAC/PhysAddress) report
+        neither v4 nor v6 and are always kept.
+        """
         if not isinstance(obj, Address):
-            return False
-        addr_str = obj.get_address()
-        if not addr_str:
             return False
         if self._drop_ipv6 and obj.is_v6():
             return True

@@ -165,12 +165,22 @@ class Address(Base):
             return self.end_address.get('address', '')
         return ''
 
+    def _family_address(self) -> str:
+        """Return a representative address string for family detection.
+
+        AddressRange stores its endpoints in ``start_address`` /
+        ``end_address`` rather than ``inet_addr_mask``, so ``get_address()``
+        is empty for ranges.  Fall back to the range start so family
+        predicates work for every address subtype.
+        """
+        return self.get_address() or self.get_start_address()
+
     def is_v4(self) -> bool:
         """True if this address is an IPv4-family address."""
         if isinstance(self, (IPv4, Network)):
             return True
         # For base Address type, check actual address value
-        addr_str = self.get_address()
+        addr_str = self._family_address()
         if addr_str:
             try:
                 return isinstance(ipaddress.ip_address(addr_str), ipaddress.IPv4Address)
@@ -183,7 +193,7 @@ class Address(Base):
         if isinstance(self, (IPv6, NetworkIPv6)):
             return True
         # For base Address type, check actual address value
-        addr_str = self.get_address()
+        addr_str = self._family_address()
         if addr_str:
             try:
                 return isinstance(ipaddress.ip_address(addr_str), ipaddress.IPv6Address)
