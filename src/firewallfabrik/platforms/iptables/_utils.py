@@ -31,6 +31,21 @@ from firewallfabrik.driver._interface_properties import (
 
 __all__ = ['get_interface_var_name']
 
+# Version assumed for a firewall object that does not pin an iptables
+# version.  The compiler adapts its output to the target version in a
+# number of places (extrapositioned negation since 1.4.3, ``-m conntrack``
+# since 1.4.4, ``-w`` since 1.4.20, ``-m set`` since 1.4.1.1).  Without a
+# pinned version the target is whatever iptables the host runs, which for
+# every currently supported distribution is 1.8.x.  Assuming the oldest
+# known release instead would emit forms that current iptables rejects,
+# such as the intrapositioned ``-s ! 192.0.2.0/24``.
+DEFAULT_IPTABLES_VERSION = '1.8'
+
+
+def get_iptables_version(fw) -> str:
+    """Return the iptables version a firewall is compiled for."""
+    return fw.version or DEFAULT_IPTABLES_VERSION
+
 
 def get_address_table_var_name(at: AddressTable) -> str:
     """Generate a shell variable name for an address table."""

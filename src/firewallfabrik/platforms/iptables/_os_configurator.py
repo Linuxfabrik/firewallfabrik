@@ -26,7 +26,10 @@ from firewallfabrik.compiler._os_configurator import OSConfigurator
 from firewallfabrik.core.objects import Firewall, Interface
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
-from firewallfabrik.platforms.iptables._utils import get_interface_var_name
+from firewallfabrik.platforms.iptables._utils import (
+    get_interface_var_name,
+    get_iptables_version,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -101,7 +104,7 @@ class OSConfigurator_linux24(OSConfigurator):
         self.virtual_addresses_for_nat: dict[str, str] = {}
         self.known_interfaces: list[str] = []
 
-        version = fw.version or ''
+        version = get_iptables_version(fw)
         if _version_compare(version, '1.4.1.1') >= 0:
             self.using_ipset = bool(fw.get_option('use_m_set'))
 
@@ -122,7 +125,7 @@ class OSConfigurator_linux24(OSConfigurator):
         only IPv4 hardening sysctls with an IPv6 equivalent that exists
         on supported kernels (RHEL 8+).
         """
-        version = self.fw.version or ''
+        version = get_iptables_version(self.fw)
         result = ''
 
         # Kernel variables
@@ -269,7 +272,7 @@ class OSConfigurator_linux24(OSConfigurator):
         parts.append(check_utils.expand())
 
         # Reset iptables
-        version = self.fw.version or ''
+        version = get_iptables_version(self.fw)
         reset = Configlet('linux24', 'reset_iptables')
         if _version_compare(version, '1.4.20') >= 0:
             reset.set_variable('opt_wait', '-w')

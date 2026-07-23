@@ -75,6 +75,7 @@ from firewallfabrik.core.objects import (
     UDPService,
     UserService,
 )
+from firewallfabrik.platforms.iptables._utils import get_iptables_version
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -165,7 +166,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.print_rule_processor = None
 
         # iptables version
-        self.version: str = fw.version or ''
+        self.version: str = get_iptables_version(fw)
 
         # Chain prefix for coexistence mode (e.g. 'fwf' → fwf_INPUT)
         self.chain_prefix: str = ''

@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
+from firewallfabrik.platforms.iptables._utils import get_iptables_version
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -86,7 +87,7 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
     ) -> str:
         """Generate automatic rules for the mangle table."""
         result = ''
-        version = self.fw.version or ''
+        version = get_iptables_version(self.fw)
         ipv6 = self.ipv6_policy
 
         iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'

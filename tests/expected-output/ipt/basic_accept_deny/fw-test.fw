@@ -121,34 +121,34 @@ check_tools() {
  find_program "$IP"
 }
 reset_iptables_v4() {
- $IPTABLES -P OUTPUT DROP
- $IPTABLES -P INPUT DROP
- $IPTABLES -P FORWARD DROP
+ $IPTABLES -w -P OUTPUT DROP
+ $IPTABLES -w -P INPUT DROP
+ $IPTABLES -w -P FORWARD DROP
 
  while read -r table; do
- list=$($IPTABLES -t "$table" -L -n)
+ list=$($IPTABLES -w -t "$table" -L -n)
  printf "%s" "$list" | while read -r c chain rest; do
  if test "$c" = "Chain" ; then
- $IPTABLES -t "$table" -F "$chain"
+ $IPTABLES -w -t "$table" -F "$chain"
  fi
  done
- $IPTABLES -t "$table" -X
+ $IPTABLES -w -t "$table" -X
  done < /proc/net/ip_tables_names
 }
 
 reset_iptables_v6() {
- $IP6TABLES -P OUTPUT DROP
- $IP6TABLES -P INPUT DROP
- $IP6TABLES -P FORWARD DROP
+ $IP6TABLES -w -P OUTPUT DROP
+ $IP6TABLES -w -P INPUT DROP
+ $IP6TABLES -w -P FORWARD DROP
 
  while read -r table; do
- list=$($IP6TABLES -t "$table" -L -n)
+ list=$($IP6TABLES -w -t "$table" -L -n)
  printf "%s" "$list" | while read -r c chain rest; do
  if test "$c" = "Chain" ; then
- $IP6TABLES -t "$table" -F "$chain"
+ $IP6TABLES -w -t "$table" -F "$chain"
  fi
  done
- $IP6TABLES -t "$table" -X
+ $IP6TABLES -w -t "$table" -X
  done < /proc/net/ip6_tables_names
 }
 
@@ -259,10 +259,10 @@ reset_fwf_chains_v4() {
  for table in filter nat mangle; do
  # Remove jump rules targeting our prefixed chains from built-in chains.
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
- $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ $IPTABLES -w -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
  | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read -r rulenum; do
- $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ $IPTABLES -w -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
  done
 
@@ -271,15 +271,15 @@ reset_fwf_chains_v4() {
  # fwf_C...) sort alphabetically before their parent chains
  # (fwf_INPUT) -- the delete would fail because the parent still
  # references the sub-chain.
- $IPTABLES -t "$table" -L -n 2>/dev/null \
+ $IPTABLES -w -t "$table" -L -n 2>/dev/null \
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read -r chain; do
- $IPTABLES -t "$table" -F "$chain" 2>/dev/null
+ $IPTABLES -w -t "$table" -F "$chain" 2>/dev/null
  done
- $IPTABLES -t "$table" -L -n 2>/dev/null \
+ $IPTABLES -w -t "$table" -L -n 2>/dev/null \
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read -r chain; do
- $IPTABLES -t "$table" -X "$chain" 2>/dev/null
+ $IPTABLES -w -t "$table" -X "$chain" 2>/dev/null
  done
  done
 }
@@ -289,22 +289,22 @@ reset_fwf_chains_v6() {
 
  for table in filter nat mangle; do
  for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
- $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
+ $IP6TABLES -w -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
  | grep "${prefix}_" | awk '{print $1}' | sort -rn \
  | while read -r rulenum; do
- $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
+ $IP6TABLES -w -t "$table" -D "$chain" "$rulenum" 2>/dev/null
  done
  done
 
- $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ $IP6TABLES -w -t "$table" -L -n 2>/dev/null \
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read -r chain; do
- $IP6TABLES -t "$table" -F "$chain" 2>/dev/null
+ $IP6TABLES -w -t "$table" -F "$chain" 2>/dev/null
  done
- $IP6TABLES -t "$table" -L -n 2>/dev/null \
+ $IP6TABLES -w -t "$table" -L -n 2>/dev/null \
  | grep "^Chain ${prefix}_" | awk '{print $2}' \
  | while read -r chain; do
- $IP6TABLES -t "$table" -X "$chain" 2>/dev/null
+ $IP6TABLES -w -t "$table" -X "$chain" 2>/dev/null
  done
  done
 }
@@ -313,38 +313,38 @@ setup_fwf_jumps_v4() {
  prefix="$1"
 
  # Set built-in chain policies to DROP for security.
- $IPTABLES -P INPUT DROP
- $IPTABLES -P FORWARD DROP
- $IPTABLES -P OUTPUT DROP
+ $IPTABLES -w -P INPUT DROP
+ $IPTABLES -w -P FORWARD DROP
+ $IPTABLES -w -P OUTPUT DROP
 
  # Create our prefixed chains (ignore error if they already exist).
- $IPTABLES -N "${prefix}_INPUT" 2>/dev/null
- $IPTABLES -N "${prefix}_FORWARD" 2>/dev/null
- $IPTABLES -N "${prefix}_OUTPUT" 2>/dev/null
+ $IPTABLES -w -N "${prefix}_INPUT" 2>/dev/null
+ $IPTABLES -w -N "${prefix}_FORWARD" 2>/dev/null
+ $IPTABLES -w -N "${prefix}_OUTPUT" 2>/dev/null
 
  # Insert jump rules at position 1 (top of chain).
  # Tools that start later (Docker, CrowdSec, fail2ban) will insert
  # their own rules at position 1, pushing ours down. Control the
  # evaluation order via systemd unit ordering.
- $IPTABLES -I INPUT 1 -j "${prefix}_INPUT"
- $IPTABLES -I FORWARD 1 -j "${prefix}_FORWARD"
- $IPTABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+ $IPTABLES -w -I INPUT 1 -j "${prefix}_INPUT"
+ $IPTABLES -w -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IPTABLES -w -I OUTPUT 1 -j "${prefix}_OUTPUT"
 }
 
 setup_fwf_jumps_v6() {
  prefix="$1"
 
- $IP6TABLES -P INPUT DROP
- $IP6TABLES -P FORWARD DROP
- $IP6TABLES -P OUTPUT DROP
+ $IP6TABLES -w -P INPUT DROP
+ $IP6TABLES -w -P FORWARD DROP
+ $IP6TABLES -w -P OUTPUT DROP
 
- $IP6TABLES -N "${prefix}_INPUT" 2>/dev/null
- $IP6TABLES -N "${prefix}_FORWARD" 2>/dev/null
- $IP6TABLES -N "${prefix}_OUTPUT" 2>/dev/null
+ $IP6TABLES -w -N "${prefix}_INPUT" 2>/dev/null
+ $IP6TABLES -w -N "${prefix}_FORWARD" 2>/dev/null
+ $IP6TABLES -w -N "${prefix}_OUTPUT" 2>/dev/null
 
- $IP6TABLES -I INPUT 1 -j "${prefix}_INPUT"
- $IP6TABLES -I FORWARD 1 -j "${prefix}_FORWARD"
- $IP6TABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
+ $IP6TABLES -w -I INPUT 1 -j "${prefix}_INPUT"
+ $IP6TABLES -w -I FORWARD 1 -j "${prefix}_FORWARD"
+ $IP6TABLES -w -I OUTPUT 1 -j "${prefix}_OUTPUT"
 }
 
 check_file() {
@@ -394,9 +394,9 @@ script_body() {
 
  # ================ Table 'filter', automatic rules
  # accept established sessions
- $IPTABLES -A fwf_INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A fwf_OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
- $IPTABLES -A fwf_FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A fwf_FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
  # ================ Table 'filter', rule set Policy
  #
@@ -404,29 +404,29 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A fwf_INPUT -p tcp -m tcp -s 192.168.1.0/24 -d 203.0.113.1 --dport 22 -m state --state NEW -j ACCEPT
- $IPTABLES -A fwf_INPUT -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.1 --dport 22 -m state --state NEW -j ACCEPT
+ $IPTABLES -w -A fwf_INPUT -p tcp -m tcp -s 192.168.1.0/24 -d 203.0.113.1 --dport 22 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A fwf_INPUT -p tcp -m tcp -s 192.168.1.0/24 -d 192.168.1.1 --dport 22 -m conntrack --ctstate NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -A fwf_INPUT -p icmp -m icmp -d 203.0.113.1 --icmp-type 8/0 -m state --state NEW -j ACCEPT
- $IPTABLES -A fwf_INPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m state --state NEW -j ACCEPT
+ $IPTABLES -w -A fwf_INPUT -p icmp -m icmp -d 203.0.113.1 --icmp-type 8/0 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A fwf_INPUT -p icmp -m icmp -d 192.168.1.1 --icmp-type 8/0 -m conntrack --ctstate NEW -j ACCEPT
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A fwf_INPUT -m state --state NEW -j DROP
- $IPTABLES -A fwf_FORWARD -i + -m state --state NEW -j DROP
+ $IPTABLES -w -A fwf_INPUT -m conntrack --ctstate NEW -j DROP
+ $IPTABLES -w -A fwf_FORWARD -i + -m conntrack --ctstate NEW -j DROP
  #
  # Rule 3 (global)
  #
  echo "Rule 3 (global)"
  #
- $IPTABLES -A fwf_OUTPUT -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
- $IPTABLES -A fwf_FORWARD -s 192.168.1.0/24 -d 203.0.113.42 -m state --state NEW -j ACCEPT
+ $IPTABLES -w -A fwf_OUTPUT -s 192.168.1.0/24 -d 203.0.113.42 -m conntrack --ctstate NEW -j ACCEPT
+ $IPTABLES -w -A fwf_FORWARD -s 192.168.1.0/24 -d 203.0.113.42 -m conntrack --ctstate NEW -j ACCEPT
 }
 
 ip_forward() {
@@ -445,19 +445,19 @@ block_action() {
 
 stop_action() {
  reset_all
- $IPTABLES -P OUTPUT ACCEPT
- $IPTABLES -P INPUT ACCEPT
- $IPTABLES -P FORWARD ACCEPT
- $IP6TABLES -P OUTPUT ACCEPT
- $IP6TABLES -P INPUT ACCEPT
- $IP6TABLES -P FORWARD ACCEPT
+ $IPTABLES -w -P OUTPUT ACCEPT
+ $IPTABLES -w -P INPUT ACCEPT
+ $IPTABLES -w -P FORWARD ACCEPT
+ $IP6TABLES -w -P OUTPUT ACCEPT
+ $IP6TABLES -w -P INPUT ACCEPT
+ $IP6TABLES -w -P FORWARD ACCEPT
 }
 
 status_action() {
  # Coexistence mode: check for FirewallFabrik's own prefixed chains.
  # Counting all chains would give false positives when Docker,
  # CrowdSec or fail2ban create their own chains.
- $IPTABLES -L -n 2>/dev/null | grep -q "^Chain fwf_" && {
+ $IPTABLES -w -L -n 2>/dev/null | grep -q "^Chain fwf_" && {
  echo "Firewall is active"
  return 0
  }

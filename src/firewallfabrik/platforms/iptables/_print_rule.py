@@ -49,7 +49,10 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
-from firewallfabrik.platforms.iptables._utils import get_interface_var_name
+from firewallfabrik.platforms.iptables._utils import (
+    get_interface_var_name,
+    get_iptables_version,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -114,7 +117,7 @@ class PrintRule(PolicyRuleProcessor):
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
-        self.version = self.compiler.fw.version or ''
+        self.version = get_iptables_version(self.compiler.fw)
         self.have_m_iprange = _version_compare(self.version, '1.2.11') >= 0
 
     def process_next(self) -> bool:

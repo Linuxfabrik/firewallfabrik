@@ -44,7 +44,10 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
-from firewallfabrik.platforms.iptables._utils import get_interface_var_name
+from firewallfabrik.platforms.iptables._utils import (
+    get_interface_var_name,
+    get_iptables_version,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -102,7 +105,7 @@ class NATPrintRule(NATRuleProcessor):
         self.version: str = ''
 
     def initialize(self) -> None:
-        self.version = self.compiler.fw.version or ''
+        self.version = get_iptables_version(self.compiler.fw)
 
     def _initialize_minus_n_tracker(self) -> None:
         ipt_comp = cast('NATCompiler_ipt', self.compiler)

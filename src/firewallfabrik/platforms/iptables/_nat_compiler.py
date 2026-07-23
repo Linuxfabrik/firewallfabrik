@@ -57,6 +57,7 @@ from firewallfabrik.core.objects import (
     TCPUDPService,
     UDPService,
 )
+from firewallfabrik.platforms.iptables._utils import get_iptables_version
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -137,7 +138,7 @@ class NATCompiler_ipt(NATCompiler):
         self.print_rule_processor: NATRuleProcessor | None = None
 
         # iptables version
-        self.version: str = fw.version or ''
+        self.version: str = get_iptables_version(fw)
 
         # ipset usage flag
         self.using_ipset: bool = False

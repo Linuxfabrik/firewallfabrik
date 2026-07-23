@@ -41,6 +41,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.platforms.iptables import __compiler_version__
+from firewallfabrik.platforms.iptables._utils import get_iptables_version
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -556,7 +557,7 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 # Coexistence mode: load configlets for prefixed chain
                 # management and wire setup_fwf_jumps into script_body.
-                real_version = fw.version or ''
+                real_version = get_iptables_version(fw)
                 opt_wait = (
                     '-w'
                     if _version_compare(
