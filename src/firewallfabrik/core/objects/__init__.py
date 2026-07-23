@@ -80,6 +80,7 @@ from ._services import (
     TCPUDPService,
     UDPService,
     UserService,
+    is_valid_dscp,
 )
 from ._types import (
     Direction,
@@ -155,6 +156,7 @@ __all__ = [
     'UserService',
     'enable_sqlite_fks',
     'group_membership',
+    'is_valid_dscp',
     'range_to_cidr',
     'rule_elements',
 ]

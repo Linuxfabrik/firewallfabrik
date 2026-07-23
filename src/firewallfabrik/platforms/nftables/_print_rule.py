@@ -51,6 +51,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    is_valid_dscp,
     range_to_cidr,
 )
 
@@ -416,11 +417,22 @@ class PrintRule_nft(PolicyRuleProcessor):
             dscp = data.get('dscp', '')
             af = 'ip6' if self.compiler.ipv6_policy else 'ip'
             if dscp:
-                # nftables' dscp symbols (cs0, af11, be, ef, ...) are
-                # lowercase and resolved case-sensitively; the DiffServ class
-                # names fwbuilder stores are uppercase (BE, CS0, AF11).
-                # Numeric values (0x20) are unaffected by lower().
-                parts.append(f'{af} dscp {dscp.lower()}')
+                if not is_valid_dscp(dscp):
+                    # An unknown DiffServ class (e.g. "AF4") is rejected by
+                    # nftables; report it instead of emitting a rule that
+                    # fails to load.
+                    self.compiler.error(
+                        rule,
+                        f'IP service has an invalid DSCP value "{dscp}"; '
+                        'use a DiffServ class (for example af41) or a numeric '
+                        'code point',
+                    )
+                else:
+                    # nftables' dscp symbols (cs0, af11, be, ef, ...) are
+                    # lowercase and resolved case-sensitively; the DiffServ
+                    # class names fwbuilder stores are uppercase (BE, CS0,
+                    # AF11). Numeric values (0x20) are unaffected by lower().
+                    parts.append(f'{af} dscp {dscp.lower()}')
             elif tos:
                 # nftables has no ToS-byte matcher: the IPv4 ToS field was
                 # split into dscp + ecn, so iptables' `-m tos --tos` has no

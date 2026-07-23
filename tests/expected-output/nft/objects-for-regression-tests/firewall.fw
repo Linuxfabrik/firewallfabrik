@@ -20,6 +20,12 @@
 # Unsupported NAT rule
 # Unsupported NAT rule
 # Rule 22 (NAT): No chain assignment for NAT rule type: None
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
@@ -344,7 +350,8 @@ table ip fwf_filter {
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 counter drop
+        # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+        meta l4proto 0 counter drop
         #
         # Rule 26 (global)
         #
@@ -494,7 +501,8 @@ table ip fwf_filter {
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 counter drop
+        # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+        meta l4proto 0 counter drop
         #
         # Rule 26 (global)
         #
@@ -663,7 +671,8 @@ table ip fwf_filter {
         #
         # Rule 25 (global)
         #
-        meta l4proto 0 ip dscp af4 counter drop
+        # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+        meta l4proto 0 counter drop
         #
         # Rule 26 (global)
         #

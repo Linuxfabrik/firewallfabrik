@@ -247,6 +247,43 @@ class IPService(Service):
     __mapper_args__ = {'polymorphic_identity': 'IPService'}
 
 
+# Symbolic DiffServ code-point class names understood by both the iptables
+# `--dscp-class` option and nftables' `dscp` matcher (RFC 2474 / RFC 2597).
+# Names outside this set are not valid classes; both back ends reject them.
+VALID_DSCP_CLASSES = frozenset(
+    {
+        'af11', 'af12', 'af13',
+        'af21', 'af22', 'af23',
+        'af31', 'af32', 'af33',
+        'af41', 'af42', 'af43',
+        'be',
+        'cs0', 'cs1', 'cs2', 'cs3', 'cs4', 'cs5', 'cs6', 'cs7',
+        'ef',
+    }
+)  # fmt: skip
+
+
+def is_valid_dscp(value: str) -> bool:
+    """Return True if ``value`` is a usable DSCP match value.
+
+    Accepts a numeric code point (decimal or ``0x`` hex) or one of the
+    symbolic DiffServ class names both back ends understand.  An unknown
+    class name (for example ``AF4``, which is missing its drop-precedence
+    digit) is rejected so the compiler can report it instead of emitting an
+    unloadable rule.
+    """
+    if not value:
+        return False
+    normalized = value.strip().lower()
+    if normalized in VALID_DSCP_CLASSES:
+        return True
+    try:
+        int(normalized, 0)
+    except ValueError:
+        return False
+    return True
+
+
 class CustomService(Service):
     """Platform-specific custom service code."""
 

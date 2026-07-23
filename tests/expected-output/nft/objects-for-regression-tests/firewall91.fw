@@ -10,6 +10,8 @@
 #
 #  test for ipv4options module for v1.4.3 and later
 #
+# Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+# Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
 
 FWBDEBUG=""
 
@@ -249,7 +251,8 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        meta l4proto 0 ip dscp af4 counter drop
+        # # Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
+        meta l4proto 0 counter drop
         #
         # Rule 1 (global)
         #

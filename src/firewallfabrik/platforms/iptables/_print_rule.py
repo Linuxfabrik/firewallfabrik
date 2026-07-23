@@ -45,6 +45,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    is_valid_dscp,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
@@ -628,9 +629,19 @@ class PrintRule(PolicyRuleProcessor):
             if tos:
                 parts.append(f'-m tos --tos {tos}')
             elif dscp:
+                if not is_valid_dscp(dscp):
+                    # An unknown DiffServ class (e.g. "AF4") is rejected by
+                    # iptables at load time; report it instead of emitting a
+                    # rule that fails to load.
+                    self.compiler.error(
+                        rule,
+                        f'IP service has an invalid DSCP value "{dscp}"; '
+                        'use a DiffServ class (for example AF41) or a numeric '
+                        'code point',
+                    )
                 # Symbolic DiffServ class names use --dscp-class
                 # (matches fwbuilder PolicyCompiler_PrintRule::_printIP)
-                if dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
+                elif dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
                     parts.append(f'-m dscp --dscp-class {dscp}')
                 else:
                     parts.append(f'-m dscp --dscp {dscp}')
