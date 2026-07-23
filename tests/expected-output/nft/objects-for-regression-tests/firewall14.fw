@@ -233,8 +233,27 @@ configure_interfaces() {
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
+table ip fwf_filter {}
+delete table ip fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state established,related counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+    }
+}
 
 table ip fwf_nat {
     chain prerouting {

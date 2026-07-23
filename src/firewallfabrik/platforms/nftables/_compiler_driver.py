@@ -477,11 +477,23 @@ class CompilerDriver_nft(CompilerDriver):
         forward_policy = 'drop'
 
         # --- Filter table ---
+        # Automatic rules (accept established/related, drop invalid, ...) are
+        # emitted in every filter chain. A firewall may carry no explicit
+        # policy rules yet still rely on these plus the default-drop policy
+        # for its protection, so they too must force the filter table to
+        # exist. Otherwise nftables loads an empty ruleset that filters
+        # nothing (fail-open), unlike the iptables output which always
+        # installs the default-drop chains.
+        auto_rules = oscnf.generate_automatic_rules()
+
         input_rules = ''.join(filter_chains.get('input', []))
         forward_rules = ''.join(filter_chains.get('forward', []))
         output_rules = ''.join(filter_chains.get('output', []))
         have_filter = bool(
-            input_rules.strip() or forward_rules.strip() or output_rules.strip()
+            input_rules.strip()
+            or forward_rules.strip()
+            or output_rules.strip()
+            or auto_rules.strip()
         )
 
         # --- NAT tables (one per address family) ---
@@ -512,9 +524,6 @@ class CompilerDriver_nft(CompilerDriver):
 
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
-
-            # Automatic rules (established/related, etc.)
-            auto_rules = oscnf.generate_automatic_rules()
 
             # Input chain
             out.write('    chain input {\n')
