@@ -40,6 +40,7 @@ from firewallfabrik.core.objects import (
     IPService,
     Network,
     NetworkIPv6,
+    PhysAddress,
     PolicyAction,
     TagService,
     TCPService,
@@ -390,6 +391,8 @@ class PrintRule(PolicyRuleProcessor):
         obj = rule.src[0] if rule.src else None
         if obj is None:
             return ''
+        if isinstance(obj, PhysAddress):
+            return self._print_mac_source(obj, rule)
         if isinstance(obj, AddressRange):
             return self._print_address_range(obj, rule, 'src')
         addr = self._print_addr(obj)
@@ -403,12 +406,34 @@ class PrintRule(PolicyRuleProcessor):
         obj = rule.dst[0] if rule.dst else None
         if obj is None:
             return ''
+        if isinstance(obj, PhysAddress):
+            # The mac module only matches the source address; iptables has
+            # no destination equivalent.
+            self.compiler.error(
+                rule,
+                f'MAC address "{obj.get_address()}" cannot be used as a '
+                'destination, iptables can only match the source MAC',
+            )
+            return ''
         if isinstance(obj, AddressRange):
             return self._print_address_range(obj, rule, 'dst')
         addr = self._print_addr(obj)
         if addr:
             return self._print_single_option_with_negation(' -d', rule, 'dst', addr)
         return ''
+
+    def _print_mac_source(self, obj: PhysAddress, rule: CompRule) -> str:
+        """Print a MAC address match.
+
+        iptables cannot match a MAC with ``-s``, it needs the mac module
+        (fwbuilder does the same in PolicyCompiler_PrintRule.cpp).
+        """
+        mac = obj.get_address()
+        if not mac:
+            self.compiler.warning(rule, 'Empty MAC address in rule')
+            mac = '00:00:00:00:00:00'
+        neg = self._print_single_option_with_negation(' --mac-source', rule, 'src', mac)
+        return f' -m mac{neg}'
 
     def _print_address_range(self, obj: AddressRange, rule: CompRule, slot: str) -> str:
         """Print AddressRange with ``-m iprange``.
@@ -467,7 +492,9 @@ class PrintRule(PolicyRuleProcessor):
         single-stack objects that survived the address-family filter still
         render).
         """
-        addresses = list(addresses)
+        # A MAC address is not an IP address of either family and must
+        # never be picked as one; it is matched separately.
+        addresses = [a for a in addresses if not isinstance(a, PhysAddress)]
         if not addresses:
             return None
         want_v6 = self.compiler.ipv6_policy

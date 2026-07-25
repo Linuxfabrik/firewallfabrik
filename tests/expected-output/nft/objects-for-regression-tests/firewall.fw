@@ -371,7 +371,7 @@ table ip fwf_filter {
         #
         # Rule 32 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ct state new counter accept
         #
         # Rule 34 (global)
         #
@@ -379,7 +379,7 @@ table ip fwf_filter {
         #
         # Rule 35 (global)
         #
-        ip saddr aa:bb:cc:dd:ee:ff ct state new counter accept
+        ether saddr aa:bb:cc:dd:ee:ff ct state new counter accept
         #
         # Rule 40 (global)
         #
@@ -525,7 +525,7 @@ table ip fwf_filter {
         #
         # Rule 33 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 37 (global)
         #
@@ -783,7 +783,7 @@ table ip fwf_nat {
         #
         # Rule 12 (NAT)
         #
-        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.40 tcp dport 25 counter dnat to 192.168.1.10
+        ether saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.40 tcp dport 25 counter dnat to 192.168.1.10
         #
         # Rule 13 (NAT)
         #
@@ -794,10 +794,10 @@ table ip fwf_nat {
         # hsould match mac and ip addresses
         ip saddr 192.168.1.10 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
         ip saddr 192.168.1.10 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:71 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
-        ip saddr 00:10:4b:de:e9:71 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ether saddr 00:10:4b:de:e9:70 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ether saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
+        ether saddr 00:10:4b:de:e9:71 ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
+        ether saddr 00:10:4b:de:e9:71 ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 222.222.222.222 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.10
         #
@@ -881,10 +881,10 @@ table ip fwf_nat {
         # should match mac and ip addresses
         oifname "eth1" ip saddr 192.168.1.10 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
         oifname "eth1" ip saddr 192.168.1.10 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:70 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip saddr 00:10:4b:de:e9:71 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
         oifname "eth1" ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
         oifname "eth1" ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
         #

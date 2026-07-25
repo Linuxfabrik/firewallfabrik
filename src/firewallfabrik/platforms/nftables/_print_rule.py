@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     IPService,
     Network,
     NetworkIPv6,
+    PhysAddress,
     PolicyAction,
     TagService,
     TCPService,
@@ -58,6 +59,34 @@ from firewallfabrik.core.objects import (
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
     from firewallfabrik.platforms.nftables._policy_compiler import PolicyCompiler_nft
+
+
+def get_mac_only_address(obj) -> str:
+    """Return the MAC of an object that has no IP address.
+
+    A PhysAddress, or an Interface / Host whose only address is a MAC, can
+    only be matched on the ethernet header.  Rendering such an object as an
+    IP address produces a ruleset the packet filter refuses to load.
+    """
+    if isinstance(obj, PhysAddress):
+        return obj.get_address() or ''
+    if isinstance(obj, Interface):
+        addresses = list(getattr(obj, 'addresses', []))
+    elif isinstance(obj, Host):
+        addresses = [
+            addr
+            for iface in getattr(obj, 'interfaces', [])
+            if not iface.is_loopback()
+            for addr in getattr(iface, 'addresses', [])
+        ]
+    else:
+        return ''
+    if any(addr.is_v4() or addr.is_v6() for addr in addresses):
+        return ''
+    for addr in addresses:
+        if isinstance(addr, PhysAddress) and addr.get_address():
+            return addr.get_address()
+    return ''
 
 
 class PrintRule_nft(PolicyRuleProcessor):
@@ -264,14 +293,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
 
         neg = '!= ' if rule.src_single_object_negation else ''
-        addrs = [self._print_addr(obj, rule) for obj in rule.src]
-        addrs = [a for a in addrs if a]
-        if not addrs:
-            self.compiler.error(rule, 'Could not resolve any source addresses')
-            return ''
-        if len(addrs) == 1:
-            return f'{af_prefix} saddr {neg}{addrs[0]}'
-        return f'{af_prefix} saddr {neg}{{ {", ".join(addrs)} }}'
+        return self._print_addr_match(rule, rule.src, f'{af_prefix} saddr', neg)
 
     def _print_dst_addr(self, rule: CompRule, af_prefix: str) -> str:
         """Print destination address matching."""
@@ -282,14 +304,44 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
 
         neg = '!= ' if rule.dst_single_object_negation else ''
-        addrs = [self._print_addr(obj, rule) for obj in rule.dst]
-        addrs = [a for a in addrs if a]
-        if not addrs:
-            self.compiler.error(rule, 'Could not resolve any destination addresses')
+        return self._print_addr_match(rule, rule.dst, f'{af_prefix} daddr', neg)
+
+    def _print_addr_match(
+        self, rule: CompRule, objects: list, keyword: str, neg: str
+    ) -> str:
+        """Render an address match, keeping MAC addresses apart.
+
+        A MAC address is not part of the IP header, so it needs its own
+        ``ether saddr`` / ``ether daddr`` match. This is what
+        iptables-translate produces for ``-m mac --mac-source``.
+        """
+        direction = keyword.rsplit(' ', 1)[1]
+        macs = []
+        addrs = []
+        for obj in objects:
+            mac = get_mac_only_address(obj)
+            if mac:
+                macs.append(mac)
+                continue
+            addr = self._print_addr(obj, rule)
+            if addr:
+                addrs.append(addr)
+        parts = []
+        if macs:
+            parts.append(self._match_clause(f'ether {direction}', macs, neg))
+        if addrs:
+            parts.append(self._match_clause(keyword, addrs, neg))
+        if not parts:
+            what = 'source' if direction == 'saddr' else 'destination'
+            self.compiler.error(rule, f'Could not resolve any {what} addresses')
             return ''
-        if len(addrs) == 1:
-            return f'{af_prefix} daddr {neg}{addrs[0]}'
-        return f'{af_prefix} daddr {neg}{{ {", ".join(addrs)} }}'
+        return ' '.join(parts)
+
+    @staticmethod
+    def _match_clause(keyword: str, values: list[str], neg: str) -> str:
+        if len(values) == 1:
+            return f'{keyword} {neg}{values[0]}'
+        return f'{keyword} {neg}{{ {", ".join(values)} }}'
 
     def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""
@@ -346,7 +398,9 @@ class PrintRule_nft(PolicyRuleProcessor):
         single-stack objects that survived the address-family filter still
         render).
         """
-        addresses = list(addresses)
+        # A MAC address is not an IP address of either family and must
+        # never be picked as one; it is matched separately.
+        addresses = [a for a in addresses if not isinstance(a, PhysAddress)]
         if not addresses:
             return None
         want_v6 = self.compiler.ipv6_policy

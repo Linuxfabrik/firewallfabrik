@@ -38,12 +38,14 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    PhysAddress,
     TagService,
     TCPService,
     UDPService,
     UserService,
     range_to_cidr,
 )
+from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -102,7 +104,14 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         # Original source
         osrc = nft_comp.get_first_osrc(rule)
-        if osrc:
+        osrc_mac = get_mac_only_address(osrc) if osrc else ''
+        if osrc_mac:
+            # A MAC address is not part of the IP header and needs its own
+            # match, the same way iptables-translate renders
+            # "-m mac --mac-source".
+            neg = '!= ' if rule.osrc_single_object_negation else ''
+            parts.append(f'ether saddr {neg}{osrc_mac}')
+        elif osrc:
             addr = self._print_addr(osrc, rule)
             if addr:
                 neg = '!= ' if rule.osrc_single_object_negation else ''
@@ -110,7 +119,11 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         # Original destination
         odst = nft_comp.get_first_odst(rule)
-        if odst:
+        odst_mac = get_mac_only_address(odst) if odst else ''
+        if odst_mac:
+            neg = '!= ' if rule.odst_single_object_negation else ''
+            parts.append(f'ether daddr {neg}{odst_mac}')
+        elif odst:
             addr = self._print_addr(odst, rule)
             if addr:
                 neg = '!= ' if rule.odst_single_object_negation else ''
@@ -253,7 +266,9 @@ class NATPrintRule_nft(NATRuleProcessor):
         single-stack objects that survived the address-family filter still
         render).
         """
-        addresses = list(addresses)
+        # A MAC address is not an IP address of either family and must
+        # never be picked as one; it is matched separately.
+        addresses = [a for a in addresses if not isinstance(a, PhysAddress)]
         if not addresses:
             return None
         want_v6 = self.compiler.ipv6_policy

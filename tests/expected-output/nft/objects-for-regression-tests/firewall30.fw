@@ -235,11 +235,11 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 00:10:4b:de:e9:6f ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ct state new counter accept
         #
         # Rule 1 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ct state new counter accept
         #
         # Rule 2 (global)
         #
@@ -252,11 +252,11 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 00:10:4b:de:e9:6f ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ct state new counter accept
         #
         # Rule 1 (global)
         #
-        ip saddr 00:10:4b:de:e9:70 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ct state new counter accept
         #
         # Rule 2 (global)
         #

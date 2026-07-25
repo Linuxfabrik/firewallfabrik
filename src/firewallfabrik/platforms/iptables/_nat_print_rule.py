@@ -37,6 +37,7 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    PhysAddress,
     TagService,
     TCPService,
     UDPService,
@@ -156,7 +157,9 @@ class NATPrintRule(NATRuleProcessor):
 
         # OSrc
         osrc = ipt_comp.get_first_osrc(rule)
-        if osrc:
+        if isinstance(osrc, PhysAddress):
+            cmd += self._print_mac_source(osrc, rule)
+        elif osrc:
             addr_str = self._print_addr(osrc)
             if addr_str:
                 cmd += self._print_single_option_with_negation(
@@ -170,7 +173,15 @@ class NATPrintRule(NATRuleProcessor):
 
         # ODst
         odst = ipt_comp.get_first_odst(rule)
-        if odst:
+        if isinstance(odst, PhysAddress):
+            # The mac module only matches the source address; iptables has
+            # no destination equivalent.
+            self.compiler.error(
+                rule,
+                f'MAC address "{odst.get_address()}" cannot be used as a '
+                'destination, iptables can only match the source MAC',
+            )
+        elif odst:
             addr_str = self._print_addr(odst)
             if addr_str:
                 cmd += self._print_single_option_with_negation(
@@ -194,6 +205,21 @@ class NATPrintRule(NATRuleProcessor):
         cmd = cmd.rstrip()
         cmd += self._end_rule_line()
         return cmd
+
+    def _print_mac_source(self, obj, rule: CompRule) -> str:
+        """Print a MAC address match.
+
+        iptables cannot match a MAC with ``-s``, it needs the mac module
+        (fwbuilder does the same in NATCompiler_PrintRule.cpp).
+        """
+        mac = obj.get_address()
+        if not mac:
+            self.compiler.warning(rule, 'Empty MAC address in rule')
+            mac = '00:00:00:00:00:00'
+        neg = self._print_single_option_with_negation(
+            ' --mac-source', rule, 'osrc', mac
+        )
+        return f' -m mac{neg}'
 
     def _print_target_args(self, rule: CompRule) -> str:
         """Print NAT target-specific arguments."""
@@ -712,7 +738,9 @@ class NATPrintRule(NATRuleProcessor):
         single-stack objects that survived the address-family filter still
         render).
         """
-        addresses = list(addresses)
+        # A MAC address is not an IP address of either family and must
+        # never be picked as one; it is matched separately.
+        addresses = [a for a in addresses if not isinstance(a, PhysAddress)]
         if not addresses:
             return None
         want_v6 = self.compiler.ipv6_policy
