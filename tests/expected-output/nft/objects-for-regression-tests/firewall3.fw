@@ -257,7 +257,7 @@ table ip fwf_filter {
         #
         # Rule 1 (eth1)
         #
-        iifname "eth1" meta l4proto 0 counter log level debug drop
+        iifname "eth1" meta l4proto 0 ip frag-off & 0x1fff != 0 counter log level debug drop
         #
         # Rule 2 (eth0)
         #

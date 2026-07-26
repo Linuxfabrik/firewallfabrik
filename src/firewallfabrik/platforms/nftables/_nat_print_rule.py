@@ -45,11 +45,19 @@ from firewallfabrik.core.objects import (
     UserService,
     range_to_cidr,
 )
-from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
+from firewallfabrik.platforms.nftables._print_rule import (
+    get_mac_only_address,
+    print_fragment_match,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
     from firewallfabrik.platforms.nftables._nat_compiler import NATCompiler_nft
+
+
+def _is_true(val) -> bool:
+    """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
+    return str(val) == 'True'
 
 
 class NATPrintRule_nft(NATRuleProcessor):
@@ -292,10 +300,14 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return 'meta l4proto ipv6-icmp'
             return 'meta l4proto icmp'
         elif isinstance(srv, IPService):
+            ip_parts = []
             p = srv.get_protocol_number()
             if p >= 0:
-                return f'meta l4proto {p}'
-            return ''
+                ip_parts.append(f'meta l4proto {p}')
+            data = srv.data or {}
+            if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
+                ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
+            return ' '.join(ip_parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')

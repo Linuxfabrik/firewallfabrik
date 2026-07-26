@@ -61,6 +61,24 @@ if TYPE_CHECKING:
     from firewallfabrik.platforms.nftables._policy_compiler import PolicyCompiler_nft
 
 
+def _is_true(val) -> bool:
+    """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
+    return str(val) == 'True'
+
+
+def print_fragment_match(ipv6: bool) -> str:
+    """Return the nftables match for "this is a fragment".
+
+    iptables expresses it as ``-f`` for IPv4 and ``-m frag --fragmore`` for
+    IPv6.  The nftables spellings are the ones ``iptables-translate`` /
+    ``ip6tables-translate`` produce (netfilter
+    ``extensions/libxt_tcp.txlate`` and ``extensions/libip6t_frag.txlate``).
+    """
+    if ipv6:
+        return 'frag more-fragments 1'
+    return 'ip frag-off & 0x1fff != 0'
+
+
 def get_mac_only_address(obj) -> str:
     """Return the MAC of an object that has no IP address.
 
@@ -470,6 +488,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             tos = data.get('tos', '')
             dscp = data.get('dscp', '')
             af = 'ip6' if self.compiler.ipv6_policy else 'ip'
+            if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
+                parts.append(print_fragment_match(self.compiler.ipv6_policy))
             if dscp:
                 if not is_valid_dscp(dscp):
                     # An unknown DiffServ class (e.g. "AF4") is rejected by

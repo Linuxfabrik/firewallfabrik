@@ -279,7 +279,7 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #
@@ -441,7 +441,7 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #

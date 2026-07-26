@@ -290,7 +290,7 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
@@ -423,7 +423,7 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
@@ -561,7 +561,7 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         # block fragments
-        meta l4proto 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
         #
         # Rule 9 (global)
         #
