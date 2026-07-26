@@ -256,11 +256,11 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        ip daddr 172.16.1.1 icmp type destination-unreachable icmp code 1 counter drop
+        ip daddr 172.16.1.1 icmp type . icmp code != { destination-unreachable . 1 } counter drop
         #
         # Rule 7 (global)
         #
-        ip daddr 172.16.1.1 meta l4proto 47 counter drop
+        ip daddr 172.16.1.1 meta l4proto != 47 counter drop
         #
         # Rule 8 (global)
         #

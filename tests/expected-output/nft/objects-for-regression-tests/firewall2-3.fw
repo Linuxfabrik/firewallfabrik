@@ -803,8 +803,8 @@ table ip fwf_nat {
         #
         # Rule 36 (NAT)
         #
-        oifname "eth0" ip saddr != 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
-        oifname "eth0" ip saddr != 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr != 192.168.1.10 tcp dport != 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr != 192.168.1.20 tcp dport != 80 counter snat to 192.168.1.1
         oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 38 (NAT)

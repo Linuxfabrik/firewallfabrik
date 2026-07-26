@@ -501,8 +501,10 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_service(self, rule: CompRule, srv) -> str:
         """Print protocol + port/ICMP matching."""
+        negated = bool(rule.srv_single_object_negation)
+
         if rule.merged_tcp_udp:
-            return self._print_merged_tcp_udp_service(rule)
+            return self._print_merged_tcp_udp_service(rule, negated)
 
         if srv is None:
             return ''
@@ -512,7 +514,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         elif isinstance(srv, UDPService):
             return self._print_tcp_udp_service(rule, srv, 'udp')
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            return self._print_icmp_service(srv)
+            return self._print_icmp_service(srv, negated)
         elif isinstance(srv, IPService):
             parts = []
             proto = srv.get_protocol_number()
@@ -568,6 +570,8 @@ class PrintRule_nft(PolicyRuleProcessor):
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
                     )
+            if negated:
+                return self._negate_single_match(rule, parts, 'IP service')
             # An "any IP" service with no further conditions carries no match
             # at all, which is correct: the rule applies to every protocol.
             return ' '.join(parts)
@@ -575,6 +579,15 @@ class PrintRule_nft(PolicyRuleProcessor):
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
             if code:
+                if negated:
+                    # The code fragment is opaque nftables text; there is no
+                    # way to invert it from here.
+                    self.compiler.error(
+                        rule,
+                        f'Negating the custom service "{srv.name}" is not '
+                        'supported by the nftables compiler; add a rule with '
+                        'the inverse match instead',
+                    )
                 return code
             return ''
         elif isinstance(srv, TagService):
@@ -706,12 +719,18 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         return ' '.join(parts)
 
-    def _print_merged_tcp_udp_service(self, rule: CompRule) -> str:
+    def _print_merged_tcp_udp_service(
+        self, rule: CompRule, negated: bool = False
+    ) -> str:
         """Print merged TCP+UDP service using transport header (th) matcher.
 
         Emits: meta l4proto { tcp, udp } th dport 53
         Or:    meta l4proto { tcp, udp } th dport { 53, 80 }
+
+        A negated element inverts the port match; the protocol stays as it is,
+        because the rule is about those ports, not about TCP and UDP as such.
         """
+        neg = '!= ' if negated else ''
         parts = ['meta l4proto { tcp, udp }']
 
         # Collect unique port ranges from all TCP/UDP services
@@ -738,15 +757,15 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         if src_ports:
             if len(src_ports) == 1:
-                parts.append(f'th sport {src_ports[0]}')
+                parts.append(f'th sport {neg}{src_ports[0]}')
             else:
-                parts.append(f'th sport {{ {", ".join(src_ports)} }}')
+                parts.append(f'th sport {neg}{{ {", ".join(src_ports)} }}')
 
         if dst_ports:
             if len(dst_ports) == 1:
-                parts.append(f'th dport {dst_ports[0]}')
+                parts.append(f'th dport {neg}{dst_ports[0]}')
             else:
-                parts.append(f'th dport {{ {", ".join(dst_ports)} }}')
+                parts.append(f'th dport {neg}{{ {", ".join(dst_ports)} }}')
 
         return ' '.join(parts)
 
@@ -798,7 +817,46 @@ class PrintRule_nft(PolicyRuleProcessor):
         143: 'mld2-listener-report',
     }
 
-    def _print_icmp_service(self, srv) -> str:
+    def _negate_single_match(self, rule: CompRule, parts: list[str], what: str) -> str:
+        """Return *parts* with the match inverted, or report why it cannot be.
+
+        A negated rule element means "not (all of these conditions)".  A
+        single condition inverts by turning its comparison into ``!=``.  Two
+        or more conditions would have to be inverted as a disjunction, which
+        one nft rule cannot express.
+        """
+        if not parts:
+            # Nothing to match, so nothing to invert: the negation of
+            # "matches everything" is "matches nothing".
+            self.compiler.error(
+                rule,
+                f'Negating an unrestricted {what} leaves a rule that can '
+                'never match; remove the rule instead',
+            )
+            return ''
+        if len(parts) > 1:
+            self.compiler.error(
+                rule,
+                f'Negating a {what} with several conditions '
+                f'({", ".join(parts)}) is not supported by the nftables '
+                'compiler; split it into one service per condition',
+            )
+            return ' '.join(parts)
+        match = parts[0]
+        # Turn "<expr> <value>" into "<expr> != <value>"; comparisons that
+        # already carry an operator (`>`, `& ... ==`) are inverted in place.
+        if ' == ' in match:
+            return match.replace(' == ', ' != ', 1)
+        if ' exists' in match:
+            return match.replace(' exists', ' missing', 1)
+        if ' > ' in match:
+            return match.replace(' > ', ' <= ', 1)
+        if ' != ' in match:
+            return match.replace(' != ', ' == ', 1)
+        expr, _, value = match.rpartition(' ')
+        return f'{expr} != {value}'
+
+    def _print_icmp_service(self, srv, negated: bool = False) -> str:
         """Print ICMP type/code matching."""
         codes = getattr(srv, 'codes', None) or srv.data or {}
         raw_type = codes.get('type', -1)
@@ -813,15 +871,21 @@ class PrintRule_nft(PolicyRuleProcessor):
             else self._ICMP_TYPE_NAMES
         )
         type_str = type_names.get(icmp_type, str(icmp_type))
+        op = '!= ' if negated else ''
 
         if icmp_type < 0:
             # `meta l4proto` resolves its argument through getprotobyname(),
             # so it needs the /etc/protocols name `ipv6-icmp` (58); the bare
             # `icmpv6` keyword only exists as the payload-match protocol below.
             l4proto = 'ipv6-icmp' if self.compiler.ipv6_policy else 'icmp'
-            return f'meta l4proto {l4proto}'
+            return f'meta l4proto {op}{l4proto}'
         if icmp_code < 0:
-            return f'{proto} type {type_str}'
+            return f'{proto} type {op}{type_str}'
+        if negated:
+            # iptables negates the type/code pair as a whole. Negating both
+            # halves separately would mean something else, so match the
+            # concatenation of the two fields against a one-element set.
+            return f'{proto} type . {proto} code != {{ {type_str} . {icmp_code} }}'
         return f'{proto} type {type_str} {proto} code {icmp_code}'
 
     def _print_limit(self, rule: CompRule) -> str:

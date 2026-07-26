@@ -292,6 +292,8 @@ class NATPrintRule_nft(NATRuleProcessor):
 
     def _print_service(self, srv, rule: CompRule) -> str:
         """Print service matching for NAT rules."""
+        neg = '!= ' if rule.osrv_single_object_negation else ''
+
         if isinstance(srv, TCPService):
             proto = 'tcp'
         elif isinstance(srv, UDPService):
@@ -300,15 +302,15 @@ class NATPrintRule_nft(NATRuleProcessor):
             if self.compiler.ipv6_policy:
                 # `meta l4proto` resolves via getprotobyname(): the IPv6 ICMP
                 # protocol is `ipv6-icmp` (58); `icmpv6` is not a protocol name.
-                return 'meta l4proto ipv6-icmp'
-            return 'meta l4proto icmp'
+                return f'meta l4proto {neg}ipv6-icmp'
+            return f'meta l4proto {neg}icmp'
         elif isinstance(srv, IPService):
             ip_parts = []
             p = srv.get_protocol_number()
             # Protocol number 0 is iptables' "all" wildcard, not a protocol;
             # `meta l4proto 0` would match IP protocol 0 and nothing else.
             if p > 0:
-                ip_parts.append(f'meta l4proto {p}')
+                ip_parts.append(f'meta l4proto {neg}{p}')
             data = srv.data or {}
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
@@ -327,6 +329,15 @@ class NATPrintRule_nft(NATRuleProcessor):
             nft_comp = cast('NATCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
             if code:
+                if neg:
+                    # The code fragment is opaque nftables text; there is no
+                    # way to invert it from here.
+                    self.compiler.error(
+                        rule,
+                        f'Negating the custom service "{srv.name}" is not '
+                        'supported by the nftables compiler; add a rule with '
+                        'the inverse match instead',
+                    )
                 return code
             return ''
         elif isinstance(srv, TagService):
@@ -334,12 +345,12 @@ class NATPrintRule_nft(NATRuleProcessor):
             if not tag_code:
                 tag_code = (srv.data or {}).get('tagvalue', '')
             if tag_code:
-                return f'meta mark {tag_code}'
+                return f'meta mark {neg}{tag_code}'
             return ''
         elif isinstance(srv, UserService):
             uid = srv.userid or ''
             if uid:
-                return f'meta skuid {uid}'
+                return f'meta skuid {neg}{uid}'
             return ''
         else:
             self.compiler.error(
@@ -356,7 +367,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         src_end = srv.src_range_end or 0
         src_ports = self._format_port_range(src_start, src_end)
         if src_ports:
-            parts.append(f'{proto} sport {src_ports}')
+            parts.append(f'{proto} sport {neg}{src_ports}')
 
         # Destination ports (single or multiport)
         if len(rule.osrv) > 1:
@@ -370,18 +381,18 @@ class NATPrintRule_nft(NATRuleProcessor):
                         all_dst_ports.append(p)
             if all_dst_ports:
                 if len(all_dst_ports) == 1:
-                    parts.append(f'{proto} dport {all_dst_ports[0]}')
+                    parts.append(f'{proto} dport {neg}{all_dst_ports[0]}')
                 else:
-                    parts.append(f'{proto} dport {{ {", ".join(all_dst_ports)} }}')
+                    parts.append(f'{proto} dport {neg}{{ {", ".join(all_dst_ports)} }}')
         else:
             dst_start = srv.dst_range_start or 0
             dst_end = srv.dst_range_end or 0
             dst_ports = self._format_port_range(dst_start, dst_end)
             if dst_ports:
-                parts.append(f'{proto} dport {dst_ports}')
+                parts.append(f'{proto} dport {neg}{dst_ports}')
 
         if not parts:
-            parts.append(f'meta l4proto {proto}')
+            parts.append(f'meta l4proto {neg}{proto}')
 
         return ' '.join(parts)
 

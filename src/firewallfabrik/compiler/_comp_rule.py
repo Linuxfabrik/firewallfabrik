@@ -126,6 +126,7 @@ class CompRule:
     itf_outb_single_object_negation: bool = False
     osrc_single_object_negation: bool = False
     odst_single_object_negation: bool = False
+    osrv_single_object_negation: bool = False
     srv_single_object_negation: bool = False
 
     # Optimization flags
