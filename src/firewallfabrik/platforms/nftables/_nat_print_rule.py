@@ -48,6 +48,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
     print_fragment_match,
+    print_ip_option_matches,
 )
 
 if TYPE_CHECKING:
@@ -307,6 +308,16 @@ class NATPrintRule_nft(NATRuleProcessor):
             data = srv.data or {}
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
+            if not self.compiler.ipv6_policy:
+                opt_matches, opt_unsupported = print_ip_option_matches(data)
+                ip_parts.extend(opt_matches)
+                for name in opt_unsupported:
+                    self.compiler.error(
+                        rule,
+                        f'IP service matching the "{name}" IP option is not '
+                        'supported by nftables, which can only match the '
+                        'lsrr, ssrr, rr and router-alert options',
+                    )
             return ' '.join(ip_parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)

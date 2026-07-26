@@ -79,6 +79,40 @@ def print_fragment_match(ipv6: bool) -> str:
     return 'ip frag-off & 0x1fff != 0'
 
 
+# IPv4 option flags of an IPService mapped to the nftables option keyword.
+# nftables knows lsrr, rr, ssrr and ra (see the ip_option_type rule in the
+# netfilter nftables parser, src/parser_bison.y).  fwbuilder's "timestamp"
+# option has no nftables keyword.
+_IP_OPTION_KEYWORDS = {
+    'lsrr': 'lsrr',
+    'rr': 'rr',
+    'rtralt': 'ra',
+    'ssrr': 'ssrr',
+}
+
+
+def print_ip_option_matches(data: dict) -> tuple[list[str], list[str]]:
+    """Return the nftables IPv4-option matches of an IPService.
+
+    Mirrors the ``-m ipv4options`` match the iptables print rules emit.
+    Returns the list of match expressions and the list of requested options
+    nftables cannot express, so the caller can report them.
+
+    ``any_opt`` ("match any IP option") becomes ``ip hdrlength > 5``: an IPv4
+    header carries options exactly when it is longer than the 5 words of the
+    fixed header.
+    """
+    if _is_true(data.get('any_opt')):
+        return (['ip hdrlength > 5'], [])
+
+    matches = []
+    for flag, keyword in sorted(_IP_OPTION_KEYWORDS.items()):
+        if _is_true(data.get(flag)):
+            matches.append(f'ip option {keyword} exists')
+    unsupported = ['timestamp'] if _is_true(data.get('ts')) else []
+    return (matches, unsupported)
+
+
 def get_mac_only_address(obj) -> str:
     """Return the MAC of an object that has no IP address.
 
@@ -517,6 +551,18 @@ class PrintRule_nft(PolicyRuleProcessor):
                     'IP service with a ToS value is not supported by nftables; '
                     'use a DSCP value instead',
                 )
+            if not self.compiler.ipv6_policy:
+                # IP options are an IPv4 header feature; the iptables compiler
+                # also emits `-m ipv4options` for IPv4 policies only.
+                opt_matches, opt_unsupported = print_ip_option_matches(data)
+                parts.extend(opt_matches)
+                for name in opt_unsupported:
+                    self.compiler.error(
+                        rule,
+                        f'IP service matching the "{name}" IP option is not '
+                        'supported by nftables, which can only match the '
+                        'lsrr, ssrr, rr and router-alert options',
+                    )
             if parts:
                 return ' '.join(parts)
         elif isinstance(srv, CustomService):

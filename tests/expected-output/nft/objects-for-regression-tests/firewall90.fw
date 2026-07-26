@@ -252,11 +252,15 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # # Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        meta l4proto 0 counter drop
+        meta l4proto 0 ip option lsrr exists ip option ra exists counter drop
         #
         # Rule 1 (global)
         #
-        meta l4proto 0 counter drop
+        meta l4proto 0 ip option rr exists counter drop
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto 0 ip hdrlength > 5 counter drop
     }
 
     chain output {
