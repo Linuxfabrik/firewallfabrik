@@ -1032,6 +1032,28 @@ class PrintRule_nft(PolicyRuleProcessor):
                 nlgroup = 1
             parts.append(f'group {nlgroup}')
 
+            # The copy range and the queue threshold are part of the log
+            # statement, exactly like iptables' `--nflog-range` /
+            # `--nflog-threshold` (netfilter extensions/libxt_NFLOG.c maps
+            # them to `snaplen` and `queue-threshold`). Same thresholds as
+            # the iptables print rule so both platforms emit or omit them
+            # together.
+            cprange = self.compiler.fw.get_option('ulog_cprange')
+            try:
+                cprange = int(cprange)
+            except (TypeError, ValueError):
+                cprange = 0
+            if cprange > 0:
+                parts.append(f'snaplen {cprange}')
+
+            qthreshold = self.compiler.fw.get_option('ulog_qthreshold')
+            try:
+                qthreshold = int(qthreshold)
+            except (TypeError, ValueError):
+                qthreshold = 1
+            if qthreshold > 1:
+                parts.append(f'queue-threshold {qthreshold}')
+
         log_prefix = self._get_log_prefix(rule)
         if log_prefix:
             parts.append(f'prefix "{log_prefix}"')

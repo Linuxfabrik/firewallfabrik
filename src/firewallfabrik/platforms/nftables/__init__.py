@@ -12,4 +12,4 @@
 
 """nftables platform compiler package."""
 
-__compiler_version__ = '1.5.53'
+__compiler_version__ = '1.5.54'

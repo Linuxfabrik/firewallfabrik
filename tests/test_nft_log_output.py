@@ -98,3 +98,28 @@ def test_log_flags_dropped_with_nflog():
     assert 'log group 1' in line
     assert 'flags' not in line
     assert warnings
+
+
+def test_nflog_copy_range_and_queue_threshold():
+    line, _ = _render(
+        {
+            'ulog_cprange': 256,
+            'ulog_nlgroup': 2,
+            'ulog_qthreshold': 25,
+            'use_NFLOG': True,
+        }
+    )
+    assert 'log group 2 snaplen 256 queue-threshold 25' in line
+
+
+def test_nflog_defaults_stay_out_of_the_rule():
+    line, _ = _render(
+        {
+            'ulog_cprange': 0,
+            'ulog_nlgroup': 1,
+            'ulog_qthreshold': 1,
+            'use_NFLOG': True,
+        }
+    )
+    assert 'snaplen' not in line
+    assert 'queue-threshold' not in line

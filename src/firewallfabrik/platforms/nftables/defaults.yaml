@@ -566,12 +566,12 @@ options:
   ulog_cprange:
     type: 'int'
     default: 0
-    supported: false
+    supported: true
     widget: 'cprange'
     description: >-
-      Not configurable through nftables. "log group N" delegates to
-      ulogd2, rsyslog or syslog-ng, where the copy range is set in
-      those daemons' configuration files.
+      Number of bytes of each packet copied to userspace
+      ("log snaplen N"). 0 copies the whole packet.
+      Used when use_NFLOG is enabled.
 
   ulog_nlgroup:
     type: 'int'
@@ -585,12 +585,11 @@ options:
   ulog_qthreshold:
     type: 'int'
     default: 1
-    supported: false
+    supported: true
     widget: 'qthreshold'
     description: >-
-      Not configurable through nftables. "log group N" delegates to
-      ulogd2, rsyslog or syslog-ng, where the queue threshold is set in
-      those daemons' configuration files.
+      Number of packets the kernel queues before waking up the logging
+      daemon ("log queue-threshold N"). Used when use_NFLOG is enabled.
 
   verify_interfaces:
     type: 'bool'
