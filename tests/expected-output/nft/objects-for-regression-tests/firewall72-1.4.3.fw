@@ -240,7 +240,7 @@ table ip fwf_filter {
         #
         # Rule 0 (lo)
         #
-        iif "lo" ip saddr 127.0.0.1 counter drop
+        iif != "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 2 (eth1)
         #
@@ -277,7 +277,7 @@ table ip fwf_filter {
         #
         # Rule 0 (lo)
         #
-        iif "lo" ip saddr 127.0.0.1 counter drop
+        iif != "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 1 (eth1)
         #
@@ -290,17 +290,17 @@ table ip fwf_filter {
         # Rule 10 (eth1)
         #
         # Should use ! -i eth1 eventually
-        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        iifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
         #
         # Rule 11 (eth1)
         #
         # Should use ! -i eth1 eventually
-        iifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
+        iifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
         #
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
     }
 
     chain output {
@@ -309,7 +309,7 @@ table ip fwf_filter {
         #
         # Rule 0 (lo)
         #
-        oif "lo" ip saddr 127.0.0.1 counter drop
+        oif != "lo" ip saddr 127.0.0.1 counter drop
         #
         # Rule 1 (eth1)
         #
@@ -322,7 +322,7 @@ table ip fwf_filter {
         # Rule 12 (eth1)
         #
         # Should use ! -i eth1 eventually
-        oifname "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
         #
         # Rule 15 (global)
         #

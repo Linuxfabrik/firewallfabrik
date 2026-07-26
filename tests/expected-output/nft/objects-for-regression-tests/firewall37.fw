@@ -327,9 +327,13 @@ table ip fwf_filter {
         #
         iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
+        # Rule 28 (eth1)
+        #
+        iifname != "eth1" ip saddr 192.168.1.0/24 counter accept
+        #
         # Rule 29 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
+        iifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 30 (global)
         #
@@ -506,10 +510,15 @@ table ip fwf_filter {
         iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
+        # Rule 28 (eth1)
+        #
+        iifname != "eth1" ip saddr 192.168.1.0/24 counter accept
+        oifname != "eth1" ip saddr 192.168.1.0/24 counter accept
+        #
         # Rule 29 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
-        oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
+        iifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
+        oifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 31 (global)
         #
@@ -693,9 +702,13 @@ table ip fwf_filter {
         #
         oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
+        # Rule 28 (eth1)
+        #
+        oifname != "eth1" ip saddr 192.168.1.0/24 counter accept
+        #
         # Rule 29 (eth1)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
+        oifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 30 (global)
         #

@@ -701,6 +701,9 @@ class NftNegation(PolicyRuleProcessor):
 
     nftables has native != support for both single and multi-object,
     so we just convert all negation flags directly — no temp chains needed.
+    The interface element is included: iptables has to replace a negated
+    interface with the set of all the other ones, nftables matches
+    ``iifname != { ... }`` directly.
     """
 
     def process_next(self) -> bool:
@@ -716,6 +719,9 @@ class NftNegation(PolicyRuleProcessor):
         if rule.get_neg('srv'):
             rule.srv_single_object_negation = True
             rule.set_neg('srv', False)
+        if rule.get_neg('itf'):
+            rule.itf_single_object_negation = True
+            rule.set_neg('itf', False)
         self.tmp_queue.append(rule)
         return True
 

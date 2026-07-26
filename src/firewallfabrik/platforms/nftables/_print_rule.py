@@ -66,6 +66,14 @@ def _is_true(val) -> bool:
     return str(val) == 'True'
 
 
+def _as_iface_set(names: list[str]) -> str:
+    """Render one interface name as it is, several as an anonymous set."""
+    quoted = [f'"{name}"' for name in names]
+    if len(quoted) == 1:
+        return quoted[0]
+    return '{ ' + ', '.join(quoted) + ' }'
+
+
 def print_fragment_match(ipv6: bool) -> str:
     """Return the nftables match for "this is a fragment".
 
@@ -311,28 +319,30 @@ class PrintRule_nft(PolicyRuleProcessor):
         if rule.is_itf_any():
             return ''
 
-        iface_obj = rule.itf[0] if rule.itf else None
-        if iface_obj is None or not isinstance(iface_obj, Interface):
+        ifaces = [obj for obj in rule.itf if isinstance(obj, Interface) and obj.name]
+        if not ifaces:
             return ''
 
-        iface_name = iface_obj.name
-        if not iface_name:
-            return ''
+        neg = '!= ' if rule.itf_single_object_negation else ''
+        # A negated element covers all of its interfaces at once; without
+        # negation the rule is atomic by then and carries exactly one.
+        names = [obj.name for obj in ifaces] if neg else [ifaces[0].name]
 
         # nftables uses iifname/oifname for wildcard matching
         # and iif/oif for exact interface matching.
         # Use iif/oif for loopback — index-based is faster and safe
-        # (loopback is always present with a stable index).
-        neg = '!= ' if rule.itf_single_object_negation else ''
-        is_loopback = iface_obj.is_loopback()
+        # (loopback is always present with a stable index).  A set of several
+        # interfaces goes through the name matcher.
+        is_loopback = len(names) == 1 and ifaces[0].is_loopback()
+        value = _as_iface_set(names)
 
         direction = rule.direction
         if direction == Direction.Inbound:
             keyword = 'iif' if is_loopback else 'iifname'
-            return f'{keyword} {neg}"{iface_name}"'
+            return f'{keyword} {neg}{value}'
         elif direction == Direction.Outbound:
             keyword = 'oif' if is_loopback else 'oifname'
-            return f'{keyword} {neg}"{iface_name}"'
+            return f'{keyword} {neg}{value}'
 
         return ''
 

@@ -455,7 +455,12 @@ class ConvertToAtomicForAddresses(BasicRuleProcessor):
 
 
 class ConvertToAtomicForInterfaces(BasicRuleProcessor):
-    """Split rules with multiple interfaces into separate rules."""
+    """Split rules with multiple interfaces into separate rules.
+
+    A negated interface element is kept whole: "on none of these
+    interfaces" would turn into "not on this one" per rule, which every
+    other interface of the set satisfies.
+    """
 
     def __init__(self, name: str = 'Convert to atomic for interfaces') -> None:
         super().__init__(name)
@@ -466,7 +471,7 @@ class ConvertToAtomicForInterfaces(BasicRuleProcessor):
         if rule is None:
             return False
 
-        if len(rule.itf) <= 1:
+        if len(rule.itf) <= 1 or rule.itf_single_object_negation:
             self.tmp_queue.append(rule)
             return True
 
