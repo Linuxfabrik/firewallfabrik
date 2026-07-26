@@ -1053,12 +1053,27 @@ class PrintRule_nft(PolicyRuleProcessor):
         # Each flag becomes its own `flags <category> <flag>` clause; nftables
         # accepts them in any order at the end of the log statement.
         fw_opt = self.compiler.fw.get_option
+        flags = []
         if rule.get_option('log_tcp_seq', False) or fw_opt('log_tcp_seq'):
-            parts.append('flags tcp sequence')
+            flags.append('flags tcp sequence')
         if rule.get_option('log_tcp_opt', False) or fw_opt('log_tcp_opt'):
-            parts.append('flags tcp options')
+            flags.append('flags tcp options')
         if rule.get_option('log_ip_opt', False) or fw_opt('log_ip_opt'):
-            parts.append('flags ip options')
+            flags.append('flags ip options')
+
+        if flags and use_nflog:
+            # nftables refuses a log statement that carries both (evaluate.c:
+            # "flags and group are mutually exclusive"), and iptables' NFLOG
+            # target has no counterpart to the LOG flags either. Drop them so
+            # the ruleset loads; the daemon behind the group logs the whole
+            # packet anyway.
+            self.compiler.warning(
+                rule,
+                'the TCP/IP log options do not apply to netlink logging and '
+                'are left out of the generated rule',
+            )
+        elif flags:
+            parts.extend(flags)
 
         return ' '.join(parts)
 
