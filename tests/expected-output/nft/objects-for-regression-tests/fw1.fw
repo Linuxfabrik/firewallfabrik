@@ -11,18 +11,6 @@
 #  This firewall has two interfaces. Eth0 faces outside and has a dynamic address; eth1 faces inside.
 #  Policy includes basic rules to permit unrestricted outbound access and anti-spoofing rules. Access to the firewall is permitted only from internal network and only using SSH. The firewall uses one of the machines on internal network for DNS. Internal network is configured with address 192.168.1.0/255.255.255.0
 #
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 1 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 2 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 7 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 8 (NAT): No chain assignment for NAT rule type: None
 # Rule 8 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 1 shadows Rule 2 below it
 # Rule 1 shadows Rule 3 below it
@@ -355,6 +343,11 @@ table ip fwf_nat {
         type nat hook prerouting priority dstnat;
         ip saddr 192.168.1.0/24 counter accept
         #
+        # Rule 2 (NAT)
+        #
+        # dest port only
+        ip saddr 192.168.1.0/24 udp dport 53 counter dnat to :1053
+        #
         # Rule 3 (NAT)
         #
         # SDNAT
@@ -390,20 +383,15 @@ table ip fwf_nat {
         # Rule 1 (NAT)
         #
         # source port only
-        ip saddr 192.168.1.0/24 udp sport 123 counter accept
-        #
-        # Rule 2 (NAT)
-        #
-        # dest port only
-        ip saddr 192.168.1.0/24 udp dport 53 counter accept
+        ip saddr 192.168.1.0/24 udp sport 123 counter snat to :5050
         oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
         oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 53 counter snat to 192.168.1.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 1024-65535 udp dport 53 counter snat to 192.168.1.1:32767-65535
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.168.1.1:32767-65535
         #
         # Rule 7 (NAT)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 counter accept
+        ip saddr 192.168.1.0/24 udp dport 53 counter snat to :5050
     }
 }
 

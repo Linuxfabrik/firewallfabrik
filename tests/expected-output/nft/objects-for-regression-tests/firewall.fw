@@ -14,12 +14,6 @@
 # Rule 14 (NAT): Host "host-with-mac-4" has no addresses
 # Rule 16 (NAT): Host "host-with-mac-4" has no addresses
 # Rule 16 (NAT): Host "host-with-mac-4" has no addresses
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 21 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 22 (NAT): No chain assignment for NAT rule type: None
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
@@ -814,6 +808,10 @@ table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
+        # Rule 4 (NAT)
+        #
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 counter dnat to :3128
+        #
         # Rule 6 (NAT)
         #
         ip daddr 222.222.222.222 tcp dport 25 counter dnat to 192.168.1.10:25
@@ -877,6 +875,10 @@ table ip fwf_nat {
         ip daddr 222.222.222.222 tcp dport 4000-4010 counter dnat to 192.168.1.10:4000-4010
         ip daddr 192.168.1.1 tcp dport 4000-4010 counter dnat to 192.168.1.10:4000-4010
         #
+        # Rule 21 (NAT)
+        #
+        ip saddr 192.168.1.10 tcp dport 3128 counter dnat to :80
+        #
         # Rule 23 (NAT)
         #
         # should use multiport
@@ -894,6 +896,14 @@ table ip fwf_nat {
         ip daddr 222.222.222.222 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } counter dnat to 192.168.1.10
     }
 
+    chain output {
+        type nat hook output priority dstnat;
+        #
+        # Rule 22 (NAT)
+        #
+        tcp dport 3128 counter dnat to :80
+    }
+
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
@@ -909,11 +919,8 @@ table ip fwf_nat {
         #
         oifname "eth1" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
         oifname "eth0" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
-        #
-        # Rule 4 (NAT)
-        #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 3128 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 5 (NAT)
         #
@@ -945,14 +952,6 @@ table ip fwf_nat {
         #
         oifname "eth1" ip saddr 192.168.1.10 tcp dport 4000-4010 counter snat to 222.222.222.222
         oifname "eth0" ip saddr 192.168.1.10 tcp dport 4000-4010 counter snat to 192.168.1.1
-        #
-        # Rule 21 (NAT)
-        #
-        ip saddr 192.168.1.10 tcp dport 3128 counter accept
-        #
-        # Rule 22 (NAT)
-        #
-        ip saddr 222.222.222.222 tcp dport 3128 counter accept
     }
 }
 

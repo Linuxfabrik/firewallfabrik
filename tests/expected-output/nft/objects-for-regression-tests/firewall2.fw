@@ -10,12 +10,6 @@
 #
 #  this object has several interfaces and shows different rules for NAT. Also testing policy rule options
 #
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 28 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 33 (NAT): No chain assignment for NAT rule type: None
 # Rule 51 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
@@ -697,6 +691,13 @@ table ip fwf_nat {
         #
         ip daddr 22.22.22.23 tcp dport 80 counter dnat to 192.168.1.10:25
         #
+        # Rule 28 (NAT)
+        #
+        ip daddr 192.168.1.1 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 22.22.22.22 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 22.22.23.23 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 192.168.2.1 tcp dport { 80, 443 } counter redirect to :3128
+        #
         # Rule 29 (NAT)
         #
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.10-192.168.1.100
@@ -713,6 +714,10 @@ table ip fwf_nat {
         #
         # transparent proxy rule
         ip saddr 192.168.1.0/24 ip daddr != 22.22.22.23 counter dnat to 192.168.2.10
+        #
+        # Rule 33 (NAT)
+        #
+        tcp dport 80 counter dnat to :8080
         #
         # Rule 34 (NAT)
         #
@@ -762,6 +767,10 @@ table ip fwf_nat {
         # roules for a support req.
         ip saddr != 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.50:3128
         ip saddr != 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.50:3128
+        #
+        # Rule 48 (NAT)
+        #
+        ip saddr 192.168.1.0/24 tcp dport 3050-3051 counter dnat to :700
     }
 
     chain output {
@@ -807,6 +816,7 @@ table ip fwf_nat {
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
+        tcp dport 80 counter dnat to :8080
         ip daddr 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.10:8080
         tcp dport 80 counter dnat to 192.168.1.10:3128
         ip daddr != 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
@@ -958,27 +968,16 @@ table ip fwf_nat {
         ip saddr 192.168.1.0/24 counter snat to 22.22.22.0/24
         oifname "eth0" ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
-        # Rule 28 (NAT)
-        #
-        ip daddr 192.168.1.1 tcp dport { 80, 443 } counter accept
-        ip daddr 22.22.22.22 tcp dport { 80, 443 } counter accept
-        ip daddr 22.22.23.23 tcp dport { 80, 443 } counter accept
-        ip daddr 192.168.2.1 tcp dport { 80, 443 } counter accept
-        #
-        # Rule 33 (NAT)
-        #
-        tcp dport 80 counter accept
-        #
         # Rule 35 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
-        oifname "eth0" ip saddr != 192.168.1.10 ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr != 192.168.1.10 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 38 (NAT)
         #
         oifname "eth0" ip saddr != 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         oifname "eth0" ip saddr != 192.168.1.20 tcp dport 80 counter snat to 192.168.1.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 40 (NAT)
         #
@@ -1000,13 +999,10 @@ table ip fwf_nat {
         # from a support req.
         oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
         oifname "eth1" ip saddr 192.168.1.20 tcp dport 80 counter snat to 22.22.22.22
-        #
-        # Rule 48 (NAT)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 3050-3051 counter snat to 192.168.1.10
-        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 3050-3051 counter snat to 192.168.1.10
-        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 3050-3051 counter snat to 192.168.1.10
-        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 3050-3051 counter snat to 192.168.1.10
+        oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 700 counter snat to 192.168.1.10
+        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 700 counter snat to 192.168.1.10
+        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 700 counter snat to 192.168.1.10
+        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 700 counter snat to 192.168.1.10
     }
 }
 

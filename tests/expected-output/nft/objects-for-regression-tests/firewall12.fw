@@ -10,33 +10,6 @@
 #
 #  This firewall does not do NAT for addresses, but translates port for a server
 #
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 0 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 1 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 2 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 3 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 6 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 7 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 9 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 15 (NAT): No chain assignment for NAT rule type: None
-# Unsupported NAT rule
-# Unsupported NAT rule
-# Rule 16 (NAT): No chain assignment for NAT rule type: None
 # Rule 16 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 
 FWBDEBUG=""
@@ -298,6 +271,23 @@ table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
+        # Rule 0 (NAT)
+        #
+        ip daddr 22.22.22.23 tcp dport 80 counter dnat to :8080
+        #
+        # Rule 1 (NAT)
+        #
+        ip daddr 22.22.23.22 tcp dport 80 counter dnat to :8080
+        #
+        # Rule 2 (NAT)
+        #
+        ip daddr 22.22.23.22 tcp dport 80 counter dnat to :8080
+        #
+        # Rule 3 (NAT)
+        #
+        ip daddr 22.22.22.22 tcp dport 80 counter redirect to :8080
+        ip daddr 22.22.23.22 tcp dport 80 counter redirect to :8080
+        #
         # Rule 4 (NAT)
         #
         ip daddr 22.22.22.22 tcp dport 80 counter redirect to :8080
@@ -307,6 +297,15 @@ table ip fwf_nat {
         #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 22.22.22.22:8080
         ip daddr 22.22.23.22 tcp dport 80 counter dnat to 22.22.22.22:8080
+        #
+        # Rule 6 (NAT)
+        #
+        tcp dport 80 counter dnat to :8080
+        #
+        # Rule 9 (NAT)
+        #
+        # port-only translation
+        tcp dport 80 counter dnat to :8080
         #
         # Rule 10 (NAT)
         #
@@ -338,53 +337,27 @@ table ip fwf_nat {
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
-        # Rule 0 (NAT)
-        #
-        ip daddr 22.22.22.23 tcp dport 80 counter accept
-        #
-        # Rule 1 (NAT)
-        #
-        ip daddr 22.22.23.22 tcp dport 80 counter accept
-        #
-        # Rule 2 (NAT)
-        #
-        ip daddr 22.22.23.22 tcp dport 80 counter accept
-        #
-        # Rule 3 (NAT)
-        #
-        ip daddr 22.22.22.22 tcp dport 80 counter accept
-        ip daddr 22.22.23.22 tcp dport 80 counter accept
-        #
-        # Rule 6 (NAT)
-        #
-        tcp dport 80 counter accept
-        #
         # Rule 7 (NAT)
         #
         # port-only translation
-        udp sport 6767 counter accept
+        udp sport 6767 counter snat to :67
         #
         # Rule 8 (NAT)
         #
         oifname "eth0" udp sport 6767 counter snat to 22.22.22.22:67
         oifname "eth1" udp sport 6767 counter snat to 22.22.23.22:67
-        #
-        # Rule 9 (NAT)
-        #
-        # port-only translation
-        tcp dport 80 counter accept
         oifname "eth0" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.0.2.1
         oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.0.2.1
         oifname "eth0" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.0.2.1:5050
         oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.0.2.1:5050
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 53 counter snat to 192.0.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 53 counter snat to 192.0.2.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 1024-65535 udp dport 53 counter snat to 192.0.2.1:32767-65535
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 1024-65535 udp dport 53 counter snat to 192.0.2.1:32767-65535
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.0.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.0.2.1
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.0.2.1:32767-65535
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.0.2.1:32767-65535
         #
         # Rule 15 (NAT)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 counter accept
+        ip saddr 192.168.1.0/24 udp dport 53 counter snat to :5050
     }
 }
 

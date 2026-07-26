@@ -46,12 +46,40 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    TCPUDPService,
 )
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
+
+
+def _tsrv_translation(osrv, tsrv) -> tuple[bool, bool]:
+    """Report whether the translated service changes the src or dst port.
+
+    Returns ``(translates_src_port, translates_dst_port)``.  A translated
+    service that repeats the port of the original service translates
+    nothing.  Mirrors the iptables ``ClassifyNATRule``.
+    """
+    if not isinstance(osrv, TCPUDPService) or not isinstance(tsrv, TCPUDPService):
+        return (False, False)
+
+    src = (tsrv.src_range_start or 0) != 0 and (tsrv.dst_range_start or 0) == 0
+    dst = (tsrv.src_range_start or 0) == 0 and (tsrv.dst_range_start or 0) != 0
+
+    if dst and (
+        (osrv.dst_range_start or 0) == (tsrv.dst_range_start or 0)
+        and (osrv.dst_range_end or 0) == (tsrv.dst_range_end or 0)
+    ):
+        dst = False
+    if src and (
+        (osrv.src_range_start or 0) == (tsrv.src_range_start or 0)
+        and (osrv.src_range_end or 0) == (tsrv.src_range_end or 0)
+    ):
+        src = False
+
+    return (src, dst)
 
 
 class NATCompiler_nft(NATCompiler):
@@ -158,6 +186,7 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(SplitOnODst('split on ODst'))
         self.add(PortTranslationRules('port translation rules'))
+        self.add(SpecialCaseWithRedirect('special case with redirect'))
 
         if self.fw.get_option('local_nat'):
             if self.fw.get_option('firewall_is_part_of_any_and_networks'):
@@ -525,7 +554,13 @@ class ItfOutbNegation(NATRuleProcessor):
 
 
 class ClassifyNATRule(NATRuleProcessor):
-    """Classify NAT rule type based on TSrc/TDst/TSrv contents."""
+    """Classify NAT rule type based on TSrc/TDst/TSrv contents.
+
+    A rule may translate nothing but the port, in which case TSrc and TDst
+    are both "any" and only TSrv is set.  Which side is translated then
+    follows from TSrv: a source port makes it an SNAT, a destination port a
+    DNAT.  Mirrors the iptables ``ClassifyNATRule``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -540,6 +575,7 @@ class ClassifyNATRule(NATRuleProcessor):
         tsrc = rule.tsrc[0] if rule.tsrc else None
         tdst = rule.tdst[0] if rule.tdst else None
         tsrv = rule.tsrv[0] if rule.tsrv else None
+        osrv = rule.osrv[0] if rule.osrv else None
 
         tsrc_any = tsrc is None
         tdst_any = tdst is None
@@ -553,14 +589,28 @@ class ClassifyNATRule(NATRuleProcessor):
             rule.nat_rule_type = NATRuleType.NONAT
             return True
 
-        if not tsrc_any and tdst_any:
+        translates_src_port, translates_dst_port = _tsrv_translation(osrv, tsrv)
+
+        if (
+            (not tsrc_any and not tdst_any)
+            or (not tsrc_any and translates_dst_port)
+            or (not tdst_any and translates_src_port)
+        ):
+            rule.nat_rule_type = NATRuleType.SDNAT
+            return True
+
+        if (not tsrc_any and tdst_any) or (
+            tsrc_any and tdst_any and translates_src_port
+        ):
             if isinstance(tsrc, Network | NetworkIPv6):
                 rule.nat_rule_type = NATRuleType.SNetnat
             else:
                 rule.nat_rule_type = NATRuleType.SNAT
             return True
 
-        if tsrc_any and not tdst_any:
+        if (tsrc_any and not tdst_any) or (
+            tsrc_any and tdst_any and translates_dst_port
+        ):
             if isinstance(tdst, Network | NetworkIPv6):
                 rule.nat_rule_type = NATRuleType.DNetnat
             elif isinstance(tdst, Firewall) and tdst.id == self.compiler.fw.id:
@@ -569,11 +619,29 @@ class ClassifyNATRule(NATRuleProcessor):
                 rule.nat_rule_type = NATRuleType.DNAT
             return True
 
-        if not tsrc_any and not tdst_any:
-            rule.nat_rule_type = NATRuleType.SDNAT
-            return True
-
         self.compiler.abort('Unsupported NAT rule')
+        return True
+
+
+class SpecialCaseWithRedirect(NATRuleProcessor):
+    """Convert a DNAT rule to Redirect when TDst is the firewall.
+
+    ``PortTranslationRules`` fills TDst in for a port-only translation that
+    targets the firewall; such a rule is a redirect to a local port, not a
+    DNAT.  Mirrors the iptables ``SpecialCaseWithRedirect``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.nat_rule_type == NATRuleType.DNAT and rule.tdst:
+            tdst = rule.tdst[0]
+            if isinstance(tdst, Firewall) and tdst.id == self.compiler.fw.id:
+                rule.nat_rule_type = NATRuleType.Redirect
+
+        self.tmp_queue.append(rule)
         return True
 
 
@@ -707,11 +775,13 @@ class NftNegationOSrv(NATRuleProcessor):
 
 
 class PortTranslationRules(NATRuleProcessor):
-    """Copy ODst into TDst for port-only translation rules.
+    """Copy ODst into TDst for a port-only translation rule.
 
-    When a DNAT rule has TSrc=Any, TDst=Any, TSrv!=Any, and ODst is
-    set, copy ODst into TDst so the port translation targets the
-    original destination address.
+    When a DNAT rule has TSrc=Any, TDst=Any, TSrv!=Any, and ODst is set,
+    copy ODst into TDst so the port translation targets the original
+    destination address.  ``SpecialCaseWithRedirect`` then turns the rule
+    into a redirect when that destination is the firewall itself.  Mirrors
+    the iptables ``PortTranslationRules``.
     """
 
     def process_next(self) -> bool:
@@ -719,9 +789,16 @@ class PortTranslationRules(NATRuleProcessor):
         if rule is None:
             return False
 
-        # If TSrv is set but TDst is empty, copy ODst to TDst
-        if rule.tsrv and not rule.tdst:
-            rule.tdst = list(rule.odst)
+        if (
+            rule.nat_rule_type == NATRuleType.DNAT
+            and not rule.tsrc
+            and not rule.tdst
+            and rule.tsrv
+            and rule.odst
+        ):
+            odst = rule.odst[0]
+            if isinstance(odst, Firewall) and odst.id == self.compiler.fw.id:
+                rule.tdst = [odst]
 
         self.tmp_queue.append(rule)
         return True
@@ -867,9 +944,11 @@ class SplitOnODst(NATRuleProcessor):
 class SplitSDNATRule(NATRuleProcessor):
     """Split SDNAT rules into separate DNAT + SNAT rules.
 
-    The first rule translates destination (clears TSrc), the second
-    rule translates source (clears TDst). Both get type Unknown
-    for reclassification.
+    The first rule translates the destination (clears TSrc), the second the
+    source (clears TDst and matches on the translated destination).  The
+    translated service goes to the half it belongs to, otherwise the halves
+    keep looking like an SDNAT rule and the reclassification never resolves
+    them.  Mirrors the iptables ``SplitSDNATRule``.
     """
 
     def process_next(self) -> bool:
@@ -881,10 +960,16 @@ class SplitSDNATRule(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        osrv = rule.osrv[0] if rule.osrv else None
+        tsrv = rule.tsrv[0] if rule.tsrv else None
+        translates_src_port, translates_dst_port = _tsrv_translation(osrv, tsrv)
+
         # DNAT part: keep odst/tdst, clear tsrc
         r1 = rule.clone()
         r1.tsrc = []
         r1.nat_rule_type = NATRuleType.Unknown
+        if translates_src_port:
+            r1.tsrv = []
         self.tmp_queue.append(r1)
 
         # SNAT part: keep osrc/tsrc, clear tdst
@@ -894,6 +979,16 @@ class SplitSDNATRule(NATRuleProcessor):
         # ODst = original TDst (translated destination becomes match for SNAT)
         r2.odst = list(rule.tdst)
         r2.set_neg('odst', False)
+        # The first rule already translated the destination port, so the
+        # second one has to match the translated port, not the original.
+        if (
+            isinstance(tsrv, TCPUDPService)
+            and not rule.is_tsrv_any()
+            and (tsrv.dst_range_start or 0) != 0
+        ):
+            r2.osrv = [tsrv]
+        if translates_dst_port:
+            r2.tsrv = []
         self.tmp_queue.append(r2)
 
         return True

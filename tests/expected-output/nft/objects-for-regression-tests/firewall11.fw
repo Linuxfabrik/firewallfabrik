@@ -19,7 +19,6 @@
 # Rule 1 (NAT): Interface "br0" has no addresses
 # Rule 2 (NAT): Interface "br0" has no addresses
 # Rule 3 (NAT): Interface "br0" has no addresses
-# Rule 3 (NAT): DNAT rule has no translated destination address
 # Rule 9 (br0): Dynamic interface address not yet supported by nftables compiler (interface: br0)
 # Rule 9 (br0): Could not resolve any destination addresses
 # Rule 9 (br0): Dynamic interface address not yet supported by nftables compiler (interface: br0)
@@ -386,7 +385,7 @@ table ip fwf_nat {
         # Rule 3 (NAT)
         #
         # see SF bug 3057503
-        tcp dport 80
+        tcp dport 80 counter dnat to :3128
     }
 
     chain postrouting {
@@ -403,7 +402,7 @@ table ip fwf_nat {
         # see bug #1693 , SF bug 3048516
         # combination of using SNAT instead of MASQ,
         # source port translation and dynamic interface
-        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter masquerade
+        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter snat to :1000-1010
     }
 }
 

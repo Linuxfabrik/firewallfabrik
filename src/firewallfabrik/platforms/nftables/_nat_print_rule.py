@@ -148,15 +148,17 @@ class NATPrintRule_nft(NATRuleProcessor):
         # NAT action, preceded by `counter` to match iptables' implicit
         # per-rule counters (iptables-translate emits `... counter snat to`).
         nat_action = self._print_nat_action(rule)
-        if nat_action:
-            l4proto_prefix = self._nat_l4proto_prefix(rule, parts)
-            if l4proto_prefix:
-                parts.append(l4proto_prefix)
-            parts.append('counter')
-            parts.append(nat_action)
-
-        if not parts:
+        if not nat_action:
+            # No action means the rule could not be translated and an error
+            # was reported.  Emitting the match alone would be a rule that
+            # does nothing, so drop it.
             return ''
+
+        l4proto_prefix = self._nat_l4proto_prefix(rule, parts)
+        if l4proto_prefix:
+            parts.append(l4proto_prefix)
+        parts.append('counter')
+        parts.append(nat_action)
 
         return '        ' + ' '.join(parts) + '\n'
 
@@ -443,28 +445,36 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
             flags = self._nat_flags(rule) if rt == NATRuleType.SNAT else ''
+            ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
                 addr = self._print_addr(tsrc, rule)
                 if addr:
-                    ports = self._print_translated_ports(tsrv, src=True)
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
                         return f'snat to {addr}:{ports}{flags}'
                     return f'snat to {addr}{flags}'
+            if ports:
+                # The rule translates the source port only; the address is
+                # left alone, which is `--to-source :port` on iptables.
+                return f'snat to :{ports}{flags}'
             return f'masquerade{random_only}'
 
         if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
             if rule.get_option('nft_load_balance'):
                 return self._print_load_balance_action(rule, tsrv)
             flags = self._nat_flags(rule) if rt == NATRuleType.DNAT else ''
+            ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
                 addr = self._print_addr(tdst, rule)
                 if addr:
-                    ports = self._print_translated_ports(tsrv, src=False)
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
                         return f'dnat to {addr}:{ports}{flags}'
                     return f'dnat to {addr}{flags}'
+            if ports:
+                # The rule translates the destination port only; the address
+                # is left alone, which is `--to-destination :port` on iptables.
+                return f'dnat to :{ports}{flags}'
             self.compiler.error(rule, 'DNAT rule has no translated destination address')
             return ''
 
