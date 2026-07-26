@@ -1794,6 +1794,8 @@ Expands Host/Firewall objects in Src/Dst to their interface addresses via `compi
 
 Splits rules with services of different protocols. Special case: if only TCP+UDP with identical port sets, merges into `meta l4proto { tcp, udp } th dport ...` by setting `rule._extra['merged_tcp_udp'] = True`.
 
+Within one protocol the rule is split further, because a single nft rule carries one destination port set: TCP/UDP services that agree on their source port stay together, every other service type (ICMP, IP, custom, tag, user) gets its own rule. This is the counterpart of the iptables `PrepareForMultiport`.
+
 #### `Optimize3` — Filter
 
 Removes duplicate rules that produce identical nftables commands. Includes the chain name in the dedup key (unlike iptables where the chain is part of the command string).
@@ -1823,6 +1825,12 @@ Classifies the NAT rule type based on TSrc/TDst/TSrv contents:
 | set | set | `SDNAT` |
 | Branch action | — | `NATBranch` |
 
+A rule may translate nothing but the port, with TSrc and TDst both "any". The translated side then follows from TSrv: a source port makes it an SNAT, a destination port a DNAT, and a port on the side opposite an address translation makes it an SDNAT. Same logic as the iptables `ClassifyNATRule`.
+
+#### `SpecialCaseWithRedirect` — Transform
+
+Reclassifies a DNAT rule as `Redirect` when TDst is the firewall. `PortTranslationRules` fills TDst in for a port-only translation that targets the firewall, which is a redirect to a local port rather than a DNAT.
+
 #### `VerifyRules` — Validation
 
 Aborts if negation is used in TSrc, TDst, or TSrv (these are not supported in translated elements).
@@ -1844,7 +1852,7 @@ Splits NAT rules with mixed-protocol services.
 
 #### `ConvertToAtomicForAddresses` — Split
 
-Creates the cartesian product of OSrc × ODst × TSrc × TDst. Each output rule has at most one object per element.
+Creates the cartesian product of OSrc × ODst × TSrc × TDst. Each output rule has at most one object per element. A negated OSrc / ODst element is kept whole and rendered as `!= { a, b }`, because "not one of these" only holds when none of them matches.
 
 #### `AssignInterface` — Transform
 
@@ -1873,10 +1881,14 @@ Supports:
 - Interface matching: `iifname`/`oifname` (wildcard), `iif`/`oif` (loopback — index-based)
 - Address matching: CIDR notation, address ranges (`start-end`), sets (`{ addr1, addr2 }`)
 - Service matching: TCP/UDP ports (single, range, multiport sets), ICMP type/code, IP protocol number
+- IP header matching: fragments (`ip frag-off & 0x1fff != 0`, `frag more-fragments 1`), DSCP, IPv4 options (`ip option lsrr exists`, `ip hdrlength > 5` for "any option")
 - Merged TCP+UDP: `meta l4proto { tcp, udp } th dport ...`
+- Negation: `!=` on addresses, ports, ICMP type, protocol; the ICMP type/code pair as a concatenation (`icmp type . icmp code != { X . Y }`)
 - Connection tracking: `ct state new`
 - Inline logging: `log prefix "..." level ...` combined with verdict
 - Log prefix macros: `%N` (position), `%A` (action), `%I` (interface), `%C` (chain), `%R` (ruleset)
+
+Reports an error instead of silently dropping a condition it cannot express: a ToS-byte match, the IPv4 timestamp option, a negated custom service, and a negated element whose match consists of several conditions (nftables cannot express the disjunction one rule would need).
 
 #### `NATPrintRule_nft` (`platforms/nftables/_nat_print_rule.py`) — Output
 
@@ -1888,7 +1900,7 @@ Key methods and their error reporting:
 |--------|----------------|
 | `_print_addr(obj, rule)` | Interface/Host has no addresses; Cannot resolve address for object type |
 | `_print_service()` | Service type not yet supported by compiler |
-| `_print_nat_action()` | DNAT has no translated destination; SDNAT not yet supported by compiler |
+| `_print_nat_action()` | DNAT has no translated destination |
 
 NAT action output:
 
@@ -1896,11 +1908,13 @@ NAT action output:
 |-----------|--------|
 | NONAT | `accept` |
 | Masq | `masquerade` |
-| SNAT/SNetnat | `snat to addr[:port]` |
-| DNAT/DNetnat | `dnat to addr[:port]` |
+| SNAT/SNetnat | `snat to addr[:port]`, `snat to :port` for a port-only translation |
+| DNAT/DNetnat | `dnat to addr[:port]`, `dnat to :port` for a port-only translation |
 | Redirect | `redirect [to :port]` |
 | Return | `return` |
-| SDNAT | error — not yet supported |
+
+SDNAT never reaches the print rule: `SplitSDNATRule` splits it into a DNAT
+and an SNAT rule beforehand.
 
 ### Compiler driver
 
@@ -1965,7 +1979,7 @@ EliminateDuplicatesInOSRC/ODST/OSRV →
 ClassifyNATRule → SplitSDNATRule → ClassifyNATRule(reclassify) → ConvertLoadBalancingRules → VerifyRules →
 SingleObjectNegationOSrc → SingleObjectNegationODst →
 NftNegationOSrc → NftNegationODst → NftNegationOSrv →
-SplitOnODst → PortTranslationRules →
+SplitOnODst → PortTranslationRules → SpecialCaseWithRedirect →
 [if local_nat: [if fw_part_of_any: SplitIfOSrcAny] → SplitIfOSrcMatchesFw] →
 SplitNONATRule → SplitNATBranchRule → LocalNATRule → DecideOnChain → DecideOnTarget →
 ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc → ExpandMultipleAddresses → DropRuleWithEmptyRE →
@@ -1988,7 +2002,8 @@ the feature at all, independent of our implementation.
 | Feature | Notes |
 |---------|-------|
 | IPv6 dual-stack | Compiled as separate `ip` / `ip6` passes (no unified `inet` table) |
-| SDNAT (simultaneous SNAT+DNAT) | `SplitSDNATRule` splits into DNAT+SNAT, then `ClassifyNATRule` reclassifies |
+| SDNAT (simultaneous SNAT+DNAT) | `SplitSDNATRule` splits into DNAT+SNAT, handing the translated service to the half it belongs to, then `ClassifyNATRule` reclassifies |
+| Port-only NAT | A rule that translates only the port: `Redirect`, `dnat to :port`, `snat to :port` |
 | Shadowing detection | `DetectShadowing`, conditional on the `check_shading` option |
 | Empty group validation | `EmptyGroupsInRE` in both policy (SRC/DST/SRV/ITF) and NAT (OSRC/ODST/OSRV/TSRC/TDST/TSRV) |
 | `firewall_is_part_of_any_and_networks` | Checked by `SplitIfSrcAny` / `SplitIfDstAny` |
