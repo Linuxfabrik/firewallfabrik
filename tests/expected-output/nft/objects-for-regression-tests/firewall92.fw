@@ -271,6 +271,8 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
+        ct state new counter accept
+        # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
         ct state new counter accept
         #

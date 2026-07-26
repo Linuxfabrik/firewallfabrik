@@ -62,6 +62,7 @@ from firewallfabrik.core.objects import (
     PhysAddress,
     PolicyAction,
     TCPService,
+    UDPService,
     UserService,
 )
 
@@ -1508,6 +1509,12 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
     Special case: if only TCP (proto 6) and UDP (proto 17) groups
     exist with identical port sets, merge them into a single rule
     using ``meta l4proto { tcp, udp } th dport ...`` syntax.
+
+    Within one protocol the rule is split further, because a single nft
+    rule can only carry one destination port set: services that differ in
+    anything else, and every service that is not TCP or UDP, need a rule of
+    their own.  This is what the iptables compiler does in
+    ``PrepareForMultiport``.
     """
 
     def process_next(self) -> bool:
@@ -1526,18 +1533,46 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
             proto = srv.get_protocol_number() if isinstance(srv, Service) else -1
             groups.setdefault(proto, []).append(srv)
 
-        if len(groups) <= 1:
-            self.tmp_queue.append(rule)
-        elif self._can_merge_tcp_udp(groups):
+        if len(groups) > 1 and self._can_merge_tcp_udp(groups):
             rule.merged_tcp_udp = True
             self.tmp_queue.append(rule)
-        else:
-            for _proto, srvs in sorted(groups.items()):
-                r = rule.clone()
-                r.srv = srvs
-                self.tmp_queue.append(r)
+            return True
+
+        chunks = [
+            chunk
+            for _proto, srvs in sorted(groups.items())
+            for chunk in self._printable_chunks(srvs)
+        ]
+
+        if len(chunks) == 1:
+            # Everything fits into one rule, keep the rule as it is.
+            self.tmp_queue.append(rule)
+            return True
+
+        for chunk in chunks:
+            r = rule.clone()
+            r.srv = chunk
+            self.tmp_queue.append(r)
 
         return True
+
+    @staticmethod
+    def _printable_chunks(srvs: list) -> list[list]:
+        """Split a same-protocol service list into per-rule chunks.
+
+        The print rule renders several TCP/UDP services as one destination
+        port set, which only describes the services correctly when they
+        agree on the source port.  Any other service type carries its own
+        match (ICMP type, IP options, custom code, mark, uid) that cannot be
+        expressed as a set, so it gets a rule of its own.
+        """
+        if all(isinstance(s, (TCPService, UDPService)) for s in srvs):
+            by_src_port: dict[tuple[int, int], list] = {}
+            for srv in srvs:
+                key = (srv.src_range_start or 0, srv.src_range_end or 0)
+                by_src_port.setdefault(key, []).append(srv)
+            return [chunk for _key, chunk in sorted(by_src_port.items())]
+        return [[srv] for srv in srvs]
 
     @staticmethod
     def _can_merge_tcp_udp(groups: dict[int, list]) -> bool:

@@ -244,6 +244,7 @@ table ip fwf_filter {
         # Rule mail_server_inbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 0 (global)
         #
@@ -252,6 +253,7 @@ table ip fwf_filter {
         # Rule web_server_inbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
@@ -269,6 +271,7 @@ table ip fwf_filter {
         # Rule mail_server_inbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule mail_server_outbound 0 (global)
         #
@@ -278,6 +281,7 @@ table ip fwf_filter {
         # Rule mail_server_outbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 0 (global)
         #
@@ -286,6 +290,7 @@ table ip fwf_filter {
         # Rule web_server_inbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
@@ -294,6 +299,7 @@ table ip fwf_filter {
         # Rule web_server_outbound 0 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_outbound 1 (global)
         #
@@ -316,6 +322,7 @@ table ip fwf_filter {
         # Rule mail_server_outbound 1 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_inbound 2 (global)
         #
@@ -324,6 +331,7 @@ table ip fwf_filter {
         # Rule web_server_outbound 0 (global)
         #
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
         #
         # Rule web_server_outbound 1 (global)
         #

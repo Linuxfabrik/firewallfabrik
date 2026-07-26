@@ -257,6 +257,10 @@ table ip fwf_filter {
         # SSH Access to the host; useful ICMP
         # types; ping request
         icmp type destination-unreachable ct state new counter accept
+        icmp type echo-reply icmp code 0 ct state new counter accept
+        icmp type echo-request icmp code 0 ct state new counter accept
+        icmp type time-exceeded icmp code 0 ct state new counter accept
+        icmp type time-exceeded icmp code 1 ct state new counter accept
         tcp dport 22 ct state new counter accept
         #
         # Rule 3 (global)
@@ -295,6 +299,10 @@ table ip fwf_filter {
         # SSH Access to the host; useful ICMP
         # types; ping request
         ip daddr 10.3.14.58 icmp type destination-unreachable ct state new counter accept
+        ip daddr 10.3.14.58 icmp type echo-reply icmp code 0 ct state new counter accept
+        ip daddr 10.3.14.58 icmp type echo-request icmp code 0 ct state new counter accept
+        ip daddr 10.3.14.58 icmp type time-exceeded icmp code 0 ct state new counter accept
+        ip daddr 10.3.14.58 icmp type time-exceeded icmp code 1 ct state new counter accept
         ip daddr 10.3.14.58 tcp dport 22 ct state new counter accept
         #
         # Rule 3 (global)
