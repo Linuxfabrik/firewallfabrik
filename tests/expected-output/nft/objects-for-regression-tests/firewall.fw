@@ -285,7 +285,7 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #
@@ -353,20 +353,20 @@ table ip fwf_filter {
         # Rule 23 (global)
         #
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 ip option rr exists counter drop
+        ip option rr exists counter drop
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 ip option lsrr exists ip option ssrr exists counter drop
+        ip option lsrr exists ip option ssrr exists counter drop
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 counter drop
+        counter drop
         #
         # Rule 24 (global)
         #
-        meta l4proto 0 ip hdrlength > 5 counter drop
+        ip hdrlength > 5 counter drop
         #
         # Rule 25 (global)
         #
         # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        meta l4proto 0 ip option lsrr exists ip option ra exists counter drop
+        ip option lsrr exists ip option ra exists counter drop
         #
         # Rule 26 (global)
         #
@@ -462,7 +462,7 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" meta l4proto 0 ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
         #
         # Rule 2 (eth1)
         #
@@ -519,20 +519,20 @@ table ip fwf_filter {
         # Rule 23 (global)
         #
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 ip option rr exists counter drop
+        ip option rr exists counter drop
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 ip option lsrr exists ip option ssrr exists counter drop
+        ip option lsrr exists ip option ssrr exists counter drop
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 counter drop
+        counter drop
         #
         # Rule 24 (global)
         #
-        meta l4proto 0 ip hdrlength > 5 counter drop
+        ip hdrlength > 5 counter drop
         #
         # Rule 25 (global)
         #
         # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        meta l4proto 0 ip option lsrr exists ip option ra exists counter drop
+        ip option lsrr exists ip option ra exists counter drop
         #
         # Rule 26 (global)
         #
@@ -704,19 +704,19 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
-        meta l4proto 0 ip option rr exists counter drop
-        meta l4proto 0 ip option lsrr exists ip option ssrr exists counter drop
+        ip option rr exists counter drop
+        ip option lsrr exists ip option ssrr exists counter drop
         # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 counter drop
+        counter drop
         #
         # Rule 24 (global)
         #
-        meta l4proto 0 ip hdrlength > 5 counter drop
+        ip hdrlength > 5 counter drop
         #
         # Rule 25 (global)
         #
         # # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        meta l4proto 0 ip option lsrr exists ip option ra exists counter drop
+        ip option lsrr exists ip option ra exists counter drop
         #
         # Rule 26 (global)
         #

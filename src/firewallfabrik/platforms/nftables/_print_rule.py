@@ -516,7 +516,12 @@ class PrintRule_nft(PolicyRuleProcessor):
         elif isinstance(srv, IPService):
             parts = []
             proto = srv.get_protocol_number()
-            if proto >= 0:
+            # Protocol number 0 is iptables' "all" wildcard, not a protocol
+            # (see the "all" entry of xtables_chain_protos in the netfilter
+            # source, libxtables/xtables.c), so it must not become a match.
+            # nftables reads `meta l4proto 0` literally as IP protocol 0 and
+            # then matches nothing.
+            if proto > 0:
                 parts.append(f'meta l4proto {proto}')
             data = srv.data or {}
             tos = data.get('tos', '')
@@ -563,8 +568,9 @@ class PrintRule_nft(PolicyRuleProcessor):
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
                     )
-            if parts:
-                return ' '.join(parts)
+            # An "any IP" service with no further conditions carries no match
+            # at all, which is correct: the rule applies to every protocol.
+            return ' '.join(parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')

@@ -303,7 +303,9 @@ class NATPrintRule_nft(NATRuleProcessor):
         elif isinstance(srv, IPService):
             ip_parts = []
             p = srv.get_protocol_number()
-            if p >= 0:
+            # Protocol number 0 is iptables' "all" wildcard, not a protocol;
+            # `meta l4proto 0` would match IP protocol 0 and nothing else.
+            if p > 0:
                 ip_parts.append(f'meta l4proto {p}')
             data = srv.data or {}
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):

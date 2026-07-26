@@ -278,7 +278,7 @@ table ip fwf_filter {
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        meta l4proto 0 ct state new counter accept
+        ct state new counter accept
         #
         # Rule 5 (global)
         #

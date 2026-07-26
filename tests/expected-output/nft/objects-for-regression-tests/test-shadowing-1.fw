@@ -280,7 +280,7 @@ table ip fwf_filter {
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 9 (global)
         #
@@ -326,7 +326,7 @@ table ip fwf_filter {
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 9 (global)
         #
@@ -372,7 +372,7 @@ table ip fwf_filter {
         #
         # this rule should shadow rule below it because
         # it uses IPService object with protocol 0
-        ip saddr 192.168.1.0/24 meta l4proto 0 ct state new counter accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 9 (global)
         #

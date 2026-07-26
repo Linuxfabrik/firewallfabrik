@@ -254,18 +254,18 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # # Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        meta l4proto 0 ip option lsrr exists ip option ra exists counter drop
+        ip option lsrr exists ip option ra exists counter drop
         #
         # Rule 1 (global)
         #
-        meta l4proto 0 ip option rr exists counter drop
-        meta l4proto 0 ip option lsrr exists ip option ssrr exists counter drop
+        ip option rr exists counter drop
+        ip option lsrr exists ip option ssrr exists counter drop
         # # Rule 1 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        meta l4proto 0 counter drop
+        counter drop
         #
         # Rule 2 (global)
         #
-        meta l4proto 0 ip hdrlength > 5 counter drop
+        ip hdrlength > 5 counter drop
     }
 
     chain output {
