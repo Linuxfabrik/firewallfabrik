@@ -297,7 +297,7 @@ options:
   limit_suffix:
     type: 'enum'
     default: '/second'
-    supported: false
+    supported: true
     widget: 'logLimitSuffix'
     values:
       - '/second'
@@ -305,17 +305,16 @@ options:
       - '/hour'
       - '/day'
     description: >-
-      Not yet implemented for nftables. The nft language has a native
-      "limit rate" directive that would be wired up here.
+      Time unit for the logging rate limit.
 
   limit_value:
     type: 'int'
     default: 0
-    supported: false
+    supported: true
     widget: 'logLimitVal'
     description: >-
-      Not yet implemented for nftables. The nft language has a native
-      "limit rate" directive that would be wired up here.
+      Maximum number of log messages per time unit.
+      Set to 0 to disable rate limiting.
 
   load_modules:
     type: 'bool'
