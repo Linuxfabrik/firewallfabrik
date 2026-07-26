@@ -263,39 +263,50 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } limit rate 5/second counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } counter drop
+        iifname "eth1" ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 2 ()
         #
         # testing group in "interface"
         # this rule should be identical to rule 3
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 2 - DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 2 - DENY **" level debug
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
         #
         # Rule 3 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 3 - DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 3 - DENY **" level debug
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "RULE 8 - DENY **" level debug
+        ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 limit rate 5/second counter log prefix "IDENT" level debug
+        tcp dport 113 counter reject with tcp reset
         #
         # Rule 10 (global)
         #
+        udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
         # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 12 (global)
         #
@@ -326,7 +337,8 @@ table ip fwf_filter {
         # using module iprange if
         # iptables version is >= 1.2.11
         # also test for bug #2526173
-        ip saddr 0.0.0.0 counter log prefix "RULE 19 - DENY **" level debug drop
+        ip saddr 0.0.0.0 limit rate 5/second counter log prefix "RULE 19 - DENY **" level debug
+        ip saddr 0.0.0.0 counter drop
         #
         # Rule 20 (global)
         #
@@ -336,7 +348,8 @@ table ip fwf_filter {
         #
         # Rule 21 (global)
         #
-        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new counter log prefix "RULE 21 - ACCEPT **" level debug accept
+        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 21 - ACCEPT **" level debug
+        ip saddr 192.168.2.0/24 ip daddr 192.168.2.1 meta l4proto icmp ct state new counter accept
         #
         # Rule 24 (global)
         #
@@ -349,16 +362,19 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
-        ip saddr 192.168.1.0/24 counter log prefix "RULE 26 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "RULE 26 - DENY **" level debug
+        ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 28 (global)
         #
-        tcp dport 21 ct state new counter log prefix "RULE 28 - ACCEPT **" level debug accept
+        tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 28 - ACCEPT **" level debug
+        tcp dport 21 ct state new counter accept
         #
         # Rule 29 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 29 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
+        counter drop
     }
 
     chain forward {
@@ -371,24 +387,32 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Anti-spoofing rule
-        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40, 192.168.1.0/24 } counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug drop
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } limit rate 5/second counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug
+        iifname "eth1" ip saddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } counter drop
+        iifname "eth1" ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "Iface: eth1 RULE 0 -- DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != 192.168.1.0/24 counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
+        oifname "eth1" ip saddr != 192.168.1.0/24 limit rate 5/second counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug
+        oifname "eth1" ip saddr != 192.168.1.0/24 counter drop
         #
         # Rule 2 ()
         #
         # testing group in "interface"
         # this rule should be identical to rule 3
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 2 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 2 - DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 2 - DENY **" level debug
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
         #
         # Rule 3 (eth1,eth3)
         #
-        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
-        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log prefix "RULE 3 - DENY **" level debug drop
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 3 - DENY **" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } limit rate 5/second counter log prefix "RULE 3 - DENY **" level debug
+        iifname "eth3" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter drop
         #
         # Rule 4 (eth1,eth3)
         #
@@ -412,23 +436,27 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "RULE 8 - DENY **" level debug
+        ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 limit rate 5/second counter log prefix "IDENT" level debug
+        tcp dport 113 counter reject with tcp reset
         #
         # Rule 10 (global)
         #
+        udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
         # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -483,7 +511,8 @@ table ip fwf_filter {
         # using module iprange if
         # iptables version is >= 1.2.11
         # also test for bug #2526173
-        ip saddr 0.0.0.0 counter log prefix "RULE 19 - DENY **" level debug drop
+        ip saddr 0.0.0.0 limit rate 5/second counter log prefix "RULE 19 - DENY **" level debug
+        ip saddr 0.0.0.0 counter drop
         #
         # Rule 20 (global)
         #
@@ -510,18 +539,21 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
-        ip saddr 192.168.1.0/24 counter log prefix "RULE 26 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "RULE 26 - DENY **" level debug
+        ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 27 (global)
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter log prefix "RULE 27 - ACCEPT **" level debug accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 27 - ACCEPT **" level debug
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
         #
         # Rule 29 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 29 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
+        counter drop
     }
 
     chain output {
@@ -533,7 +565,8 @@ table ip fwf_filter {
         # Rule 1 (eth1)
         #
         # Anti-spoofing rule
-        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug drop
+        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } limit rate 5/second counter log prefix "Iface: eth1 RULE 1 -- DENY **" level debug
+        oifname "eth1" ip saddr != { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } counter drop
         #
         # Rule 4 (eth1,eth3)
         #
@@ -550,23 +583,27 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log prefix "RULE 7 - DENY **" level debug drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
         #
         # Rule 8 (global)
         #
         # block fragments
-        ip frag-off & 0x1fff != 0 counter log prefix "RULE 8 - DENY **" level debug drop
+        ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "RULE 8 - DENY **" level debug
+        ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 9 (global)
         #
         # sends TCP RST and makes custom record
         # in the log
-        tcp dport 113 counter log prefix "IDENT" level debug reject with tcp reset
+        tcp dport 113 limit rate 5/second counter log prefix "IDENT" level debug
+        tcp dport 113 counter reject with tcp reset
         #
         # Rule 10 (global)
         #
+        udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
         # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        udp dport 161 counter log prefix "RULE 10 - REJECT **" level debug reject with icmp net-unreachable
+        udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)
         #
@@ -609,22 +646,26 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
-        ip saddr 192.168.1.0/24 counter log prefix "RULE 26 - DENY **" level debug drop
+        ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "RULE 26 - DENY **" level debug
+        ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 27 (global)
         #
         # host-fw2 has the same address as
         #         one of the firewall's interfaces
-        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter log prefix "RULE 27 - ACCEPT **" level debug accept
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 27 - ACCEPT **" level debug
+        ip daddr 22.22.22.22 tcp dport 21 ct state new limit rate 5/minute burst 10 packets counter accept
         #
         # Rule 28 (global)
         #
-        ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new counter log prefix "RULE 28 - ACCEPT **" level debug accept
+        ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 28 - ACCEPT **" level debug
+        ip daddr { 22.22.22.22, 22.22.23.23, 22.22.25.50, 192.168.1.1, 192.168.2.1, 192.168.2.40 } tcp dport 21 ct state new counter accept
         #
         # Rule 29 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 29 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
+        counter drop
     }
 }
 

@@ -278,12 +278,16 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 2 (eth1)
         #
         # Automatically generated anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } counter drop
+        iifname "eth1" ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 3 (eth1)
         #
@@ -338,10 +342,14 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        meta l4proto icmp counter drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #
         # Rule 23 (global)
         #
@@ -363,9 +371,10 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        counter drop
         #
         # Rule 28 (global)
         #
@@ -417,7 +426,8 @@ table ip fwf_filter {
         #
         # Rule 51 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 52 (global)
         #
@@ -443,7 +453,8 @@ table ip fwf_filter {
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        counter drop
     }
 
     chain forward {
@@ -455,12 +466,16 @@ table ip fwf_filter {
         # Rule 0 (eth1)
         #
         # Automatically generated rule blocking short fragments
-        iifname "eth1" ip frag-off & 0x1fff != 0 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip frag-off & 0x1fff != 0 counter drop
         #
         # Rule 2 (eth1)
         #
         # Automatically generated anti-spoofing rule
-        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222, 192.168.1.0/24 } counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } counter drop
+        iifname "eth1" ip saddr 192.168.1.0/24 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip saddr 192.168.1.0/24 counter drop
         #
         # Rule 5 (eth1)
         #
@@ -486,7 +501,8 @@ table ip fwf_filter {
         #
         # code should go into INPUT chain with
         # address in destination for comparison
-        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 counter log prefix "CUSTOM LOGGING" level debug drop
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth0" ip daddr 192.168.1.255 udp dport 53 counter drop
         #
         # Rule 12 (eth0)
         #
@@ -504,10 +520,14 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        meta l4proto icmp counter drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #
         # Rule 23 (global)
         #
@@ -529,9 +549,10 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        counter drop
         #
         # Rule 28 (global)
         #
@@ -572,10 +593,14 @@ table ip fwf_filter {
         #
         # Rule 42 (global)
         #
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 counter accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } counter accept
         #
         # Rule 43 (global)
         #
@@ -626,7 +651,8 @@ table ip fwf_filter {
         # rule with a single service should use "--dports".
         # It may be acceptable to not use multiport
         # in the rule with a single service at all.
-        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter accept
         #
         # Rule 53 (global)
         #
@@ -645,7 +671,8 @@ table ip fwf_filter {
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        counter drop
     }
 
     chain output {
@@ -690,10 +717,14 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
-        meta l4proto icmp counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
-        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter log prefix "CUSTOM LOGGING" level debug drop
+        meta l4proto icmp limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        meta l4proto icmp counter drop
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #
         # Rule 23 (global)
         #
@@ -713,11 +744,13 @@ table ip fwf_filter {
         #
         # Rule 26 (global)
         #
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        counter drop
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         # # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        counter drop
         #
         # Rule 28 (global)
         #
@@ -770,11 +803,13 @@ table ip fwf_filter {
         # rule with a single service should use "--dports".
         # It may be acceptable to not use multiport
         # in the rule with a single service at all.
-        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr 192.168.1.0/24 ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } ct state new counter accept
         #
         # Rule 51 (global)
         #
-        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        ip saddr { 192.168.1.1, 222.222.222.222 } ip daddr { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
         # Rule 52 (global)
         #
@@ -799,7 +834,8 @@ table ip fwf_filter {
         # Rule 57 (global)
         #
         # Automatically generated 'catch all' rule
-        counter log prefix "CUSTOM LOGGING" level debug drop
+        limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        counter drop
     }
 }
 

@@ -87,6 +87,11 @@ def print_fragment_match(ipv6: bool) -> str:
     return 'ip frag-off & 0x1fff != 0'
 
 
+# Targets that only write a log message and let the packet fall through to
+# the next rule.
+LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
+
+
 # IPv4 option flags of an IPService mapped to the nftables option keyword.
 # nftables knows lsrr, rr, ssrr and ra (see the ip_option_type rule in the
 # netfilter nftables parser, src/parser_bison.y).  fwbuilder's "timestamp"
@@ -214,6 +219,31 @@ class PrintRule_nft(PolicyRuleProcessor):
         return self._build_rule(rule)
 
     def _build_rule(self, rule: CompRule) -> str:
+        """Build the nftables text of one compiled rule.
+
+        Normally one line. A logged rule of a firewall that rate-limits its
+        log messages needs two, because the limit applies to the log message
+        and not to the traffic: one rate-limited log rule and one rule that
+        carries the verdict, the same pair the iptables compiler emits.
+        """
+        if rule.nft_log and self._firewall_log_limit() > 0:
+            log_rule = rule.clone()
+            log_rule.ipt_target = 'LOG'
+            action_rule = rule.clone()
+            action_rule.nft_log = False
+            return self._build_rule_line(
+                log_rule, with_errors=False
+            ) + self._build_rule_line(action_rule)
+        return self._build_rule_line(rule)
+
+    def _firewall_log_limit(self) -> int:
+        """Return the log rate limit configured in the firewall settings."""
+        try:
+            return int(self.compiler.fw.get_option('limit_value'))
+        except (TypeError, ValueError):
+            return 0
+
+    def _build_rule_line(self, rule: CompRule, with_errors: bool = True) -> str:
         """Build a complete nftables rule line.
 
         nft rule format:
@@ -286,7 +316,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         line = '        ' + ' '.join(parts) + '\n'
 
         # Add error comments inline
-        errors = self.compiler.get_errors_for_rule(rule)
+        errors = self.compiler.get_errors_for_rule(rule) if with_errors else ''
         if errors:
             line = f'        # {errors}\n' + line
 
@@ -923,7 +953,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         ``limit_suffix`` (``/second``, ``/minute``, ``/hour``, ``/day``) is
         already the spelling nftables expects.
         """
-        limit_val = rule.get_option('limit_value', -1)
+        if rule.ipt_target in LOG_TARGETS:
+            # fwbuilder applies the limit configured in the firewall settings
+            # to log rules and the limit configured on the rule itself to
+            # every other rule (PolicyCompiler_PrintRule.cpp:271).
+            limit_val = self.compiler.fw.get_option('limit_value')
+            limit_suffix = self.compiler.fw.get_option('limit_suffix')
+            burst = 0
+        else:
+            limit_val = rule.get_option('limit_value', -1)
+            limit_suffix = rule.get_option('limit_suffix', '')
+            burst = rule.get_option('limit_burst', 0)
+
         try:
             limit_val = int(limit_val)
         except (ValueError, TypeError):
@@ -931,8 +972,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
-        burst = rule.get_option('limit_burst', 0)
+        limit_suffix = limit_suffix or '/second'
         try:
             burst = int(burst)
         except (ValueError, TypeError):

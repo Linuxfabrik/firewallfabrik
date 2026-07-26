@@ -58,12 +58,14 @@ table ip fwf_filter {
         # Rule 16 (eth0)
         #
         # Test 16 : Check INPUT/OUPUT with FW part of rule
-        iifname "eth0" tcp dport 21 counter log prefix "RULE 16 -- DENY " level info drop
+        iifname "eth0" tcp dport 21 limit rate 5/second counter log prefix "RULE 16 -- DENY " level info
+        iifname "eth0" tcp dport 21 counter drop
         #
         # Rule 35 (global)
         #
         # Test 16 : Check INPUT/OUPUT with FW part of rule
-        tcp dport 21 counter log prefix "RULE 35 -- DENY " level info drop
+        tcp dport 21 limit rate 5/second counter log prefix "RULE 35 -- DENY " level info
+        tcp dport 21 counter drop
     }
 
     chain forward {
@@ -111,10 +113,14 @@ table ip fwf_filter {
         # Test 7 : Optimize : src, dst, svc
         # Time should appear on the src rules in the FORWARD table
         # +Logging
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 6 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 6 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 6 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 6 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter accept
         #
         # Rule 7 (eth0)
         #
@@ -140,12 +146,18 @@ table ip fwf_filter {
         #
         # Test 10 : Optimize on src & dst, services -> user chain
         # + Logging
-        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter log prefix "RULE 10 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter accept
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter accept
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter accept
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 10 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter accept
         #
         # Rule 11 (eth0)
         #
@@ -162,14 +174,22 @@ table ip fwf_filter {
         # Test 12 : Optimize : src, dst, svc
         # + options limit test
         # + logging
-        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 12 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter accept
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        iifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter accept
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 5/second counter log prefix "RULE 12 -- ACCEPT " level info
+        oifname "eth0" ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter accept
         #
         # Rule 13 (eth0)
         #
@@ -178,14 +198,22 @@ table ip fwf_filter {
         # +Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 13 -- ACCEPT " level info
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
         #
         # Rule 14 (eth0)
         #
@@ -222,8 +250,10 @@ table ip fwf_filter {
         # Rule 16 (eth0)
         #
         # Test 16 : Check INPUT/OUPUT with FW part of rule
-        iifname "eth0" ip daddr 10.0.0.1 tcp dport 21 counter log prefix "RULE 16 -- DENY " level info drop
-        oifname "eth0" ip daddr 10.0.0.1 tcp dport 21 counter log prefix "RULE 16 -- DENY " level info drop
+        iifname "eth0" ip daddr 10.0.0.1 tcp dport 21 limit rate 5/second counter log prefix "RULE 16 -- DENY " level info
+        iifname "eth0" ip daddr 10.0.0.1 tcp dport 21 counter drop
+        oifname "eth0" ip daddr 10.0.0.1 tcp dport 21 limit rate 5/second counter log prefix "RULE 16 -- DENY " level info
+        oifname "eth0" ip daddr 10.0.0.1 tcp dport 21 counter drop
         #
         # Rule 17 (eth0)
         #
@@ -271,8 +301,10 @@ table ip fwf_filter {
         # Test 7 : Optimize : src, dst, svc
         # Time should appear on the src rules in the FORWARD table
         # +Logging
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 25 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 25 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 25 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 25 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter accept
         #
         # Rule 26 (global)
         #
@@ -295,9 +327,12 @@ table ip fwf_filter {
         #
         # Test 10 : Optimize on src & dst, services -> user chain
         # + Logging
-        ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter log prefix "RULE 29 -- ACCEPT " level info accept
-        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter log prefix "RULE 29 -- ACCEPT " level info accept
-        ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter log prefix "RULE 29 -- ACCEPT " level info accept
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 29 -- ACCEPT " level info
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 meta l4proto icmp ct state new counter accept
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new limit rate 5/second counter log prefix "RULE 29 -- ACCEPT " level info
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 tcp dport 80 ct state new counter accept
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 29 -- ACCEPT " level info
+        ip saddr 10.0.1.1 ip daddr 10.0.0.1 udp dport 873 ct state new counter accept
         #
         # Rule 30 (global)
         #
@@ -313,10 +348,14 @@ table ip fwf_filter {
         # Test 12 : Optimize : src, dst, svc
         # + options limit test
         # + logging
-        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 31 -- ACCEPT " level info accept
-        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 31 -- ACCEPT " level info accept
-        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 31 -- ACCEPT " level info accept
-        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter log prefix "RULE 31 -- ACCEPT " level info accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 5/second counter log prefix "RULE 31 -- ACCEPT " level info
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new limit rate 8/second burst 4 packets counter accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 5/second counter log prefix "RULE 31 -- ACCEPT " level info
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new limit rate 8/second burst 4 packets counter accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 5/second counter log prefix "RULE 31 -- ACCEPT " level info
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new limit rate 8/second burst 4 packets counter accept
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 5/second counter log prefix "RULE 31 -- ACCEPT " level info
+        ip saddr 10.0.1.2 ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new limit rate 8/second burst 4 packets counter accept
         #
         # Rule 32 (global)
         #
@@ -325,10 +364,14 @@ table ip fwf_filter {
         # +Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 32 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 32 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 32 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 limit rate 5/second counter log prefix "RULE 32 -- ACCEPT " level info
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
         #
         # Rule 33 (global)
         #
@@ -356,7 +399,8 @@ table ip fwf_filter {
         # Rule 35 (global)
         #
         # Test 16 : Check INPUT/OUPUT with FW part of rule
-        ip daddr 10.0.0.1 tcp dport 21 counter log prefix "RULE 35 -- DENY " level info drop
+        ip daddr 10.0.0.1 tcp dport 21 limit rate 5/second counter log prefix "RULE 35 -- DENY " level info
+        ip daddr 10.0.0.1 tcp dport 21 counter drop
     }
 
     chain output {

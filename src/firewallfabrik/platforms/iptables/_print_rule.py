@@ -84,6 +84,10 @@ _LOG_LEVEL_MAP = {
     'warning': '4',
 }
 
+# Targets that only write a log message and let the packet fall through to
+# the next rule.
+LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
+
 
 class PrintRule(PolicyRuleProcessor):
     """Generates iptables shell commands from compiled policy rules.
@@ -814,7 +818,21 @@ class PrintRule(PolicyRuleProcessor):
         return ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
-        limit_val = rule.get_option('limit_value', -1)
+        """Print ``-m limit`` rate limiting.
+
+        fwbuilder applies the limit configured in the firewall settings to
+        log rules and the limit configured on the rule itself to every
+        other rule (PolicyCompiler_PrintRule.cpp:271).
+        """
+        if rule.ipt_target in LOG_TARGETS:
+            limit_val = self.compiler.fw.get_option('limit_value')
+            limit_suffix = self.compiler.fw.get_option('limit_suffix')
+            burst = 0
+        else:
+            limit_val = rule.get_option('limit_value', -1)
+            limit_suffix = rule.get_option('limit_suffix', '')
+            burst = rule.get_option('limit_burst', 0)
+
         try:
             limit_val = int(limit_val)
         except (ValueError, TypeError):
@@ -822,8 +840,7 @@ class PrintRule(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        limit_suffix = rule.get_option('limit_suffix', '') or '/second'
-        burst = rule.get_option('limit_burst', 0)
+        limit_suffix = limit_suffix or '/second'
         try:
             burst = int(burst)
         except (ValueError, TypeError):

@@ -249,7 +249,8 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 0 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 0 - DENY **" level debug
+        counter drop
     }
 
     chain forward {
@@ -262,7 +263,8 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 0 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 0 - DENY **" level debug
+        counter drop
     }
 
     chain output {
@@ -274,7 +276,8 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         # 'catch all' rule
-        counter log prefix "RULE 0 - DENY **" level debug drop
+        limit rate 5/second counter log prefix "RULE 0 - DENY **" level debug
+        counter drop
     }
 }
 
