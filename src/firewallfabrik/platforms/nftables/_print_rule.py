@@ -969,14 +969,37 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         start_h, start_m, end_h, end_m, days = parse_interval_data(data)
 
+        kerneltz = bool(self.compiler.fw.get_option('use_kerneltz'))
+
         parts = []
-        parts.append(
-            f'meta hour "{start_h:02d}:{start_m:02d}"-"{end_h:02d}:{end_m:02d}"'
-        )
+        if kerneltz:
+            # nft converts an "HH:MM" literal from the timezone of the host
+            # loading the ruleset into the kernel's seconds-since-UTC-midnight
+            # (hour_type_parse, netfilter nftables src/meta.c), which is what
+            # iptables' `-m time --kerneltz` does.
+            parts.append(
+                f'meta hour "{start_h:02d}:{start_m:02d}"-"{end_h:02d}:{end_m:02d}"'
+            )
+        else:
+            # Without --kerneltz iptables reads the times as UTC. A bare
+            # number goes into the rule unconverted, so the seconds since UTC
+            # midnight reproduce the iptables match exactly.
+            parts.append(
+                f'meta hour {start_h * 3600 + start_m * 60}-{end_h * 3600 + end_m * 60}'
+            )
 
         if sorted(days) != list(range(7)):
             day_names = ', '.join(f'"{DOW_NAMES_FULL[d]}"' for d in days)
             parts.append(f'meta day {{ {day_names} }}')
+            if kerneltz:
+                # The kernel derives the weekday from the UTC timestamp and
+                # nftables has no local-timezone counterpart, so this half of
+                # `--kerneltz` cannot be reproduced.
+                self.compiler.warning(
+                    rule,
+                    'nftables matches the weekday in UTC; the "use kernel '
+                    'timezone" setting only applies to the time of day',
+                )
 
         return ' '.join(parts)
 

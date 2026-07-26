@@ -245,39 +245,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
@@ -285,39 +285,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
     }
 
     chain forward {
@@ -327,39 +327,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
@@ -367,39 +367,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
     }
 
     chain output {
@@ -408,39 +408,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
@@ -448,39 +448,39 @@ table inet fwf_filter {
         #
         # Rule fw61-Policy 0 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour "18:00"-"23:59" counter log prefix "RULE 2 -- DENY " level info drop
+        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
-        meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
-        meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
-        meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
-        meta hour "00:00"-"01:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
-        meta hour "01:00"-"02:00" meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
     }
 }
 

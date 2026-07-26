@@ -238,28 +238,28 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "18:00"-"23:59" counter log prefix "RULE 1 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 64800-86340 counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #
@@ -272,28 +272,28 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "18:00"-"23:59" counter log prefix "RULE 1 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 64800-86340 counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #
@@ -306,28 +306,28 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip saddr 192.168.1.0/24 meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "18:00"-"23:59" counter log prefix "RULE 1 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 64800-86340 counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
-        ip saddr 192.168.1.0/24 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
         #

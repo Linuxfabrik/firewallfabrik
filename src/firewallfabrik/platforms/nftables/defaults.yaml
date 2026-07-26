@@ -528,11 +528,12 @@ options:
   use_kerneltz:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'useKernelTz'
     description: >-
-      No equivalent in nftables. "meta hour"/"meta day" matching always
-      uses the kernel timezone, no UTC mode to switch to.
+      Interpret the time of day of time-based rules in the kernel
+      timezone instead of UTC. The weekday is always matched in UTC:
+      nftables has no local-timezone weekday.
 
   use_m_set:
     type: 'bool'

@@ -337,12 +337,12 @@ table ip fwf_filter {
         #
         # Rule 38 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter accept
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
         #
         # Rule 39 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 40 (global)
         #
@@ -485,12 +485,12 @@ table ip fwf_filter {
         # Rule 29 (global)
         #
         # testing negation in service field
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 30 (global)
         #
         # testing negation in service field
-        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 33 (global)
         #
@@ -516,12 +516,12 @@ table ip fwf_filter {
         #
         # Rule 38 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter accept
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
         #
         # Rule 39 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
     }
 
     chain output {
@@ -611,12 +611,12 @@ table ip fwf_filter {
         # Rule 29 (global)
         #
         # testing negation in service field
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 30 (global)
         #
         # testing negation in service field
-        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 32 (global)
         #
@@ -642,12 +642,12 @@ table ip fwf_filter {
         #
         # Rule 38 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter accept
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
         #
         # Rule 39 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour "09:00"-"17:00" meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 40 (global)
         #

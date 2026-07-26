@@ -111,10 +111,10 @@ table ip fwf_filter {
         # Test 7 : Optimize : src, dst, svc
         # Time should appear on the src rules in the FORWARD table
         # +Logging
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 6 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 6 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 6 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 6 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 6 -- ACCEPT " level info accept
         #
         # Rule 7 (eth0)
         #
@@ -178,14 +178,14 @@ table ip fwf_filter {
         # +Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 13 -- ACCEPT " level info accept
         #
         # Rule 14 (eth0)
         #
@@ -196,22 +196,22 @@ table ip fwf_filter {
         # + Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter accept
-        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter accept
-        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 43200-86340 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 43200-86340 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 43200-86340 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 43200-86340 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        iifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 43200-86340 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 43200-86340 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 43200-86340 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 43200-86340 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        oifname "eth0" ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
         #
         # Rule 15 (eth0)
         #
@@ -271,8 +271,8 @@ table ip fwf_filter {
         # Test 7 : Optimize : src, dst, svc
         # Time should appear on the src rules in the FORWARD table
         # +Logging
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 25 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 25 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 25 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 25 -- ACCEPT " level info accept
         #
         # Rule 26 (global)
         #
@@ -325,10 +325,10 @@ table ip fwf_filter {
         # +Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 32 -- ACCEPT " level info accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter log prefix "RULE 32 -- ACCEPT " level info accept
         #
         # Rule 33 (global)
         #
@@ -339,14 +339,14 @@ table ip fwf_filter {
         # + Logging
         # NOT OPTIMUM : Time appears in Logging
         # SOLUTION : Patch logging not to include time?
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "12:00"-"23:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "12:00"-"23:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "12:00"-"23:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "12:00"-"23:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour "00:00"-"11:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour "00:00"-"11:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour "00:00"-"11:59" counter accept
-        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour "00:00"-"11:59" counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 43200-86340 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 43200-86340 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 43200-86340 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 43200-86340 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto icmp ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } tcp dport 21 ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } udp dport 873 ct state new meta hour 0-43140 counter accept
+        ip saddr { 10.0.1.1, 10.0.1.2 } ip daddr { 10.0.0.1, 10.0.0.2, 10.0.0.3 } meta l4proto 51 ct state new meta hour 0-43140 counter accept
         #
         # Rule 34 (global)
         #

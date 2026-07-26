@@ -572,10 +572,10 @@ table ip fwf_filter {
         #
         # Rule 42 (global)
         #
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Saturday" } counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "00:00"-"23:59" meta day { "Sunday" } counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "18:00"-"23:59" counter log prefix "CUSTOM LOGGING" level debug accept
-        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour "01:01"-"02:02" meta day { "Sunday", "Monday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 counter log prefix "CUSTOM LOGGING" level debug accept
+        ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "CUSTOM LOGGING" level debug accept
         #
         # Rule 43 (global)
         #
