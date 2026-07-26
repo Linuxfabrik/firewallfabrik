@@ -1391,15 +1391,24 @@ class GroupServicesByProtocol(NATRuleProcessor):
 
 
 class ConvertToAtomicForAddresses(NATRuleProcessor):
-    """Split rules with multiple addresses into individual atomic rules."""
+    """Split rules with multiple addresses into individual atomic rules.
+
+    A negated element is kept whole.  "Not one of these addresses" means
+    none of them, so splitting it into one rule per address would turn the
+    condition into "not this one", which every other address satisfies; the
+    print rule renders the list as ``!= { a, b }`` instead.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        osrc_list = rule.osrc or [None]
-        odst_list = rule.odst or [None]
+        keep_osrc = bool(rule.osrc_single_object_negation) and len(rule.osrc) > 1
+        keep_odst = bool(rule.odst_single_object_negation) and len(rule.odst) > 1
+
+        osrc_list = [None] if keep_osrc else (rule.osrc or [None])
+        odst_list = [None] if keep_odst else (rule.odst or [None])
         tsrc_list = rule.tsrc or [None]
         tdst_list = rule.tdst or [None]
 
@@ -1408,8 +1417,10 @@ class ConvertToAtomicForAddresses(NATRuleProcessor):
                 for tsrc in tsrc_list:
                     for tdst in tdst_list:
                         r = rule.clone()
-                        r.osrc = [osrc] if osrc is not None else []
-                        r.odst = [odst] if odst is not None else []
+                        if not keep_osrc:
+                            r.osrc = [osrc] if osrc is not None else []
+                        if not keep_odst:
+                            r.odst = [odst] if odst is not None else []
                         r.tsrc = [tsrc] if tsrc is not None else []
                         r.tdst = [tdst] if tdst is not None else []
                         self.tmp_queue.append(r)

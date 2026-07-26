@@ -13,7 +13,6 @@
 # Rule 14 (NAT): Host "host-with-mac-4" has no addresses
 # Rule 14 (NAT): Host "host-with-mac-4" has no addresses
 # Rule 16 (NAT): Host "host-with-mac-4" has no addresses
-# Rule 16 (NAT): Host "host-with-mac-4" has no addresses
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
@@ -939,14 +938,10 @@ table ip fwf_nat {
         # Rule 16 (NAT)
         #
         # should match mac and ip addresses
-        oifname "eth1" ip saddr 192.168.1.10 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip saddr 192.168.1.10 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip daddr != 223.223.223.223 tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ip daddr != 61.150.47.112 tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
+        oifname "eth1" ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
         #
         # Rule 20 (NAT)
         #

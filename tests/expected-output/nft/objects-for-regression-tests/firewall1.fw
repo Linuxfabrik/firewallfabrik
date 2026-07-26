@@ -668,10 +668,7 @@ table ip fwf_nat {
         #
         # Rule 11 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr != 192.168.1.1 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.0/24 ip daddr != 22.22.22.22 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.0/24 ip daddr != 192.168.2.1 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.0/24 ip daddr != 22.22.23.23 tcp dport 80 counter redirect to :3128
+        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 22.22.22.22, 192.168.2.1, 22.22.23.23 } tcp dport 80 counter redirect to :3128
         #
         # Rule 12 (NAT)
         #
@@ -679,17 +676,13 @@ table ip fwf_nat {
         #
         # Rule 13 (NAT)
         #
-        ip saddr 192.168.1.10 ip daddr != 192.168.1.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.10 ip daddr != 192.168.2.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.20 ip daddr != 192.168.1.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr 192.168.1.20 ip daddr != 192.168.2.0/24 tcp dport 80 counter redirect to :3128
+        ip saddr 192.168.1.10 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter redirect to :3128
+        ip saddr 192.168.1.20 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter redirect to :3128
         #
         # Rule 14 (NAT)
         #
-        ip saddr != 192.168.1.10 ip daddr 192.168.1.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr != 192.168.1.10 ip daddr 192.168.2.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr != 192.168.1.20 ip daddr 192.168.1.0/24 tcp dport 80 counter redirect to :3128
-        ip saddr != 192.168.1.20 ip daddr 192.168.2.0/24 tcp dport 80 counter redirect to :3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.0/24 tcp dport 80 counter redirect to :3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.2.0/24 tcp dport 80 counter redirect to :3128
         #
         # Rule 15 (NAT)
         #
@@ -761,21 +754,15 @@ table ip fwf_nat {
         #
         # Rule 8 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 22.22.22.22
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 192.168.2.1
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 22.22.23.23
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 22.22.22.22
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 192.168.2.1
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 22.22.23.23
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 22.22.22.22
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 192.168.2.1
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 22.22.23.23
         #
         # Rule 9 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 22.22.22.22
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 192.168.2.1
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.1.0/24 counter snat to 22.22.23.23
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 22.22.22.22
-        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 192.168.2.1
-        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 22.22.23.23
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 22.22.22.22
+        oifname "eth2" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 192.168.2.1
+        oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.0/24, 192.168.2.0/24 } counter snat to 22.22.23.23
         #
         # Rule 10 (NAT)
         #

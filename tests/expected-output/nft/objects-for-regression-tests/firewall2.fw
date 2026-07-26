@@ -642,10 +642,8 @@ table ip fwf_nat {
         ip saddr 192.168.1.10 ip daddr 192.168.2.11 counter accept
         ip saddr 192.168.1.20 ip daddr 192.168.2.10 counter accept
         ip saddr 192.168.1.20 ip daddr 192.168.2.11 counter accept
-        ip saddr 192.168.1.10 ip daddr != 192.168.2.10 counter accept
-        ip saddr 192.168.1.10 ip daddr != 192.168.2.11 counter accept
-        ip saddr 192.168.1.20 ip daddr != 192.168.2.10 counter accept
-        ip saddr 192.168.1.20 ip daddr != 192.168.2.11 counter accept
+        ip saddr 192.168.1.10 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
+        ip saddr 192.168.1.20 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
         #
         # Rule 13 (NAT)
         #
@@ -729,8 +727,7 @@ table ip fwf_nat {
         #
         # Rule 37 (NAT)
         #
-        ip saddr != 192.168.1.10 ip daddr != 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
-        ip saddr != 192.168.1.20 ip daddr != 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr != 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
         #
         # Rule 39 (NAT)
         #
@@ -744,29 +741,25 @@ table ip fwf_nat {
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr != 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.1:3128
-        ip saddr != 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.1:3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 counter dnat to 192.168.1.1:3128
         #
         # Rule 44 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr != 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.1:3128
-        ip saddr != 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.1:3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 counter dnat to 192.168.1.1:3128
         #
         # Rule 45 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr != 192.168.1.10 tcp dport 80 counter redirect to :3128
-        ip saddr != 192.168.1.20 tcp dport 80 counter redirect to :3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 counter redirect to :3128
         #
         # Rule 47 (NAT)
         #
         # testing transparent proxy
         # roules for a support req.
-        ip saddr != 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.50:3128
-        ip saddr != 192.168.1.20 tcp dport 80 counter dnat to 192.168.1.50:3128
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 counter dnat to 192.168.1.50:3128
         #
         # Rule 48 (NAT)
         #
@@ -943,10 +936,8 @@ table ip fwf_nat {
         #
         # Rule 12 (NAT)
         #
-        ip saddr 192.168.1.10 ip daddr != 192.168.2.10 counter accept
-        ip saddr 192.168.1.10 ip daddr != 192.168.2.11 counter accept
-        ip saddr 192.168.1.20 ip daddr != 192.168.2.10 counter accept
-        ip saddr 192.168.1.20 ip daddr != 192.168.2.11 counter accept
+        ip saddr 192.168.1.10 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
+        ip saddr 192.168.1.20 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
         #
         # Rule 20 (NAT)
         #
@@ -975,8 +966,7 @@ table ip fwf_nat {
         #
         # Rule 38 (NAT)
         #
-        oifname "eth0" ip saddr != 192.168.1.10 tcp dport != 80 counter snat to 192.168.1.1
-        oifname "eth0" ip saddr != 192.168.1.20 tcp dport != 80 counter snat to 192.168.1.1
+        oifname "eth0" ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport != 80 counter snat to 192.168.1.1
         oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 40 (NAT)

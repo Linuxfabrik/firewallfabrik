@@ -61,6 +61,13 @@ def _is_true(val) -> bool:
     return str(val) == 'True'
 
 
+def _as_set(values: list[str]) -> str:
+    """Render one value as it is, several as an nftables anonymous set."""
+    if len(values) == 1:
+        return values[0]
+    return '{ ' + ', '.join(values) + ' }'
+
+
 class NATPrintRule_nft(NATRuleProcessor):
     """Generates nftables NAT rule statements from compiled NAT rules."""
 
@@ -112,31 +119,26 @@ class NATPrintRule_nft(NATRuleProcessor):
             parts.append(iface_match)
 
         # Original source
-        osrc = nft_comp.get_first_osrc(rule)
-        osrc_mac = get_mac_only_address(osrc) if osrc else ''
-        if osrc_mac:
-            # A MAC address is not part of the IP header and needs its own
-            # match, the same way iptables-translate renders
-            # "-m mac --mac-source".
-            neg = '!= ' if rule.osrc_single_object_negation else ''
-            parts.append(f'ether saddr {neg}{osrc_mac}')
-        elif osrc:
-            addr = self._print_addr(osrc, rule)
-            if addr:
-                neg = '!= ' if rule.osrc_single_object_negation else ''
-                parts.append(f'{af_prefix} saddr {neg}{addr}')
+        parts.extend(
+            self._print_addr_match(
+                rule,
+                rule.osrc,
+                f'{af_prefix} saddr',
+                'ether saddr',
+                bool(rule.osrc_single_object_negation),
+            )
+        )
 
         # Original destination
-        odst = nft_comp.get_first_odst(rule)
-        odst_mac = get_mac_only_address(odst) if odst else ''
-        if odst_mac:
-            neg = '!= ' if rule.odst_single_object_negation else ''
-            parts.append(f'ether daddr {neg}{odst_mac}')
-        elif odst:
-            addr = self._print_addr(odst, rule)
-            if addr:
-                neg = '!= ' if rule.odst_single_object_negation else ''
-                parts.append(f'{af_prefix} daddr {neg}{addr}')
+        parts.extend(
+            self._print_addr_match(
+                rule,
+                rule.odst,
+                f'{af_prefix} daddr',
+                'ether daddr',
+                bool(rule.odst_single_object_negation),
+            )
+        )
 
         # Original service
         osrv = nft_comp.get_first_osrv(rule)
@@ -161,6 +163,41 @@ class NATPrintRule_nft(NATRuleProcessor):
         parts.append(nat_action)
 
         return '        ' + ' '.join(parts) + '\n'
+
+    def _print_addr_match(
+        self,
+        rule: CompRule,
+        objects: list,
+        ip_keyword: str,
+        ether_keyword: str,
+        negated: bool,
+    ) -> list[str]:
+        """Render an address element, keeping MAC addresses apart.
+
+        A negated element keeps all of its addresses in one match, because
+        "not one of these" only holds when none of them matches; they are
+        rendered as an anonymous set.  A MAC address is not part of the IP
+        header and needs its own ``ether`` match, which is what
+        iptables-translate produces for ``-m mac --mac-source``.
+        """
+        neg = '!= ' if negated else ''
+        macs = []
+        addrs = []
+        for obj in objects:
+            mac = get_mac_only_address(obj)
+            if mac:
+                macs.append(mac)
+                continue
+            addr = self._print_addr(obj, rule)
+            if addr:
+                addrs.append(addr)
+
+        parts = []
+        if macs:
+            parts.append(f'{ether_keyword} {neg}{_as_set(macs)}')
+        if addrs:
+            parts.append(f'{ip_keyword} {neg}{_as_set(addrs)}')
+        return parts
 
     def _print_rule_label(self, rule: CompRule) -> str:
         """Print rule label as nft comment."""
