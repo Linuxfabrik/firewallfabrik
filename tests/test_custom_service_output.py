@@ -68,12 +68,12 @@ def _make_custom_service(name, codes, protocol='any'):
     return svc
 
 
-def _make_tag_service(name, tagvalue):
+def _make_tag_service(name, tagcode):
     svc = TagService()
     svc.id = uuid.uuid4()
     svc.name = name
-    svc.codes = {'tag_tagvalue': tagvalue}
-    svc.data = {'tagvalue': tagvalue}
+    # 'tagcode' is the key the .fwb reader and the tag service dialog write.
+    svc.data = {'tagcode': tagcode}
     return svc
 
 

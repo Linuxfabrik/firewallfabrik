@@ -305,6 +305,15 @@ class TagService(Service):
 
     __mapper_args__ = {'polymorphic_identity': 'TagService'}
 
+    def get_code(self) -> str:
+        """Return the packet mark this service matches.
+
+        The value is stored under the ``tagcode`` key, the attribute name
+        the ``.fwb`` XML and the tag service dialog both use.  Mirrors
+        fwbuilder's ``TagService::getCode()``.
+        """
+        return str((self.data or {}).get('tagcode', '') or '')
+
 
 class Interval(Base):
     """Time interval used in rule scheduling."""

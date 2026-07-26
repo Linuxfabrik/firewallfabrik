@@ -301,7 +301,7 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule 22 (global)
         #
@@ -385,7 +385,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule mangle_rules 1 (global)
         #
@@ -393,39 +393,43 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        counter accept
+        meta mark 1 counter accept
         #
         # Rule mangle_rules 4 (global)
         #
-        ip saddr 157.112.176.24 ct state new counter accept
+        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 5 (global)
         #
-        ip saddr "6bone.net" ct state new counter accept
+        ip saddr "6bone.net" meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 8 (global)
         #
-        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } ct state new counter accept
+        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 9 (global)
         #
-        ip saddr 22.22.23.22 ct state new counter accept
+        ip saddr 22.22.23.22 meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 10 (global)
+        #
+        meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 11 (global)
         #
-        ip saddr != 192.168.1.0/24 ct state new counter accept
+        ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 12 (global)
         #
-        ip saddr != 1.1.1.1 ct state new counter accept
+        ip saddr != 1.1.1.1 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 13 (global)
         #
-        ip saddr != 157.112.176.24 ct state new counter accept
+        ip saddr != 157.112.176.24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 14 (global)
         #
-        ip saddr != "6bone.net" ct state new counter accept
+        ip saddr != "6bone.net" meta mark 1 ct state new counter accept
     }
 
     chain forward {
@@ -477,7 +481,7 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule 21 (global)
         #
@@ -569,7 +573,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule mangle_rules 1 (global)
         #
@@ -577,31 +581,31 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        counter accept
+        meta mark 1 counter accept
         #
         # Rule mangle_rules 4 (global)
         #
-        ip saddr 157.112.176.24 ct state new counter accept
+        ip saddr 157.112.176.24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 5 (global)
         #
-        ip saddr "6bone.net" ct state new counter accept
+        ip saddr "6bone.net" meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 11 (global)
         #
-        ip saddr != 192.168.1.0/24 ct state new counter accept
+        ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 12 (global)
         #
-        ip saddr != 1.1.1.1 ct state new counter accept
+        ip saddr != 1.1.1.1 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 13 (global)
         #
-        ip saddr != 157.112.176.24 ct state new counter accept
+        ip saddr != 157.112.176.24 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 14 (global)
         #
-        ip saddr != "6bone.net" ct state new counter accept
+        ip saddr != "6bone.net" meta mark 1 ct state new counter accept
     }
 
     chain output {
@@ -671,7 +675,7 @@ table ip fwf_filter {
         # Rule 20 (global)
         #
         # tag 0 matches packet that has not been marked yet.
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule 21 (global)
         #
@@ -759,7 +763,7 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 0 (global)
         #
-        ct state new counter accept
+        meta mark != 0 ct state new counter accept
         #
         # Rule mangle_rules 1 (global)
         #
@@ -767,15 +771,19 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 2 (global)
         #
-        counter accept
+        meta mark 1 counter accept
+        #
+        # Rule mangle_rules 8 (global)
+        #
+        meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 9 (global)
         #
-        ip saddr 22.22.23.22 ct state new counter accept
+        ip saddr 22.22.23.22 meta mark 1 ct state new counter accept
         #
         # Rule mangle_rules 10 (global)
         #
-        ip daddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } ct state new counter accept
+        ip daddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
     }
 }
 

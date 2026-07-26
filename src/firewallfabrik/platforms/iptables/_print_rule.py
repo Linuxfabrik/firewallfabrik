@@ -693,9 +693,7 @@ class PrintRule(PolicyRuleProcessor):
             return ''
 
         if isinstance(srv, TagService):
-            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
-            if not tag_code:
-                tag_code = (srv.data or {}).get('tagvalue', '')
+            tag_code = srv.get_code()
             if tag_code:
                 return f'-m mark {neg}--mark {tag_code} '
             return ''

@@ -601,9 +601,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                 return code
             return ''
         elif isinstance(srv, TagService):
-            tag_code = (srv.codes or {}).get('tag_tagvalue', '')
-            if not tag_code:
-                tag_code = (srv.data or {}).get('tagvalue', '')
+            tag_code = srv.get_code()
             if tag_code:
                 neg = '!= ' if rule.srv_single_object_negation else ''
                 return f'meta mark {neg}{tag_code}'

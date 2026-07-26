@@ -265,6 +265,11 @@ table ip fwf_filter {
         #
         # Rule Policy_1 3 (global)
         #
+        meta mark 1 counter
+        #
+        # Rule Policy_1 4 (global)
+        #
+        meta mark 2 counter
         #
         # Rule Policy_1 5 (global)
         #
@@ -297,6 +302,11 @@ table ip fwf_filter {
         #
         # Rule Policy_1 3 (global)
         #
+        meta mark 1 counter
+        #
+        # Rule Policy_1 4 (global)
+        #
+        meta mark 2 counter
         #
         # Rule Policy_1 5 (global)
         #
@@ -325,6 +335,11 @@ table ip fwf_filter {
         #
         # Rule Policy_1 3 (global)
         #
+        meta mark 1 counter
+        #
+        # Rule Policy_1 4 (global)
+        #
+        meta mark 2 counter
         #
         # Rule Policy_1 5 (global)
         #

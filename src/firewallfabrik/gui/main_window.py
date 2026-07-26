@@ -311,10 +311,10 @@ def _identity_key(obj):
         data = getattr(obj, 'data', None) or {}
         return (obj_type, repr(sorted(data.items())))
 
-    # TagService: type + tagvalue
+    # TagService: type + tagcode
     if obj_type == 'TagService':
         data = getattr(obj, 'data', None) or {}
-        return (obj_type, data.get('tagvalue'))
+        return (obj_type, data.get('tagcode'))
 
     # No meaningful content key for groups, devices, intervals, etc.
     return None

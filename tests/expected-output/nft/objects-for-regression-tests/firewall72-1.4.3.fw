@@ -268,7 +268,7 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        ip daddr 172.16.1.1 counter drop
+        ip daddr 172.16.1.1 meta mark != 16 counter drop
     }
 
     chain forward {
@@ -317,7 +317,7 @@ table ip fwf_filter {
         #
         # Rule 9 (global)
         #
-        ip daddr 172.16.1.1 counter drop
+        ip daddr 172.16.1.1 meta mark != 16 counter drop
         #
         # Rule 12 (eth1)
         #
