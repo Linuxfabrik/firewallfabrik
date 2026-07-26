@@ -49,6 +49,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
     print_fragment_match,
     print_ip_option_matches,
+    print_mark_match,
 )
 
 if TYPE_CHECKING:
@@ -380,7 +381,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         elif isinstance(srv, TagService):
             tag_code = srv.get_code()
             if tag_code:
-                return f'meta mark {neg}{tag_code}'
+                return print_mark_match(tag_code, bool(neg))
             return ''
         elif isinstance(srv, UserService):
             uid = srv.userid or ''

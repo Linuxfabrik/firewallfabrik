@@ -284,6 +284,13 @@ class TestNftTagServiceOutput:
         line = self._render(rule)
         assert 'meta mark 42' in line
 
+    def test_masked_mark_uses_bitwise_form(self):
+        # `meta mark 0x1/0xff` is read as a prefix length and rejected.
+        svc = _make_tag_service('masked-tag', '0x1/0xff')
+        rule = _make_rule([svc], stateless=True)
+        line = self._render(rule)
+        assert 'meta mark and 0xff == 0x1' in line
+
 
 class TestNftUserServiceOutput:
     def _render(self, rule):

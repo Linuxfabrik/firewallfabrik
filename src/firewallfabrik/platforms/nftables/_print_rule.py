@@ -121,6 +121,23 @@ def print_ip_option_matches(data: dict) -> tuple[list[str], list[str]]:
     return (matches, unsupported)
 
 
+def print_mark_match(tag_code: str, negated: bool) -> str:
+    """Return the nftables match for an iptables ``--mark value[/mask]``.
+
+    A bare value compares directly (``meta mark 0x1``).  A masked value
+    has to be spelled out as a bitwise test, because nftables reads the
+    slash of ``meta mark 0x1/0xff`` as a prefix length and rejects it.
+    The bitwise form is what ``iptables-translate`` produces for the same
+    match (netfilter ``extensions/libxt_mark.txlate``).
+    """
+    op = '!=' if negated else '=='
+    value, sep, mask = tag_code.partition('/')
+    value = value.strip()
+    if not sep:
+        return f'meta mark {"!= " if negated else ""}{value}'
+    return f'meta mark and {mask.strip()} {op} {value}'
+
+
 def get_mac_only_address(obj) -> str:
     """Return the MAC of an object that has no IP address.
 
@@ -603,8 +620,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         elif isinstance(srv, TagService):
             tag_code = srv.get_code()
             if tag_code:
-                neg = '!= ' if rule.srv_single_object_negation else ''
-                return f'meta mark {neg}{tag_code}'
+                return print_mark_match(tag_code, bool(rule.srv_single_object_negation))
             return ''
         elif isinstance(srv, UserService):
             uid = srv.userid or ''
