@@ -1689,21 +1689,44 @@ class SrvNegation(PolicyRuleProcessor):
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_return)
 
-        # Action rule: clear everything
-        r_action = rule.clone()
-        r_action.src = []
-        r_action.dst = []
-        r_action.srv = []
-        r_action.itf = []
-        r_action.when = []
-        r_action.ipt_chain = new_chain
-        r_action.upstream_rule_chain = this_chain
-        r_action.set_option('stateless', True)
-        r_action.force_state_check = False
-        r_action.final = True
+        # Action rule: clear everything.  The service was already matched by
+        # the jump rule and the RETURN rules above.
+        def make_action_rule() -> CompRule:
+            r = rule.clone()
+            r.src = []
+            r.dst = []
+            r.srv = []
+            r.itf = []
+            r.when = []
+            r.ipt_chain = new_chain
+            r.upstream_rule_chain = this_chain
+            r.set_option('stateless', True)
+            r.force_state_check = False
+            r.final = True
+            return r
+
         ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
-        self.tmp_queue.append(r_action)
+
+        if rule.action == PolicyAction.Reject and ipt_comp.is_action_on_reject_tcp_rst(
+            rule
+        ):
+            # `--reject-with tcp-reset` needs `-p tcp`; iptables refuses the
+            # rule without it, and clearing the service element takes that
+            # match away.  Split the action the way
+            # SplitRuleIfSrvAnyActionReject does for a service-any Reject
+            # rule: TCP is reset, everything else gets the default ICMP
+            # unreachable.  The TCP rule has to come first, otherwise the
+            # general one already caught the packet.
+            r_tcp = make_action_rule()
+            r_tcp.srv = [make_any_tcp_service()]
+            self.tmp_queue.append(r_tcp)
+
+            r_other = make_action_rule()
+            ipt_comp.reset_action_on_reject(r_other)
+            self.tmp_queue.append(r_other)
+        else:
+            self.tmp_queue.append(make_action_rule())
 
         return True
 
