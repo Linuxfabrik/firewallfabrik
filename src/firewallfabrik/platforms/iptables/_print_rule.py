@@ -918,6 +918,16 @@ class PrintRule(PolicyRuleProcessor):
 
         target = rule.ipt_target
         if target:
+            if target == '.CUSTOM':
+                # The rule carries the target verbatim, e.g. `-j TCPMSS
+                # --clamp-mss-to-pmtu`.
+                custom_str = rule.get_option('custom_str', '')
+                if not custom_str:
+                    self.compiler.error(
+                        rule, 'rule with a custom action has no target to run'
+                    )
+                    return ''
+                return f' {custom_str}'
             if target.startswith('.'):
                 return ''
             if target == 'REJECT':

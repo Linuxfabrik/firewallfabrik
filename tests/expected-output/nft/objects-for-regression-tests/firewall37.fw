@@ -108,6 +108,9 @@
 # Rule 35 (eth0): Classification not yet supported by nftables compiler
 # Rule 35 (eth0): Classification not yet supported by nftables compiler
 # Rule 35 (eth0): Classification not yet supported by nftables compiler
+# Rule 36 (global): Custom action not yet supported by nftables compiler
+# Rule 36 (global): Custom action not yet supported by nftables compiler
+# Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
@@ -530,6 +533,7 @@ table ip fwf_filter {
         #
         # Rule 36 (global)
         #
+        # # Rule 36 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 37 (global)
@@ -797,6 +801,7 @@ table ip fwf_filter {
         #
         # Rule 36 (global)
         #
+        # # Rule 36 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 37 (global)
@@ -1085,6 +1090,7 @@ table ip fwf_filter {
         #
         # Rule 36 (global)
         #
+        # # Rule 36 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 37 (global)

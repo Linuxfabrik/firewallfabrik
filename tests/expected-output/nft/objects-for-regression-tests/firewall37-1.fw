@@ -82,6 +82,9 @@
 # Rule 22 (global): Branch action not yet supported by nftables compiler
 # Rule 22 (global): Branch action not yet supported by nftables compiler
 # Rule 22 (global): Branch action not yet supported by nftables compiler
+# Rule 23 (global): Custom action not yet supported by nftables compiler
+# Rule 23 (global): Custom action not yet supported by nftables compiler
+# Rule 23 (global): Custom action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -470,6 +473,7 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
@@ -682,6 +686,7 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
@@ -866,6 +871,7 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)

@@ -1426,7 +1426,14 @@ class DecideOnTarget(PolicyRuleProcessor):
         }
         action = rule.action
         target = target_map.get(action) if isinstance(action, PolicyAction) else None
-        if target is not None:
+        if target == '.CUSTOM':
+            # The custom target of such a rule is free-form iptables text
+            # (`-j TCPMSS --clamp-mss-to-pmtu`), which has no meaning here.
+            self.compiler.error(
+                rule, 'Custom action not yet supported by nftables compiler'
+            )
+            rule.ipt_target = target
+        elif target is not None:
             rule.ipt_target = target
         else:
             action_name = action.name if action else str(action)
