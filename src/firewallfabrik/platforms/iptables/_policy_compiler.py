@@ -1766,13 +1766,19 @@ class SplitIfIfaceAndDirectionBoth(PolicyRuleProcessor):
 
         direction = rule.direction
         if direction == Direction.Both and not rule.is_itf_any():
-            r1 = rule.clone()
-            r1.direction = Direction.Inbound
-            self.tmp_queue.append(r1)
+            # A chain that is already assigned rules out one of the two
+            # directions: a packet has no incoming interface left in
+            # POSTROUTING and no outgoing one yet in PREROUTING, and
+            # iptables refuses `-i` / `-o` there.
+            if rule.ipt_chain != 'POSTROUTING':
+                r1 = rule.clone()
+                r1.direction = Direction.Inbound
+                self.tmp_queue.append(r1)
 
-            r2 = rule.clone()
-            r2.direction = Direction.Outbound
-            self.tmp_queue.append(r2)
+            if rule.ipt_chain != 'PREROUTING':
+                r2 = rule.clone()
+                r2.direction = Direction.Outbound
+                self.tmp_queue.append(r2)
         else:
             self.tmp_queue.append(rule)
 
