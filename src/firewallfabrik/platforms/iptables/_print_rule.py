@@ -906,6 +906,16 @@ class PrintRule(PolicyRuleProcessor):
                 return ''
             return f' -j MARK --set-mark {tag_value}'
 
+        if rule.get_option('classification', False):
+            classify_str = rule.get_option('classify_str', '')
+            if not classify_str:
+                self.compiler.error(
+                    rule,
+                    'classification rule has no traffic class to set',
+                )
+                return ''
+            return f' -j CLASSIFY --set-class {classify_str}'
+
         target = rule.ipt_target
         if target:
             if target.startswith('.'):
