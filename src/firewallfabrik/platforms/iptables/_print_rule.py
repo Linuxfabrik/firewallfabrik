@@ -680,7 +680,12 @@ class PrintRule(PolicyRuleProcessor):
             flags = self._print_tcp_flags(srv)
             if flags:
                 parts.append(flags)
-        return ' '.join(parts)
+        if not parts:
+            return ''
+        # Every fragment of the command line ends with a space, otherwise the
+        # next one (`-m time`, `-m limit`) is glued to the last argument here
+        # and iptables reads them as one token.
+        return ' '.join(parts) + ' '
 
     def _print_custom_services(self, rule: CompRule, srv) -> str:
         """Print CustomService, TagService and UserService matching.
