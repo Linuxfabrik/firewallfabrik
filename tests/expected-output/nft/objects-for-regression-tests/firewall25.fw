@@ -26,6 +26,9 @@
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
 # Rule 18 (global): Branch action not yet supported by nftables compiler
 # Rule 18 (global): Branch action not yet supported by nftables compiler
 # Rule 18 (global): Branch action not yet supported by nftables compiler

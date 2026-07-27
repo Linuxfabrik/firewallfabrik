@@ -12,11 +12,111 @@
 
 #  normal script mode (not using  iptables-restore)
 #
+# Rule 0: Tagging not yet supported by nftables compiler
+# Rule 0: Tagging not yet supported by nftables compiler
+# Rule 0: Tagging not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 0 (global): Tagging not yet supported by nftables compiler
+# Rule 0 (global): Tagging not yet supported by nftables compiler
+# Rule 0 (global): Tagging not yet supported by nftables compiler
+# Rule 1 (global): Tagging not yet supported by nftables compiler
+# Rule 1 (global): Tagging not yet supported by nftables compiler
+# Rule 1 (global): Tagging not yet supported by nftables compiler
+# Rule 2 (global): Tagging not yet supported by nftables compiler
+# Rule 2 (global): Tagging not yet supported by nftables compiler
+# Rule 3 (eth1): Tagging not yet supported by nftables compiler
+# Rule 4 (global): Tagging not yet supported by nftables compiler
+# Rule 4 (global): Tagging not yet supported by nftables compiler
+# Rule 5 (eth1): Tagging not yet supported by nftables compiler
+# Rule 6 (eth1): Tagging not yet supported by nftables compiler
+# Rule 7 (eth1): Tagging not yet supported by nftables compiler
+# Rule 8 (eth1): Tagging not yet supported by nftables compiler
+# Rule 9 (eth1): Tagging not yet supported by nftables compiler
+# Rule 10 (eth1): Tagging not yet supported by nftables compiler
+# Rule 11 (global): Tagging not yet supported by nftables compiler
+# Rule 11 (global): Tagging not yet supported by nftables compiler
+# Rule 11 (global): Tagging not yet supported by nftables compiler
+# Rule 12 (eth1): Tagging not yet supported by nftables compiler
+# Rule 12 (eth1): Tagging not yet supported by nftables compiler
+# Rule 12 (eth1): Tagging not yet supported by nftables compiler
+# Rule 12 (eth1): Tagging not yet supported by nftables compiler
+# Rule 13 (eth1): Tagging not yet supported by nftables compiler
+# Rule 13 (eth1): Tagging not yet supported by nftables compiler
+# Rule 14 (eth1): Tagging not yet supported by nftables compiler
+# Rule 14 (eth1): Tagging not yet supported by nftables compiler
+# Rule 15 (global): Tagging not yet supported by nftables compiler
+# Rule 15 (global): Tagging not yet supported by nftables compiler
+# Rule 15 (global): Tagging not yet supported by nftables compiler
+# Rule 16 (global): Tagging not yet supported by nftables compiler
+# Rule 16 (global): Tagging not yet supported by nftables compiler
+# Rule 16 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 17 (global): Tagging not yet supported by nftables compiler
+# Rule 18 (eth1): Tagging not yet supported by nftables compiler
+# Rule 18 (eth1): Tagging not yet supported by nftables compiler
+# Rule 19 (eth1): Tagging not yet supported by nftables compiler
+# Rule 19 (eth1): Tagging not yet supported by nftables compiler
 # Rule 21 (global): Pipe action not yet supported by nftables compiler
 # Rule 21 (global): Pipe action not yet supported by nftables compiler
+# Rule 22 (global): Classification not yet supported by nftables compiler
+# Rule 22 (global): Classification not yet supported by nftables compiler
+# Rule 22 (global): Classification not yet supported by nftables compiler
+# Rule 23 (global): Classification not yet supported by nftables compiler
+# Rule 23 (global): Classification not yet supported by nftables compiler
+# Rule 23 (global): Classification not yet supported by nftables compiler
+# Rule 24 (global): Classification not yet supported by nftables compiler
+# Rule 24 (global): Classification not yet supported by nftables compiler
+# Rule 24 (global): Classification not yet supported by nftables compiler
+# Rule 25 (global): Classification not yet supported by nftables compiler
+# Rule 25 (global): Classification not yet supported by nftables compiler
+# Rule 25 (global): Classification not yet supported by nftables compiler
+# Rule 26 (eth1): Classification not yet supported by nftables compiler
+# Rule 26 (eth1): Classification not yet supported by nftables compiler
+# Rule 26 (eth1): Classification not yet supported by nftables compiler
+# Rule 26 (eth1): Classification not yet supported by nftables compiler
+# Rule 27 (eth1): Classification not yet supported by nftables compiler
+# Rule 27 (eth1): Classification not yet supported by nftables compiler
+# Rule 27 (eth1): Classification not yet supported by nftables compiler
+# Rule 27 (eth1): Classification not yet supported by nftables compiler
+# Rule 28 (eth1): Classification not yet supported by nftables compiler
+# Rule 28 (eth1): Classification not yet supported by nftables compiler
+# Rule 28 (eth1): Classification not yet supported by nftables compiler
+# Rule 28 (eth1): Classification not yet supported by nftables compiler
+# Rule 29 (eth1): Classification not yet supported by nftables compiler
+# Rule 29 (eth1): Classification not yet supported by nftables compiler
+# Rule 29 (eth1): Classification not yet supported by nftables compiler
+# Rule 29 (eth1): Classification not yet supported by nftables compiler
+# Rule 30 (global): Classification not yet supported by nftables compiler
+# Rule 30 (global): Classification not yet supported by nftables compiler
+# Rule 31 (global): Classification not yet supported by nftables compiler
+# Rule 31 (global): Classification not yet supported by nftables compiler
+# Rule 31 (global): Classification not yet supported by nftables compiler
+# Rule 32 (eth0): Classification not yet supported by nftables compiler
+# Rule 32 (eth0): Classification not yet supported by nftables compiler
+# Rule 32 (eth0): Classification not yet supported by nftables compiler
+# Rule 32 (eth0): Classification not yet supported by nftables compiler
+# Rule 33 (global): Classification not yet supported by nftables compiler
+# Rule 33 (global): Classification not yet supported by nftables compiler
+# Rule 33 (global): Classification not yet supported by nftables compiler
+# Rule 34 (global): Classification not yet supported by nftables compiler
+# Rule 34 (global): Classification not yet supported by nftables compiler
+# Rule 34 (global): Classification not yet supported by nftables compiler
+# Rule 35 (eth0): Classification not yet supported by nftables compiler
+# Rule 35 (eth0): Classification not yet supported by nftables compiler
+# Rule 35 (eth0): Classification not yet supported by nftables compiler
+# Rule 35 (eth0): Classification not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
 # Rule 37 (global): Branch action not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 1: Tagging not yet supported by nftables compiler
+# Rule 2: Classification not yet supported by nftables compiler
+# Rule 2: Classification not yet supported by nftables compiler
+# Rule 2: Classification not yet supported by nftables compiler
 # firewall37:mangle_rules:6: warning: Empty group or address table object 'DNS objects'
 # firewall37:mangle_rules:6: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 6 (global) because option 'Ignore rules with empty groups' is in effect
 # firewall37:mangle_rules:7: warning: Empty group or address table object 'empty Ogroup'
@@ -250,53 +350,94 @@ table ip fwf_filter {
         #
         # Rule mymark 0 (global)
         #
+        # # Rule 0: Tagging not yet supported by nftables compiler
         ip daddr 192.168.2.0/24 ct state new counter accept
         #
         # Rule mymark 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         ct state new counter accept
         #
         # Rule 0 (global)
         #
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter accept
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 2 (global)
         #
+        # # Rule 2 (global): Tagging not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta l4proto 50 ct state new counter accept
+        # # Rule 2 (global): Tagging not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta l4proto 51 ct state new counter accept
         #
         # Rule 4 (global)
         #
+        # # Rule 4 (global): Tagging not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta l4proto 50 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
+        # # Rule 4 (global): Tagging not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta l4proto 51 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
         #
         # Rule 12 (eth1)
         #
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 13 (eth1)
+        #
+        # # Rule 13 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 13 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 50 ct state new counter accept
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 16 (global)
         #
         # using CONNMARK
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
         #
         # Rule 17 (global)
         #
         # using CONNMARK
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 18 (eth1)
+        #
+        # using CONNMARK
+        # # Rule 18 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 18 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -305,38 +446,47 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
+        # # Rule 22 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter log prefix "RULE 23 -- ACCEPT " level info accept
         #
         # Rule 24 (global)
         #
+        # # Rule 24 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
         #
         # Rule 25 (global)
         #
+        # # Rule 25 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log prefix "RULE 25 -- ACCEPT " level info accept
         #
         # Rule 26 (eth1)
         #
+        # # Rule 26 (eth1): Classification not yet supported by nftables compiler
         iifname "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 27 (eth1)
         #
+        # # Rule 27 (eth1): Classification not yet supported by nftables compiler
         iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
         # Rule 28 (eth1)
         #
+        # # Rule 28 (eth1): Classification not yet supported by nftables compiler
         iifname != "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 29 (eth1)
         #
+        # # Rule 29 (eth1): Classification not yet supported by nftables compiler
         iifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 30 (global)
         #
+        # # Rule 30 (global): Classification not yet supported by nftables compiler
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter
         #
         # Rule 31 (global)
@@ -344,21 +494,27 @@ table ip fwf_filter {
         # testing for bug #1618381
         # classify action is non-terminating
         # in this firewall object
+        # # Rule 31 (global): Classification not yet supported by nftables compiler
         icmp type destination-unreachable counter accept
         #
         # Rule 32 (eth0)
         #
         # second rule for bug #1618381
+        # # Rule 32 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" counter accept
         #
         # Rule 33 (global)
         #
         # testing for bug #1618381
+        # # Rule 33 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)
@@ -367,7 +523,9 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 36 (global)
@@ -389,10 +547,12 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         tcp dport 80 ct state new counter accept
         #
         # Rule mangle_rules 2 (global)
         #
+        # # Rule 2: Classification not yet supported by nftables compiler
         meta mark 1 counter accept
         #
         # Rule mangle_rules 4 (global)
@@ -438,45 +598,99 @@ table ip fwf_filter {
         #
         # Rule mymark 0 (global)
         #
+        # # Rule 0: Tagging not yet supported by nftables compiler
         ip daddr 192.168.2.0/24 ct state new counter accept
         #
         # Rule mymark 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         ct state new counter accept
         #
         # Rule 0 (global)
         #
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter accept
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
         #
         # Rule 12 (eth1)
         #
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         iifname "eth1" meta l4proto 51 ct state new counter accept
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 13 (eth1)
+        #
+        # # Rule 13 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 13 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 14 (eth1)
+        #
+        # # Rule 14 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 14 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 50 ct state new counter accept
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 16 (global)
         #
         # using CONNMARK
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
         #
         # Rule 17 (global)
         #
         # using CONNMARK
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 18 (eth1)
+        #
+        # using CONNMARK
+        # # Rule 18 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 18 (eth1): Tagging not yet supported by nftables compiler
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 19 (eth1)
+        #
+        # using CONNMARK
+        # # Rule 19 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 19 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -490,38 +704,50 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
+        # # Rule 22 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter log prefix "RULE 23 -- ACCEPT " level info accept
         #
         # Rule 24 (global)
         #
+        # # Rule 24 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
         #
         # Rule 25 (global)
         #
+        # # Rule 25 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log prefix "RULE 25 -- ACCEPT " level info accept
         #
         # Rule 26 (eth1)
         #
+        # # Rule 26 (eth1): Classification not yet supported by nftables compiler
         iifname "eth1" ip saddr 192.168.1.0/24 counter accept
+        # # Rule 26 (eth1): Classification not yet supported by nftables compiler
         oifname "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 27 (eth1)
         #
+        # # Rule 27 (eth1): Classification not yet supported by nftables compiler
         iifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
+        # # Rule 27 (eth1): Classification not yet supported by nftables compiler
         oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
         # Rule 28 (eth1)
         #
+        # # Rule 28 (eth1): Classification not yet supported by nftables compiler
         iifname != "eth1" ip saddr 192.168.1.0/24 counter accept
+        # # Rule 28 (eth1): Classification not yet supported by nftables compiler
         oifname != "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 29 (eth1)
         #
+        # # Rule 29 (eth1): Classification not yet supported by nftables compiler
         iifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
+        # # Rule 29 (eth1): Classification not yet supported by nftables compiler
         oifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 31 (global)
@@ -529,22 +755,29 @@ table ip fwf_filter {
         # testing for bug #1618381
         # classify action is non-terminating
         # in this firewall object
+        # # Rule 31 (global): Classification not yet supported by nftables compiler
         icmp type destination-unreachable counter accept
         #
         # Rule 32 (eth0)
         #
         # second rule for bug #1618381
+        # # Rule 32 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" counter accept
+        # # Rule 32 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" counter accept
         #
         # Rule 33 (global)
         #
         # testing for bug #1618381
+        # # Rule 33 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)
@@ -553,9 +786,13 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         iifname "eth0" udp dport { 53, 161 } counter accept
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 36 (global)
@@ -577,10 +814,12 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         tcp dport 80 ct state new counter accept
         #
         # Rule mangle_rules 2 (global)
         #
+        # # Rule 2: Classification not yet supported by nftables compiler
         meta mark 1 counter accept
         #
         # Rule mangle_rules 4 (global)
@@ -614,63 +853,143 @@ table ip fwf_filter {
         #
         # Rule mymark 0 (global)
         #
+        # # Rule 0: Tagging not yet supported by nftables compiler
         ip daddr 192.168.2.0/24 ct state new counter accept
         #
         # Rule mymark 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         ct state new counter accept
         #
         # Rule 0 (global)
         #
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter accept
+        # # Rule 0 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter accept
         #
         # Rule 1 (global)
         #
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        # # Rule 1 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
+        #
+        # Rule 2 (global)
+        #
+        # # Rule 2 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 50 ct state new counter accept
+        # # Rule 2 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 3 (eth1)
         #
+        # # Rule 3 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 3 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 4 (global)
         #
+        # # Rule 4 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
+        # # Rule 4 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (eth1)
         #
+        # # Rule 5 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter accept
+        # # Rule 5 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter accept
+        #
+        # Rule 6 (eth1)
+        #
+        # # Rule 6 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter accept
+        # # Rule 6 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter accept
+        #
+        # Rule 7 (eth1)
+        #
+        # # Rule 7 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 7 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 8 (eth1)
         #
+        # # Rule 8 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter accept
+        # # Rule 8 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter accept
+        #
+        # Rule 9 (eth1)
+        #
+        # # Rule 9 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter accept
+        # # Rule 9 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter accept
         #
         # Rule 10 (eth1)
         #
+        # # Rule 10 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 50 counter accept
+        # # Rule 10 (eth1): Tagging not yet supported by nftables compiler
         oifname "eth1" meta l4proto 51 counter accept
         #
         # Rule 11 (global)
         #
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
+        # # Rule 11 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
+        #
+        # Rule 12 (eth1)
+        #
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 12 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 14 (eth1)
+        #
+        # # Rule 14 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 14 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 50 ct state new counter accept
+        # # Rule 15 (global): Tagging not yet supported by nftables compiler
+        meta l4proto 51 ct state new counter accept
         #
         # Rule 16 (global)
         #
         # using CONNMARK
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 50 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
+        # # Rule 16 (global): Tagging not yet supported by nftables compiler
         meta l4proto 51 ct state new counter log prefix "RULE 16 -- ACCEPT " level info accept
         #
         # Rule 17 (global)
         #
         # using CONNMARK
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        # # Rule 17 (global): Tagging not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 19 (eth1)
+        #
+        # using CONNMARK
+        # # Rule 19 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        # # Rule 19 (eth1): Tagging not yet supported by nftables compiler
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -684,34 +1003,42 @@ table ip fwf_filter {
         #
         # Rule 22 (global)
         #
+        # # Rule 22 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 23 (global)
         #
+        # # Rule 23 (global): Classification not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter log prefix "RULE 23 -- ACCEPT " level info accept
         #
         # Rule 24 (global)
         #
+        # # Rule 24 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
         #
         # Rule 25 (global)
         #
+        # # Rule 25 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log prefix "RULE 25 -- ACCEPT " level info accept
         #
         # Rule 26 (eth1)
         #
+        # # Rule 26 (eth1): Classification not yet supported by nftables compiler
         oifname "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 27 (eth1)
         #
+        # # Rule 27 (eth1): Classification not yet supported by nftables compiler
         oifname "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 27 -- ACCEPT " level info accept
         #
         # Rule 28 (eth1)
         #
+        # # Rule 28 (eth1): Classification not yet supported by nftables compiler
         oifname != "eth1" ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 29 (eth1)
         #
+        # # Rule 29 (eth1): Classification not yet supported by nftables compiler
         oifname != "eth1" ip saddr 192.168.1.0/24 counter log prefix "RULE 29 -- ACCEPT " level info accept
         #
         # Rule 30 (global)
@@ -722,21 +1049,27 @@ table ip fwf_filter {
         # testing for bug #1618381
         # classify action is non-terminating
         # in this firewall object
+        # # Rule 31 (global): Classification not yet supported by nftables compiler
         icmp type destination-unreachable counter accept
         #
         # Rule 32 (eth0)
         #
         # second rule for bug #1618381
+        # # Rule 32 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" counter accept
         #
         # Rule 33 (global)
         #
         # testing for bug #1618381
+        # # Rule 33 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         #
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        # # Rule 34 (global): Classification not yet supported by nftables compiler
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)
@@ -745,7 +1078,9 @@ table ip fwf_filter {
         # this rule uses multiport
         # and has to be split because
         # of that
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        # # Rule 35 (eth0): Classification not yet supported by nftables compiler
         oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 36 (global)
@@ -767,10 +1102,12 @@ table ip fwf_filter {
         #
         # Rule mangle_rules 1 (global)
         #
+        # # Rule 1: Tagging not yet supported by nftables compiler
         tcp dport 80 ct state new counter accept
         #
         # Rule mangle_rules 2 (global)
         #
+        # # Rule 2: Classification not yet supported by nftables compiler
         meta mark 1 counter accept
         #
         # Rule mangle_rules 8 (global)

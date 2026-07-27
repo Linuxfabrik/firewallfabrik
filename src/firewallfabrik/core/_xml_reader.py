@@ -317,6 +317,7 @@ class XmlReader:
         self._rule_element_rows = []
         self._deferred_memberships = []
         self._deferred_rule_elements = []
+        self._deferred_option_refs = []
 
     def _register(self, xml_id):
         """Map *xml_id* to a new UUID (or return an existing one)."""
@@ -346,6 +347,7 @@ class XmlReader:
         self._rule_element_rows.clear()
         self._deferred_memberships.clear()
         self._deferred_rule_elements.clear()
+        self._deferred_option_refs.clear()
 
         tree = defusedxml.ElementTree.parse(path)
         database = self._parse_database(tree.getroot(), exclude_libraries or set())
@@ -357,6 +359,18 @@ class XmlReader:
         )
 
     def _resolve_deferred(self):
+        # Rule options that reference another object by its XML id have to
+        # follow the same renumbering as the rule elements, otherwise the
+        # compiler cannot look the object up (a tagging rule would lose the
+        # mark value of its Tag Service).
+        for rule, key in self._deferred_option_refs:
+            ref_id = (rule.options or {}).get(key)
+            target_id = self._id_map.get(ref_id)
+            if target_id is None:
+                logger.warning('Unresolved rule option reference: %s', ref_id)
+                continue
+            rule.options[key] = str(target_id)
+
         group_positions: dict = {}
         for group_id, ref_id in self._deferred_memberships:
             target_id = self._id_map.get(ref_id)
@@ -643,5 +657,8 @@ class XmlReader:
 
         for rule_id, slot, ref_id in _parse_rule_children(rule, elem):
             self._deferred_rule_elements.append((rule_id, slot, ref_id))
+
+        if (rule.options or {}).get('tagobject_id'):
+            self._deferred_option_refs.append((rule, 'tagobject_id'))
 
         return rule

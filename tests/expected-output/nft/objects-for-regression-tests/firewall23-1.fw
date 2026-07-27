@@ -12,6 +12,12 @@
 #  This is BRIDGING FIREWALL
 #  Testing module physdev
 #
+# Rule 13 (eth2): Classification not yet supported by nftables compiler
+# Rule 13 (eth2): Classification not yet supported by nftables compiler
+# Rule 14 (eth3): Classification not yet supported by nftables compiler
+# Rule 14 (eth3): Classification not yet supported by nftables compiler
+# Rule 15 (eth2): Classification not yet supported by nftables compiler
+# Rule 15 (eth2): Classification not yet supported by nftables compiler
 # Rule 15 (eth2): Classification not yet supported by nftables compiler
 
 FWBDEBUG=""

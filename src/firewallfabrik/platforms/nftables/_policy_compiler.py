@@ -1403,6 +1403,16 @@ class DecideOnTarget(PolicyRuleProcessor):
 
         self.tmp_queue.append(rule)
 
+        # The tagging and classification options replace the rule's target
+        # on iptables (MARK / CLASSIFY). Neither is generated here yet, so
+        # say so instead of emitting a rule that quietly does nothing.
+        if rule.get_option('tagging', False):
+            self.compiler.error(rule, 'Tagging not yet supported by nftables compiler')
+        if rule.get_option('classification', False):
+            self.compiler.error(
+                rule, 'Classification not yet supported by nftables compiler'
+            )
+
         if rule.ipt_target:
             return True
 

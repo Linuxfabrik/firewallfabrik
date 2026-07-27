@@ -19,6 +19,7 @@ Generates iptables command strings (shell or iptables-restore format).
 from __future__ import annotations
 
 import ipaddress
+import uuid
 from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._interval_helpers import (
@@ -876,7 +877,35 @@ class PrintRule(PolicyRuleProcessor):
         }
     )
 
+    def _get_tag_value(self, rule: CompRule) -> str:
+        """Return the mark of the Tag Service a tagging rule refers to.
+
+        Ports fwbuilder's ``PolicyRule::getTagValue()``: the rule options
+        name the Tag Service, the service carries the mark.
+        """
+        tag_id = rule.get_option('tagobject_id', '')
+        if not tag_id:
+            return ''
+        try:
+            tag_obj = self.compiler.session.get(TagService, uuid.UUID(str(tag_id)))
+        except (AttributeError, ValueError):
+            return ''
+        return tag_obj.get_code() if tag_obj else ''
+
     def _print_target(self, rule: CompRule) -> str:
+        # Tagging and classification pick their own target and carry the
+        # value with it, so they come before the generic target mapping
+        # (fwbuilder PolicyCompiler_PrintRule::_printTarget).
+        if rule.get_option('tagging', False):
+            tag_value = self._get_tag_value(rule)
+            if not tag_value:
+                self.compiler.error(
+                    rule,
+                    'tagging rule has no Tag Service to take the mark from',
+                )
+                return ''
+            return f' -j MARK --set-mark {tag_value}'
+
         target = rule.ipt_target
         if target:
             if target.startswith('.'):
@@ -885,6 +914,12 @@ class PrintRule(PolicyRuleProcessor):
                 reject_opt = self._print_action_on_reject(rule)
                 if reject_opt:
                     return f' -j REJECT {reject_opt}'
+            if target == 'CONNMARK':
+                # A bare `-j CONNMARK` is refused by iptables ("No operation
+                # specified"); the operation is set by SplitIfTagAndConnmark.
+                connmark_arg = rule.get_option('CONNMARK_arg', '')
+                if connmark_arg:
+                    return f' -j CONNMARK {connmark_arg}'
             # Prefix user-chain targets, but not built-in targets.
             if target not in self._BUILTIN_TARGETS:
                 target = self._prefix_chain(target)

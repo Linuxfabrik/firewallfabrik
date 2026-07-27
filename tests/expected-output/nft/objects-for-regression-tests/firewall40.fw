@@ -11,6 +11,12 @@
 
 #  more complex and realistic combination of Tag and Route rules
 #
+# Rule 0 (eth0): Tagging not yet supported by nftables compiler
+# Rule 0 (eth0): Tagging not yet supported by nftables compiler
+# Rule 1 (eth2): Tagging not yet supported by nftables compiler
+# Rule 1 (eth2): Tagging not yet supported by nftables compiler
+# Rule 6 (global): Tagging not yet supported by nftables compiler
+# Rule 6 (global): Tagging not yet supported by nftables compiler
 # Rule 6 (global): Tagging not yet supported by nftables compiler
 
 FWBDEBUG=""
@@ -251,10 +257,12 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
+        # # Rule 0 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ct state new counter
         #
         # Rule 1 (eth2)
         #
+        # # Rule 1 (eth2): Tagging not yet supported by nftables compiler
         iifname "eth2" ct state new counter
         #
         # Rule 2 (global)
@@ -283,10 +291,12 @@ table ip fwf_filter {
         #
         # Rule 0 (eth0)
         #
+        # # Rule 0 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ct state new counter
         #
         # Rule 1 (eth2)
         #
+        # # Rule 1 (eth2): Tagging not yet supported by nftables compiler
         iifname "eth2" ct state new counter
         #
         # Rule 2 (global)
