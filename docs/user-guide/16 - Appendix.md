@@ -140,7 +140,7 @@ The following tables list every setting from the firewall settings dialogs and t
 |---|---|---|---|---|---|
 | Compiler | Accept ESTABLISHED and RELATED packets before the first rule | `accept_established` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Compiler | Accept TCP sessions opened prior to firewall restart | `accept_new_tcp_with_no_syn` | on/off (`true` / `false`) | `true` | iptables, nftables |
-| Compiler | Default action on 'Reject': | `action_on_reject` | one of: `ICMP unreachable`, `ICMP net unreachable`, `ICMP host unreachable`, `ICMP port unreachable`, `ICMP net prohibited`, `ICMP host prohibited`, `TCP RST` | `''` | iptables, nftables |
+| Compiler | Default action on 'Reject': | `action_on_reject` | one of: `ICMP admin prohibited`, `ICMP host prohibited`, `ICMP host unreachable`, `ICMP net prohibited`, `ICMP net unreachable`, `ICMP port unreachable`, `ICMP protocol unreachable`, `TCP RST` | `''` | iptables, nftables |
 | Installer | A command that installer should execute on the firewall in order to activate the policy (if this field is blank, installer runs firewall script in the directory specified above; it uses sudo if user name is not 'root') | `activationCmd` | string | `''` | iptables, nftables |
 | Compiler | Add rules to accept IPv6 Neighbor Discovery packets to IPv6 policies | `add_rules_for_ipv6_neighbor_discovery` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Installer | User name used to authenticate to the firewall | `admUser` | string | `''` | iptables, nftables |

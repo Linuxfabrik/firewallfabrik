@@ -41,12 +41,13 @@ options:
     supported: true
     widget: 'actionOnReject'
     values:
-      - 'ICMP unreachable'
-      - 'ICMP net unreachable'
-      - 'ICMP host unreachable'
-      - 'ICMP port unreachable'
-      - 'ICMP net prohibited'
+      - 'ICMP admin prohibited'
       - 'ICMP host prohibited'
+      - 'ICMP host unreachable'
+      - 'ICMP net prohibited'
+      - 'ICMP net unreachable'
+      - 'ICMP port unreachable'
+      - 'ICMP protocol unreachable'
       - 'TCP RST'
     description: >-
       ICMP message type or TCP RST sent back to the sender when a

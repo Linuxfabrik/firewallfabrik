@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): rules that match a single TCP flag (for example SYN-only, `--tcp-flags SYN SYN`) now produce a ruleset that loads. The generated `tcp flags syn / syn` form is rejected by current nftables when the mask is a single flag; the compiler now emits the equivalent bitwise match.
 * Compiler (nftables): rules that match on TCP flags (for example SYN-only or non-SYN packets) now generate the correct flag match instead of matching all TCP traffic, matching the iptables compiler.
 * Compiler (nftables): the logging rate limit can be set again in the nftables firewall settings. Both fields were greyed out as unsupported although the compiler emits the limit.
+* GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor and as Firewall Builder: "ICMP admin prohibited" and "ICMP protocol unreachable" were missing, so a firewall imported with one of them could not keep it. The list also offered a plain "ICMP unreachable" that no compiler maps to a defined ICMP type.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 
 
