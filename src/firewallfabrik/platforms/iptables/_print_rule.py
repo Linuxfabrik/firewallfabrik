@@ -795,9 +795,14 @@ class PrintRule(PolicyRuleProcessor):
         """Print ``-m time`` matching for time/weekday constraints.
 
         Ports fwbuilder's ``PolicyCompiler_ipt::PrintRule::_printTimeInterval``
-        (PolicyCompiler_PrintRule.cpp:1387).  Always uses the modern iptables
-        ``--timestart``/``--timestop``/``--weekdays`` syntax (no ``--datestart``
-        or ``--days``).
+        (PolicyCompiler_PrintRule.cpp:1387), without the ``--datestart`` /
+        ``--datestop`` branch: an Interval that pins a calendar date is not
+        modelled here.
+
+        The option names depend on the iptables version. The time module was
+        rewritten in 1.4.0: the weekday list is ``--days`` before that and
+        ``--weekdays`` since (netfilter extensions/libxt_time.c), and
+        ``--kerneltz`` only exists from 1.4.11 on.
         """
         if not rule.when:
             return ''
@@ -816,9 +821,16 @@ class PrintRule(PolicyRuleProcessor):
 
         if sorted(days) != list(range(7)):
             day_names = ','.join(DOW_NAMES_SHORT[d] for d in days)
-            parts.append(f'--weekdays {day_names}')
+            weekdays_opt = (
+                '--weekdays'
+                if version_compare(self.version, '1.4.0') >= 0
+                else '--days'
+            )
+            parts.append(f'{weekdays_opt} {day_names}')
 
-        if self.compiler.fw.get_option('use_kerneltz'):
+        if version_compare(self.version, '1.4.11') >= 0 and self.compiler.fw.get_option(
+            'use_kerneltz'
+        ):
             parts.append('--kerneltz')
 
         return ' '.join(parts) + ' '
