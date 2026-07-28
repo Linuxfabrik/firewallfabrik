@@ -48,22 +48,36 @@ def get_iptables_version(fw) -> str:
 
 
 def version_compare(v1: str, v2: str) -> int:
-    """Compare two version strings. Returns -1, 0, or 1."""
+    """Compare two iptables version strings. Returns -1, 0, or 1.
 
-    def _normalize(v):
-        return [int(x) for x in v.split('.') if x.isdigit()]
+    Ports fwbuilder's ``XMLTools::version_compare``. Two properties of it
+    matter here:
 
-    parts1 = _normalize(v1) if v1 else [0]
-    parts2 = _normalize(v2) if v2 else [0]
-    for a, b in zip(parts1, parts2, strict=False):
+    * A component is read with C ``atoi`` semantics, so one that does not
+      begin with a digit counts as 0. Firewall Builder's version list is
+      not purely numeric: "1.2.5 or earlier" is stored as ``lt_1.2.6`` and
+      "1.2.6 to 1.2.8" as ``ge_1.2.6`` (libgui/platforms.cpp). Dropping the
+      non-numeric component instead would turn ``lt_1.2.6`` into ``2.6``,
+      which outranks every real iptables release, and the compiler would
+      then emit modern syntax for the oldest targets there are.
+    * A missing trailing component counts as 0, so ``1.2.3`` equals
+      ``1.2.3.0``.
+    """
+
+    def _atoi(part: str) -> int:
+        match = re.match(r'[+-]?\d+', part.strip())
+        return int(match.group()) if match else 0
+
+    parts1 = [_atoi(p) for p in v1.split('.')] if v1 else [0]
+    parts2 = [_atoi(p) for p in v2.split('.')] if v2 else [0]
+    width = max(len(parts1), len(parts2))
+    parts1 += [0] * (width - len(parts1))
+    parts2 += [0] * (width - len(parts2))
+    for a, b in zip(parts1, parts2, strict=True):
         if a < b:
             return -1
         if a > b:
             return 1
-    if len(parts1) < len(parts2):
-        return -1
-    if len(parts1) > len(parts2):
-        return 1
     return 0
 
 
