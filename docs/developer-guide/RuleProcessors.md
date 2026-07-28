@@ -1941,7 +1941,7 @@ EliminateDuplicatesInSRC/DST/SRV →
 CheckForTCPEstablished →
 SplitRuleIfSrvAnyActionReject → FillActionOnReject → SplitServicesIfRejectWithTCPReset →
 FillActionOnReject(2) → SplitServicesIfRejectWithTCPReset(2) →
-ClearLogInMangle → Logging_nft → Accounting →
+ClearLogInMangle → Logging_nft → SplitIfTagAndConnmark → Accounting →
 SplitIfSrcNegAndFw → SplitIfDstNegAndFw → NftNegation → TimeNegation →
 [DetectShadowing (if check_shading and not single-rule mode)] →
 [CheckActionInMangleTable (mangle run)] →
@@ -1950,7 +1950,7 @@ ProcessMultiAddressObjectsInRE(src/dst) →
 SplitIfSrcMatchingAddressRange → SplitIfDstMatchingAddressRange →
 SplitIfSrcMatchesFw → SplitIfDstMatchesFw → SpecialCaseWithFW1 →
 DecideOnChainIfDstFW → SplitIfSrcFWNetwork → DecideOnChainIfSrcFW → SplitIfDstFWNetwork →
-SpecialCaseWithFW2 → DecideOnChainIfLoopback → FinalizeChain → SpecialCaseWithFWInDstAndOutbound → DecideOnTarget →
+SpecialCaseWithFW2 → DecideOnChainIfLoopback → FinalizeChain → SpecialCaseWithFWInDstAndOutbound → DecideOnTarget → CheckForRestoreMarkInOutput →
 RemoveFW → ExpandMultipleAddresses → ExpandLoopbackInterfaceAddress → DropRuleWithEmptyRE →
 CheckInterfaceAgainstAddressFamily →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
@@ -2013,6 +2013,7 @@ the feature at all, independent of our implementation.
 | `firewall_is_part_of_any_and_networks` | Checked by `SplitIfSrcAny` / `SplitIfDstAny` |
 | Packet marking (tagging) | `meta mark set` in the mangle table, via `MangleCompiler_nft` |
 | Classification | `meta priority set` in the mangle table's postrouting chain |
+| Connection marking | `ct mark set mark` per rule, `meta mark set ct mark` prepended to the prerouting and output chains |
 | Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
 | NAT interface negation | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `!=` output |
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |

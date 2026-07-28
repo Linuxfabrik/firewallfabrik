@@ -248,14 +248,17 @@ delete table ip fwf_nat
 table ip fwf_mangle {
     chain prerouting {
         type filter hook prerouting priority mangle; policy accept;
+        counter meta mark set ct mark
         #
         # Rule 0 (eth0)
         #
         iifname "eth0" ct state new counter meta mark set 1
+        iifname "eth0" ct state new counter ct mark set mark
         #
         # Rule 1 (eth2)
         #
         iifname "eth2" ct state new counter meta mark set 2
+        iifname "eth2" ct state new counter ct mark set mark
         #
         # Rule 6 (global)
         #

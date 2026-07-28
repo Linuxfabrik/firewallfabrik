@@ -72,6 +72,8 @@ class CompilerDriver_nft(CompilerDriver):
         super().__init__(db)
         self.have_nat: bool = False
         self.have_filter: bool = False
+        self.have_connmark: bool = False
+        self.have_connmark_in_output: bool = False
 
     def run(
         self,
@@ -503,6 +505,11 @@ class CompilerDriver_nft(CompilerDriver):
             if rules:
                 mangle_chains.setdefault(chain_name, []).extend(rules)
 
+        self.have_connmark = self.have_connmark or mangle_compiler.have_connmark
+        self.have_connmark_in_output = (
+            self.have_connmark_in_output or mangle_compiler.have_connmark_in_output
+        )
+
         if mangle_compiler.get_errors() or mangle_compiler.get_warnings():
             self.all_errors.extend(mangle_compiler.get_errors())
             self.all_warnings.extend(mangle_compiler.get_warnings())
@@ -579,10 +586,23 @@ class CompilerDriver_nft(CompilerDriver):
         have_nat = bool(nat_by_family)
 
         # --- Mangle table ---
+        # A rule that saves its packet mark to the connection needs the mark
+        # restored again on the way in, which iptables writes as
+        # `-A PREROUTING -j CONNMARK --restore-mark` and nftables as
+        # `meta mark set ct mark` (netfilter
+        # extensions/libxt_CONNMARK.txlate). It goes in front of everything
+        # else in the chain, as in the iptables output.
+        restore_mark = '        counter meta mark set ct mark\n'
+        auto_mangle = {}
+        if self.have_connmark:
+            auto_mangle['prerouting'] = restore_mark
+        if self.have_connmark_in_output:
+            auto_mangle['output'] = restore_mark
+
         # Only the chains that actually carry a rule are declared: an empty
         # chain at the mangle priority would hook every packet for nothing.
         mangle_by_chain = [
-            (chain, ''.join(mangle_chains.get(chain, [])))
+            (chain, auto_mangle.get(chain, '') + ''.join(mangle_chains.get(chain, [])))
             for chain in ('prerouting', 'input', 'forward', 'output', 'postrouting')
         ]
         mangle_by_chain = [(c, r) for c, r in mangle_by_chain if r.strip()]

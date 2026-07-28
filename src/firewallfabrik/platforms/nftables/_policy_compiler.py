@@ -100,6 +100,11 @@ class PolicyCompiler_nft(PolicyCompiler):
         # rules go into a mangle table of their own.
         self.my_table: str = 'filter'
 
+        # Set by the mangle run when a rule saves its packet mark to the
+        # connection; the driver then prepends the matching restore rules.
+        self.have_connmark: bool = False
+        self.have_connmark_in_output: bool = False
+
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
         # nftables rules are placed inside chain blocks, so we need
@@ -222,6 +227,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Logging — inline in nftables, no temp chain needed
         self.add(ClearLogInMangle('clear logging in rules in mangle table'))
         self.add(Logging_nft('process logging'))
+        self.add(SplitIfTagAndConnmark('Tag+CONNMARK combo'))
         self.add(Accounting('handle accounting rules'))
 
         # Negation processors
@@ -260,6 +266,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(FinalizeChain('assign chain'))
         self.add(SpecialCaseWithFWInDstAndOutbound('drop impossible outbound fw dst'))
         self.add(DecideOnTarget('set target'))
+        self.add(CheckForRestoreMarkInOutput('check for CONNMARK restore in output'))
 
         # Clean up firewall object in src/dst
         self.add(RemoveFW('remove fw'))
@@ -1580,6 +1587,62 @@ class ClearLogInMangle(PolicyRuleProcessor):
             'PolicyCompiler_nft', self.compiler
         ).my_table == 'mangle' and not _is_mangle_only_rule_set(self.compiler):
             rule.set_option('log', False)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfTagAndConnmark(PolicyRuleProcessor):
+    """Add the rule that saves a packet mark to its connection.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::splitIfTagAndConnmark``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.get_option('tagging', False) and rule.get_option(
+            'ipt_mark_connections', False
+        ):
+            save_rule = rule.clone()
+            save_rule.ipt_target = 'CONNMARK'
+            save_rule.action = PolicyAction.Continue
+            save_rule.set_option('classification', False)
+            save_rule.set_option('routing', False)
+            save_rule.set_option('tagging', False)
+            save_rule.set_option('log', False)
+            save_rule.set_option('CONNMARK_arg', '--save-mark')
+            self.tmp_queue.append(save_rule)
+
+            cast('PolicyCompiler_nft', self.compiler).have_connmark = True
+
+        return True
+
+
+class CheckForRestoreMarkInOutput(PolicyRuleProcessor):
+    """Note that the output chain needs the mark restored from the connection.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkForRestoreMarkInOutput``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and rule.get_option('ipt_mark_connections', False)
+            and rule.ipt_chain == 'output'
+        ):
+            cast('PolicyCompiler_nft', self.compiler).have_connmark_in_output = True
 
         self.tmp_queue.append(rule)
         return True

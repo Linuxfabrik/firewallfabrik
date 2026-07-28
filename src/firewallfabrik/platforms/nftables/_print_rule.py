@@ -147,6 +147,22 @@ def print_mark_set(tag_code: str) -> str:
     return f'meta mark set mark and {keep:#010x} xor {value}'
 
 
+def print_connmark(connmark_arg: str) -> str:
+    """Return the nftables statement for an iptables CONNMARK operation.
+
+    ``--save-mark`` copies the packet mark onto the connection and
+    ``--restore-mark`` copies it back; nftables says the same thing by
+    assigning one to the other (netfilter
+    ``extensions/libxt_CONNMARK.txlate``).
+    """
+    arg = connmark_arg.strip()
+    if arg == '--save-mark':
+        return 'ct mark set mark'
+    if arg == '--restore-mark':
+        return 'meta mark set ct mark'
+    return ''
+
+
 def print_priority_set(classify_str: str) -> str:
     """Return the nftables statement for an iptables ``--set-class major:minor``.
 
@@ -1263,14 +1279,24 @@ class PrintRule_nft(PolicyRuleProcessor):
                     rule, 'classification rule has no traffic class to set'
                 )
 
+        if rule.ipt_target == 'CONNMARK':
+            connmark = print_connmark(rule.get_option('CONNMARK_arg', ''))
+            if connmark:
+                parts.append(connmark)
+            else:
+                self.compiler.error(
+                    rule, 'connection mark rule has no operation to perform'
+                )
+
         return ' '.join(parts)
 
     def _print_verdict(self, rule: CompRule) -> str:
         """Print the nftables verdict."""
         target = rule.ipt_target
 
-        # LOG target is printed via _print_log, no separate verdict
-        if target == 'LOG':
+        # LOG target is printed via _print_log, CONNMARK via
+        # _print_mangle_statement; neither ends the rule with a verdict.
+        if target in ('LOG', 'CONNMARK'):
             return ''
 
         # Handle iptables target names mapped to nftables verdicts
