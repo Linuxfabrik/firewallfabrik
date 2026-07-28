@@ -264,7 +264,7 @@ table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " drop
+        ct state invalid counter log prefix "INVALID " level debug drop
         #
         # Rule 0 (global)
         #
@@ -308,7 +308,7 @@ table inet fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " drop
+        ct state invalid counter log prefix "INVALID " level debug drop
         #
         # Rule 2 (global)
         #
@@ -350,7 +350,7 @@ table inet fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        ct state invalid counter log prefix "INVALID " drop
+        ct state invalid counter log prefix "INVALID " level debug drop
         #
         # Rule 1 (global)
         #

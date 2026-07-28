@@ -126,6 +126,23 @@ class OSConfigurator_nft(OSConfigurator):
         'nd-neighbor-advert',
     )
 
+    def _invalid_log(self) -> str:
+        """Return the log statement of the "drop invalid packets" rule.
+
+        The iptables counterpart logs at level debug, and via NFLOG when the
+        firewall is set to log that way (configlets/linux24/automatic_rules).
+        nftables defaults a log statement without a level to warn (netfilter
+        nftables src/statement.c), which would put a packet flood on the
+        console, so the level is spelled out.
+        """
+        if self.fw.get_option('use_NFLOG'):
+            try:
+                nlgroup = int(self.fw.get_option('ulog_nlgroup'))
+            except (TypeError, ValueError):
+                nlgroup = 1
+            return f'log group {nlgroup} prefix "INVALID "'
+        return 'log prefix "INVALID " level debug'
+
     def generate_automatic_rules(
         self, chain: str = 'input', have_ipv6: bool = False
     ) -> str:
@@ -150,7 +167,7 @@ class OSConfigurator_nft(OSConfigurator):
         if drop_invalid:
             if log_invalid:
                 rules.append(
-                    '        ct state invalid counter log prefix "INVALID " drop'
+                    f'        ct state invalid counter {self._invalid_log()} drop'
                 )
             else:
                 rules.append('        ct state invalid counter drop')
