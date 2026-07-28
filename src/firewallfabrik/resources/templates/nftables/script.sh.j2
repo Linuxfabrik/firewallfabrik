@@ -107,6 +107,8 @@ flush_own_tables() {
     $NFT delete table inet {{ nat_table }} 2>/dev/null
     $NFT delete table ip {{ nat_table }} 2>/dev/null
     $NFT delete table ip6 {{ nat_table }} 2>/dev/null
+    $NFT delete table inet {{ mangle_table }} 2>/dev/null
+    $NFT delete table ip {{ mangle_table }} 2>/dev/null
 }
 {% if flush_ruleset %}
 

@@ -94,6 +94,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.oscnf = oscnf
         self.have_dynamic_interfaces: bool = False
 
+        # Which of the two tables this run fills.  nftables needs the same
+        # split as iptables: a packet mark has to be set in a chain that
+        # runs before the routing decision, so tagging and classification
+        # rules go into a mangle table of their own.
+        self.my_table: str = 'filter'
+
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
         # nftables rules are placed inside chain blocks, so we need
@@ -124,7 +130,10 @@ class PolicyCompiler_nft(PolicyCompiler):
         Much simpler than iptables — no mangle splitting, multiport
         optimization, or temp chain management needed.
         """
-        banner = f' Compiling policy ruleset {self.get_rule_set_name()} for nftables'
+        banner = (
+            f' Compiling policy ruleset {self.get_rule_set_name()} for nftables'
+            f", '{self.my_table}' table"
+        )
         if self.ipv6_policy:
             banner += ', IPv6'
         self.info(banner)
@@ -134,12 +143,29 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Run the shared shadowing detection pass before the main pipeline,
         # exactly like iptables. It runs before negation processing so negated
         # rule elements are still flagged and correctly skipped (issue #136).
-        if self.fw.get_option('check_shading') and not self.single_rule_compile_mode:
+        # The mangle run sees a subset of the same rule set, so letting it
+        # detect shadowing again would only repeat every warning.
+        if (
+            self.my_table != 'mangle'
+            and self.fw.get_option('check_shading')
+            and not self.single_rule_compile_mode
+        ):
             self.run_shadowing_pass()
 
         # -- Processor pipeline --
         self.add(Begin('Begin compilation'))
         self.add(SingleRuleFilter('single rule filter'))
+
+        self.add_rule_filter()
+
+        self.add(
+            ClearTagClassifyInFilter('clear Tag and Classify options in filter table')
+        )
+        self.add(
+            ClearActionInTagClassifyIfMangle(
+                'clear action in rules with Tag and Classify in mangle'
+            )
+        )
 
         # Store original action
         self.add(StoreAction('store action'))
@@ -148,6 +174,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Interface and direction
         self.add(ExpandGroupsInItf('expand groups in Itf'))
         self.add(ReplaceClusterInterfaceInItfRE('replace cluster interfaces', 'itf'))
+        self.add(DecideOnChainForClassify('set chain for action is Classify'))
+
         self.add(InterfaceAndDirection('interface+dir'))
         self.add(
             SplitIfIfaceAndDirectionBoth('split interface rule with direction both')
@@ -192,6 +220,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         )
 
         # Logging — inline in nftables, no temp chain needed
+        self.add(ClearLogInMangle('clear logging in rules in mangle table'))
         self.add(Logging_nft('process logging'))
         self.add(Accounting('handle accounting rules'))
 
@@ -201,9 +230,16 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(NftNegation('process negation'))
         self.add(TimeNegation('process time negation'))
 
-        # Chain assignment
+        # Chain assignment.  The action check runs before the rule is split
+        # on "any", so an unusable action is reported once and not once per
+        # copy.
+        if self.my_table == 'mangle':
+            self.add(CheckActionInMangleTable('check allowed actions in mangle table'))
         self.add(SplitIfSrcAny('split rule if src is any'))
+        self.add(SetChainForMangle('set chain for mangle rules'))
+        self.add(SetChainPreroutingForTag('chain prerouting for Tag'))
         self.add(SplitIfDstAny('split rule if dst is any'))
+        self.add(SetChainPostroutingForTag('chain postrouting for Tag'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Src', 'src'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Dst', 'dst'))
         self.add(
@@ -283,6 +319,14 @@ class PolicyCompiler_nft(PolicyCompiler):
         )
 
         optimize_chain_rules(self.chain_rules)
+
+    def add_rule_filter(self) -> None:
+        """Add the processor that selects the rules of this table.
+
+        The filter run drops the rules the mangle run takes care of; the
+        mangle compiler overrides this with the opposite filter.
+        """
+        self.add(DropMangleTableRules('drop rules that require the mangle table'))
 
     def create_print_rule_processor(self):
         """Create the nftables PrintRule processor."""
@@ -672,19 +716,19 @@ class Logging_nft(PolicyRuleProcessor):
 
         # For Continue+log, set target to LOG
         if rule.action == PolicyAction.Continue:
-            if rule.get_option('tagging', False):
-                self.compiler.error(
-                    rule, 'Tagging not yet supported by nftables compiler'
-                )
-            if rule.get_option('classification', False):
-                self.compiler.error(
-                    rule, 'Classification not yet supported by nftables compiler'
-                )
             if rule.get_option('routing', False):
                 self.compiler.error(
                     rule, 'Policy routing not yet supported by nftables compiler'
                 )
-            rule.ipt_target = 'LOG'
+            if rule.get_option('tagging', False) or rule.get_option(
+                'classification', False
+            ):
+                # A rule that also sets a mark or a traffic class carries
+                # that statement plus the log message in one nft rule; the
+                # standalone LOG target is for the pure log rule.
+                rule.nft_log = True
+            else:
+                rule.ipt_target = 'LOG'
             self.tmp_queue.append(rule)
             return True
 
@@ -1347,6 +1391,18 @@ class FinalizeChain(PolicyRuleProcessor):
         direction = rule.direction
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
 
+        if nft_comp.my_table == 'mangle':
+            # The mangle chains sit in front of the routing decision, so a
+            # rule that was not pinned to a chain earlier follows its
+            # direction: inbound traffic is seen in prerouting, outbound in
+            # postrouting (fwbuilder PolicyCompiler_ipt::finalizeChain).
+            if direction == Direction.Inbound:
+                rule.ipt_chain = 'prerouting'
+            elif direction == Direction.Outbound:
+                rule.ipt_chain = 'postrouting'
+            self.tmp_queue.append(rule)
+            return True
+
         # Exclude AddressRange from chain hijacking - same reasoning
         # as in DecideOnChainIfSrcFW / DecideOnChainIfDstFW
         # (fwbuilder #2650).  The dedicated split processor emits the
@@ -1393,6 +1449,277 @@ class FinalizeChain(PolicyRuleProcessor):
         return True
 
 
+def _is_mangle_only_rule_set(compiler) -> bool:
+    """Return whether the rule set being compiled is mangle-only."""
+    rs = compiler.source_ruleset
+    if rs is None:
+        return False
+    mangle_only = rs.options.get('mangle_only_rule_set', False) if rs.options else False
+    if isinstance(mangle_only, str):
+        return mangle_only.lower() == 'true'
+    return bool(mangle_only)
+
+
+class DropMangleTableRules(PolicyRuleProcessor):
+    """Drop the rules the mangle run takes care of.
+
+    A rule that only tags, classifies or routes carries no verdict, so it
+    has nothing to say in the filter table.  Every other rule stays: its
+    verdict belongs here and the mangle run contributes the mark.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::dropMangleTableRules``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if _is_mangle_only_rule_set(self.compiler):
+            return True
+
+        if (
+            rule.action == PolicyAction.Continue
+            and not rule.get_option('log', False)
+            and (
+                rule.get_option('tagging', False)
+                or rule.get_option('routing', False)
+                or rule.get_option('classification', False)
+            )
+        ):
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class KeepMangleTableRules(PolicyRuleProcessor):
+    """Keep only the rules that set a mark or a traffic class.
+
+    Corresponds to C++ ``MangleTableCompiler_ipt::keepMangleTableRules``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            rule.get_option('tagging', False)
+            or rule.get_option('routing', False)
+            or rule.get_option('classification', False)
+            or rule.get_option('put_in_mangle_table', False)
+            or _is_mangle_only_rule_set(self.compiler)
+        ):
+            self.tmp_queue.append(rule)
+
+        return True
+
+
+class ClearTagClassifyInFilter(PolicyRuleProcessor):
+    """Drop the mangle-only options from a rule compiled for filter.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearTagClassifyInFilter``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if cast('PolicyCompiler_nft', self.compiler).my_table != 'mangle':
+            rule.set_option('classification', False)
+            rule.set_option('routing', False)
+            rule.set_option('tagging', False)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClearActionInTagClassifyIfMangle(PolicyRuleProcessor):
+    """Let a tagging or classifying rule fall through in the mangle table.
+
+    ``meta mark set`` and ``meta priority set`` are statements, not
+    verdicts; a verdict on the same rule would end the traversal before the
+    filter chains see the packet.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearActionInTagClassifyIfMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if cast('PolicyCompiler_nft', self.compiler).my_table == 'mangle' and (
+            rule.get_option('tagging', False)
+            or rule.get_option('classification', False)
+        ):
+            rule.action = PolicyAction.Continue
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class ClearLogInMangle(PolicyRuleProcessor):
+    """Log a rule once, in the filter table.
+
+    A rule that tags and filters is compiled into both tables; without this
+    the packet would be logged twice.  A mangle-only rule set has no filter
+    half, so its logging stays.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::clearLogInMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if cast(
+            'PolicyCompiler_nft', self.compiler
+        ).my_table == 'mangle' and not _is_mangle_only_rule_set(self.compiler):
+            rule.set_option('log', False)
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckActionInMangleTable(PolicyRuleProcessor):
+    """Refuse a Reject rule in the mangle table.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::checkActionInMangleTable``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.action == PolicyAction.Reject:
+            self.compiler.abort(rule, 'Action Reject is not allowed in mangle table')
+            return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainForMangle(PolicyRuleProcessor):
+    """Assign the mangle chain that matches the rule's direction.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainForMangle``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+
+        if nft_comp.my_table == 'mangle' and not rule.ipt_chain:
+            if rule.direction == Direction.Inbound:
+                rule.ipt_chain = 'prerouting'
+            elif rule.direction == Direction.Outbound:
+                rule.ipt_chain = 'postrouting'
+
+            src = rule.src[0] if rule.src else None
+            if (
+                rule.direction != Direction.Inbound
+                and not rule.is_src_any()
+                and src is not None
+                and nft_comp.complex_match(src, nft_comp.fw)
+            ):
+                rule.ipt_chain = 'output'
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainPreroutingForTag(PolicyRuleProcessor):
+    """Tag inbound traffic in prerouting, before the routing decision.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainPreroutingForTag``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and not rule.ipt_chain
+            and rule.direction in (Direction.Both, Direction.Inbound)
+            and rule.is_itf_any()
+        ):
+            rule.ipt_chain = 'prerouting'
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SetChainPostroutingForTag(PolicyRuleProcessor):
+    """Tag outbound traffic in postrouting.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::setChainPostroutingForTag``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            (
+                rule.get_option('tagging', False)
+                or rule.originated_from_a_rule_with_tagging
+            )
+            and not rule.ipt_chain
+            and rule.direction in (Direction.Both, Direction.Outbound)
+            and rule.is_itf_any()
+        ):
+            rule.ipt_chain = 'postrouting'
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class DecideOnChainForClassify(PolicyRuleProcessor):
+    """Set the traffic class in postrouting, where the qdisc reads it.
+
+    A rule that both tags and classifies is split, because the mark wants
+    prerouting and the class wants postrouting.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::decideOnChainForClassify``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_option('classification', False) or rule.ipt_chain:
+            self.tmp_queue.append(rule)
+            return True
+
+        if rule.get_option('tagging', False):
+            tag_rule = rule.clone()
+            tag_rule.set_option('classification', False)
+            tag_rule.set_option('routing', False)
+            tag_rule.action = PolicyAction.Continue
+            self.tmp_queue.append(tag_rule)
+
+            rule.set_option('tagging', False)
+
+        rule.ipt_chain = 'postrouting'
+        self.tmp_queue.append(rule)
+        return True
+
+
 class DecideOnTarget(PolicyRuleProcessor):
     """Set the nftables verdict based on rule action."""
 
@@ -1402,16 +1729,6 @@ class DecideOnTarget(PolicyRuleProcessor):
             return False
 
         self.tmp_queue.append(rule)
-
-        # The tagging and classification options replace the rule's target
-        # on iptables (MARK / CLASSIFY). Neither is generated here yet, so
-        # say so instead of emitting a rule that quietly does nothing.
-        if rule.get_option('tagging', False):
-            self.compiler.error(rule, 'Tagging not yet supported by nftables compiler')
-        if rule.get_option('classification', False):
-            self.compiler.error(
-                rule, 'Classification not yet supported by nftables compiler'
-            )
 
         if rule.ipt_target:
             return True

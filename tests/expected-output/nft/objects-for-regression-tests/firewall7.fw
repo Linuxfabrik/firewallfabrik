@@ -365,6 +365,8 @@ flush_own_tables() {
     $NFT delete table inet fwf_nat 2>/dev/null
     $NFT delete table ip fwf_nat 2>/dev/null
     $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
 }
 
 flush_legacy_iptables() {

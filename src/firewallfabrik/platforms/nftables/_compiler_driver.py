@@ -176,6 +176,16 @@ class CompilerDriver_nft(CompilerDriver):
                     'forward': [],
                     'output': [],
                 }
+                # Rules that set a packet mark or a traffic class need a
+                # chain in front of the routing decision, which the filter
+                # hooks run after; they go into a table of their own.
+                mangle_chains: dict[str, list[str]] = {
+                    'prerouting': [],
+                    'input': [],
+                    'forward': [],
+                    'output': [],
+                    'postrouting': [],
+                }
                 # NAT rules are kept per address family: nftables rejects an
                 # `ip6` match inside an `ip` table (and vice versa), so each
                 # family needs its own NAT table.
@@ -258,6 +268,15 @@ class CompilerDriver_nft(CompilerDriver):
                                 oscnf,
                                 policy_af,
                             )
+                            self._process_mangle_rule_set(
+                                session,
+                                fw,
+                                pol_rs,
+                                single_rule_id,
+                                mangle_chains,
+                                oscnf,
+                                policy_af,
+                            )
 
                 # --- Routing compilation ---
                 from firewallfabrik.platforms.linux._routing_compiler import (
@@ -304,6 +323,7 @@ class CompilerDriver_nft(CompilerDriver):
                     filter_chains,
                     nat_chains,
                     self._any_rs_ipv6,
+                    mangle_chains,
                 )
 
                 # Single-rule compile mode: return raw rules (no shell wrapper)
@@ -445,6 +465,48 @@ class CompilerDriver_nft(CompilerDriver):
             self.all_errors.extend(policy_compiler.get_errors())
             self.all_warnings.extend(policy_compiler.get_warnings())
 
+    def _process_mangle_rule_set(
+        self,
+        session: sqlalchemy.orm.Session,
+        fw: Firewall,
+        pol_rs: RuleSet,
+        single_rule_id: str,
+        mangle_chains: dict[str, list[str]],
+        oscnf,
+        policy_af: int,
+    ) -> None:
+        """Compile the mangle half of a single policy rule set."""
+        from firewallfabrik.platforms.nftables._mangle_compiler import (
+            MangleCompiler_nft,
+        )
+
+        ipv6_policy = policy_af == AF_INET6
+
+        mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
+        mangle_compiler.set_source_ruleset(pol_rs)
+        mangle_compiler.source_ruleset = pol_rs
+
+        if single_rule_id:
+            mangle_compiler.single_rule_compile_mode = True
+            mangle_compiler.single_rule_id = single_rule_id
+        mangle_compiler.verbose = self.verbose > 0
+        mangle_compiler.source_dir = self.source_dir
+        mangle_compiler.debug_rule = self.debug_rule_policy
+        mangle_compiler.rule_debug_on = self.debug_rule_policy >= 0
+
+        mangle_rules_count = mangle_compiler.prolog()
+        if mangle_rules_count > 0:
+            mangle_compiler.compile()
+            mangle_compiler.epilog()
+
+        for chain_name, rules in mangle_compiler.chain_rules.items():
+            if rules:
+                mangle_chains.setdefault(chain_name, []).extend(rules)
+
+        if mangle_compiler.get_errors() or mangle_compiler.get_warnings():
+            self.all_errors.extend(mangle_compiler.get_errors())
+            self.all_warnings.extend(mangle_compiler.get_warnings())
+
     def _assemble_nft_rules_body(
         self,
         fw: Firewall,
@@ -452,6 +514,7 @@ class CompilerDriver_nft(CompilerDriver):
         filter_chains: dict[str, list[str]],
         nat_chains: dict[str, dict[str, list[str]]],
         have_ipv6: bool,
+        mangle_chains: dict[str, list[str]] | None = None,
     ) -> str:
         """Assemble the nft rules body for embedding in a heredoc.
 
@@ -465,6 +528,8 @@ class CompilerDriver_nft(CompilerDriver):
         table_name = options.get('table_name', '') or 'fwf'
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
+        mangle_table = f'{table_name}_mangle'
+        mangle_chains = mangle_chains or {}
 
         out = io.StringIO()
 
@@ -513,16 +578,44 @@ class CompilerDriver_nft(CompilerDriver):
                 nat_by_family.append((fam, pre, post, outp))
         have_nat = bool(nat_by_family)
 
+        # --- Mangle table ---
+        # Only the chains that actually carry a rule are declared: an empty
+        # chain at the mangle priority would hook every packet for nothing.
+        mangle_by_chain = [
+            (chain, ''.join(mangle_chains.get(chain, [])))
+            for chain in ('prerouting', 'input', 'forward', 'output', 'postrouting')
+        ]
+        mangle_by_chain = [(c, r) for c, r in mangle_by_chain if r.strip()]
+        have_mangle = bool(mangle_by_chain)
+
         # Atomically delete our tables before recreating them.
         # "create + delete" ensures deletion works even on first run
         # (plain "delete" fails if the table does not exist yet).
         if have_filter:
             out.write(f'table {family} {filter_table} {{}}\n')
             out.write(f'delete table {family} {filter_table}\n')
+        if have_mangle:
+            out.write(f'table {family} {mangle_table} {{}}\n')
+            out.write(f'delete table {family} {mangle_table}\n')
         for fam, *_ in nat_by_family:
             out.write(f'table {fam} {nat_table} {{}}\n')
             out.write(f'delete table {fam} {nat_table}\n')
-        if have_filter or have_nat:
+        if have_filter or have_mangle or have_nat:
+            out.write('\n')
+
+        if have_mangle:
+            out.write(f'table {family} {mangle_table} {{\n')
+            for index, (chain, rules) in enumerate(mangle_by_chain):
+                if index:
+                    out.write('\n')
+                out.write(f'    chain {chain} {{\n')
+                out.write(
+                    f'        type filter hook {chain} priority mangle;'
+                    ' policy accept;\n'
+                )
+                out.write(rules)
+                out.write('    }\n')
+            out.write('}\n')
             out.write('\n')
 
         if have_filter:
@@ -727,6 +820,7 @@ class CompilerDriver_nft(CompilerDriver):
         table_name = options.get('table_name', '') or 'fwf'
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
+        mangle_table = f'{table_name}_mangle'
 
         # Determine filter family (must match _assemble_nft_rules_body)
         filter_family = 'inet' if self._any_rs_ipv6 else 'ip'
@@ -756,6 +850,7 @@ class CompilerDriver_nft(CompilerDriver):
             'flush_ruleset': options.get('flush_ruleset', True),
             'ip_path': ip_path,
             'nat_table': nat_table,
+            'mangle_table': mangle_table,
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')

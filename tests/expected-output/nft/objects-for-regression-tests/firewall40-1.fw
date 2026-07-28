@@ -11,13 +11,6 @@
 
 #  more complex and realistic combination of Tag and Route rules that are in the separate Policy rule set
 #
-# Rule 0: Tagging not yet supported by nftables compiler
-# Rule 0: Tagging not yet supported by nftables compiler
-# Rule 1: Tagging not yet supported by nftables compiler
-# Rule 1: Tagging not yet supported by nftables compiler
-# Rule 6: Tagging not yet supported by nftables compiler
-# Rule 6: Tagging not yet supported by nftables compiler
-# Rule 6: Tagging not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -247,29 +240,30 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_mangle {}
+delete table ip fwf_mangle
 table ip fwf_nat {}
 delete table ip fwf_nat
 
-table ip fwf_filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-        ct state established,related counter accept
+table ip fwf_mangle {
+    chain prerouting {
+        type filter hook prerouting priority mangle; policy accept;
         #
         # Rule Policy_1 0 (eth0)
         #
-        # # Rule 0: Tagging not yet supported by nftables compiler
-        iifname "eth0" ct state new counter
+        iifname "eth0" ct state new counter meta mark set 1
         #
         # Rule Policy_1 1 (eth2)
         #
-        # # Rule 1: Tagging not yet supported by nftables compiler
-        iifname "eth2" ct state new counter
+        iifname "eth2" ct state new counter meta mark set 2
         #
-        # Rule Policy_1 2 (global)
+        # Rule Policy_1 6 (global)
         #
-        # This permits access from internal net
-        # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter meta mark set 8
+    }
+
+    chain input {
+        type filter hook input priority mangle; policy accept;
         #
         # Rule Policy_1 3 (global)
         #
@@ -278,6 +272,43 @@ table ip fwf_filter {
         # Rule Policy_1 4 (global)
         #
         meta mark 2 counter
+    }
+
+    chain forward {
+        type filter hook forward priority mangle; policy accept;
+        #
+        # Rule Policy_1 3 (global)
+        #
+        meta mark 1 counter
+        #
+        # Rule Policy_1 4 (global)
+        #
+        meta mark 2 counter
+    }
+
+    chain output {
+        type filter hook output priority mangle; policy accept;
+        #
+        # Rule Policy_1 3 (global)
+        #
+        meta mark 1 counter
+        #
+        # Rule Policy_1 4 (global)
+        #
+        meta mark 2 counter
+    }
+}
+
+table ip fwf_filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+        ct state established,related counter accept
+        #
+        # Rule Policy_1 2 (global)
+        #
+        # This permits access from internal net
+        # to the Internet and DMZ
+        ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule Policy_1 5 (global)
         #
@@ -294,29 +325,11 @@ table ip fwf_filter {
         ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
-        # Rule Policy_1 0 (eth0)
-        #
-        # # Rule 0: Tagging not yet supported by nftables compiler
-        iifname "eth0" ct state new counter
-        #
-        # Rule Policy_1 1 (eth2)
-        #
-        # # Rule 1: Tagging not yet supported by nftables compiler
-        iifname "eth2" ct state new counter
-        #
         # Rule Policy_1 2 (global)
         #
         # This permits access from internal net
         # to the Internet and DMZ
         ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule Policy_1 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule Policy_1 4 (global)
-        #
-        meta mark 2 counter
         #
         # Rule Policy_1 5 (global)
         #
@@ -324,7 +337,6 @@ table ip fwf_filter {
         #
         # Rule Policy_1 6 (global)
         #
-        # # Rule 6: Tagging not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter log prefix "RULE 6 -- CONTINUE " level info
         #
         # Rule 0 (global)
@@ -343,21 +355,12 @@ table ip fwf_filter {
         # to the Internet and DMZ
         ip saddr 192.168.1.0/24 ct state new counter accept
         #
-        # Rule Policy_1 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule Policy_1 4 (global)
-        #
-        meta mark 2 counter
-        #
         # Rule Policy_1 5 (global)
         #
         counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule Policy_1 6 (global)
         #
-        # # Rule 6: Tagging not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter log prefix "RULE 6 -- CONTINUE " level info
         #
         # Rule 0 (global)
@@ -398,6 +401,8 @@ flush_own_tables() {
     $NFT delete table inet fwf_nat 2>/dev/null
     $NFT delete table ip fwf_nat 2>/dev/null
     $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
 }
 
 flush_legacy_iptables() {

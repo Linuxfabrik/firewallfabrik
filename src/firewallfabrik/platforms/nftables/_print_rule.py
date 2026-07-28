@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import uuid
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._interval_helpers import (
@@ -124,6 +125,49 @@ def print_ip_option_matches(data: dict) -> tuple[list[str], list[str]]:
             matches.append(f'ip option {keyword} exists')
     unsupported = ['timestamp'] if _is_true(data.get('ts')) else []
     return (matches, unsupported)
+
+
+def print_mark_set(tag_code: str) -> str:
+    """Return the nftables statement for an iptables ``--set-mark value[/mask]``.
+
+    A bare value is assigned directly (``meta mark set 0x10``).  A masked
+    value keeps the bits outside the mask, which nftables spells out as the
+    bitwise expression ``meta mark set mark and <~mask> xor <value>`` (the
+    form ``iptables-translate`` produces for ``--set-xmark``, netfilter
+    ``extensions/libxt_MARK.txlate``).
+    """
+    value, sep, mask = tag_code.partition('/')
+    value = value.strip()
+    if not sep:
+        return f'meta mark set {value}'
+    try:
+        keep = (~int(mask.strip(), 0)) & 0xFFFFFFFF
+    except ValueError:
+        return f'meta mark set {value}'
+    return f'meta mark set mark and {keep:#010x} xor {value}'
+
+
+def print_priority_set(classify_str: str) -> str:
+    """Return the nftables statement for an iptables ``--set-class major:minor``.
+
+    nftables takes the same ``major:minor`` handle and names the two
+    extremes: ``0:0`` is ``none`` and ``ffff:ffff`` is ``root`` (netfilter
+    ``extensions/libxt_CLASSIFY.txlate``).
+    """
+    handle = classify_str.strip()
+    major, sep, minor = handle.partition(':')
+    if not sep:
+        return f'meta priority set {handle}'
+    try:
+        major_val = int(major, 16)
+        minor_val = int(minor, 16)
+    except ValueError:
+        return f'meta priority set {handle}'
+    if major_val == 0 and minor_val == 0:
+        return 'meta priority set none'
+    if major_val == 0xFFFF and minor_val == 0xFFFF:
+        return 'meta priority set root'
+    return f'meta priority set {handle}'
 
 
 def print_mark_match(tag_code: str, negated: bool) -> str:
@@ -293,19 +337,23 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit_match:
             parts.append(limit_match)
 
-        # Logging and verdict
+        # Logging, mangle statements and verdict
         log_match = self._print_log(rule)
+        mangle_stmt = self._print_mangle_statement(rule)
         verdict = self._print_verdict(rule)
 
         # Counter: every iptables rule keeps implicit packet/byte counters, so
         # emit `counter` here (before any log or verdict, the order
         # iptables-translate uses) to give the nftables ruleset the same
         # visible hit counts. Skip it only for an otherwise empty rule.
-        if parts or log_match or verdict:
+        if parts or log_match or mangle_stmt or verdict:
             parts.append('counter')
 
         if log_match:
             parts.append(log_match)
+
+        if mangle_stmt:
+            parts.append(mangle_stmt)
 
         if verdict:
             parts.append(verdict)
@@ -1171,6 +1219,51 @@ class PrintRule_nft(PolicyRuleProcessor):
         result = result.replace('%C', chain)
         result = result.replace('%R', ruleset_name)
         return result[:63]  # nftables limit
+
+    def _get_tag_value(self, rule: CompRule) -> str:
+        """Return the mark of the Tag Service a tagging rule refers to.
+
+        Ports fwbuilder's ``PolicyRule::getTagValue()``: the rule options
+        name the Tag Service, the service carries the mark.
+        """
+        tag_id = rule.get_option('tagobject_id', '')
+        if not tag_id:
+            return ''
+        try:
+            tag_obj = self.compiler.session.get(TagService, uuid.UUID(str(tag_id)))
+        except (AttributeError, ValueError):
+            return ''
+        return tag_obj.get_code() if tag_obj else ''
+
+    def _print_mangle_statement(self, rule: CompRule) -> str:
+        """Print the statement of a tagging or classifying rule.
+
+        These are the nftables counterparts of the iptables MARK and
+        CLASSIFY targets (netfilter ``extensions/libxt_MARK.txlate`` and
+        ``libxt_CLASSIFY.txlate``).  Unlike a verdict they let the packet
+        carry on to the next rule, so they are printed in front of it.
+        """
+        parts = []
+
+        if rule.get_option('tagging', False):
+            tag_value = self._get_tag_value(rule)
+            if tag_value:
+                parts.append(print_mark_set(tag_value))
+            else:
+                self.compiler.error(
+                    rule, 'tagging rule has no Tag Service to take the mark from'
+                )
+
+        if rule.get_option('classification', False):
+            classify_str = rule.get_option('classify_str', '')
+            if classify_str:
+                parts.append(print_priority_set(classify_str))
+            else:
+                self.compiler.error(
+                    rule, 'classification rule has no traffic class to set'
+                )
+
+        return ' '.join(parts)
 
     def _print_verdict(self, rule: CompRule) -> str:
         """Print the nftables verdict."""

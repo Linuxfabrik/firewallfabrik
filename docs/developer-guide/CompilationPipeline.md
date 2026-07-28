@@ -131,12 +131,14 @@ This walks through what happens when `fwf-ipt firewall1` (or the GUI
    driver reports `Compiled successfully` or `Compiled with errors` and
    collects all warnings/errors in `all_errors` / `all_warnings`.
 
-nftables follows the same shape, but simpler: no separate mangle pass
-(native `meta mark set`), no temp-chain tricks (native `!=` for negation,
-native sets for multiport), and fewer processors overall (~35 policy, ~30
-NAT). The final script starts with `#!/usr/sbin/nft -f` and a
-`flush ruleset`, then emits `table inet filter { chain input { … } … }`
-blocks.
+nftables follows the same shape, but simpler: no temp-chain tricks
+(native `!=` for negation, native sets for multiport) and fewer
+processors overall (~35 policy, ~30 NAT). It keeps the mangle pass,
+because a packet mark still has to be set before the routing decision;
+`MangleCompiler_nft` fills a `<name>_mangle` table whose chains hook in
+at `priority mangle`. The final script starts with `#!/usr/sbin/nft -f`
+and a `flush ruleset`, then emits
+`table inet filter { chain input { … } … }` blocks.
 
 ---
 

@@ -12,73 +12,6 @@
 
 #  normal script mode (not using  iptables-restore)
 #
-# Rule 0: Classification not yet supported by nftables compiler
-# Rule 0: Classification not yet supported by nftables compiler
-# Rule 0: Classification not yet supported by nftables compiler
-# Rule 0 (eth0): Tagging not yet supported by nftables compiler
-# Rule 0 (eth0): Classification not yet supported by nftables compiler
-# Rule 0 (eth0): Tagging not yet supported by nftables compiler
-# Rule 0 (eth0): Classification not yet supported by nftables compiler
-# Rule 1 (eth0): Tagging not yet supported by nftables compiler
-# Rule 1 (eth0): Classification not yet supported by nftables compiler
-# Rule 1 (eth0): Tagging not yet supported by nftables compiler
-# Rule 1 (eth0): Classification not yet supported by nftables compiler
-# Rule 2 (eth0): Tagging not yet supported by nftables compiler
-# Rule 2 (eth0): Classification not yet supported by nftables compiler
-# Rule 2 (eth0): Tagging not yet supported by nftables compiler
-# Rule 2 (eth0): Classification not yet supported by nftables compiler
-# Rule 3 (eth0): Tagging not yet supported by nftables compiler
-# Rule 3 (eth0): Classification not yet supported by nftables compiler
-# Rule 3 (eth0): Tagging not yet supported by nftables compiler
-# Rule 3 (eth0): Classification not yet supported by nftables compiler
-# Rule 4 (eth0): Tagging not yet supported by nftables compiler
-# Rule 4 (eth0): Classification not yet supported by nftables compiler
-# Rule 4 (eth0): Tagging not yet supported by nftables compiler
-# Rule 4 (eth0): Classification not yet supported by nftables compiler
-# Rule 5 (eth0): Tagging not yet supported by nftables compiler
-# Rule 5 (eth0): Classification not yet supported by nftables compiler
-# Rule 5 (eth0): Tagging not yet supported by nftables compiler
-# Rule 5 (eth0): Classification not yet supported by nftables compiler
-# Rule 6 (eth0): Tagging not yet supported by nftables compiler
-# Rule 6 (eth0): Classification not yet supported by nftables compiler
-# Rule 6 (eth0): Tagging not yet supported by nftables compiler
-# Rule 6 (eth0): Classification not yet supported by nftables compiler
-# Rule 7 (eth0): Tagging not yet supported by nftables compiler
-# Rule 7 (eth0): Classification not yet supported by nftables compiler
-# Rule 7 (eth0): Tagging not yet supported by nftables compiler
-# Rule 7 (eth0): Classification not yet supported by nftables compiler
-# Rule 8 (eth0): Tagging not yet supported by nftables compiler
-# Rule 8 (eth0): Classification not yet supported by nftables compiler
-# Rule 8 (eth0): Tagging not yet supported by nftables compiler
-# Rule 8 (eth0): Classification not yet supported by nftables compiler
-# Rule 9 (eth0): Tagging not yet supported by nftables compiler
-# Rule 9 (eth0): Classification not yet supported by nftables compiler
-# Rule 9 (eth0): Tagging not yet supported by nftables compiler
-# Rule 9 (eth0): Classification not yet supported by nftables compiler
-# Rule 10 (eth0): Tagging not yet supported by nftables compiler
-# Rule 10 (eth0): Classification not yet supported by nftables compiler
-# Rule 10 (eth0): Tagging not yet supported by nftables compiler
-# Rule 10 (eth0): Classification not yet supported by nftables compiler
-# Rule 11 (eth0): Tagging not yet supported by nftables compiler
-# Rule 11 (eth0): Classification not yet supported by nftables compiler
-# Rule 11 (eth0): Tagging not yet supported by nftables compiler
-# Rule 11 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-# Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-# Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
-# Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
-# Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-# Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-# Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
-# Rule 15 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
-# Rule 15 (eth0): Classification not yet supported by nftables compiler
 # Rule 16 (global): Branch action not yet supported by nftables compiler
 # Rule 16 (global): Branch action not yet supported by nftables compiler
 # Rule 16 (global): Branch action not yet supported by nftables compiler
@@ -301,123 +234,128 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_mangle {}
+delete table ip fwf_mangle
+
+table ip fwf_mangle {
+    chain prerouting {
+        type filter hook prerouting priority mangle; policy accept;
+        #
+        # Rule 0 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 counter meta mark set 2
+        #
+        # Rule 1 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter meta mark set 2
+        #
+        # Rule 4 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter meta mark set 2
+        #
+        # Rule 5 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter meta mark set 2
+        #
+        # Rule 8 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta mark set 2
+        #
+        # Rule 9 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter meta mark set 2
+        #
+        # Rule 12 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter meta mark set 2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta mark set 2
+        #
+        # Rule 13 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter meta mark set 2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter meta mark set 2
+    }
+
+    chain postrouting {
+        type filter hook postrouting priority mangle; policy accept;
+        #
+        # Rule classify_2 0 (global)
+        #
+        ip saddr 192.168.1.0/24 counter meta priority set 1:12
+        #
+        # Rule 0 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 counter meta priority set 1:2
+        #
+        # Rule 1 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter meta priority set 1:2
+        #
+        # Rule 4 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter meta priority set 1:2
+        #
+        # Rule 5 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter meta priority set 1:2
+        #
+        # Rule 8 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta priority set 1:2
+        #
+        # Rule 9 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter meta priority set 1:2
+        #
+        # Rule 12 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter meta priority set 1:2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta priority set 1:2
+        #
+        # Rule 13 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter meta priority set 1:2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter meta priority set 1:2
+    }
+}
 
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule classify_2 0 (global)
-        #
-        # # Rule 0: Classification not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
-        #
-        # Rule 0 (eth0)
-        #
-        # # Rule 0 (eth0): Classification not yet supported by nftables compiler
-# Rule 0 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 counter
-        #
         # Rule 1 (eth0)
         #
-        # # Rule 1 (eth0): Classification not yet supported by nftables compiler
-# Rule 1 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 2 (eth0)
-        #
-        # # Rule 2 (eth0): Classification not yet supported by nftables compiler
-# Rule 2 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter
         #
         # Rule 3 (eth0)
         #
-        # # Rule 3 (eth0): Classification not yet supported by nftables compiler
-# Rule 3 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 counter accept
-        #
-        # Rule 4 (eth0)
-        #
-        # # Rule 4 (eth0): Classification not yet supported by nftables compiler
-# Rule 4 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != 192.168.1.0/24 counter
         #
         # Rule 5 (eth0)
         #
-        # # Rule 5 (eth0): Classification not yet supported by nftables compiler
-# Rule 5 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 6 (eth0)
-        #
-        # # Rule 6 (eth0): Classification not yet supported by nftables compiler
-# Rule 6 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter
         #
         # Rule 7 (eth0)
         #
-        # # Rule 7 (eth0): Classification not yet supported by nftables compiler
-# Rule 7 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != 192.168.1.0/24 counter accept
-        #
-        # Rule 8 (eth0)
-        #
-        # # Rule 8 (eth0): Classification not yet supported by nftables compiler
-# Rule 8 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 9 (eth0)
         #
-        # # Rule 9 (eth0): Classification not yet supported by nftables compiler
-# Rule 9 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
-        #
-        # Rule 10 (eth0)
-        #
-        # # Rule 10 (eth0): Classification not yet supported by nftables compiler
-# Rule 10 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter
         #
         # Rule 11 (eth0)
         #
-        # # Rule 11 (eth0): Classification not yet supported by nftables compiler
-# Rule 11 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
-        #
-        # Rule 12 (eth0)
-        #
-        # # Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter
-        # # Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter
         #
         # Rule 13 (eth0)
         #
-        # # Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter accept
-        # # Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter accept
-        #
-        # Rule 14 (eth0)
-        #
-        # # Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter
-        # # Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter
         #
         # Rule 15 (eth0)
         #
-        # # Rule 15 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter accept
-        # # Rule 15 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
         # Rule 16 (global)
@@ -447,117 +385,38 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule classify_2 0 (global)
-        #
-        # # Rule 0: Classification not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
-        #
-        # Rule 0 (eth0)
-        #
-        # # Rule 0 (eth0): Classification not yet supported by nftables compiler
-# Rule 0 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 counter
-        #
         # Rule 1 (eth0)
         #
-        # # Rule 1 (eth0): Classification not yet supported by nftables compiler
-# Rule 1 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 2 (eth0)
-        #
-        # # Rule 2 (eth0): Classification not yet supported by nftables compiler
-# Rule 2 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter
         #
         # Rule 3 (eth0)
         #
-        # # Rule 3 (eth0): Classification not yet supported by nftables compiler
-# Rule 3 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 counter accept
-        #
-        # Rule 4 (eth0)
-        #
-        # # Rule 4 (eth0): Classification not yet supported by nftables compiler
-# Rule 4 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != 192.168.1.0/24 counter
         #
         # Rule 5 (eth0)
         #
-        # # Rule 5 (eth0): Classification not yet supported by nftables compiler
-# Rule 5 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 6 (eth0)
-        #
-        # # Rule 6 (eth0): Classification not yet supported by nftables compiler
-# Rule 6 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter
         #
         # Rule 7 (eth0)
         #
-        # # Rule 7 (eth0): Classification not yet supported by nftables compiler
-# Rule 7 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != 192.168.1.0/24 counter accept
-        #
-        # Rule 8 (eth0)
-        #
-        # # Rule 8 (eth0): Classification not yet supported by nftables compiler
-# Rule 8 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter
         #
         # Rule 9 (eth0)
         #
-        # # Rule 9 (eth0): Classification not yet supported by nftables compiler
-# Rule 9 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
-        #
-        # Rule 10 (eth0)
-        #
-        # # Rule 10 (eth0): Classification not yet supported by nftables compiler
-# Rule 10 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter
         #
         # Rule 11 (eth0)
         #
-        # # Rule 11 (eth0): Classification not yet supported by nftables compiler
-# Rule 11 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter accept
-        #
-        # Rule 12 (eth0)
-        #
-        # # Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter
-        # # Rule 12 (eth0): Classification not yet supported by nftables compiler
-# Rule 12 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter
         #
         # Rule 13 (eth0)
         #
-        # # Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter accept
-        # # Rule 13 (eth0): Classification not yet supported by nftables compiler
-# Rule 13 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter accept
-        #
-        # Rule 14 (eth0)
-        #
-        # # Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter
-        # # Rule 14 (eth0): Classification not yet supported by nftables compiler
-# Rule 14 (eth0): Tagging not yet supported by nftables compiler
-        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter
         #
         # Rule 15 (eth0)
         #
-        # # Rule 15 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter accept
-        # # Rule 15 (eth0): Classification not yet supported by nftables compiler
-# Rule 15 (eth0): Tagging not yet supported by nftables compiler
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
         # Rule 16 (global)
@@ -575,11 +434,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule classify_2 0 (global)
-        #
-        # # Rule 0: Classification not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
         #
         # Rule 16 (global)
         #
@@ -614,6 +468,8 @@ flush_own_tables() {
     $NFT delete table inet fwf_nat 2>/dev/null
     $NFT delete table ip fwf_nat 2>/dev/null
     $NFT delete table ip6 fwf_nat 2>/dev/null
+    $NFT delete table inet fwf_mangle 2>/dev/null
+    $NFT delete table ip fwf_mangle 2>/dev/null
 }
 
 flush_legacy_iptables() {

@@ -1682,7 +1682,7 @@ Key source files:
 | Multiport | `-m multiport --dports 22,80,443` (max 15) | Native sets: `tcp dport { 22, 80, 443 }` (unlimited) |
 | Negation | Temp chains for multi-object `!` | Native `!=` operator |
 | Logging | Separate `-j LOG` rule + temp chain | Inline `log prefix "..." accept` |
-| Mangle table | Separate `-t mangle` compilation pass | Not needed — nftables uses `meta mark set` inline |
+| Mangle table | Separate `-t mangle` compilation pass | Separate pass too: a `<name>_mangle` table whose chains hook in at `priority mangle` |
 | Address family | Separate `iptables`/`ip6tables` binaries | `inet` family for dual-stack |
 | Reject types | `--reject-with icmp-port-unreachable` | `reject with icmp port-unreachable` |
 
@@ -1719,8 +1719,6 @@ Simpler than iptables `Logging2` because nftables supports inline logging.
 - **Other action + log**: sets `rule._extra['nft_log'] = True` so `PrintRule_nft` emits `log prefix "..." accept` in a single rule.
 
 Errors reported:
-- `Tagging not yet supported by nftables compiler` — nftables has `meta mark set`, but not implemented.
-- `Classification not yet supported by nftables compiler` — nftables has `meta priority set`, but not implemented.
 - `Policy routing not yet supported by nftables compiler` — nftables has `fib`+marks, but not implemented.
 
 #### `SplitIfSrcNegAndFw` — Split
@@ -1931,8 +1929,11 @@ interfaces). The nftables driver reuses the iptables routing compiler.
 ### Policy pipeline order
 
 ```
-Begin → SingleRuleFilter → StoreAction → Logging1 →
-ExpandGroupsInItf → ReplaceClusterInterfaceInItfRE(itf) → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth →
+Begin → SingleRuleFilter →
+[DropMangleTableRules (filter run) OR KeepMangleTableRules (mangle run)] →
+ClearTagClassifyInFilter → ClearActionInTagClassifyIfMangle →
+StoreAction → Logging1 →
+ExpandGroupsInItf → ReplaceClusterInterfaceInItfRE(itf) → DecideOnChainForClassify → InterfaceAndDirection → SplitIfIfaceAndDirectionBoth →
 ResolveMultiAddress →
 RecursiveGroupsInRE(src/dst/srv) → EmptyGroupsInRE(src/dst/srv/itf) →
 ExpandGroups → DropRuleWithEmptyRE →
@@ -1940,10 +1941,11 @@ EliminateDuplicatesInSRC/DST/SRV →
 CheckForTCPEstablished →
 SplitRuleIfSrvAnyActionReject → FillActionOnReject → SplitServicesIfRejectWithTCPReset →
 FillActionOnReject(2) → SplitServicesIfRejectWithTCPReset(2) →
-Logging_nft → Accounting →
+ClearLogInMangle → Logging_nft → Accounting →
 SplitIfSrcNegAndFw → SplitIfDstNegAndFw → NftNegation → TimeNegation →
 [DetectShadowing (if check_shading and not single-rule mode)] →
-SplitIfSrcAny → SplitIfDstAny →
+[CheckActionInMangleTable (mangle run)] →
+SplitIfSrcAny → SetChainForMangle → SetChainPreroutingForTag → SplitIfDstAny → SetChainPostroutingForTag →
 ProcessMultiAddressObjectsInRE(src/dst) →
 SplitIfSrcMatchingAddressRange → SplitIfDstMatchingAddressRange →
 SplitIfSrcMatchesFw → SplitIfDstMatchesFw → SpecialCaseWithFW1 →
@@ -1962,7 +1964,9 @@ CheckForZeroAddr → CheckForObjectsWithErrors →
 PrintRule_nft → SimplePrintProgress
 ```
 
-~64 processors vs. ~110 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the mangle-table, temp-chain, and multiport processors (nftables has native marks, `!=` negation, and sets). `DetectShadowing` runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
+~70 processors vs. ~110 in iptables. The pipeline shares many base processors with iptables (`Begin`, `ExpandGroups`, `DropRuleWithEmptyRE`, `EliminateDuplicatesIn*`, `DropIPv4/6Rules`, `ConvertToAtomicForInterfaces`, `SimplePrintProgress`, `EmptyGroupsInRE`, `DetectShadowing`) but omits the temp-chain and multiport processors (nftables has native `!=` negation and sets).
+
+The same pipeline runs twice per rule set, once per table. `MangleCompiler_nft` (`platforms/nftables/_mangle_compiler.py`) is `PolicyCompiler_nft` with `my_table = 'mangle'`; it swaps the rule filter and reaches the chain names `prerouting` … `postrouting`. `DetectShadowing` runs in the filter pass only — the mangle pass sees a subset of the same rules and would just repeat every warning; in the filter pass it runs right after `TimeNegation`, deliberately before the split-any processors. Negation is handled natively via `!=`: `SplitIfSrcNegAndFw`, `SplitIfDstNegAndFw`, `NftNegation`, plus `TimeNegation`. `SplitIfSrcAny`/`SplitIfDstAny` check the `firewall_is_part_of_any_and_networks` option with the same improved negation logic as iptables.
 
 ### NAT pipeline order
 
@@ -2007,6 +2011,8 @@ the feature at all, independent of our implementation.
 | Shadowing detection | `DetectShadowing`, conditional on the `check_shading` option |
 | Empty group validation | `EmptyGroupsInRE` in both policy (SRC/DST/SRV/ITF) and NAT (OSRC/ODST/OSRV/TSRC/TDST/TSRV) |
 | `firewall_is_part_of_any_and_networks` | Checked by `SplitIfSrcAny` / `SplitIfDstAny` |
+| Packet marking (tagging) | `meta mark set` in the mangle table, via `MangleCompiler_nft` |
+| Classification | `meta priority set` in the mangle table's postrouting chain |
 | Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
 | NAT interface negation | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `!=` output |
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |
@@ -2025,8 +2031,6 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Policy Branch errors; NAT Branch rules split into prerouting+postrouting with a warning (`SplitNATBranchRule`), no actual `jump` to the branch ruleset yet |
 | Dynamic interface addresses | Sets / maps | ❌ Not yet | `PrintRule_nft` aborts: "Dynamic interface address not yet supported by nftables compiler" |
-| Packet marking (tagging) | `meta mark set` | ❌ Not yet | Error emitted for the tagging option |
-| Classification | `meta priority set` | ❌ Not yet | Error emitted for the classification option |
 | Policy routing | `fib` + marks | ❌ Not yet | Error emitted for the routing option |
 | Accounting | `counter` | ❌ Not yet | Error emitted for the accounting action |
 | Pipe / QUEUE | `queue num` | ❌ Not yet | Error emitted for the pipe action |
