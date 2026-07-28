@@ -705,7 +705,7 @@ table ip fwf_nat {
         # Rule 22 (NAT)
         #
         # NETMAP
-        ip daddr 22.22.22.0/24 counter dnat to 192.168.1.0/24
+        ip daddr 22.22.22.0/24 counter dnat prefix to 192.168.1.0/24
         #
         # Rule 23 (NAT)
         #
@@ -966,7 +966,7 @@ table ip fwf_nat {
         # Rule 21 (NAT)
         #
         # NETMAP
-        ip saddr 192.168.1.0/24 counter snat to 22.22.22.0/24
+        ip saddr 192.168.1.0/24 counter snat prefix to 22.22.22.0/24
         oifname "eth0" ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 33 (NAT)

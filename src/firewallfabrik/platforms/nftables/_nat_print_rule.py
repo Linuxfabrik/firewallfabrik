@@ -490,8 +490,13 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.Masq:
             return f'masquerade{random_only}'
 
-        if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
-            flags = self._nat_flags(rule) if rt == NATRuleType.SNAT else ''
+        if rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):
+            return self._print_netmap_action(
+                rule, tsrc if rt is NATRuleType.SNetnat else tdst, rt
+            )
+
+        if rt == NATRuleType.SNAT:
+            flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
                 addr = self._print_addr(tsrc, rule)
@@ -506,10 +511,10 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return f'snat to :{ports}{flags}'
             return f'masquerade{random_only}'
 
-        if rt in (NATRuleType.DNAT, NATRuleType.DNetnat):
+        if rt == NATRuleType.DNAT:
             if rule.get_option('nft_load_balance'):
                 return self._print_load_balance_action(rule, tsrv)
-            flags = self._nat_flags(rule) if rt == NATRuleType.DNAT else ''
+            flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
                 addr = self._print_addr(tdst, rule)
@@ -542,6 +547,26 @@ class NATPrintRule_nft(NATRuleProcessor):
             return 'return'
 
         return 'accept'
+
+    def _print_netmap_action(self, rule: CompRule, target, rt) -> str:
+        """Print a 1:1 network translation, the iptables NETMAP target.
+
+        NETMAP keeps the host part of the address and only rewrites the
+        network part, so 10.141.11.4 becomes 192.168.2.4. In nftables that
+        is the ``prefix`` form: a plain ``snat to 192.168.2.0/24`` carries no
+        netmap flag and lets the kernel pick any address out of the range
+        instead (netfilter nftables src/parser_bison.y sets
+        NF_NAT_RANGE_NETMAP only for ``prefix to``).
+        """
+        verb = 'snat' if rt is NATRuleType.SNetnat else 'dnat'
+        addr = self._print_addr(target, rule) if target else ''
+        if not addr:
+            side = 'source' if verb == 'snat' else 'destination'
+            self.compiler.error(
+                rule, f'Network translation rule has no translated {side} network'
+            )
+            return ''
+        return f'{verb} prefix to {addr}'
 
     def _print_load_balance_action(self, rule: CompRule, tsrv) -> str:
         """Print a load-balanced DNAT action using ``numgen inc mod``.

@@ -948,7 +948,7 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        ip saddr 192.168.1.0/24 counter snat to 222.222.222.0/24
+        ip saddr 192.168.1.0/24 counter snat prefix to 222.222.222.0/24
         #
         # Rule 2 (NAT)
         #
