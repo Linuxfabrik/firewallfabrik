@@ -847,7 +847,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
         conf.set_variable('use_nlgroup', 1 if nlgroup else 0)
         conf.set_variable('use_cprange', 1 if cprange > 0 else 0)
         conf.set_variable('use_qthreshold', 1 if qthreshold > 1 else 0)
-        conf.set_variable('invalid_match_log_prefix', '"INVALID "')
+        # In iptables-restore mode the rule is wrapped in `echo "..."`, so the
+        # quotes around the prefix have to be escaped for the shell, the same
+        # way the print rule quotes a per-rule log prefix.
+        quote = '\\"' if use_restore else '"'
+        conf.set_variable('invalid_match_log_prefix', f'{quote}INVALID {quote}')
 
         return conf.expand()
 

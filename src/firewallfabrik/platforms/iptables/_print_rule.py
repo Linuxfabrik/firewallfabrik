@@ -1062,7 +1062,7 @@ class PrintRule(PolicyRuleProcessor):
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:29]
-            parts.append(f'--log-prefix "{log_prefix}"')
+            parts.append(f'--log-prefix {self._quote(log_prefix)}')
 
         # Per-rule option overrides firewall-level default (matching fwbuilder).
         fw_opt = self.compiler.fw.get_option
@@ -1100,7 +1100,7 @@ class PrintRule(PolicyRuleProcessor):
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
             log_prefix = log_prefix[:63]  # NFLOG supports up to 64 chars
-            parts.append(f'--nflog-prefix "{log_prefix}"')
+            parts.append(f'--nflog-prefix {self._quote(log_prefix)}')
 
         cprange = self.compiler.fw.get_option('ulog_cprange')
         try:
@@ -1169,6 +1169,15 @@ class PrintRule(PolicyRuleProcessor):
 
     def _end_rule_line(self) -> str:
         return '\n'
+
+    def _quote(self, s: str) -> str:
+        """Quote an argument that may contain spaces, such as a log prefix.
+
+        Ports fwbuilder's virtual ``PolicyCompiler_ipt::PrintRule::_quote``:
+        every output format needs its own quoting, so the subclasses below
+        override this.
+        """
+        return f'"{s}"'
 
 
 class PrintRuleIptRst(PrintRule):
@@ -1250,6 +1259,13 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
     def _end_rule_line(self) -> str:
         # fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_endRuleLine
         return '"\n'
+
+    def _quote(self, s: str) -> str:
+        # The whole rule is wrapped in `echo "..."`, so an inner quote has
+        # to be escaped for the shell. Without the backslashes the shell
+        # closes the echo argument early and the prefix loses its trailing
+        # space (fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_quote).
+        return f'\\"{s}\\"'
 
     def _declare_table(self) -> str:
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
