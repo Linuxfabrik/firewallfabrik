@@ -562,7 +562,9 @@ options:
     supported: false
     widget: 'logNumsyslog'
     description: >-
-      Not yet implemented for nftables.
+      Not supported by nftables, which names the syslog level and has no
+      numeric form: the log statement accepts only emerg, alert, crit,
+      err, warn, notice, info, debug and audit.
 
   ulog_cprange:
     type: 'int'
