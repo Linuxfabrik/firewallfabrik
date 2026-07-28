@@ -248,6 +248,11 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{_bracket_v6(addr_part)}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
+            else:
+                # `--to-source` without an argument is refused by iptables and
+                # stops the activation script, so report the rule instead.
+                self.compiler.error(rule, 'SNAT rule has no translated source address')
+                return ''
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
             if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
@@ -268,6 +273,11 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append(f'{_bracket_v6(addr_part)}:{ports}')
             elif addr_part:
                 parts.append(addr_part)
+            else:
+                self.compiler.error(
+                    rule, 'DNAT rule has no translated destination address'
+                )
+                return ''
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
             if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
