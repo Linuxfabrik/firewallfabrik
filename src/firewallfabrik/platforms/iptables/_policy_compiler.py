@@ -802,7 +802,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         conf.set_variable(
             'add_rules_for_ipv6_neighbor_discovery',
-            1 if (ipv6 and self.fw.get_option('ipv6_neighbor_discovery')) else 0,
+            1
+            if (ipv6 and self.fw.get_option('add_rules_for_ipv6_neighbor_discovery'))
+            else 0,
         )
 
         drop_invalid = self.fw.get_option('drop_invalid')

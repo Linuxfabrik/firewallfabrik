@@ -67,6 +67,16 @@ options:
       Currently always-on whenever management SSH access is enabled. A
       separate toggle for the block/stop backup rule is on the roadmap.
 
+  add_rules_for_ipv6_neighbor_discovery:
+    type: 'bool'
+    default: false
+    supported: true
+    widget: 'ipv6NeighborDiscovery'
+    description: >-
+      Automatically generate rules to permit ICMPv6 packets used
+      in IPv6 Neighbor Discovery. These rules are inserted after
+      the ESTABLISHED,RELATED accept and before the INVALID drop.
+
   admUser:
     type: 'str'
     default: ''
@@ -276,16 +286,6 @@ options:
     description: >-
       Order in which IPv4 and IPv6 rules are generated in the
       output script.
-
-  ipv6_neighbor_discovery:
-    type: 'bool'
-    default: false
-    supported: true
-    widget: 'ipv6NeighborDiscovery'
-    description: >-
-      Automatically generate rules to permit ICMPv6 packets used
-      in IPv6 Neighbor Discovery. These rules are inserted after
-      the ESTABLISHED,RELATED accept and before the INVALID drop.
 
   limit_suffix:
     type: 'enum'

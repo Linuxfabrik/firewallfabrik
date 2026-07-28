@@ -70,6 +70,15 @@ options:
       Currently always-on whenever management SSH access is enabled. A
       separate toggle for the block/stop backup rule is on the roadmap.
 
+  add_rules_for_ipv6_neighbor_discovery:
+    type: 'bool'
+    default: false
+    supported: false
+    widget: 'ipv6NeighborDiscovery'
+    description: >-
+      Not yet implemented for nftables. ICMPv6 Neighbor Discovery is
+      required by RFC 4861, IPv6 connectivity breaks without it.
+
   admUser:
     type: 'str'
     default: ''
@@ -284,15 +293,6 @@ options:
     description: >-
       Order in which IPv4 and IPv6 rules are generated in the
       output script.
-
-  ipv6_neighbor_discovery:
-    type: 'bool'
-    default: false
-    supported: false
-    widget: 'ipv6NeighborDiscovery'
-    description: >-
-      Not yet implemented for nftables. ICMPv6 Neighbor Discovery is
-      required by RFC 4861, IPv6 connectivity breaks without it.
 
   limit_suffix:
     type: 'enum'
