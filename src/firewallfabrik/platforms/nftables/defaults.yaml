@@ -73,11 +73,12 @@ options:
   add_rules_for_ipv6_neighbor_discovery:
     type: 'bool'
     default: false
-    supported: false
+    supported: true
     widget: 'ipv6NeighborDiscovery'
     description: >-
-      Not yet implemented for nftables. ICMPv6 Neighbor Discovery is
-      required by RFC 4861, IPv6 connectivity breaks without it.
+      Automatically generate rules to permit the ICMPv6 packets used
+      in IPv6 Neighbor Discovery. Without them a firewall that drops
+      by default loses IPv6 connectivity (RFC 4861).
 
   admUser:
     type: 'str'

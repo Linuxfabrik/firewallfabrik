@@ -115,11 +115,27 @@ class OSConfigurator_nft(OSConfigurator):
         ]
         return '\n'.join(lines) + '\n'
 
-    def generate_automatic_rules(self) -> str:
-        """Generate automatic rules for the filter table.
+    # ICMPv6 types a host must exchange for IPv6 to work at all, in the
+    # order the iptables automatic_rules configlet lists them. The names
+    # are nftables' spellings of the ip6tables `--icmpv6-type` values
+    # (netfilter nftables src/proto.c, icmp6_type_tbl).
+    _NEIGHBOR_DISCOVERY_TYPES = (
+        'nd-router-solicit',
+        'nd-router-advert',
+        'nd-neighbor-solicit',
+        'nd-neighbor-advert',
+    )
+
+    def generate_automatic_rules(
+        self, chain: str = 'input', have_ipv6: bool = False
+    ) -> str:
+        """Generate the automatic rules of one filter chain.
 
         These are rules that are always present regardless of user
-        policy, like accepting established/related connections.
+        policy, like accepting established/related connections. They are
+        the nftables counterpart of the ``automatic_rules`` configlet the
+        iptables compiler renders, so which rule goes into which chain
+        follows that configlet.
         """
         rules = []
 
@@ -150,6 +166,24 @@ class OSConfigurator_nft(OSConfigurator):
         if not self.fw.get_option('accept_new_tcp_with_no_syn'):
             rules.append(
                 '        tcp flags != syn / syn,rst,ack ct state new counter drop'
+            )
+
+        # Permit IPv6 neighbor discovery. Without these a dual-stack firewall
+        # with a default-drop policy cannot resolve a neighbour and loses IPv6
+        # connectivity. The hop-limit test is what makes the rule safe: a
+        # discovery message is link-local, so a hop limit below 255 means the
+        # packet has been routed and is spoofed (RFC 4861 section 11.2). It is
+        # the nftables spelling of the `-m hl --hl-eq 255` match the iptables
+        # rules carry (netfilter extensions/libip6t_hl.txlate). Traffic passes
+        # the forward chain only on a bridging firewall.
+        if (
+            have_ipv6
+            and self.fw.get_option('add_rules_for_ipv6_neighbor_discovery')
+            and (chain in ('input', 'output') or self.fw.get_option('bridging_fw'))
+        ):
+            types = ', '.join(self._NEIGHBOR_DISCOVERY_TYPES)
+            rules.append(
+                f'        icmpv6 type {{ {types} }} ip6 hoplimit 255 counter accept'
             )
 
         return '\n'.join(rules) + '\n' if rules else ''

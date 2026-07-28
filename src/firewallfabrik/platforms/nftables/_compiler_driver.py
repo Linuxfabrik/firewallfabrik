@@ -484,7 +484,10 @@ class CompilerDriver_nft(CompilerDriver):
         # exist. Otherwise nftables loads an empty ruleset that filters
         # nothing (fail-open), unlike the iptables output which always
         # installs the default-drop chains.
-        auto_rules = oscnf.generate_automatic_rules()
+        auto_rules = {
+            chain: oscnf.generate_automatic_rules(chain, have_ipv6)
+            for chain in ('input', 'forward', 'output')
+        }
 
         input_rules = ''.join(filter_chains.get('input', []))
         forward_rules = ''.join(filter_chains.get('forward', []))
@@ -493,7 +496,7 @@ class CompilerDriver_nft(CompilerDriver):
             input_rules.strip()
             or forward_rules.strip()
             or output_rules.strip()
-            or auto_rules.strip()
+            or any(text.strip() for text in auto_rules.values())
         )
 
         # --- NAT tables (one per address family) ---
@@ -530,8 +533,8 @@ class CompilerDriver_nft(CompilerDriver):
             out.write(
                 f'        type filter hook input priority filter; policy {input_policy};\n'
             )
-            if auto_rules:
-                out.write(auto_rules)
+            if auto_rules['input']:
+                out.write(auto_rules['input'])
             if input_rules.strip():
                 out.write(input_rules)
             out.write('    }\n')
@@ -542,8 +545,8 @@ class CompilerDriver_nft(CompilerDriver):
             out.write(
                 f'        type filter hook forward priority filter; policy {forward_policy};\n'
             )
-            if auto_rules:
-                out.write(auto_rules)
+            if auto_rules['forward']:
+                out.write(auto_rules['forward'])
             # TCPMSS clamping on forwarded traffic — nft equivalent of
             # the iptables "-t mangle -A FORWARD -p tcp --tcp-flags
             # SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu" rule.  Guarded
@@ -579,8 +582,8 @@ class CompilerDriver_nft(CompilerDriver):
             out.write(
                 f'        type filter hook output priority filter; policy {output_policy};\n'
             )
-            if auto_rules:
-                out.write(auto_rules)
+            if auto_rules['output']:
+                out.write(auto_rules['output'])
             if output_rules.strip():
                 out.write(output_rules)
             out.write('    }\n')

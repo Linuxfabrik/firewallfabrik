@@ -142,6 +142,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Compiler | Accept TCP sessions opened prior to firewall restart | `accept_new_tcp_with_no_syn` | on/off (`true` / `false`) | `true` | iptables, nftables |
 | Compiler | Default action on 'Reject': | `action_on_reject` | one of: `ICMP unreachable`, `ICMP net unreachable`, `ICMP host unreachable`, `ICMP port unreachable`, `ICMP net prohibited`, `ICMP host prohibited`, `TCP RST` | `''` | iptables, nftables |
 | Installer | A command that installer should execute on the firewall in order to activate the policy (if this field is blank, installer runs firewall script in the directory specified above; it uses sudo if user name is not 'root') | `activationCmd` | string | `''` | iptables, nftables |
+| Compiler | Add rules to accept IPv6 Neighbor Discovery packets to IPv6 policies | `add_rules_for_ipv6_neighbor_discovery` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Installer | User name used to authenticate to the firewall | `admUser` | string | `''` | iptables, nftables |
 | Installer | Alternative name or address used to communicate with the firewall | `altAddress` | string | `''` | iptables, nftables |
 | Compiler | Bridging firewall | `bridging_fw` | on/off (`true` / `false`) | `false` | iptables, nftables |
@@ -162,9 +163,8 @@ The following tables list every setting from the firewall settings dialogs and t
 | Installer | Policy install script (using built-in installer if this field is blank): | `installScript` | string | `''` | iptables, nftables |
 | Installer | Command line options for the script: | `installScriptArgs` | string | `''` | iptables, nftables |
 | IPv6 | The order in which ipv4 and ipv6 rules should be generated: | `ipv4_6_order` | one of: `ipv4_first`, `ipv6_first` | `ipv4_first` | iptables, nftables |
-| Compiler | Add rules to accept IPv6 Neighbor Discovery packets to IPv6 policies | `ipv6_neighbor_discovery` | on/off (`true` / `false`) | `false` | iptables |
-| Logging | Logging limit: | `limit_suffix` | one of: `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables |
-| Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `0` | iptables |
+| Logging | Logging limit: | `limit_suffix` | one of: `/second`, `/minute`, `/hour`, `/day` | `/second` | iptables, nftables |
+| Logging | Logging limit: | `limit_value` | integer (`-1` = kernel default) | `0` | iptables, nftables |
 | Script | Load iptables modules: Uses modprobe to load required netfilter kernel modules (connection tracking, NAT). Already loaded modules are skipped automatically. | `load_modules` | on/off (`true` / `false`) | `true` | iptables |
 | Compiler | Enable support for NAT of locally originated connections | `local_nat` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Logging | Activate logging in all rules (overrides rule options, use for debugging) | `log_all` | on/off (`true` / `false`) | `false` | iptables, nftables |
@@ -184,12 +184,12 @@ The following tables list every setting from the firewall settings dialogs and t
 | Compiler | Script name on the firewall: | `script_name_on_firewall` | string | `fwf.sh` | iptables, nftables |
 | Installer | Additional command line parameters for ssh | `sshArgs` | string | `''` | iptables, nftables |
 | Compiler | Table name: | `table_name` | string | `fwf` | iptables, nftables |
-| Logging | cprange | `ulog_cprange` | integer (`-1` = kernel default) | `0` | iptables |
+| Logging | cprange | `ulog_cprange` | integer (`-1` = kernel default) | `0` | iptables, nftables |
 | Logging | netlink group: | `ulog_nlgroup` | integer (`-1` = kernel default) | `1` | iptables, nftables |
-| Logging | queue threshold: | `ulog_qthreshold` | integer (`-1` = kernel default) | `1` | iptables |
+| Logging | queue threshold: | `ulog_qthreshold` | integer (`-1` = kernel default) | `1` | iptables, nftables |
 | Logging | use NFLOG | `use_NFLOG` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Script | Use iptables-restore: Loads all rules in one atomic transaction instead of calling iptables for each rule individually. | `use_iptables_restore` | on/off (`true` / `false`) | `false` | iptables |
-| Compiler | Use kernel timezone instead of UTC (only available in iptables v 1.4.11 and later) | `use_kerneltz` | on/off (`true` / `false`) | `false` | iptables |
+| Compiler | Use kernel timezone instead of UTC (only available in iptables v 1.4.11 and later) | `use_kerneltz` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Compiler | Use module "set" for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later) | `use_m_set` | on/off (`true` / `false`) | `false` | iptables |
 | Logging | use numeric syslog levels | `use_numeric_log_levels` | on/off (`true` / `false`) | `false` | iptables |
 | Script | Verify interfaces: Checks at runtime that all interfaces defined in the firewall object exist on the target machine before loading rules. The script aborts if any interface is missing. | `verify_interfaces` | on/off (`true` / `false`) | `true` | iptables, nftables |

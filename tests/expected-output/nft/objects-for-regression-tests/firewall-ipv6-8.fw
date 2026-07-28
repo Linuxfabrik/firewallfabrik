@@ -260,6 +260,7 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " drop
+        icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
         #
         # Rule Policy_OSPF 2 (global)
         #
@@ -354,6 +355,7 @@ table inet fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " drop
+        icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
         #
         # Rule Policy_OSPF 2 (global)
         #
