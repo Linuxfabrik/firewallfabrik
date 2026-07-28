@@ -243,21 +243,21 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter drop
-        tcp flags != syn ct state new counter drop
+        tcp flags != syn / syn,rst,ack ct state new counter drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter drop
-        tcp flags != syn ct state new counter drop
+        tcp flags != syn / syn,rst,ack ct state new counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter drop
-        tcp flags != syn ct state new counter drop
+        tcp flags != syn / syn,rst,ack ct state new counter drop
     }
 }
 

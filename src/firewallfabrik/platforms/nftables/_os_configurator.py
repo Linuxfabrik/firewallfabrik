@@ -139,9 +139,18 @@ class OSConfigurator_nft(OSConfigurator):
             else:
                 rules.append('        ct state invalid counter drop')
 
-        # Drop new TCP without SYN
+        # Drop new TCP without SYN. Only the SYN, RST and ACK bits decide
+        # whether a segment opens a connection, so the match has to name that
+        # mask: a bare `tcp flags != syn` compares the whole flags byte and
+        # would also drop an ECN-negotiating SYN (which carries ECE and CWR).
+        # This is the mask the iptables rule uses
+        # (`! --tcp-flags SYN,RST,ACK SYN`, configlets/linux24/automatic_rules)
+        # and the form iptables-translate produces for it (netfilter
+        # extensions/libxt_tcp.c, tcp_xlate).
         if not self.fw.get_option('accept_new_tcp_with_no_syn'):
-            rules.append('        tcp flags != syn ct state new counter drop')
+            rules.append(
+                '        tcp flags != syn / syn,rst,ack ct state new counter drop'
+            )
 
         return '\n'.join(rules) + '\n' if rules else ''
 
