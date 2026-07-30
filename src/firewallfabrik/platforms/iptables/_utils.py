@@ -106,6 +106,7 @@ def get_wait_option(version: str) -> str:
 # only rejects names longer than 30 and lets two unloadable lengths pass.
 MAX_CHAIN_NAME_LENGTH = 28
 
+
 def _chain_name_problem(chain: str) -> str:
     """Return why iptables would refuse *chain*, or an empty string.
 
