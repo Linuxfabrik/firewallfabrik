@@ -1093,6 +1093,50 @@ class PrintRule_nft(PolicyRuleProcessor):
             return 'ct state new'
         return ''
 
+    @staticmethod
+    def _hour_literal(seconds: int, kerneltz: bool) -> str:
+        """Render a time of day for ``meta hour``.
+
+        A bare number goes into the rule as the seconds since UTC midnight
+        the kernel compares against, which is what iptables' time match does
+        without ``--kerneltz``.  With ``--kerneltz`` the times are local, and
+        an ``"HH:MM:SS"`` literal is what nft converts from the timezone of
+        the host loading the ruleset (hour_type_parse, netfilter nftables
+        src/meta.c).
+        """
+        if not kerneltz:
+            return str(seconds)
+        hours, rest = divmod(seconds, 3600)
+        minutes, secs = divmod(rest, 60)
+        return f'"{hours:02d}:{minutes:02d}:{secs:02d}"'
+
+    def _print_hour_range(self, start: int, stop: int, kerneltz: bool) -> str:
+        """Return the ``meta hour`` match for a time window, or an empty string.
+
+        A window that runs past midnight (22:00 to 06:00) is the interesting
+        case: iptables matches it, because the time match compares the two
+        ends the other way round once the start is behind the stop
+        (net/netfilter/xt_time.c: time_mt).  nftables has no such rule, and
+        ``meta hour 79200-21600`` asks for a value that is at once above the
+        larger and below the smaller bound, so it matches nothing.  Saying it
+        as the times *outside* the gap keeps the iptables meaning: the match
+        holds unless the time falls strictly between the stop and the start.
+        """
+        if start < stop:
+            return (
+                f'meta hour {self._hour_literal(start, kerneltz)}'
+                f'-{self._hour_literal(stop, kerneltz)}'
+            )
+        # An empty gap leaves nothing to exclude, so the window covers the
+        # whole day and needs no match at all.  Equal ends are that case too:
+        # iptables never rejects a packet on them.
+        if start - stop < 2:
+            return ''
+        return (
+            f'meta hour != {self._hour_literal(stop + 1, kerneltz)}'
+            f'-{self._hour_literal(start - 1, kerneltz)}'
+        )
+
     def _print_time_interval(self, rule: CompRule) -> str:
         """Print nftables time/weekday matching.
 
@@ -1113,21 +1157,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         kerneltz = bool(self.compiler.fw.get_option('use_kerneltz'))
 
         parts = []
-        if kerneltz:
-            # nft converts an "HH:MM" literal from the timezone of the host
-            # loading the ruleset into the kernel's seconds-since-UTC-midnight
-            # (hour_type_parse, netfilter nftables src/meta.c), which is what
-            # iptables' `-m time --kerneltz` does.
-            parts.append(
-                f'meta hour "{start_h:02d}:{start_m:02d}"-"{end_h:02d}:{end_m:02d}"'
-            )
-        else:
-            # Without --kerneltz iptables reads the times as UTC. A bare
-            # number goes into the rule unconverted, so the seconds since UTC
-            # midnight reproduce the iptables match exactly.
-            parts.append(
-                f'meta hour {start_h * 3600 + start_m * 60}-{end_h * 3600 + end_m * 60}'
-            )
+        hour_match = self._print_hour_range(
+            start_h * 3600 + start_m * 60,
+            end_h * 3600 + end_m * 60,
+            kerneltz,
+        )
+        if hour_match:
+            parts.append(hour_match)
 
         if sorted(days) != list(range(7)):
             day_names = ', '.join(f'"{DOW_NAMES_FULL[d]}"' for d in days)
