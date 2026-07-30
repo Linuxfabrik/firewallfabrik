@@ -819,6 +819,19 @@ class VerifyRules(NATRuleProcessor):
             self.compiler.abort('Can not use negation in translated service')
             return True
 
+        if rule.nat_rule_type == NATRuleType.SNAT and rule.tsrc:
+            tsrc = rule.tsrc[0]
+            # An unnumbered interface never carries an address, so there is
+            # nothing to translate the source to.  Corresponds to C++
+            # NATCompiler_ipt::VerifyRules.
+            if isinstance(tsrc, Interface) and tsrc.is_unnumbered():
+                self.compiler.abort(
+                    rule,
+                    'Can not use unnumbered interface in Translated Source '
+                    'of a Source translation rule.',
+                )
+                return True
+
         self.tmp_queue.append(rule)
         return True
 

@@ -13,7 +13,7 @@
 # Can not use negation in translated source
 # Can not use negation in translated destination
 # Can not use negation in translated service
-# Rule 9 (NAT): Interface "eth3" has no addresses
+# Rule 9 (NAT): Can not use unnumbered interface in Translated Source of a Source translation rule.
 # Rule 12 (NAT): Can not use service object in Translated Service if Original Service is 'Any'.
 # Rule 13 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 14 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
@@ -336,10 +336,6 @@ table ip fwf_nat {
         # Rule 8 (NAT)
         #
         ip saddr 192.168.1.0/24 tcp dport 80 counter snat prefix to 22.22.22.0/24
-        #
-        # Rule 9 (NAT)
-        #
-        oifname "eth3" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 10 (NAT)
         #
