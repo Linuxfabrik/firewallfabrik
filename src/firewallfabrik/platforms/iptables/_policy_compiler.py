@@ -80,6 +80,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -1773,15 +1774,13 @@ class SplitIfIfaceAndDirectionBoth(PolicyRuleProcessor):
         direction = rule.direction
         if direction == Direction.Both and not rule.is_itf_any():
             # A chain that is already assigned rules out one of the two
-            # directions: a packet has no incoming interface left in
-            # POSTROUTING and no outgoing one yet in PREROUTING, and
-            # iptables refuses `-i` / `-o` there.
-            if rule.ipt_chain != 'POSTROUTING':
+            # directions, because its hook only knows one of the two devices.
+            if not interface_direction_problem(rule.ipt_chain, inbound=True):
                 r1 = rule.clone()
                 r1.direction = Direction.Inbound
                 self.tmp_queue.append(r1)
 
-            if rule.ipt_chain != 'PREROUTING':
+            if not interface_direction_problem(rule.ipt_chain, inbound=False):
                 r2 = rule.clone()
                 r2.direction = Direction.Outbound
                 self.tmp_queue.append(r2)

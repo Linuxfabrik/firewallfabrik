@@ -56,6 +56,7 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     range_to_cidr,
 )
+from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -248,12 +249,40 @@ class PrintRule_nft(PolicyRuleProcessor):
         """Initialize after compiler context is set."""
         pass
 
+    def _report_impossible_interface_direction(self, rule: CompRule) -> bool:
+        """Report a rule whose chain cannot see the interface it matches on.
+
+        Returns True when the rule was reported and must not be printed.
+        nftables takes ``iifname`` in postrouting and ``oifname`` in
+        prerouting without complaining and then never matches the rule, so
+        the mistake would go unnoticed.  Leaving the interface out instead
+        would silently widen the rule to every interface.
+        """
+        if rule.iface_label == 'nil':
+            return False
+        direction = rule.direction
+        if direction not in (Direction.Inbound, Direction.Outbound):
+            return False
+        inbound = direction == Direction.Inbound
+        problem = interface_direction_problem(rule.ipt_chain, inbound)
+        if not problem:
+            return False
+        side = 'incoming' if inbound else 'outgoing'
+        self.compiler.error(
+            rule,
+            f'Rule matches on the {side} interface but {problem}; the rule is left out',
+        )
+        return True
+
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
         self.tmp_queue.append(rule)
+
+        if self._report_impossible_interface_direction(rule):
+            return True
 
         chain = rule.ipt_chain or 'forward'
 
@@ -433,6 +462,12 @@ class PrintRule_nft(PolicyRuleProcessor):
         if rule.iface_label == 'nil':
             return ''
 
+        direction = rule.direction
+        if direction not in (Direction.Inbound, Direction.Outbound):
+            return ''
+
+        inbound = direction == Direction.Inbound
+
         if rule.is_itf_any():
             return ''
 
@@ -453,15 +488,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         is_loopback = len(names) == 1 and ifaces[0].is_loopback()
         value = _as_iface_set(names)
 
-        direction = rule.direction
-        if direction == Direction.Inbound:
+        if inbound:
             keyword = 'iif' if is_loopback else 'iifname'
-            return f'{keyword} {neg}{value}'
-        elif direction == Direction.Outbound:
+        else:
             keyword = 'oif' if is_loopback else 'oifname'
-            return f'{keyword} {neg}{value}'
-
-        return ''
+        return f'{keyword} {neg}{value}'
 
     def _print_src_addr(self, rule: CompRule, af_prefix: str) -> str:
         """Print source address matching."""
