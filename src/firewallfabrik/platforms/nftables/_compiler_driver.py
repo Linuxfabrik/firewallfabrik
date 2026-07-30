@@ -53,6 +53,21 @@ AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
 
 
+def _declare_counters(names: list[str]) -> str:
+    """Declare the named counter objects an accounting rule counts into.
+
+    A counter has to exist as an object of the table before a rule can name
+    it (netfilter nftables doc/stateful-objects.txt).
+    """
+    if not names:
+        return ''
+    out = []
+    for name in names:
+        out.append(f'    counter {name} {{\n    }}\n')
+    out.append('\n')
+    return ''.join(out)
+
+
 def _prepend(prefix: str, text: str) -> str:
     """Prepend a string to every non-empty line."""
     if not text:
@@ -74,6 +89,8 @@ class CompilerDriver_nft(CompilerDriver):
         self.have_filter: bool = False
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
+        self.filter_counters: list[str] = []
+        self.mangle_counters: list[str] = []
 
     def run(
         self,
@@ -463,6 +480,10 @@ class CompilerDriver_nft(CompilerDriver):
                 self.have_filter = True
                 filter_chains.setdefault(chain_name, []).extend(rules)
 
+        for counter in policy_compiler.counters:
+            if counter not in self.filter_counters:
+                self.filter_counters.append(counter)
+
         if policy_compiler.get_errors() or policy_compiler.get_warnings():
             self.all_errors.extend(policy_compiler.get_errors())
             self.all_warnings.extend(policy_compiler.get_warnings())
@@ -509,6 +530,10 @@ class CompilerDriver_nft(CompilerDriver):
         self.have_connmark_in_output = (
             self.have_connmark_in_output or mangle_compiler.have_connmark_in_output
         )
+
+        for counter in mangle_compiler.counters:
+            if counter not in self.mangle_counters:
+                self.mangle_counters.append(counter)
 
         if mangle_compiler.get_errors() or mangle_compiler.get_warnings():
             self.all_errors.extend(mangle_compiler.get_errors())
@@ -625,6 +650,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         if have_mangle:
             out.write(f'table {family} {mangle_table} {{\n')
+            out.write(_declare_counters(self.mangle_counters))
             for index, (chain, rules) in enumerate(mangle_by_chain):
                 if index:
                     out.write('\n')
@@ -640,6 +666,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
+            out.write(_declare_counters(self.filter_counters))
 
             # Input chain
             out.write('    chain input {\n')

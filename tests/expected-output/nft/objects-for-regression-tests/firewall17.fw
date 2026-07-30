@@ -10,16 +10,6 @@
 #
 #  doing SNAT with virtual addresses of two external interface
 #
-# Rule 1 (global): Accounting action not yet supported by nftables compiler
-# Rule 1 (global): Accounting action not yet supported by nftables compiler
-# Rule 1 (global): Accounting action not yet supported by nftables compiler
-# Rule 2 (global): Accounting action not yet supported by nftables compiler
-# Rule 2 (global): Accounting action not yet supported by nftables compiler
-# Rule 2 (global): Accounting action not yet supported by nftables compiler
-# Rule 3 (global): Accounting action not yet supported by nftables compiler
-# Rule 3 (global): Accounting action not yet supported by nftables compiler
-# Rule 3 (global): Accounting action not yet supported by nftables compiler
-# Rule 4 (global): Accounting action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -250,6 +240,15 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    counter rule0acct {
+    }
+    counter rule1acct {
+    }
+    counter RULE_3 {
+    }
+    counter RULE_4 {
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -260,16 +259,15 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
+        counter name "rule0acct"
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
+        counter name "rule1acct" log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
+        counter name "RULE_3" log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
         #
         # Rule 5 (global)
         #
@@ -290,21 +288,19 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
+        counter name "rule0acct"
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
+        counter name "rule1acct" log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
+        counter name "RULE_3" log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
         #
         # Rule 4 (global)
         #
-        # # Rule 4 (global): Accounting action not yet supported by nftables compiler
-        ip saddr 192.168.1.11 ip daddr 192.168.2.10 tcp dport { 22, 4000-4010 } counter
+        ip saddr 192.168.1.11 ip daddr 192.168.2.10 tcp dport { 22, 4000-4010 } counter name "RULE_4"
         #
         # Rule 5 (global)
         #
@@ -321,16 +317,15 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
+        counter name "rule0acct"
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
+        counter name "rule1acct" log prefix "RULE 2 -- ACCOUNTING on interface global " level debug
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Accounting action not yet supported by nftables compiler
-        counter log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
+        counter name "RULE_3" log prefix "RULE 3 -- ACCOUNTING on interface global " level debug
         #
         # Rule 5 (global)
         #

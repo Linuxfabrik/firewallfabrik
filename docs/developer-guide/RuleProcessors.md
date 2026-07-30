@@ -1690,7 +1690,7 @@ Key source files:
 
 All processors have access to `self.compiler.error(rule, msg)` and `self.compiler.warning(rule, msg)`. Errors appear as inline `# comments` in the generated script, set the compiler status to `FWCOMPILER_ERROR`, and cause the CLI to exit with code 1.
 
-**Convention**: Messages say "not supported in nftables" when the feature genuinely doesn't exist in nftables (e.g. Scrub, Skip actions), and "not yet supported by nftables compiler" when nftables could do it but our compiler doesn't implement it yet (e.g. dynamic interfaces, Branch, Accounting).
+**Convention**: Messages say "not supported in nftables" when the feature genuinely doesn't exist in nftables (e.g. Scrub, Skip actions), and "not yet supported by nftables compiler" when nftables could do it but our compiler doesn't implement it yet (e.g. dynamic interfaces, Branch).
 
 ### Policy processors (`platforms/nftables/_policy_compiler.py`)
 
@@ -1773,7 +1773,7 @@ Maps rule action to iptables-style target string (used internally; `PrintRule_nf
 | Return | `RETURN` | |
 | Continue | `.CONTINUE` | Pseudo-target — no verdict in output |
 | Custom | `.CUSTOM` | |
-| Accounting | — | Error: not yet supported by compiler |
+| Accounting | `.CONTINUE` | Counts into a named counter, no verdict |
 | Branch | — | Error: not yet supported by compiler |
 | Modify | — | Error: not yet supported by compiler |
 | Pipe | `QUEUE` | Rendered as the `queue` verdict |
@@ -2015,6 +2015,7 @@ the feature at all, independent of our implementation.
 | Classification | `meta priority set` in the mangle table's postrouting chain |
 | Connection marking | `ct mark set mark` per rule, `meta mark set ct mark` prepended to the prerouting and output chains |
 | Pipe | `queue`, queue number 0, the same queue the iptables QUEUE target uses |
+| Accounting | `counter name "..."` plus a counter object declared in the table |
 | Negation expansion (policy) | Native `!=` via `NftNegation` + `SplitIfSrcNegAndFw` / `SplitIfDstNegAndFw` |
 | NAT interface negation | `SingleObjectNegationItfInb` / `SingleObjectNegationItfOutb` + `!=` output |
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |
@@ -2034,4 +2035,3 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Policy Branch errors; NAT Branch rules split into prerouting+postrouting with a warning (`SplitNATBranchRule`), no actual `jump` to the branch ruleset yet |
 | Dynamic interface addresses | Sets / maps | ❌ Not yet | `PrintRule_nft` aborts: "Dynamic interface address not yet supported by nftables compiler" |
 | Policy routing | `fib` + marks | ❌ Not yet | Error emitted for the routing option |
-| Accounting | `counter` | ❌ Not yet | Error emitted for the accounting action |

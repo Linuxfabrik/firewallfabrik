@@ -11,11 +11,6 @@
 #  this object is used to test all kinds of negation in policy and NAT rules.
 #  Assume firewall is part of any is ON
 #
-# Rule 11 (global): Accounting action not yet supported by nftables compiler
-# Rule 11 (global): Accounting action not yet supported by nftables compiler
-# Rule 11 (global): Accounting action not yet supported by nftables compiler
-# Rule 17 (global): Accounting action not yet supported by nftables compiler
-# Rule 17 (global): Accounting action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -239,6 +234,11 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    counter RULE_11 {
+    }
+    counter RULE_17 {
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -281,6 +281,7 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        counter name "RULE_11"
         #
         # Rule 12 (global)
         #
@@ -302,8 +303,7 @@ table ip fwf_filter {
         # Rule 17 (global)
         #
         # testing negation in the policy rule
-        # # Rule 17 (global): Accounting action not yet supported by nftables compiler
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
         #
         # Rule 18 (global)
         #
@@ -411,6 +411,7 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        counter name "RULE_11"
         #
         # Rule 12 (global)
         #
@@ -437,8 +438,7 @@ table ip fwf_filter {
         # Rule 17 (global)
         #
         # testing negation in the policy rule
-        # # Rule 17 (global): Accounting action not yet supported by nftables compiler
-        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter log level debug
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
         #
         # Rule 18 (global)
         #
@@ -553,6 +553,7 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        counter name "RULE_11"
         #
         # Rule 12 (global)
         #

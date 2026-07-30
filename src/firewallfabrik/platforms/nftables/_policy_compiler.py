@@ -105,6 +105,10 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
 
+        # Named counter objects the accounting rules count into. The driver
+        # declares them at the top of the table.
+        self.counters: list[str] = []
+
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
         # nftables rules are placed inside chain blocks, so we need
@@ -326,6 +330,27 @@ class PolicyCompiler_nft(PolicyCompiler):
         )
 
         optimize_chain_rules(self.chain_rules)
+
+    def new_counter_name(self, rule) -> str:
+        """Return the name of the counter that stands for *rule*.
+
+        The rule set and position identify the rule the same way the
+        iptables compiler names the chain it sends accounting traffic
+        through.
+        """
+        ruleset_name = self.get_rule_set_name()
+        prefix = 'RULE' if ruleset_name == 'Policy' else ruleset_name
+        position = rule.position if rule.position >= 0 else 0
+        name = f'{prefix}_{position}'
+        suffix = rule.subrule_suffix
+        if suffix:
+            name += f'_{suffix}'
+        return name
+
+    def register_counter(self, name: str) -> None:
+        """Remember a counter object so the driver can declare it."""
+        if name not in self.counters:
+            self.counters.append(name)
 
     def add_rule_filter(self) -> None:
         """Add the processor that selects the rules of this table.
@@ -1819,7 +1844,6 @@ class DecideOnTarget(PolicyRuleProcessor):
         else:
             action_name = action.name if action else str(action)
             not_yet = {
-                PolicyAction.Accounting,
                 PolicyAction.Branch,
                 PolicyAction.Modify,
             }
@@ -2169,16 +2193,40 @@ class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
 
 
 class Accounting(PolicyRuleProcessor):
-    """Handle accounting rules with user-defined chains."""
+    """Count the traffic of an accounting rule in a named counter.
+
+    iptables has no target that only counts, so it sends the traffic
+    through a chain of its own that immediately returns and reads the
+    counters of that chain.  nftables has the counter as a named object
+    (netfilter nftables doc/stateful-objects.txt), so the rule counts into
+    it and falls through, which is the same effect without the detour.
+
+    The counter is named after the rule unless the rule carries an explicit
+    accounting name, matching what the iptables compiler does with the
+    chain name.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.action == PolicyAction.Accounting:
-            # nftables uses named counters natively.
-            # For now, pass through — nftables handles counters differently.
-            pass
+
+        if rule.action != PolicyAction.Accounting or rule.ipt_target:
+            self.tmp_queue.append(rule)
+            return True
+
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        name = rule.get_option('rule_name_accounting', '') or nft_comp.new_counter_name(
+            rule
+        )
+        nft_comp.register_counter(name)
+
+        rule.set_option('nft_counter_name', name)
+        # Counting does not decide anything, so the packet has to carry on
+        # to the rules below.
+        rule.action = PolicyAction.Continue
+        rule.ipt_target = '.CONTINUE'
+
         self.tmp_queue.append(rule)
         return True
 

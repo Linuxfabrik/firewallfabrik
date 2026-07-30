@@ -362,8 +362,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         # emit `counter` here (before any log or verdict, the order
         # iptables-translate uses) to give the nftables ruleset the same
         # visible hit counts. Skip it only for an otherwise empty rule.
-        if parts or log_match or mangle_stmt or verdict:
-            parts.append('counter')
+        # An accounting rule counts into a named counter instead, so its
+        # totals survive a reload and can be read back by name.
+        counter_name = rule.get_option('nft_counter_name', '')
+        if parts or log_match or mangle_stmt or verdict or counter_name:
+            if counter_name:
+                parts.append(f'counter name "{counter_name}"')
+            else:
+                parts.append('counter')
 
         if log_match:
             parts.append(log_match)
