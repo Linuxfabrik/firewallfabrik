@@ -89,6 +89,21 @@ _LOG_LEVEL_MAP = {
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 
+# The limit match stores its rate as XT_LIMIT_SCALE * unit / rate in a
+# 32-bit field, so a rate above XT_LIMIT_SCALE per unit rounds to zero and
+# iptables refuses it with "Rate too fast" (netfilter
+# extensions/libxt_limit.c: parse_rate, include/linux/netfilter/xt_limit.h).
+# The burst is bounded by the option itself.  nftables counts tokens
+# directly and has neither ceiling.
+XT_LIMIT_SCALE = 10000
+MAX_LIMIT_BURST = 10000
+LIMIT_UNIT_SECONDS = {
+    '/day': 24 * 60 * 60,
+    '/hour': 60 * 60,
+    '/minute': 60,
+    '/second': 1,
+}
+
 
 class PrintRule(PolicyRuleProcessor):
     """Generates iptables shell commands from compiled policy rules.
@@ -863,6 +878,23 @@ class PrintRule(PolicyRuleProcessor):
             burst = int(burst)
         except (ValueError, TypeError):
             burst = 0
+
+        max_rate = XT_LIMIT_SCALE * LIMIT_UNIT_SECONDS.get(limit_suffix, 1)
+        if limit_val > max_rate:
+            self.compiler.error(
+                rule,
+                f'Rate limit {limit_val}{limit_suffix} is faster than iptables '
+                f'can express; the limit match tops out at {max_rate}'
+                f'{limit_suffix}',
+            )
+            return ''
+        if burst > MAX_LIMIT_BURST:
+            self.compiler.error(
+                rule,
+                f'Rate limit burst {burst} is out of range; iptables accepts '
+                f'0 to {MAX_LIMIT_BURST}',
+            )
+            return ''
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'
         if burst > 0:
