@@ -1240,7 +1240,12 @@ class PrintRule_nft(PolicyRuleProcessor):
         result = result.replace('%I', iface_name)
         result = result.replace('%C', chain)
         result = result.replace('%R', ruleset_name)
-        return result[:63]  # nftables limit
+        # The kernel takes a log prefix of up to NF_LOG_PREFIXLEN - 1 = 127
+        # characters, for a netlink group as well as for plain logging
+        # (netfilter linux/include/uapi/linux/netfilter/nf_log.h and
+        # net/netfilter/nft_log.c). This is not the 29-character limit of
+        # iptables' LOG target nor the 63 of its NFLOG target.
+        return result[:127]
 
     def _get_tag_value(self, rule: CompRule) -> str:
         """Return the mark of the Tag Service a tagging rule refers to.
