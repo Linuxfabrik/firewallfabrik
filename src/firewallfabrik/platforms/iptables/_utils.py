@@ -106,16 +106,39 @@ def get_wait_option(version: str) -> str:
 # only rejects names longer than 30 and lets two unloadable lengths pass.
 MAX_CHAIN_NAME_LENGTH = 28
 
+def _chain_name_problem(chain: str) -> str:
+    """Return why iptables would refuse *chain*, or an empty string.
+
+    Ports the length, leading-character and whitespace checks of
+    ``assert_valid_chain_name`` (netfilter iptables/xshared.c), which
+    iptables applies to every ``-N`` and every ``-j`` naming a chain.  Its
+    fourth check, the clash with a loadable target name, is left out: the
+    compiler routes its own targets through the same helper, so every one
+    of them would be reported.
+    """
+    if len(chain) > MAX_CHAIN_NAME_LENGTH:
+        return (
+            f'is longer than {MAX_CHAIN_NAME_LENGTH} characters, iptables '
+            'refuses to create it'
+        )
+    if chain[:1] in ('-', '!'):
+        return f'starts with "{chain[0]}", which iptables reads as an option'
+    if any(char.isspace() for char in chain):
+        return 'contains whitespace, which iptables does not allow in a chain name'
+    return ''
+
 
 def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
     """Report chain names iptables would refuse, once per name."""
-    if len(chain) <= MAX_CHAIN_NAME_LENGTH or chain in already_reported:
+    if chain in already_reported:
+        return
+    problem = _chain_name_problem(chain)
+    if not problem:
         return
     already_reported.add(chain)
     compiler.error(
-        f'Chain name "{chain}" is longer than {MAX_CHAIN_NAME_LENGTH} '
-        'characters, iptables refuses to create it. Shorten the name of the '
-        'rule set or branch it is generated from.',
+        f'Chain name "{chain}" {problem}. Rename the rule set or branch it '
+        'is generated from.',
     )
 
 
