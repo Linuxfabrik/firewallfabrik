@@ -129,12 +129,13 @@ class NATPrintRule(NATRuleProcessor):
 
         # Build command
         cmd = self._build_nat_command(rule)
-        self.compiler.output.write(cmd)
+        if cmd:
+            self.compiler.output.write(cmd)
 
         return True
 
     def _build_nat_command(self, rule: CompRule) -> str:
-        """Build NAT iptables command."""
+        """Build NAT iptables command, empty when the rule cannot be expressed."""
         cmd = ''
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
@@ -199,6 +200,10 @@ class NATPrintRule(NATRuleProcessor):
 
         # Target-specific args
         target_args = self._print_target_args(rule)
+        if target_args is None:
+            # The target cannot be given the argument it insists on, so the
+            # command would only make iptables stop the activation script.
+            return ''
         if target_args:
             cmd += target_args
 
@@ -221,8 +226,16 @@ class NATPrintRule(NATRuleProcessor):
         )
         return f' -m mac{neg}'
 
-    def _print_target_args(self, rule: CompRule) -> str:
-        """Print NAT target-specific arguments."""
+    def _print_target_args(self, rule: CompRule) -> str | None:
+        """Print NAT target-specific arguments.
+
+        Returns None when the target needs an argument the rule cannot
+        supply.  SNAT, DNAT and NETMAP all refuse to load without one
+        ("SNAT: option \"--to-source\" must be specified", netfilter
+        extensions/libipt_SNAT.c, libxt_DNAT.c and libipt_NETMAP.c), and a
+        rule iptables refuses stops the whole activation script, so the
+        caller leaves such a rule out.
+        """
         rt = rule.nat_rule_type
         target = rule.ipt_target
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
@@ -252,7 +265,7 @@ class NATPrintRule(NATRuleProcessor):
                 # `--to-source` without an argument is refused by iptables and
                 # stops the activation script, so report the rule instead.
                 self.compiler.error(rule, 'SNAT rule has no translated source address')
-                return ''
+                return None
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
             if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
@@ -277,7 +290,7 @@ class NATPrintRule(NATRuleProcessor):
                 self.compiler.error(
                     rule, 'DNAT rule has no translated destination address'
                 )
-                return ''
+                return None
             if rule.get_option('ipt_nat_random', False):
                 parts.append('--random')
             if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
@@ -286,15 +299,16 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append('--persistent')
             return ' '.join(parts)
 
-        if rt == NATRuleType.SNetnat and target == 'NETMAP':
-            if tsrc:
-                return f'--to {self._print_addr(tsrc)}'
-            return ''
-
-        if rt == NATRuleType.DNetnat and target == 'NETMAP':
-            if tdst:
-                return f'--to {self._print_addr(tdst)}'
-            return ''
+        if target == 'NETMAP' and rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):
+            netmap_to = tsrc if rt == NATRuleType.SNetnat else tdst
+            addr_part = self._print_addr(netmap_to).strip() if netmap_to else ''
+            if addr_part:
+                return f'--to {addr_part}'
+            side = 'source' if rt == NATRuleType.SNetnat else 'destination'
+            self.compiler.error(
+                rule, f'Network translation rule has no translated {side} network'
+            )
+            return None
 
         if rt == NATRuleType.Redirect and target == 'REDIRECT':
             ports = self._print_dnat_ports(tsrv) if tsrv else ''
