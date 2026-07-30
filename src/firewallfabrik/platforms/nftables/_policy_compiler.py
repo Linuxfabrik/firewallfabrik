@@ -1801,6 +1801,7 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Deny: 'DROP',
             PolicyAction.Reject: 'REJECT',
             PolicyAction.Return: 'RETURN',
+            PolicyAction.Pipe: 'QUEUE',
             PolicyAction.Continue: '.CONTINUE',
             PolicyAction.Custom: '.CUSTOM',
         }
@@ -1821,7 +1822,6 @@ class DecideOnTarget(PolicyRuleProcessor):
                 PolicyAction.Accounting,
                 PolicyAction.Branch,
                 PolicyAction.Modify,
-                PolicyAction.Pipe,
             }
             if rule.action in not_yet:
                 self.compiler.error(

@@ -12,8 +12,6 @@
 
 #  same as firewall37 except rules are made to be terminating
 #
-# Rule 10 (global): Pipe action not yet supported by nftables compiler
-# Rule 10 (global): Pipe action not yet supported by nftables compiler
 # Rule 22 (global): Branch action not yet supported by nftables compiler
 # Rule 22 (global): Branch action not yet supported by nftables compiler
 # Rule 22 (global): Branch action not yet supported by nftables compiler
@@ -540,8 +538,7 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        # # Rule 10 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80 counter
+        ip daddr 192.168.2.10 tcp dport 80 counter queue
         #
         # Rule 11 (global)
         #
@@ -650,8 +647,7 @@ table ip fwf_filter {
         #
         # Rule 10 (global)
         #
-        # # Rule 10 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80 counter
+        ip daddr 192.168.2.10 tcp dport 80 counter queue
         #
         # Rule 11 (global)
         #

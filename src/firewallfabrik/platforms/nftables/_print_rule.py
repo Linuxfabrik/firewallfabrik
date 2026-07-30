@@ -1303,6 +1303,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         verdict_map = {
             'ACCEPT': 'accept',
             'DROP': 'drop',
+            # The iptables QUEUE target hands the packet to userspace on
+            # queue number 0 (net/ipv4/netfilter/ip_tables.c turns its
+            # standard-target verdict into a bare NF_QUEUE), which is what a
+            # plain `queue` means in nftables as well.
+            'QUEUE': 'queue',
             'REJECT': 'reject',
             'RETURN': 'return',
         }
@@ -1326,6 +1331,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         action_map = {
             PolicyAction.Accept: 'accept',
             PolicyAction.Deny: 'drop',
+            PolicyAction.Pipe: 'queue',
             PolicyAction.Reject: 'reject',
             PolicyAction.Return: 'return',
             PolicyAction.Continue: '',

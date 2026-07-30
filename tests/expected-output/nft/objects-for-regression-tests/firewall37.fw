@@ -12,8 +12,6 @@
 
 #  normal script mode (not using  iptables-restore)
 #
-# Rule 21 (global): Pipe action not yet supported by nftables compiler
-# Rule 21 (global): Pipe action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
@@ -682,8 +680,7 @@ table ip fwf_filter {
         #
         # Rule 21 (global)
         #
-        # # Rule 21 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80 counter
+        ip daddr 192.168.2.10 tcp dport 80 counter queue
         #
         # Rule 22 (global)
         #
@@ -877,8 +874,7 @@ table ip fwf_filter {
         #
         # Rule 21 (global)
         #
-        # # Rule 21 (global): Pipe action not yet supported by nftables compiler
-        ip daddr 192.168.2.10 tcp dport 80 counter
+        ip daddr 192.168.2.10 tcp dport 80 counter queue
         #
         # Rule 22 (global)
         #
