@@ -9,8 +9,11 @@
 # files: * heartbeat_cluster_1_d.fw /etc/fwf.sh
 #
 # Rule 0 (NAT): Interface "eth0" has no addresses
+# Rule 0 (NAT): SNAT rule has no translated source address
 # Rule 1 (NAT): Interface "eth0" has no addresses
+# Rule 1 (NAT): SNAT rule has no translated source address
 # Rule 2 (NAT): Interface "eth0" has no addresses
+# Rule 2 (NAT): SNAT rule has no translated source address
 # Rule 3 (NAT): Interface "eth0" has no addresses
 # Rule 4 (NAT): Interface "eth0" has no addresses
 # Rule 5 (global): Interface "eth0" has no addresses
@@ -185,15 +188,12 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 1 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 2 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade random
     }
 }
 

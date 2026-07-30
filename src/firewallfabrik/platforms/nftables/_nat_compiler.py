@@ -218,6 +218,9 @@ class NATCompiler_nft(NATCompiler):
         self.add(SplitMultipleICMP('split rule with multiple ICMP services'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AssignInterface('assign rules to interfaces'))
+        self.add(
+            DynamicInterfaceInTSrc('masquerade if TSrc has no compile-time address')
+        )
 
         self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
         self.add(ConvertToAtomicForItfOutb('convert to atomic for outbound interface'))
@@ -1364,6 +1367,38 @@ class ReplaceFirewallObjectsTSrc(NATRuleProcessor):
                 'Could not find suitable interface for the NAT rule. '
                 'Perhaps all interfaces are unnumbered?',
             )
+
+        return True
+
+
+class DynamicInterfaceInTSrc(NATRuleProcessor):
+    """Masquerade a source translation whose address is only known at run time.
+
+    An interface that is not regular (dynamic, unnumbered, bridge port)
+    carries no address the compiler could write into the rule.  iptables
+    can name one at activation time through a shell variable and otherwise
+    falls back to the MASQUERADE target (C++
+    ``NATCompiler_ipt::dynamicInterfaceInTSrc``).  nftables loads its whole
+    ruleset in one go and has no such variable, so masquerading, which
+    takes the address of the outgoing interface per packet, is the only way
+    to express the rule; the iptables-only "use SNAT instead of
+    MASQUERADE" option therefore does not apply here.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type != NATRuleType.SNAT or not rule.tsrc:
+            return True
+
+        tsrc = rule.tsrc[0]
+        if isinstance(tsrc, Interface) and not tsrc.is_regular():
+            rule.nat_rule_type = NATRuleType.Masq
+            rule.ipt_target = 'masquerade'
 
         return True
 

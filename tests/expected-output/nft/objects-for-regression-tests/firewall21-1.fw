@@ -15,10 +15,6 @@
 # Rule 0 (NAT): Interface "eth1" has no addresses
 # Rule 1 (NAT): Interface "eth0" has no addresses
 # Rule 1 (NAT): Interface "eth1" has no addresses
-# Rule 2 (NAT): Interface "eth0" has no addresses
-# Rule 3 (NAT): Interface "eth0" has no addresses
-# Rule 4 (NAT): Interface "eth0" has no addresses
-# Rule 5 (NAT): Interface "eth0" has no addresses
 # Rule 0 (eth0): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
 # Rule 0 (eth0): Could not resolve any source addresses
 # Rule 0 (eth0): Dynamic interface address not yet supported by nftables compiler (interface: eth0)

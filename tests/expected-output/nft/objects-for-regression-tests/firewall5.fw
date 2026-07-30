@@ -14,7 +14,6 @@
 
 #  All "configure interfaces" options are off, testing shell functions for this case.
 #
-# Rule 0 (NAT): Interface "ppp1" has no addresses
 # Rule 3 (NAT): Interface "ppp1" has no addresses
 # Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 0 (ppp0): Could not resolve any source addresses
@@ -562,7 +561,7 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "ppp0" ip saddr 192.168.1.0/24 counter snat to 192.168.1.1
+        oifname "ppp0" ip saddr 192.168.1.0/24 counter masquerade
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
         oifname "ppp1" ip saddr 192.168.1.0/24 counter masquerade
         #

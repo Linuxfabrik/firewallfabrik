@@ -488,6 +488,13 @@ class NATPrintRule_nft(NATRuleProcessor):
         random_only = ' random' if rule.get_option('ipt_nat_random', False) else ''
 
         if rt == NATRuleType.Masq:
+            # Masquerading takes the address of the outgoing interface but
+            # still accepts a source port range, which is how a translation
+            # to an address only known at run time keeps its ports (netfilter
+            # extensions/libipt_MASQUERADE.txlate: `masquerade to :10-20`).
+            ports = self._print_translated_ports(tsrv, src=True)
+            if ports:
+                return f'masquerade to :{ports}{random_only}'
             return f'masquerade{random_only}'
 
         if rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):
@@ -500,16 +507,26 @@ class NATPrintRule_nft(NATRuleProcessor):
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
                 addr = self._print_addr(tsrc, rule)
-                if addr:
-                    if ports:
-                        addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
-                        return f'snat to {addr}:{ports}{flags}'
-                    return f'snat to {addr}{flags}'
+                if not addr:
+                    # Masquerading instead would translate the traffic to the
+                    # address of whatever interface it leaves by, which is not
+                    # what the rule says.  DynamicInterfaceInTSrc has already
+                    # turned the one case where that is the right answer into
+                    # a masquerade rule.
+                    self.compiler.error(
+                        rule, 'SNAT rule has no translated source address'
+                    )
+                    return ''
+                if ports:
+                    addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
+                    return f'snat to {addr}:{ports}{flags}'
+                return f'snat to {addr}{flags}'
             if ports:
                 # The rule translates the source port only; the address is
                 # left alone, which is `--to-source :port` on iptables.
                 return f'snat to :{ports}{flags}'
-            return f'masquerade{random_only}'
+            self.compiler.error(rule, 'SNAT rule has no translated source address')
+            return ''
 
         if rt == NATRuleType.DNAT:
             if rule.get_option('nft_load_balance'):

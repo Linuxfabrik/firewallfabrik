@@ -11,7 +11,6 @@
 #  this firewall uses iptables-restore format
 #  One interface has dynamic address, script uses echo to generated iptables commands and then pipes them to iptables-restore
 #
-# Rule 0 (NAT): Interface "ppp" has no addresses
 # Rule 2 (NAT): Interface "ppp" has no addresses
 # Rule 1 (ppp): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
 # Rule 1 (ppp): Could not resolve any destination addresses

@@ -15,9 +15,6 @@
 
 #  Interfaces eth0 and eth1 are parts of the bridge; Interface eth2 is external interface (doing NAT and routing on this interface) Interface eth3 is connected to protected network and is used to manage firewall. This is rather realistic configuration for the bridging firewall
 #
-# Rule 1 (NAT): Interface "eth2" has no addresses
-# Rule 1 (NAT): Interface "br0" has no addresses
-# Rule 2 (NAT): Interface "br0" has no addresses
 # Rule 3 (NAT): Interface "br0" has no addresses
 # Rule 9 (br0): Dynamic interface address not yet supported by nftables compiler (interface: br0)
 # Rule 9 (br0): Could not resolve any destination addresses
@@ -402,7 +399,7 @@ table ip fwf_nat {
         # see bug #1693 , SF bug 3048516
         # combination of using SNAT instead of MASQ,
         # source port translation and dynamic interface
-        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter snat to :1000-1010
+        oifname "br0" ip saddr 192.168.1.0/24 tcp sport 1000-1010 counter masquerade to :1000-1010
     }
 }
 
