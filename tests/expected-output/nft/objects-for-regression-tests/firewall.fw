@@ -38,6 +38,7 @@
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+# firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2' removed from the rule
 
 FWBDEBUG=""
 
@@ -975,8 +976,6 @@ table ip fwf_nat {
         #
         # should match mac and ip addresses
         oifname "eth1" ip saddr 192.168.1.10 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:70 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
-        oifname "eth1" ether saddr 00:10:4b:de:e9:71 ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
         oifname "eth1" ip daddr != { 223.223.223.223, 61.150.47.112 } tcp dport 80 counter snat to 222.222.222.222
         #
         # Rule 20 (NAT)

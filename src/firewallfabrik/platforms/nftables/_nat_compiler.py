@@ -48,6 +48,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     TCPUDPService,
 )
+from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -210,6 +211,8 @@ class NATCompiler_nft(NATCompiler):
             self.add(DropIPv6Rules('drop ipv6 rules'))
 
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
+
+        self.add(VerifyRuleWithMAC('verify MAC address usage in NAT rules'))
 
         self.add(GroupServicesByProtocol('group services by protocol'))
         self.add(VerifyRules2('check correctness of TSrv'))
@@ -1400,6 +1403,57 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 
+        return True
+
+
+class VerifyRuleWithMAC(NATRuleProcessor):
+    """Drop a MAC match from a rule whose chain cannot see the MAC.
+
+    The link-layer header a MAC match reads is only there on the way in:
+    the kernel offers it in the PRE_ROUTING, LOCAL_IN and FORWARD hooks and
+    nowhere else (the hook mask of xt_mac, net/netfilter/xt_mac.c).
+    nftables takes ``ether saddr`` in a postrouting chain all the same and
+    then never matches the rule, so a source translation carrying one would
+    silently stop translating.  Same behaviour as the iptables
+    ``VerifyRuleWithMAC``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.osrc:
+            self.tmp_queue.append(rule)
+            return True
+
+        chain = (rule.ipt_chain or '').lower()
+        if chain in ('prerouting', 'forward', 'input'):
+            self.tmp_queue.append(rule)
+            return True
+
+        # Same predicate the print rule uses to decide that an object can
+        # only be matched on the ethernet header: a PhysAddress, or an
+        # interface or host whose only address is a MAC.
+        mac_objs = [obj for obj in rule.osrc if get_mac_only_address(obj)]
+        if mac_objs:
+            remaining = [obj for obj in rule.osrc if not get_mac_only_address(obj)]
+            rule.osrc = remaining
+            mac_name = mac_objs[0].name
+            if not remaining:
+                self.compiler.abort(
+                    rule,
+                    f'SNAT rule can not match MAC address, and after removing '
+                    f"object '{mac_name}' from OSrc it becomes 'Any'",
+                )
+                return True
+            self.compiler.warning(
+                rule,
+                f"SNAT rule can not match MAC address. Object '{mac_name}' "
+                f'removed from the rule',
+            )
+
+        self.tmp_queue.append(rule)
         return True
 
 
