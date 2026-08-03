@@ -259,12 +259,6 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         counter log prefix "RULE 1 -- DENY " level info drop
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
-        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
@@ -278,12 +272,6 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         counter log prefix "RULE 1 -- DENY " level info drop
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
-        counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {

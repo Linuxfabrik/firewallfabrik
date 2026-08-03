@@ -255,12 +255,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 4 (eth0)
-        #
-        # # Rule 4 (eth0): Could not resolve any source addresses
-# Rule 4 (eth0): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        oifname "eth0" ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
     }
 }
 

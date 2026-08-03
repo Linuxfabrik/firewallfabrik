@@ -12,12 +12,11 @@
 #  One interface has dynamic address, script uses echo to generated iptables commands and then pipes them to iptables-restore
 #
 # Rule 2 (NAT): Interface "ppp" has no addresses
+# Rule 2 (NAT): Could not resolve any original destination addresses
 # Rule 1 (ppp): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
 # Rule 1 (ppp): Could not resolve any destination addresses
 # Rule 1 (ppp): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
 # Rule 1 (ppp): Could not resolve any destination addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
-# Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
@@ -270,13 +269,6 @@ table ip fwf_filter {
         # ppp clients get addresses on 10.1.1.0
         iifname "ppp" ip saddr != 10.1.1.0/24 counter log drop
         #
-        # Rule 1 (ppp)
-        #
-        # ppp clients can not connect to the firewall
-        # # Rule 1 (ppp): Could not resolve any destination addresses
-# Rule 1 (ppp): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
-        iifname "ppp" counter log drop
-        #
         # Rule 2 (ppp)
         #
         iifname "ppp" counter log drop
@@ -294,12 +286,6 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp dport 22 ct state new counter accept
-        #
-        # Rule 8 (global)
-        #
-        # # Rule 8 (global): Could not resolve any destination addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
         tcp dport 22 ct state new counter accept
         #
         # Rule 14 (global)
@@ -418,12 +404,6 @@ table ip fwf_filter {
         #
         ip daddr { 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new counter accept
         #
-        # Rule 8 (global)
-        #
-        # # Rule 8 (global): Could not resolve any destination addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
-        tcp dport 22 ct state new counter accept
-        #
         # Rule 9 (global)
         #
         ip daddr 192.168.1.1 tcp dport 22 ct state new counter accept
@@ -464,7 +444,6 @@ table ip fwf_nat {
         #
         # Rule 2 (NAT)
         #
-        tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
         #

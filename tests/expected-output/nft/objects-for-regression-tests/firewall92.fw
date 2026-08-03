@@ -276,11 +276,6 @@ table ip fwf_filter {
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
         ct state new counter accept
         #
-        # Rule 1 (global)
-        #
-        # matching module owner here
-        # and tcp and udp ports in the branch
-        #
         # Rule 2 (global)
         #
         # this only matches module owner

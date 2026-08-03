@@ -20,11 +20,6 @@
 # Rule 3 (global): Could not resolve any destination addresses
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Could not resolve any destination addresses
-# Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-# Rule 4 (global): Cannot resolve address for object type AddressTable
-# Rule 4 (global): Cannot resolve address for object type AddressTable
-# Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Could not resolve any destination addresses
@@ -276,12 +271,6 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 3 (global)
-        #
-        # # Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-        counter log prefix "RULE 3 -- DENY " level info drop
     }
 
     chain output {
@@ -292,29 +281,9 @@ table ip fwf_filter {
         #
         ip daddr www.heise.de ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
-        # Rule 1 (global)
-        #
-        # # Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-        ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
-        #
         # Rule 2 (global)
         #
         ip daddr 1.1.1.1 ct state new counter log prefix "RULE 2 -- ACCEPT " level info accept
-        #
-        # Rule 3 (global)
-        #
-        # # Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-        counter log prefix "RULE 3 -- DENY " level info drop
-        #
-        # Rule 4 (global)
-        #
-        # testing for bug #1086
-        # when two run-time objects are used in the rule, compiler adds blank command that blocks (permits) any to any
-        # # Rule 4 (global): Cannot resolve address for object type AddressTable
-# Rule 4 (global): Could not resolve any destination addresses
-        ct state new counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #

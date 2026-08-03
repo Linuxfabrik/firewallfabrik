@@ -11,8 +11,11 @@
 #  testing run time address table objects with module set
 #
 # Rule 0 (NAT): Cannot resolve address for object type AddressTable
+# Rule 0 (NAT): Could not resolve any original source addresses
 # Rule 1 (NAT): Cannot resolve address for object type AddressTable
+# Rule 1 (NAT): Could not resolve any original source addresses
 # Rule 2 (NAT): Cannot resolve address for object type AddressTable
+# Rule 2 (NAT): Could not resolve any original destination addresses
 # Rule 0 (global): Cannot resolve address for object type AddressTable
 # Rule 0 (global): Could not resolve any destination addresses
 # Rule 0 (global): Cannot resolve address for object type AddressTable
@@ -23,12 +26,6 @@
 # Rule 1 (global): Could not resolve any destination addresses
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
-# Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any destination addresses
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Cannot resolve address for object type AddressTable
 # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Cannot resolve address for object type AddressTable
@@ -36,25 +33,12 @@
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Could not resolve any destination addresses
-# Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-# Rule 4 (global): Cannot resolve address for object type AddressTable
-# Rule 4 (global): Could not resolve any source addresses
 # Rule 4 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Could not resolve any source addresses
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
@@ -62,11 +46,6 @@
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Could not resolve any source addresses
-# Rule 8 (global): Cannot resolve address for object type AddressTable
-# Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Cannot resolve address for object type AddressTable
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Cannot resolve address for object type AddressTable
@@ -300,129 +279,21 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 1 (global)
-        #
-        # # Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-        ip saddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any destination addresses
-        ip saddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
-        #
-        # Rule 4 (global)
-        #
-        # # Rule 4 (global): Cannot resolve address for object type AddressTable
-# Rule 4 (global): Could not resolve any source addresses
-        ct state new counter accept
-        #
-        # Rule 5 (global)
-        #
-        # # Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-        ct state new counter accept
-        #
-        # Rule 6 (global)
-        #
-        # # Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Could not resolve any source addresses
-        ct state new counter accept
-        #
-        # Rule 7 (global)
-        #
-        # # Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Could not resolve any source addresses
-        ct state new counter accept
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 8 (global)
-        #
-        # # Rule 8 (global): Cannot resolve address for object type AddressTable
-# Rule 8 (global): Could not resolve any destination addresses
-        counter drop
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): Cannot resolve address for object type AddressTable
-# Rule 0 (global): Could not resolve any destination addresses
-        ct state new counter accept
-        #
-        # Rule 1 (global)
-        #
-        # # Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-        ct state new counter accept
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any destination addresses
-        ct state new counter accept
-        #
-        # Rule 3 (global)
-        #
-        # # Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-        ct state new counter accept
-        #
-        # Rule 5 (global)
-        #
-        # # Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-        ip daddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
-        #
-        # Rule 6 (global)
-        #
-        # # Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Could not resolve any source addresses
-        ip daddr { 1.1.1.1, 2.2.2.2 } ct state new counter accept
-        #
-        # Rule 8 (global)
-        #
-        # # Rule 8 (global): Cannot resolve address for object type AddressTable
-# Rule 8 (global): Could not resolve any destination addresses
-        counter drop
-    }
-}
-
-table ip fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-        #
-        # Rule 2 (NAT)
-        #
-        counter dnat to 192.168.1.10
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
-        #
-        # Rule 0 (NAT)
-        #
-        oifname "eth0" counter snat to 1.1.1.1
-        #
-        # Rule 1 (NAT)
-        #
-        oifname "eth0" counter snat to 1.1.1.1
     }
 }
 

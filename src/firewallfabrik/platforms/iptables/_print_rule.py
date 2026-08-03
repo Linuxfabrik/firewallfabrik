@@ -162,20 +162,25 @@ class PrintRule(PolicyRuleProcessor):
 
         chain = rule.ipt_chain
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        if ipt_comp.chain_usage_counter.get(chain, 0) > 0:
-            self.tmp_queue.append(rule)
+        self.tmp_queue.append(rule)
 
-            self.compiler.output.write(self._print_rule_label(rule))
-            self.compiler.output.write(self._create_chain(rule.ipt_chain))
+        if ipt_comp.chain_usage_counter.get(chain, 0) <= 0:
+            return True
 
-            target = rule.ipt_target
-            if target and not target.startswith('.'):
-                self.compiler.output.write(self._create_chain(target))
+        # Build the command first: a rule the compiler cannot express yields
+        # an empty one, and then not even its label belongs in the script.
+        cmd = self._build_rule_command(rule)
+        if not cmd:
+            return True
 
-            cmd = self._build_rule_command(rule)
-            self.compiler.output.write(cmd)
-        else:
-            self.tmp_queue.append(rule)
+        self.compiler.output.write(self._print_rule_label(rule))
+        self.compiler.output.write(self._create_chain(rule.ipt_chain))
+
+        target = rule.ipt_target
+        if target and not target.startswith('.'):
+            self.compiler.output.write(self._create_chain(target))
+
+        self.compiler.output.write(cmd)
 
         return True
 
@@ -196,8 +201,20 @@ class PrintRule(PolicyRuleProcessor):
             command_line += self._print_protocol(srv)
 
         command_line += self._print_multiport(rule)
-        command_line += self._print_src_addr_from_rule(rule)
-        command_line += self._print_dst_addr_from_rule(rule)
+
+        src_addr = self._print_src_addr_from_rule(rule)
+        dst_addr = self._print_dst_addr_from_rule(rule)
+        if src_addr is None or dst_addr is None:
+            # The reason was reported already. Emitting the rule without the
+            # match would apply it to every address, the opposite of what it
+            # says, so leave it out.
+            if not self._keeps_the_ruleset_tighter(rule):
+                return ''
+            src_addr = src_addr or ''
+            dst_addr = dst_addr or ''
+        command_line += src_addr
+        command_line += dst_addr
+
         command_line += self._print_src_service_from_rule(rule)
         command_line += self._print_dst_service_from_rule(rule)
 
@@ -218,6 +235,22 @@ class PrintRule(PolicyRuleProcessor):
 
         command_line += self._end_rule_line()
         return command_line
+
+    @staticmethod
+    def _keeps_the_ruleset_tighter(rule: CompRule) -> bool:
+        """Is a rule that lost its address match better kept than dropped?
+
+        A rule the compiler could not restrict matches everything, so leaving
+        it out is what keeps the generated ruleset closest to the intent -
+        except when it only sends the packet back to the calling chain.  The
+        negation expansion builds such a chain out of a RETURN rule that
+        excludes the negated addresses and an action rule behind it; drop the
+        RETURN and the action applies to all traffic instead of none.
+        Keeping it makes the whole chain return, so the rule does nothing,
+        which is the right answer for a rule that cannot be compiled.
+        """
+        target = rule.ipt_target or ''
+        return target == 'RETURN' or target.startswith('.')
 
     def _get_first_srv(self, rule: CompRule):
         """Get the first service object from the rule."""
@@ -430,7 +463,8 @@ class PrintRule(PolicyRuleProcessor):
             return ' -m multiport '
         return ''
 
-    def _print_src_addr_from_rule(self, rule: CompRule) -> str:
+    def _print_src_addr_from_rule(self, rule: CompRule) -> str | None:
+        """Print the source match, None when the object could not be rendered."""
         if rule.is_src_any():
             return ''
         obj = rule.src[0] if rule.src else None
@@ -443,9 +477,13 @@ class PrintRule(PolicyRuleProcessor):
         addr = self._print_addr(obj)
         if addr:
             return self._print_single_option_with_negation(' -s', rule, 'src', addr)
-        return ''
+        self.compiler.error(
+            rule, f'Could not resolve a source address for "{obj.name}"'
+        )
+        return None
 
-    def _print_dst_addr_from_rule(self, rule: CompRule) -> str:
+    def _print_dst_addr_from_rule(self, rule: CompRule) -> str | None:
+        """Print the destination match, None when it could not be rendered."""
         if rule.is_dst_any():
             return ''
         obj = rule.dst[0] if rule.dst else None
@@ -459,13 +497,16 @@ class PrintRule(PolicyRuleProcessor):
                 f'MAC address "{obj.get_address()}" cannot be used as a '
                 'destination, iptables can only match the source MAC',
             )
-            return ''
+            return None
         if isinstance(obj, AddressRange):
             return self._print_address_range(obj, rule, 'dst')
         addr = self._print_addr(obj)
         if addr:
             return self._print_single_option_with_negation(' -d', rule, 'dst', addr)
-        return ''
+        self.compiler.error(
+            rule, f'Could not resolve a destination address for "{obj.name}"'
+        )
+        return None
 
     def _print_mac_source(self, obj: PhysAddress, rule: CompRule) -> str:
         """Print a MAC address match.

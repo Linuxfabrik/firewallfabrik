@@ -11,7 +11,9 @@
 #  two dynamic interfaces in the same policy or NAT rule. Interfaces have a dot in their names
 #
 # Rule 0 (NAT): Interface "eth0.100" has no addresses
+# Rule 0 (NAT): Could not resolve any original destination addresses
 # Rule 0 (NAT): Interface "eth0.200" has no addresses
+# Rule 0 (NAT): Could not resolve any original destination addresses
 # Rule 0 (eth0.200): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 0 (eth0.200): Could not resolve any source addresses
 # Rule 0 (eth0.200): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
@@ -22,18 +24,10 @@
 # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 1 (global): Could not resolve any source addresses
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-# Rule 1 (global): Could not resolve any source addresses
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 1 (global): Could not resolve any source addresses
-# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-# Rule 2 (global): Could not resolve any destination addresses
-# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-# Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
@@ -262,8 +256,6 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -274,21 +266,8 @@ table ip fwf_filter {
         #
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-        ct state new counter accept
-        # # Rule 1 (global): Could not resolve any source addresses
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ct state new counter accept
-        # # Rule 1 (global): Could not resolve any source addresses
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
         ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 2 (global)
-        #
-        # # Rule 2 (global): Could not resolve any destination addresses
-# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 3 (global)
         #
@@ -326,18 +305,8 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (eth0.200)
-        #
-        # # Rule 0 (eth0.200): Could not resolve any source addresses
-# Rule 0 (eth0.200): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        oifname "eth0.200" ct state new counter accept
-        #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Could not resolve any source addresses
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        ct state new counter accept
         # # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
@@ -347,29 +316,11 @@ table ip fwf_filter {
         #
         # # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
-        udp dport { 68, 67 } ct state new counter accept
-        # # Rule 2 (global): Could not resolve any destination addresses
-# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
         ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 5 (global)
         #
         counter log prefix "RULE 5 -- DENY on interface global " level debug drop
-    }
-}
-
-table ip fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-        #
-        # Rule 0 (NAT)
-        #
-        counter dnat to 192.168.1.10
-        counter dnat to 192.168.1.10
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
     }
 }
 

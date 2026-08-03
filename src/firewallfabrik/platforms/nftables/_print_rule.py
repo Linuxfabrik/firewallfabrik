@@ -286,8 +286,13 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         chain = rule.ipt_chain or 'forward'
 
-        label_str = self._print_rule_label(rule, chain)
+        # Build the rule first: one the compiler cannot express comes back
+        # empty, and then not even its label belongs in the ruleset.
         cmd = self._build_rule(rule)
+        if not cmd:
+            return True
+
+        label_str = self._print_rule_label(rule, chain)
 
         text = ''
         if label_str:
@@ -354,11 +359,18 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Source address
         src_match = self._print_src_addr(rule, af_prefix)
+        if src_match is None:
+            # None of the source objects could be rendered and the reason was
+            # reported. Emitting the rule without the match would apply it to
+            # every source address, which is the opposite of what it says.
+            return ''
         if src_match:
             parts.append(src_match)
 
         # Destination address
         dst_match = self._print_dst_addr(rule, af_prefix)
+        if dst_match is None:
+            return ''
         if dst_match:
             parts.append(dst_match)
 
@@ -494,8 +506,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             keyword = 'oif' if is_loopback else 'oifname'
         return f'{keyword} {neg}{value}'
 
-    def _print_src_addr(self, rule: CompRule, af_prefix: str) -> str:
-        """Print source address matching."""
+    def _print_src_addr(self, rule: CompRule, af_prefix: str) -> str | None:
+        """Print source address matching, None when nothing could be rendered."""
         if rule.is_src_any():
             return ''
 
@@ -505,8 +517,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         neg = '!= ' if rule.src_single_object_negation else ''
         return self._print_addr_match(rule, rule.src, f'{af_prefix} saddr', neg)
 
-    def _print_dst_addr(self, rule: CompRule, af_prefix: str) -> str:
-        """Print destination address matching."""
+    def _print_dst_addr(self, rule: CompRule, af_prefix: str) -> str | None:
+        """Print destination address matching, None when nothing was rendered."""
         if rule.is_dst_any():
             return ''
 
@@ -518,7 +530,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_addr_match(
         self, rule: CompRule, objects: list, keyword: str, neg: str
-    ) -> str:
+    ) -> str | None:
         """Render an address match, keeping MAC addresses apart.
 
         A MAC address is not part of the IP header, so it needs its own
@@ -544,7 +556,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         if not parts:
             what = 'source' if direction == 'saddr' else 'destination'
             self.compiler.error(rule, f'Could not resolve any {what} addresses')
-            return ''
+            return None
         return ' '.join(parts)
 
     @staticmethod

@@ -234,25 +234,16 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule Policy_A 0 (global)
-        #
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule Policy_A 0 (global)
-        #
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule Policy_A 0 (global)
-        #
     }
 }
 

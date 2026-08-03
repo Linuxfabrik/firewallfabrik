@@ -324,9 +324,6 @@ table ip fwf_filter {
         # # Rule 1: Branch action not yet supported by nftables compiler
         iifname "eth0" counter log prefix "RULE 1 -- BRANCH " level info
         #
-        # Rule rule6_branch 0 (global)
-        #
-        #
         # Rule rule_4_0_branch 1 (global)
         #
         counter log prefix "RULE 1 -- DENY " level info drop
@@ -465,9 +462,6 @@ table ip fwf_filter {
         #
         # # Rule 1: Branch action not yet supported by nftables compiler
         iifname "eth0" counter log prefix "RULE 1 -- BRANCH " level info
-        #
-        # Rule rule6_branch 0 (global)
-        #
         #
         # Rule rule_4_0_branch 0 (eth2)
         #
@@ -625,9 +619,6 @@ table ip fwf_filter {
         # Rule rule3_branch 1 (global)
         #
         counter log prefix "RULE 1 -- DENY " level info drop
-        #
-        # Rule rule6_branch 0 (global)
-        #
         #
         # Rule rule_4_0_branch 0 (eth2)
         #

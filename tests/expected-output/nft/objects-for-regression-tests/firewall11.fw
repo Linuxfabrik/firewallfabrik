@@ -256,12 +256,6 @@ table ip fwf_filter {
         #
         iifname "br0" tcp dport 22 ct state new counter accept
         #
-        # Rule 9 (br0)
-        #
-        # # Rule 9 (br0): Could not resolve any destination addresses
-# Rule 9 (br0): Dynamic interface address not yet supported by nftables compiler (interface: br0)
-        iifname "br0" tcp dport 22 ct state new counter accept
-        #
         # Rule 10 (br0)
         #
         iifname "br0" counter log level debug drop

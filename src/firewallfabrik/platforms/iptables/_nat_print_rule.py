@@ -114,6 +114,12 @@ class NATPrintRule(NATRuleProcessor):
 
         self.tmp_queue.append(rule)
 
+        # Build the command first: a rule the compiler cannot express yields
+        # an empty one, and then not even its label belongs in the script.
+        cmd = self._build_nat_command(rule)
+        if not cmd:
+            return True
+
         # Output rule label
         label_str = self._print_rule_label(rule)
         if label_str:
@@ -127,10 +133,7 @@ class NATPrintRule(NATRuleProcessor):
         if target_create:
             self.compiler.output.write(target_create)
 
-        # Build command
-        cmd = self._build_nat_command(rule)
-        if cmd:
-            self.compiler.output.write(cmd)
+        self.compiler.output.write(cmd)
 
         return True
 
@@ -162,7 +165,16 @@ class NATPrintRule(NATRuleProcessor):
             cmd += self._print_mac_source(osrc, rule)
         elif osrc:
             addr_str = self._print_addr(osrc)
-            if addr_str:
+            if not addr_str:
+                # Emitting the rule without the match would translate every
+                # source address, not the one the rule names.
+                self.compiler.error(
+                    rule,
+                    f'Could not resolve an original source address for "{osrc.name}"',
+                )
+                if rule.ipt_target != 'RETURN':
+                    return ''
+            else:
                 cmd += self._print_single_option_with_negation(
                     ' -s', rule, 'osrc', addr_str
                 )
@@ -184,7 +196,18 @@ class NATPrintRule(NATRuleProcessor):
             )
         elif odst:
             addr_str = self._print_addr(odst)
-            if addr_str:
+            if not addr_str:
+                self.compiler.error(
+                    rule,
+                    f'Could not resolve an original destination address for '
+                    f'"{odst.name}"',
+                )
+                # A RETURN rule that lost its match sends the whole helper
+                # chain back to its caller, so the rule does nothing; drop it
+                # and the action rule behind it would translate everything.
+                if rule.ipt_target != 'RETURN':
+                    return ''
+            else:
                 cmd += self._print_single_option_with_negation(
                     ' -d', rule, 'odst', addr_str
                 )

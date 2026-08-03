@@ -89,20 +89,19 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         chain = rule.ipt_chain or 'postrouting'
 
-        label_str = self._print_rule_label(rule)
+        # Build the rule first: one the compiler cannot express comes back
+        # empty, and then not even its label belongs in the ruleset.
         cmd = self._build_nat_rule(rule)
+        if not cmd:
+            return True
 
-        text = ''
-        if label_str:
-            text += label_str
-        if cmd:
-            text += cmd
+        text = self._print_rule_label(rule) + cmd
 
         # Write to per-chain collection if available
         nft_comp = cast('NATCompiler_nft', self.compiler)
-        if text and hasattr(nft_comp, 'chain_rules') and chain in nft_comp.chain_rules:
+        if hasattr(nft_comp, 'chain_rules') and chain in nft_comp.chain_rules:
             nft_comp.chain_rules[chain].append(text)
-        elif text:
+        else:
             nft_comp.output.write(text)
 
         return True
@@ -120,26 +119,31 @@ class NATPrintRule_nft(NATRuleProcessor):
             parts.append(iface_match)
 
         # Original source
-        parts.extend(
-            self._print_addr_match(
-                rule,
-                rule.osrc,
-                f'{af_prefix} saddr',
-                'ether saddr',
-                bool(rule.osrc_single_object_negation),
-            )
+        osrc_match = self._print_addr_match(
+            rule,
+            rule.osrc,
+            f'{af_prefix} saddr',
+            'ether saddr',
+            bool(rule.osrc_single_object_negation),
         )
+        if osrc_match is None:
+            # None of the objects could be rendered and the reason was
+            # reported. Emitting the rule without the match would translate
+            # every source address, not the ones the rule names.
+            return ''
+        parts.extend(osrc_match)
 
         # Original destination
-        parts.extend(
-            self._print_addr_match(
-                rule,
-                rule.odst,
-                f'{af_prefix} daddr',
-                'ether daddr',
-                bool(rule.odst_single_object_negation),
-            )
+        odst_match = self._print_addr_match(
+            rule,
+            rule.odst,
+            f'{af_prefix} daddr',
+            'ether daddr',
+            bool(rule.odst_single_object_negation),
         )
+        if odst_match is None:
+            return ''
+        parts.extend(odst_match)
 
         # Original service
         osrv = nft_comp.get_first_osrv(rule)
@@ -172,7 +176,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         ip_keyword: str,
         ether_keyword: str,
         negated: bool,
-    ) -> list[str]:
+    ) -> list[str] | None:
         """Render an address element, keeping MAC addresses apart.
 
         A negated element keeps all of its addresses in one match, because
@@ -198,6 +202,12 @@ class NATPrintRule_nft(NATRuleProcessor):
             parts.append(f'{ether_keyword} {neg}{_as_set(macs)}')
         if addrs:
             parts.append(f'{ip_keyword} {neg}{_as_set(addrs)}')
+        if objects and not parts:
+            what = 'source' if 'saddr' in ip_keyword else 'destination'
+            self.compiler.error(
+                rule, f'Could not resolve any original {what} addresses'
+            )
+            return None
         return parts
 
     def _print_rule_label(self, rule: CompRule) -> str:

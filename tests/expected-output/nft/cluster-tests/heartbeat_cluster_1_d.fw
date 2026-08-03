@@ -15,13 +15,13 @@
 # Rule 2 (NAT): Interface "eth0" has no addresses
 # Rule 2 (NAT): SNAT rule has no translated source address
 # Rule 3 (NAT): Interface "eth0" has no addresses
+# Rule 3 (NAT): Could not resolve any original destination addresses
 # Rule 4 (NAT): Interface "eth0" has no addresses
+# Rule 4 (NAT): Could not resolve any original destination addresses
 # Rule 5 (global): Interface "eth0" has no addresses
 # Rule 5 (global): Could not resolve any source addresses
 # Rule 5 (global): Interface "eth0" has no addresses
 # Rule 5 (global): Could not resolve any source addresses
-# Rule 6 (global): Interface "eth0" has no addresses
-# Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Interface "eth0" has no addresses
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
@@ -81,8 +81,6 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -94,13 +92,6 @@ table ip fwf_filter {
         # SSH Access to firewall is permitted
         # only from internal network
         ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
-        #
-        # Rule 7 (global)
-        #
-        # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
-# Rule 7 (global): Could not resolve any source addresses
-# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 11 (global)
         #
@@ -116,13 +107,6 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 7 (global)
-        #
-        # # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
-# Rule 7 (global): Could not resolve any source addresses
-# Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 11 (global)
         #
@@ -143,20 +127,6 @@ table ip fwf_filter {
         #
         ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
-        # Rule 5 (global)
-        #
-        # fw is part of any and networks
-        # # Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Interface "eth0" has no addresses
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
-        #
-        # Rule 6 (global)
-        #
-        # fw is NOT part of any and networks
-        # # Rule 6 (global): Could not resolve any source addresses
-# Rule 6 (global): Interface "eth0" has no addresses
-        ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
-        #
         # Rule 8 (global)
         #
         # fw is part of any
@@ -167,33 +137,6 @@ table ip fwf_filter {
         # All other attempts to connect to
         # the firewall are denied and logged
         ip daddr 192.168.1.254 counter log prefix "RULE 12 -- DENY " level info drop
-    }
-}
-
-table ip fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-        #
-        # Rule 3 (NAT)
-        #
-        counter dnat to 192.168.1.100
-        #
-        # Rule 4 (NAT)
-        #
-        counter dnat to 192.168.1.100
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
-        #
-        # Rule 0 (NAT)
-        #
-        #
-        # Rule 1 (NAT)
-        #
-        #
-        # Rule 2 (NAT)
-        #
     }
 }
 
