@@ -1192,7 +1192,7 @@ class PrintRule(PolicyRuleProcessor):
         Parameters:
         - --nflog-group N: netlink multicast group (default 1)
         - --nflog-prefix "...": log prefix string
-        - --nflog-range N: bytes of packet to copy (0 = entire packet)
+        - --nflog-size N: bytes of packet to copy (0 = entire packet)
         - --nflog-threshold N: packets to queue before sending to userspace
         """
         parts = []
@@ -1218,7 +1218,20 @@ class PrintRule(PolicyRuleProcessor):
         except (TypeError, ValueError):
             cprange = 0
         if cprange > 0:
-            parts.append(f'--nflog-range {cprange}')
+            # --nflog-range sets the length but not XT_NFLOG_F_COPY_LEN, so
+            # the kernel ignores it (netfilter iptables commit 7070b1f3,
+            # "nflog-range does not truncate packets").  --nflog-size, which
+            # does set the flag, arrived in iptables 1.6.1; an older target
+            # has no way to say this at all.
+            if version_compare(self.version, '1.6.1') >= 0:
+                parts.append(f'--nflog-size {cprange}')
+            else:
+                self.compiler.warning(
+                    rule,
+                    'iptables before 1.6.1 cannot limit how much of a packet '
+                    'NFLOG copies to userspace; the "Copy range" setting is '
+                    'left out and the whole packet is copied',
+                )
 
         qthreshold = self.compiler.fw.get_option('ulog_qthreshold')
         try:
