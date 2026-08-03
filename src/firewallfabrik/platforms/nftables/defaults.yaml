@@ -4,8 +4,13 @@
 # option keys, their types, default values, widget mappings, and
 # descriptions (used as GUI tooltips).
 #
-# Options with ``supported: false`` are present in the shared .ui file
-# but are disabled because the nftables compiler does not use them.
+# Options with ``supported: false`` are present in the .ui file but are
+# disabled because the nftables compiler does not use them. Options that
+# describe an iptables implementation detail with no nftables counterpart
+# at all carry ``widget: ~``: they have no place in the nftables settings
+# dialog and were removed from nftablessettingsdialog_q.ui. Their keys
+# stay here so that a value imported from a .fwb or .fwf file remains a
+# known key and survives a platform switch back to iptables.
 #
 # Keys are listed alphabetically for maintainability.
 
@@ -322,7 +327,7 @@ options:
     type: 'bool'
     default: true
     supported: false
-    widget: 'loadModules'
+    widget: ~
     description: >-
       Not needed for nftables: nft loads required kernel modules on
       demand.
@@ -521,7 +526,7 @@ options:
     type: 'bool'
     default: false
     supported: false
-    widget: 'iptablesRestoreActivation'
+    widget: ~
     description: >-
       Not needed for nftables: the nft compiler always loads the
       ruleset atomically via "nft -f /dev/stdin".
@@ -540,7 +545,7 @@ options:
     type: 'bool'
     default: false
     supported: false
-    widget: 'useModuleSet'
+    widget: ~
     description: >-
       Not needed for nftables: sets are a native feature of the nft
       language.

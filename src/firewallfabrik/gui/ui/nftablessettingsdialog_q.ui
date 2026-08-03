@@ -476,25 +476,15 @@ packets to IPv6 policies</string>
            </property>
           </widget>
          </item>
-         <item row="7" column="0" colspan="2">
-          <widget class="QCheckBox" name="useModuleSet">
-           <property name="text">
-            <string>Use module "set" for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later)</string>
-           </property>
-           <property name="toolTip">
-            <string>Use the ipset kernel module ("set" match) for run-time address table objects.
-Only available in iptables v1.4.1.1 and later.</string>
-           </property>
-          </widget>
-         </item>
          <item row="8" column="0" colspan="2">
           <widget class="QCheckBox" name="useKernelTz">
            <property name="text">
             <string>Use kernel timezone instead of UTC</string>
            </property>
            <property name="toolTip">
-            <string>Use the kernel timezone instead of UTC for time-based rules. Only available in
-iptables v1.4.11 and later.</string>
+            <string>Interpret the time of day of time-based rules in the kernel timezone instead of
+UTC. The weekday is always matched in UTC: nftables has no local-timezone
+weekday.</string>
            </property>
           </widget>
          </item>
@@ -1376,35 +1366,6 @@ for debugging only.</string>
        <string>Script</string>
       </attribute>
       <layout class="QGridLayout" name="scriptTabLayout">
-       <item row="0" column="0">
-        <widget class="QCheckBox" name="loadModules">
-         <property name="text">
-          <string />
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="loadModules_label">
-         <property name="text">
-          <string>Load iptables modules: Uses modprobe to load required netfilter kernel modules (connection tracking, NAT). Already loaded modules are skipped automatically.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-         </property>
-         <property name="buddy">
-          <cstring>loadModules</cstring>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="0">
         <widget class="QCheckBox" name="iptDebug">
          <property name="text">
@@ -1634,35 +1595,6 @@ for debugging only.</string>
          </property>
          <property name="buddy">
           <cstring>addVirtualsforNAT</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="0">
-        <widget class="QCheckBox" name="iptablesRestoreActivation">
-         <property name="text">
-          <string />
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
-       </item>
-       <item row="9" column="1">
-        <widget class="QLabel" name="iptablesRestoreActivation_label">
-         <property name="text">
-          <string>Use iptables-restore: Loads all rules in one atomic transaction instead of calling iptables for each rule individually.</string>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-         </property>
-         <property name="buddy">
-          <cstring>iptablesRestoreActivation</cstring>
          </property>
         </widget>
        </item>

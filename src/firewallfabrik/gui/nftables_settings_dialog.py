@@ -42,9 +42,6 @@ for _key, _entry in _SCHEMA.items():
     if not _entry.get('supported', True):
         _UNSUPPORTED_WIDGETS.append(_widget)
 
-# Additional non-widget UI elements to disable for unsupported options.
-_UNSUPPORTED_WIDGETS.extend(['textLabel6'])
-
 
 class NftablesSettingsDialog(QDialog):
     """Modal dialog for nftables firewall settings."""
@@ -103,6 +100,10 @@ class NftablesSettingsDialog(QDialog):
 
         Also replace the hardcoded .ui tooltip with the schema description
         so the user sees *why* the option is greyed out.
+
+        Options that describe an iptables implementation detail with no
+        nftables counterpart carry ``widget: ~`` in the schema and have no
+        widget in the nftables .ui file, so they never reach this method.
         """
         # Build widget→description map once.
         desc_by_widget = {

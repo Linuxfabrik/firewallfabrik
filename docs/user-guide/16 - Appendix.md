@@ -189,7 +189,7 @@ The following tables list every setting from the firewall settings dialogs and t
 | Logging | queue threshold: | `ulog_qthreshold` | integer (`-1` = kernel default) | `1` | iptables, nftables |
 | Logging | use NFLOG | `use_NFLOG` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Script | Use iptables-restore: Loads all rules in one atomic transaction instead of calling iptables for each rule individually. | `use_iptables_restore` | on/off (`true` / `false`) | `false` | iptables |
-| Compiler | Use kernel timezone instead of UTC (only available in iptables v 1.4.11 and later) | `use_kerneltz` | on/off (`true` / `false`) | `false` | iptables, nftables |
+| Compiler | Use kernel timezone instead of UTC (on iptables only available in v 1.4.11 and later; on nftables the weekday is always matched in UTC) | `use_kerneltz` | on/off (`true` / `false`) | `false` | iptables, nftables |
 | Compiler | Use module "set" for run-time Address Table objects (module is only available in iptables v 1.4.1.1 and later) | `use_m_set` | on/off (`true` / `false`) | `false` | iptables |
 | Logging | use numeric syslog levels | `use_numeric_log_levels` | on/off (`true` / `false`) | `false` | iptables |
 | Script | Verify interfaces: Checks at runtime that all interfaces defined in the firewall object exist on the target machine before loading rules. The script aborts if any interface is missing. | `verify_interfaces` | on/off (`true` / `false`) | `true` | iptables, nftables |

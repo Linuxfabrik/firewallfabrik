@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 * FirewallFabrik now runs on Python 3.11 and newer; it previously required Python 3.14. This lets it install on current enterprise and desktop distributions without a custom Python build.
+* The nftables firewall settings no longer show the three options that describe how iptables works and have no counterpart in nftables at all: loading netfilter kernel modules, the ipset module toggle, and iptables-restore activation. nft loads the modules it needs on demand, brings its own named sets, and always loads a ruleset in one atomic transaction, so the three checkboxes had nothing to switch. They stay in the iptables settings, and a value a firewall already carries is left untouched, so switching that firewall back to iptables restores it.
 
 ### Fixed
 
@@ -91,6 +92,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): rules that match on TCP flags (for example SYN-only or non-SYN packets) now generate the correct flag match instead of matching all TCP traffic, matching the iptables compiler.
 * Compiler (nftables): the logging rate limit can be set again in the nftables firewall settings. Both fields were greyed out as unsupported although the compiler emits the limit.
 * GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor and as Firewall Builder: "ICMP admin prohibited" and "ICMP protocol unreachable" were missing, so a firewall imported with one of them could not keep it. The list also offered a plain "ICMP unreachable" that no compiler maps to a defined ICMP type.
+* GUI: the "Logging limit:" label in the nftables firewall settings is no longer greyed out. The limit itself has been configurable for a while, but its label still looked disabled and suggested the setting had no effect.
+* GUI: the "Use kernel timezone instead of UTC" tooltip in the nftables firewall settings describes what nftables does instead of naming an iptables version requirement. The setting works on nftables, with the one difference that the weekday of a time-restricted rule is always matched in UTC.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 
 
