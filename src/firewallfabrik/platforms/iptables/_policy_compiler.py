@@ -1123,10 +1123,15 @@ class BridgingFw(PolicyRuleProcessor):
         """Check if address matches a broadcast address of any firewall interface.
 
         Matches C++ ``bridgingFw::checkForMatchingBroadcastAndMulticast``
-        interface iteration logic.
+        interface iteration logic, including its ``hasInetAddress()`` guard:
+        a rule element may still hold an Interface or another object that
+        carries no address of its own, and asking such an object for one
+        would end the compile with no script written at all.
         """
         import ipaddress as _ipa
 
+        if not isinstance(addr, Address):
+            return False
         addr_str = addr.get_address()
         if not addr_str:
             return False
