@@ -245,9 +245,17 @@ class NATPrintRule(NATRuleProcessor):
         tsrv = ipt_comp.get_first_tsrv(rule)
 
         if rt == NATRuleType.Masq:
+            parts = []
+            # Masquerading picks the address of the outgoing interface but
+            # still takes a source port range, which is how a translation to
+            # an address only known at run time keeps its ports (netfilter
+            # extensions/libxt_MASQUERADE.man, extensions/libipt_MASQUERADE.t).
+            ports = self._print_snat_ports(tsrv) if tsrv else ''
+            if ports:
+                parts.append(f'--to-ports {ports}')
             if rule.get_option('ipt_nat_random', False):
-                return '--random'
-            return ''
+                parts.append('--random')
+            return ' '.join(parts)
 
         if rt == NATRuleType.SNAT and target == 'SNAT':
             parts = ['--to-source']
@@ -426,15 +434,15 @@ class NATPrintRule(NATRuleProcessor):
     def _nat_l4proto_option(self, rule: CompRule) -> str:
         """Return `-p tcp `/`-p udp ` for a port mapping that lacks a protocol.
 
-        REDIRECT (`--to-ports`), and DNAT/SNAT that translate a port, need an
-        explicit protocol; the port comes from the translated service, which
-        also pins the protocol. Mirrors the `meta l4proto` the nftables
-        compiler injects for the same rules.
+        REDIRECT and MASQUERADE (`--to-ports`), and DNAT/SNAT that translate
+        a port, need an explicit protocol; the port comes from the translated
+        service, which also pins the protocol. Mirrors the `meta l4proto` the
+        nftables compiler injects for the same rules.
         """
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
         rt = rule.nat_rule_type
         tsrv = ipt_comp.get_first_tsrv(rule)
-        if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
+        if rt in (NATRuleType.Masq, NATRuleType.SNAT, NATRuleType.SNetnat):
             has_port = bool(self._print_snat_ports(tsrv)) if tsrv else False
         elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
             has_port = bool(self._print_dnat_ports(tsrv)) if tsrv else False
