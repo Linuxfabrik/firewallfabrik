@@ -109,6 +109,10 @@ flush_own_tables() {
     $NFT delete table ip6 {{ nat_table }} 2>/dev/null
     $NFT delete table inet {{ mangle_table }} 2>/dev/null
     $NFT delete table ip {{ mangle_table }} 2>/dev/null
+    # Deleting a table that is not there fails, and most firewalls have no
+    # mangle table, so without this the function would hand its caller the
+    # exit code of a failed delete and "stop" would report failure.
+    return 0
 }
 {% if flush_ruleset %}
 
@@ -129,6 +133,9 @@ flush_legacy_iptables() {
             "$ipt" -t "$table" -X 2>/dev/null
         done
     done
+    # Same as in flush_own_tables: a table the kernel does not offer makes
+    # the last command fail, which must not become the caller's exit code.
+    return 0
 }
 {% endif %}
 
