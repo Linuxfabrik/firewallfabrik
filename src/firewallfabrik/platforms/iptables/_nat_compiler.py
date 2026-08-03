@@ -61,6 +61,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -2195,8 +2196,12 @@ class VerifyRules2(NATRuleProcessor):
 class VerifyRules3(NATRuleProcessor):
     """Verify interface specification is compatible with the chosen chain.
 
-    Corresponds to C++ NATCompiler_ipt::VerifyRules3.
-    iptables does not allow -i in POSTROUTING or -o in PREROUTING.
+    Corresponds to C++ NATCompiler_ipt::VerifyRules3, which asks the rule
+    type instead of the chain and so only covers a plain SNAT and DNAT.  A
+    masquerading, a netmap and a redirect rule land in the very same chains
+    and a NONAT rule is split into a copy for each of them, and iptables
+    refuses ``-i`` in POSTROUTING and ``-o`` in PREROUTING for all of them
+    alike.  Asking the chain the rule ended up in covers every type.
     """
 
     def process_next(self) -> bool:
@@ -2204,34 +2209,15 @@ class VerifyRules3(NATRuleProcessor):
         if rule is None:
             return False
 
-        has_itf_inb = bool(rule.itf_inb)
-        has_itf_outb = bool(rule.itf_outb)
-
-        if rule.nat_rule_type == NATRuleType.SNAT and has_itf_inb:
-            self.compiler.abort(
-                rule,
-                'Can not use inbound interface specification with '
-                'rules that translate source because iptables does not '
-                'allow "-i" in POSTROUTING chain',
-            )
-            return True
-
-        if rule.nat_rule_type == NATRuleType.DNAT and has_itf_outb:
-            self.compiler.abort(
-                rule,
-                'Can not use outbound interface specification with '
-                'rules that translate destination because iptables does not '
-                'allow "-o" in PREROUTING chain',
-            )
-            return True
-
-        if rule.ipt_chain == 'OUTPUT' and has_itf_inb:
-            self.compiler.abort(
-                rule,
-                'Can not use inbound interface specification with '
-                'this rule because iptables does not '
-                'allow "-i" in OUTPUT chain',
-            )
+        # A rule moved into a helper chain matches its interface in the
+        # rule that jumps there, not in the chain itself.
+        problem = nat_interface_problem(
+            rule.ipt_chain or '',
+            has_itf_inb=bool(rule.itf_inb) and rule.nat_iface_in != 'nil',
+            has_itf_outb=bool(rule.itf_outb) and rule.nat_iface_out != 'nil',
+        )
+        if problem:
+            self.compiler.abort(rule, f'Rule {problem}; the rule is left out')
             return True
 
         self.tmp_queue.append(rule)

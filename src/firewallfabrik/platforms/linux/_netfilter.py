@@ -45,3 +45,25 @@ def interface_direction_problem(chain: str, inbound: bool) -> str:
     if not inbound and name in NO_OUTBOUND_DEVICE_CHAINS:
         return f'a packet in the {chain} chain has no outgoing interface yet'
     return ''
+
+
+def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> str:
+    """Return why *chain* cannot match a NAT rule's interfaces, or ``''``.
+
+    A NAT rule names its interfaces in two elements of its own instead of
+    carrying a direction, so it can name both at once.  Which chain it ends
+    up in follows from what it translates: a source translation runs in
+    postrouting, a destination translation in prerouting, and a locally
+    generated one in output.  The same hook facts as in
+    :func:`interface_direction_problem` then rule one of the two elements
+    out.
+    """
+    if has_itf_inb:
+        problem = interface_direction_problem(chain, inbound=True)
+        if problem:
+            return f'matches on the incoming interface but {problem}'
+    if has_itf_outb:
+        problem = interface_direction_problem(chain, inbound=False)
+        if problem:
+            return f'matches on the outgoing interface but {problem}'
+    return ''

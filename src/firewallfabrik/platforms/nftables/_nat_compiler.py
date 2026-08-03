@@ -48,6 +48,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     TCPUDPService,
 )
+from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
 from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
 
 if TYPE_CHECKING:
@@ -224,6 +225,7 @@ class NATCompiler_nft(NATCompiler):
         self.add(
             DynamicInterfaceInTSrc('masquerade if TSrc has no compile-time address')
         )
+        self.add(VerifyRules3('check combination of interface spec and chain'))
 
         self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
         self.add(ConvertToAtomicForItfOutb('convert to atomic for outbound interface'))
@@ -1051,6 +1053,36 @@ class VerifyRules2(NATRuleProcessor):
                             'same type as Original Service.',
                         )
                         return True
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class VerifyRules3(NATRuleProcessor):
+    """Drop NAT rules whose chain never sees the interface they match on.
+
+    Counterpart of the iptables ``VerifyRules3``.  iptables refuses ``-i``
+    in postrouting and ``-o`` in prerouting outright, so there the mistake
+    surfaces at activation time; nftables takes ``iifname`` and ``oifname``
+    in either chain without complaining and then never matches the rule, so
+    a source translation with an inbound interface would silently translate
+    nothing.  Report it and leave the rule out, as the iptables compiler
+    does.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        problem = nat_interface_problem(
+            rule.ipt_chain or '',
+            has_itf_inb=bool(rule.itf_inb),
+            has_itf_outb=bool(rule.itf_outb),
+        )
+        if problem:
+            self.compiler.error(rule, f'Rule {problem}; the rule is left out')
+            return True
 
         self.tmp_queue.append(rule)
         return True
