@@ -28,7 +28,7 @@ Example usage::
     )
 
     schema = get_platform_defaults('iptables')
-    seed   = get_default_values('iptables')
+    seed = get_default_values('iptables')
 """
 
 import functools
