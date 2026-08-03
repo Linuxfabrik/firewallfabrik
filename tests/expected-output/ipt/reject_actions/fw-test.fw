@@ -120,20 +120,29 @@ check_tools() {
  find_program "$IPTABLES"
  find_program "$IP"
 }
+# The tables to clear. /proc/net/ip_tables_names, which used to be
+# read here, only exists while the legacy ip_tables module is loaded;
+# with the iptables-nft backend that every current distribution ships it
+# is absent, the loop over it ran zero times and nothing was cleared at
+# all, while the policies below were already set to DROP. Naming the
+# tables works with either backend: flushing one that does not exist is
+# a no-op and leaves no table behind.
+FWF_TABLES="filter mangle nat raw security"
+
 reset_iptables_v4() {
  $IPTABLES -w 5 -P OUTPUT DROP
  $IPTABLES -w 5 -P INPUT DROP
  $IPTABLES -w 5 -P FORWARD DROP
 
- while read -r table; do
- list=$($IPTABLES -w 5 -t "$table" -L -n)
+ for table in $FWF_TABLES; do
+ list=$($IPTABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
  printf "%s" "$list" | while read -r c chain rest; do
  if test "$c" = "Chain" ; then
  $IPTABLES -w 5 -t "$table" -F "$chain"
  fi
  done
  $IPTABLES -w 5 -t "$table" -X
- done < /proc/net/ip_tables_names
+ done
 }
 
 reset_iptables_v6() {
@@ -141,15 +150,15 @@ reset_iptables_v6() {
  $IP6TABLES -w 5 -P INPUT DROP
  $IP6TABLES -w 5 -P FORWARD DROP
 
- while read -r table; do
- list=$($IP6TABLES -w 5 -t "$table" -L -n)
+ for table in $FWF_TABLES; do
+ list=$($IP6TABLES -w 5 -t "$table" -L -n 2>/dev/null) || continue
  printf "%s" "$list" | while read -r c chain rest; do
  if test "$c" = "Chain" ; then
  $IP6TABLES -w 5 -t "$table" -F "$chain"
  fi
  done
  $IP6TABLES -w 5 -t "$table" -X
- done < /proc/net/ip6_tables_names
+ done
 }
 
 P2P_INTERFACE_WARNING=""
