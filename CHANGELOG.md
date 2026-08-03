@@ -10,92 +10,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* FirewallFabrik now runs on Python 3.11 and newer; it previously required Python 3.14. This lets it install on current enterprise and desktop distributions without a custom Python build.
-* The nftables firewall settings no longer show the three options that describe how iptables works and have no counterpart in nftables at all: loading netfilter kernel modules, the ipset module toggle, and iptables-restore activation. nft loads the modules it needs on demand, brings its own named sets, and always loads a ruleset in one atomic transaction, so the three checkboxes had nothing to switch. They stay in the iptables settings, and a value a firewall already carries is left untouched, so switching that firewall back to iptables restores it.
+* FirewallFabrik installs on Python 3.11 and newer, so current distributions no longer need a custom Python build for it.
+* The nftables firewall settings no longer show three options that only ever applied to iptables. A firewall switched back to iptables keeps its values.
 
 ### Fixed
 
-* Compiler (iptables): a firewall that does not pin a specific iptables version is now compiled for current iptables instead of for the oldest release ever supported. Rules with a negated address or interface were written as `-s ! 192.0.2.0/24`, a form iptables has rejected since 1.4.3, so those rules failed to load. The generated script now also waits for the iptables lock, uses the `conntrack` match instead of the obsolete `state` match, and honours the "use ipset" setting, all of which were tied to the assumed version as well. Firewalls that do pin a version are unaffected.
-* Compiler (iptables): a generated script with "Clear all rules" enabled now really clears them. It read the list of tables from `/proc/net/ip_tables_names`, which only exists while the legacy `ip_tables` module is loaded; on the `iptables-nft` backend that every current distribution ships, the file is missing, the loop ran zero times, and no table was flushed and no chain deleted. The firewall was left with its old rules plus the new ones appended, growing with every activation, while the chain policies had already been set to DROP. The script now names the tables it clears, which works on both backends.
-* Compiler (iptables): a bridging firewall whose rules name an interface as a destination now compiles. The check that decides whether a destination is a broadcast or multicast address asked the interface object for an address it does not have, which ended the compile with an internal error and left no script behind at all. The nftables compiler already guarded against this.
-* Compiler (iptables): a firewall with routing rules now generates a working script. The first routing command was appended to the last iptables command instead of starting on its own line, which broke both: the packet filter refused the rule and the route was never added.
-* Compiler (iptables): a masquerading rule that also translates the source port now keeps that port range (`-j MASQUERADE --to-ports 1000-1010`). The port was silently dropped, so the kernel picked a source port of its own and any peer or accounting that expects the configured range saw something else. This affects a source translation to an interface whose address is only known at run time, which is compiled to MASQUERADE.
-* Compiler (iptables): a NAT rule whose translated address the compiler cannot determine is now reported as an error and left out of the generated script, instead of emitting `-j SNAT`, `-j DNAT` or `-j NETMAP` without the address those targets insist on. iptables refuses such a rule and the activation script stops there, leaving the firewall half-loaded. This happens for a source translation to a dynamic interface, whose address is only known at run time, and for a network translation whose target network cannot be resolved.
-* Compiler (iptables, nftables): a firewall with "Add rules to permit IPv6 Neighbor Discovery" enabled now generates those rules. The compiler looked the setting up under a name no firewall file ever uses, so it always read the default "off" and a dual-stack firewall that drops by default silently lost IPv6 connectivity. The nftables compiler, which did not implement the setting at all, now generates the rules as well.
-* Compiler (iptables): a rule with a time restriction now uses the option names the pinned iptables understands. The weekday list was always written as `--weekdays`, which the time module only learned in 1.4.0 (it is `--days` before that), and `--kerneltz` was emitted for releases older than 1.4.11, which do not know it. Both made the rule fail to load on those targets.
-* Compiler (iptables): a firewall pinned to "1.2.5 or earlier" or to "1.2.6 to 1.2.8" is compiled for that iptables again. Both settings are stored under a name that is not a plain version number, and the compiler read them as if they were newer than every release there is. Such a firewall got the modern syntax throughout: the `conntrack` match, extrapositioned negation (`! -s ...`), a lock wait, and the current spelling of the time and IP-options matches, none of which those releases understand.
-* Compiler (iptables): a firewall that uses iptables-restore now writes its log prefixes correctly. The quotes around the prefix were left unescaped inside the `echo` line that builds the restore file, so the shell swallowed them: every log message lost the space at the end of its prefix and ran into the packet data (`RULE 0 -- DENYIN=eth0 ...`), which breaks log parsers. A prefix containing shell syntax was interpreted by the shell as well.
-* Compiler (iptables): a rate limit iptables cannot express is now reported as an error instead of producing a script that stops at activation time. The limit match tops out at 10000 per time unit and its burst at 10000; a higher value made iptables refuse the rule with "Rate too fast" or "out of range", leaving the firewall half-loaded. nftables has neither ceiling and is unaffected.
-* Compiler (iptables): a rule set or branch whose name yields a chain name iptables cannot create is now reported as an error instead of producing a script that fails at activation time. Besides a name longer than 28 characters, this now also catches a name containing a space and one starting with "-" or "!", both of which iptables refuses as well. nftables has no such limits and is unaffected.
-* Compiler (iptables): a rule that assigns a traffic class now generates the CLASSIFY target with the class it names. The rule was generated without a target, so it counted packets and classified nothing, and traffic shaping downstream never saw the class.
-* Compiler (iptables): a rule that matches TCP flags (or an IP header option) and additionally carries a rate limit or a time restriction now loads. The two matches were written without a space between them (`--tcp-flags ALL SYN-m limit ...`), which iptables rejected as an unknown TCP flag, so the rule was missing from the running firewall.
-* Compiler (iptables): a rule that names an interface and applies in both directions no longer produces a rule the packet filter refuses. Once such a rule is placed in the postrouting or prerouting chain, only one of the two directions can still be matched there; the compiler generated both and iptables rejected the impossible one with "Can't use --in-interface with POSTROUTING", which stopped the activation script at that point.
-* Compiler (iptables): a rule that rejects with a TCP reset now loads when the compiler has to move its action into a helper chain, which it does for logged rules, for rules with a negated source, destination or service, and for rules the optimizer splits. The reject rule lost the `-p tcp` match in the process, and iptables rejects `--reject-with tcp-reset` without it, so the rule was missing from the running firewall and the traffic fell through to the policy below. For a negated service the rule is now split, so TCP is reset and every other protocol gets the configured ICMP unreachable. nftables was not affected, it keeps the protocol match inline.
-* Compiler (iptables): a rule that uses a custom service now carries the protocol the service is defined for, so a service whose code needs a preceding protocol match (`-m tcp --tcp-flags ...` for example) produces a rule that loads instead of being rejected with "TCP match requires '-p tcp'".
-* Compiler (iptables): ip6tables NAT rules that match a specific ICMPv6 type now produce a valid rule. The rule used the IPv4-only `--icmp-type` option; it now uses `-m icmp6 --icmpv6-type`, matching the policy compiler.
-* Compiler (iptables): the generated script waits at most five seconds for the iptables lock (`-w 5`) instead of waiting indefinitely (`-w`). A plain `-w` blocks forever while another process holds the lock, which stalls an unattended rollout with no error; the script now aborts with iptables' "Stopped waiting" message instead. Firewalls pinned to an iptables older than 1.6.0, which cannot express a timeout, keep the plain `-w`.
-* Compiler (iptables, nftables): a dual-stack firewall whose rules mix IPv4 and IPv6 addresses no longer aborts compilation. The shadowing detector compared an IPv4 address directly against an IPv6 one, which raised an error and stopped the whole firewall from compiling; the two families are now correctly treated as non-overlapping.
-* Compiler (iptables, nftables): a dual-stack interface or host used in a rule now renders its IPv4 address in the IPv4 ruleset and its IPv6 address in the IPv6 ruleset, instead of always using its first address. A single-stack interface or host used in the wrong address family (for example an IPv6-only tunnel in the IPv4 ruleset, or an IPv4-only host in the IPv6 ruleset) is now dropped from that ruleset instead of emitting a mismatched-family match the packet filter refuses to load.
-* Compiler (iptables, nftables): a firewall that limits how many log messages its rules may produce now gets that limit into the generated ruleset. The setting was read nowhere, so a logging firewall under load or under attack wrote log lines at full rate and could fill its disk. On nftables a logged rule is now split into a rate-limited log rule and the rule carrying the action, matching what iptables generates; the limit throttles the log message, not the traffic.
-* Compiler (iptables, nftables): a NAT rule that names an interface the chain it runs in never sees is reported and left out. iptables refused it and stopped the activation script; nftables accepted it and translated nothing.
-* Compiler (iptables, nftables): a NAT rule whose translated service has a different protocol than its original service is now reported as an error, matching Firewall Builder. Such a rule was silently compiled into a translation that does not do what the rule says.
-* Compiler (iptables, nftables): a source translation to an unnumbered interface is now reported as an error, matching Firewall Builder. Such an interface never carries an address, so there is nothing to translate the source to; iptables got a `-j SNAT` with no address behind it and refused it, which stopped the activation script, and nftables silently masqueraded instead, translating the traffic to the address of whatever interface it left by.
-* Compiler (iptables, nftables): a REDIRECT (or port-translating DNAT/SNAT) rule whose only match is on the connection owner, such as a transparent-proxy rule that redirects a user's traffic to a local port, now carries the transport protocol it needs. The protocol is taken from the redirect target port, so the rule loads instead of being rejected for a port mapping without a preceding protocol match.
-* Compiler (iptables, nftables): a rule whose source or destination the compiler cannot resolve is now left out of the generated ruleset instead of being written without that match. Such a rule applied to every address: an "accept from these hosts" rule accepted from everywhere, a "deny to that network" rule denied everything, and a NAT rule translated all traffic. It happens for an Address Table whose file is missing, for an interface whose address is only known at run time, and for a host object with no address at all. The error was reported all along, but the generated script was already written and could be installed. A rule that only returns to its calling chain is still written, because leaving that one out would hand the traffic to the rule behind it.
-* Compiler (iptables, nftables): a rule or NAT rule that matches a MAC address now generates a loadable rule. The MAC was emitted as if it were an IP address (`-s 00:10:4b:...` / `ip saddr 00:10:4b:...`), which the packet filter rejects; it now uses the MAC match (`-m mac --mac-source` for iptables, `ether saddr`/`ether daddr` for nftables). A MAC used as a destination is reported as an error on iptables, which can only match the source MAC.
-* Compiler (iptables, nftables): a rule or NAT rule that matches a Tag Service now matches the packet mark it names. The mark match was dropped from the generated rule, so a rule meant to match only marked packets matched every packet instead, which lets traffic through a rule that was supposed to be selective.
-* Compiler (iptables, nftables): a rule that matches an interface in a chain that never sees it is now reported as an error and left out of the generated ruleset. A packet has no incoming interface in the postrouting and output chains and no outgoing one in the prerouting and input chains, so a rule such as "classify inbound traffic on eth0", which has to go into postrouting, can never match. iptables refused it with "Can't use --in-interface with POSTROUTING" and the activation script stopped there, leaving the firewall half-loaded; nftables accepted the rule and silently matched nothing.
-* Compiler (iptables, nftables): a rule that rejects with a TCP reset and matches a custom TCP service is no longer downgraded to an ICMP unreachable with a spurious "can be used only with TCP services" warning. The compiler did not recognise the protocol of a custom service.
-* Compiler (iptables, nftables): a rule that tags packets now sets the mark. On iptables the rule was generated without a target, so it counted packets and marked nothing, and the companion rule that saves the mark to the connection was rejected by iptables as "CONNMARK target: No operation specified", which stopped the script at that point.
-* Compiler (iptables, nftables): a rule with a custom action now runs the target it names (for example `-j TCPMSS --clamp-mss-to-pmtu`). The target was left out of the generated rule, so the rule counted packets and did nothing else. nftables cannot run an iptables target and now reports such a rule instead of generating a rule that does nothing.
-* Compiler (iptables, nftables): an IP service with an unknown DiffServ class name (for example "AF4", which is missing its drop-precedence digit) now reports a clear error instead of emitting a rule the packet filter refuses to load. Valid DiffServ classes (af41, cs0, be, ef, ...) and numeric code points are unaffected.
-* Compiler (iptables, nftables): an IPv4 address range used in an IPv6 rule (or an IPv6 range in an IPv4 rule) is now dropped from that address family instead of being emitted. Address ranges slipped through the address-family filter, so a rule meant for IPv4 produced an IPv6 ruleset that the packet filter refused to load.
-* Compiler (iptables, nftables): IPv6 SNAT and DNAT rules that also translate the port now bracket the address (for example `[fec0::1]:80`), so the generated ruleset loads. Without the brackets the port was read as part of the IPv6 address.
-* Compiler (nftables): a firewall that logs via netlink (NFLOG) and has one of the "Log IP options", "Log TCP options" or "Log TCP sequence numbers" settings enabled now produces a ruleset that loads. nftables refuses a log statement that combines a netlink group with those flags, so the whole firewall failed to activate. The flags are now left out with a warning, matching the iptables NFLOG target, which has no counterpart for them either.
-* Compiler (nftables): a firewall with no explicit policy rules but with automatic rules enabled (accept established/related, drop invalid, drop non-SYN TCP) now installs its filter table with the default-drop policy and those rules, matching the iptables output. Previously it produced an empty ruleset that filtered nothing, leaving the host effectively open.
-* Compiler (nftables): a NAT rule that matches a MAC address in a chain that never sees one no longer keeps that match. The link-layer header is only available on the way in, so a source translation, which runs in the postrouting chain, can never match a MAC; nftables accepted the rule and then translated nothing, so the traffic left untranslated. The MAC is now dropped from the rule with the same warning the iptables compiler gives, and the rule is reported when nothing else is left to match on.
-* Compiler (nftables): a NAT rule that translates the source to an interface whose address is only known at run time (a PPP or DHCP interface) now masquerades, as the iptables output does. The compiler took the address of some other interface of the firewall instead, so the traffic left with a source address that does not belong to the link it went out on and the answers never came back. Where the address cannot be determined at all, the rule is now reported and left out instead of silently masquerading, which would translate the traffic to a different address than the rule asks for.
-* Compiler (nftables): a NAT rule that translates only the port now performs the translation instead of letting the traffic pass untranslated. A redirect to a local port, a destination-port-only DNAT and a source-port-only SNAT were all compiled into a plain `accept` in the postrouting chain, with a "no chain assignment for NAT rule type" error. Combined source and destination translation (SDNAT) that also translates a port now works as well; it previously either errored out or translated the address only.
-* Compiler (nftables): a NAT rule whose original source or destination address is negated now produces a ruleset that loads. The generated rule used an invalid negation (`ip saddr ! ...`) that nftables rejected; it now uses the correct `ip saddr != ...` form.
-* Compiler (nftables): a NAT rule whose original source or destination negates a group of addresses now matches none of them, as the rule says. The group was split into one rule per address, each excluding a single address, so every address of the group still matched one of the rules and got translated.
-* Compiler (nftables): a NAT rule that translates a whole network (the iptables NETMAP target) now maps the addresses one to one, so 10.141.11.4 becomes 192.168.2.4 as it does on iptables. The generated rule handed nftables a plain address range instead, and the kernel then picked an arbitrary address out of the target network for every connection, which breaks any setup that relies on a fixed mapping.
-* Compiler (nftables): a firewall that logs invalid packets now logs them at the debug level and, when netlink logging is enabled, sends them to the configured NFLOG group. nftables defaults a log statement without a level to "warning", so those messages reached the console and the default syslog targets on a firewall under a packet flood. The iptables output has always used debug for this rule.
-* Compiler (nftables): a firewall that drops TCP sessions opened before the firewall restart no longer drops legitimate new connections along with them. The rule compared the whole TCP flags byte against SYN, so a connection that negotiates ECN (a SYN packet with the ECE and CWR bits set, which Linux sends when `tcp_ecn` is on) was dropped. It now inspects only the SYN, RST and ACK bits, the same match the iptables output uses.
-* Compiler (nftables): a long log prefix is no longer cut in half. The compiler shortened it to 63 characters, while nftables takes 127, so a descriptive prefix or one whose macros expand to a long string (a long rule-set name behind %R, for example) lost its tail and log parsers keyed on the full prefix stopped matching.
-* Compiler (nftables): a rule with the Accounting action now counts the traffic it matches, in a named counter that `nft list counters` reads back. An accounting name nftables cannot use for a counter, one containing a space for example, is reported as an error instead of producing a ruleset that fails to load. The rule was generated without any statement at all, so it counted nothing and the traffic accounting an admin set it up for stayed empty. iptables counts the same traffic in a chain of its own.
-* Compiler (nftables): a rule with the Pipe action now hands the packet to userspace instead of aborting with "Pipe action not yet supported by nftables compiler". The rule was generated without a verdict, so the traffic an intrusion-detection or userspace-filtering setup was supposed to inspect fell through to the rule below.
-* Compiler (nftables): a rule that tags packets and saves the mark to its connection now does both. The connection mark was dropped, so the mark was lost as soon as the connection was established and every later packet of it went unmarked. The rule now saves the mark and the prerouting and output chains restore it, the same pair the iptables output generates.
-* Compiler (nftables): a rule that tags packets or assigns a traffic class now does so, instead of aborting with "not yet supported by nftables compiler". Such rules go into a mangle table of their own, whose chains run before the routing decision, so a mark is available to policy routing and to traffic shaping exactly as it is on iptables. ([#122](https://github.com/Linuxfabrik/firewallfabrik/issues/122))
-* Compiler (nftables): a rule or NAT rule that negates its service now matches the opposite of that service instead of the service itself. The negation was honoured for TCP and UDP port matches only; for an ICMP service, an IP service, and for a service matched on both TCP and UDP, it was silently dropped, so the rule did exactly the opposite of what it says. A negated custom service, which nftables cannot invert, is now reported as an error.
-* Compiler (nftables): a rule that lists several services of the same protocol, for example a set of ICMP types or several IP or custom services, now generates a rule for every one of them. Only the first service was rendered and the rest were silently dropped, so a rule such as "accept the useful ICMP types" ended up accepting only the first type. Only TCP and UDP services, which nftables can express as one destination port set, keep sharing a rule.
-* Compiler (nftables): a rule that matches a Tag Service whose mark carries a mask (for example `0x1/0xff`) now produces a ruleset that loads. nftables read the slash as a prefix length and refused the rule; the mask is now applied with a bitwise match, the same translation `iptables-translate` performs.
-* Compiler (nftables): a rule that uses a loopback interface which has no IP address now aborts compilation with a clear error instead of silently dropping the rule, matching the iptables compiler.
-* Compiler (nftables): a rule that uses an IP service with protocol number 0 ("any protocol" in Firewall Builder) no longer restricts the rule to IP protocol 0. The generated `meta l4proto 0` matched only packets whose protocol field is literally 0, so such a rule matched nothing at all; iptables reads protocol 0 as the "all" wildcard. The protocol match is now left out, which is what "any protocol" means.
-* Compiler (nftables): a rule with a negated interface now matches every other interface, as the rule says. The negation was dropped, so an anti-spoofing rule such as "drop packets with a loopback source that do not arrive on the loopback interface" did the exact opposite: it dropped the legitimate loopback traffic and let the spoofed packets through. Rules that differed only in the negated interface were also collapsed into one.
-* Compiler (nftables): a rule whose time restriction runs past midnight (22:00 to 06:00, for example) now matches that night. nftables has no notion of a window that wraps, so the generated rule asked for a time both later than 22:00 and earlier than 06:00 and matched nothing at all, silently disabling every such rule. iptables has always matched these windows correctly.
-* Compiler (nftables): an IP service that matches fragmented packets now generates a rule that actually matches fragments. The fragment condition was silently dropped, so a rule meant to block fragments matched on the protocol alone and let fragments through (or, for an "any" protocol, matched nothing at all).
-* Compiler (nftables): an IP service that matches IP options (source routing, record route, router alert) now generates a rule that carries the option match, instead of dropping the condition and matching every packet of that protocol. An option nftables cannot match, the timestamp option, is now reported as an error.
-* Compiler (nftables): an IPv6 network object with a /0 netmask (equivalent to "any") is now reported as a likely configuration error, matching the iptables compiler which already caught the IPv4 case.
-* Compiler (nftables): firewall rules with a negated source that are directed outbound to a firewall address are no longer silently dropped. The nftables compiler now keeps them, matching the iptables compiler.
-* Compiler (nftables): generated rules now carry a counter, so `nft list ruleset` shows per-rule packet and byte hit counts, matching the implicit counters of the iptables output.
-* Compiler (nftables): IP service objects that match on a DSCP value now generate a rule that loads. nftables requires lowercase DiffServ class names (for example "af11" instead of "AF11") and the IPv6 header in IPv6 policies. A match on the legacy ToS byte, which nftables cannot express, now reports a clear error instead of an unloadable ruleset.
-* Compiler (nftables): IPv6 NAT rules are now written to a separate IPv6 NAT table instead of the IPv4 one. A firewall that used IPv6 NAT previously produced a ruleset nftables refused to load, because it placed IPv6 matches in an IPv4 table.
-* Compiler (nftables): log rules of a firewall that logs via netlink (NFLOG) now honour the "Copy range" and "Queue threshold" settings, matching the iptables compiler. Both were silently ignored on nftables, so the logging daemon received full packet copies and no batching even where the firewall asked for the opposite.
-* Compiler (nftables): log rules that use the "error" or "warning" severity level now produce a ruleset that loads. nftables only accepts the abbreviated level names, so the generated script previously emitted names it rejected.
-* Compiler (nftables): NAT rules now emit the "random" and "persistent" flags when those options are set, matching the iptables compiler. Previously the flags were silently dropped on nftables.
-* Compiler (nftables): on bridging firewalls, rules whose destination is a broadcast, multicast, or on-link network address are now placed in the forward chain like the iptables compiler, instead of also generating a spurious input-chain rule.
-* Compiler (nftables): rule shadowing detection no longer reports false "Rule X shadows Rule Y below it" warnings when a rule negates its source or destination. The nftables compiler now runs the same shadowing detection as the iptables compiler, so both platforms report identical shadowing for the same firewall ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
-* Compiler (nftables): rules and NAT rules that match an ICMPv6 service with no specific type now produce a ruleset that loads. The generated rule used `meta l4proto icmpv6`, a protocol name nftables does not recognise; it now uses `ipv6-icmp`.
-* Compiler (nftables): rules that are restricted to a time of day now match at the same hours as the iptables output. nftables reads a written-out time such as "09:00" in the timezone of the host loading the ruleset, while iptables reads it as UTC unless the "use kernel timezone" setting is on, so on a host that is not on UTC the two platforms fired hours apart. The setting is now honoured on nftables as well; with it off the time is emitted in UTC. Note that the weekday of a time-based rule is always matched in UTC, which nftables cannot change; a rule that restricts both the weekday and the time now says so with a warning.
-* Compiler (nftables): rules that carry a rate limit now emit it as a native `limit rate` match, matching the iptables compiler. Previously the limit was silently dropped on nftables, so a rule meant to be rate-limited passed all traffic.
-* Compiler (nftables): rules that match a DNS name beginning with a digit (for example `6bone.net`) now produce a ruleset that loads. nftables read the bare name as a number and rejected the rule; the name is now quoted so nftables resolves it as a hostname.
-* Compiler (nftables): rules that match a single TCP flag (for example SYN-only, `--tcp-flags SYN SYN`) now produce a ruleset that loads. The generated `tcp flags syn / syn` form is rejected by current nftables when the mask is a single flag; the compiler now emits the equivalent bitwise match.
-* Compiler (nftables): rules that match on TCP flags (for example SYN-only or non-SYN packets) now generate the correct flag match instead of matching all TCP traffic, matching the iptables compiler.
-* Compiler (nftables): the generated script now reports success when it is stopped. `./firewall.fw stop` exited with 1 on nearly every firewall: it removes its own tables one after another and ends with the mangle table, which a firewall without tagging or classification rules never has, so the failed removal became the exit code of the whole script. A systemd unit or an Ansible task watching the return code saw a failure although the firewall had been shut down correctly.
-* Compiler (nftables): the logging rate limit can be set again in the nftables firewall settings. Both fields were greyed out as unsupported although the compiler emits the limit.
-* GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor and as Firewall Builder: "ICMP admin prohibited" and "ICMP protocol unreachable" were missing, so a firewall imported with one of them could not keep it. The list also offered a plain "ICMP unreachable" that no compiler maps to a defined ICMP type.
-* GUI: the "Logging limit:" label in the nftables firewall settings is no longer greyed out. The limit itself has been configurable for a while, but its label still looked disabled and suggested the setting had no effect.
-* GUI: the "Use kernel timezone instead of UTC" tooltip in the nftables firewall settings describes what nftables does instead of naming an iptables version requirement. The setting works on nftables, with the one difference that the weekday of a time-restricted rule is always matched in UTC.
+* Compiler (iptables): "Clear all rules" really clears them on current distributions. The firewall kept its old rules and grew with every activation, with all traffic blocked in the meantime.
+* Compiler (iptables): a rate limit higher than iptables can express is reported at compile time instead of stopping the activation script. nftables is unaffected.
+* Compiler (iptables): a rule set or branch whose name iptables cannot use as a chain name is reported at compile time instead of failing during activation. nftables is unaffected.
+* Compiler (iptables): bridging firewalls whose rules use an interface as a destination compile again instead of failing with an internal error and no script at all.
+* Compiler (iptables): firewalls pinned to iptables 1.2.5 or to 1.2.6 through 1.2.8 are compiled for that release again.
+* Compiler (iptables): firewalls that do not pin an iptables version are compiled for current iptables. Rules with a negated address or interface failed to load.
+* Compiler (iptables): firewalls with routing rules generate a working script. One packet filter rule and the first route were lost.
+* Compiler (iptables): IPv6 NAT rules that match a specific ICMPv6 type produce a valid rule.
+* Compiler (iptables): log prefixes are written correctly on firewalls that activate through iptables-restore. Log messages ran into the packet data and broke log parsers.
+* Compiler (iptables): masquerading rules that also translate the source port keep the configured port range instead of letting the kernel pick a port.
+* Compiler (iptables): NAT rules whose translated address cannot be determined are reported and left out instead of stopping the activation script half way.
+* Compiler (iptables): rules combining a TCP flag or IP option match with a rate limit or a time restriction load again. They were missing from the running firewall.
+* Compiler (iptables): rules that assign a traffic class do so. Traffic shaping never saw the class.
+* Compiler (iptables): rules that name an interface and apply in both directions no longer stop the activation script.
+* Compiler (iptables): rules that reject with a TCP reset also work when they are logged or negate their source, destination or service. The traffic fell through to the rule below instead.
+* Compiler (iptables): rules that use a custom service load again instead of being rejected for a missing protocol match.
+* Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking forever, which stalled unattended rollouts without an error.
+* Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.
+* Compiler (iptables, nftables): "Add rules to permit IPv6 Neighbor Discovery" generates those rules. Dual-stack firewalls that drop by default lost IPv6 connectivity.
+* Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
+* Compiler (iptables, nftables): a NAT rule whose translated service uses a different protocol than the original is reported instead of being compiled into a translation the rule does not ask for.
+* Compiler (iptables, nftables): a source translation to an unnumbered interface is reported instead of stopping the activation script on iptables and translating to the wrong address on nftables.
+* Compiler (iptables, nftables): address ranges are no longer emitted into the wrong address family, which produced a ruleset that did not load.
+* Compiler (iptables, nftables): an IP service with an unknown DiffServ class name is reported with a clear error instead of producing a ruleset that does not load.
+* Compiler (iptables, nftables): dual-stack firewalls whose rules mix IPv4 and IPv6 addresses compile again.
+* Compiler (iptables, nftables): IPv6 NAT rules that also translate the port produce a ruleset that loads.
+* Compiler (iptables, nftables): NAT rules that name an interface which cannot apply to them are reported and left out. They stopped the activation script on iptables and translated nothing on nftables.
+* Compiler (iptables, nftables): redirect rules that only match the connection owner, as a transparent proxy does, load again.
+* Compiler (iptables, nftables): rules and NAT rules that match a MAC address produce a rule that loads.
+* Compiler (iptables, nftables): rules that match a Tag Service match only the tagged packets instead of every packet, which let traffic through a rule meant to be selective.
+* Compiler (iptables, nftables): rules that match an interface which can never apply to them are reported and left out. They stopped the activation script on iptables and matched nothing on nftables.
+* Compiler (iptables, nftables): rules that reject with a TCP reset and use a custom TCP service keep that reject type instead of being downgraded with a spurious warning.
+* Compiler (iptables, nftables): rules that tag packets set the tag. On iptables the activation script also stopped at such a rule.
+* Compiler (iptables, nftables): rules whose source or destination cannot be resolved are left out instead of applying to every address, where an "accept from these hosts" rule accepted from everywhere.
+* Compiler (iptables, nftables): rules with a custom action run it instead of doing nothing. nftables cannot run one and reports the rule.
+* Compiler (iptables, nftables): the firewall-wide limit on log messages reaches the generated ruleset. A logging firewall under load could fill its disk.
+* Compiler (nftables): a firewall whose only rules are the automatic ones installs them together with its default-drop policy, instead of an empty ruleset that left the host open.
+* Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
+* Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
+* Compiler (nftables): a rule that uses a loopback interface without an IP address reports a clear error instead of disappearing silently.
+* Compiler (nftables): an IP service that matches fragmented packets does so instead of letting fragments through.
+* Compiler (nftables): an IP service that matches IP options carries that condition instead of matching every packet. The timestamp option, which nftables cannot match, is reported.
+* Compiler (nftables): an IP service with protocol "any" no longer restricts the rule to a protocol that matches nothing.
+* Compiler (nftables): an IPv6 network with a /0 netmask is reported as a likely mistake, as on iptables.
+* Compiler (nftables): dropping TCP sessions that were open before a firewall restart no longer drops legitimate new connections along with them.
+* Compiler (nftables): firewalls that log through NFLOG with one of the IP or TCP option logging settings enabled produce a ruleset that loads.
+* Compiler (nftables): generated rules carry a counter, so `nft list ruleset` shows per-rule hit counts as the iptables output does.
+* Compiler (nftables): IP services that match a DSCP value produce a ruleset that loads. A match on the legacy ToS byte, which nftables cannot express, is reported.
+* Compiler (nftables): IPv6 NAT rules produce a ruleset that loads.
+* Compiler (nftables): logging of invalid packets uses the debug level and the configured NFLOG group. Under a packet flood those messages reached the console.
+* Compiler (nftables): long log prefixes are no longer truncated, so log parsers keyed on the full prefix match again.
+* Compiler (nftables): NAT rules that match a MAC address where that cannot work drop the match with a warning, as on iptables, instead of translating nothing.
+* Compiler (nftables): NAT rules that translate only the port perform the translation instead of letting the traffic pass untranslated. Combined source and destination translation with a port works as well.
+* Compiler (nftables): NAT rules with a negated original source or destination produce a ruleset that loads.
+* Compiler (nftables): on bridging firewalls, rules to a broadcast, multicast or on-link address no longer generate a spurious extra rule.
+* Compiler (nftables): outbound rules with a negated source that are directed at a firewall address are no longer silently dropped.
+* Compiler (nftables): rule shadowing detection no longer reports false warnings for rules with a negated source or destination ([#136](https://github.com/Linuxfabrik/firewallfabrik/issues/136)).
+* Compiler (nftables): rules and NAT rules that match an ICMPv6 service with no specific type produce a ruleset that loads.
+* Compiler (nftables): rules and NAT rules that negate their service match the opposite of it. For ICMP and IP services they did exactly the reverse of what the rule says.
+* Compiler (nftables): rules that match a DNS name beginning with a digit produce a ruleset that loads.
+* Compiler (nftables): rules that match a single TCP flag produce a ruleset that loads.
+* Compiler (nftables): rules that match a Tag Service whose tag carries a mask produce a ruleset that loads.
+* Compiler (nftables): rules that match TCP flags match those flags instead of all TCP traffic.
+* Compiler (nftables): rules that tag packets and save the tag to the connection do both. The tag was lost as soon as the connection was established.
+* Compiler (nftables): rules that tag packets or assign a traffic class work instead of aborting the compile ([#122](https://github.com/Linuxfabrik/firewallfabrik/issues/122)).
+* Compiler (nftables): rules with a negated interface match every other interface. An anti-spoofing rule did the exact opposite of what it says.
+* Compiler (nftables): rules with a rate limit are rate-limited instead of passing all traffic.
+* Compiler (nftables): rules with the Accounting action count the traffic they match, in a counter `nft list counters` reads back.
+* Compiler (nftables): rules with the Pipe action hand the packet to userspace instead of aborting the compile.
+* Compiler (nftables): stopping the generated script reports success. It reported a failure on nearly every firewall, which systemd units and Ansible tasks act on.
+* Compiler (nftables): the "error" and "warning" log levels produce a ruleset that loads.
+* Compiler (nftables): the "random" and "persistent" NAT options reach the generated ruleset instead of being dropped.
+* Compiler (nftables): the logging rate limit can be set again in the firewall settings.
+* Compiler (nftables): the NFLOG "Copy range" and "Queue threshold" settings reach the generated ruleset instead of being ignored.
+* Compiler (nftables): time restrictions that run past midnight match that night instead of nothing at all.
+* Compiler (nftables): time-restricted rules fire at the same hours as on iptables, and the "use kernel timezone" setting is honoured. The weekday is always matched in UTC, which a rule restricting both now warns about.
+* Compiler (nftables): translating a whole network maps the addresses one to one, as on iptables, instead of picking an arbitrary one per connection.
+* Compiler (nftables): translating the source to a PPP or DHCP interface masquerades, as on iptables, instead of using an address the traffic never leaves by.
+* GUI: the "Logging limit:" label in the nftables firewall settings is no longer greyed out, which suggested the setting had no effect.
+* GUI: the "Use kernel timezone instead of UTC" tooltip in the nftables firewall settings describes what nftables does instead of naming an iptables version requirement.
+* GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor, so a firewall imported with "ICMP admin prohibited" or "ICMP protocol unreachable" keeps it.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
 
 
@@ -298,269 +298,269 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Custom Service editor: Platform dropdown always reset to nftables instead of remembering the last selection ([#61](https://github.com/Linuxfabrik/firewallfabrik/issues/61)).
-- Sporadic SIGSEGV crash when rebuilding the object tree after compilation or when closing/creating files ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
+* Custom Service editor: Platform dropdown always reset to nftables instead of remembering the last selection ([#61](https://github.com/Linuxfabrik/firewallfabrik/issues/61)).
+* Sporadic SIGSEGV crash when rebuilding the object tree after compilation or when closing/creating files ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
 
 ## [v1.4.2] - 2026-04-08
 
 ### Fixed
 
-- Images not loading on the MkDocs documentation site due to broken relative paths in HTML image tags.
-- Object tree attribute column too narrow on first use when "Show object attributes in the tree" is enabled ([#60](https://github.com/Linuxfabrik/firewallfabrik/issues/60)).
+* Images not loading on the MkDocs documentation site due to broken relative paths in HTML image tags.
+* Object tree attribute column too narrow on first use when "Show object attributes in the tree" is enabled ([#60](https://github.com/Linuxfabrik/firewallfabrik/issues/60)).
 
 
 ## [v1.4.1] - 2026-04-08
 
 ### Added
 
-- Documentation on how to install Release Candidate (RC) versions
-- MkDocs-based documentation site, deployed automatically to GitHub Pages
+* Documentation on how to install Release Candidate (RC) versions
+* MkDocs-based documentation site, deployed automatically to GitHub Pages
 
 ### Changed
 
-- Update pre-commit hooks to latest versions
-- Unify CONTRIBUTING with Linuxfabrik standards
+* Update pre-commit hooks to latest versions
+* Unify CONTRIBUTING with Linuxfabrik standards
 
 ### Fixed
 
-- GUI failed to start on Wayland-only systems (e.g. GNOME without X11) because Qt defaulted to the xcb platform plugin ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-- Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-- `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-- Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
-- Sporadic SIGSEGV crash when opening a rule editor (action, comment, direction, metric, options) while another editor had unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
+* GUI failed to start on Wayland-only systems (e.g. GNOME without X11) because Qt defaulted to the xcb platform plugin ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+* Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+* `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
+* Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
+* Sporadic SIGSEGV crash when opening a rule editor (action, comment, direction, metric, options) while another editor had unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
 
 ## [v1.4.0] - 2026-03-29
 
 ### Added
 
-- "Flush entire ruleset" option for both iptables and nftables. When disabled, FirewallFabrik only manages its own tables/chains (e.g. `fwf_filter`, `fwf_nat` for nftables or `fwf_INPUT`, `fwf_FORWARD` for iptables), leaving rules created by other tools like Docker, CrowdSec and fail2ban untouched.
+* "Flush entire ruleset" option for both iptables and nftables. When disabled, FirewallFabrik only manages its own tables/chains (e.g. `fwf_filter`, `fwf_nat` for nftables or `fwf_INPUT`, `fwf_FORWARD` for iptables), leaving rules created by other tools like Docker, CrowdSec and fail2ban untouched.
 
 ### Changed
 
-- Default output file name changed from firewall object name to `fwf.sh`.
-- Default script directory on the firewall changed from `/etc/fw` to `/etc`.
-- Default table/chain prefix changed from `linuxfabrik` to `fwf`.
+* Default output file name changed from firewall object name to `fwf.sh`.
+* Default script directory on the firewall changed from `/etc/fw` to `/etc`.
+* Default table/chain prefix changed from `linuxfabrik` to `fwf`.
 
 ### Fixed
 
-- Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
-- Coexistence mode: `status` command now correctly detects whether the firewall is active, even when other tools like Docker create additional chains.
-- Coexistence mode: `stop` command now properly removes all FirewallFabrik chains, including sub-chains with hash-based names (e.g. `fwf_C...`) that were previously left behind ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-- Coexistence mode: `stop` command now properly removes FirewallFabrik's chains and jump rules on all systems, including those using the iptables-nft backend.
-- Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
-- Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
-- Compiler error and warning messages now show the rule position number instead of the color label.
-- IPv6 address and network dialogs now accept prefix lengths 0-128 instead of 1-127 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
-- Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
-- Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
-- Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.
-- Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
-- Harmless Qt/Wayland text-input warnings suppressed during GUI startup.
-- Main window border is now clearly visible on GNOME/Wayland.
-- `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
-- `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
-- Test infrastructure: expected output files are now also regenerated for firewalls with compiler warnings.
+* Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
+* Coexistence mode: `status` command now correctly detects whether the firewall is active, even when other tools like Docker create additional chains.
+* Coexistence mode: `stop` command now properly removes all FirewallFabrik chains, including sub-chains with hash-based names (e.g. `fwf_C...`) that were previously left behind ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
+* Coexistence mode: `stop` command now properly removes FirewallFabrik's chains and jump rules on all systems, including those using the iptables-nft backend.
+* Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
+* Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
+* Compiler error and warning messages now show the rule position number instead of the color label.
+* IPv6 address and network dialogs now accept prefix lengths 0-128 instead of 1-127 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
+* Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
+* Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
+* Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.
+* Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
+* Harmless Qt/Wayland text-input warnings suppressed during GUI startup.
+* Main window border is now clearly visible on GNOME/Wayland.
+* `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
+* `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
+* Test infrastructure: expected output files are now also regenerated for firewalls with compiler warnings.
 
 
 ## [v1.3.0] - 2026-03-17
 
 ### Added
 
-- Advanced Interface Settings dialog to configure device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
-- `Alt+Return` keyboard shortcut opens the editor for the selected object (same as double-click).
-- Appearance tab in Preferences — customize fonts for rules, tree and compiler output; toggle direction/action text, comment clipping and toolbar labels.
-- Bridge interface configuration support for iptables and nftables using iproute2 (`ip link`).
-- Bridge port interfaces are detected automatically from the parent interface type.
-- Installer tab in Preferences — configure SSH/SCP paths, timeout and password caching for the built-in policy installer.
-- Rules menu: insert, move, copy, cut, paste, remove, disable and enable rules directly from the menu bar.
-- Tooltips on all widgets in the platform settings dialogs and the interface editor.
-- VLAN sub-interface name validation — warns when the name does not match the parent interface.
+* Advanced Interface Settings dialog to configure device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
+* `Alt+Return` keyboard shortcut opens the editor for the selected object (same as double-click).
+* Appearance tab in Preferences — customize fonts for rules, tree and compiler output; toggle direction/action text, comment clipping and toolbar labels.
+* Bridge interface configuration support for iptables and nftables using iproute2 (`ip link`).
+* Bridge port interfaces are detected automatically from the parent interface type.
+* Installer tab in Preferences — configure SSH/SCP paths, timeout and password caching for the built-in policy installer.
+* Rules menu: insert, move, copy, cut, paste, remove, disable and enable rules directly from the menu bar.
+* Tooltips on all widgets in the platform settings dialogs and the interface editor.
+* VLAN sub-interface name validation — warns when the name does not match the parent interface.
 
 ### Changed
 
-- About dialog: Linuxfabrik credit visually separated with homepage link (https://www.linuxfabrik.ch).
-- Application icon uses PNG at multiple sizes for Wayland compatibility; window icon set via .ui file.
-- Default label colors use the Solarized palette throughout; "Purple" renamed to "Cluster", "Gray" renamed to "Maintenance".
-- Interface autoconfigure now also runs when opening the editor, not only on save.
-- Platform settings dialogs: Script tab shows inline descriptions for each option; Help buttons removed; dialog size reduced.
-- Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
-- Removed XCB/XWayland fallback; fwf runs natively on Wayland.
-- Timestamps removed from generated shell scripts to ensure idempotent deployments.
-- "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
+* About dialog: Linuxfabrik credit visually separated with homepage link (https://www.linuxfabrik.ch).
+* Application icon uses PNG at multiple sizes for Wayland compatibility; window icon set via .ui file.
+* Default label colors use the Solarized palette throughout; "Purple" renamed to "Cluster", "Gray" renamed to "Maintenance".
+* Interface autoconfigure now also runs when opening the editor, not only on save.
+* Platform settings dialogs: Script tab shows inline descriptions for each option; Help buttons removed; dialog size reduced.
+* Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
+* Removed XCB/XWayland fallback; fwf runs natively on Wayland.
+* Timestamps removed from generated shell scripts to ensure idempotent deployments.
+* "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
 
 ### Fixed
 
-- Address containment: AddressRange objects were incorrectly treated as "any" address by the shadowing detector.
-- Shadowing detection now produces warnings instead of aborting the compilation.
+* Address containment: AddressRange objects were incorrectly treated as "any" address by the shadowing detector.
+* Shadowing detection now produces warnings instead of aborting the compilation.
 
 
 ## [v1.2.0] - 2026-03-17
 
 ### Added
 
-- Clickable compile log errors scroll to the relevant firewall section (closes #15).
-- Cluster Member Management dialog to add/remove firewalls and view interface mappings (closes #26).
-- File Properties dialog showing file path, size, and object counts (closes #29).
-- Full Firewall Builder compiler parity for iptables and nftables (~130 rule processors ported).
-- Import Addresses from File via Tools menu (closes #12).
-- Inspect Rules showing all rules referencing the selected object (closes #28).
-- Interface name autoconfiguration guesses type and VLAN ID from name patterns.
-- Library Export to a separate `.fwf` file (closes #27).
-- Library Import from `.fwf` or `.fwb` files.
-- NFLOG logging target support for iptables and nftables (closes #18).
-- nftables load balancing, address set merging, and separate shadowing pass (closes #22, #23, #24).
-- Policy rules now use Preferences defaults for logging, stateful inspection, action, and direction.
-- Preferences dialog with Restore Defaults, DNS Name, Address Table, Policy Rules, and Interface tabs.
-- Standard service library: Bareos, Keycloak, Kibana, Libvirt, Logstash, OpenSearch.
+* Clickable compile log errors scroll to the relevant firewall section (closes #15).
+* Cluster Member Management dialog to add/remove firewalls and view interface mappings (closes #26).
+* File Properties dialog showing file path, size, and object counts (closes #29).
+* Full Firewall Builder compiler parity for iptables and nftables (~130 rule processors ported).
+* Import Addresses from File via Tools menu (closes #12).
+* Inspect Rules showing all rules referencing the selected object (closes #28).
+* Interface name autoconfiguration guesses type and VLAN ID from name patterns.
+* Library Export to a separate `.fwf` file (closes #27).
+* Library Import from `.fwf` or `.fwb` files.
+* NFLOG logging target support for iptables and nftables (closes #18).
+* nftables load balancing, address set merging, and separate shadowing pass (closes #22, #23, #24).
+* Policy rules now use Preferences defaults for logging, stateful inspection, action, and direction.
+* Preferences dialog with Restore Defaults, DNS Name, Address Table, Policy Rules, and Interface tabs.
+* Standard service library: Bareos, Keycloak, Kibana, Libvirt, Logstash, OpenSearch.
 
 ### Changed
 
-- Generated iptables scripts now run `nft flush ruleset` on systems where `nft` is available.
-- Timestamp format in generated scripts changed to ISO 8601.
+* Generated iptables scripts now run `nft flush ruleset` on systems where `nft` is available.
+* Timestamp format in generated scripts changed to ISO 8601.
 
 ### Fixed
 
-- "Advanced Interface Settings" button documented as intentionally disabled for iptables/nftables (closes #13).
-- False-positive shadowing errors caused by analysis injecting rules into the main pipeline.
-- Hardcoded version in generated iptables scripts replaced with the actual package version.
-- MAC address edits were silently ignored (fixes #14).
-- Multiport rules were broken: TCP flag check incorrectly matched all TCP services (fixes #21).
-- Opening objects for editing no longer marks the file as modified when nothing changed (fixes #25).
+* "Advanced Interface Settings" button documented as intentionally disabled for iptables/nftables (closes #13).
+* False-positive shadowing errors caused by analysis injecting rules into the main pipeline.
+* Hardcoded version in generated iptables scripts replaced with the actual package version.
+* MAC address edits were silently ignored (fixes #14).
+* Multiport rules were broken: TCP flag check incorrectly matched all TCP services (fixes #21).
+* Opening objects for editing no longer marks the file as modified when nothing changed (fixes #25).
 
 
 ## [v1.1.0] - 2026-03-16
 
 ### Added
 
-- DiffServ (DSCP/TOS) matching for the nftables compiler (`ip dscp` / `ip tos`).
-- DSCP symbolic class names (`AF11`, `EF`, `CS3`, etc.) now generate `--dscp-class` in iptables output, matching Firewall Builder behavior.
-- Fragment matching (`-f` / `-m frag --fragmore`) and IPv4 option matching (`-m ipv4options`) in the iptables filter compiler (previously only present in the NAT compiler).
-- Router-alert IP option (`--ra` / `--flags router-alert`) support in both iptables filter and NAT compilers.
-- Tooltips for all IPService dialog fields (protocol number, DSCP, TOS, IP options, fragments).
-- Version-aware `ipv4options` module formatting: old module (`--lsrr`, `--ra`) for iptables < 1.4.3, new module (`--flags lsrr,router-alert,...`) for >= 1.4.3.
+* DiffServ (DSCP/TOS) matching for the nftables compiler (`ip dscp` / `ip tos`).
+* DSCP symbolic class names (`AF11`, `EF`, `CS3`, etc.) now generate `--dscp-class` in iptables output, matching Firewall Builder behavior.
+* Fragment matching (`-f` / `-m frag --fragmore`) and IPv4 option matching (`-m ipv4options`) in the iptables filter compiler (previously only present in the NAT compiler).
+* Router-alert IP option (`--ra` / `--flags router-alert`) support in both iptables filter and NAT compilers.
+* Tooltips for all IPService dialog fields (protocol number, DSCP, TOS, IP options, fragments).
+* Version-aware `ipv4options` module formatting: old module (`--lsrr`, `--ra`) for iptables < 1.4.3, new module (`--flags lsrr,router-alert,...`) for >= 1.4.3.
 
 ### Changed
 
-- DiffServ default changed from TOS to DSCP (the modern standard).
-- DiffServ radio buttons unselected by default when no code is set; input field disabled until DSCP or TOS is chosen.
-- Input widget borders use `palette(dark)` instead of `palette(mid)` for better visibility.
+* DiffServ default changed from TOS to DSCP (the modern standard).
+* DiffServ radio buttons unselected by default when no code is set; input field disabled until DSCP or TOS is chosen.
+* Input widget borders use `palette(dark)` instead of `palette(mid)` for better visibility.
 
 ### Fixed
 
-- Boolean flags stored as string `'False'` (truthy in Python) now stored as native booleans.
-- DiffServ data keys now consistent across compilers and shadow detection.
-- ICMP type/code matching in NAT rules now reads from the correct attribute.
-- Rule shadowing false positives for IPService objects (e.g. VRRP) fixed.
-- TagService data key inconsistency between dialog and display fixed.
-- TCP flags in iptables compiler now read from ORM attributes instead of pre-formatted strings.
+* Boolean flags stored as string `'False'` (truthy in Python) now stored as native booleans.
+* DiffServ data keys now consistent across compilers and shadow detection.
+* ICMP type/code matching in NAT rules now reads from the correct attribute.
+* Rule shadowing false positives for IPService objects (e.g. VRRP) fixed.
+* TagService data key inconsistency between dialog and display fixed.
+* TCP flags in iptables compiler now read from ORM attributes instead of pre-formatted strings.
 
 
 ## [v1.0.1] - 2026-03-11
 
 ### Fixed
 
-- Platform YAML defaults not included in pip-installed packages (missing `MANIFEST.in` entry).
+* Platform YAML defaults not included in pip-installed packages (missing `MANIFEST.in` entry).
 
 
 ## [v1.0.0] - 2026-03-08
 
 ### Added
 
-- CLI compilers (`fwf-ipt`, `fwf-nft`) accept multiple firewall names and `--all` flag; database is loaded once for all firewalls.
-- Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
-- Compile time intervals and clean up time dialog.
-- Confirm-delete dialog when deleting objects that are still in use.
-- DNS "Resolve Name" button implemented for IPv4 and IPv6 address dialogs.
-- DynamicGroup editor with criteria table and matched-objects preview.
-- Example files shipped with the distribution.
-- File > Reload action to re-read the current file from disk.
-- FreeIPA service group added to the standard library.
-- MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
-- NAT and Routing rule display support with title bar dirty-state indicator.
-- Parallel compilation in the GUI: multiple firewalls compile concurrently using up to N CPU cores, with ordered log output.
-- Platform and OS option defaults defined in YAML as single source of truth, replacing scattered hardcoded dicts.
-- Settings dialogs now show tooltips and placeholder defaults from the YAML schema.
-- Subfolder paste, drag & drop, and nested object creation in the object tree.
-- System theme icons (Breeze, Adwaita, etc.) for toolbar and menu actions, with QRC fallback.
-- Title labels on MDI rule set panels and Del key support for deleting rules.
-- Undo stack entries prefixed with the device name for clarity.
-- Window menu and automatic opening of firewall Policy on file load.
+* CLI compilers (`fwf-ipt`, `fwf-nft`) accept multiple firewall names and `--all` flag; database is loaded once for all firewalls.
+* Collabora Online, Icinga, Nextcloud notify_push and WinRM added to the standard library.
+* Compile time intervals and clean up time dialog.
+* Confirm-delete dialog when deleting objects that are still in use.
+* DNS "Resolve Name" button implemented for IPv4 and IPv6 address dialogs.
+* DynamicGroup editor with criteria table and matched-objects preview.
+* Example files shipped with the distribution.
+* File > Reload action to re-read the current file from disk.
+* FreeIPA service group added to the standard library.
+* MIME type definitions for `.fwf` and `.fwb` files for file manager integration.
+* NAT and Routing rule display support with title bar dirty-state indicator.
+* Parallel compilation in the GUI: multiple firewalls compile concurrently using up to N CPU cores, with ordered log output.
+* Platform and OS option defaults defined in YAML as single source of truth, replacing scattered hardcoded dicts.
+* Settings dialogs now show tooltips and placeholder defaults from the YAML schema.
+* Subfolder paste, drag & drop, and nested object creation in the object tree.
+* System theme icons (Breeze, Adwaita, etc.) for toolbar and menu actions, with QRC fallback.
+* Title labels on MDI rule set panels and Del key support for deleting rules.
+* Undo stack entries prefixed with the device name for clarity.
+* Window menu and automatic opening of firewall Policy on file load.
 
 ### Fixed
 
-- `.fwb` imports allowed to compile and install without requiring a prior save.
-- Clipboard router now correctly routes Ctrl+C/X/V to focused text widgets.
-- Compiler option lookup (`get_option`) now raises `KeyError` on unknown keys, catching typos at the earliest possible moment; all inline Python fallbacks removed in favour of YAML defaults.
-- Context menus and sub-interfaces aligned with fwbuilder behavior.
-- Dead menu entries removed (File Compare, SNMP Discovery, Policy Import, Library Import/Export, Print, Help Contents/Index).
-- DynamicGroup, AddressTable and DNSName now allowed in rule src/dst cells.
-- Find & Replace scope, tree filter, element display, and MDI refresh.
-- Focus moves to next element in a rule cell after deleting an object.
-- ICMP type/code now read from the codes field instead of data.
-- Keywords renamed to Tags in context menus.
-- Last-active rule set persisted by name instead of UUID for stability across imports.
-- Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
-- Linux host settings now save under canonical `linux24_conntrack_*` keys matching the compiler.
-- Lock/Unlock menu actions wired up to tree selection.
-- MDI views refresh on object rename; undo descriptions are now human-readable.
-- Model class name used instead of `.type` in `duplicate_object`.
-- Netmask shown in tree when editing an address under an interface.
-- New objects created via the toolbar menu now land in the selected custom folder.
-- Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
-- Object deletion fixed: str-vs-UUID type mismatch in where-used reference queries.
-- Object tree auto-selects the Policy item when opening a file.
-- ORM objects flushed before raw `rule_elements` INSERT to avoid integrity errors.
-- Output pane context menu shows Ctrl+C and Ctrl+A shortcuts.
-- Parent firewall `lastModified` timestamp updated on child/rule/shared-object edits.
-- Readonly flag passed to tree items with updated lock icons.
-- Rule shadowing detection enabled by default; error messages include rule position numbers.
-- Time dialog uses YYYY-MM-DD date format and sensible defaults.
-- Title bar double-click on Wayland now works (XCB fallback).
+* `.fwb` imports allowed to compile and install without requiring a prior save.
+* Clipboard router now correctly routes Ctrl+C/X/V to focused text widgets.
+* Compiler option lookup (`get_option`) now raises `KeyError` on unknown keys, catching typos at the earliest possible moment; all inline Python fallbacks removed in favour of YAML defaults.
+* Context menus and sub-interfaces aligned with fwbuilder behavior.
+* Dead menu entries removed (File Compare, SNMP Discovery, Policy Import, Library Import/Export, Print, Help Contents/Index).
+* DynamicGroup, AddressTable and DNSName now allowed in rule src/dst cells.
+* Find & Replace scope, tree filter, element display, and MDI refresh.
+* Focus moves to next element in a rule cell after deleting an object.
+* ICMP type/code now read from the codes field instead of data.
+* Keywords renamed to Tags in context menus.
+* Last-active rule set persisted by name instead of UUID for stability across imports.
+* Legacy Firewall Builder compiler paths (`fwb_ipt`, `fwb_nft`) detected during `.fwb` import; a dialog offers to clear them so FirewallFabrik uses its built-in compiler.
+* Linux host settings now save under canonical `linux24_conntrack_*` keys matching the compiler.
+* Lock/Unlock menu actions wired up to tree selection.
+* MDI views refresh on object rename; undo descriptions are now human-readable.
+* Model class name used instead of `.type` in `duplicate_object`.
+* Netmask shown in tree when editing an address under an interface.
+* New objects created via the toolbar menu now land in the selected custom folder.
+* Nftables compiler now correctly generates `tcp flags != syn ct state new drop` rules when `accept_new_tcp_with_no_syn` is disabled (was reading a non-existent key).
+* Object deletion fixed: str-vs-UUID type mismatch in where-used reference queries.
+* Object tree auto-selects the Policy item when opening a file.
+* ORM objects flushed before raw `rule_elements` INSERT to avoid integrity errors.
+* Output pane context menu shows Ctrl+C and Ctrl+A shortcuts.
+* Parent firewall `lastModified` timestamp updated on child/rule/shared-object edits.
+* Readonly flag passed to tree items with updated lock icons.
+* Rule shadowing detection enabled by default; error messages include rule position numbers.
+* Time dialog uses YYYY-MM-DD date format and sensible defaults.
+* Title bar double-click on Wayland now works (XCB fallback).
 
 ### Changed
 
-- Decouple GUI components with ClipboardStore, PolicyViewBridge, and focus registration.
-- Extract ClipboardRouter, EditorManager, and RuleSetWindowManager from FWWindow.
-- Extract TreeActionHandler from ObjectTree.
-- Extract context-menu builders from PolicyView into a dedicated module.
-- Modernize UI with comprehensive QSS stylesheet.
-- Object tree rewritten into 4 focused modules.
-- Replace tree clipboard global with instance attribute and add paste validation.
+* Decouple GUI components with ClipboardStore, PolicyViewBridge, and focus registration.
+* Extract ClipboardRouter, EditorManager, and RuleSetWindowManager from FWWindow.
+* Extract TreeActionHandler from ObjectTree.
+* Extract context-menu builders from PolicyView into a dedicated module.
+* Modernize UI with comprehensive QSS stylesheet.
+* Object tree rewritten into 4 focused modules.
+* Replace tree clipboard global with instance attribute and add paste validation.
 
 
 ## [v0.5.0rc1] - 2026-02-13
 
 ### Added
 
-- CIDR notation parsing in IPv4/IPv6 editor dialogs and editor breadcrumb.
-- Center compile dialog on screen and persist its geometry.
-- Firewalls needing recompilation shown in bold in the object tree.
-- Highlight only the clicked cell in rule view and protect default Any elements.
-- Input validation and widget constraints for all editor dialogs.
-- RuleSet editor dialog for Policy, NAT and Routing.
-- Show asterisk in title bar when file has unsaved changes.
+* CIDR notation parsing in IPv4/IPv6 editor dialogs and editor breadcrumb.
+* Center compile dialog on screen and persist its geometry.
+* Firewalls needing recompilation shown in bold in the object tree.
+* Highlight only the clicked cell in rule view and protect default Any elements.
+* Input validation and widget constraints for all editor dialogs.
+* RuleSet editor dialog for Policy, NAT and Routing.
+* Show asterisk in title bar when file has unsaved changes.
 
 ### Fixed
 
-- Address range end field auto-filled when start field loses focus.
-- Bool-coerced inactive flag from XML loader handled correctly.
-- Compiler/installer remote paths and file names corrected.
-- Context menu actions deferred to prevent SIGSEGV on tree clear.
-- Compile, Install and Save actions disabled when no file is loaded.
-- Default Qt icon replaced with the FirewallFabrik app icon.
-- Deprecated Qt5 margin property removed from .ui files.
-- Host OS Settings options disabled for unsupported nftables features.
-- Platform Settings options disabled for unsupported compiler features.
-- Qt5 signal/slot mismatch in the find panel .ui file corrected.
-- Skip Any sentinel objects in rule element display.
-- Warn before overwriting existing .fwf when saving an imported .fwb.
+* Address range end field auto-filled when start field loses focus.
+* Bool-coerced inactive flag from XML loader handled correctly.
+* Compiler/installer remote paths and file names corrected.
+* Context menu actions deferred to prevent SIGSEGV on tree clear.
+* Compile, Install and Save actions disabled when no file is loaded.
+* Default Qt icon replaced with the FirewallFabrik app icon.
+* Deprecated Qt5 margin property removed from .ui files.
+* Host OS Settings options disabled for unsupported nftables features.
+* Platform Settings options disabled for unsupported compiler features.
+* Qt5 signal/slot mismatch in the find panel .ui file corrected.
+* Skip Any sentinel objects in rule element display.
+* Warn before overwriting existing .fwf when saving an imported .fwb.
 
 ### Changed
 
-- Erroneous QSS styling removed.
-- Include .qss files in build output.
+* Erroneous QSS styling removed.
+* Include .qss files in build output.
 
 
 ## [v0.5.0b1] - 2026-02-13
@@ -569,37 +569,37 @@ Initial public beta pre-release.
 
 ### Added
 
-- Compile and install workflow for iptables and nftables platforms.
-- Ctrl+Shift+N shortcut for File > New Object File.
-- Ctrl+Shift+S shortcut for File > Save As.
-- Detailed object tooltips ported from fwbuilder to the rule editor.
-- File > Close (Ctrl+F4) to close the current document.
-- Group dialog with drag & drop support.
-- Host wizard dialog ported from fwbuilder.
-- Library folder structure with nested group placement.
-- MDI rule set windows with multi-select drag, clipboard, delete and context menu.
-- Modernized Qt6 appearance with Fusion style and central stylesheet.
-- nftables settings dialog.
-- Object tree with Delete context menus and New [Type] for group-based folders.
-- Panels hidden when no database file is loaded.
-- Resource compilation from .qrc at build time.
-- Restore last active object and MDI rule set when reopening a file.
-- Rule number column display and platform combo defaults.
-- Service library expanded with Wikipedia multi-service ports.
-- Single-rule compile for the correct platform, with error for unsupported platforms.
+* Compile and install workflow for iptables and nftables platforms.
+* Ctrl+Shift+N shortcut for File > New Object File.
+* Ctrl+Shift+S shortcut for File > Save As.
+* Detailed object tooltips ported from fwbuilder to the rule editor.
+* File > Close (Ctrl+F4) to close the current document.
+* Group dialog with drag & drop support.
+* Host wizard dialog ported from fwbuilder.
+* Library folder structure with nested group placement.
+* MDI rule set windows with multi-select drag, clipboard, delete and context menu.
+* Modernized Qt6 appearance with Fusion style and central stylesheet.
+* nftables settings dialog.
+* Object tree with Delete context menus and New [Type] for group-based folders.
+* Panels hidden when no database file is loaded.
+* Resource compilation from .qrc at build time.
+* Restore last active object and MDI rule set when reopening a file.
+* Rule number column display and platform combo defaults.
+* Service library expanded with Wikipedia multi-service ports.
+* Single-rule compile for the correct platform, with error for unsupported platforms.
 
 ### Fixed
 
-- Accept new TCP with no SYN option corrected.
-- Firewall modified timestamp updated when changing host/platform settings.
-- Flush pending editor changes before save/close/switch.
-- IPv4/IPv6 order option corrected.
-- Object tree strikethrough and MDI titles refreshed on inactive toggle.
-- Stub slots added for unimplemented .ui connections; unused UI elements disabled.
+* Accept new TCP with no SYN option corrected.
+* Firewall modified timestamp updated when changing host/platform settings.
+* Flush pending editor changes before save/close/switch.
+* IPv4/IPv6 order option corrected.
+* Object tree strikethrough and MDI titles refreshed on inactive toggle.
+* Stub slots added for unimplemented .ui connections; unused UI elements disabled.
 
 ### Changed
 
-- Fixture database caching with sqlite3 serialize/deserialize for faster tests.
+* Fixture database caching with sqlite3 serialize/deserialize for faster tests.
 
 
 [Unreleased]: https://github.com/Linuxfabrik/firewallfabrik/compare/v1.9.0...HEAD
