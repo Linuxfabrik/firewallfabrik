@@ -1040,13 +1040,16 @@ class PrintRule_nft(PolicyRuleProcessor):
         143: 'mld2-listener-report',
     }
 
-    def _negate_single_match(self, rule: CompRule, parts: list[str], what: str) -> str:
-        """Return *parts* with the match inverted, or report why it cannot be.
+    def _negate_single_match(
+        self, rule: CompRule, parts: list[str], what: str
+    ) -> str | None:
+        """Return *parts* with the match inverted, or ``None`` if it cannot be.
 
         A negated rule element means "not (all of these conditions)".  A
         single condition inverts by turning its comparison into ``!=``.  Two
         or more conditions would have to be inverted as a disjunction, which
-        one nft rule cannot express.
+        one nft rule cannot express.  ``None`` tells the caller to leave the
+        rule out; the reason is reported first.
         """
         if not parts:
             # Nothing to match, so nothing to invert: the negation of
@@ -1056,7 +1059,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                 f'Negating an unrestricted {what} leaves a rule that can '
                 'never match; remove the rule instead',
             )
-            return ''
+            return None
         if len(parts) > 1:
             self.compiler.error(
                 rule,
@@ -1064,7 +1067,9 @@ class PrintRule_nft(PolicyRuleProcessor):
                 f'({", ".join(parts)}) is not supported by the nftables '
                 'compiler; split it into one service per condition',
             )
-            return ' '.join(parts)
+            # Writing the conditions out unchanged would match exactly the
+            # traffic the rule excludes, so leave the rule out instead.
+            return None
         match = parts[0]
         # Turn "<expr> <value>" into "<expr> != <value>"; comparisons that
         # already carry an operator (`>`, `& ... ==`) are inverted in place.

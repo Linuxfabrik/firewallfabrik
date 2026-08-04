@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
 * Compiler (nftables): a rule that uses a loopback interface without an IP address reports a clear error instead of disappearing silently.
 * Compiler (nftables): an IP service that matches fragmented packets does so instead of letting fragments through.
+* Compiler (nftables): a rule that negates an IP service the compiler cannot invert is left out instead of being written the other way round, where it acted on exactly the traffic it was meant to spare.
 * Compiler (nftables): an IP service that matches IP options carries that condition instead of matching every packet. The timestamp option, which nftables cannot match, is reported.
 * Compiler (nftables): an IP service with protocol "any" no longer restricts the rule to a protocol that matches nothing.
 * Compiler (nftables): an IPv6 network with a /0 netmask is reported as a likely mistake, as on iptables.
