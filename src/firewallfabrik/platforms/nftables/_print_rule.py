@@ -354,6 +354,10 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Interface matching
         iface_match = self._print_interface(rule)
+        if iface_match is None:
+            # The reason was reported. Emitting the rule without the match
+            # would apply it to every interface.
+            return ''
         if iface_match:
             parts.append(iface_match)
 
@@ -474,8 +478,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             return '\n'.join(res) + '\n'
         return ''
 
-    def _print_interface(self, rule: CompRule) -> str:
-        """Print interface matching: iifname/oifname."""
+    def _print_interface(self, rule: CompRule) -> str | None:
+        """Print interface matching: iifname/oifname.
+
+        Returns ``None`` when the interface cannot be matched at all, so the
+        caller leaves the rule out instead of widening it.
+        """
         if rule.iface_label == 'nil':
             return ''
 
@@ -491,6 +499,25 @@ class PrintRule_nft(PolicyRuleProcessor):
         ifaces = [obj for obj in rule.itf if isinstance(obj, Interface) and obj.name]
         if not ifaces:
             return ''
+
+        for iface in ifaces:
+            if iface.is_bridge_port():
+                # A bridged packet reaches the ip/inet hooks with the bridge
+                # device as its in/out device, not the port it came in on.
+                # iptables reads the port from the bridge layer with
+                # `-m physdev`; nftables only exposes it as `meta ibrname` /
+                # `meta obrname`, which the kernel registers for the bridge
+                # family alone (net/bridge/netfilter/nft_meta_bridge.c) and
+                # refuses in an ip or inet table.  Matching the parent bridge
+                # instead would widen the rule to every port of that bridge,
+                # so leave it out.
+                self.compiler.error(
+                    rule,
+                    f'Rule matches on the bridge port "{iface.name}", which '
+                    'nftables cannot see in a filter table; the rule is left '
+                    'out',
+                )
+                return None
 
         neg = '!= ' if rule.itf_single_object_negation else ''
         # A negated element covers all of its interfaces at once; without

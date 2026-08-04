@@ -403,14 +403,57 @@ class PrintRule(PolicyRuleProcessor):
         if not iface_name:
             return ''
 
-        # Replace wildcard '*' with '+'
-        iface_name = iface_name.replace('*', '+')
+        # iptables spells a trailing wildcard '+', fwbuilder stores '*'.
+        if iface_name.endswith('*'):
+            iface_name = iface_name[:-1] + '+'
+
+        if iface_obj.is_bridge_port() and (
+            not self.version or version_compare(self.version, '1.3.0') >= 0
+        ):
+            return self._print_bridge_port(rule, iface_obj, iface_name, inbound)
 
         option = '-i' if inbound else '-o'
         return (
             self._print_single_option_with_negation(option, rule, 'itf', iface_name)
             + ' '
         )
+
+    def _print_bridge_port(
+        self, rule: CompRule, iface_obj, iface_name: str, inbound: bool
+    ) -> str:
+        """Print the interface match of a rule that names a bridge port.
+
+        In the filter and mangle tables a bridged packet carries the bridge
+        device as its in/out device, not the port it came in on
+        (``nf_bridge_get_physindev`` in the netfilter ``xt_physdev`` module
+        is what holds the port), so ``-i <port>`` never matches.  The port
+        is matched with ``-m physdev`` instead.
+
+        ``--physdev-out`` alone stopped matching non-bridged traffic in
+        iptables 1.2.9, so the outbound form adds ``--physdev-is-bridged``.
+        And because several bridges can share one wildcard port name
+        (``vnet+`` on both br0 and br1), the parent bridge is named as well
+        once the firewall has more than one bridge, so the rule still tells
+        the two apart.  Same as C++
+        ``PolicyCompiler_ipt::PrintRule::_printDirectionAndInterface``.
+        """
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        parent = getattr(iface_obj, 'parent_interface', None)
+        parent_name = parent.name if parent is not None else ''
+
+        parts = []
+        name_the_bridge = (
+            ipt_comp.bridge_count > 1 and iface_name.endswith('+') and parent_name
+        )
+        if inbound:
+            if name_the_bridge:
+                parts.append(f'-i {parent_name}')
+            parts.append(f'-m physdev --physdev-in {iface_name}')
+        else:
+            if name_the_bridge:
+                parts.append(f'-o {parent_name}')
+            parts.append(f'-m physdev --physdev-is-bridged --physdev-out {iface_name}')
+        return ' '.join(parts) + ' '
 
     def _print_protocol(self, srv) -> str:
         """Print protocol matching.

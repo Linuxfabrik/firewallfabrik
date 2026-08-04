@@ -206,6 +206,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
                 if iface.is_dynamic():
                     self.have_dynamic_interfaces = True
 
+        # PrintRule names the parent bridge next to a wildcard bridge port
+        # only when there is more than one bridge to tell apart, so count
+        # them here (C++ PolicyCompiler_ipt::prolog).
+        self.bridge_count = sum(
+            1
+            for iface in self.fw.interfaces
+            if (iface.get_option('type', '') or '') == 'bridge'
+        )
+
         return n
 
     def compile(self) -> None:

@@ -15,6 +15,10 @@
 
 #  see SF bug #3439613
 #
+# Rule 0 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
+# Rule 0 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
 
 FWBDEBUG=""
 
@@ -235,10 +239,6 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (vnet+)
-        #
-        iifname "vnet+" ct state new counter accept
     }
 
     chain forward {
@@ -250,11 +250,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 1 (vnet+)
-        #
-        # -o br0
-        oifname "vnet+" ct state new counter accept
     }
 }
 

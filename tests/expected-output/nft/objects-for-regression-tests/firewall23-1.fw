@@ -12,6 +12,62 @@
 #  This is BRIDGING FIREWALL
 #  Testing module physdev
 #
+# Rule 0 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 0 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 0 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 1 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 2 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 2 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 2 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 3 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 3 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 3 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 4 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 4 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 4 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 5 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 5 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 5 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 6 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 6 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 6 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 7 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 7 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 7 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 8 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 9 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 9 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 9 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 9 (eth2,eth3): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 9 (eth2,eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 10 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 10 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 10 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 10 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 11 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 11 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 12 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 12 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 13 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 13 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 14 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 14 (eth3): Rule matches on the bridge port "eth3", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
+# Rule 15 (eth2): Rule matches on the bridge port "eth2", which nftables cannot see in a filter table; the rule is left out
 
 FWBDEBUG=""
 
@@ -228,41 +284,11 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_mangle {}
-delete table ip fwf_mangle
-
-table ip fwf_mangle {
-    chain postrouting {
-        type filter hook postrouting priority mangle; policy accept;
-        #
-        # Rule 13 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 counter meta priority set 1:12
-        #
-        # Rule 14 (eth3)
-        #
-        oifname "eth3" ip daddr 192.168.1.0/24 tcp dport 22 counter meta priority set 2:12
-        #
-        # Rule 15 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 counter meta priority set 1:12
-    }
-}
 
 table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (eth2,eth3)
-        #
-        iifname "eth2" ct state new counter accept
-        iifname "eth3" ct state new counter accept
-        #
-        # Rule 1 (eth2,eth3)
-        #
-        iifname "eth2" ct state new counter accept
-        iifname "eth3" ct state new counter accept
         #
         # Rule 22 (global)
         #
@@ -281,68 +307,6 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
-        #
-        # Rule 1 (eth2,eth3)
-        #
-        iifname "eth2" ct state new counter accept
-        iifname "eth3" ct state new counter accept
-        #
-        # Rule 2 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr { 192.168.1.10, 192.168.1.20 } ct state new counter log level debug accept
-        iifname "eth3" ip daddr { 192.168.1.10, 192.168.1.20 } ct state new counter log level debug accept
-        #
-        # Rule 3 (eth2,eth3)
-        #
-        # testing for bug 1593221
-        iifname "eth2" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new counter log level debug accept
-        iifname "eth3" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.10, 192.168.1.20 } ct state new counter log level debug accept
-        #
-        # Rule 4 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 192.168.1.255 ct state new counter accept
-        iifname "eth3" ip daddr 192.168.1.255 ct state new counter accept
-        #
-        # Rule 5 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 255.255.255.255 ct state new counter accept
-        iifname "eth3" ip daddr 255.255.255.255 ct state new counter accept
-        #
-        # Rule 6 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 224.0.1.141 ct state new counter accept
-        iifname "eth3" ip daddr 224.0.1.141 ct state new counter accept
-        #
-        # Rule 7 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr 192.168.1.0/24 ct state new counter accept
-        iifname "eth3" ip daddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 8 (eth2,eth3)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 ct state new counter accept
-        oifname "eth3" ip daddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 9 (eth2,eth3)
-        #
-        iifname "eth2" ip daddr != 192.168.1.0/24 counter drop
-        iifname "eth3" ip daddr != 192.168.1.0/24 counter drop
-        #
-        # Rule 10 (eth2)
-        #
-        oifname "eth2" ip daddr 224.0.0.0/4 ct state new counter accept
-        #
-        # Rule 11 (eth2)
-        #
-        iifname "eth2" ip saddr 192.168.1.10 ip daddr 224.0.0.0/4 ct state new counter accept
-        #
-        # Rule 12 (eth3)
-        #
-        oifname "eth3" ip saddr 192.168.1.10 ip daddr 224.0.0.0/4 ct state new counter accept
-        #
-        # Rule 15 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 counter log level debug
         #
         # Rule 16 (global)
         #
@@ -379,19 +343,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 8 (eth2,eth3)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 ct state new counter accept
-        oifname "eth3" ip daddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 10 (eth2)
-        #
-        oifname "eth2" ip daddr 224.0.0.0/4 ct state new counter accept
-        #
-        # Rule 15 (eth2)
-        #
-        oifname "eth2" ip daddr 192.168.1.0/24 tcp dport 22 counter log level debug
         #
         # Rule 16 (global)
         #

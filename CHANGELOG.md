@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): redirect rules that only match the connection owner, as a transparent proxy does, load again.
 * Compiler (iptables, nftables): rules and NAT rules that match a MAC address produce a rule that loads.
 * Compiler (iptables, nftables): rules that match a Tag Service match only the tagged packets instead of every packet, which let traffic through a rule meant to be selective.
+* Compiler (iptables, nftables): rules that match a bridge port match the bridged traffic. On iptables the rule now looks at the bridge layer, and on nftables, which cannot do that in a filter table, the rule is reported and left out. Before, both platforms produced a rule that never matched, so an "accept" rule dropped the traffic and a "deny" rule let it through.
 * Compiler (iptables, nftables): rules that match an interface which can never apply to them are reported and left out. They stopped the activation script on iptables and matched nothing on nftables.
 * Compiler (iptables, nftables): rules that compile to the same command as an earlier rule are all kept. Whichever came second was silently dropped, so a firewall could be missing rules it shows in the GUI.
 * Compiler (iptables, nftables): rules that reject with a TCP reset and use a custom TCP service keep that reject type instead of being downgraded with a spurious warning.
