@@ -229,8 +229,6 @@ configure_interfaces() {
     update_addresses_of_interface "eth0 192.168.1.1/24" ""
     update_addresses_of_interface "eth2 33.33.33.3/29 33.33.33.4/29" ""
     update_addresses_of_interface "eth3 33.33.33.25/29" ""
-    update_addresses_of_interface "eth5" ""
-    update_addresses_of_interface "eth6" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
     update_addresses_of_interface "vlan101 222.222.222.222/24" ""
 }

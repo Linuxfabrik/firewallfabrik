@@ -167,19 +167,8 @@ class InterfaceDialog(BaseObjectDialog):
         super().__init__('interfacedialog_q.ui', parent)
 
     def _is_bridge_port(self):
-        """Check if this interface is a bridge port.
-
-        Mirrors fwbuilder's ``Interface::isBridgePort()``: a
-        sub-interface whose parent has ``type == "bridge"`` in its
-        options is a bridge port, regardless of an explicit
-        ``bridge_port`` option.
-        """
-        if self._obj.is_bridge_port():
-            return True
-        parent = getattr(self._obj, 'parent_interface', None)
-        if parent is not None:
-            return (parent.options or {}).get('type') == 'bridge'
-        return False
+        """Check if this interface is a bridge port."""
+        return self._obj.is_bridge_port()
 
     def _run_autoconfigure(self):
         """Auto-detect interface type from name and parent context.

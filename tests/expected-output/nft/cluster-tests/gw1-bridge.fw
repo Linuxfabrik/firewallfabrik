@@ -320,8 +320,6 @@ configure_interfaces() {
     update_addresses_of_interface "br1 192.168.1.2/24" ""
     update_addresses_of_interface "eth0 172.24.0.2/16" ""
     update_addresses_of_interface "eth0.100" ""
-    update_addresses_of_interface "eth2" ""
-    update_addresses_of_interface "eth3" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 

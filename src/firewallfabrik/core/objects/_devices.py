@@ -337,8 +337,28 @@ class Interface(Base):
             and not self.is_bridge_port()
         )
 
+    def _is_port_of(self, parent_type: str) -> bool:
+        """Is this a plain port of a parent interface of *parent_type*?
+
+        Mirrors C++ ``Interface::isBridgePort()`` / ``isSlave()``: neither
+        Firewall Builder nor FirewallFabrik stores a flag on the port, the
+        answer follows from the port's own type and its parent's.
+        """
+        if (self.get_option('type', '') or '') not in ('', 'ethernet'):
+            return False
+        parent = self.parent_interface
+        return (
+            parent is not None and (parent.get_option('type', '') or '') == parent_type
+        )
+
     def is_bridge_port(self) -> bool:
-        return bool(self.get_option('bridge_port', False))
+        # An explicit option still wins, so a file that carries one keeps
+        # working.
+        if self.get_option('bridge_port', False):
+            return True
+        return self._is_port_of('bridge')
 
     def is_slave(self) -> bool:
-        return bool(self.get_option('slave', False))
+        if self.get_option('slave', False):
+            return True
+        return self._is_port_of('bonding')
