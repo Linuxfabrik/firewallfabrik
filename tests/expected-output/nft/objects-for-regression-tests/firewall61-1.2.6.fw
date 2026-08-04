@@ -16,6 +16,18 @@
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (global): Branch action not yet supported by nftables compiler
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""
 
@@ -256,6 +268,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
@@ -265,6 +278,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
@@ -284,6 +298,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
@@ -293,6 +308,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
@@ -311,6 +327,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule 0 (global)
@@ -320,6 +337,7 @@ table inet fwf_filter {
         #
         # Rule 1 (global)
         #
+        # # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)

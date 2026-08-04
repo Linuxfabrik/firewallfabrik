@@ -538,8 +538,9 @@ options:
     widget: 'useKernelTz'
     description: >-
       Interpret the time of day of time-based rules in the kernel
-      timezone instead of UTC. The weekday is always matched in UTC:
-      nftables has no local-timezone weekday.
+      timezone instead of UTC. The weekday is always matched in the
+      kernel timezone, whatever this is set to: nftables has no
+      UTC weekday.
 
   use_m_set:
     type: 'bool'

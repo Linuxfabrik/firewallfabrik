@@ -10,6 +10,42 @@
 #
 #  used to test time matching rules
 #
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""
 
@@ -238,6 +274,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
+        # # firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
@@ -246,19 +283,24 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        # # firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
+        # # firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
+        # # firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
@@ -272,6 +314,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
+        # # firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
@@ -280,19 +323,24 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        # # firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
+        # # firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
+        # # firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)
@@ -306,6 +354,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
+        # # firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule 1 (global)
@@ -314,19 +363,24 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        # # firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter accept
         #
         # Rule 3 (global)
         #
+        # # firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 3 -- ACCEPT " level info accept
         #
         # Rule 4 (global)
         #
+        # # firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 4 -- ACCEPT " level info accept
         #
         # Rule 5 (global)
         #
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
+        # # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr 192.168.1.0/24 ct state new meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 5 -- ACCEPT " level info accept
         #
         # Rule 6 (global)

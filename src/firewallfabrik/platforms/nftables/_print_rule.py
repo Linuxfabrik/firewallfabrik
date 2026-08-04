@@ -1236,14 +1236,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         if sorted(days) != list(range(7)):
             day_names = ', '.join(f'"{DOW_NAMES_FULL[d]}"' for d in days)
             parts.append(f'meta day {{ {day_names} }}')
-            if kerneltz:
-                # The kernel derives the weekday from the UTC timestamp and
-                # nftables has no local-timezone counterpart, so this half of
-                # `--kerneltz` cannot be reproduced.
+            if not kerneltz:
+                # `meta day` always takes the kernel timezone into account:
+                # nft_meta_weekday() subtracts sys_tz.tz_minuteswest, the
+                # very adjustment xt_time only makes for --kerneltz
+                # (net/netfilter/nft_meta.c, net/netfilter/xt_time.c).  So
+                # the weekday cannot be matched in UTC, and a rule left at
+                # the iptables default of UTC shifts by the kernel's offset.
                 self.compiler.warning(
                     rule,
-                    'nftables matches the weekday in UTC; the "use kernel '
-                    'timezone" setting only applies to the time of day',
+                    'nftables always matches the weekday in the kernel '
+                    'timezone; turn on "use kernel timezone" so iptables '
+                    'agrees',
                 )
 
         return ' '.join(parts)

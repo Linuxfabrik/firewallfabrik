@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): rules whose source or destination cannot be resolved are left out instead of applying to every address, where an "accept from these hosts" rule accepted from everywhere.
 * Compiler (iptables, nftables): rules with a custom action run it instead of doing nothing. nftables cannot run one and reports the rule.
 * Compiler (iptables, nftables): the firewall-wide limit on log messages reaches the generated ruleset. A logging firewall under load could fill its disk.
+* Compiler (nftables): a firewall with weekday-restricted rules is warned when its time zone setting makes iptables and nftables pick different days. The warning was the wrong way round and fired exactly when the two agreed.
 * Compiler (nftables): a firewall whose only rules are the automatic ones installs them together with its default-drop policy, instead of an empty ruleset that left the host open.
 * Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
 * Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
