@@ -3482,9 +3482,17 @@ class Optimize1(PolicyRuleProcessor):
                 # in original
                 setattr(rule, attr, [])
 
-        # Jump rule: keep state matching, just change target
+        # Jump rule: keep state matching, just change target.  The mark,
+        # traffic class or route belongs to the rule that moves into the
+        # temp chain; leaving the option on the jump rule would make
+        # _print_target write `-j MARK` instead of the jump, so the temp
+        # chain would never run and the mark would be set on everything the
+        # jump rule matches (C++ optimizeForRuleElement clears all three).
         r.ipt_target = new_chain
         r.action = PolicyAction.Continue
+        r.set_option('classification', False)
+        r.set_option('routing', False)
+        r.set_option('tagging', False)
         self.tmp_queue.append(r)
 
         # Original rule: moved to temp chain, made stateless
