@@ -251,17 +251,10 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-        ip option lsrr exists ip option ra exists counter drop
-        #
         # Rule 1 (global)
         #
         ip option rr exists counter drop
         ip option lsrr exists ip option ssrr exists counter drop
-        # # Rule 1 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-        counter drop
         #
         # Rule 2 (global)
         #

@@ -267,20 +267,6 @@ table ip fwf_filter {
         #
         tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
         udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
-        #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
-        ct state new counter accept
-        # # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
-# Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-        ct state new counter accept
-        #
-        # Rule 2 (global)
-        #
-        # this only matches module owner
-        # # Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
-        counter log prefix "RULE 2 -- DENY " level info drop
     }
 }
 

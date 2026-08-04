@@ -301,12 +301,6 @@ table ip fwf_filter {
         #
         tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
         #
-        # Rule 10 (global)
-        #
-        # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
-        #
         # Rule 11 (global)
         #
         ip daddr { 66.66.66.130, 127.0.0.1 } tcp dport 3128 ct state new counter accept
@@ -343,12 +337,6 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
-        #
-        # Rule 10 (global)
-        #
-        # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
         #
         # Rule 12 (global)
         #
@@ -409,12 +397,6 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
-        #
-        # Rule 10 (global)
-        #
-        # # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
-        ip saddr 192.168.1.0/24 counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #

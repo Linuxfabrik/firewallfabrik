@@ -422,15 +422,6 @@ table inet fwf_filter {
         # # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
         meta l4proto ipv6-icmp counter accept
         #
-        # Rule 31 (global)
-        #
-        # test for bug 2463048
-        # "custom services should have IPv4/v6 setting"
-        # rule should compile for ipv6 b/c custom service
-        # object "ipv6 source route" is configured as "ipv6"
-        # # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log prefix "RULE 31 -- DENY " level info drop
-        #
         # Rule 34 (global)
         #
         counter log prefix "RULE 34 -- DENY " level info drop
@@ -538,15 +529,6 @@ table inet fwf_filter {
         #
         # # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
         meta l4proto ipv6-icmp counter accept
-        #
-        # Rule 31 (global)
-        #
-        # test for bug 2463048
-        # "custom services should have IPv4/v6 setting"
-        # rule should compile for ipv6 b/c custom service
-        # object "ipv6 source route" is configured as "ipv6"
-        # # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #
@@ -670,15 +652,6 @@ table inet fwf_filter {
         # Rule 30 (global)
         #
         ip6 saddr fe80::21d:9ff:fe8b:8e94 ct state new counter accept
-        #
-        # Rule 31 (global)
-        #
-        # test for bug 2463048
-        # "custom services should have IPv4/v6 setting"
-        # rule should compile for ipv6 b/c custom service
-        # object "ipv6 source route" is configured as "ipv6"
-        # # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log prefix "RULE 31 -- DENY " level info drop
         #
         # Rule 34 (global)
         #

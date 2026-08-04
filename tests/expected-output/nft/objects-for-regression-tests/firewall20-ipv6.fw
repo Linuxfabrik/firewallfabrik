@@ -282,11 +282,6 @@ table inet fwf_filter {
         # INPUT chains
         ct state new counter accept
         #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log drop
-        #
         # Rule 19 (global)
         #
         # Automatically generated 'catch all' rule
@@ -328,11 +323,6 @@ table inet fwf_filter {
         # INPUT chains
         ct state new counter accept
         #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log drop
-        #
         # Rule 19 (global)
         #
         # Automatically generated 'catch all' rule
@@ -364,11 +354,6 @@ table inet fwf_filter {
         # generate code in both FORWARD and
         # OUTPUT chains
         ct state new counter accept
-        #
-        # Rule 18 (global)
-        #
-        # # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-        counter log drop
         #
         # Rule 19 (global)
         #

@@ -249,11 +249,6 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-        ct state new counter accept
-        #
         # Rule 1 (global)
         #
         ip dscp 0x20 ct state new counter accept
@@ -268,11 +263,6 @@ table ip fwf_filter {
         ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-        ct state new counter accept
-        #
         # Rule 1 (global)
         #
         ip dscp 0x20 ct state new counter accept
@@ -285,11 +275,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (global)
-        #
-        # # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-        ct state new counter accept
         #
         # Rule 1 (global)
         #

@@ -376,6 +376,11 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Protocol + service matching
         srv_match = self._print_service(rule, srv)
+        if srv_match is None:
+            # The service cannot be expressed and the reason was reported.
+            # Emitting the rule without the match would apply it to every
+            # protocol and port, the opposite of what it says.
+            return ''
         if srv_match:
             parts.append(srv_match)
 
@@ -669,8 +674,15 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         return addr_str
 
-    def _print_service(self, rule: CompRule, srv) -> str:
-        """Print protocol + port/ICMP matching."""
+    def _print_service(self, rule: CompRule, srv) -> str | None:
+        """Print protocol + port/ICMP matching.
+
+        Returns ``None`` when the service says something nftables cannot
+        express.  The caller then leaves the whole rule out: emitting it
+        without the match would apply it to every protocol and port, so a
+        rule meant for one service would act on all traffic.  The reason is
+        reported before returning.
+        """
         negated = bool(rule.srv_single_object_negation)
 
         if rule.merged_tcp_udp:
@@ -699,6 +711,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             tos = data.get('tos', '')
             dscp = data.get('dscp', '')
             af = 'ip6' if self.compiler.ipv6_policy else 'ip'
+            # A condition of the service that cannot be rendered widens the
+            # rule to traffic the user did not name, so the rule is dropped.
+            unrenderable = False
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 parts.append(print_fragment_match(self.compiler.ipv6_policy))
             if dscp:
@@ -712,6 +727,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                         'use a DiffServ class (for example af41) or a numeric '
                         'code point',
                     )
+                    unrenderable = True
                 else:
                     # nftables' dscp symbols (cs0, af11, be, ef, ...) are
                     # lowercase and resolved case-sensitively; the DiffServ
@@ -728,6 +744,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                     'IP service with a ToS value is not supported by nftables; '
                     'use a DSCP value instead',
                 )
+                unrenderable = True
             if not self.compiler.ipv6_policy:
                 # IP options are an IPv4 header feature; the iptables compiler
                 # also emits `-m ipv4options` for IPv4 policies only.
@@ -740,6 +757,9 @@ class PrintRule_nft(PolicyRuleProcessor):
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
                     )
+                    unrenderable = True
+            if unrenderable:
+                return None
             if negated:
                 return self._negate_single_match(rule, parts, 'IP service')
             # An "any IP" service with no further conditions carries no match
@@ -748,35 +768,44 @@ class PrintRule_nft(PolicyRuleProcessor):
         elif isinstance(srv, CustomService):
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
-            if code:
-                if negated:
-                    # The code fragment is opaque nftables text; there is no
-                    # way to invert it from here.
-                    self.compiler.error(
-                        rule,
-                        f'Negating the custom service "{srv.name}" is not '
-                        'supported by the nftables compiler; add a rule with '
-                        'the inverse match instead',
-                    )
-                return code
-            return ''
+            if not code:
+                # VerifyCustomServices already reported the missing code.
+                return None
+            if negated:
+                # The code fragment is opaque nftables text; there is no
+                # way to invert it from here, and emitting it unchanged
+                # would match exactly what the rule excludes.
+                self.compiler.error(
+                    rule,
+                    f'Negating the custom service "{srv.name}" is not '
+                    'supported by the nftables compiler; add a rule with '
+                    'the inverse match instead',
+                )
+                return None
+            return code
         elif isinstance(srv, TagService):
             tag_code = srv.get_code()
-            if tag_code:
-                return print_mark_match(tag_code, bool(rule.srv_single_object_negation))
-            return ''
+            if not tag_code:
+                self.compiler.error(
+                    rule, f'Tag service "{srv.name}" carries no tag to match on'
+                )
+                return None
+            return print_mark_match(tag_code, bool(rule.srv_single_object_negation))
         elif isinstance(srv, UserService):
             uid = srv.userid or ''
-            if uid:
-                neg = '!= ' if rule.srv_single_object_negation else ''
-                return f'meta skuid {neg}{uid}'
-            return ''
+            if not uid:
+                self.compiler.error(
+                    rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            neg = '!= ' if rule.srv_single_object_negation else ''
+            return f'meta skuid {neg}{uid}'
 
         self.compiler.error(
             rule,
             f'Service type {type(srv).__name__} not yet supported by nftables compiler',
         )
-        return ''
+        return None
 
     # Map iptables/syslog level names to the abbreviated keywords nftables
     # accepts. Only the two divergent spellings need mapping.

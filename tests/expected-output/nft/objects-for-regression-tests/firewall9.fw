@@ -303,23 +303,14 @@ table ip fwf_filter {
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
-        # Rule 12 (global)
-        #
-        # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
-        #
         # Rule 13 (global)
         #
-        # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
     }
@@ -351,23 +342,14 @@ table ip fwf_filter {
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
-        # Rule 12 (global)
-        #
-        # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
-        #
         # Rule 13 (global)
         #
-        # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
     }
@@ -435,23 +417,14 @@ table ip fwf_filter {
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
-        # Rule 12 (global)
-        #
-        # # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
-        #
         # Rule 13 (global)
         #
-        # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
         #
         # Rule 14 (global)
         #
         ip saddr 192.168.1.0/24 udp dport 53 counter reject with icmp net-unreachable
-        # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-        ip saddr 192.168.1.0/24 counter reject with tcp reset
         # # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
         ip saddr 192.168.1.0/24 tcp dport 80 counter reject with tcp reset
     }

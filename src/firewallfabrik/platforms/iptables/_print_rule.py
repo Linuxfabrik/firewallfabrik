@@ -220,7 +220,12 @@ class PrintRule(PolicyRuleProcessor):
 
         if srv:
             command_line += self._print_ip_service_options(rule, srv)
-            command_line += self._print_custom_services(rule, srv)
+            custom_srv = self._print_custom_services(rule, srv)
+            if custom_srv is None:
+                if not self._keeps_the_ruleset_tighter(rule):
+                    return ''
+                custom_srv = ''
+            command_line += custom_srv
 
         command_line += self._print_modules(rule, command_line)
         command_line += self._print_time_interval(rule)
@@ -768,32 +773,44 @@ class PrintRule(PolicyRuleProcessor):
         # and iptables reads them as one token.
         return ' '.join(parts) + ' '
 
-    def _print_custom_services(self, rule: CompRule, srv) -> str:
+    def _print_custom_services(self, rule: CompRule, srv) -> str | None:
         """Print CustomService, TagService and UserService matching.
 
         Corresponds to the CustomService/TagService/UserService blocks
         inside fwbuilder's PolicyCompiler_PrintRule::_printDstService().
+
+        Returns ``None`` when the object carries nothing to match on, so the
+        caller can leave the rule out.  Emitting it without the match would
+        apply it to every protocol and port instead of the one service the
+        rule names.
         """
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         neg = self._print_single_object_negation(rule, 'srv')
 
         if isinstance(srv, CustomService):
             code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
-            if code:
-                return f'{neg}{code} '
-            return ''
+            if not code:
+                # VerifyCustomServices already reported the missing code.
+                return None
+            return f'{neg}{code} '
 
         if isinstance(srv, TagService):
             tag_code = srv.get_code()
-            if tag_code:
-                return f'-m mark {neg}--mark {tag_code} '
-            return ''
+            if not tag_code:
+                self.compiler.error(
+                    rule, f'Tag service "{srv.name}" carries no tag to match on'
+                )
+                return None
+            return f'-m mark {neg}--mark {tag_code} '
 
         if isinstance(srv, UserService):
             uid = srv.userid or ''
-            if uid:
-                return f'-m owner {neg}--uid-owner {uid} '
-            return ''
+            if not uid:
+                self.compiler.error(
+                    rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            return f'-m owner {neg}--uid-owner {uid} '
 
         return ''
 
