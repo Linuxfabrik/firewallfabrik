@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): rules that name an interface and apply in both directions no longer stop the activation script.
 * Compiler (iptables): rules that reject with a TCP reset also work when they are logged or negate their source, destination or service. The traffic fell through to the rule below instead.
 * Compiler (iptables): rules that use a custom service load again instead of being rejected for a missing protocol match.
+* Compiler (iptables): the `--xp` rule trace works on firewalls imported from a `.fwb` file instead of aborting the whole compile with an internal error.
 * Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking forever, which stalled unattended rollouts without an error.
 * Compiler (iptables): the NFLOG "Copy range" setting takes effect, so the logging daemon receives only as much of each packet as the firewall asks for instead of always the whole one. Firewalls pinned to an iptables older than 1.6.1, which cannot express this, get a warning.
 * Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.

@@ -541,11 +541,19 @@ class PolicyCompiler_ipt(PolicyCompiler):
             if aor:
                 meta += f' {aor}'
 
-        if rule.options.get('limit_value', 0) > 0:
+        # An imported .fwb stores these as strings, so compare them as
+        # numbers the way the print rule does instead of against 0.
+        def _positive(key: str) -> bool:
+            try:
+                return int(rule.options.get(key, 0)) > 0
+            except (TypeError, ValueError):
+                return False
+
+        if _positive('limit_value'):
             meta += ' limit'
-        if rule.options.get('connlimit_value', 0) > 0:
+        if _positive('connlimit_value'):
             meta += ' connlimit'
-        if rule.options.get('hashlimit_value', 0) > 0:
+        if _positive('hashlimit_value'):
             meta += ' hashlimit'
 
         lines.append(meta)
