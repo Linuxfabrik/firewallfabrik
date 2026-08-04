@@ -243,6 +243,11 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 1 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 2 (global)
         #
         ip saddr != 192.168.1.0/24 meta l4proto 50 ct state new counter meta mark set 16
@@ -262,6 +267,11 @@ table ip fwf_mangle {
         type filter hook output priority mangle; policy accept;
         #
         # Rule 0 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
+        # Rule 1 (global)
         #
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
@@ -327,10 +337,12 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
         #
         # Rule 12 (global)
         #
+        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
         #
         # Rule 14 (global)
@@ -367,10 +379,12 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
         #
         # Rule 12 (global)
         #
+        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
         #
         # Rule 13 (global)
@@ -414,10 +428,12 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        meta mark 16 ct state new counter accept
         tcp dport 80 ct state new counter accept
         #
         # Rule 12 (global)
         #
+        meta mark != 16 ct state new counter accept
         tcp dport != 80 ct state new counter accept
         #
         # Rule 13 (global)

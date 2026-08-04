@@ -285,6 +285,12 @@ table ip fwf_filter {
         iifname "eth1" ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         iifname "eth1" ip frag-off & 0x1fff != 0 counter drop
         #
+        # Rule 1 (eth1)
+        #
+        # тестовый комментарий по-русски. Проверяем конвертацию из/в Utf8
+        iifname "eth1" ip frag-off & 0x1fff != 0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        iifname "eth1" ip frag-off & 0x1fff != 0 counter drop
+        #
         # Rule 2 (eth1)
         #
         # Automatically generated anti-spoofing rule
@@ -304,6 +310,14 @@ table ip fwf_filter {
         # is pretty much impossible
         iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
+        # Rule 5 (eth1)
+        #
+        iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new counter accept
+        #
+        # Rule 6 (eth1)
+        #
+        iifname "eth1" ip daddr 222.222.222.222 udp dport 53 ct state new counter accept
+        #
         # Rule 7 (eth1)
         #
         iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
@@ -316,7 +330,7 @@ table ip fwf_filter {
         #
         # Rule 9 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
+        iifname "eth1" ip saddr { 222.222.222.222, 192.168.1.10 } udp dport 53 ct state new counter accept
         #
         # Rule 10 (eth0)
         #
@@ -332,6 +346,12 @@ table ip fwf_filter {
         iifname "eth0" counter drop
         iifname "eth1" counter drop
         #
+        # Rule 14 (eth0,eth1)
+        #
+        # reject using connlimit
+        iifname "eth0" counter drop
+        iifname "eth1" counter drop
+        #
         # Rule 15 (eth0,eth1)
         #
         iifname "eth0" ct state new counter accept
@@ -342,6 +362,16 @@ table ip fwf_filter {
         # INTPUT with "-i +"
         # "-i +" is redundant if chain is INPUT,
         # optimization removes it
+        ip saddr 1.1.1.1 counter accept
+        #
+        # Rule 19 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 counter accept
+        #
+        # Rule 21 (global)
+        #
+        # INPUT + FORWARD
         ip saddr 1.1.1.1 counter accept
         #
         # Rule 22 (global)
@@ -449,6 +479,10 @@ table ip fwf_filter {
         # not allow access to the firewall
         ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new counter accept
         #
+        # Rule 55 (global)
+        #
+        ip saddr 192.168.1.0/24 ip daddr != { 192.168.1.1, 222.222.222.222 } ct state new counter accept
+        #
         # Rule 56 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport { 113, 10000-11000 } ct state new counter accept
@@ -486,6 +520,11 @@ table ip fwf_filter {
         iifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
         oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
+        # Rule 6 (eth1)
+        #
+        iifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
+        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
+        #
         # Rule 7 (eth1)
         #
         iifname "eth1" ip saddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
@@ -498,7 +537,7 @@ table ip fwf_filter {
         #
         # Rule 9 (eth1)
         #
-        iifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
+        iifname "eth1" ip saddr { 222.222.222.222, 192.168.1.10 } udp dport 53 ct state new counter accept
         oifname "eth1" ip saddr 192.168.1.10 udp dport 53 ct state new counter accept
         #
         # Rule 11 (eth0)
@@ -518,6 +557,16 @@ table ip fwf_filter {
         ip daddr 1.1.1.1 counter accept
         #
         # Rule 19 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 counter accept
+        #
+        # Rule 20 (global)
+        #
+        # OUTPUT + FORWARD
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 21 (global)
         #
         # INPUT + FORWARD
         ip saddr 1.1.1.1 counter accept
@@ -575,6 +624,10 @@ table ip fwf_filter {
         #
         ether saddr 00:10:4b:de:e9:70 ip daddr 200.200.200.200 ct state new counter accept
         #
+        # Rule 36 (global)
+        #
+        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
+        #
         # Rule 37 (global)
         #
         ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.10 ct state new counter accept
@@ -619,6 +672,7 @@ table ip fwf_filter {
         # Rule #20 test: from Rock
         ip daddr 192.168.1.10 tcp dport { 53, 3128 } ct state new counter accept
         ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new counter accept
         #
         # Rule 46 (global)
         #
@@ -663,6 +717,13 @@ table ip fwf_filter {
         # Automatically generated 'masquerading' rule
         ip saddr 192.168.1.0/24 ct state new counter accept
         #
+        # Rule 54 (global)
+        #
+        # similar to a standard 'masquerading'
+        # rule, but not so permissive as it does
+        # not allow access to the firewall
+        ip saddr 192.168.1.0/24 ct state new counter accept
+        #
         # Rule 55 (global)
         #
         ip saddr 192.168.1.0/24 ip daddr != 33.33.33.0/24 ct state new counter accept
@@ -698,7 +759,11 @@ table ip fwf_filter {
         #
         # Rule 5 (eth1)
         #
-        oifname "eth1" ip daddr 192.168.1.10 udp dport 53 ct state new counter accept
+        oifname "eth1" ip daddr { 222.222.222.222, 192.168.1.10 } udp dport 53 ct state new counter accept
+        #
+        # Rule 6 (eth1)
+        #
+        oifname "eth1" ip daddr { 222.222.222.222, 192.168.1.10 } udp dport 53 ct state new counter accept
         #
         # Rule 7 (eth1)
         #
@@ -710,6 +775,10 @@ table ip fwf_filter {
         # because it is needed for anti-spoofing rules
         oifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new counter accept
         #
+        # Rule 9 (eth1)
+        #
+        oifname "eth1" ip saddr 222.222.222.222 udp dport 53 ct state new counter accept
+        #
         # Rule 10 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 ip daddr { 192.168.1.1, 222.222.222.222 } udp dport 53 ct state new counter accept
@@ -717,6 +786,16 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # OUTPUT
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 18 (global)
+        #
+        # OUTPUT + FORWARD
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 20 (global)
+        #
+        # OUTPUT + FORWARD
         ip daddr 1.1.1.1 counter accept
         #
         # Rule 22 (global)
@@ -771,6 +850,7 @@ table ip fwf_filter {
         # Rule #20 test: from Rock
         ip daddr 192.168.1.10 tcp dport { 53, 3128 } ct state new counter accept
         ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
+        ip daddr 192.168.1.10 tcp sport 1024-65535 tcp dport 80 ct state new counter accept
         #
         # Rule 46 (global)
         #
@@ -824,6 +904,13 @@ table ip fwf_filter {
         #
         # Automatically generated 'masquerading' rule
         ct state new counter accept
+        ip saddr 192.168.1.0/24 ct state new counter accept
+        #
+        # Rule 54 (global)
+        #
+        # similar to a standard 'masquerading'
+        # rule, but not so permissive as it does
+        # not allow access to the firewall
         ip saddr 192.168.1.0/24 ct state new counter accept
         #
         # Rule 55 (global)

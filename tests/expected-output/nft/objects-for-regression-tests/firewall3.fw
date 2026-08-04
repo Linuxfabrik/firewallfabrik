@@ -265,6 +265,7 @@ table ip fwf_filter {
         #
         # Rule 3 (eth0,eth2)
         #
+        iifname "eth0" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log level debug drop
         iifname "eth2" ip saddr 192.168.1.0/24 udp dport { 68, 67 } counter log level debug drop
         #
         # Rule 4 (eth0)
@@ -278,7 +279,9 @@ table ip fwf_filter {
         #
         # testing choice of chains in case when several interfaces
         # are used and rule matches on any or broadcast
+        iifname "eth0" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         iifname "eth2" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        oifname "eth0" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         oifname "eth2" ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 6 (eth0)
@@ -287,6 +290,7 @@ table ip fwf_filter {
         #
         # Rule 7 (eth0,eth2)
         #
+        iifname "eth0" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         iifname "eth2" ip saddr 0.0.0.0 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 8 (eth0)
@@ -295,6 +299,7 @@ table ip fwf_filter {
         #
         # Rule 9 (eth0,eth2)
         #
+        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         oifname "eth2" ip saddr 192.168.1.0/24 ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 10 (eth1)

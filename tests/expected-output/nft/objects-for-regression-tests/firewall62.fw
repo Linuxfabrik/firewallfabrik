@@ -16,20 +16,30 @@
 #  it appears that user defined chain gets control not from OUTPUT)
 #
 # firewall62:Policy:0: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:6: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:7: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:11: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:11: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:13: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 # firewall62:Policy:15: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:15: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:17: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+# firewall62:Policy:17: warning: nftables matches 'meta skuid' only in the OUTPUT chain
 
 FWBDEBUG=""
 
@@ -265,6 +275,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         ip saddr { 192.168.1.1, 222.222.222.222 } tcp dport 80 ct state new counter accept
         #
         # Rule 18 (global)
@@ -292,6 +303,18 @@ table ip fwf_filter {
         meta skuid 2000 ct state new counter accept
         #
         # Rule 1 (global)
+        #
+        meta skuid 2000 ct state new counter accept
+        tcp dport 80 ct state new counter accept
+        #
+        # Rule 2 (global)
+        #
+        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+        meta skuid 2000 ct state new counter accept
+        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+        tcp dport 80 ct state new counter accept
+        #
+        # Rule 3 (global)
         #
         meta skuid 2000 ct state new counter accept
         tcp dport 80 ct state new counter accept
@@ -332,6 +355,7 @@ table ip fwf_filter {
         # Rule 11 (global)
         #
         # bug 2186568
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new counter accept
         ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid 500 ct state new counter accept
         #
         # Rule 12 (global)
@@ -356,12 +380,22 @@ table ip fwf_filter {
         # Rule 15 (global)
         #
         # bug 2186568
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 2000 ct state new counter accept
         ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid != 500 ct state new counter accept
         #
         # Rule 16 (global)
         #
         # bug 2186568
+        # # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the OUTPUT chain
+        meta skuid 2000 ct state new counter accept
+        # # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the OUTPUT chain
         meta skuid 500 ct state new counter accept
+        #
+        # Rule 17 (global)
+        #
+        # bug 2186568
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid 2000 ct state new counter accept
+        ip daddr { 192.168.1.1, 222.222.222.222 } meta skuid 500 ct state new counter accept
         #
         # Rule 18 (global)
         #

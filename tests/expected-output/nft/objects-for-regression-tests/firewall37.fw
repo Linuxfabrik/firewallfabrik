@@ -264,6 +264,11 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 1 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 11 (global)
         #
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter meta mark set 16
@@ -274,7 +279,20 @@ table ip fwf_mangle {
         iifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
         iifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 13 (eth1)
+        #
+        iifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
+        iifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 15 (global)
+        #
+        # using CONNMARK
+        meta l4proto 50 ct state new counter meta mark set 10
+        meta l4proto 51 ct state new counter meta mark set 10
+        meta l4proto 50 ct state new counter ct mark set mark
+        meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 16 (global)
         #
         # using CONNMARK
         meta l4proto 50 ct state new counter meta mark set 10
@@ -321,17 +339,47 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 1 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
+        # Rule 2 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 3 (eth1)
         #
         oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
         oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
+        # Rule 4 (global)
+        #
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
         #
         # Rule 5 (eth1)
         #
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter meta mark set 16
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 6 (eth1)
+        #
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter meta mark set 16
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter meta mark set 16
+        #
+        # Rule 7 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
+        oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 8 (eth1)
+        #
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter meta mark set 16
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter meta mark set 16
+        #
+        # Rule 9 (eth1)
         #
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter meta mark set 16
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter meta mark set 16
@@ -341,7 +389,25 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 50 counter meta mark set 16
         oifname "eth1" meta l4proto 51 counter meta mark set 16
         #
+        # Rule 12 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
+        oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
+        # Rule 14 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
+        oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 15 (global)
+        #
+        # using CONNMARK
+        meta l4proto 50 ct state new counter meta mark set 10
+        meta l4proto 51 ct state new counter meta mark set 10
+        meta l4proto 50 ct state new counter ct mark set mark
+        meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 16 (global)
         #
         # using CONNMARK
         meta l4proto 50 ct state new counter meta mark set 10
@@ -371,6 +437,11 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
         oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 14 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
+        oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 19 (eth1)
         #
         # using CONNMARK
@@ -383,7 +454,15 @@ table ip fwf_mangle {
         #
         ip saddr 192.168.1.0/24 counter meta priority set 1:2
         #
+        # Rule 23 (global)
+        #
+        ip saddr 192.168.1.0/24 counter meta priority set 1:2
+        #
         # Rule 24 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta priority set 1:2
+        #
+        # Rule 25 (global)
         #
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta priority set 1:2
         #
@@ -391,7 +470,15 @@ table ip fwf_mangle {
         #
         oifname "eth1" ip saddr 192.168.1.0/24 counter meta priority set 1:2
         #
+        # Rule 27 (eth1)
+        #
+        oifname "eth1" ip saddr 192.168.1.0/24 counter meta priority set 1:2
+        #
         # Rule 28 (eth1)
+        #
+        oifname != "eth1" ip saddr 192.168.1.0/24 counter meta priority set 1:2
+        #
+        # Rule 29 (eth1)
         #
         oifname != "eth1" ip saddr 192.168.1.0/24 counter meta priority set 1:2
         #
@@ -419,6 +506,7 @@ table ip fwf_mangle {
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter meta priority set 1:10
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter meta priority set 1:10
         #
         # Rule 35 (eth0)
@@ -479,6 +567,17 @@ table ip fwf_filter {
         iifname "eth1" meta l4proto 50 ct state new counter accept
         iifname "eth1" meta l4proto 51 ct state new counter accept
         #
+        # Rule 13 (eth1)
+        #
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 16 (global)
         #
         # using CONNMARK
@@ -490,6 +589,12 @@ table ip fwf_filter {
         # using CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 18 (eth1)
+        #
+        # using CONNMARK
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -548,6 +653,7 @@ table ip fwf_filter {
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)
@@ -656,6 +762,22 @@ table ip fwf_filter {
         oifname "eth1" meta l4proto 50 ct state new counter accept
         oifname "eth1" meta l4proto 51 ct state new counter accept
         #
+        # Rule 13 (eth1)
+        #
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 14 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 16 (global)
         #
         # using CONNMARK
@@ -667,6 +789,18 @@ table ip fwf_filter {
         # using CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 18 (eth1)
+        #
+        # using CONNMARK
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 19 (eth1)
+        #
+        # using CONNMARK
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -734,6 +868,7 @@ table ip fwf_filter {
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)
@@ -820,6 +955,11 @@ table ip fwf_filter {
         meta l4proto 50 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         meta l4proto 51 ct state new counter log prefix "RULE 1 -- ACCEPT " level info accept
         #
+        # Rule 2 (global)
+        #
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 3 (eth1)
         #
         oifname "eth1" meta l4proto 50 ct state new counter accept
@@ -835,7 +975,22 @@ table ip fwf_filter {
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter accept
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter accept
         #
+        # Rule 6 (eth1)
+        #
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 ct state new counter accept
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 ct state new counter accept
+        #
+        # Rule 7 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
         # Rule 8 (eth1)
+        #
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter accept
+        oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter accept
+        #
+        # Rule 9 (eth1)
         #
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 50 counter accept
         oifname "eth1" ip saddr 22.22.23.22 meta l4proto 51 counter accept
@@ -850,6 +1005,22 @@ table ip fwf_filter {
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 11 -- ACCEPT " level info accept
         #
+        # Rule 12 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 14 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # using CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 16 (global)
         #
         # using CONNMARK
@@ -861,6 +1032,12 @@ table ip fwf_filter {
         # using CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 17 -- ACCEPT " level info accept
+        #
+        # Rule 19 (eth1)
+        #
+        # using CONNMARK
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 20 (global)
         #
@@ -923,6 +1100,7 @@ table ip fwf_filter {
         # Rule 34 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 35 (eth0)

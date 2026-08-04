@@ -28,6 +28,12 @@
 # Rule 1 (ppp1): Could not resolve any source addresses
 # Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 1 (ppp1): Could not resolve any source addresses
+# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (ppp1): Could not resolve any source addresses
+# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 1 (ppp1): Could not resolve any source addresses
+# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
 # Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
 # Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
@@ -40,10 +46,14 @@
 # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
 # Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
 # Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
 # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
+# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
+# Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 3 (global): Could not resolve any source addresses
 # Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 3 (global): Could not resolve any source addresses
 # Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
@@ -52,7 +62,11 @@
 # Rule 3 (global): Could not resolve any source addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+# Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+# Rule 4 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 4 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
 # Rule 4 (global): Could not resolve any destination addresses

@@ -317,6 +317,10 @@ table inet fwf_filter {
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #
+        # Rule 19 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
         # Rule 20 (global)
         #
         # INPUT, OUTPUT, FORWARD
@@ -441,6 +445,10 @@ table inet fwf_filter {
         #
         ip daddr 192.168.1.1 ct state new counter accept
         #
+        # Rule 9 (global)
+        #
+        ip daddr 192.168.1.1 ct state new counter accept
+        #
         # Rule 12 (global)
         #
         ip saddr { 61.150.47.112, 192.168.1.0 } ct state new counter log prefix "RULE 12 -- ACCEPT " level info accept
@@ -450,6 +458,10 @@ table inet fwf_filter {
         meta l4proto icmp ct state new counter accept
         #
         # Rule 17 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 19 (global)
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #
@@ -478,6 +490,10 @@ table inet fwf_filter {
         counter log prefix "RULE 34 -- DENY " level info drop
         #
         # Rule 8 (global)
+        #
+        ip6 daddr e80::21d:9ff:fe8b:8e94 ct state new counter accept
+        #
+        # Rule 9 (global)
         #
         ip6 daddr e80::21d:9ff:fe8b:8e94 ct state new counter accept
         #
@@ -546,6 +562,10 @@ table inet fwf_filter {
         #
         ip daddr 192.168.1.1 ct state new counter accept
         #
+        # Rule 9 (global)
+        #
+        ip daddr 192.168.1.1 ct state new counter accept
+        #
         # Rule 13 (global)
         #
         ip saddr 1.1.1.1 icmp type echo-request icmp code 0 ct state new counter accept
@@ -555,6 +575,10 @@ table inet fwf_filter {
         meta l4proto icmp ct state new counter accept
         #
         # Rule 17 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 19 (global)
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #
@@ -592,6 +616,10 @@ table inet fwf_filter {
         counter log prefix "RULE 34 -- DENY " level info drop
         #
         # Rule 8 (global)
+        #
+        ip6 daddr e80::21d:9ff:fe8b:8e94 ct state new counter accept
+        #
+        # Rule 9 (global)
         #
         ip6 daddr e80::21d:9ff:fe8b:8e94 ct state new counter accept
         #

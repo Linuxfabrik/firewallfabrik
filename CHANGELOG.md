@@ -47,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): rules and NAT rules that match a MAC address produce a rule that loads.
 * Compiler (iptables, nftables): rules that match a Tag Service match only the tagged packets instead of every packet, which let traffic through a rule meant to be selective.
 * Compiler (iptables, nftables): rules that match an interface which can never apply to them are reported and left out. They stopped the activation script on iptables and matched nothing on nftables.
+* Compiler (iptables, nftables): rules that compile to the same command as an earlier rule are all kept. Whichever came second was silently dropped, so a firewall could be missing rules it shows in the GUI.
 * Compiler (iptables, nftables): rules that reject with a TCP reset and use a custom TCP service keep that reject type instead of being downgraded with a spurious warning.
 * Compiler (iptables, nftables): rules that tag packets set the tag. On iptables the activation script also stopped at such a rule.
 * Compiler (iptables, nftables): rules whose source or destination cannot be resolved are left out instead of applying to every address, where an "accept from these hosts" rule accepted from everywhere.

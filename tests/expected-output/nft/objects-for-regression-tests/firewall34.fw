@@ -29,41 +29,6 @@
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 4 (global): Could not resolve any source addresses
-# Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Cannot resolve address for object type AddressTable
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 6 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 7 (global): Cannot resolve address for object type AddressTable
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 8 (global): Could not resolve any source addresses
-# AddressTable "empty table": file not found (emtpy-table.tbl)
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
-# Rule 15 (global): Cannot resolve address for object type AddressTable
-# Rule 15 (global): Could not resolve any destination addresses
-# Rule 15 (global): Cannot resolve address for object type AddressTable
-# Rule 15 (global): Could not resolve any destination addresses
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
-# Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-# Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-# Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-# Rule 1 (global): Cannot resolve address for object type AddressTable
-# Rule 1 (global): Could not resolve any destination addresses
-# Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
-# Rule 3 (global): Cannot resolve address for object type AddressTable
-# Rule 3 (global): Could not resolve any destination addresses
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 4 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
@@ -72,18 +37,85 @@
 # Rule 5 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 8 (global): Could not resolve any source addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 8 (global): Could not resolve any source addresses
+# AddressTable "empty table": file not found (emtpy-table.tbl)
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 4 (global): Could not resolve any source addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 4 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 8 (global): Could not resolve any source addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 8 (global): Could not resolve any source addresses
 # AddressTable "empty table": file not found (emtpy-table.tbl)
 # AddressTable "addr-table-1": file not found (addr-table-1.tbl)
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
+# Rule 15 (global): Cannot resolve address for object type AddressTable
+# Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable

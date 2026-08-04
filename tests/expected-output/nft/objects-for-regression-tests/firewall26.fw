@@ -23,6 +23,8 @@
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
 # Rule 8 (global): Could not resolve any destination addresses
+# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp)
+# Rule 8 (global): Could not resolve any destination addresses
 
 FWBDEBUG=""
 

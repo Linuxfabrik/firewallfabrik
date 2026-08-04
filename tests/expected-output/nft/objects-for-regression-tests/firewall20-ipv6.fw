@@ -23,6 +23,8 @@
 # Rule 9 (global): Could not resolve any destination addresses
 # Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
 # Rule 9 (global): Could not resolve any destination addresses
+# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
+# Rule 9 (global): Could not resolve any destination addresses
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
@@ -304,6 +306,10 @@ table inet fwf_filter {
         #
         tcp dport { 22, 23 } ct state new counter accept
         #
+        # Rule 12 (global)
+        #
+        tcp dport { 22, 23 } ct state new counter accept
+        #
         # Rule 13 (global)
         #
         tcp dport { 22, 23 } ct state new counter log accept
@@ -313,6 +319,13 @@ table inet fwf_filter {
         # firewall is part of Any, so compiler should
         # generate code in both FORWARD and
         # OUTPUT chains
+        ct state new counter accept
+        #
+        # Rule 15 (global)
+        #
+        # firewall is part of Any, compiler should
+        # generate code for both FORWARD and
+        # INPUT chains
         ct state new counter accept
         #
         # Rule 18 (global)
@@ -334,6 +347,10 @@ table inet fwf_filter {
         ip6 daddr { 2001:470:1f05:590::1, fe80::1 } tcp dport 22 ct state new counter accept
         #
         # Rule 11 (global)
+        #
+        tcp dport { 22, 23 } ct state new counter accept
+        #
+        # Rule 12 (global)
         #
         tcp dport { 22, 23 } ct state new counter accept
         #

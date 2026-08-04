@@ -270,6 +270,12 @@ table ip fwf_filter {
         # ticket #1338: "assume fw is part of any" is off, ip forwarding is off
         # this rule generates no iptables commands
         iifname "eth0" ip saddr 192.168.1.1 counter drop
+        #
+        # Rule 1 (eth0)
+        #
+        # ticket #1338: local override of "Assume fw is part of any"
+        # only INPUT chain because ip forwarding is off
+        iifname "eth0" ip saddr 192.168.1.1 counter drop
     }
 
     chain output {

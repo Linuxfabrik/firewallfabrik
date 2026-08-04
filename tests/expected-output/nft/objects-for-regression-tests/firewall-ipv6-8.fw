@@ -288,6 +288,16 @@ table inet fwf_filter {
         # see #1523
         iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
+        # Rule Policy_v6 7 (eth0)
+        #
+        # see #1523
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        #
+        # Rule Policy_v6 8 (eth0)
+        #
+        # see #1523
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
+        #
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
@@ -334,6 +344,22 @@ table inet fwf_filter {
         oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 3 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:aaaa ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 7 (eth0)
+        #
+        # see #1523
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        #
+        # Rule Policy_v6 9 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 10 (eth0)
         #
         # see #1523
         oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:aaaa ip6 daddr ff00::/8 counter accept
@@ -389,6 +415,36 @@ table inet fwf_filter {
         oifname "eth0" ip6 daddr ff00::/8 counter accept
         #
         # Rule Policy_v6 5 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 6 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 7 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        #
+        # Rule Policy_v6 9 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 11 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 12 (eth0)
+        #
+        # see #1523
+        oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept
+        #
+        # Rule Policy_v6 13 (eth0)
         #
         # see #1523
         oifname "eth0" ip6 saddr fe80::21d:9ff:fe8b:8e94 ip6 daddr ff00::/8 counter accept

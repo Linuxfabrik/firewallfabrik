@@ -320,6 +320,10 @@ table inet fwf_filter {
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #
+        # Rule 17 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
         # Rule 18 (global)
         #
         # INPUT, OUTPUT, FORWARD
@@ -439,6 +443,14 @@ table inet fwf_filter {
         # Rule Policy_ipv6 11 (global)
         #
         meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 12 (global)
+        #
+        meta l4proto ipv6-icmp counter accept
+        #
+        # Rule Policy_ipv6 13 (global)
+        #
+        meta l4proto ipv6-icmp counter accept
     }
 
     chain forward {
@@ -455,6 +467,10 @@ table inet fwf_filter {
         meta l4proto icmp ct state new counter accept
         #
         # Rule 15 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 17 (global)
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #
@@ -530,6 +546,10 @@ table inet fwf_filter {
         meta l4proto icmp ct state new counter accept
         #
         # Rule 15 (global)
+        #
+        icmp type echo-request icmp code 0 ct state new counter accept
+        #
+        # Rule 17 (global)
         #
         icmp type echo-request icmp code 0 ct state new counter accept
         #

@@ -93,9 +93,18 @@ table ip fwf_filter {
         #
         counter drop
         #
+        # Rule 9 (global)
+        #
+        counter drop
+        #
         # Rule 10 (global)
         #
         # fw is part of any
+        ip saddr { 172.24.0.1, 192.168.1.1 } tcp dport 22 ct state new counter accept
+        #
+        # Rule 11 (global)
+        #
+        # fw is NOT part of any
         ip saddr { 172.24.0.1, 192.168.1.1 } tcp dport 22 ct state new counter accept
         #
         # Rule 12 (global)
@@ -173,6 +182,11 @@ table ip fwf_filter {
         iifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
         oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
         #
+        # Rule 18 (eth0)
+        #
+        # fw is NOT part of any
+        oifname "eth0" ip saddr { 172.24.0.2, 172.24.0.3 } tcp dport 22 ct state new counter accept
+        #
         # Rule 21 (global)
         #
         ct state new counter log prefix "RULE 21 -- DENY " level info drop
@@ -222,9 +236,18 @@ table ip fwf_filter {
         #
         ip daddr { 172.24.0.1, 192.168.1.1 } counter drop
         #
+        # Rule 9 (global)
+        #
+        ip daddr { 172.24.0.1, 192.168.1.1 } counter drop
+        #
         # Rule 10 (global)
         #
         # fw is part of any
+        tcp dport 22 ct state new counter accept
+        #
+        # Rule 11 (global)
+        #
+        # fw is NOT part of any
         tcp dport 22 ct state new counter accept
         #
         # Rule 12 (global)
@@ -232,7 +255,17 @@ table ip fwf_filter {
         # fw is NOT part of any
         ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept
         #
+        # Rule 13 (global)
+        #
+        # fw is NOT part of any
+        ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept
+        #
         # Rule 14 (eth0)
+        #
+        # fw is NOT part of any
+        oifname "eth0" ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept
+        #
+        # Rule 15 (eth0)
         #
         # fw is NOT part of any
         oifname "eth0" ip saddr 172.24.0.1 tcp dport 22 ct state new counter accept

@@ -236,6 +236,14 @@ table ip fwf_filter {
         #
         iifname "tun*" ct state new counter accept
         #
+        # Rule 1 (tun*)
+        #
+        iifname "tun*" ct state new counter accept
+        #
+        # Rule 3 (tun*)
+        #
+        iifname "tun*" ct state new counter accept
+        #
         # Rule 4 (tun*)
         #
         iifname "tun*" udp dport { 68, 67 } ct state new counter accept
@@ -271,6 +279,11 @@ table ip fwf_filter {
         #
         # Rule 2 (tun*)
         #
+        oifname "tun*" ct state new counter accept
+        #
+        # Rule 3 (tun*)
+        #
+        iifname "tun*" ct state new counter accept
         oifname "tun*" ct state new counter accept
         #
         # Rule 4 (tun*)
@@ -334,6 +347,10 @@ table ip fwf_filter {
         #
         oifname "tun*" ct state new counter accept
         #
+        # Rule 3 (tun*)
+        #
+        oifname "tun*" ct state new counter accept
+        #
         # Rule 10 (global)
         #
         ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
@@ -363,6 +380,10 @@ table ip fwf_filter {
         ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 18 (global)
+        #
+        ip daddr 192.168.1.1 ct state new counter accept
+        #
+        # Rule 19 (global)
         #
         ip daddr 192.168.1.1 ct state new counter accept
     }

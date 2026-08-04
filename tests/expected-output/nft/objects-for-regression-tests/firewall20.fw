@@ -27,6 +27,8 @@
 # Rule 9 (global): Could not resolve any destination addresses
 # Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
 # Rule 9 (global): Could not resolve any destination addresses
+# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
+# Rule 9 (global): Could not resolve any destination addresses
 
 FWBDEBUG=""
 

@@ -237,6 +237,10 @@ table ip fwf_filter {
         #
         iifname "eth*" ct state new counter accept
         #
+        # Rule 1 (eth*)
+        #
+        iifname "eth*" ct state new counter accept
+        #
         # Rule 13 (global)
         #
         # this rule should generate commands

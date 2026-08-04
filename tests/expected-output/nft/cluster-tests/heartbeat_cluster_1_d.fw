@@ -24,6 +24,8 @@
 # Rule 5 (global): Could not resolve any source addresses
 # Rule 6 (global): Interface "eth0" has no addresses
 # Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Interface "eth0" has no addresses
+# Rule 6 (global): Could not resolve any source addresses
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
@@ -130,6 +132,16 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         # fw is part of any
+        ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
+        #
+        # Rule 9 (global)
+        #
+        # fw is not part of any
+        ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
+        #
+        # Rule 10 (global)
+        #
+        # fw is not part of any
         ip saddr 192.168.1.254 ip daddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
         # Rule 12 (global)

@@ -31,11 +31,17 @@
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 4 (global): Could not resolve any source addresses
+# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 4 (global): Could not resolve any source addresses
 # Rule 5 (global): Branch action not yet supported by nftables compiler
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Cannot resolve address for object type AddressTable
@@ -44,6 +50,8 @@
 # Rule 8 (global): Cannot resolve address for object type AddressTable
 # Rule 8 (global): Cannot resolve address for object type AddressTable
 # Rule 8 (global): Cannot resolve address for object type AddressTable
+# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 9 (global): Could not resolve any source addresses
 # Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 9 (global): Could not resolve any source addresses
 

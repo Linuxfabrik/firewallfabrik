@@ -256,6 +256,10 @@ table ip fwf_filter {
         #
         iifname "br0" tcp dport 22 ct state new counter accept
         #
+        # Rule 8 (br0)
+        #
+        iifname "br0" tcp dport 22 ct state new counter accept
+        #
         # Rule 10 (br0)
         #
         iifname "br0" counter log level debug drop
@@ -299,6 +303,11 @@ table ip fwf_filter {
         #
         # Rule 2 (eth0)
         #
+        oifname "eth0" ip daddr 255.255.255.255 ct state new counter accept
+        #
+        # Rule 3 (eth0)
+        #
+        iifname "eth0" ip daddr 255.255.255.255 ct state new counter accept
         oifname "eth0" ip daddr 255.255.255.255 ct state new counter accept
         #
         # Rule 4 (eth0)
@@ -351,6 +360,10 @@ table ip fwf_filter {
         ip daddr 192.168.1.10 counter log level debug drop
         #
         # Rule 23 (global)
+        #
+        counter log level debug drop
+        #
+        # Rule 24 (global)
         #
         counter log level debug drop
     }

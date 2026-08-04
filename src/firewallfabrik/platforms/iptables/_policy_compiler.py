@@ -3747,7 +3747,14 @@ class PrepareForMultiport(PolicyRuleProcessor):
 
 
 class Optimize3(PolicyRuleProcessor):
-    """Remove duplicate rules that produce identical iptables commands."""
+    """Remove duplicate commands generated for the *same* high level rule.
+
+    Two different rules of the rule set may well compile to the same
+    iptables command and still both be needed, because the chains they set
+    up around that command differ.  The rule label is therefore part of the
+    dedup key, exactly as in C++ ``PolicyCompiler_ipt::optimize3``.  A
+    fallback or hidden rule is never a duplicate of anything.
+    """
 
     def __init__(self, name: str = '') -> None:
         super().__init__(name)
@@ -3759,11 +3766,11 @@ class Optimize3(PolicyRuleProcessor):
             return False
 
         pr = getattr(self.compiler, 'print_rule_processor', None)
-        if pr is None:
+        if pr is None or rule.fallback or rule.hidden:
             self.tmp_queue.append(rule)
             return True
 
-        rule_str = pr.policy_rule_to_string(rule)
+        rule_str = f'{rule.label} {pr.policy_rule_to_string(rule)}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

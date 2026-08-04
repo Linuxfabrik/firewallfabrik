@@ -239,6 +239,11 @@ table ip fwf_filter {
         #
         # -i br0
         iifname "vnet+" ct state new counter accept
+        #
+        # Rule 1 (vnet+)
+        #
+        # -i br1
+        iifname "vnet+" ct state new counter accept
     }
 
     chain forward {
@@ -254,6 +259,11 @@ table ip fwf_filter {
         # Rule 2 (vnet+)
         #
         # -o br0
+        oifname "vnet+" ct state new counter accept
+        #
+        # Rule 3 (vnet+)
+        #
+        # -o br1
         oifname "vnet+" ct state new counter accept
     }
 }

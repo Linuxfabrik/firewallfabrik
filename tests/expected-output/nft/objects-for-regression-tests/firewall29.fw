@@ -26,8 +26,14 @@
 # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 1 (global): Could not resolve any source addresses
+# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
+# Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 1 (global): Could not resolve any source addresses
+# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
+# Rule 2 (global): Could not resolve any destination addresses
+# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
+# Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
 # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.200)
@@ -272,6 +278,11 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         # should be --connlimit-above 10
+        tcp dport 22 ct state new counter accept
+        #
+        # Rule 4 (global)
+        #
+        # should be ! --connlimit-above 10
         tcp dport 22 ct state new counter accept
         #
         # Rule 5 (global)

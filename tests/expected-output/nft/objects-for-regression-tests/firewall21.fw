@@ -30,8 +30,14 @@
 # Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
 # Rule 1 (global): Could not resolve any source addresses
+# Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 1 (global): Could not resolve any source addresses
 # Rule 1 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth1)
 # Rule 1 (global): Could not resolve any source addresses
+# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 2 (global): Could not resolve any destination addresses
+# Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
+# Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)
 # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0)

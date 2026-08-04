@@ -296,9 +296,11 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 11 (global)
         #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
         # Rule 12 (global)
@@ -342,9 +344,11 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 11 (global)
         #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
         # Rule 12 (global)
@@ -424,9 +428,11 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 11 (global)
         #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
         #
         # Rule 12 (global)

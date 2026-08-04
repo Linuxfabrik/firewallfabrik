@@ -410,6 +410,13 @@ table inet fwf_filter {
         # Internet
         tcp dport 25 ct state new counter accept
         #
+        # Rule 7 (global)
+        #
+        # this rule permits a mail relay
+        # located on DMZ to connect
+        # to internal mail server
+        tcp dport 25 ct state new counter accept
+        #
         # Rule 11 (global)
         #
         counter log prefix "RULE 11 -- DENY " level info drop

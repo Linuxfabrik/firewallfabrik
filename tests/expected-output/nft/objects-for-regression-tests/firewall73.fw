@@ -241,7 +241,15 @@ table ip fwf_filter {
         #
         iifname "eth0" counter drop
         #
+        # Rule 1 (eth0)
+        #
+        iifname "eth0" counter drop
+        #
         # Rule 3 (lo)
+        #
+        iif "lo" counter drop
+        #
+        # Rule 4 (lo)
         #
         iif "lo" counter drop
         #
@@ -249,11 +257,39 @@ table ip fwf_filter {
         #
         counter drop
         #
+        # Rule 7 (global)
+        #
+        counter drop
+        #
+        # Rule 9 (eth0)
+        #
+        iifname "eth0" counter drop
+        #
+        # Rule 10 (eth0)
+        #
+        iifname "eth0" counter drop
+        #
+        # Rule 12 (global)
+        #
+        counter drop
+        #
+        # Rule 13 (global)
+        #
+        counter drop
+        #
         # Rule 15 (eth0)
         #
         iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
+        # Rule 16 (eth0)
+        #
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
         # Rule 18 (global)
+        #
+        ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
+        # Rule 19 (global)
         #
         ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
     }
@@ -267,7 +303,23 @@ table ip fwf_filter {
         iifname "eth0" counter drop
         oifname "eth0" counter drop
         #
+        # Rule 1 (eth0)
+        #
+        iifname "eth0" counter drop
+        #
+        # Rule 2 (eth0)
+        #
+        oifname "eth0" counter drop
+        #
         # Rule 6 (global)
+        #
+        counter drop
+        #
+        # Rule 7 (global)
+        #
+        counter drop
+        #
+        # Rule 8 (global)
         #
         counter drop
         #
@@ -276,6 +328,10 @@ table ip fwf_filter {
         ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 15 (eth0)
+        #
+        iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
+        # Rule 16 (eth0)
         #
         iifname "eth0" ip saddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
@@ -292,7 +348,15 @@ table ip fwf_filter {
         #
         oifname "eth0" counter drop
         #
+        # Rule 2 (eth0)
+        #
+        oifname "eth0" counter drop
+        #
         # Rule 3 (lo)
+        #
+        oif "lo" counter drop
+        #
+        # Rule 5 (lo)
         #
         oif "lo" counter drop
         #
@@ -300,13 +364,41 @@ table ip fwf_filter {
         #
         counter drop
         #
+        # Rule 8 (global)
+        #
+        counter drop
+        #
         # Rule 9 (eth0)
+        #
+        oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
+        # Rule 11 (eth0)
         #
         oifname "eth0" ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
         #
         # Rule 12 (global)
         #
         ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
+        # Rule 14 (global)
+        #
+        ip daddr { 33.33.33.33, 172.16.1.1 } counter drop
+        #
+        # Rule 15 (eth0)
+        #
+        oifname "eth0" counter drop
+        #
+        # Rule 17 (eth0)
+        #
+        oifname "eth0" counter drop
+        #
+        # Rule 18 (global)
+        #
+        counter drop
+        #
+        # Rule 20 (global)
+        #
+        counter drop
     }
 }
 

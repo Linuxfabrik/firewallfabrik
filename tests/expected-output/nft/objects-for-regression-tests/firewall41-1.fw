@@ -26,6 +26,12 @@
 # Rule 1 (global): Could not resolve any destination addresses
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
+# Rule 1 (global): Cannot resolve address for object type AddressTable
+# Rule 1 (global): Could not resolve any destination addresses
+# Rule 2 (global): Cannot resolve address for object type AddressTable
+# Rule 2 (global): Could not resolve any destination addresses
+# Rule 2 (global): Cannot resolve address for object type AddressTable
+# Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Cannot resolve address for object type AddressTable
 # Rule 2 (global): Could not resolve any destination addresses
 # Rule 2 (global): Cannot resolve address for object type AddressTable
@@ -33,12 +39,25 @@
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Cannot resolve address for object type AddressTable
 # Rule 3 (global): Could not resolve any destination addresses
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Cannot resolve address for object type AddressTable
+# Rule 3 (global): Could not resolve any destination addresses
+# Rule 4 (global): Cannot resolve address for object type AddressTable
+# Rule 4 (global): Could not resolve any source addresses
 # Rule 4 (global): Cannot resolve address for object type AddressTable
 # Rule 4 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
 # Rule 5 (global): Cannot resolve address for object type AddressTable
 # Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 5 (global): Cannot resolve address for object type AddressTable
+# Rule 5 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
+# Rule 6 (global): Cannot resolve address for object type AddressTable
+# Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Cannot resolve address for object type AddressTable
@@ -46,6 +65,11 @@
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Cannot resolve address for object type AddressTable
 # Rule 7 (global): Could not resolve any source addresses
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Cannot resolve address for object type AddressTable
+# Rule 7 (global): Could not resolve any source addresses
+# Rule 8 (global): Cannot resolve address for object type AddressTable
+# Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Cannot resolve address for object type AddressTable
 # Rule 8 (global): Could not resolve any destination addresses
 # Rule 8 (global): Cannot resolve address for object type AddressTable

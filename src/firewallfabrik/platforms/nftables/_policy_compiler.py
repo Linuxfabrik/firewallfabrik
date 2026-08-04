@@ -1917,11 +1917,14 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
 
 
 class Optimize3(PolicyRuleProcessor):
-    """Remove duplicate rules that produce identical nftables commands.
+    """Remove duplicate commands generated for the *same* high level rule.
 
-    Unlike iptables (where the chain name is part of the command string),
-    nftables rules don't include the chain. We include the chain in the
-    dedup key so identical rules in different chains are kept.
+    Two different rules of the rule set may well compile to the same
+    nftables rule and still both be needed, so the rule label is part of
+    the dedup key (C++ ``PolicyCompiler_ipt::optimize3`` does the same).
+    Unlike iptables, an nftables rule does not name its chain, so the chain
+    goes into the key as well.  A fallback or hidden rule is never a
+    duplicate of anything.
     """
 
     def __init__(self, name: str = '') -> None:
@@ -1934,12 +1937,12 @@ class Optimize3(PolicyRuleProcessor):
             return False
 
         pr = getattr(self.compiler, 'print_rule_processor', None)
-        if pr is None:
+        if pr is None or rule.fallback or rule.hidden:
             self.tmp_queue.append(rule)
             return True
 
         chain = rule.ipt_chain or ''
-        rule_str = f'{chain}:{pr.policy_rule_to_string(rule)}'
+        rule_str = f'{rule.label} {chain}:{pr.policy_rule_to_string(rule)}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

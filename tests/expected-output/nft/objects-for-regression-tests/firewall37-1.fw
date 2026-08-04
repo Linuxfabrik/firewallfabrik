@@ -251,6 +251,12 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 1 (global)
+        #
+        # terminating target
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 2 (global)
         #
         # terminating target
@@ -264,6 +270,14 @@ table ip fwf_mangle {
         iifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
         #
         # Rule 5 (global)
+        #
+        # terminating and CONNMARK
+        meta l4proto 50 ct state new counter meta mark set 10
+        meta l4proto 51 ct state new counter meta mark set 10
+        meta l4proto 50 ct state new counter ct mark set mark
+        meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 6 (global)
         #
         # terminating and CONNMARK
         meta l4proto 50 ct state new counter meta mark set 10
@@ -298,6 +312,12 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 1 (global)
+        #
+        # terminating target
+        meta l4proto 50 ct state new counter meta mark set 16
+        meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 4 (eth1)
         #
         # temrinating target
@@ -305,6 +325,14 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 51 ct state new counter meta mark set 16
         #
         # Rule 5 (global)
+        #
+        # terminating and CONNMARK
+        meta l4proto 50 ct state new counter meta mark set 10
+        meta l4proto 51 ct state new counter meta mark set 10
+        meta l4proto 50 ct state new counter ct mark set mark
+        meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 6 (global)
         #
         # terminating and CONNMARK
         meta l4proto 50 ct state new counter meta mark set 10
@@ -363,6 +391,7 @@ table ip fwf_mangle {
         # Rule 14 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter meta priority set 1:10
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter meta priority set 1:10
         #
         # Rule 15 (eth0)
@@ -374,9 +403,42 @@ table ip fwf_mangle {
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter meta priority set 1:11
         oifname "eth0" udp dport { 53, 161 } counter meta priority set 1:11
         #
+        # Rule 16 (global)
+        #
+        # testing for bug #1618381
+        # this rule, and the next one, should place
+        # CLASSIFY rule in a separate chain
+        # and pass control to it using -g
+        icmp type destination-unreachable counter meta priority set 1:10
+        #
+        # Rule 17 (eth0)
+        #
+        # second rule for bug #1618381
+        oifname "eth0" counter meta priority set 1:11
+        #
         # Rule 18 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter meta priority set 1:11
+        #
+        # Rule 19 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter meta priority set 1:10
+        #
+        # Rule 20 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter meta priority set 1:10
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter meta priority set 1:10
+        #
+        # Rule 21 (eth0)
+        #
+        # bug #1618381
+        # this rule uses multiport
+        # and has to be split because
+        # of that
+        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter meta priority set 1:11
+        oifname "eth0" udp dport { 53, 161 } counter meta priority set 1:11
     }
 }
 
@@ -417,6 +479,12 @@ table ip fwf_filter {
         iifname "eth1" meta l4proto 50 ct state new counter accept
         iifname "eth1" meta l4proto 51 ct state new counter accept
         #
+        # Rule 5 (global)
+        #
+        # terminating and CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
@@ -428,6 +496,12 @@ table ip fwf_filter {
         # terminating and  CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        #
+        # Rule 8 (eth1)
+        #
+        # terminating and CONNMARK
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 11 (global)
         #
@@ -450,9 +524,43 @@ table ip fwf_filter {
         # Rule 14 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
+        #
+        # bug #1618381
+        # this rule uses multiport
+        # and has to be split because
+        # of that
+        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        iifname "eth0" udp dport { 53, 161 } counter accept
+        #
+        # Rule 16 (global)
+        #
+        # testing for bug #1618381
+        # this rule, and the next one, should place
+        # CLASSIFY rule in a separate chain
+        # and pass control to it using -g
+        icmp type destination-unreachable counter accept
+        #
+        # Rule 17 (eth0)
+        #
+        # second rule for bug #1618381
+        iifname "eth0" counter accept
+        #
+        # Rule 19 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        #
+        # Rule 20 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
+        #
+        # Rule 21 (eth0)
         #
         # bug #1618381
         # this rule uses multiport
@@ -521,6 +629,12 @@ table ip fwf_filter {
         oifname "eth1" meta l4proto 50 ct state new counter accept
         oifname "eth1" meta l4proto 51 ct state new counter accept
         #
+        # Rule 5 (global)
+        #
+        # terminating and CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
@@ -532,6 +646,18 @@ table ip fwf_filter {
         # terminating and  CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        #
+        # Rule 8 (eth1)
+        #
+        # terminating and CONNMARK
+        iifname "eth1" meta l4proto 50 ct state new counter accept
+        iifname "eth1" meta l4proto 51 ct state new counter accept
+        #
+        # Rule 9 (eth1)
+        #
+        # terminating and CONNMARK
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 10 (global)
         #
@@ -559,6 +685,7 @@ table ip fwf_filter {
         # Rule 14 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
@@ -572,9 +699,45 @@ table ip fwf_filter {
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
         oifname "eth0" udp dport { 53, 161 } counter accept
         #
+        # Rule 16 (global)
+        #
+        # testing for bug #1618381
+        # this rule, and the next one, should place
+        # CLASSIFY rule in a separate chain
+        # and pass control to it using -g
+        icmp type destination-unreachable counter accept
+        #
+        # Rule 17 (eth0)
+        #
+        # second rule for bug #1618381
+        iifname "eth0" counter accept
+        oifname "eth0" counter accept
+        #
         # Rule 18 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter log prefix "RULE 18 -- ACCEPT " level info accept
+        #
+        # Rule 19 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        #
+        # Rule 20 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
+        #
+        # Rule 21 (eth0)
+        #
+        # bug #1618381
+        # this rule uses multiport
+        # and has to be split because
+        # of that
+        iifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        iifname "eth0" udp dport { 53, 161 } counter accept
+        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 22 (global)
         #
@@ -630,6 +793,12 @@ table ip fwf_filter {
         oifname "eth1" meta l4proto 50 ct state new counter accept
         oifname "eth1" meta l4proto 51 ct state new counter accept
         #
+        # Rule 5 (global)
+        #
+        # terminating and CONNMARK
+        meta l4proto 50 ct state new counter accept
+        meta l4proto 51 ct state new counter accept
+        #
         # Rule 6 (global)
         #
         # terminating and CONNMARK
@@ -641,6 +810,12 @@ table ip fwf_filter {
         # terminating and  CONNMARK
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        #
+        # Rule 9 (eth1)
+        #
+        # terminating and CONNMARK
+        oifname "eth1" meta l4proto 50 ct state new counter accept
+        oifname "eth1" meta l4proto 51 ct state new counter accept
         #
         # Rule 10 (global)
         #
@@ -667,6 +842,7 @@ table ip fwf_filter {
         # Rule 14 (global)
         #
         # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
         #
         # Rule 15 (eth0)
@@ -678,9 +854,42 @@ table ip fwf_filter {
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
         oifname "eth0" udp dport { 53, 161 } counter accept
         #
+        # Rule 16 (global)
+        #
+        # testing for bug #1618381
+        # this rule, and the next one, should place
+        # CLASSIFY rule in a separate chain
+        # and pass control to it using -g
+        icmp type destination-unreachable counter accept
+        #
+        # Rule 17 (eth0)
+        #
+        # second rule for bug #1618381
+        oifname "eth0" counter accept
+        #
         # Rule 18 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter log prefix "RULE 18 -- ACCEPT " level info accept
+        #
+        # Rule 19 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        #
+        # Rule 20 (global)
+        #
+        # testing for bug #1618381
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter accept
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter accept
+        #
+        # Rule 21 (eth0)
+        #
+        # bug #1618381
+        # this rule uses multiport
+        # and has to be split because
+        # of that
+        oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter accept
+        oifname "eth0" udp dport { 53, 161 } counter accept
         #
         # Rule 22 (global)
         #

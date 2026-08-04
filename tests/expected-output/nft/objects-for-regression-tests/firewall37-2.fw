@@ -19,15 +19,23 @@
 # Rule 17 (global): Branch action not yet supported by nftables compiler
 # Rule 0 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 1 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 2 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 3 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 4 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 5 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 6 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 7 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 8 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 9 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 10 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 11 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 12 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 12 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 13 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 13 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 14 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 14 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
+# Rule 15 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 15 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 
 FWBDEBUG=""
@@ -261,6 +269,14 @@ table ip fwf_mangle {
         #
         iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter meta mark set 2
         #
+        # Rule 2 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 ct state new counter meta mark set 2
+        #
+        # Rule 3 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 counter meta mark set 2
+        #
         # Rule 4 (eth0)
         #
         iifname "eth0" ip saddr != 192.168.1.0/24 counter meta mark set 2
@@ -269,6 +285,14 @@ table ip fwf_mangle {
         #
         iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter meta mark set 2
         #
+        # Rule 6 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 ct state new counter meta mark set 2
+        #
+        # Rule 7 (eth0)
+        #
+        iifname "eth0" ip saddr != 192.168.1.0/24 counter meta mark set 2
+        #
         # Rule 8 (eth0)
         #
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta mark set 2
@@ -276,6 +300,14 @@ table ip fwf_mangle {
         # Rule 9 (eth0)
         #
         iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter meta mark set 2
+        #
+        # Rule 10 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter meta mark set 2
+        #
+        # Rule 11 (eth0)
+        #
+        iifname "eth0" ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter meta mark set 2
         #
         # Rule 12 (eth0)
         #
@@ -286,6 +318,16 @@ table ip fwf_mangle {
         #
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter meta mark set 2
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter meta mark set 2
+        #
+        # Rule 14 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 ct state new counter meta mark set 2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter meta mark set 2
+        #
+        # Rule 15 (eth0)
+        #
+        iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter meta mark set 2
+        iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta mark set 2
     }
 
     chain postrouting {

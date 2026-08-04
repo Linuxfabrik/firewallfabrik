@@ -271,8 +271,23 @@ table ip fwf_filter {
         # it should be removed by optimization
         ip saddr 1.1.1.1 counter accept
         #
+        # Rule 8 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 counter accept
+        #
+        # Rule 10 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 counter accept
+        #
         # Rule 11 (global)
         #
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # testing negation in the policy rule
         ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
         #
         # Rule 15 (global)
@@ -339,6 +354,16 @@ table ip fwf_filter {
         # INPUT + FORWARD
         ip saddr 1.1.1.1 counter accept
         #
+        # Rule 9 (global)
+        #
+        # OUTPUT + FORWARD
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 10 (global)
+        #
+        # INPUT + FORWARD
+        ip saddr 1.1.1.1 counter accept
+        #
         # Rule 12 (global)
         #
         # testing negation in the policy rule
@@ -389,6 +414,16 @@ table ip fwf_filter {
         # Rule 5 (global)
         #
         # OUTPUT
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 7 (global)
+        #
+        # OUTPUT + FORWARD
+        ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 9 (global)
+        #
+        # OUTPUT + FORWARD
         ip daddr 1.1.1.1 counter accept
         #
         # Rule 13 (global)

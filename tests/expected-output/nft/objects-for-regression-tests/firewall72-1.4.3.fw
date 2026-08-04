@@ -258,6 +258,10 @@ table ip fwf_filter {
         #
         ip daddr 172.16.1.1 icmp type . icmp code != { destination-unreachable . 1 } counter drop
         #
+        # Rule 6 (global)
+        #
+        ip daddr 172.16.1.1 icmp type . icmp code != { destination-unreachable . 1 } counter drop
+        #
         # Rule 7 (global)
         #
         ip daddr 172.16.1.1 meta l4proto != 47 counter drop
@@ -301,6 +305,18 @@ table ip fwf_filter {
         #
         # Should use ! -i eth1 eventually
         oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        #
+        # Rule 13 (eth1)
+        #
+        # Should use ! -i eth1 eventually
+        iifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        #
+        # Rule 14 (eth1)
+        #
+        # Should use ! -i eth1 eventually
+        iifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
     }
 
     chain output {
@@ -320,6 +336,16 @@ table ip fwf_filter {
         ip daddr 172.16.1.1 meta mark != 16 counter drop
         #
         # Rule 12 (eth1)
+        #
+        # Should use ! -i eth1 eventually
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        #
+        # Rule 13 (eth1)
+        #
+        # Should use ! -i eth1 eventually
+        oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
+        #
+        # Rule 14 (eth1)
         #
         # Should use ! -i eth1 eventually
         oifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
