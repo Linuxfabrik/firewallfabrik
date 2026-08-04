@@ -237,8 +237,6 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -271,29 +269,6 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         counter log level err drop
-    }
-}
-
-table ip fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-        #
-        # Rule 1 (NAT)
-        #
-        ip daddr 192.168.2.1 counter dnat to 192.168.1.10
-        #
-        # Rule 2 (NAT)
-        #
-        ip saddr 192.168.1.0/24 counter dnat to 200.200.200.200
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
-        #
-        # Rule 0 (NAT)
-        #
-        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 200.200.200.200 counter snat to 192.168.2.1
     }
 }
 

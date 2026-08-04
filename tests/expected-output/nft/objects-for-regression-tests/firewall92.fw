@@ -245,8 +245,6 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
-table ip fwf_nat {}
-delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -267,28 +265,6 @@ table ip fwf_filter {
         #
         tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
         udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
-    }
-}
-
-table ip fwf_nat {
-    chain prerouting {
-        type nat hook prerouting priority dstnat;
-    }
-
-    chain output {
-        type nat hook output priority dstnat;
-        #
-        # Rule 0 (NAT)
-        #
-        meta l4proto udp counter redirect to :53
-        #
-        # Rule 1 (NAT)
-        #
-        meta l4proto tcp counter redirect to :9040
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
     }
 }
 

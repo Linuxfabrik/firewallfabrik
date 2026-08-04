@@ -149,6 +149,11 @@ class NATPrintRule_nft(NATRuleProcessor):
         osrv = nft_comp.get_first_osrv(rule)
         if osrv:
             srv_match = self._print_service(osrv, rule)
+            if srv_match is None:
+                # The service cannot be expressed and the reason was
+                # reported. Translating without it would take every protocol
+                # and port, not the one service the rule names.
+                return ''
             if srv_match:
                 parts.append(srv_match)
 
@@ -338,8 +343,14 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return addr
         return addresses[0]
 
-    def _print_service(self, srv, rule: CompRule) -> str:
-        """Print service matching for NAT rules."""
+    def _print_service(self, srv, rule: CompRule) -> str | None:
+        """Print service matching for NAT rules.
+
+        Returns ``None`` when the service says something nftables cannot
+        express, so the caller leaves the rule out.  A NAT rule without its
+        service match translates every protocol and port between the
+        addresses it names, not the one service it was written for.
+        """
         neg = '!= ' if rule.osrv_single_object_negation else ''
 
         if isinstance(srv, TCPService):
@@ -372,39 +383,49 @@ class NATPrintRule_nft(NATRuleProcessor):
                         'supported by nftables, which can only match the '
                         'lsrr, ssrr, rr and router-alert options',
                     )
+                    return None
             return ' '.join(ip_parts)
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
-            if code:
-                if neg:
-                    # The code fragment is opaque nftables text; there is no
-                    # way to invert it from here.
-                    self.compiler.error(
-                        rule,
-                        f'Negating the custom service "{srv.name}" is not '
-                        'supported by the nftables compiler; add a rule with '
-                        'the inverse match instead',
-                    )
-                return code
-            return ''
+            if not code:
+                # VerifyCustomServices already reported the missing code.
+                return None
+            if neg:
+                # The code fragment is opaque nftables text; there is no
+                # way to invert it from here, and emitting it unchanged
+                # would translate exactly what the rule excludes.
+                self.compiler.error(
+                    rule,
+                    f'Negating the custom service "{srv.name}" is not '
+                    'supported by the nftables compiler; add a rule with '
+                    'the inverse match instead',
+                )
+                return None
+            return code
         elif isinstance(srv, TagService):
             tag_code = srv.get_code()
-            if tag_code:
-                return print_mark_match(tag_code, bool(neg))
-            return ''
+            if not tag_code:
+                self.compiler.error(
+                    rule, f'Tag service "{srv.name}" carries no tag to match on'
+                )
+                return None
+            return print_mark_match(tag_code, bool(neg))
         elif isinstance(srv, UserService):
             uid = srv.userid or ''
-            if uid:
-                return f'meta skuid {neg}{uid}'
-            return ''
+            if not uid:
+                self.compiler.error(
+                    rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            return f'meta skuid {neg}{uid}'
         else:
             self.compiler.error(
                 rule,
                 f'Service type {type(srv).__name__} not yet'
                 f' supported by nftables compiler',
             )
-            return ''
+            return None
 
         parts = []
 

@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): rules that compile to the same command as an earlier rule are all kept. Whichever came second was silently dropped, so a firewall could be missing rules it shows in the GUI.
 * Compiler (iptables, nftables): rules that reject with a TCP reset and use a custom TCP service keep that reject type instead of being downgraded with a spurious warning.
 * Compiler (iptables, nftables): rules that tag packets set the tag. On iptables the activation script also stopped at such a rule.
+* Compiler (iptables, nftables): NAT rules whose service cannot be expressed are left out instead of translating every protocol and port between the addresses they name. A transparent-proxy redirect meant for one user redirected everyone's traffic.
 * Compiler (iptables, nftables): rules whose service cannot be expressed are left out instead of applying to every protocol and port. A rule for one service acted on all traffic, so a "reject this service" rule rejected everything from its source.
 * Compiler (iptables, nftables): rules whose source or destination cannot be resolved are left out instead of applying to every address, where an "accept from these hosts" rule accepted from everywhere.
 * Compiler (iptables, nftables): rules with a custom action run it instead of doing nothing. nftables cannot run one and reports the rule.

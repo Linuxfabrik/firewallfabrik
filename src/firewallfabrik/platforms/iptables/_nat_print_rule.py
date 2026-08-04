@@ -215,7 +215,16 @@ class NATPrintRule(NATRuleProcessor):
         # Dst service
         cmd += ' '
         if osrv:
-            cmd += self._print_dst_service(rule)
+            dst_service = self._print_dst_service(rule)
+            if dst_service is None:
+                # The reason was reported. Translating without the service
+                # match would take every protocol and port; keep only a
+                # RETURN rule, whose chain would otherwise let the action
+                # behind it translate everything.
+                if rule.ipt_target != 'RETURN':
+                    return ''
+                dst_service = ''
+            cmd += dst_service
 
         # Target
         target = rule.ipt_target
@@ -540,12 +549,16 @@ class NATPrintRule(NATRuleProcessor):
                 return f'--sports {",".join(port_strs)} '
         return ''
 
-    def _print_dst_service(self, rule: CompRule) -> str:
+    def _print_dst_service(self, rule: CompRule) -> str | None:
         """Print destination service matching for NAT rules.
 
         Handles CustomService, TagService and UserService in addition
         to the standard TCP/UDP/ICMP/IP types (matching fwbuilder's
         NATCompiler_PrintRule::_printDestinationPort).
+
+        Returns ``None`` when the service object carries nothing to match
+        on, so the caller can leave the rule out instead of translating
+        every protocol and port between the addresses it names.
         """
         if rule.is_osrv_any():
             return ''
@@ -556,21 +569,28 @@ class NATPrintRule(NATRuleProcessor):
         if isinstance(srv, CustomService):
             ipt_comp = cast('NATCompiler_ipt', self.compiler)
             code = (srv.codes or {}).get(ipt_comp.my_platform_name(), '')
-            if code:
-                return f'{code} '
-            return ''
+            if not code:
+                # VerifyCustomServices already reported the missing code.
+                return None
+            return f'{code} '
 
         if isinstance(srv, TagService):
             tag_code = srv.get_code()
-            if tag_code:
-                return f'-m mark --mark {tag_code} '
-            return ''
+            if not tag_code:
+                self.compiler.error(
+                    rule, f'Tag service "{srv.name}" carries no tag to match on'
+                )
+                return None
+            return f'-m mark --mark {tag_code} '
 
         if isinstance(srv, UserService):
             uid = srv.userid or ''
-            if uid:
-                return f'-m owner --uid-owner {uid} '
-            return ''
+            if not uid:
+                self.compiler.error(
+                    rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            return f'-m owner --uid-owner {uid} '
 
         if len(rule.osrv) == 1:
             if isinstance(srv, (TCPService, UDPService)):
