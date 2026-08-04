@@ -319,14 +319,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* Update pre-commit hooks to latest versions
 * Unify CONTRIBUTING with Linuxfabrik standards
+* Update pre-commit hooks to latest versions
 
 ### Fixed
 
+* `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
 * GUI failed to start on Wayland-only systems (e.g. GNOME without X11) because Qt defaulted to the xcb platform plugin ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
 * Improved Wayland detection to also cover systems where only wayland-egl or wayland-brcm platform plugins are available ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
-* `pyside6-rcc` not found when installed via `uv tool install` because the tool is inside the isolated virtual environment and not on the user's PATH ([#58](https://github.com/Linuxfabrik/firewallfabrik/issues/58)).
 * Pre-compiled Qt resource file (`.rcc`) was written to the wrong directory during package build, causing unnecessary runtime recompilation.
 * Sporadic SIGSEGV crash when opening a rule editor (action, comment, direction, metric, options) while another editor had unsaved changes ([#57](https://github.com/Linuxfabrik/firewallfabrik/issues/57)).
 
@@ -345,22 +345,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
+* `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
 * Application no longer crashes with a segmentation fault when pressing Ctrl+C in the terminal.
 * Coexistence mode: `status` command now correctly detects whether the firewall is active, even when other tools like Docker create additional chains.
 * Coexistence mode: `stop` command now properly removes all FirewallFabrik chains, including sub-chains with hash-based names (e.g. `fwf_C...`) that were previously left behind ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 * Coexistence mode: `stop` command now properly removes FirewallFabrik's chains and jump rules on all systems, including those using the iptables-nft backend.
 * Coexistence mode: `stop` command now restores chain policies to ACCEPT so that rules from other tools (Docker, CrowdSec, fail2ban) keep working after stopping the firewall.
-* Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 * Compiler error and warning messages now show the rule position number instead of the color label.
-* IPv6 address and network dialogs now accept prefix lengths 0-128 instead of 1-127 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
 * Compiler no longer rejects TCPService objects with a string `'False'` value for the `established` option.
+* Compiler now generates IPv6 rules (ip6tables / nftables inet) based on the rule set's address family setting ("IPv4 and IPv6") instead of requiring IPv6 addresses on the firewall's interfaces ([#42](https://github.com/Linuxfabrik/firewallfabrik/issues/42)).
 * Extra leading whitespace in generated iptables scripts from inline configlet `{{if}}` blocks removed.
 * Generated iptables scripts now abort on `script_body` failure instead of continuing with an incomplete ruleset.
 * Generated scripts use `command -v` instead of non-POSIX `which` for checking program availability.
 * Harmless Qt/Wayland text-input warnings suppressed during GUI startup.
+* IPv6 address and network dialogs now accept prefix lengths 0-128 instead of 1-127 ([#50](https://github.com/Linuxfabrik/firewallfabrik/issues/50)).
 * Main window border is now clearly visible on GNOME/Wayland.
-* `RETVAL` variable is now initialized at script start and set to `1` for invalid arguments.
-* `stop_action` in generated iptables scripts now keeps chain policies at DROP instead of setting ACCEPT, preventing the server from being completely open after stop.
 * Test infrastructure: expected output files are now also regenerated for firewalls with compiler warnings.
 
 
@@ -368,8 +368,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Advanced Interface Settings dialog to configure device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
 * `Alt+Return` keyboard shortcut opens the editor for the selected object (same as double-click).
+* Advanced Interface Settings dialog to configure device type (ethernet, VLAN, bridge, bonding), VLAN ID, STP and bonding parameters.
 * Appearance tab in Preferences — customize fonts for rules, tree and compiler output; toggle direction/action text, comment clipping and toolbar labels.
 * Bridge interface configuration support for iptables and nftables using iproute2 (`ip link`).
 * Bridge port interfaces are detected automatically from the parent interface type.
@@ -380,6 +380,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+* "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
 * About dialog: Linuxfabrik credit visually separated with homepage link (https://www.linuxfabrik.ch).
 * Application icon uses PNG at multiple sizes for Wayland compatibility; window icon set via .ui file.
 * Default label colors use the Solarized palette throughout; "Purple" renamed to "Cluster", "Gray" renamed to "Maintenance".
@@ -388,7 +389,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Policy rule table borders now match the fwbuilder look (native headers, subtle cell borders).
 * Removed XCB/XWayland fallback; fwf runs natively on Wayland.
 * Timestamps removed from generated shell scripts to ensure idempotent deployments.
-* "Unprotected interface" checkbox removed from the interface editor (not applicable to iptables/nftables).
 
 ### Fixed
 
@@ -523,8 +523,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Decouple GUI components with ClipboardStore, PolicyViewBridge, and focus registration.
 * Extract ClipboardRouter, EditorManager, and RuleSetWindowManager from FWWindow.
-* Extract TreeActionHandler from ObjectTree.
 * Extract context-menu builders from PolicyView into a dedicated module.
+* Extract TreeActionHandler from ObjectTree.
 * Modernize UI with comprehensive QSS stylesheet.
 * Object tree rewritten into 4 focused modules.
 * Replace tree clipboard global with instance attribute and add paste validation.
@@ -534,8 +534,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* CIDR notation parsing in IPv4/IPv6 editor dialogs and editor breadcrumb.
 * Center compile dialog on screen and persist its geometry.
+* CIDR notation parsing in IPv4/IPv6 editor dialogs and editor breadcrumb.
 * Firewalls needing recompilation shown in bold in the object tree.
 * Highlight only the clicked cell in rule view and protect default Any elements.
 * Input validation and widget constraints for all editor dialogs.
@@ -546,9 +546,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Address range end field auto-filled when start field loses focus.
 * Bool-coerced inactive flag from XML loader handled correctly.
+* Compile, Install and Save actions disabled when no file is loaded.
 * Compiler/installer remote paths and file names corrected.
 * Context menu actions deferred to prevent SIGSEGV on tree clear.
-* Compile, Install and Save actions disabled when no file is loaded.
 * Default Qt icon replaced with the FirewallFabrik app icon.
 * Deprecated Qt5 margin property removed from .ui files.
 * Host OS Settings options disabled for unsupported nftables features.
