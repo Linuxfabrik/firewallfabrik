@@ -31,19 +31,32 @@ _CPP_REFERENCE_FIXTURES = frozenset(
     }
 )
 
+# The marker has to sit on the parameter, not inside the test body: an
+# imperative pytest.xfail() ends the test where it stands, so the comparison
+# never runs and convergence can never show up as an XPASS.  Non-strict, so
+# a case that starts matching is reported instead of turning into a failure.
+_PARAMS = [
+    pytest.param(
+        fixture_name,
+        fw_name,
+        marks=pytest.mark.xfail(
+            reason='C++ reference expected output — Python compiler output not yet matching',
+            strict=False,
+        ),
+    )
+    if fixture_name in _CPP_REFERENCE_FIXTURES
+    else pytest.param(fixture_name, fw_name)
+    for fixture_name, fw_name in _CASES
+]
+
 
 @pytest.mark.parametrize(
     ('fixture_name', 'fw_name'),
-    _CASES,
+    _PARAMS,
     ids=[f'{f}/{n}' for f, n in _CASES],
 )
 def test_iptables_expected_output(fixture_name, fw_name, compile_ipt, tmp_path):
     """Compile fixture and compare normalized output to expected output."""
-    if fixture_name in _CPP_REFERENCE_FIXTURES:
-        pytest.xfail(
-            reason='C++ reference expected output — Python compiler output not yet matching',
-        )
-
     fixture_path = _find_fixture(fixture_name)
     expected_path = EXPECTED_OUTPUT_DIR / 'ipt' / fixture_name / f'{fw_name}.fw'
 
