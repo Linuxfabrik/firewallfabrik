@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+* CI: the test suite runs on every push and pull request, on every Python version the package claims to support. Until now nothing in CI executed a single test.
 * CI: the documentation toolchain lockfile is watched by Dependabot, so it receives updates like every other lockfile in the repository.
 * FirewallFabrik installs on Python 3.11 and newer, so current distributions no longer need a custom Python build for it.
 * The nftables firewall settings no longer show three options that only ever applied to iptables. A firewall switched back to iptables keeps its values.

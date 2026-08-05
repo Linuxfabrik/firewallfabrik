@@ -1,0 +1,4 @@
+# Test runner for the Linuxfabrik: Unit Tests workflow.
+# Keep the version inside the range declared for the 'dev' dependency group
+# in pyproject.toml.
+pytest>=9.0.2,<9.2.0

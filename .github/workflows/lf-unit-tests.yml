@@ -1,0 +1,74 @@
+name: 'Linuxfabrik: Unit Tests'
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request: {}
+
+permissions:
+  contents: 'read'
+
+jobs:
+  pytest:
+    name: 'pytest (Python ${{ matrix.python-version }})'
+    runs-on: 'ubuntu-latest'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every version the package claims to support in pyproject.toml
+        # (requires-python and the Programming Language classifiers).
+        python-version:
+          - '3.11'
+          - '3.12'
+          - '3.13'
+          - '3.14'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920' # v2.20.0
+        with:
+          egress-policy: 'audit'
+
+      - name: 'Checkout repository'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # v7.0.1
+
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97' # v7.0.0
+        with:
+          python-version: '${{ matrix.python-version }}'
+
+      - name: 'Install pytest'
+        run: 'pip install --require-hashes --requirement .github/pytest/requirements.txt'
+
+      # No test imports PySide6, but setup.py compiles the Qt resource file
+      # with pyside6-rcc, so the build environment pulls it in regardless.
+      # That is why this installs the package without the 'gui' extra and
+      # still takes a while on a cold runner.
+      - name: 'Install FirewallFabrik'
+        run: 'pip install --editable .'
+
+      - name: 'Run the test suite'
+        run: 'pytest'
+
+  # One stable check for the branch ruleset. Requiring the matrix jobs
+  # directly would mean editing the ruleset every time the matrix changes,
+  # and a required check that no longer exists blocks every pull request.
+  unit-tests:
+    name: 'Unit Tests'
+    needs:
+      - 'pytest'
+    # Runs even when the matrix failed, so the ruleset sees a red check
+    # instead of a skipped one, which GitHub would let pass.
+    if: 'always()'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'Harden the runner (Audit all outbound calls)'
+        uses: 'step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920' # v2.20.0
+        with:
+          egress-policy: 'audit'
+
+      - name: 'Fail unless every matrix job succeeded'
+        if: "needs.pytest.result != 'success'"
+        run: |
+          echo "pytest matrix result: ${{ needs.pytest.result }}"
+          exit 1
