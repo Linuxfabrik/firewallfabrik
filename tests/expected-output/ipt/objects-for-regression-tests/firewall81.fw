@@ -27,19 +27,19 @@ FWBDEBUG=""
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
-LSMOD="lsmod"
-MODPROBE="modprobe"
-IPTABLES="iptables"
-IP6TABLES="ip6tables"
-IPTABLES_RESTORE="iptables-restore"
-IP6TABLES_RESTORE="ip6tables-restore"
-IP="ip"
-IFCONFIG="ifconfig"
-VCONFIG="vconfig"
-BRCTL="brctl"
-IFENSLAVE="ifenslave"
-IPSET="ipset"
-LOGGER="logger"
+LSMOD="/sbin/lsmod"
+MODPROBE="/sbin/modprobe"
+IPTABLES="/sbin/iptables"
+IP6TABLES="/sbin/ip6tables"
+IPTABLES_RESTORE="/sbin/iptables-restore"
+IP6TABLES_RESTORE="/sbin/ip6tables-restore"
+IP="/sbin/ip"
+IFCONFIG="/sbin/ifconfig"
+VCONFIG="/sbin/vconfig"
+BRCTL="/sbin/brctl"
+IFENSLAVE="/sbin/ifenslave"
+IPSET="/usr/sbin/ipset"
+LOGGER="/usr/bin/logger"
 
 log() {
  echo "$1"
@@ -129,39 +129,33 @@ check_tools() {
  find_program $IP
 }
 reset_iptables_v4() {
- local list
-
  $IPTABLES -P OUTPUT DROP
  $IPTABLES -P INPUT DROP
  $IPTABLES -P FORWARD DROP
 
- while read table; do
- list=$($IPTABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip_tables_names | while read table; do
+ $IPTABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IPTABLES -t $table -F $chain
  fi
  done
  $IPTABLES -t $table -X
- done < /proc/net/ip_tables_names
+done
 }
 
 reset_iptables_v6() {
- local list
-
  $IP6TABLES -P OUTPUT DROP
  $IP6TABLES -P INPUT DROP
  $IP6TABLES -P FORWARD DROP
 
- while read table; do
- list=$($IP6TABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip6_tables_names | while read table; do
+ $IP6TABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IP6TABLES -t $table -F $chain
  fi
  done
  $IP6TABLES -t $table -X
- done < /proc/net/ip6_tables_names
+done
 }
 
 P2P_INTERFACE_WARNING=""
@@ -320,12 +314,9 @@ script_body() {
  # firewall81:NAT_2:0: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
  # firewall81:NAT_2:0: warning: Translated Src, Dst and Srv are ignored in the NAT rule with action 'Branch'
 
- $IPTABLES -t nat -N NAT_2_PREROUTING
- $IPTABLES -t nat -N NAT_1_PREROUTING
- $IPTABLES -t nat -A NAT_2_PREROUTING -d 192.0.2.1 -j NAT_1_PREROUTING
- $IPTABLES -t nat -N NAT_2_POSTROUTING
- $IPTABLES -t nat -N NAT_1_POSTROUTING
- $IPTABLES -t nat -A NAT_2_POSTROUTING -d 192.0.2.1 -j NAT_1_POSTROUTING
+ $IPTABLES -t nat -N NAT_1
+ $IPTABLES -t nat -A POSTROUTING -d 192.0.2.1 -j NAT_1
+ $IPTABLES -t nat -A PREROUTING -d 192.0.2.1 -j NAT_1
  #
  # Rule NAT_2 1 (NAT)
  #
@@ -334,8 +325,8 @@ script_body() {
  # DNAT Rule
  # firewall81:NAT_2:1: warning: NAT branching rule does not have information about targets used in the branch ruleset to choose proper chain in the nat table. Will split the rule and place it in both PREROUTNING and POSTROUTING
 
- $IPTABLES -t nat -A NAT_2_PREROUTING -j NAT_1_PREROUTING
- $IPTABLES -t nat -A NAT_2_POSTROUTING -j NAT_1_POSTROUTING
+ $IPTABLES -t nat -A POSTROUTING -j NAT_1
+ $IPTABLES -t nat -A PREROUTING -j NAT_1
 
  # ================ Table 'nat', rule set NAT_1
  #
@@ -344,6 +335,7 @@ script_body() {
  echo "Rule NAT_1 0 (NAT)"
  #
  # DNAT Rule
+ $IPTABLES -t nat -N NAT_1_PREROUTING
  $IPTABLES -t nat -A NAT_1_PREROUTING -d 192.0.2.1 -j DNAT --to-destination 192.168.1.10
  #
  # Rule NAT_1 1 (NAT)
@@ -351,6 +343,7 @@ script_body() {
  echo "Rule NAT_1 1 (NAT)"
  #
  # SNAT rule
+ $IPTABLES -t nat -N NAT_1_POSTROUTING
  $IPTABLES -t nat -A NAT_1_POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 192.0.2.1
 
  # ================ Table 'nat', rule set NAT_1
@@ -448,7 +441,6 @@ case "$cmd" in
 
  script_body
  ip_forward
-
  epilog_commands
  RETVAL=$?
  ;;

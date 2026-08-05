@@ -21,19 +21,19 @@ FWBDEBUG=""
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
-LSMOD="lsmod"
-MODPROBE="modprobe"
-IPTABLES="iptables"
-IP6TABLES="ip6tables"
-IPTABLES_RESTORE="iptables-restore"
-IP6TABLES_RESTORE="ip6tables-restore"
-IP="ip"
-IFCONFIG="ifconfig"
-VCONFIG="vconfig"
-BRCTL="brctl"
-IFENSLAVE="ifenslave"
-IPSET="ipset"
-LOGGER="logger"
+LSMOD="/sbin/lsmod"
+MODPROBE="/sbin/modprobe"
+IPTABLES="/sbin/iptables"
+IP6TABLES="/sbin/ip6tables"
+IPTABLES_RESTORE="/sbin/iptables-restore"
+IP6TABLES_RESTORE="/sbin/ip6tables-restore"
+IP="/sbin/ip"
+IFCONFIG="/sbin/ifconfig"
+VCONFIG="/sbin/vconfig"
+BRCTL="/sbin/brctl"
+IFENSLAVE="/sbin/ifenslave"
+IPSET="/usr/sbin/ipset"
+LOGGER="/usr/bin/logger"
 
 log() {
  echo "$1"
@@ -124,39 +124,33 @@ check_tools() {
  find_program $IP
 }
 reset_iptables_v4() {
- local list
-
  $IPTABLES -P OUTPUT DROP
  $IPTABLES -P INPUT DROP
  $IPTABLES -P FORWARD DROP
 
- while read table; do
- list=$($IPTABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip_tables_names | while read table; do
+ $IPTABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IPTABLES -t $table -F $chain
  fi
  done
  $IPTABLES -t $table -X
- done < /proc/net/ip_tables_names
+done
 }
 
 reset_iptables_v6() {
- local list
-
  $IP6TABLES -P OUTPUT DROP
  $IP6TABLES -P INPUT DROP
  $IP6TABLES -P FORWARD DROP
 
- while read table; do
- list=$($IP6TABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip6_tables_names | while read table; do
+ $IP6TABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IP6TABLES -t $table -F $chain
  fi
  done
  $IP6TABLES -t $table -X
- done < /proc/net/ip6_tables_names
+done
 }
 
 P2P_INTERFACE_WARNING=""
@@ -331,10 +325,10 @@ script_body() {
  echo "Rule 0 (global)"
  #
  $IPTABLES -N Policy
- $IPTABLES -A Policy -s 151.101.3.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.67.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.131.5 -m state --state NEW -j ACCEPT
- $IPTABLES -A Policy -s 151.101.195.5 -m state --state NEW -j ACCEPT
+ $IPTABLES -A Policy -s 157.166.226.25 -m state --state NEW -j ACCEPT
+ $IPTABLES -A Policy -s 157.166.226.26 -m state --state NEW -j ACCEPT
+ $IPTABLES -A Policy -s 157.166.255.18 -m state --state NEW -j ACCEPT
+ $IPTABLES -A Policy -s 157.166.255.19 -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
@@ -346,7 +340,9 @@ script_body() {
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -A Policy -s 172.30.15.254 -m state --state NEW -j ACCEPT
+ # firewall33-1:Policy:2: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+
+ $IPTABLES -A Policy -s 192.0.2.1 -m state --state NEW -j ACCEPT
  #
  # Rule 3 (global)
  #
@@ -360,10 +356,10 @@ script_body() {
  #
  $IPTABLES -N Cid4386E38318346.0
  $IPTABLES -A Policy -j Cid4386E38318346.0
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid4386E38318346.0 -d 151.101.195.5 -j RETURN
+ $IPTABLES -A Cid4386E38318346.0 -d 157.166.226.25 -j RETURN
+ $IPTABLES -A Cid4386E38318346.0 -d 157.166.226.26 -j RETURN
+ $IPTABLES -A Cid4386E38318346.0 -d 157.166.255.18 -j RETURN
+ $IPTABLES -A Cid4386E38318346.0 -d 157.166.255.19 -j RETURN
  $IPTABLES -A Cid4386E38318346.0 -j DROP
  #
  # Rule 5 (global)
@@ -379,9 +375,11 @@ script_body() {
  #
  echo "Rule 6 (global)"
  #
+ # firewall33-1:Policy:6: error: DNSName object "buildmaster (ct)" (compile time) can not resolve dns name "buildmaster" (AF_INET): Host or network 'buildmaster' not found; last error: Unknown error Using dummy address in test mode
+
  $IPTABLES -N Cid43867C3018346.0
  $IPTABLES -A Policy -m state --state NEW -j Cid43867C3018346.0
- $IPTABLES -A Cid43867C3018346.0 -d 172.30.15.254 -j RETURN
+ $IPTABLES -A Cid43867C3018346.0 -d 192.0.2.1 -j RETURN
  $IPTABLES -A Cid43867C3018346.0 -j ACCEPT
  #
  # Rule 7 (global)
@@ -399,16 +397,15 @@ script_body() {
  #
  $IPTABLES -N Cid438728A918346.0
  $IPTABLES -A Policy -m state --state NEW -j Cid438728A918346.0
- $IPTABLES -A Cid438728A918346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 151.101.195.5 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.99 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.103 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.104 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.105 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.106 -j RETURN
- $IPTABLES -A Cid438728A918346.0 -d 172.217.208.147 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 74.125.224.112 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 74.125.224.113 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 74.125.224.114 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 74.125.224.115 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 74.125.224.116 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 157.166.226.25 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 157.166.226.26 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 157.166.255.18 -j RETURN
+ $IPTABLES -A Cid438728A918346.0 -d 157.166.255.19 -j RETURN
  $IPTABLES -A Cid438728A918346.0 -j ACCEPT
  #
  # Rule 9 (global)
@@ -428,10 +425,10 @@ script_body() {
  $IPTABLES -N Cid438728CD18346.0
  $IPTABLES -A Policy -m state --state NEW -j Cid438728CD18346.0
  $IPTABLES -A Cid438728CD18346.0 -d www.google.com -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.3.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.67.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.131.5 -j RETURN
- $IPTABLES -A Cid438728CD18346.0 -d 151.101.195.5 -j RETURN
+ $IPTABLES -A Cid438728CD18346.0 -d 157.166.226.25 -j RETURN
+ $IPTABLES -A Cid438728CD18346.0 -d 157.166.226.26 -j RETURN
+ $IPTABLES -A Cid438728CD18346.0 -d 157.166.255.18 -j RETURN
+ $IPTABLES -A Cid438728CD18346.0 -d 157.166.255.19 -j RETURN
  $IPTABLES -A Cid438728CD18346.0 -j ACCEPT
  #
  # Rule 11 (global)
@@ -447,7 +444,7 @@ script_body() {
  #
  echo "Rule 12 (global)"
  #
- $IPTABLES -A Policy -d 157.112.176.24 -m state --state NEW -j ACCEPT
+ $IPTABLES -A Policy -d 72.55.148.116 -m state --state NEW -j ACCEPT
  $IPTABLES -A Policy -d 207.251.84.150 -m state --state NEW -j ACCEPT
  #
  # Rule 13 (global)
@@ -537,7 +534,6 @@ case "$cmd" in
 
  script_body
  ip_forward
-
  epilog_commands
  RETVAL=$?
  ;;

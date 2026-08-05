@@ -17,19 +17,19 @@ FWBDEBUG=""
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
-LSMOD="lsmod"
-MODPROBE="modprobe"
-IPTABLES="iptables"
-IP6TABLES="ip6tables"
-IPTABLES_RESTORE="iptables-restore"
-IP6TABLES_RESTORE="ip6tables-restore"
-IP="ip"
-IFCONFIG="ifconfig"
-VCONFIG="vconfig"
-BRCTL="brctl"
-IFENSLAVE="ifenslave"
-IPSET="ipset"
-LOGGER="logger"
+LSMOD="/sbin/lsmod"
+MODPROBE="/sbin/modprobe"
+IPTABLES="/sbin/iptables"
+IP6TABLES="/sbin/ip6tables"
+IPTABLES_RESTORE="/sbin/iptables-restore"
+IP6TABLES_RESTORE="/sbin/ip6tables-restore"
+IP="/sbin/ip"
+IFCONFIG="/sbin/ifconfig"
+VCONFIG="/sbin/vconfig"
+BRCTL="/sbin/brctl"
+IFENSLAVE="/sbin/ifenslave"
+IPSET="/usr/sbin/ipset"
+LOGGER="/usr/bin/logger"
 
 log() {
  echo "$1"
@@ -120,39 +120,33 @@ check_tools() {
  find_program $IP
 }
 reset_iptables_v4() {
- local list
-
  $IPTABLES -P OUTPUT DROP
  $IPTABLES -P INPUT DROP
  $IPTABLES -P FORWARD DROP
 
- while read table; do
- list=$($IPTABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip_tables_names | while read table; do
+ $IPTABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IPTABLES -t $table -F $chain
  fi
  done
  $IPTABLES -t $table -X
- done < /proc/net/ip_tables_names
+done
 }
 
 reset_iptables_v6() {
- local list
-
  $IP6TABLES -P OUTPUT DROP
  $IP6TABLES -P INPUT DROP
  $IP6TABLES -P FORWARD DROP
 
- while read table; do
- list=$($IP6TABLES -t $table -L -n)
- printf "%s" "$list" | while read c chain rest; do
+cat /proc/net/ip6_tables_names | while read table; do
+ $IP6TABLES -t $table -L -n | while read c chain rest; do
  if test "X$c" = "XChain" ; then
  $IP6TABLES -t $table -F $chain
  fi
  done
  $IP6TABLES -t $table -X
- done < /proc/net/ip6_tables_names
+done
 }
 
 P2P_INTERFACE_WARNING=""
@@ -408,7 +402,6 @@ case "$cmd" in
 
  script_body
  ip_forward
-
  epilog_commands
  RETVAL=$?
  ;;
