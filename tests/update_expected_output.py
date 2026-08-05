@@ -55,6 +55,23 @@ PLATFORMS = {
 }
 
 
+def is_cpp_reference(fixture_path: Path, platform: str, private: bool) -> bool:
+    """Is this expected output the C++ compiler's, rather than ours?
+
+    The iptables expected output of the ``.fwb`` fixtures was produced by
+    the C++ ``fwb_ipt`` compiler and is the compatibility target the Python
+    compiler is measured against.  Overwriting it with our own output
+    replaces the yardstick with the thing being measured, which is how it
+    was lost once already.  Private fixtures have no C++ reference, so they
+    are ours to regenerate.
+
+    To re-import the reference, copy the ``.fw.orig`` files from the
+    fwbuilder tree into place and run ``--normalize-only`` instead; see
+    docs/developer-guide/Testing.md.
+    """
+    return not private and platform == 'ipt' and fixture_path.suffix == '.fwb'
+
+
 def normalize_existing(
     platform: str,
     fixture: str | None = None,
@@ -238,8 +255,17 @@ def main():
             return 1
 
     total_updated = 0
+    skipped_reference = 0
     for fwf_path in fixtures:
         for platform in platforms:
+            if is_cpp_reference(fwf_path, platform, args.private):
+                skipped_reference += 1
+                print(
+                    f'{fwf_path.stem} ({platform}): SKIPPED, this is the C++ '
+                    'reference output. Re-import it from the fwbuilder tree '
+                    'and run --normalize-only instead.'
+                )
+                continue
             print(f'{fwf_path.stem} ({platform}):')
             updated = compile_and_update(
                 fwf_path, platform, expected_output_dir=expected_output_dir
@@ -247,6 +273,12 @@ def main():
             total_updated += len(updated)
 
     print(f'\n{total_updated} expected output file(s) updated.')
+    if skipped_reference:
+        print(f'{skipped_reference} C++ reference fixture(s) left untouched.')
+    # Asking for nothing but the reference is a request the script refuses,
+    # so say so with a non-zero exit instead of a silent no-op.
+    if skipped_reference and total_updated == 0:
+        return 1
     return 0
 
 

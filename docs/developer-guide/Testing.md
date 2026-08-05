@@ -198,8 +198,10 @@ As the Python compiler is improved, individual tests will start passing. pytest 
 pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-test"
 
 # See which tests unexpectedly pass (if any)
-pytest --verbose -k "objects-for-regression-tests or cluster-tests or optimizer-test" 2>&1 | grep XPASS
+pytest -rX -k "objects-for-regression-tests or cluster-tests or optimizer-test"
 ```
+
+The `xfail` comes from a marker on the test parameter, so the comparison still runs and a firewall whose output has converged shows up as `XPASS`. Marking it inside the test body instead would end the test before the comparison and make convergence invisible.
 
 ### WARNING: Do Not Modify the iptables Expected Output for `.fwb` Fixtures
 
@@ -216,6 +218,14 @@ These files are the **ground truth** for the Python iptables compiler. They defi
 - Run `update_expected_output.py --platform ipt` on `.fwb` fixtures.
 - Manually edit the iptables `.fw` files under `expected-output/ipt/objects-for-regression-tests/`, `expected-output/ipt/cluster-tests/`, or `expected-output/ipt/optimizer-test/`.
 - Re-normalize these files (they are already normalized).
+
+`update_expected_output.py` enforces the first point itself: it skips the iptables output of every `.fwb` fixture and says so, and exits non-zero if that was all you asked for. This rule was prose only until the reference was overwritten once and nobody noticed, because the tests never read the files back then.
+
+To re-import the reference after a fwbuilder update, copy the matching `<firewall>.fw.orig` files from the fwbuilder tree (`fwbuilder5/test/ipt/`) into the expected output directory as `<firewall>.fw` and run:
+
+```bash
+python tests/update_expected_output.py --normalize-only --platform ipt --fixture objects-for-regression-tests
+```
 
 ## Limitation: Compiler Aborts Cannot Be Tested
 
