@@ -48,6 +48,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
     print_fragment_match,
+    print_icmp_service,
     print_ip_option_matches,
     print_mark_match,
 )
@@ -358,11 +359,11 @@ class NATPrintRule_nft(NATRuleProcessor):
         elif isinstance(srv, UDPService):
             proto = 'udp'
         elif isinstance(srv, (ICMPService, ICMP6Service)):
-            if self.compiler.ipv6_policy:
-                # `meta l4proto` resolves via getprotobyname(): the IPv6 ICMP
-                # protocol is `ipv6-icmp` (58); `icmpv6` is not a protocol name.
-                return f'meta l4proto {neg}ipv6-icmp'
-            return f'meta l4proto {neg}icmp'
+            # The type and the code belong in the match: without them the
+            # rule translates every ICMP packet between the addresses it
+            # names, not the message types it was written for.  The
+            # iptables NAT print rule emits `--icmp-type type[/code]` here.
+            return print_icmp_service(srv, self.compiler.ipv6_policy, bool(neg))
         elif isinstance(srv, IPService):
             ip_parts = []
             p = srv.get_protocol_number()

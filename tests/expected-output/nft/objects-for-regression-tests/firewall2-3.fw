@@ -540,10 +540,10 @@ table ip fwf_nat {
         #
         ip daddr 22.22.22.23 meta l4proto 88 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 meta l4proto 50 counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type destination-unreachable counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type echo-reply icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 1 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         ip saddr 200.200.200.200 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
@@ -659,18 +659,18 @@ table ip fwf_nat {
         ip daddr 192.168.2.11 counter accept
         ip daddr 22.22.22.23 meta l4proto 88 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 meta l4proto 50 counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type destination-unreachable counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type echo-reply icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 1 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 12 (NAT)
         #
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 22.22.22.23 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type destination-unreachable counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type echo-reply icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 icmp type time-exceeded icmp code 1 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 13 (NAT)
@@ -716,18 +716,18 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.1
         oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
         oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1
@@ -740,18 +740,18 @@ table ip fwf_nat {
         oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.23.23
         oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.22.22
-        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 22.22.23.23
-        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto icmp counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.1
+        oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.22.22
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.1
         oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
         oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1

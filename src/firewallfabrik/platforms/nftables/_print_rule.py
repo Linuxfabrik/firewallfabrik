@@ -203,6 +203,82 @@ def print_mark_match(tag_code: str, negated: bool) -> str:
     return f'meta mark and {mask.strip()} {op} {value}'
 
 
+# ICMP and ICMPv6 type numbers mapped to the keywords nftables accepts
+# (netfilter nftables src/proto.c, icmp_type_tbl / icmpv6_type_tbl).
+_ICMP_TYPE_NAMES = {
+    0: 'echo-reply',
+    3: 'destination-unreachable',
+    4: 'source-quench',
+    5: 'redirect',
+    8: 'echo-request',
+    9: 'router-advertisement',
+    10: 'router-solicitation',
+    11: 'time-exceeded',
+    12: 'parameter-problem',
+    13: 'timestamp-request',
+    14: 'timestamp-reply',
+    15: 'info-request',
+    16: 'info-reply',
+    17: 'address-mask-request',
+    18: 'address-mask-reply',
+}
+
+_ICMPV6_TYPE_NAMES = {
+    1: 'destination-unreachable',
+    2: 'packet-too-big',
+    3: 'time-exceeded',
+    4: 'parameter-problem',
+    128: 'echo-request',
+    129: 'echo-reply',
+    130: 'mld-listener-query',
+    131: 'mld-listener-report',
+    132: 'mld-listener-done',
+    133: 'nd-router-solicit',
+    134: 'nd-router-advert',
+    135: 'nd-neighbor-solicit',
+    136: 'nd-neighbor-advert',
+    137: 'nd-redirect',
+    138: 'router-renumbering',
+    141: 'ind-neighbor-solicit',
+    142: 'ind-neighbor-advert',
+    143: 'mld2-listener-report',
+}
+
+
+def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
+    """Return the nftables match for an ICMP / ICMPv6 service.
+
+    A service that names no type matches the protocol as a whole; one
+    that names a type and a code matches both, the way iptables'
+    ``--icmp-type type/code`` does.
+    """
+    codes = getattr(srv, 'codes', None) or srv.data or {}
+    raw_type = codes.get('type', -1)
+    raw_code = codes.get('code', -1)
+    icmp_type = -1 if raw_type is None else int(raw_type)
+    icmp_code = -1 if raw_code is None else int(raw_code)
+
+    proto = 'icmpv6' if ipv6 else 'icmp'
+    type_names = _ICMPV6_TYPE_NAMES if ipv6 else _ICMP_TYPE_NAMES
+    type_str = type_names.get(icmp_type, str(icmp_type))
+    op = '!= ' if negated else ''
+
+    if icmp_type < 0:
+        # `meta l4proto` resolves its argument through getprotobyname(),
+        # so it needs the /etc/protocols name `ipv6-icmp` (58); the bare
+        # `icmpv6` keyword only exists as the payload-match protocol below.
+        l4proto = 'ipv6-icmp' if ipv6 else 'icmp'
+        return f'meta l4proto {op}{l4proto}'
+    if icmp_code < 0:
+        return f'{proto} type {op}{type_str}'
+    if negated:
+        # iptables negates the type/code pair as a whole. Negating both
+        # halves separately would mean something else, so match the
+        # concatenation of the two fields against a one-element set.
+        return f'{proto} type . {proto} code != {{ {type_str} . {icmp_code} }}'
+    return f'{proto} type {type_str} {proto} code {icmp_code}'
+
+
 def get_mac_only_address(obj) -> str:
     """Return the MAC of an object that has no IP address.
 
@@ -960,45 +1036,6 @@ class PrintRule_nft(PolicyRuleProcessor):
             return str(start)
         return f'{start}-{end}'
 
-    _ICMP_TYPE_NAMES: ClassVar[dict[int, str]] = {
-        0: 'echo-reply',
-        3: 'destination-unreachable',
-        4: 'source-quench',
-        5: 'redirect',
-        8: 'echo-request',
-        9: 'router-advertisement',
-        10: 'router-solicitation',
-        11: 'time-exceeded',
-        12: 'parameter-problem',
-        13: 'timestamp-request',
-        14: 'timestamp-reply',
-        15: 'info-request',
-        16: 'info-reply',
-        17: 'address-mask-request',
-        18: 'address-mask-reply',
-    }
-
-    _ICMPV6_TYPE_NAMES: ClassVar[dict[int, str]] = {
-        1: 'destination-unreachable',
-        2: 'packet-too-big',
-        3: 'time-exceeded',
-        4: 'parameter-problem',
-        128: 'echo-request',
-        129: 'echo-reply',
-        130: 'mld-listener-query',
-        131: 'mld-listener-report',
-        132: 'mld-listener-done',
-        133: 'nd-router-solicit',
-        134: 'nd-router-advert',
-        135: 'nd-neighbor-solicit',
-        136: 'nd-neighbor-advert',
-        137: 'nd-redirect',
-        138: 'router-renumbering',
-        141: 'ind-neighbor-solicit',
-        142: 'ind-neighbor-advert',
-        143: 'mld2-listener-report',
-    }
-
     def _negate_single_match(
         self, rule: CompRule, parts: list[str], what: str
     ) -> str | None:
@@ -1045,35 +1082,7 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_icmp_service(self, srv, negated: bool = False) -> str:
         """Print ICMP type/code matching."""
-        codes = getattr(srv, 'codes', None) or srv.data or {}
-        raw_type = codes.get('type', -1)
-        raw_code = codes.get('code', -1)
-        icmp_type = -1 if raw_type is None else int(raw_type)
-        icmp_code = -1 if raw_code is None else int(raw_code)
-
-        proto = 'icmpv6' if self.compiler.ipv6_policy else 'icmp'
-        type_names = (
-            self._ICMPV6_TYPE_NAMES
-            if self.compiler.ipv6_policy
-            else self._ICMP_TYPE_NAMES
-        )
-        type_str = type_names.get(icmp_type, str(icmp_type))
-        op = '!= ' if negated else ''
-
-        if icmp_type < 0:
-            # `meta l4proto` resolves its argument through getprotobyname(),
-            # so it needs the /etc/protocols name `ipv6-icmp` (58); the bare
-            # `icmpv6` keyword only exists as the payload-match protocol below.
-            l4proto = 'ipv6-icmp' if self.compiler.ipv6_policy else 'icmp'
-            return f'meta l4proto {op}{l4proto}'
-        if icmp_code < 0:
-            return f'{proto} type {op}{type_str}'
-        if negated:
-            # iptables negates the type/code pair as a whole. Negating both
-            # halves separately would mean something else, so match the
-            # concatenation of the two fields against a one-element set.
-            return f'{proto} type . {proto} code != {{ {type_str} . {icmp_code} }}'
-        return f'{proto} type {type_str} {proto} code {icmp_code}'
+        return print_icmp_service(srv, self.compiler.ipv6_policy, negated)
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print native nftables rate limiting.

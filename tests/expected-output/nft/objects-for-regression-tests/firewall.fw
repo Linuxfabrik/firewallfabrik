@@ -902,13 +902,13 @@ table ip fwf_nat {
         #
         # Rule 7 (NAT)
         #
-        ip daddr 222.222.222.222 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 192.168.1.1 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 222.222.222.222 icmp type echo-request icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 counter dnat to 192.168.1.10
         #
         # Rule 8 (NAT)
         #
-        ip daddr 222.222.222.222 meta l4proto icmp counter dnat to 192.168.1.10
-        ip daddr 192.168.1.1 meta l4proto icmp counter dnat to 192.168.1.10
+        ip daddr 222.222.222.222 icmp type echo-request icmp code 0 counter dnat to 192.168.1.10
+        ip daddr 192.168.1.1 icmp type echo-request icmp code 0 counter dnat to 192.168.1.10
         #
         # Rule 9 (NAT)
         #

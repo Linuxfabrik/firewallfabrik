@@ -205,7 +205,7 @@ In modern infrastructure, firewall policies are often deployed as part of an aut
 
 ### Ansible
 
-An Ansible playbook to deploy a FirewallFabrik-generated policy might look like this (following the [Linuxfabrik Ansible Development Guidelines](https://github.com/Linuxfabrik/lfops/blob/main/CONTRIBUTING.rst)):
+An Ansible playbook to deploy a FirewallFabrik-generated policy might look like this (following the [Linuxfabrik Ansible Development Guidelines](https://github.com/Linuxfabrik/lfops/blob/main/CONTRIBUTING.md)):
 
 ``` yaml
 - name: 'Playbook linuxfabrik.lfops.firewallfabrik'

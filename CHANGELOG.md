@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a firewall with weekday-restricted rules is warned when its time zone setting makes iptables and nftables pick different days. The warning was the wrong way round and fired exactly when the two agreed.
 * Compiler (nftables): a firewall whose only rules are the automatic ones installs them together with its default-drop policy, instead of an empty ruleset that left the host open.
 * Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
+* Compiler (nftables): a NAT rule for an ICMP service translates only the message types it names instead of every ICMP packet between the addresses in the rule.
 * Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
 * Compiler (nftables): a rule that uses a loopback interface without an IP address reports a clear error instead of disappearing silently.
 * Compiler (nftables): an IP service that matches fragmented packets does so instead of letting fragments through.
