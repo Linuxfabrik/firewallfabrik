@@ -66,6 +66,29 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
     def print_automatic_rules(self) -> str:
         return ''
 
+    def _automatic_rule_line(self, rule: str) -> str:
+        """Wrap one automatic mangle rule in the current output format.
+
+        fwbuilder builds these rules from ``_startRuleLine()`` /
+        ``_endRuleLine()`` of the print rule processor
+        (MangleTableCompiler_ipt::printAutomaticRulesForMangleTable), so
+        they follow the same format as every other rule: a
+        ``$IPTABLES -t mangle -A ...`` command in shell mode and a bare
+        ``echo "-A ..."`` line in iptables-restore mode.  Emitting the
+        shell command inside the ``( ... ) | $IPTABLES_RESTORE`` subshell
+        would run it outside the restore stream, and the restore of the
+        mangle table right afterwards would wipe the rule again.
+        """
+        if bool(self.fw.get_option('use_iptables_restore')):
+            return f'echo "-A {rule}"\n'
+
+        version = get_iptables_version(self.fw)
+        iptables_cmd = '$IP6TABLES' if self.ipv6_policy else '$IPTABLES'
+        opt_wait = get_wait_option(version)
+        if opt_wait:
+            opt_wait += ' '
+        return f'{iptables_cmd} {opt_wait}-t mangle -A {rule}\n'
+
     def print_automatic_rules_for_mangle_table(
         self, have_connmark: bool, have_connmark_in_output: bool
     ) -> str:
@@ -74,22 +97,11 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         version = get_iptables_version(self.fw)
         ipv6 = self.ipv6_policy
 
-        iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
-        opt_wait = get_wait_option(version)
-        if opt_wait:
-            opt_wait += ' '
-
         if have_connmark:
-            result += (
-                f'{iptables_cmd} {opt_wait}-t mangle '
-                f'-A PREROUTING -j CONNMARK --restore-mark\n'
-            )
+            result += self._automatic_rule_line('PREROUTING -j CONNMARK --restore-mark')
 
         if have_connmark_in_output:
-            result += (
-                f'{iptables_cmd} {opt_wait}-t mangle '
-                f'-A OUTPUT -j CONNMARK --restore-mark\n'
-            )
+            result += self._automatic_rule_line('OUTPUT -j CONNMARK --restore-mark')
 
         # TCPMSS clamping.  Matches fwbuilder's
         # PolicyCompiler_PrintRule::_clampTcpToMssRule (and
@@ -109,10 +121,9 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
             ipforw_str = str(ipforw_raw or '').strip()
             ipforw = ipforw_str in ('', '1', 'On', 'on', 'True', 'true')
             if ipforw and min_version_ok:
-                result += (
-                    f'{iptables_cmd} {opt_wait}-t mangle '
-                    f'-A FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
-                    f'-j TCPMSS --clamp-mss-to-pmtu\n'
+                result += self._automatic_rule_line(
+                    'FORWARD -p tcp -m tcp --tcp-flags SYN,RST SYN '
+                    '-j TCPMSS --clamp-mss-to-pmtu'
                 )
 
         return result
