@@ -97,6 +97,14 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # directly and has neither ceiling.
 XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
+
+# The LOG target carries its prefix in a 30-byte field and the NFLOG one
+# in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
+# xt_LOG.h and xt_NFLOG.h), so one character of each is the terminator.
+# iptables truncates a longer prefix without a word.  nftables has room
+# for 127 characters and keeps the whole string.
+MAX_LOG_PREFIX = 29
+MAX_NFLOG_PREFIX = 63
 LIMIT_UNIT_SECONDS = {
     '/day': 24 * 60 * 60,
     '/hour': 60 * 60,
@@ -1199,7 +1207,7 @@ class PrintRule(PolicyRuleProcessor):
             log_prefix = self.compiler.fw.get_option('log_prefix')
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
-            log_prefix = log_prefix[:29]
+            log_prefix = self._truncate_log_prefix(rule, log_prefix, MAX_LOG_PREFIX)
             parts.append(f'--log-prefix {self._quote(log_prefix)}')
 
         # Per-rule option overrides firewall-level default (matching fwbuilder).
@@ -1237,7 +1245,7 @@ class PrintRule(PolicyRuleProcessor):
             log_prefix = self.compiler.fw.get_option('log_prefix')
         if log_prefix:
             log_prefix = self._expand_log_prefix(rule, str(log_prefix))
-            log_prefix = log_prefix[:63]  # NFLOG supports up to 64 chars
+            log_prefix = self._truncate_log_prefix(rule, log_prefix, MAX_NFLOG_PREFIX)
             parts.append(f'--nflog-prefix {self._quote(log_prefix)}')
 
         cprange = self.compiler.fw.get_option('ulog_cprange')
@@ -1270,6 +1278,25 @@ class PrintRule(PolicyRuleProcessor):
             parts.append(f'--nflog-threshold {qthreshold}')
 
         return ' '.join(parts)
+
+    def _truncate_log_prefix(self, rule: CompRule, prefix: str, limit: int) -> str:
+        """Cut *prefix* to what the target can carry, and say so.
+
+        Ports the warning of fwbuilder's
+        ``PolicyCompiler_ipt::PrintRule::_printLogPrefix``.  Silently
+        cutting the prefix is how a log parser starts missing the fields
+        behind it, and the nftables backend takes the full string, so the
+        same policy would write differently shaped log lines on the two
+        platforms without anyone noticing.
+        """
+        if len(prefix) <= limit:
+            return prefix
+        self.compiler.warning(
+            rule,
+            f'Log prefix "{prefix}" is longer than the {limit} characters '
+            'iptables can carry and has been truncated',
+        )
+        return prefix[:limit]
 
     def _expand_log_prefix(self, rule: CompRule, prefix: str) -> str:
         """Expand log prefix macros (%N, %A, %I, %C, %R)."""
