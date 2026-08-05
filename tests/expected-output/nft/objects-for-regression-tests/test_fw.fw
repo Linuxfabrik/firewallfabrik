@@ -531,6 +531,12 @@ table inet fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # no need to translate
+        # between DMZ and
+        # internal net
         ip saddr 192.168.2.0/24 ip daddr 192.168.1.0/24 counter accept
         #
         # Rule 2 (NAT)

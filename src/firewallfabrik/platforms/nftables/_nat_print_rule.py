@@ -75,7 +75,9 @@ class NATPrintRule_nft(NATRuleProcessor):
 
     def __init__(self, name: str = 'generate nftables NAT rules') -> None:
         super().__init__(name)
-        self.current_rule_label: str = ''
+        # Track per-chain: NAT rules go to separate chain blocks, so label
+        # dedup must be independent per chain.
+        self._chain_labels: dict[str, str] = {}
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -96,7 +98,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         if not cmd:
             return True
 
-        text = self._print_rule_label(rule) + cmd
+        text = self._print_rule_label(rule, chain) + cmd
 
         # Write to per-chain collection if available
         nft_comp = cast('NATCompiler_nft', self.compiler)
@@ -216,19 +218,26 @@ class NATPrintRule_nft(NATRuleProcessor):
             return None
         return parts
 
-    def _print_rule_label(self, rule: CompRule) -> str:
-        """Print rule label as nft comment."""
+    def _print_rule_label(self, rule: CompRule, chain: str) -> str:
+        """Print rule label as nft comment.
+
+        Tracks labels per chain: one NAT rule can produce a rule in the
+        prerouting and one in the postrouting chain, and those go into
+        separate chain blocks.  A single counter would print the label
+        only in whichever chain came first and file the other rule under
+        whatever label that chain saw last.
+        """
         label = rule.label
-        if label and label != self.current_rule_label:
-            self.current_rule_label = label
-            result = f'        # \n        # Rule {label}\n        # \n'
-            comment = rule.comment
-            if comment:
-                for line in comment.split('\n'):
-                    if line.strip():
-                        result += f'        # {line}\n'
-            return result
-        return ''
+        if not label or label == self._chain_labels.get(chain, ''):
+            return ''
+        self._chain_labels[chain] = label
+        result = f'        # \n        # Rule {label}\n        # \n'
+        comment = rule.comment
+        if comment:
+            for line in comment.split('\n'):
+                if line.strip():
+                    result += f'        # {line}\n'
+        return result
 
     def _print_interface(self, rule: CompRule) -> str:
         """Print interface matching for NAT rules."""

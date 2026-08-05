@@ -731,6 +731,9 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
         ip saddr 192.168.1.0/24 ip daddr 192.168.2.0/24 counter accept
         #
         # Rule 11 (NAT)

@@ -260,14 +260,34 @@ table ip fwf_nat {
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
         ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        #
+        # Rule 1 (NAT)
+        #
+        # DNAT Rule
         counter accept
+        #
+        # Rule 2 (NAT)
+        #
+        # for #1686
         ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
     }
 
     chain output {
         type nat hook output priority dstnat;
+        #
+        # Rule NAT_1 0 (NAT)
+        #
+        # DNAT Rule
         ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        #
+        # Rule 0 (NAT)
+        #
+        # Branch rule with actual translation. Translation is ignored and warning should be issued
         ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        #
+        # Rule 3 (NAT)
+        #
+        # for #1686
         tcp dport 10000-11000 counter accept
     }
 

@@ -36,10 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): rules that reject with a TCP reset also work when they are logged or negate their source, destination or service. The traffic fell through to the rule below instead.
 * Compiler (iptables): rules that use a custom service load again instead of being rejected for a missing protocol match.
 * Compiler (iptables): the `--xp` rule trace works on firewalls imported from a `.fwb` file instead of aborting the whole compile with an internal error.
-* Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking forever, which stalled unattended rollouts without an error.
-* Compiler (iptables): the NFLOG "Copy range" setting takes effect, so the logging daemon receives only as much of each packet as the firewall asks for instead of always the whole one. Firewalls pinned to an iptables older than 1.6.1, which cannot express this, get a warning.
 * Compiler (iptables): the automatic MSS clamping and connection mark rules survive activation on firewalls that activate through iptables-restore. They were wiped again right after being set.
 * Compiler (iptables): the generated script no longer creates and fills chains nothing ever jumps to. Dual-stack firewalls carried a copy of every IPv6-only rule in their IPv4 chains and vice versa.
+* Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking forever, which stalled unattended rollouts without an error.
+* Compiler (iptables): the NFLOG "Copy range" setting takes effect, so the logging daemon receives only as much of each packet as the firewall asks for instead of always the whole one. Firewalls pinned to an iptables older than 1.6.1, which cannot express this, get a warning.
 * Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.
 * Compiler (iptables, nftables): "Add rules to permit IPv6 Neighbor Discovery" generates those rules. Dual-stack firewalls that drop by default lost IPv6 connectivity.
 * Compiler (iptables, nftables): a bridge port is recognised as one, so the generated script no longer tries to configure an address on it and rules that name one are compiled again.
@@ -67,8 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): the firewall-wide limit on log messages reaches the generated ruleset. A logging firewall under load could fill its disk.
 * Compiler (nftables): a firewall with weekday-restricted rules is warned when its time zone setting makes iptables and nftables pick different days. The warning was the wrong way round and fired exactly when the two agreed.
 * Compiler (nftables): a firewall whose only rules are the automatic ones installs them together with its default-drop policy, instead of an empty ruleset that left the host open.
-* Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
 * Compiler (nftables): a NAT rule for an ICMP service translates only the message types it names instead of every ICMP packet between the addresses in the rule.
+* Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
+* Compiler (nftables): a NAT rule that translates the source and the destination is labelled in both chains of the generated ruleset, so its second half is no longer filed under an unrelated rule number.
 * Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
 * Compiler (nftables): a rule that uses a loopback interface without an IP address reports a clear error instead of disappearing silently.
 * Compiler (nftables): an IP service that matches fragmented packets does so instead of letting fragments through.

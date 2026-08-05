@@ -672,10 +672,16 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 9 (NAT)
+        #
         ip saddr 192.168.1.10 ip daddr 192.168.2.10 counter accept
         ip saddr 192.168.1.10 ip daddr 192.168.2.11 counter accept
         ip saddr 192.168.1.20 ip daddr 192.168.2.10 counter accept
         ip saddr 192.168.1.20 ip daddr 192.168.2.11 counter accept
+        #
+        # Rule 10 (NAT)
+        #
         ip saddr 192.168.1.10 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
         ip saddr 192.168.1.20 ip daddr != { 192.168.2.10, 192.168.2.11 } counter accept
         #
@@ -688,6 +694,9 @@ table ip fwf_nat {
         ip daddr 22.22.22.23 icmp type time-exceeded icmp code 0 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 icmp type time-exceeded icmp code 1 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        #
+        # Rule 14 (NAT)
+        #
         ip saddr 200.200.200.200 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 16 (NAT)
@@ -798,8 +807,14 @@ table ip fwf_nat {
 
     chain output {
         type nat hook output priority dstnat;
+        #
+        # Rule 9 (NAT)
+        #
         ip daddr 192.168.2.10 counter accept
         ip daddr 192.168.2.11 counter accept
+        #
+        # Rule 11 (NAT)
+        #
         ip daddr 22.22.22.23 meta l4proto 88 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 meta l4proto 50 counter dnat to 192.168.1.10
         ip daddr 22.22.22.23 icmp type destination-unreachable counter dnat to 192.168.1.10
@@ -823,28 +838,79 @@ table ip fwf_nat {
         # Rule 14 (NAT)
         #
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        #
+        # Rule 16 (NAT)
+        #
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        #
+        # Rule 17 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 119 counter dnat to 192.168.1.10
+        #
+        # Rule 19 (NAT)
+        #
         ip daddr 22.22.23.24 counter dnat to 192.168.1.20
+        #
+        # Rule 23 (NAT)
+        #
         ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.22.22 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.23.23 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 192.168.2.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        #
+        # Rule 24 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.10
+        #
+        # Rule 25 (NAT)
+        #
         ip daddr 22.22.22.23 tcp dport 80 counter dnat to 192.168.1.10:25
+        #
+        # Rule 27 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.10-192.168.1.100
+        #
+        # Rule 28 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.11
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.12
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
         ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
+        #
+        # Rule 31 (NAT)
+        #
         tcp dport 80 counter dnat to :8080
+        #
+        # Rule 32 (NAT)
+        #
         ip daddr 192.168.1.10 tcp dport 80 counter dnat to 192.168.1.10:8080
+        #
+        # Rule 34 (NAT)
+        #
         tcp dport 80 counter dnat to 192.168.1.10:3128
+        #
+        # Rule 35 (NAT)
+        #
         ip daddr != 192.168.1.50 tcp dport 80 counter dnat to 192.168.1.50:3128
+        #
+        # Rule 41 (NAT)
+        #
+        # testing transparent proxy
+        # roules for a support req.
         tcp dport 80 counter dnat to 192.168.1.1:3128
+        #
+        # Rule 42 (NAT)
+        #
+        # testing transparent proxy
+        # roules for a support req.
         tcp dport 80 counter dnat to 192.168.1.1:3128
+        #
+        # Rule 45 (NAT)
+        #
+        # testing transparent proxy
+        # roules for a support req.
         tcp dport 80 counter dnat to 192.168.1.50:3128
     }
 
@@ -967,16 +1033,25 @@ table ip fwf_nat {
         #
         # NETMAP
         ip saddr 192.168.1.0/24 counter snat prefix to 22.22.22.0/24
+        #
+        # Rule 24 (NAT)
+        #
         oifname "eth0" ip daddr 192.168.1.10 tcp dport 80 counter snat to 192.168.1.1
         #
         # Rule 33 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.10 tcp dport 80 counter snat to 22.22.22.22
+        #
+        # Rule 34 (NAT)
+        #
         oifname "eth0" ip saddr != 192.168.1.10 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 36 (NAT)
         #
         oifname "eth0" ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport != 80 counter snat to 192.168.1.1
+        #
+        # Rule 37 (NAT)
+        #
         oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 tcp dport 3128 counter snat to 192.168.1.1
         #
         # Rule 38 (NAT)

@@ -304,13 +304,25 @@ table ip fwf_nat {
         #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.20
+        #
+        # Rule 7 (NAT)
+        #
         ip saddr 192.168.1.0/24 tcp dport 80 counter accept
     }
 
     chain output {
         type nat hook output priority dstnat;
+        #
+        # Rule 3 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10:25
+        #
+        # Rule 4 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10:113
+        #
+        # Rule 5 (NAT)
+        #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.20
     }

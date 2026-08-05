@@ -327,6 +327,9 @@ table ip fwf_nat {
 
     chain output {
         type nat hook output priority dstnat;
+        #
+        # Rule 13 (NAT)
+        #
         ip daddr 222.222.222.40 counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)

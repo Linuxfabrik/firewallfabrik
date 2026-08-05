@@ -1000,6 +1000,9 @@ table ip fwf_nat {
         #
         oifname "eth1" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
         oifname "eth0" ip saddr 192.168.1.10-192.168.1.100 counter snat to 222.222.222.10-222.222.222.100
+        #
+        # Rule 4 (NAT)
+        #
         oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 3128 counter snat to 192.168.1.1
         oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 3128 counter snat to 192.168.1.1
         #

@@ -341,6 +341,9 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
         ip saddr 192.168.1.0/24 counter accept
         #
         # Rule 2 (NAT)
@@ -384,9 +387,27 @@ table ip fwf_nat {
         #
         # source port only
         ip saddr 192.168.1.0/24 udp sport 123 counter snat to :5050
+        #
+        # Rule 3 (NAT)
+        #
+        # SDNAT
         oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
+        #
+        # Rule 4 (NAT)
+        #
+        # SDNAT with source port
         oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
+        #
+        # Rule 5 (NAT)
+        #
+        # SDNAT with dest port
         oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.168.1.1
+        #
+        # Rule 6 (NAT)
+        #
+        # SDNAT
+        # translate src and dst addresses
+        # and src and dst ports
         oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.168.1.1:32767-65535
         #
         # Rule 7 (NAT)
