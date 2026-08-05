@@ -392,8 +392,8 @@ table ip fwf_filter {
         meta l4proto icmp counter drop
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags syn / syn,rst,ack limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / syn,rst,ack counter drop
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #
@@ -573,8 +573,8 @@ table ip fwf_filter {
         meta l4proto icmp counter drop
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags syn / syn,rst,ack limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / syn,rst,ack counter drop
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #
@@ -784,8 +784,8 @@ table ip fwf_filter {
         meta l4proto icmp counter drop
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags & (urg | ack | psh | rst | syn | fin) == 0x0 counter drop
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter drop
+        tcp flags syn / syn,rst,ack limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
+        tcp flags syn / syn,rst,ack counter drop
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
         tcp flags ack,rst,syn,fin / urg,ack,psh,rst,syn,fin counter drop
         #

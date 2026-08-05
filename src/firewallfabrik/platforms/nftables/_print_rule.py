@@ -812,31 +812,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         'warning': 'warn',
     }
 
-    _TCP_FLAG_ORDER: ClassVar[tuple[str, ...]] = (
-        'urg',
-        'ack',
-        'psh',
-        'rst',
-        'syn',
-        'fin',
-    )
-
     def _print_tcp_flags(self, srv, negated: bool = False) -> str:
         """Format TCP flag inspection for nftables.
 
-        Reads the ORM attributes ``tcp_flags_masks`` (which flags to
-        inspect, the MASK) and ``tcp_flags`` (which of those must be set,
-        the COMP). nftables writes ``tcp flags <value> / <mask>`` with the
-        value before the slash and the mask after, the reverse order of
-        iptables' ``--tcp-flags MASK COMP`` (see nftables doc/data-types.txt
-        and tests/py/inet/tcp.t).
+        The service decides which flags go into the MASK and which into
+        the COMP (``TCPService.tcp_flag_match``), so both back ends match
+        the same packets.  nftables writes ``tcp flags <value> / <mask>``
+        with the value before the slash and the mask after, the reverse
+        order of iptables' ``--tcp-flags MASK COMP`` (see nftables
+        doc/data-types.txt and tests/py/inet/tcp.t).
         """
-        masks = srv.tcp_flags_masks or {}
-        flags = srv.tcp_flags or {}
-        mask_names = [f for f in self._TCP_FLAG_ORDER if masks.get(f)]
+        mask_names, comp_names = srv.tcp_flag_match()
         if not mask_names:
             return ''
-        comp_names = [f for f in self._TCP_FLAG_ORDER if flags.get(f)]
         mask_pipe = ' | '.join(mask_names)
         if negated:
             comp_pipe = ' | '.join(comp_names) if comp_names else '0x0'

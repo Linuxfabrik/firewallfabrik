@@ -273,8 +273,8 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
+        tcp flags & (syn | rst | ack) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (syn | rst | ack) != syn counter drop
         #
         # Rule 8 (global)
         #
@@ -385,8 +385,8 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
+        tcp flags & (syn | rst | ack) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (syn | rst | ack) != syn counter drop
         #
         # Rule 8 (global)
         #
@@ -470,8 +470,8 @@ table ip fwf_filter {
         #
         # Rule 7 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter drop
+        tcp flags & (syn | rst | ack) != syn limit rate 5/second counter log prefix "RULE 7 - DENY **" level debug
+        tcp flags & (syn | rst | ack) != syn counter drop
         #
         # Rule 8 (global)
         #

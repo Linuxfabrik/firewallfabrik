@@ -315,11 +315,11 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log level debug drop
+        tcp flags syn / syn,rst,ack counter log level debug drop
         #
         # Rule 13 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log level debug drop
+        tcp flags & (syn | rst | ack) != syn counter log level debug drop
         #
         # Rule 15 (global)
         #
@@ -457,11 +457,11 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log level debug drop
+        tcp flags syn / syn,rst,ack counter log level debug drop
         #
         # Rule 13 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log level debug drop
+        tcp flags & (syn | rst | ack) != syn counter log level debug drop
         #
         # Rule 14 (global)
         #
@@ -614,11 +614,11 @@ table ip fwf_filter {
         #
         # Rule 12 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log level debug drop
+        tcp flags syn / syn,rst,ack counter log level debug drop
         #
         # Rule 13 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter log level debug drop
+        tcp flags & (syn | rst | ack) != syn counter log level debug drop
         #
         # Rule 14 (global)
         #

@@ -17,7 +17,7 @@ from __future__ import (
 )
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import sqlalchemy
 import sqlalchemy.orm
@@ -225,6 +225,41 @@ class TCPService(TCPUDPService):
     """TCP service with optional flag inspection."""
 
     __mapper_args__ = {'polymorphic_identity': 'TCPService'}
+
+    # The order fwbuilder writes the flags in
+    # (PolicyCompiler_PrintRule::_printTCPFlags).
+    TCP_FLAG_ORDER: ClassVar[tuple[str, ...]] = (
+        'urg',
+        'ack',
+        'psh',
+        'rst',
+        'syn',
+        'fin',
+    )
+
+    def tcp_flag_match(self) -> tuple[list[str], list[str]]:
+        """Return the flags to inspect and the ones that must be set.
+
+        Ports fwbuilder's ``PolicyCompiler_ipt::PrintRule::_printTCPFlags``,
+        including its one special case: a service that inspects all six
+        flags and wants only SYN is a connection request, and fwbuilder
+        narrows the inspected set to SYN, RST and ACK for it.  Inspecting
+        all six instead would also require FIN, PSH and URG to be clear,
+        which is a different match.  Both back ends have to agree on this,
+        so the decision lives here rather than in one of the print rules.
+
+        Returns ``([], [])`` for a service that inspects nothing.
+        """
+        masks = self.tcp_flags_masks or {}
+        flags = self.tcp_flags or {}
+        mask_names = [f for f in self.TCP_FLAG_ORDER if masks.get(f)]
+        if not mask_names:
+            return ([], [])
+        comp_names = [f for f in self.TCP_FLAG_ORDER if flags.get(f)]
+        if len(mask_names) == len(self.TCP_FLAG_ORDER) and comp_names == ['syn']:
+            # fwbuilder spells this one out in its own order.
+            return (['syn', 'rst', 'ack'], comp_names)
+        return (mask_names, comp_names)
 
 
 class UDPService(TCPUDPService):

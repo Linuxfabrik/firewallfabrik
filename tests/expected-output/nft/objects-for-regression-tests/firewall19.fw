@@ -279,27 +279,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / syn,rst,ack counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
+        tcp flags & (syn | rst | ack) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #
@@ -316,27 +316,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / syn,rst,ack counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
+        tcp flags & (syn | rst | ack) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
         #
         # Rule 12 (global)
         #
@@ -376,27 +376,27 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin limit rate 2/second counter accept
+        tcp flags syn / syn,rst,ack limit rate 2/second counter accept
         #
         # Rule 5 (global)
         #
-        tcp flags syn / urg,ack,psh,rst,syn,fin counter log prefix "RULE 5 -- DENY " level info drop
+        tcp flags syn / syn,rst,ack counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
-        tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter accept
+        tcp flags & (syn | rst | ack) != syn counter accept
         #
         # Rule 7 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin ct state new counter accept
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack ct state new counter accept
         #
         # Rule 8 (global)
         #
-        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / urg,ack,psh,rst,syn,fin counter reject with icmp host-prohibited
+        ip saddr 192.168.1.0/24 tcp dport 5190 tcp flags syn / syn,rst,ack counter reject with icmp host-prohibited
         #
         # Rule 9 (global)
         #
-        tcp dport != 5190 tcp flags & (urg | ack | psh | rst | syn | fin) != syn counter reject with icmp host-prohibited
+        tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #

@@ -872,19 +872,17 @@ class PrintRule(PolicyRuleProcessor):
     def _print_tcp_flags(self, srv) -> str:
         """Format TCP flags for iptables ``--tcp-flags MASK COMP``.
 
-        Reads from the ORM attributes ``tcp_flags_masks`` (which flags to
-        inspect) and ``tcp_flags`` (which of those must be set).
-        Matches fwbuilder PolicyCompiler_PrintRule::_printTCPFlags().
+        Matches fwbuilder PolicyCompiler_PrintRule::_printTCPFlags(); the
+        service decides which flags go into MASK and COMP.
         """
-        masks = srv.tcp_flags_masks or {}
-        flags = srv.tcp_flags or {}
-        _FLAG_ORDER = ('urg', 'ack', 'psh', 'rst', 'syn', 'fin')
-        mask_names = [f.upper() for f in _FLAG_ORDER if masks.get(f)]
+        mask_names, comp_names = srv.tcp_flag_match()
         if not mask_names:
             return ''
-        mask_str = ','.join(mask_names) if len(mask_names) < 6 else 'ALL'
-        comp_names = [f.upper() for f in _FLAG_ORDER if flags.get(f)]
-        comp_str = ','.join(comp_names) if comp_names else 'NONE'
+        if len(mask_names) == len(srv.TCP_FLAG_ORDER):
+            mask_str = 'ALL'
+        else:
+            mask_str = ','.join(f.upper() for f in mask_names)
+        comp_str = ','.join(f.upper() for f in comp_names) if comp_names else 'NONE'
         return f'--tcp-flags {mask_str} {comp_str}'
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
