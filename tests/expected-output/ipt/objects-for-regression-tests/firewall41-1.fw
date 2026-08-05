@@ -1,5 +1,4 @@
 #!/bin/sh
-# shellcheck disable=SC2034,SC2329
 #
 # MANAGED_HEADER
 #
@@ -13,8 +12,9 @@
 #
 # testing run time address table objects with module set
 
+# firewall41-1::: warning: Can not add virtual address for object atbl.1
+
 FWBDEBUG=""
-RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -35,18 +35,18 @@ LOGGER="logger"
 
 log() {
  echo "$1"
- command -v "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
+ which "$LOGGER" >/dev/null 2>&1 && $LOGGER -p info "$1"
 }
 
 getInterfaceVarName() {
- echo "$1" | sed 's/\./_/'
+ echo $1 | sed 's/\./_/'
 }
 
 getaddr_internal() {
  dev=$1
  name=$2
  af=$3
- L=$("$IP" "$af" addr show dev "$dev" | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
+ L=$($IP $af addr show dev $dev | sed -n '/inet/{s!.*inet6* !!;s!/.*!!p}' | sed 's/peer.*//')
  test -z "$L" && {
  eval "$name=''"
  return
@@ -58,7 +58,7 @@ getnet_internal() {
  dev=$1
  name=$2
  af=$3
- L=$("$IP" route list proto kernel | grep "$dev" | grep -v default | sed 's! .*$!!')
+ L=$($IP route list proto kernel | grep $dev | grep -v default | sed 's! .*$!!')
  test -z "$L" && {
  eval "$name=''"
  return
@@ -67,31 +67,30 @@ getnet_internal() {
 }
 
 getaddr() {
- getaddr_internal "$1" "$2" "-4"
+ getaddr_internal $1 $2 "-4"
 }
 
 getaddr6() {
- getaddr_internal "$1" "$2" "-6"
+ getaddr_internal $1 $2 "-6"
 }
 
 getnet() {
- getnet_internal "$1" "$2" "-4"
+ getnet_internal $1 $2 "-4"
 }
 
 getnet6() {
- getnet_internal "$1" "$2" "-6"
+ getnet_internal $1 $2 "-6"
 }
 
 # function getinterfaces is used to process wildcard interfaces
 getinterfaces() {
  NAME=$1
- "$IP" link show | grep ": $NAME" | while read -r L; do
+ $IP link show | grep ": $NAME" | while read L; do
  OIFS=$IFS
  IFS=" :"
- # shellcheck disable=SC2086
- set -- $L
+ set $L
  IFS=$OIFS
- echo "$2"
+ echo $2
  done
 }
 
@@ -102,56 +101,60 @@ diff_intf() {
  cmd=$4
  for intf in $list1
  do
- echo "$list2" | grep -q "$intf" || {
- # $intf is absent in list 2
- "$func" "$intf" "$cmd"
+ echo $list2 | grep -q $intf || {
+ # $vlan is absent in list 2
+ $func $intf $cmd
  }
  done
 }
 
 find_program() {
  PGM=$1
- command -v "$PGM" >/dev/null 2>&1 || {
+ which $PGM >/dev/null 2>&1 || {
  echo "\"$PGM\" not found"
  exit 1
  }
 }
 check_tools() {
- find_program command
- find_program "$IPTABLES"
- find_program "$MODPROBE"
- find_program "$IP"
- find_program "$IPSET"
+ find_program which
+ find_program $IPTABLES
+ find_program $MODPROBE
+ find_program $IP
+ find_program $IPSET
 }
 reset_iptables_v4() {
+ local list
+
  $IPTABLES -P OUTPUT DROP
  $IPTABLES -P INPUT DROP
  $IPTABLES -P FORWARD DROP
 
- while read -r table; do
- list=$($IPTABLES -t "$table" -L -n)
- printf "%s" "$list" | while read -r c chain rest; do
- if test "$c" = "Chain" ; then
- $IPTABLES -t "$table" -F "$chain"
+ while read table; do
+ list=$($IPTABLES -t $table -L -n)
+ printf "%s" "$list" | while read c chain rest; do
+ if test "X$c" = "XChain" ; then
+ $IPTABLES -t $table -F $chain
  fi
  done
- $IPTABLES -t "$table" -X
+ $IPTABLES -t $table -X
  done < /proc/net/ip_tables_names
 }
 
 reset_iptables_v6() {
+ local list
+
  $IP6TABLES -P OUTPUT DROP
  $IP6TABLES -P INPUT DROP
  $IP6TABLES -P FORWARD DROP
 
- while read -r table; do
- list=$($IP6TABLES -t "$table" -L -n)
- printf "%s" "$list" | while read -r c chain rest; do
- if test "$c" = "Chain" ; then
- $IP6TABLES -t "$table" -F "$chain"
+ while read table; do
+ list=$($IP6TABLES -t $table -L -n)
+ printf "%s" "$list" | while read c chain rest; do
+ if test "X$c" = "XChain" ; then
+ $IP6TABLES -t $table -F $chain
  fi
  done
- $IP6TABLES -t "$table" -X
+ $IP6TABLES -t $table -X
  done < /proc/net/ip6_tables_names
 }
 
@@ -163,13 +166,12 @@ missing_address() {
 
  oldIFS=$IFS
  IFS="@"
- # shellcheck disable=SC2086
- set -- $address
+ set $address
  addr=$1
  interface=$2
  IFS=$oldIFS
 
- "$IP" addr show dev "$interface" | grep -q POINTOPOINT && {
+ $IP addr show dev $interface | grep -q POINTOPOINT && {
  test -z "$P2P_INTERFACE_WARNING" && echo "Warning: Can not update address of interface $interface. fwbuilder can not manage addresses of point-to-point interfaces yet"
  P2P_INTERFACE_WARNING="yes"
  return
@@ -177,46 +179,45 @@ missing_address() {
 
  test "$cmd" = "add" && {
  echo "# Adding ip address: $interface $addr"
- if echo "$addr" | grep -q ':'; then
- $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface"
- else
- $FWBDEBUG "$IP" addr "$cmd" "$addr" broadcast + dev "$interface"
- fi
+ echo $addr | grep -q ':' && {
+ $FWBDEBUG $IP addr $cmd $addr dev $interface
+ } || {
+ $FWBDEBUG $IP addr $cmd $addr broadcast + dev $interface
+ }
  }
 
  test "$cmd" = "del" && {
  echo "# Removing ip address: $interface $addr"
- $FWBDEBUG "$IP" addr "$cmd" "$addr" dev "$interface" || exit 1
+ $FWBDEBUG $IP addr $cmd $addr dev $interface || exit 1
  }
 
- $FWBDEBUG "$IP" link set "$interface" up
+ $FWBDEBUG $IP link set $interface up
 }
 
 list_addresses_by_scope() {
  interface=$1
  scope=$2
  ignore_list=$3
- "$IP" addr ls dev "$interface" | \
+ $IP addr ls dev $interface | \
  awk -v IGNORED="$ignore_list" -v SCOPE="$scope" \
  'BEGIN {
  split(IGNORED,ignored_arr);
  for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
  }
  (/inet |inet6 / && $0 ~ SCOPE && !($2 in ignored_dict)) {print $2;}' | \
- while read -r addr; do
+ while read addr; do
  echo "${addr}@$interface"
 	done | sort
 }
 
 update_addresses_of_interface() {
  ignore_list=$2
- # shellcheck disable=SC2086
- set -- $1
+ set $1
  interface=$1
  shift
 
  FWB_ADDRS=$(
- for addr in "$@"; do
+ for addr in $*; do
  echo "${addr}@$interface"
  done | sort
  )
@@ -224,136 +225,37 @@ update_addresses_of_interface() {
  CURRENT_ADDRS_ALL_SCOPES=""
  CURRENT_ADDRS_GLOBAL_SCOPE=""
 
- if "$IP" link show dev "$interface" >/dev/null 2>&1; then
- CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope "$interface" 'scope .*' "$ignore_list")
- CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope "$interface" 'scope global' "$ignore_list")
- else
+ $IP link show dev $interface >/dev/null 2>&1 && {
+ CURRENT_ADDRS_ALL_SCOPES=$(list_addresses_by_scope $interface 'scope .*' "$ignore_list")
+ CURRENT_ADDRS_GLOBAL_SCOPE=$(list_addresses_by_scope $interface 'scope global' "$ignore_list")
+ } || {
  echo "# Interface $interface does not exist"
  # Stop the script if we are not in test mode
  test -z "$FWBDEBUG" && exit 1
- fi
+ }
 
  diff_intf missing_address "$FWB_ADDRS" "$CURRENT_ADDRS_ALL_SCOPES" add
  diff_intf missing_address "$CURRENT_ADDRS_GLOBAL_SCOPE" "$FWB_ADDRS" del
 }
 
 clear_addresses_except_known_interfaces() {
- "$IP" link show | sed 's/://g' | awk -v IGNORED="$*" \
+ $IP link show | sed 's/://g' | awk -v IGNORED="$*" \
  'BEGIN {
  split(IGNORED,ignored_arr);
  for (a in ignored_arr) {ignored_dict[ignored_arr[a]]=1;}
  }
  (/state/ && !($2 in ignored_dict)) {print $2;}' | \
- while read -r intf; do
+ while read intf; do
  echo "# Removing addresses not configured in fwbuilder from interface $intf"
- $FWBDEBUG "$IP" addr flush dev "$intf" scope global
- $FWBDEBUG "$IP" link set "$intf" down
+ $FWBDEBUG $IP addr flush dev $intf scope global
+ $FWBDEBUG $IP link set $intf down
  done
-}
-
-reset_fwf_chains_v4() {
- prefix="$1"
-
- # For each table, remove FWF jump rules from built-in chains (in
- # reverse order to keep line numbers stable), then flush and delete
- # FWF's own chains. We do not check /proc/net/ip_tables_names
- # because it is absent on systems using the iptables-nft backend;
- # instead we query iptables directly and suppress errors.
- for table in filter nat mangle; do
- # Remove jump rules targeting our prefixed chains from built-in chains.
- for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
- $IPTABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep "${prefix}_" | awk '{print $1}' | sort -rn \
- | while read -r rulenum; do
- $IPTABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
- done
- done
-
- # Flush all our prefixed chains first, then delete them in a
- # second pass. A single pass fails when sub-chains (e.g.
- # fwf_C...) sort alphabetically before their parent chains
- # (fwf_INPUT) -- the delete would fail because the parent still
- # references the sub-chain.
- $IPTABLES -t "$table" -L -n 2>/dev/null \
- | grep "^Chain ${prefix}_" | awk '{print $2}' \
- | while read -r chain; do
- $IPTABLES -t "$table" -F "$chain" 2>/dev/null
- done
- $IPTABLES -t "$table" -L -n 2>/dev/null \
- | grep "^Chain ${prefix}_" | awk '{print $2}' \
- | while read -r chain; do
- $IPTABLES -t "$table" -X "$chain" 2>/dev/null
- done
- done
-}
-
-reset_fwf_chains_v6() {
- prefix="$1"
-
- for table in filter nat mangle; do
- for chain in INPUT FORWARD OUTPUT PREROUTING POSTROUTING; do
- $IP6TABLES -t "$table" -L "$chain" -n --line-numbers 2>/dev/null \
- | grep "${prefix}_" | awk '{print $1}' | sort -rn \
- | while read -r rulenum; do
- $IP6TABLES -t "$table" -D "$chain" "$rulenum" 2>/dev/null
- done
- done
-
- $IP6TABLES -t "$table" -L -n 2>/dev/null \
- | grep "^Chain ${prefix}_" | awk '{print $2}' \
- | while read -r chain; do
- $IP6TABLES -t "$table" -F "$chain" 2>/dev/null
- done
- $IP6TABLES -t "$table" -L -n 2>/dev/null \
- | grep "^Chain ${prefix}_" | awk '{print $2}' \
- | while read -r chain; do
- $IP6TABLES -t "$table" -X "$chain" 2>/dev/null
- done
- done
-}
-
-setup_fwf_jumps_v4() {
- prefix="$1"
-
- # Set built-in chain policies to DROP for security.
- $IPTABLES -P INPUT DROP
- $IPTABLES -P FORWARD DROP
- $IPTABLES -P OUTPUT DROP
-
- # Create our prefixed chains (ignore error if they already exist).
- $IPTABLES -N "${prefix}_INPUT" 2>/dev/null
- $IPTABLES -N "${prefix}_FORWARD" 2>/dev/null
- $IPTABLES -N "${prefix}_OUTPUT" 2>/dev/null
-
- # Insert jump rules at position 1 (top of chain).
- # Tools that start later (Docker, CrowdSec, fail2ban) will insert
- # their own rules at position 1, pushing ours down. Control the
- # evaluation order via systemd unit ordering.
- $IPTABLES -I INPUT 1 -j "${prefix}_INPUT"
- $IPTABLES -I FORWARD 1 -j "${prefix}_FORWARD"
- $IPTABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
-}
-
-setup_fwf_jumps_v6() {
- prefix="$1"
-
- $IP6TABLES -P INPUT DROP
- $IP6TABLES -P FORWARD DROP
- $IP6TABLES -P OUTPUT DROP
-
- $IP6TABLES -N "${prefix}_INPUT" 2>/dev/null
- $IP6TABLES -N "${prefix}_FORWARD" 2>/dev/null
- $IP6TABLES -N "${prefix}_OUTPUT" 2>/dev/null
-
- $IP6TABLES -I INPUT 1 -j "${prefix}_INPUT"
- $IP6TABLES -I FORWARD 1 -j "${prefix}_FORWARD"
- $IP6TABLES -I OUTPUT 1 -j "${prefix}_OUTPUT"
 }
 
 check_module_ipset() {
- "$IPSET" --list > /dev/null 2>&1 || {
+ $IPSET --list > /dev/null 2>&1 || {
  echo "Detected an error with ipset utility :"
- "$IPSET" -V
+ $IPSET -V
  exit 1
  }
 }
@@ -362,52 +264,51 @@ reload_address_table() {
  addrtbl_name=$1
  data_file=$2
 
- test -z "$addrtbl_name" || test -z "$data_file" && {
+ test -z "$addrtbl_name" -o -z "$data_file" && {
  echo "Usage: reload_address_table address_table_object_name file_name"
  exit 1
  }
 
- "$IPSET" -X tmp_fwb_set:ip -q
- "$IPSET" -X tmp_fwb_set:net -q
+ $IPSET -X tmp_fwb_set:ip -q
+ $IPSET -X tmp_fwb_set:net -q
 
- "$IPSET" -N tmp_fwb_set:ip iphash
- "$IPSET" -N tmp_fwb_set:net nethash
+ $IPSET -N tmp_fwb_set:ip iphash
+ $IPSET -N tmp_fwb_set:net nethash
 
- DATAFILE_SIZE=$(wc -l "$data_file" | cut -d" " -f 1)
+ DATAFILE_SIZE=`wc -l $data_file|cut -d" " -f 1`
  echo "Processing $DATAFILE_SIZE items in file: $data_file"
 
- grep -Ev '^#|^;|^\s*$' "$data_file" | while read -r L ; do
- # shellcheck disable=SC2086
- set -- $L
+ grep -Ev '^#|^;|^\s*$' $data_file | while read L ; do
+ set $L
  addr=$1
- if echo "$addr" | grep -q "/"
+ if echo $addr | grep -q "/"
  then
- "$IPSET" -A tmp_fwb_set:net "$addr"
+ $IPSET -A tmp_fwb_set:net $addr
  else
- "$IPSET" -A tmp_fwb_set:ip "$addr"
+ $IPSET -A tmp_fwb_set:ip $addr
  fi
  done
 
- "$IPSET" --list "${addrtbl_name}:ip" >/dev/null || "$IPSET" -N "${addrtbl_name}:ip" iphash
- "$IPSET" --list "${addrtbl_name}:net" >/dev/null || "$IPSET" -N "${addrtbl_name}:net" nethash
+ $IPSET --list ${addrtbl_name}:ip >/dev/null || $IPSET -N ${addrtbl_name}:ip iphash
+ $IPSET --list ${addrtbl_name}:net >/dev/null || $IPSET -N ${addrtbl_name}:net nethash
 
- "$IPSET" -W "${addrtbl_name}:ip" tmp_fwb_set:ip
- "$IPSET" -W "${addrtbl_name}:net" tmp_fwb_set:net
+ $IPSET -W ${addrtbl_name}:ip tmp_fwb_set:ip
+ $IPSET -W ${addrtbl_name}:net tmp_fwb_set:net
 
- "$IPSET" --list "${addrtbl_name}" >/dev/null || {
- "$IPSET" -N "${addrtbl_name}" setlist
+ $IPSET --list ${addrtbl_name} >/dev/null || {
+ $IPSET -N ${addrtbl_name} setlist
  }
 
- "$IPSET" --list "${addrtbl_name}" | grep -q "${addrtbl_name}:ip" || {
- "$IPSET" -A "${addrtbl_name}" "${addrtbl_name}:ip"
+ $IPSET --list ${addrtbl_name} | grep -q ${addrtbl_name}:ip || {
+ $IPSET -A ${addrtbl_name} ${addrtbl_name}:ip
  }
 
- "$IPSET" --list "${addrtbl_name}" | grep -q "${addrtbl_name}:net" || {
- "$IPSET" -A "${addrtbl_name}" "${addrtbl_name}:net"
+ $IPSET --list ${addrtbl_name} | grep -q ${addrtbl_name}:net || {
+ $IPSET -A ${addrtbl_name} ${addrtbl_name}:net
  }
 
- "$IPSET" -X tmp_fwb_set:ip
- "$IPSET" -X tmp_fwb_set:net
+ $IPSET -X tmp_fwb_set:ip
+ $IPSET -X tmp_fwb_set:net
 }
 
 add_to_address_table() {
@@ -415,18 +316,18 @@ add_to_address_table() {
  data_file=$2
  address=$3
 
- test -z "$addrtbl_name" || test -z "$data_file" || test -z "$address" && {
+ test -z "$addrtbl_name" -o -z "$data_file" -o -z "$address" && {
  echo "Usage: add_to_address_table address_table_object_name file_name address"
  exit 1
  }
 
- echo "$address" >> "$data_file"
+ echo $address >> $data_file
 
- if echo "$address" | grep -q "/"
+ if echo $address | grep -q "/"
  then
- "$IPSET" -A "${addrtbl_name}:net" "$address"
+ $IPSET -A ${addrtbl_name}:net $address
  else
- "$IPSET" -A "${addrtbl_name}:ip" "$address"
+ $IPSET -A ${addrtbl_name}:ip $address
  fi
 }
 
@@ -435,19 +336,19 @@ remove_from_address_table() {
  data_file=$2
  address=$3
 
- test -z "$addrtbl_name" || test -z "$data_file" || test -z "$address" && {
+ test -z "$addrtbl_name" -o -z "$data_file" -o -z "$address" && {
  echo "Usage: remove_from_address_table address_table_object_name file_name address"
  exit 1
  }
 
- escaped_addr=$(echo "$address" | sed 's!/!\\/!')
- sed -i "/^ *$escaped_addr *\$/d" "$data_file"
+ escaped_addr=$(echo $address | sed 's!/!\\/!')
+ sed -i "/^ *$escaped_addr *\$/d" $data_file
 
- if echo "$address" | grep -q "/"
+ if echo $address | grep -q "/"
  then
- "$IPSET" -D "${addrtbl_name}:net" "$address"
+ $IPSET -D ${addrtbl_name}:net $address
  else
- "$IPSET" -D "${addrtbl_name}:ip" "$address"
+ $IPSET -D ${addrtbl_name}:ip $address
  fi
 }
 
@@ -455,22 +356,23 @@ test_address_table() {
  addrtbl_name=$1
  address=$2
 
- test -z "$addrtbl_name" || test -z "$address" && {
+ test -z "$addrtbl_name" -o -z "$address" && {
  echo "Usage: test_address_table address_table_object_name address"
  exit 1
  }
 
- if echo "$address" | grep -q "/"
+ if echo $address | grep -q "/"
  then
- "$IPSET" -T "${addrtbl_name}:net" "$address"
+ $IPSET -T ${addrtbl_name}:net $address
  else
- "$IPSET" -T "${addrtbl_name}:ip" "$address"
+ $IPSET -T ${addrtbl_name}:ip $address
  fi
 }
 
 load_run_time_address_table_files() {
  :
-
+ reload_address_table "atbl.1" "addr-table-1.tbl"
+reload_address_table "block_these" "block-hosts.tbl"
 }
 
 check_file() {
@@ -482,23 +384,24 @@ check_file() {
 
 check_run_time_address_table_files() {
  :
-
+ check_file "atbl.1" "addr-table-1.tbl"
+check_file "block_these" "block-hosts.tbl"
 }
 
 load_modules() {
  :
  OPTS=$1
- MODULES_DIR="/lib/modules/$(uname -r)/kernel/net/"
- MODULES=$(find "$MODULES_DIR" -name '*conntrack*' \! -name '*ipv6*' | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')
- echo "$OPTS" | grep -q nat && {
- MODULES="$MODULES $(find "$MODULES_DIR" -name '*nat*' | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
+ MODULES_DIR="/lib/modules/`uname -r`/kernel/net/"
+ MODULES=$(find $MODULES_DIR -name '*conntrack*' \! -name '*ipv6*'|sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')
+ echo $OPTS | grep -q nat && {
+ MODULES="$MODULES $(find $MODULES_DIR -name '*nat*'|sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
  }
- echo "$OPTS" | grep -q ipv6 && {
- MODULES="$MODULES $(find "$MODULES_DIR" -name nf_conntrack_ipv6 | sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
+ echo $OPTS | grep -q ipv6 && {
+ MODULES="$MODULES $(find $MODULES_DIR -name nf_conntrack_ipv6|sed -e 's/^.*\///' -e 's/\([^\.]\)\..*/\1/')"
  }
  for module in $MODULES; do
- if "$LSMOD" | grep "$module" >/dev/null; then continue; fi
- "$MODPROBE" "$module" || exit 1
+ if $LSMOD | grep ${module} >/dev/null; then continue; fi
+ $MODPROBE ${module} || exit 1
  done
 }
 
@@ -525,7 +428,7 @@ epilog_commands() {
 
 run_epilog_and_exit() {
  epilog_commands
- exit "$1"
+ exit $1
 }
 
 configure_interfaces() {
@@ -550,7 +453,7 @@ script_body() {
  #
  echo "Rule 0 (NAT)"
  #
- $IPTABLES -t nat -A POSTROUTING -o eth0 -j SNAT --to-source 1.1.1.1
+ $IPTABLES -t nat -A POSTROUTING -o eth0 -m set --set atbl.1 src -j SNAT --to-source 1.1.1.1
  #
  # Rule 1 (NAT)
  #
@@ -558,14 +461,14 @@ script_body() {
  #
  $IPTABLES -t nat -N CHAIN
  $IPTABLES -t nat -A POSTROUTING -o eth0 -j CHAIN
- $IPTABLES -t nat -A CHAIN -j RETURN
+ $IPTABLES -t nat -A CHAIN -m set --set atbl.1 src -j RETURN
  $IPTABLES -t nat -A CHAIN -j SNAT --to-source 1.1.1.1
  #
  # Rule 2 (NAT)
  #
  echo "Rule 2 (NAT)"
  #
- $IPTABLES -t nat -A PREROUTING -j DNAT --to-destination 192.168.1.10
+ $IPTABLES -t nat -A PREROUTING -m set --set atbl.1 dst -j DNAT --to-destination 192.168.1.10
 
  # ================ Table 'filter', rule set Policy
  #
@@ -573,64 +476,66 @@ script_body() {
  #
  echo "Rule 0 (global)"
  #
- $IPTABLES -A OUTPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m set --set atbl.1 dst -m state --state NEW -j ACCEPT
  #
  # Rule 1 (global)
  #
  echo "Rule 1 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -s 1.1.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -s 2.2.2.2 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A INPUT -m set ! --set atbl.1 dst -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -s 1.1.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -s 2.2.2.2 -j ACCEPT
+ $IPTABLES -A OUTPUT -m set ! --set atbl.1 dst -m state --state NEW -j ACCEPT
  #
  # Rule 2 (global)
  #
  echo "Rule 2 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A INPUT -s 1.1.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -s 2.2.2.2 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A OUTPUT -m set ! --set atbl.1 dst -m state --state NEW -j ACCEPT
+ #
+ # Rule 3 (global)
+ #
+ echo "Rule 3 (global)"
+ #
+ $IPTABLES -A OUTPUT -m set --set atbl.1 dst -m state --state NEW -j ACCEPT
+ $IPTABLES -A OUTPUT -m set --set block_these dst -m state --state NEW -j ACCEPT
  #
  # Rule 4 (global)
  #
  echo "Rule 4 (global)"
  #
- $IPTABLES -A INPUT -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -m set --set atbl.1 src -m state --state NEW -j ACCEPT
  #
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A OUTPUT -d 1.1.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -d 2.2.2.2 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -N CHAIN
+ $IPTABLES -A OUTPUT -m set ! --set atbl.1 src -m state --state NEW -j CHAIN
+ $IPTABLES -A CHAIN -d 1.1.1.1 -j ACCEPT
+ $IPTABLES -A CHAIN -d 2.2.2.2 -j ACCEPT
+ $IPTABLES -A INPUT -m set ! --set atbl.1 src -m state --state NEW -j ACCEPT
  #
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
  #
- $IPTABLES -N CHAIN 2>/dev/null
- $IPTABLES -A OUTPUT -d 1.1.1.1 -m state --state NEW -j CHAIN
- $IPTABLES -A OUTPUT -d 2.2.2.2 -m state --state NEW -j CHAIN
- $IPTABLES -A INPUT -m state --state NEW -j CHAIN
- $IPTABLES -A CHAIN -j RETURN
- $IPTABLES -A CHAIN -j ACCEPT
+ $IPTABLES -A INPUT -m set ! --set atbl.1 src -m state --state NEW -j ACCEPT
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
+ #
+ $IPTABLES -A INPUT -m set --set atbl.1 src -m state --state NEW -j ACCEPT
+ $IPTABLES -A INPUT -m set --set block_these src -m state --state NEW -j ACCEPT
  #
  # Rule 8 (global)
  #
  echo "Rule 8 (global)"
  #
- $IPTABLES -A OUTPUT -j DROP
- $IPTABLES -A FORWARD -j DROP
+ $IPTABLES -A OUTPUT -m set --set atbl.1 dst -j DROP
+ $IPTABLES -A FORWARD -m set --set atbl.1 dst -j DROP
 }
 
 ip_forward() {
@@ -640,7 +545,6 @@ ip_forward() {
 
 reset_all() {
  :
- command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
 }
 
@@ -653,20 +557,27 @@ stop_action() {
  $IPTABLES -P OUTPUT ACCEPT
  $IPTABLES -P INPUT ACCEPT
  $IPTABLES -P FORWARD ACCEPT
- $IP6TABLES -P OUTPUT ACCEPT
- $IP6TABLES -P INPUT ACCEPT
- $IP6TABLES -P FORWARD ACCEPT
 }
 
-status_action() {
- # Full-flush mode: check if iptables has user-defined chains
- # (more than just the three built-in chains INPUT/FORWARD/OUTPUT).
- chains=$($IPTABLES -L -n 2>/dev/null | grep -c "^Chain ")
- [ "$chains" -gt 3 ] && {
- echo "Firewall is active"
+check_iptables() {
+ IP_TABLES="$1"
+ [ ! -e $IP_TABLES ] && return 151
+ NF_TABLES=$(cat $IP_TABLES 2>/dev/null)
+ [ -z "$NF_TABLES" ] && return 152
  return 0
+}
+status_action() {
+ check_iptables "/proc/net/ip_tables_names"
+ ret_ipv4=$?
+ check_iptables "/proc/net/ip6_tables_names"
+ ret_ipv6=$?
+ [ $ret_ipv4 -eq 0 -o $ret_ipv6 -eq 0 ] && return 0
+ [ $ret_ipv4 -eq 151 -o $ret_ipv6 -eq 151 ] && {
+ echo "iptables modules are not loaded"
  }
+ [ $ret_ipv4 -eq 152 -o $ret_ipv6 -eq 152 ] && {
  echo "Firewall is not configured"
+ }
  exit 3
 }
 
@@ -693,29 +604,26 @@ case "$cmd" in
 
  reset_all
 
-
- script_body || run_epilog_and_exit 1
+ script_body
  ip_forward
 
  load_run_time_address_table_files
 
  epilog_commands
+ RETVAL=$?
  ;;
 
  stop)
- check_tools
  stop_action
  RETVAL=$?
  ;;
 
  status)
- check_tools
  status_action
  RETVAL=$?
  ;;
 
  block)
- check_tools
  block_action
  RETVAL=$?
  ;;
@@ -727,41 +635,34 @@ case "$cmd" in
  ;;
 
  interfaces)
- check_tools
  configure_interfaces
  RETVAL=$?
  ;;
 
  test_interfaces)
- check_tools
  FWBDEBUG="echo"
  configure_interfaces
  RETVAL=$?
  ;;
 
  reload_address_table)
- check_tools
- reload_address_table "$2" "$3"
+ reload_address_table $2 $3
  ;;
 
  add_to_address_table)
- check_tools
- add_to_address_table "$2" "$3" "$4"
+ add_to_address_table $2 $3 $4
  ;;
 
  remove_from_address_table)
- check_tools
- remove_from_address_table "$2" "$3" "$4"
+ remove_from_address_table $2 $3 $4
  ;;
 
  test_address_table)
- check_tools
- test_address_table "$2" "$3"
+ test_address_table $2 $3
  ;;
 
  *)
  echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces|reload_address_table|add_to_address_table|remove_from_address_table|test_address_table]"
- RETVAL=1
  ;;
 
 esac
