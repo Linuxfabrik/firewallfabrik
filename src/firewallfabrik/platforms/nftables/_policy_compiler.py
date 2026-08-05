@@ -44,6 +44,9 @@ from firewallfabrik.compiler.processors._generic import (
     SimplePrintProgress,
     SingleRuleFilter,
 )
+from firewallfabrik.compiler.processors._policy import (
+    DropRuleWithImpossibleInterface,
+)
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
 )
@@ -330,6 +333,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add(CheckForZeroAddr('check for zero addresses'))
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
+        self.add(DropRuleWithImpossibleInterface())
 
         # Print rule
         self.add(self.create_print_rule_processor())

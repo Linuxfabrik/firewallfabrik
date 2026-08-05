@@ -20,9 +20,11 @@ from __future__ import annotations
 
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
+    Direction,
     Interface,
     PhysAddress,
 )
+from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
 
 class InterfacePolicyRules(PolicyRuleProcessor):
@@ -209,6 +211,50 @@ class CheckForObjectsWithErrors(PolicyRuleProcessor):
         if rule is None:
             return False
         self.tmp_queue.append(rule)
+        return True
+
+
+class DropRuleWithImpossibleInterface(PolicyRuleProcessor):
+    """Drop a rule whose chain cannot see the interface it matches on.
+
+    A packet has no incoming device once the routing decision is made and
+    no outgoing one before it, so ``-i`` is impossible in POSTROUTING and
+    OUTPUT and ``-o`` in PREROUTING and INPUT (see
+    ``platforms/linux/_netfilter.py``).  iptables refuses such a rule
+    outright and nftables accepts one that never matches, so neither can
+    do what the rule asks for.
+
+    Runs before ``CountChainUsage`` rather than in the print rule: the
+    dropped rule may be the only jump to a temporary chain, and counting
+    it would leave that chain created and filled but unreachable.
+    """
+
+    def __init__(self, name: str = 'drop rules with an impossible interface') -> None:
+        super().__init__(name)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.iface_label == 'nil' or rule.direction not in (
+            Direction.Inbound,
+            Direction.Outbound,
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        inbound = rule.direction == Direction.Inbound
+        problem = interface_direction_problem(rule.ipt_chain, inbound)
+        if not problem:
+            self.tmp_queue.append(rule)
+            return True
+
+        side = 'incoming' if inbound else 'outgoing'
+        self.compiler.error(
+            rule,
+            f'Rule matches on the {side} interface but {problem}; the rule is left out',
+        )
         return True
 
 

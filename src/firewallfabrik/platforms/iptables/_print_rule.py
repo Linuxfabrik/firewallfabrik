@@ -58,7 +58,6 @@ from firewallfabrik.platforms.iptables._utils import (
     get_wait_option,
     version_compare,
 )
-from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -126,39 +125,10 @@ class PrintRule(PolicyRuleProcessor):
         self.version = get_iptables_version(self.compiler.fw)
         self.have_m_iprange = version_compare(self.version, '1.2.11') >= 0
 
-    def _report_impossible_interface_direction(self, rule: CompRule) -> bool:
-        """Report a rule whose chain cannot see the interface it matches on.
-
-        Returns True when the rule was reported and must not be printed:
-        iptables refuses ``-i`` in POSTROUTING / OUTPUT and ``-o`` in
-        PREROUTING / INPUT, which would stop the activation script.  Leaving
-        the interface out instead would silently widen the rule to every
-        interface, so the rule is dropped.
-        """
-        if rule.iface_label == 'nil':
-            return False
-        direction = rule.direction
-        if direction not in (Direction.Inbound, Direction.Outbound):
-            return False
-        inbound = direction == Direction.Inbound
-        problem = interface_direction_problem(rule.ipt_chain, inbound)
-        if not problem:
-            return False
-        side = 'incoming' if inbound else 'outgoing'
-        self.compiler.error(
-            rule,
-            f'Rule matches on the {side} interface but {problem}; the rule is left out',
-        )
-        return True
-
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-
-        if self._report_impossible_interface_direction(rule):
-            self.tmp_queue.append(rule)
-            return True
 
         chain = rule.ipt_chain
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)

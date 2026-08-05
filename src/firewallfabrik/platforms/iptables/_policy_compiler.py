@@ -46,6 +46,7 @@ from firewallfabrik.compiler.processors._generic import (
     SingleRuleFilter,
 )
 from firewallfabrik.compiler.processors._policy import (
+    DropRuleWithImpossibleInterface,
     ItfNegation,
 )
 from firewallfabrik.compiler.processors._policy import (
@@ -472,6 +473,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(OptimizeForMinusIOPlus("optimize for '-i +' / '-o +'"))
 
         self.add(CheckForObjectsWithErrors('check for objects with errors'))
+
+        # Before CountChainUsage: a rule left out here may be the only
+        # jump to a temporary chain, which then must not be created.
+        self.add(DropRuleWithImpossibleInterface())
 
         self.add(CountChainUsage('count chain usage'))
 
@@ -3840,19 +3845,36 @@ class CheckForObjectsWithErrors(PolicyRuleProcessor):
 
 
 class CountChainUsage(PolicyRuleProcessor):
-    """Count chain usage for all rules."""
+    """Count how often each chain is jumped to.
+
+    Ports C++ ``PolicyCompiler_ipt::countChainUsage``: a chain is used
+    when a rule names it as its target, so the count is keyed on
+    ``ipt_target``, not on the chain the rule sits in.  The built-in
+    chains and the chains of the rule sets are seeded to 1 beforehand
+    (``prolog`` and ``register_rule_set_chain``), so they always count as
+    used.
+
+    The second pass propagates: a rule inside a chain nothing jumps to
+    cannot run either, so its own target does not count as used.
+    ``PrintRule`` then leaves the whole chain out, ``-N`` included.
+    """
 
     def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
+        if not self.slurp():
             return False
-        chain = rule.ipt_chain
-        if chain:
-            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-            ipt_comp.chain_usage_counter[chain] = (
-                ipt_comp.chain_usage_counter.get(chain, 0) + 1
-            )
-        self.tmp_queue.append(rule)
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        for rule in self.tmp_queue:
+            target = rule.ipt_target
+            if target:
+                ipt_comp.chain_usage_counter[target] = (
+                    ipt_comp.chain_usage_counter.get(target, 0) + 1
+                )
+
+        for rule in self.tmp_queue:
+            if ipt_comp.chain_usage_counter.get(rule.ipt_chain, 0) == 0:
+                ipt_comp.chain_usage_counter[rule.ipt_target] = 0
+
         return True
 
 

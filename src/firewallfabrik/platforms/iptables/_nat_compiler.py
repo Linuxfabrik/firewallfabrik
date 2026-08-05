@@ -1710,19 +1710,27 @@ class CheckForObjectsWithErrors(NATRuleProcessor):
 
 
 class CountChainUsage(NATRuleProcessor):
-    """Count chain usage for all rules."""
+    """Count how often each chain is jumped to.
+
+    Ports C++ ``NATCompiler_ipt::countChainUsage``: a chain is used when
+    a rule names it as its target, so the count is keyed on
+    ``ipt_target``, not on the chain the rule sits in.  The built-in NAT
+    chains and the chains of the rule sets are seeded to 1 beforehand
+    (``prolog`` and ``register_rule_set_chain``).
+    """
 
     def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
+        if not self.slurp():
             return False
-        chain = rule.ipt_chain
-        if chain:
-            nat_comp = cast('NATCompiler_ipt', self.compiler)
-            nat_comp.chain_usage_counter[chain] = (
-                nat_comp.chain_usage_counter.get(chain, 0) + 1
-            )
-        self.tmp_queue.append(rule)
+
+        nat_comp = cast('NATCompiler_ipt', self.compiler)
+        for rule in self.tmp_queue:
+            target = rule.ipt_target
+            if target:
+                nat_comp.chain_usage_counter[target] = (
+                    nat_comp.chain_usage_counter.get(target, 0) + 1
+                )
+
         return True
 
 
