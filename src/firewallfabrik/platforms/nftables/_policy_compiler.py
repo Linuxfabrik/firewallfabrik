@@ -70,6 +70,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    is_run_time_address_table,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
@@ -127,6 +128,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Named counter objects the accounting rules count into. The driver
         # declares them at the top of the table.
         self.counters: list[str] = []
+        # Named sets an address table is rendered as, keyed by set name and
+        # holding the file the activation script reads the elements from.
+        self.address_tables: dict[str, tuple[str, bool]] = {}
 
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
@@ -2419,12 +2423,25 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        runtime_objs = [o for o in elements if isinstance(o, MultiAddressRunTime)]
+        # A run-time AddressTable belongs here too: it renders as a
+        # reference to a named set, which cannot be an element of the
+        # anonymous set the other addresses of the element are merged into.
+        runtime_objs = [
+            o
+            for o in elements
+            if isinstance(o, MultiAddressRunTime) or is_run_time_address_table(o)
+        ]
         if not runtime_objs:
             self.tmp_queue.append(rule)
             return True
 
-        if len(elements) == 1:
+        negated = rule.get_neg(self._slot) or bool(
+            getattr(rule, f'{self._slot}_single_object_negation', False)
+        )
+        if len(elements) == 1 or negated:
+            # A negated element means "none of these", so its objects have
+            # to stay in one rule; the print rule renders them as several
+            # matches, which nftables ANDs.
             self.tmp_queue.append(rule)
             return True
 

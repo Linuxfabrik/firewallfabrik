@@ -53,6 +53,8 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    get_address_table_source,
+    is_run_time_address_table,
     is_valid_dscp,
     range_to_cidr,
 )
@@ -65,6 +67,20 @@ if TYPE_CHECKING:
 def _is_true(val) -> bool:
     """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
     return str(val) == 'True'
+
+
+def nft_set_name(name: str) -> str:
+    """Return the nftables set name for an object called *name*.
+
+    A set name is an identifier of the nftables grammar, so the characters
+    outside it become underscores; the length is bounded by the kernel's
+    NFT_SET_MAXNAMELEN of 256 (netfilter linux/include/uapi/linux/
+    netfilter/nf_tables.h).
+    """
+    return re.sub(r'[^A-Za-z0-9_.\-]', '_', name)[:NFT_SET_MAX_NAME_LENGTH]
+
+
+NFT_SET_MAX_NAME_LENGTH = 255
 
 
 def _as_iface_set(names: list[str]) -> str:
@@ -630,13 +646,42 @@ class PrintRule_nft(PolicyRuleProcessor):
         parts = []
         if macs:
             parts.append(self._match_clause(f'ether {direction}', macs, neg))
-        if addrs:
-            parts.append(self._match_clause(keyword, addrs, neg))
+        parts.extend(self._address_clauses(rule, keyword, addrs, neg))
         if not parts:
             what = 'source' if direction == 'saddr' else 'destination'
             self.compiler.error(rule, f'Could not resolve any {what} addresses')
             return None
         return ' '.join(parts)
+
+    def _address_clauses(
+        self, rule: CompRule, keyword: str, addrs: list[str], neg: str
+    ) -> list[str]:
+        """Split the rendered addresses into the clauses one rule can carry.
+
+        A reference to a named set cannot be an element of the anonymous set
+        the other addresses are merged into, so it needs a clause of its
+        own.  Several clauses in one rule are ANDed, which is what a negated
+        element means ("none of these"); a positive element means "any of
+        these" and has to become one rule per clause, which
+        ``ProcessMultiAddressObjectsInRE`` takes care of before this point.
+        """
+        if not addrs:
+            return []
+        set_refs = [a for a in addrs if a.startswith('@')]
+        plain = [a for a in addrs if not a.startswith('@')]
+        if not set_refs:
+            return [self._match_clause(keyword, plain, neg)]
+        if plain and not neg:
+            self.compiler.error(
+                rule,
+                'An address table cannot be combined with other addresses in '
+                'one nftables rule; the rule is left out',
+            )
+            return []
+        clauses = [f'{keyword} {neg}{ref}' for ref in set_refs]
+        if plain:
+            clauses.append(self._match_clause(keyword, plain, neg))
+        return clauses
 
     @staticmethod
     def _match_clause(keyword: str, values: list[str], neg: str) -> str:
@@ -646,6 +691,19 @@ class PrintRule_nft(PolicyRuleProcessor):
 
     def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""
+        if is_run_time_address_table(obj):
+            # The addresses live in a file on the firewall, so the rule
+            # points at a named set and the script fills that set in at
+            # activation time (netfilter nftables doc/sets.txt).  A set is
+            # typed, so the two address families need one set each.
+            ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            self.compiler.address_tables[name] = (
+                get_address_table_source(obj),
+                ipv6,
+            )
+            return f'@{name}'
+
         if isinstance(obj, AddressRange):
             start = obj.get_start_address()
             end = obj.get_end_address()
@@ -1605,6 +1663,10 @@ def _parse_addr(
             prefix = before_match + m.group(1)
             addr = m.group(4)
             suffix = m.group(5)
+            if addr.lstrip().startswith('@'):
+                # A reference to a named set is not a value an anonymous
+                # set can hold; nftables rejects `{ @set, addr }`.
+                return None
             return (prefix, addr, suffix, field)
     return None
 

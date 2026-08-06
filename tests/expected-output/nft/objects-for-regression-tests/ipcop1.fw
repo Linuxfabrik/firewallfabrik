@@ -14,14 +14,6 @@
 #  Do not forget to change IP addresses to
 #  match your firewall.
 #
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
-# Rule 2 (global): Cannot resolve address for object type AddressTable
-# Rule 2 (global): Could not resolve any source addresses
 
 FWBDEBUG=""
 
@@ -245,12 +237,52 @@ configure_interfaces() {
     update_addresses_of_interface "eth1 192.168.253.128/24" ""
 }
 
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        exit 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+    load_address_table "ip" "fwf_filter" "atbl.1" "addr-table-1.tbl" "-4"
+}
+
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
 
 table ip fwf_filter {
+    set atbl.1 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -258,6 +290,10 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } counter log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 2 (global)
+        #
+        ip saddr @atbl.1 counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
@@ -271,6 +307,10 @@ table ip fwf_filter {
         # Rule 1 (global)
         #
         ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } counter log prefix "RULE 1 -- DENY " level info drop
+        #
+        # Rule 2 (global)
+        #
+        ip saddr @atbl.1 counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {
@@ -284,6 +324,7 @@ table ip fwf_filter {
 }
 
 NFT_RULES
+    load_address_tables
 }
 
 ip_forward() {

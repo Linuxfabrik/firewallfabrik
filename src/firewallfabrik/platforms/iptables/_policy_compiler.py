@@ -78,11 +78,11 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    get_address_table_source,
+    is_run_time_address_table,
 )
 from firewallfabrik.platforms.iptables._utils import (
-    get_address_table_source,
     get_iptables_version,
-    is_run_time_address_table,
     normalize_set_name,
     version_compare,
 )

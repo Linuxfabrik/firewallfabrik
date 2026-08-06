@@ -43,10 +43,13 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    get_address_table_source,
+    is_run_time_address_table,
     range_to_cidr,
 )
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
+    nft_set_name,
     print_fragment_match,
     print_icmp_service,
     print_ip_option_matches,
@@ -209,7 +212,16 @@ class NATPrintRule_nft(NATRuleProcessor):
         if macs:
             parts.append(f'{ether_keyword} {neg}{_as_set(macs)}')
         if addrs:
-            parts.append(f'{ip_keyword} {neg}{_as_set(addrs)}')
+            # A reference to a named set cannot be an element of the
+            # anonymous set the other addresses are merged into, so it gets
+            # a match of its own.  Two matches in one rule are ANDed, which
+            # is what a negated element means; a positive one would need a
+            # rule each, which ConvertToAtomicForAddresses provides.
+            set_refs = [a for a in addrs if a.startswith('@')]
+            plain = [a for a in addrs if not a.startswith('@')]
+            parts.extend(f'{ip_keyword} {neg}{ref}' for ref in set_refs)
+            if plain:
+                parts.append(f'{ip_keyword} {neg}{_as_set(plain)}')
         if objects and not parts:
             what = 'source' if 'saddr' in ip_keyword else 'destination'
             self.compiler.error(
@@ -265,6 +277,19 @@ class NATPrintRule_nft(NATRuleProcessor):
 
     def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""
+        if is_run_time_address_table(obj):
+            # The addresses live in a file on the firewall, so the rule
+            # points at a named set and the script fills that set in at
+            # activation time (netfilter nftables doc/sets.txt).  A set is
+            # typed, so the two address families need one set each.
+            ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            self.compiler.address_tables[name] = (
+                get_address_table_source(obj),
+                ipv6,
+            )
+            return f'@{name}'
+
         if isinstance(obj, AddressRange):
             start = obj.get_start_address()
             end = obj.get_end_address()

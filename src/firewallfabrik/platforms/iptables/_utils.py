@@ -143,20 +143,6 @@ def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
     )
 
 
-def is_run_time_address_table(obj) -> bool:
-    """Report whether *obj* is an AddressTable that is read on the firewall.
-
-    A compile-time table is replaced by its addresses in
-    ``ResolveMultiAddress``; only a run-time one still reaches a print rule.
-    """
-    return isinstance(obj, AddressTable) and bool((obj.data or {}).get('run_time'))
-
-
-def get_address_table_source(at: AddressTable) -> str:
-    """Return the file an AddressTable is read from, as the script sees it."""
-    return str((at.data or {}).get('filename', ''))
-
-
 def get_address_table_var_name(at: AddressTable) -> str:
     """Generate a shell variable name for an address table."""
     name = at.name

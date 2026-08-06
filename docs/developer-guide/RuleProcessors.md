@@ -2025,6 +2025,7 @@ the feature at all, independent of our implementation.
 | NAT OSrc/ODst negation | `SingleObjectNegationOSrc` / `SingleObjectNegationODst` inline `!` flags |
 | NAT local_nat | `SplitIfOSrcAny` + `SplitIfOSrcMatchesFw` + `LocalNATRule` |
 | NAT ReplaceFirewallObjectsTSrc | Replaces firewall in TSrc with the interface facing ODst |
+| Address table (run-time) | A named set per address family, declared with `flags interval` and `auto-merge` in the table its rules are in and filled from the file by `load_address_tables` after the ruleset is loaded |
 
 #### Partial or not yet implemented
 

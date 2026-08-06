@@ -168,6 +168,20 @@ class AddressTable(MultiAddress):
     __mapper_args__ = {'polymorphic_identity': 'AddressTable'}
 
 
+def is_run_time_address_table(obj) -> bool:
+    """Report whether *obj* is an AddressTable that is read on the firewall.
+
+    A compile-time table is replaced by its addresses before the rule
+    reaches a print rule; only a run-time one still carries the file.
+    """
+    return isinstance(obj, AddressTable) and bool((obj.data or {}).get('run_time'))
+
+
+def get_address_table_source(at: AddressTable) -> str:
+    """Return the file an AddressTable is read from, as the script sees it."""
+    return str((at.data or {}).get('filename', ''))
+
+
 class AttachedNetworks(MultiAddress):
     """Networks attached to an interface."""
 

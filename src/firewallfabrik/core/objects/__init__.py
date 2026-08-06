@@ -55,7 +55,9 @@ from ._groups import (
     ObjectGroup,
     ServiceGroup,
     StateSyncClusterGroup,
+    get_address_table_source,
     group_membership,
+    is_run_time_address_table,
 )
 from ._rules import (
     NAT,
@@ -155,7 +157,9 @@ __all__ = [
     'UDPService',
     'UserService',
     'enable_sqlite_fks',
+    'get_address_table_source',
     'group_membership',
+    'is_run_time_address_table',
     'is_valid_dscp',
     'range_to_cidr',
     'rule_elements',

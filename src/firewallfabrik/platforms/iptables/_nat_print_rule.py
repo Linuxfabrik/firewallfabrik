@@ -42,17 +42,17 @@ from firewallfabrik.core.objects import (
     TCPService,
     UDPService,
     UserService,
+    get_address_table_source,
+    is_run_time_address_table,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
     check_chain_name,
-    get_address_table_source,
     get_address_table_var_name,
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
-    is_run_time_address_table,
     normalize_set_name,
     version_compare,
 )

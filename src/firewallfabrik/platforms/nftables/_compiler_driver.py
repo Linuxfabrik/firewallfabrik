@@ -68,6 +68,33 @@ def _declare_counters(names: list[str]) -> str:
     return ''.join(out)
 
 
+def _declare_address_tables(tables: dict[str, tuple[str, bool]]) -> str:
+    """Declare the named sets an address table rule matches against.
+
+    The set has to exist before a rule can name it.  ``flags interval``
+    makes it hold networks as well as single addresses, which is what an
+    address table file may carry, and ``auto-merge`` folds the ones that
+    overlap into each other: an interval set otherwise refuses the whole
+    element list with "conflicting intervals specified", and a hand-kept
+    block list regularly holds a host that is already covered by one of its
+    networks (netfilter nftables doc/sets.txt).
+    """
+    if not tables:
+        return ''
+    out = []
+    for name, (_source, ipv6) in sorted(tables.items()):
+        addr_type = 'ipv6_addr' if ipv6 else 'ipv4_addr'
+        out.append(
+            f'    set {name} {{\n'
+            f'        type {addr_type}\n'
+            f'        flags interval\n'
+            f'        auto-merge\n'
+            f'    }}\n'
+        )
+    out.append('\n')
+    return ''.join(out)
+
+
 def _prepend(prefix: str, text: str) -> str:
     """Prepend a string to every non-empty line."""
     if not text:
@@ -91,6 +118,11 @@ class CompilerDriver_nft(CompilerDriver):
         self.have_connmark_in_output: bool = False
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
+        # Address tables rendered as named sets, per table of the ruleset.
+        # Each maps the set name to the file the script reads it from.
+        self.filter_address_tables: dict[str, tuple[str, bool]] = {}
+        self.mangle_address_tables: dict[str, tuple[str, bool]] = {}
+        self.nat_address_tables: dict[str, dict[str, tuple[str, bool]]] = {}
 
     def run(
         self,
@@ -436,6 +468,10 @@ class CompilerDriver_nft(CompilerDriver):
             if rules:
                 fam_chains.setdefault(chain_name, []).extend(rules)
 
+        self.nat_address_tables.setdefault(family_key, {}).update(
+            nat_compiler.address_tables
+        )
+
         if nat_compiler.get_errors() or nat_compiler.get_warnings():
             self.all_errors.extend(nat_compiler.get_errors())
             self.all_warnings.extend(nat_compiler.get_warnings())
@@ -483,6 +519,8 @@ class CompilerDriver_nft(CompilerDriver):
         for counter in policy_compiler.counters:
             if counter not in self.filter_counters:
                 self.filter_counters.append(counter)
+
+        self.filter_address_tables.update(policy_compiler.address_tables)
 
         if policy_compiler.get_errors() or policy_compiler.get_warnings():
             self.all_errors.extend(policy_compiler.get_errors())
@@ -534,6 +572,8 @@ class CompilerDriver_nft(CompilerDriver):
         for counter in mangle_compiler.counters:
             if counter not in self.mangle_counters:
                 self.mangle_counters.append(counter)
+
+        self.mangle_address_tables.update(mangle_compiler.address_tables)
 
         if mangle_compiler.get_errors() or mangle_compiler.get_warnings():
             self.all_errors.extend(mangle_compiler.get_errors())
@@ -651,6 +691,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_mangle:
             out.write(f'table {family} {mangle_table} {{\n')
             out.write(_declare_counters(self.mangle_counters))
+            out.write(_declare_address_tables(self.mangle_address_tables))
             for index, (chain, rules) in enumerate(mangle_by_chain):
                 if index:
                     out.write('\n')
@@ -667,6 +708,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
             out.write(_declare_counters(self.filter_counters))
+            out.write(_declare_address_tables(self.filter_address_tables))
 
             # Input chain
             out.write('    chain input {\n')
@@ -733,6 +775,7 @@ class CompilerDriver_nft(CompilerDriver):
 
         for fam, prerouting_rules, postrouting_rules, output_nat_rules in nat_by_family:
             out.write(f'table {fam} {nat_table} {{\n')
+            out.write(_declare_address_tables(self.nat_address_tables.get(fam, {})))
 
             # Prerouting chain (DNAT)
             out.write('    chain prerouting {\n')
@@ -898,10 +941,45 @@ class CompilerDriver_nft(CompilerDriver):
             'ip_path': ip_path,
             'nat_table': nat_table,
             'mangle_table': mangle_table,
+            'address_table_code': self._address_table_load_commands(
+                filter_family, filter_table, mangle_table, nat_table
+            ),
         }
 
         template = Jinja2Template('nftables', 'script.sh.j2')
         return template.render(context)
+
+    def _address_table_load_commands(
+        self,
+        filter_family: str,
+        filter_table: str,
+        mangle_table: str,
+        nat_table: str,
+    ) -> str:
+        """Return one load command per address table set in the ruleset.
+
+        The set lives in the table its rules are in, so a table used by both
+        the filter and the NAT rules is loaded once per table.
+        """
+        lines: list[str] = []
+        for table, tables in (
+            (filter_table, self.filter_address_tables),
+            (mangle_table, self.mangle_address_tables),
+        ):
+            for name, (source, ipv6) in sorted(tables.items()):
+                af = '-6' if ipv6 else '-4'
+                lines.append(
+                    f'    load_address_table "{filter_family}" "{table}" '
+                    f'"{name}" "{source}" "{af}"'
+                )
+        for fam, tables in sorted(self.nat_address_tables.items()):
+            for name, (source, ipv6) in sorted(tables.items()):
+                af = '-6' if ipv6 else '-4'
+                lines.append(
+                    f'    load_address_table "{fam}" "{nat_table}" '
+                    f'"{name}" "{source}" "{af}"'
+                )
+        return '\n'.join(lines)
 
     def _get_ip_forward_commands(self, fw: Firewall) -> str:
         """Generate IP forwarding sysctl commands."""

@@ -98,6 +98,9 @@ class NATCompiler_nft(NATCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.oscnf = oscnf
         self.have_dynamic_interfaces: bool = False
+        # Named sets an address table is rendered as, keyed by set name and
+        # holding the file the activation script reads the elements from.
+        self.address_tables: dict[str, tuple[str, bool]] = {}
 
         # Per-chain rule collection for nftables output assembly
         self.chain_rules: dict[str, list[str]] = {

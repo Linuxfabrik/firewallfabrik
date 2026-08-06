@@ -77,10 +77,49 @@ configure_interfaces() {
 }
 {% endif %}
 
+{% if address_table_code %}
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        exit 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+{{ address_table_code }}
+}
+{% endif %}
+
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 {{ nft_rules_body }}
 NFT_RULES
+{% if address_table_code %}
+    load_address_tables
+{% endif %}
 }
 
 {% if routing_output %}
