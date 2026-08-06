@@ -1602,7 +1602,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `splitIfSrcNegAndFw` | `platforms/iptables/_policy_compiler.py:SplitIfSrcNegAndFw` |
 | `splitIfDstNegAndFw` | `platforms/iptables/_policy_compiler.py:SplitIfDstNegAndFw` |
 | `splitIfSrcMatchingAddressRange` | `platforms/iptables/_policy_compiler.py:SplitIfSrcMatchingAddressRange` / `SplitIfDstMatchingAddressRange` |
-| `specialCaseAddressRangeInSrc` | `platforms/iptables/_policy_compiler.py:SpecialCaseAddressRangeInSrc` / `SpecialCaseAddressRangeInDst` |
+| `specialCaseAddressRangeInSrc` | `compiler/processors/_policy.py:SpecialCaseAddressRangeInSrc` / `SpecialCaseAddressRangeInDst` (shared by both policy pipelines) |
 | `decideOnChainIfSrcFW` | `platforms/iptables/_policy_compiler.py:DecideOnChainIfSrcFW` |
 | `decideOnChainIfDstFW` | `platforms/iptables/_policy_compiler.py:DecideOnChainIfDstFW` |
 | `decideOnChainIfLoopback` | `platforms/iptables/_policy_compiler.py:DecideOnChainIfLoopback` |
@@ -1947,6 +1947,7 @@ SplitIfSrcNegAndFw → SplitIfDstNegAndFw → NftNegation → TimeNegation →
 [CheckActionInMangleTable (mangle run)] →
 SplitIfSrcAny → SetChainForMangle → SetChainPreroutingForTag → SplitIfDstAny → SetChainPostroutingForTag →
 ProcessMultiAddressObjectsInRE(src/dst) →
+SpecialCaseAddressRangeInSrc → SpecialCaseAddressRangeInDst →
 SplitIfSrcMatchingAddressRange → SplitIfDstMatchingAddressRange →
 SplitIfSrcMatchesFw → SplitIfDstMatchesFw → SpecialCaseWithFW1 →
 DecideOnChainIfDstFW → SplitIfSrcFWNetwork → DecideOnChainIfSrcFW → SplitIfDstFWNetwork →

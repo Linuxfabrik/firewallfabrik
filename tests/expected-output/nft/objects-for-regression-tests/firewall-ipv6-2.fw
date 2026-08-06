@@ -331,6 +331,11 @@ table inet fwf_filter {
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
         #
+        # Rule 33 (global)
+        #
+        # ipv4 address range for bug 2820152
+        ip daddr 255.255.255.255 counter log prefix "RULE 33 -- DENY " level info drop
+        #
         # Rule 34 (global)
         #
         counter log prefix "RULE 34 -- DENY " level info drop
@@ -470,11 +475,6 @@ table inet fwf_filter {
         #
         # ipv4 address range for bug 2820152
         ip daddr 192.168.1.1-192.168.1.100 counter log prefix "RULE 32 -- DENY " level info drop
-        #
-        # Rule 33 (global)
-        #
-        # ipv4 address range for bug 2820152
-        ip daddr 255.255.255.255 counter log prefix "RULE 33 -- DENY " level info drop
         #
         # Rule 34 (global)
         #

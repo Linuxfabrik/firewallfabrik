@@ -18,10 +18,16 @@ rewritten for CompRule dataclasses.
 
 from __future__ import annotations
 
+import ipaddress as _ipa
+import uuid
+
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
+    AddressRange,
     Direction,
     Interface,
+    IPv4,
+    IPv6,
     PhysAddress,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -304,3 +310,91 @@ class MACFiltering(PolicyRuleProcessor):
                     )
 
         return True
+
+
+class SpecialCaseAddressRangeInRE(PolicyRuleProcessor):
+    """Replace AddressRange with dimension==1 (start==end) by an Address object.
+
+    When an AddressRange has the same start and end address (a single
+    address), replace it with an IPv4 or IPv6 address object. This is
+    done before ``splitIfSrcMatchingAddressRange`` to simplify matching.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::specialCaseAddressRangeInRE``.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        new_elements: list = []
+        for obj in elements:
+            # Note: ``is_any()`` on an AddressRange spuriously returns
+            # True because AddressRange keeps its addresses in
+            # ``start_address`` / ``end_address`` rather than
+            # ``inet_addr_mask``; the base Address.is_any() checks the
+            # latter and so treats every AddressRange as "any".  Guard
+            # the conversion with an explicit start != "" test.
+            if (
+                isinstance(obj, AddressRange)
+                and obj.get_start_address() == obj.get_end_address()
+                and obj.get_start_address()
+            ):
+                # Single address -- replace with IPv4 or IPv6.  The
+                # base Address.is_v4() queries ``inet_addr_mask`` which
+                # is empty for AddressRange, so derive the family from
+                # the start address directly.
+                start_addr = obj.get_start_address()
+                try:
+                    ip_obj = _ipa.ip_address(start_addr)
+                    is_v4 = ip_obj.version == 4
+                except ValueError:
+                    is_v4 = True
+                if is_v4:
+                    new_addr = IPv4(
+                        id=uuid.uuid4(),
+                        name=f'{obj.name}_addr',
+                    )
+                    new_addr.inet_addr_mask = {
+                        'address': start_addr,
+                        'netmask': '255.255.255.255',
+                    }
+                else:
+                    new_addr = IPv6(
+                        id=uuid.uuid4(),
+                        name=f'{obj.name}_addr',
+                    )
+                    new_addr.inet_addr_mask = {
+                        'address': start_addr,
+                        'netmask': 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+                    }
+                new_elements.append(new_addr)
+            else:
+                new_elements.append(obj)
+
+        setattr(rule, self._slot, new_elements)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SpecialCaseAddressRangeInSrc(SpecialCaseAddressRangeInRE):
+    """Replace single-address AddressRange in Src with an IPv4/IPv6 object."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'src')
+
+
+class SpecialCaseAddressRangeInDst(SpecialCaseAddressRangeInRE):
+    """Replace single-address AddressRange in Dst with an IPv4/IPv6 object."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'dst')

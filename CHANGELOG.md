@@ -86,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): logging of invalid packets uses the debug level and the configured NFLOG group. Under a packet flood those messages reached the console.
 * Compiler (nftables): long log prefixes are no longer truncated, so log parsers keyed on the full prefix match again.
 * Compiler (nftables): NAT rules that match a MAC address where that cannot work drop the match with a warning, as on iptables, instead of translating nothing.
+* Compiler (nftables): an address range that covers a single address is treated like that address, so a rule using it lands in the same chain as on iptables. Rules for broadcast traffic ended up in the wrong chains and matched nothing.
 * Compiler (nftables): NAT rules that name a host or a firewall with more than one address cover all of its addresses. Only the first one was translated or matched, so the rest of the traffic passed untranslated.
 * Compiler (nftables): NAT rules that translate only the port perform the translation instead of letting the traffic pass untranslated. Combined source and destination translation with a port works as well.
 * Compiler (nftables): NAT rules with a negated original source or destination produce a ruleset that loads.

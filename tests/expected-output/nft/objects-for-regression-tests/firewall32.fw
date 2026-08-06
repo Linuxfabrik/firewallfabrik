@@ -257,6 +257,10 @@ table ip fwf_filter {
         #
         ct state new counter accept
         #
+        # Rule Policy_fw32 2 (global)
+        #
+        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
+        #
         # Rule Policy_fw32 3 (global)
         #
         counter log prefix "RULE 3 -- DENY on global " level debug drop
@@ -275,10 +279,6 @@ table ip fwf_filter {
         # Rule Policy_fw32 1 (global)
         #
         ct state new counter accept
-        #
-        # Rule Policy_fw32 2 (global)
-        #
-        ip daddr 255.255.255.255 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule Policy_fw32 3 (global)
         #

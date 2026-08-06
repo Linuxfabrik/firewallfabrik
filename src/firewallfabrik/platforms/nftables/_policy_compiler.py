@@ -46,6 +46,8 @@ from firewallfabrik.compiler.processors._generic import (
 )
 from firewallfabrik.compiler.processors._policy import (
     DropRuleWithImpossibleInterface,
+    SpecialCaseAddressRangeInDst,
+    SpecialCaseAddressRangeInSrc,
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
@@ -269,6 +271,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(SetChainPostroutingForTag('chain postrouting for Tag'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Src', 'src'))
         self.add(ProcessMultiAddressObjectsInRE('process MultiAddress in Dst', 'dst'))
+        self.add(SpecialCaseAddressRangeInSrc('replace single address range in Src'))
+        self.add(SpecialCaseAddressRangeInDst('replace single address range in Dst'))
         self.add(
             SplitIfSrcMatchingAddressRange('split if Src has matching address range')
         )

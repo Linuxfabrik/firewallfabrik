@@ -241,6 +241,11 @@ table ip fwf_filter {
         #
         iifname "eth2" ip saddr 192.168.2.10 ip daddr 192.168.1.1 udp dport 67 ct state new counter accept
         #
+        # Rule 10 (global)
+        #
+        # compiler should place rule in INPUT chain because this is broadcast destination
+        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
+        #
         # Rule 14 (global)
         #
         ip daddr 224.0.0.18 ct state new counter accept
@@ -283,11 +288,6 @@ table ip fwf_filter {
         #
         # compiler should place rule in INPUT chain because this is broadcast destination
         ip daddr 192.168.1.255 udp dport 68 ct state new counter accept
-        #
-        # Rule 10 (global)
-        #
-        # compiler should place rule in INPUT chain because this is broadcast destination
-        ip daddr 255.255.255.255 udp dport 68 ct state new counter accept
         #
         # Rule 11 (global)
         #
