@@ -272,14 +272,6 @@ table inet fwf_filter {
         # Rule Policy_v6 1 (ppp0)
         #
         iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
-        #
-        # Rule 0 (ppp0)
-        #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
-        #
-        # Rule 1 (ppp-dsl)
-        #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
     }
 
     chain forward {
@@ -301,14 +293,6 @@ table inet fwf_filter {
         # Rule Policy_v6 1 (ppp0)
         #
         iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
-        #
-        # Rule 0 (ppp0)
-        #
-        iifname "ppp0" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
-        #
-        # Rule 1 (ppp-dsl)
-        #
-        iifname "ppp-dsl" ip6 saddr fe80::20c:29ff:fe28:c078 ct state new counter accept
     }
 
     chain output {

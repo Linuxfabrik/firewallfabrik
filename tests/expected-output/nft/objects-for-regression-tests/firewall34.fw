@@ -22,14 +22,6 @@
 # Rule 8 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 8 (global): Could not resolve any source addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 4 (global): Could not resolve any source addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 4 (global): Could not resolve any source addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 8 (global): Could not resolve any source addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 8 (global): Could not resolve any source addresses
 
 FWBDEBUG=""
 
@@ -278,9 +270,7 @@ load_address_table() {
 load_address_tables() {
     :
     load_address_table "inet" "fwf_filter" "addr-table-1_a" "addr-table-1.tbl" "-4"
-    load_address_table "inet" "fwf_filter" "addr-table-1_a_v6" "addr-table-1.tbl" "-6"
     load_address_table "inet" "fwf_filter" "block_these" "block-hosts.tbl" "-4"
-    load_address_table "inet" "fwf_filter" "block_these_v6" "block-hosts.tbl" "-6"
     load_address_table "ip" "fwf_nat" "block_these" "block-hosts.tbl" "-4"
 }
 
@@ -297,18 +287,8 @@ table inet fwf_filter {
         flags interval
         auto-merge
     }
-    set addr-table-1_a_v6 {
-        type ipv6_addr
-        flags interval
-        auto-merge
-    }
     set block_these {
         type ipv4_addr
-        flags interval
-        auto-merge
-    }
-    set block_these_v6 {
-        type ipv6_addr
         flags interval
         auto-merge
     }
@@ -333,28 +313,6 @@ table inet fwf_filter {
         # Rule 10 (global)
         #
         ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
-        #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
-        #
-        # Rule 5 (global)
-        #
-        ip6 saddr @block_these_v6 counter log prefix "RULE 5 -- DENY on global " level debug drop
-        #
-        # Rule 6 (global)
-        #
-        ip6 saddr @block_these_v6 counter log prefix "RULE 6 -- DENY on global " level debug drop
-        #
-        # Rule 7 (global)
-        #
-        ip6 saddr != @block_these_v6 ct state new counter accept
         #
         # Rule 11 (global)
         #
@@ -441,48 +399,6 @@ table inet fwf_filter {
         #
         ip daddr @addr-table-1_a ct state new counter accept
         #
-        # Rule 0 (global)
-        #
-        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
-        #
-        # Rule 1 (global)
-        #
-        ip6 daddr @block_these_v6 counter log prefix "RULE 1 -- DENY on global " level debug drop
-        #
-        # Rule 3 (global)
-        #
-        ip6 daddr @block_these_v6 tcp dport 25 counter drop
-        #
-        # Rule 5 (global)
-        #
-        ip6 saddr @block_these_v6 counter log prefix "RULE 5 -- DENY on global " level debug drop
-        #
-        # Rule 6 (global)
-        #
-        ip6 saddr @block_these_v6 counter log prefix "RULE 6 -- DENY on global " level debug drop
-        #
-        # Rule 7 (global)
-        #
-        ip6 saddr != @block_these_v6 ct state new counter accept
-        #
-        # Rule 9 (global)
-        #
-        tcp dport 25 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
-        #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
-        #
-        # Rule 15 (global)
-        #
-        ip6 daddr @addr-table-1_a_v6 ct state new counter accept
-        #
         # Rule Policy_ipv6 0 (global)
         #
         ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
@@ -548,36 +464,6 @@ table inet fwf_filter {
         # Rule 15 (global)
         #
         ip daddr @addr-table-1_a ct state new counter accept
-        #
-        # Rule 0 (global)
-        #
-        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
-        #
-        # Rule 1 (global)
-        #
-        ip6 daddr @block_these_v6 counter log prefix "RULE 1 -- DENY on global " level debug drop
-        #
-        # Rule 3 (global)
-        #
-        ip6 daddr @block_these_v6 tcp dport 25 counter drop
-        #
-        # Rule 9 (global)
-        #
-        tcp dport 25 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
-        #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
-        #
-        # Rule 15 (global)
-        #
-        ip6 daddr @addr-table-1_a_v6 ct state new counter accept
         #
         # Rule Policy_ipv6 0 (global)
         #

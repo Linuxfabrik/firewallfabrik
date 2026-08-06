@@ -313,22 +313,6 @@ table inet fwf_filter {
         #
         iifname "eth1" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
         #
-        # Rule 4 (global)
-        #
-        # All other attempts to connect to
-        # the firewall are denied and logged
-        ct state new counter log prefix "RULE 4 -- DENY " level info drop
-        #
-        # Rule 5 (global)
-        #
-        # Quickly reject attempts to connect
-        # to ident server to avoid SMTP delays
-        tcp dport 113 counter reject
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY " level info drop
-        #
         # Rule Policy_v6 1 (global)
         #
         # # Rule 1: Branch action not yet supported by nftables compiler
@@ -397,30 +381,6 @@ table inet fwf_filter {
         #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
         #
-        # Rule 5 (global)
-        #
-        # Quickly reject attempts to connect
-        # to ident server to avoid SMTP delays
-        tcp dport 113 counter reject
-        #
-        # Rule 6 (global)
-        #
-        # Mail relay on DMZ can accept
-        # connections from hosts on the
-        # Internet
-        tcp dport 25 ct state new counter accept
-        #
-        # Rule 7 (global)
-        #
-        # this rule permits a mail relay
-        # located on DMZ to connect
-        # to internal mail server
-        tcp dport 25 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY " level info drop
-        #
         # Rule Policy_v6 0 (eth1)
         #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
@@ -487,35 +447,6 @@ table inet fwf_filter {
         # Rule Policy_OSPF 1 (eth1)
         #
         oifname "eth1" ip6 saddr fe80::/10 ip6 daddr ff00::/8 counter accept
-        #
-        # Rule 3 (global)
-        #
-        # Firewall uses one of the machines
-        # on internal network for DNS
-        meta l4proto { tcp, udp } th dport 53 ct state new counter accept
-        #
-        # Rule 4 (global)
-        #
-        # All other attempts to connect to
-        # the firewall are denied and logged
-        ip6 daddr fe80::20c:29ff:fed2:cca1 ct state new counter log prefix "RULE 4 -- DENY " level info drop
-        #
-        # Rule 5 (global)
-        #
-        # Quickly reject attempts to connect
-        # to ident server to avoid SMTP delays
-        tcp dport 113 counter reject
-        #
-        # Rule 6 (global)
-        #
-        # Mail relay on DMZ can accept
-        # connections from hosts on the
-        # Internet
-        tcp dport 25 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule Policy_v6 0 (eth1)
         #

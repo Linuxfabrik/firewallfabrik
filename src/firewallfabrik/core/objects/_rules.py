@@ -16,6 +16,7 @@ from __future__ import (
     annotations,  # This is needed since SQLAlchemy does not support forward references yet
 )
 
+import socket
 import uuid
 from typing import TYPE_CHECKING
 
@@ -92,23 +93,31 @@ class RuleSet(Base):
 
     # -- Compiler helper methods --
 
+    def is_v4(self) -> bool:
+        """Whether this rule set is compiled for IPv4.
+
+        A rule set written before the IPv6 flags existed carries neither
+        flag.  fwbuilder reads that as IPv4-only, so that files predating
+        the flags keep compiling the way they always did (``RuleSet.h``:
+        ``isV4()``).  Both flags set means dual stack.
+        """
+        return self.ipv4 or not self.ipv6
+
+    def is_v6(self) -> bool:
+        """Whether this rule set is compiled for IPv6."""
+        return self.ipv6
+
     def matching_address_family(self, af: int) -> bool:
         """Check if this rule set should be compiled for the given address family.
 
         *af* is a :mod:`socket` address-family constant
         (``socket.AF_INET`` or ``socket.AF_INET6``).
-        Returns True if the rule set supports the given family, or if
-        both are False (meaning compile for both).
         """
-        import socket
-
-        if not self.ipv4 and not self.ipv6:
-            return True
         if af == socket.AF_INET:
-            return self.ipv4
+            return self.is_v4()
         if af == socket.AF_INET6:
-            return self.ipv6
-        return True
+            return self.is_v6()
+        return False
 
 
 class Policy(RuleSet):
