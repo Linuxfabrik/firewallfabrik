@@ -122,3 +122,34 @@ Connections between signals and slots are established in two ways:
 2. **In Python** -- explicit `.connect()` calls for signals not covered by the .ui file (e.g. custom tree signals, dynamically created widgets).
 
 A slot must not be connected both ways. If a connection already exists in the .ui file, adding a Python `.connect()` call for the same signal/slot pair will cause the slot to fire twice per signal emission.
+
+
+## Firewall Builder Features Left Out Because YAML Replaced XML
+
+Firewall Builder stores its data as XML, which no ordinary tool can diff or
+merge sensibly. It therefore had to bring its own. FirewallFabrik stores YAML,
+which every diff and merge tool already handles, so three of those features
+have no reason to exist here.
+
+**Rule set diff (`RuleSetDiffDialog`).** Firewall Builder shows two rule sets
+side by side and marks what differs. On a YAML file `git diff`, `diff
+--unified` or any graphical diff viewer answers the same question, with
+history and blame on top.
+
+**Find conflicting objects in two files (`ObjConflictResolutionDialog`).**
+Firewall Builder asks, object by object, which version wins when two data
+files are merged. Merging XML by hand is impractical, so the dialog was the
+only way. A YAML merge conflict is a normal three-way merge that `git merge`,
+`git mergetool` and every editor resolve.
+
+**Template firewalls.** The new-firewall wizard in Firewall Builder can start
+from a template file so the new object arrives with a working policy instead
+of an empty one. Copying a `.fwf` file and editing it does the same thing, and
+keeping a template in version control is more useful than a second mechanism
+inside the application. `new_host_dialog.py` therefore offers manual interface
+configuration only.
+
+The same reasoning does not extend to `fwf-edit`, the counterpart of
+`fwbedit`: editing YAML by hand is possible, but a data file still has
+cross-references and a schema that a text editor does not check. See
+[#146](https://github.com/Linuxfabrik/firewallfabrik/issues/146).
