@@ -1515,7 +1515,10 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 - `ItfNegation` (multi-interface) — excludes only loopback; missing the C++ filters for unprotected, bridge-port, and cluster interfaces
 - `SingleSrcNegation` / `SingleDstNegation` — no `countInetAddresses` check and no AddressTable/ipset handling; `SingleSrvNegation` is a no-op stub (TagService/UserService not yet modelled)
 - `SrcNegation` / `DstNegation` / `SrvNegation` — missing the `shadowing_mode` variant and the TCP-RST special case (preserving "any TCP" on the action rule for tcp-reset)
-- `TimeNegation` — validation only (aborts on time negation); no temp-chain expansion
+- `TimeNegation` — on nftables a negated interval that names both a time of day
+  and a weekday is reported and left out: its negation is a disjunction, which
+  one nftables rule cannot hold. iptables expands it into a temporary chain
+  like the address negations.
 - `SplitIfSrcAny` — no POSTROUTING copy for mangle+classification, no bridging / bridge-port check
 - `SplitIfDstAny` — no PREROUTING copy for mangle+classification
 - `InterfacePolicyRulesWithOptimization` — splits one rule per interface but does not factor the common rule body into a shared user-defined chain
@@ -1595,7 +1598,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `SrcNegation` | `platforms/iptables/_policy_compiler.py:SrcNegation` |
 | `DstNegation` | `platforms/iptables/_policy_compiler.py:DstNegation` |
 | `SrvNegation` | `platforms/iptables/_policy_compiler.py:SrvNegation` |
-| `TimeNegation` | `compiler/processors/_policy.py:TimeNegation` |
+| `TimeNegation` | `platforms/iptables/_policy_compiler.py:TimeNegation` + `platforms/nftables/_policy_compiler.py:TimeNegation` |
 | `splitIfSrcAny` | `platforms/iptables/_policy_compiler.py:SplitIfSrcAny` |
 | `splitIfDstAny` | `platforms/iptables/_policy_compiler.py:SplitIfDstAny` |
 | `splitIfSrcAnyForShadowing` | `platforms/iptables/_policy_compiler.py:SplitIfSrcAnyForShadowing` / `SplitIfDstAnyForShadowing` |

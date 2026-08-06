@@ -51,9 +51,6 @@ from firewallfabrik.compiler.processors._policy import (
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
 )
-from firewallfabrik.compiler.processors._policy import (
-    TimeNegation as BaseTimeNegation,
-)
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
     SeparateTCPWithFlags,
@@ -335,9 +332,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(SrcNegation('process negation in Src'))
         self.add(DstNegation('process negation in Dst'))
 
-        self.add(
-            BaseTimeNegation(allow_negation=False, name='process negation in Time')
-        )
+        self.add(TimeNegation('process negation in Time'))
 
         self.add(Logging2('process logging'))
 
@@ -1613,6 +1608,93 @@ class SrcNegation(PolicyRuleProcessor):
 
         # Action rule: clear everything
         # https://github.com/Linuxfabrik/firewallfabrik/issues/16
+        r_action = rule.clone()
+        r_action.src = []
+        r_action.dst = []
+        reset_srv_preserving_tcp(r_action)
+        r_action.itf = []
+        r_action.when = []
+        r_action.ipt_chain = new_chain
+        r_action.upstream_rule_chain = this_chain
+        r_action.set_option('stateless', True)
+        r_action.force_state_check = False
+        r_action.final = True
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_action)
+
+        return True
+
+
+class TimeNegation(PolicyRuleProcessor):
+    """Expand a negated time restriction into a temporary chain.
+
+    iptables has no way to negate ``-m time``: the match module takes a
+    window and matches inside it, and there is no ``!`` for the whole set of
+    its options (netfilter extensions/libxt_time.c).  So the rule is turned
+    into the same three-rule shape the address negations use, which says
+    "outside this window" by excluding the window instead of negating it:
+
+    1. a jump rule carrying the original conditions into a new chain,
+    2. a RETURN rule in that chain matching the interval, so traffic *inside*
+       the window leaves again without being acted on,
+    3. the action rule, which everything that did not return reaches.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::TimeNegation``.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if not rule.get_neg('when'):
+            self.tmp_queue.append(rule)
+            return True
+
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        rule.set_neg('when', False)
+
+        this_chain = rule.ipt_chain
+        new_chain = ipt_comp.get_new_tmp_chain_name(rule)
+
+        # Jump rule: everything except the time, which is checked in the chain
+        r_jump = rule.clone()
+        r_jump.when = []
+        r_jump.ipt_target = new_chain
+        r_jump.action = PolicyAction.Continue
+        r_jump.set_option('classification', False)
+        r_jump.set_option('routing', False)
+        r_jump.set_option('tagging', False)
+        r_jump.set_option('log', False)
+        r_jump.set_option('limit_value', -1)
+        r_jump.set_option('connlimit_value', -1)
+        r_jump.set_option('hashlimit_value', -1)
+        self.tmp_queue.append(r_jump)
+
+        # Return rule: keep only the interval, which is what is excluded
+        r_return = rule.clone()
+        r_return.src = []
+        r_return.dst = []
+        r_return.srv = []
+        r_return.itf = []
+        r_return.ipt_chain = new_chain
+        r_return.upstream_rule_chain = this_chain
+        r_return.action = PolicyAction.Return
+        r_return.set_option('classification', False)
+        r_return.set_option('routing', False)
+        r_return.set_option('tagging', False)
+        r_return.set_option('log', False)
+        r_return.set_option('stateless', True)
+        r_return.set_option('limit_value', -1)
+        r_return.set_option('connlimit_value', -1)
+        r_return.set_option('hashlimit_value', -1)
+        r_return.force_state_check = False
+        ipt_comp.register_chain(new_chain)
+        ipt_comp.insert_upstream_chain(this_chain, new_chain)
+        self.tmp_queue.append(r_return)
+
+        # Action rule: everything was matched already
         r_action = rule.clone()
         r_action.src = []
         r_action.dst = []

@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
 * Compiler (iptables): a rate limit higher than iptables can express is reported at compile time instead of stopping the activation script. nftables is unaffected.
 * Compiler (iptables): a rule set or branch whose name iptables cannot use as a chain name is reported at compile time instead of failing during activation. nftables is unaffected.
+* Compiler (iptables): a rule whose time restriction is negated is compiled instead of being left out, so a policy that applies outside a time window works again.
 * Compiler (iptables): an address table file that lists both IPv4 and IPv6 addresses gives each ruleset only the addresses that ruleset's tool accepts, so rules built on such a table are no longer missing from the running firewall.
 * Compiler (iptables): bridging firewalls whose rules use an interface as a destination compile again instead of failing with an internal error and no script at all.
 * Compiler (iptables): firewalls pinned to iptables 1.2.5 or to 1.2.6 through 1.2.8 are compiled for that release again.
