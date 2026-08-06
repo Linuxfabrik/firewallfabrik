@@ -20,7 +20,6 @@
 # Rule 0: Could not resolve any source addresses
 # Rule 0: Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 0: Could not resolve any source addresses
-# AddressTable "addrtbl 1": file not found (addr-table-1.tbl)
 
 FWBDEBUG=""
 
@@ -255,7 +254,7 @@ table ip fwf_filter {
         #
         # Rule Policy_fw32 1 (global)
         #
-        ct state new counter accept
+        ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule Policy_fw32 2 (global)
         #
@@ -278,7 +277,7 @@ table ip fwf_filter {
         #
         # Rule Policy_fw32 1 (global)
         #
-        ct state new counter accept
+        ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule Policy_fw32 3 (global)
         #
@@ -288,10 +287,6 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule Policy_fw32 1 (global)
-        #
-        ct state new counter accept
         #
         # Rule Policy_fw32 2 (global)
         #

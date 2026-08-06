@@ -14,7 +14,6 @@
 # Rule 0 (NAT): Could not resolve any original source addresses
 # Rule 1 (NAT): Cannot resolve address for object type AddressTable
 # Rule 1 (NAT): Could not resolve any original destination addresses
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
 # Rule 1 (global): Cannot resolve address for object type AddressTable
@@ -51,8 +50,6 @@
 # Rule 8 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 8 (global): Could not resolve any source addresses
-# AddressTable "empty table": file not found (emtpy-table.tbl)
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
@@ -61,7 +58,6 @@
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
 # Rule 1 (global): Cannot resolve address for object type AddressTable
@@ -110,8 +106,6 @@
 # Rule 8 (global): Could not resolve any source addresses
 # Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
 # Rule 8 (global): Could not resolve any source addresses
-# AddressTable "empty table": file not found (emtpy-table.tbl)
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
@@ -120,7 +114,6 @@
 # Rule 15 (global): Could not resolve any destination addresses
 # Rule 15 (global): Cannot resolve address for object type AddressTable
 # Rule 15 (global): Could not resolve any destination addresses
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 
 FWBDEBUG=""
 
@@ -347,10 +340,6 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        ct state new counter accept
-        #
         # Rule 6 (global)
         #
         # # Rule 6 (global): Cannot resolve address for object type AddressTable
@@ -375,18 +364,6 @@ table inet fwf_filter {
         # object with no addresses
         counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
-        # Rule 14 (global)
-        #
-        # using connlimit
-        # option. Connlimit
-        # is only valid in combination
-        # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
-        #
-        # Rule 0 (global)
-        #
-        ct state new counter accept
-        #
         # Rule 11 (global)
         #
         counter log prefix "RULE 11 -- DENY on global " level debug drop
@@ -396,10 +373,6 @@ table inet fwf_filter {
         # using address table
         # object with no addresses
         counter log prefix "RULE 12 -- DENY on global " level debug drop
-        #
-        # Rule Policy_ipv6 0 (global)
-        #
-        ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
@@ -412,7 +385,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule 2 (global)
         #
@@ -463,11 +436,11 @@ table inet fwf_filter {
         # option. Connlimit
         # is only valid in combination
         # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } tcp dport 25 ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
         #
         # Rule 9 (global)
         #
@@ -485,7 +458,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #
@@ -498,7 +471,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule 2 (global)
         #
@@ -539,11 +512,11 @@ table inet fwf_filter {
         # option. Connlimit
         # is only valid in combination
         # with "-p tcp -m tcp"
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new counter accept
+        ip saddr 192.168.1.0/24 ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } tcp dport 25 ct state new counter accept
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
         #
         # Rule 9 (global)
         #
@@ -561,7 +534,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 0 (global)
         #
-        ct state new counter accept
+        ip6 daddr { 2001:458:20:100:250:b7ff:fe00:2af, fe80:: } ct state new counter accept
         #
         # Rule Policy_ipv6 1 (global)
         #

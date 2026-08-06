@@ -34,6 +34,9 @@ tests/
 │   ├── basic_accept_deny.fwf            # Hand-crafted YAML fixture
 │   ├── cluster-tests.fwb               # C++ cluster regression suite (XML)
 │   ├── compiler-tests.fwf              # Hand-crafted YAML fixture
+│   ├── addr-table-1.tbl                # Address table data, referenced by .fwb fixtures
+│   ├── block-hosts.tbl                 # Address table data, referenced by .fwb fixtures
+│   ├── emtpy-table.tbl                 # Address table data, referenced by .fwb fixtures
 │   ├── objects-for-regression-tests.fwb # C++ Firewall Builder regression suite (XML)
 │   ├── optimizer-test.fwb              # C++ optimizer regression suite (XML)
 │   └── reject_actions.fwf             # Hand-crafted YAML fixture

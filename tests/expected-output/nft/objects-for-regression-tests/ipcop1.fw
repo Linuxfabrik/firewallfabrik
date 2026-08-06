@@ -14,7 +14,6 @@
 #  Do not forget to change IP addresses to
 #  match your firewall.
 #
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 2 (global): Cannot resolve address for object type AddressTable
 # Rule 2 (global): Could not resolve any source addresses
 # Rule 2 (global): Cannot resolve address for object type AddressTable
@@ -258,7 +257,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        counter log prefix "RULE 1 -- DENY " level info drop
+        ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } counter log prefix "RULE 1 -- DENY " level info drop
     }
 
     chain forward {
@@ -271,7 +270,7 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        counter log prefix "RULE 1 -- DENY " level info drop
+        ip saddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } counter log prefix "RULE 1 -- DENY " level info drop
     }
 
     chain output {
@@ -281,10 +280,6 @@ table ip fwf_filter {
         # Rule 0 (global)
         #
         ip daddr 10.3.14.40 tcp dport 80 ct state new counter accept
-        #
-        # Rule 1 (global)
-        #
-        counter log prefix "RULE 1 -- DENY " level info drop
     }
 }
 

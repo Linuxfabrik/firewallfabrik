@@ -16,7 +16,6 @@
 # Rule 0 (NAT): Could not resolve any original source addresses
 # Rule 1 (NAT): Cannot resolve address for object type AddressTable
 # Rule 1 (NAT): Could not resolve any original destination addresses
-# AddressTable "addr-table-1": file not found (addr-table-1.tbl)
 # Rule 1 (global): Cannot resolve address for object type AddressTable
 # Rule 1 (global): Could not resolve any destination addresses
 # Rule 1 (global): Cannot resolve address for object type AddressTable
@@ -280,10 +279,6 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        ct state new counter accept
-        #
         # Rule 7 (global)
         #
         # # Rule 7 (global): Cannot resolve address for object type AddressTable
@@ -315,7 +310,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule 2 (global)
         #
@@ -360,7 +355,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ct state new counter accept
+        ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
         #
         # Rule 2 (global)
         #
