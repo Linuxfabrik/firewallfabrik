@@ -11,6 +11,29 @@
 #  this object is used to test all kinds of negation in policy and NAT rules.
 #  Assume firewall is part of any is ON
 #
+# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -23,9 +46,6 @@
 # firewall1:Policy:31: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:31: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:31: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -376,18 +396,6 @@ table ip fwf_filter {
         #
         ip daddr 192.168.1.0/24 ct state new counter accept
         #
-        # Rule 38 (global)
-        #
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
-        #
-        # Rule 39 (global)
-        #
-        # # firewall1:Policy:39: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
-        #
         # Rule 40 (global)
         #
         ip saddr { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } ip daddr != 192.168.1.0/24 tcp dport 80 counter drop
@@ -541,18 +549,6 @@ table ip fwf_filter {
         # # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
-        # Rule 30 (global)
-        #
-        # testing negation in service field
-        # # firewall1:Policy:30: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
-        #
-        # Rule 31 (global)
-        #
-        # testing negation in service field
-        # # firewall1:Policy:31: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
-        #
         # Rule 33 (global)
         #
         ip saddr 192.168.2.0/24 ip daddr != 192.168.1.0/24 tcp dport 22 ct state new counter accept
@@ -574,18 +570,6 @@ table ip fwf_filter {
         # Rule 37 (global)
         #
         ip daddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 38 (global)
-        #
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
-        #
-        # Rule 39 (global)
-        #
-        # # firewall1:Policy:39: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
     }
 
     chain output {
@@ -679,18 +663,6 @@ table ip fwf_filter {
         # # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
-        # Rule 30 (global)
-        #
-        # testing negation in service field
-        # # firewall1:Policy:30: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
-        #
-        # Rule 31 (global)
-        #
-        # testing negation in service field
-        # # firewall1:Policy:31: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
-        #
         # Rule 32 (global)
         #
         tcp dport 80 ct state new counter accept
@@ -712,18 +684,6 @@ table ip fwf_filter {
         # Rule 37 (global)
         #
         ip saddr != { 192.168.1.1, 192.168.2.1 } ip daddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule 38 (global)
-        #
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
-        # # firewall1:Policy:38: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 25 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
-        #
-        # Rule 39 (global)
-        #
-        # # firewall1:Policy:39: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        ip saddr 192.168.1.0/24 tcp dport 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 40 (global)
         #

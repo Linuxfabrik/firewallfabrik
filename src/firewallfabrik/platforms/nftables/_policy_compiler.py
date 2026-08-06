@@ -833,13 +833,19 @@ class NftNegation(PolicyRuleProcessor):
 
 
 class TimeNegation(PolicyRuleProcessor):
-    """Process negation in time rule element for nftables."""
+    """Carry a negated time through to the print rule.
+
+    nftables inverts a single ``meta hour`` or ``meta day`` match with
+    ``!=``, so unlike iptables no temporary chain is needed and the flag
+    stays on the rule.  ``PrintRule_nft._print_time_interval`` applies it and
+    reports the one case that needs two rules, a negated interval that names
+    both a time of day and a weekday.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        # nftables handles time negation natively, just pass through
         self.tmp_queue.append(rule)
         return True
 

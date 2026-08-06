@@ -466,6 +466,11 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Time matching
         time_match = self._print_time_interval(rule)
+        if time_match is None:
+            # A negated time nftables cannot invert; the reason was reported.
+            # Emitting the rule without the match would make it apply at all
+            # times, the opposite of what it says.
+            return ''
         if time_match:
             parts.append(time_match)
 
@@ -1262,19 +1267,46 @@ class PrintRule_nft(PolicyRuleProcessor):
             f'-{self._hour_literal(start - 1, kerneltz)}'
         )
 
-    def _print_time_interval(self, rule: CompRule) -> str:
+    @staticmethod
+    def _invert_time_match(match: str) -> str:
+        """Turn a single ``meta hour`` / ``meta day`` match into its opposite."""
+        if ' != ' in match:
+            return match.replace(' != ', ' ', 1)
+        keyword, _, value = match.partition(' ')
+        # `meta hour`/`meta day` is two words, so the value starts after them.
+        head, _, rest = value.partition(' ')
+        return f'{keyword} {head} != {rest}'
+
+    def _print_time_interval(self, rule: CompRule) -> str | None:
         """Print nftables time/weekday matching.
 
         Uses ``meta hour`` for time-of-day and ``meta day`` for weekday
         constraints.
+
+        A negated interval is the opposite of everything the interval says at
+        once.  When the interval boils down to a single condition that is one
+        ``!=``; when it names both a time of day and a set of weekdays, the
+        opposite is "outside those hours *or* on another day", and no single
+        nftables rule holds a disjunction, so the rule is reported and left
+        out rather than written as something else.
         """
         if not rule.when:
             return ''
 
         interval = rule.when[0]
         data = interval.data or {}
+        negated = bool(rule.get_neg('when'))
 
         if is_any_interval(data):
+            if negated:
+                # "Never" - the rule can never match, so writing it would
+                # only be misleading.
+                self.compiler.error(
+                    rule,
+                    'The time is negated but covers the whole week, so the '
+                    'rule can never match',
+                )
+                return None
             return ''
 
         start_h, start_m, end_h, end_m, days = parse_interval_data(data)
@@ -1306,6 +1338,26 @@ class PrintRule_nft(PolicyRuleProcessor):
                     'timezone; turn on "use kernel timezone" so iptables '
                     'agrees',
                 )
+
+        if negated:
+            if len(parts) == 1:
+                return self._invert_time_match(parts[0])
+            if not parts:
+                # Every hour of every day, negated: the rule never matches.
+                self.compiler.error(
+                    rule,
+                    'The time is negated but covers the whole week, so the '
+                    'rule can never match',
+                )
+                return None
+            self.compiler.error(
+                rule,
+                'A negated time that names both a time of day and a weekday '
+                'needs two rules to say "outside those hours or on another '
+                'day", which nftables cannot express in one; the rule is '
+                'left out',
+            )
+            return None
 
         return ' '.join(parts)
 
