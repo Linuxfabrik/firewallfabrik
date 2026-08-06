@@ -21,9 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
 * Compiler (iptables): a rate limit higher than iptables can express is reported at compile time instead of stopping the activation script. nftables is unaffected.
 * Compiler (iptables): a rule set or branch whose name iptables cannot use as a chain name is reported at compile time instead of failing during activation. nftables is unaffected.
-* Compiler (iptables): an address table file that lists both IPv4 and IPv6 addresses gives each ruleset only the addresses it can use. Every address of the other family was rejected on activation, so those rules were missing from the running firewall. nftables already did this.
+* Compiler (iptables): an address table file that lists both IPv4 and IPv6 addresses gives each ruleset only the addresses that ruleset's tool accepts, so rules built on such a table are no longer missing from the running firewall.
 * Compiler (iptables): bridging firewalls whose rules use an interface as a destination compile again instead of failing with an internal error and no script at all.
 * Compiler (iptables): firewalls pinned to iptables 1.2.5 or to 1.2.6 through 1.2.8 are compiled for that release again.
+* Compiler (iptables): firewalls that activate through iptables-restore and log invalid packets load their ruleset again instead of stopping at the first invalid-state rule.
 * Compiler (iptables): firewalls that do not pin an iptables version are compiled for current iptables. Rules with a negated address or interface failed to load.
 * Compiler (iptables): firewalls with routing rules generate a working script. One packet filter rule and the first route were lost.
 * Compiler (iptables): IPv6 NAT rules that match a specific ICMPv6 type produce a valid rule.
@@ -49,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a bridge port is recognised as one, so the generated script no longer tries to configure an address on it and rules that name one are compiled again.
 * Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
 * Compiler (iptables, nftables): a NAT rule whose translated service uses a different protocol than the original is reported instead of being compiled into a translation the rule does not ask for.
-* Compiler (iptables, nftables): a rule set that names neither address family is compiled for IPv4 only, the way Firewall Builder reads it. Such a rule set was compiled into the IPv6 ruleset as well, where a rule lost its IPv4 addresses and matched far more traffic than intended, and a rule reading an IPv4 address table failed once per address in the file.
+* Compiler (iptables, nftables): a rule set that names neither address family is compiled for IPv4 only, instead of also landing in the IPv6 ruleset where its rules matched far more traffic than intended or failed to load at all.
 * Compiler (iptables, nftables): a source translation to an unnumbered interface is reported instead of stopping the activation script on iptables and translating to the wrong address on nftables.
 * Compiler (iptables, nftables): address ranges are no longer emitted into the wrong address family, which produced a ruleset that did not load.
 * Compiler (iptables, nftables): an IP service with an unknown DiffServ class name is reported with a clear error instead of producing a ruleset that does not load.

@@ -814,8 +814,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         drop_inv = f'{prefix}_drop_invalid' if prefix else 'drop_invalid'
         conf.set_variable('prefix_drop_invalid', drop_inv)
+        # iptables-restore only knows a chain it has seen declared, so the
+        # chain the invalid-state rules jump to needs its own `:name - [0:0]`
+        # line, the same one the rule set chains already get.  Without it
+        # restore stops at the first jump with "Chain 'drop_invalid' does not
+        # exist" and the firewall keeps the ruleset it had.
         create_cmd = (
-            f'{iptables_cmd} -N {drop_inv} 2>/dev/null' if not use_restore else ''
+            f'echo ":{drop_inv} - [0:0]"'
+            if use_restore
+            else f'{iptables_cmd} -N {drop_inv} 2>/dev/null'
         )
         conf.set_variable('create_drop_invalid_chain', create_cmd)
 
