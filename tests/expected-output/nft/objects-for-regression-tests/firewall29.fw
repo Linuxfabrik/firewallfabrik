@@ -10,10 +10,6 @@
 #
 #  two dynamic interfaces in the same policy or NAT rule. Interfaces have a dot in their names
 #
-# Rule 0 (NAT): Interface "eth0.100" has no addresses
-# Rule 0 (NAT): Could not resolve any original destination addresses
-# Rule 0 (NAT): Interface "eth0.200" has no addresses
-# Rule 0 (NAT): Could not resolve any original destination addresses
 
 FWBDEBUG=""
 
@@ -325,12 +321,16 @@ load_address_tables() {
     :
     load_interface_address "ip" "fwf_filter" "i_eth0.100" "eth0.100" "-4"
     load_interface_address "ip" "fwf_filter" "i_eth0.200" "eth0.200" "-4"
+    load_interface_address "ip" "fwf_nat" "i_eth0.100" "eth0.100" "-4"
+    load_interface_address "ip" "fwf_nat" "i_eth0.200" "eth0.200" "-4"
 }
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
 
 table ip fwf_filter {
     set i_eth0.100 {
@@ -409,6 +409,32 @@ table ip fwf_filter {
         # Rule 5 (global)
         #
         counter log prefix "RULE 5 -- DENY on interface global " level debug drop
+    }
+}
+
+table ip fwf_nat {
+    set i_eth0.100 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set i_eth0.200 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 0 (NAT)
+        #
+        ip daddr @i_eth0.100 counter dnat to 192.168.1.10
+        ip daddr @i_eth0.200 counter dnat to 192.168.1.10
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
     }
 }
 

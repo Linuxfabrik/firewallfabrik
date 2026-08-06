@@ -325,6 +325,16 @@ class NATPrintRule_nft(NATRuleProcessor):
                 return f'{start}-{end}'
 
         if isinstance(obj, Interface):
+            if for_match and obj.is_dynamic():
+                # The address is only known on the firewall, so the match
+                # points at a named set the script fills from the running
+                # interface, the same way the policy rules do.  A translation
+                # target cannot use this: DynamicInterfaceInTSrc has already
+                # turned that case into a masquerade rule.
+                ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+                name = nft_set_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
+                self.compiler.address_tables[name] = (obj.name, ipv6, 'interface')
+                return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))
             if addr is not None:
                 return addr.get_address()

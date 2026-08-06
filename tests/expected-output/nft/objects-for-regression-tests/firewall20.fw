@@ -330,6 +330,7 @@ load_interface_address() {
 load_address_tables() {
     :
     load_interface_address "ip" "fwf_filter" "i_ppp_" "ppp*" "-4"
+    load_interface_address "ip" "fwf_nat" "i_ppp_" "ppp*" "-4"
 }
 
 script_body() {
@@ -538,6 +539,12 @@ table ip fwf_filter {
 }
 
 table ip fwf_nat {
+    set i_ppp_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
@@ -545,7 +552,7 @@ table ip fwf_nat {
         #
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
-        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr @i_ppp_ tcp dport 22 counter dnat to 192.168.1.10:22
         #
         # Rule 6 (NAT)
         #
@@ -554,7 +561,7 @@ table ip fwf_nat {
         # Rule 7 (NAT)
         #
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10
-        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10
+        ip daddr @i_ppp_ tcp dport 22 counter dnat to 192.168.1.10
     }
 
     chain postrouting {
