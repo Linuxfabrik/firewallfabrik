@@ -680,7 +680,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         if not addrs:
             return []
-        set_refs = [a for a in addrs if a.startswith('@')]
+        # Two objects can render to the same set: a dynamic interface named
+        # in the rule and the same interface reached through the host it
+        # belongs to both become "@i_<name>".  Repeating the clause would
+        # test it twice for no reason.
+        set_refs = list(dict.fromkeys(a for a in addrs if a.startswith('@')))
         plain = [a for a in addrs if not a.startswith('@')]
         if not set_refs:
             return [self._match_clause(keyword, plain, neg)]
@@ -750,12 +754,15 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         if isinstance(obj, Interface):
             if obj.is_dynamic():
-                self.compiler.error(
-                    rule,
-                    f'Dynamic interface address not yet supported by nftables compiler'
-                    f' (interface: {obj.name})',
-                )
-                return ''
+                # The address is only known on the firewall, so the rule
+                # points at a named set that the script fills from the
+                # running interface after the ruleset is loaded.  A wildcard
+                # name such as "ppp*" collects the addresses of every
+                # interface it matches into the same set.
+                ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+                name = nft_set_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
+                self.compiler.address_tables[name] = (obj.name, ipv6, 'interface')
+                return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))
             if addr is not None:
                 return self._print_addr_basic(addr, rule)

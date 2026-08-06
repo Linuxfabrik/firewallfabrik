@@ -12,16 +12,6 @@
 #
 # Rule 0 (NAT): Interface "eth0.100" has no addresses
 # Rule 0 (NAT): Could not resolve any original destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 4 (global): Could not resolve any source addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 4 (global): Could not resolve any source addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 4 (global): Could not resolve any source addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 8 (global): Could not resolve any source addresses
-# Rule 8 (global): Dynamic interface address not yet supported by nftables compiler (interface: eth0.100)
-# Rule 8 (global): Could not resolve any source addresses
 
 FWBDEBUG=""
 
@@ -292,10 +282,44 @@ load_dns_name() {
     $NFT add element "$family" "$table" "$setname" "{ $addrs }"
 }
 
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
 load_address_tables() {
     :
     load_address_table "inet" "fwf_filter" "addr-table-1_a" "addr-table-1.tbl" "-4"
     load_address_table "inet" "fwf_filter" "block_these" "block-hosts.tbl" "-4"
+    load_interface_address "inet" "fwf_filter" "i_eth0.100" "eth0.100" "-4"
     load_address_table "ip" "fwf_nat" "block_these" "block-hosts.tbl" "-4"
 }
 
@@ -313,6 +337,11 @@ table inet fwf_filter {
         auto-merge
     }
     set block_these {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set i_eth0.100 {
         type ipv4_addr
         flags interval
         auto-merge
@@ -453,6 +482,15 @@ table inet fwf_filter {
         #
         ip daddr @block_these tcp dport 25 counter drop
         ip daddr 61.150.47.112 tcp dport 25 counter drop
+        #
+        # Rule 4 (global)
+        #
+        ip saddr @i_eth0.100 ip daddr @block_these tcp dport 25 counter drop
+        ip saddr @i_eth0.100 ip daddr 61.150.47.112 tcp dport 25 counter drop
+        #
+        # Rule 8 (global)
+        #
+        ip saddr @i_eth0.100 ip daddr != @block_these ip daddr != 61.150.47.112 ct state new counter accept
         #
         # Rule 9 (global)
         #

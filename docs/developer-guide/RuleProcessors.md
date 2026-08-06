@@ -2041,5 +2041,5 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 | Inline logging with verdict | Partial | ⚠️ Partial | `log ... accept` works; LOG branching with multiple actions does not |
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Policy Branch errors; NAT Branch rules split into prerouting+postrouting with a warning (`SplitNATBranchRule`), no actual `jump` to the branch ruleset yet |
-| Dynamic interface addresses | Sets / maps | ❌ Not yet | `PrintRule_nft` aborts: "Dynamic interface address not yet supported by nftables compiler" |
+| Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |
 | Policy routing | `fib` + marks | ❌ Not yet | Error emitted for the routing option |

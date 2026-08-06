@@ -16,62 +16,6 @@
 #
 # Rule 3 (NAT): Interface "ppp1" has no addresses
 # Rule 3 (NAT): Could not resolve any original destination addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 3 (global): Could not resolve any source addresses
-# Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 3 (global): Could not resolve any source addresses
-# Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 3 (global): Could not resolve any source addresses
-# Rule 3 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 3 (global): Could not resolve any source addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 4 (global): Could not resolve any destination addresses
-# Rule 4 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
-# Rule 4 (global): Could not resolve any destination addresses
 
 FWBDEBUG=""
 
@@ -278,6 +222,99 @@ run_epilog_and_exit() {
     exit "$1"
 }
 
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        exit 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+    load_interface_address "ip" "fwf_filter" "i_ppp0" "ppp0" "-4"
+    load_interface_address "ip" "fwf_filter" "i_ppp1" "ppp1" "-4"
+}
+
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
@@ -286,31 +323,47 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    set i_ppp0 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set i_ppp1 {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         #
         # Rule 0 (ppp0)
         #
-        # # Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        iifname "ppp0" ip saddr != @i_ppp0 counter log drop
         iifname "ppp0" ip saddr != 192.168.1.0/24 counter log drop
         #
         # Rule 1 (ppp1)
         #
-        # # Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        iifname "ppp1" ip saddr != @i_ppp0 counter log drop
         iifname "ppp1" ip saddr != 192.168.1.0/24 counter log drop
         #
         # Rule 2 (ppp0,ppp1)
         #
-        # # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+        iifname "ppp0" ip saddr != @i_ppp0 counter log drop
+        iifname "ppp1" ip saddr != @i_ppp0 counter log drop
+        iifname "ppp0" ip saddr != @i_ppp1 counter log drop
+        iifname "ppp1" ip saddr != @i_ppp1 counter log drop
         iifname "ppp0" ip saddr != 192.168.1.0/24 counter log drop
-        # # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
         iifname "ppp1" ip saddr != 192.168.1.0/24 counter log drop
+        #
+        # Rule 3 (global)
+        #
+        ip saddr @i_ppp0 ip daddr @i_ppp1 counter log drop
+        #
+        # Rule 4 (global)
+        #
+        ip daddr @i_ppp0 tcp dport 22 ct state new counter accept
+        ip daddr @i_ppp1 tcp dport 22 ct state new counter accept
         #
         # Rule 6 (global)
         #
@@ -345,25 +398,21 @@ table ip fwf_filter {
         #
         # Rule 0 (ppp0)
         #
-        # # Rule 0 (ppp0): Could not resolve any source addresses
-# Rule 0 (ppp0): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        iifname "ppp0" ip saddr != @i_ppp0 counter log drop
         iifname "ppp0" ip saddr != 192.168.1.0/24 counter log drop
         #
         # Rule 1 (ppp1)
         #
-        # # Rule 1 (ppp1): Could not resolve any source addresses
-# Rule 1 (ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
+        iifname "ppp1" ip saddr != @i_ppp0 counter log drop
         iifname "ppp1" ip saddr != 192.168.1.0/24 counter log drop
         #
         # Rule 2 (ppp0,ppp1)
         #
-        # # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
+        iifname "ppp0" ip saddr != @i_ppp0 counter log drop
+        iifname "ppp1" ip saddr != @i_ppp0 counter log drop
+        iifname "ppp0" ip saddr != @i_ppp1 counter log drop
+        iifname "ppp1" ip saddr != @i_ppp1 counter log drop
         iifname "ppp0" ip saddr != 192.168.1.0/24 counter log drop
-        # # Rule 2 (ppp0,ppp1): Could not resolve any source addresses
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp0)
-# Rule 2 (ppp0,ppp1): Dynamic interface address not yet supported by nftables compiler (interface: ppp1)
         iifname "ppp1" ip saddr != 192.168.1.0/24 counter log drop
         #
         # Rule 5 (global)
@@ -416,6 +465,15 @@ table ip fwf_filter {
 
     chain output {
         type filter hook output priority filter; policy drop;
+        #
+        # Rule 3 (global)
+        #
+        ip saddr @i_ppp0 ip daddr @i_ppp1 counter log drop
+        #
+        # Rule 4 (global)
+        #
+        ip daddr @i_ppp0 tcp dport 22 ct state new counter accept
+        ip daddr @i_ppp1 tcp dport 22 ct state new counter accept
         #
         # Rule 5 (global)
         #
@@ -509,6 +567,7 @@ table ip fwf_nat {
 }
 
 NFT_RULES
+    load_address_tables
 }
 
 ip_forward() {

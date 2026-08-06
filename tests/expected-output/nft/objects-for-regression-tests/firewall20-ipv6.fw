@@ -13,18 +13,6 @@
 
 #  dynamic interface ppp0 has an address object attached to it (interface used to be static and had an address, then got converted to dynamic but address object is still there). Compiler should ignore this address object and issue a warning.
 #
-# Rule 1 (ppp*): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 1 (ppp*): Could not resolve any destination addresses
-# Rule 1 (ppp*): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 1 (ppp*): Could not resolve any destination addresses
-# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 9 (global): Could not resolve any destination addresses
-# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 9 (global): Could not resolve any destination addresses
-# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 9 (global): Could not resolve any destination addresses
-# Rule 9 (global): Dynamic interface address not yet supported by nftables compiler (interface: ppp*)
-# Rule 9 (global): Could not resolve any destination addresses
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
@@ -258,14 +246,117 @@ configure_interfaces() {
     update_addresses_of_interface "eth2 192.168.2.1/24 2001:470:1f05:590::1/64" ""
 }
 
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        exit 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+    load_interface_address "inet" "fwf_filter" "i_ppp__v6" "ppp*" "-6"
+}
+
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table inet fwf_filter {}
 delete table inet fwf_filter
 
 table inet fwf_filter {
+    set i_ppp__v6 {
+        type ipv6_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
+        #
+        # Rule 1 (ppp*)
+        #
+        # ppp clients can not connect to the firewall
+        iifname "ppp*" ip6 daddr @i_ppp__v6 counter log drop
         #
         # Rule 2 (ppp*)
         #
@@ -274,6 +365,10 @@ table inet fwf_filter {
         # Rule 8 (global)
         #
         tcp dport 22 ct state new counter accept
+        #
+        # Rule 9 (global)
+        #
+        ip6 daddr @i_ppp__v6 tcp dport 22 ct state new counter accept
         #
         # Rule 15 (global)
         #
@@ -336,6 +431,10 @@ table inet fwf_filter {
         #
         ip6 daddr { 2001:470:1f05:590::1, fe80::1 } tcp dport 22 ct state new counter accept
         #
+        # Rule 9 (global)
+        #
+        ip6 daddr @i_ppp__v6 tcp dport 22 ct state new counter accept
+        #
         # Rule 11 (global)
         #
         tcp dport { 22, 23 } ct state new counter accept
@@ -363,6 +462,7 @@ table inet fwf_filter {
 }
 
 NFT_RULES
+    load_address_tables
 }
 
 ip_forward() {

@@ -68,6 +68,13 @@ def _declare_counters(names: list[str]) -> str:
     return ''.join(out)
 
 
+_SET_LOADERS = {
+    'file': 'load_address_table',
+    'host': 'load_dns_name',
+    'interface': 'load_interface_address',
+}
+
+
 def _declare_address_tables(tables: dict[str, tuple[str, bool, str]]) -> str:
     """Declare the named sets an address table rule matches against.
 
@@ -981,7 +988,7 @@ class CompilerDriver_nft(CompilerDriver):
         ):
             for name, (source, ipv6, kind) in sorted(tables.items()):
                 af = '-6' if ipv6 else '-4'
-                loader = 'load_address_table' if kind == 'file' else 'load_dns_name'
+                loader = _SET_LOADERS[kind]
                 lines.append(
                     f'    {loader} "{filter_family}" "{table}" '
                     f'"{name}" "{source}" "{af}"'
@@ -989,7 +996,7 @@ class CompilerDriver_nft(CompilerDriver):
         for fam, tables in sorted(self.nat_address_tables.items()):
             for name, (source, ipv6, kind) in sorted(tables.items()):
                 af = '-6' if ipv6 else '-4'
-                loader = 'load_address_table' if kind == 'file' else 'load_dns_name'
+                loader = _SET_LOADERS[kind]
                 lines.append(
                     f'    {loader} "{fam}" "{nat_table}" "{name}" "{source}" "{af}"'
                 )
