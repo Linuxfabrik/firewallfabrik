@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**Highlights:** A large-scale correctness pass over both compilers. A whole class of rules that silently compiled into something other than what the GUI shows is now either compiled correctly or reported at compile time, instead of matching every address, every service, or nothing at all. On iptables, "Clear all rules" really clears them again, and dual-stack firewalls no longer carry a copy of every IPv6-only rule in their IPv4 chains. Re-compile and review your rulesets after updating, since rules that were silently wrong will change behaviour.
+**Highlights:** A large-scale correctness pass over both compilers. A whole class of rules that silently compiled into something other than what the GUI shows is now either compiled correctly or reported at compile time, instead of matching every address, every service, or nothing at all. Every generated nftables ruleset loads and every generated script parses, both for the first time across the whole test corpus. On iptables, "Clear all rules" really clears them again, and dual-stack firewalls no longer carry a copy of every IPv6-only rule in their IPv4 chains. Most of this lands in cases a typical policy never reaches: recompiling 335 firewalls from real configurations leaves the iptables rules unchanged on all but one of them, while the nftables side, being the younger compiler, changes on roughly one in ten. Re-compile and review your rulesets after updating, and read the breaking change below before you do.
+
+### Breaking Changes
+
+* A rule set that sets neither "IPv4" nor "IPv6" is compiled for IPv4 only, the way Firewall Builder has always read that state. Until now such a rule set was compiled into the IPv6 ruleset as well. If one of them carries IPv6 rules, those rules disappear from the generated script: open the rule set in the editor and set it to "IPv4 and IPv6" to keep them.
 
 ### Changed
 
@@ -51,7 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
 * Compiler (iptables, nftables): a firewall whose rule sets produce no rules at all generates a script that runs instead of one the shell refuses to parse.
 * Compiler (iptables, nftables): a NAT rule whose translated service uses a different protocol than the original is reported instead of being compiled into a translation the rule does not ask for.
-* Compiler (iptables, nftables): a rule set that names neither address family is compiled for IPv4 only, instead of also landing in the IPv6 ruleset where its rules matched far more traffic than intended or failed to load at all.
 * Compiler (iptables, nftables): a source translation to an unnumbered interface is reported instead of stopping the activation script on iptables and translating to the wrong address on nftables.
 * Compiler (iptables, nftables): address ranges are no longer emitted into the wrong address family, which produced a ruleset that did not load.
 * Compiler (iptables, nftables): an IP service with an unknown DiffServ class name is reported with a clear error instead of producing a ruleset that does not load.
