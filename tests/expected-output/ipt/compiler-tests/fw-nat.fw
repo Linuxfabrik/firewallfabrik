@@ -422,6 +422,7 @@ configure_interfaces() {
 }
 
 script_body() {
+ :
  # ================ IPv4
 
  # ================ Table 'filter', automatic rules

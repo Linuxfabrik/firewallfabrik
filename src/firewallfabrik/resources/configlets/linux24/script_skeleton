@@ -56,7 +56,12 @@ configure_interfaces() {
     {{$configure_interfaces}}
 }
 
+## The colon keeps the function valid when a firewall compiles to no rules
+## at all, the same guard the functions above use.  A shell function needs
+## at least one command, so an empty body makes the whole script
+## unparsable and nothing in it runs.
 script_body() {
+    :
     {{$script_body}}
 }
 
