@@ -559,6 +559,8 @@ table ip fwf_nat {
         # Rule 16 (NAT)
         #
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.24 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.25 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)
         #
@@ -575,15 +577,18 @@ table ip fwf_nat {
         #
         # Rule 23 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.22.22 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.23.23 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.25.50 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 192.168.2.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.2.40 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         #
         # Rule 24 (NAT)
         #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 22.22.25.50 tcp dport 80 counter dnat to 192.168.1.10
         #
         # Rule 25 (NAT)
         #
@@ -591,10 +596,12 @@ table ip fwf_nat {
         #
         # Rule 26 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport { 80, 443 } counter redirect to :3128
         ip daddr 22.22.22.22 tcp dport { 80, 443 } counter redirect to :3128
         ip daddr 22.22.23.23 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 22.22.25.50 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 192.168.1.1 tcp dport { 80, 443 } counter redirect to :3128
         ip daddr 192.168.2.1 tcp dport { 80, 443 } counter redirect to :3128
+        ip daddr 192.168.2.40 tcp dport { 80, 443 } counter redirect to :3128
         #
         # Rule 27 (NAT)
         #
@@ -691,6 +698,7 @@ table ip fwf_nat {
         # Rule 13 (NAT)
         #
         ip saddr 22.22.23.23 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip saddr 22.22.25.50 ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 14 (NAT)
         #
@@ -699,6 +707,8 @@ table ip fwf_nat {
         # Rule 16 (NAT)
         #
         ip daddr 22.22.22.23 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.24 tcp dport { 80, 119 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.25 tcp dport { 80, 119 } counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)
         #
@@ -710,15 +720,18 @@ table ip fwf_nat {
         #
         # Rule 23 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.22.22 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 22.22.23.23 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 22.22.25.50 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.1.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         ip daddr 192.168.2.1 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
+        ip daddr 192.168.2.40 tcp dport 10000-11000 counter dnat to 192.168.1.10:10000-11000
         #
         # Rule 24 (NAT)
         #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.10
+        ip daddr 22.22.25.50 tcp dport 80 counter dnat to 192.168.1.10
         #
         # Rule 25 (NAT)
         #
@@ -778,53 +791,80 @@ table ip fwf_nat {
         #
         oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.40
         #
         # Rule 1 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.40
         #
         # Rule 2 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 88 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 meta l4proto 50 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type destination-unreachable counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type echo-reply icmp code 0 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 counter snat to 192.168.2.40
         oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.22.22
         oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 22.22.25.50
         oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.1
+        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 192.168.2.40
         #
         # Rule 3 (NAT)
         #
         oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.23.23
+        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.25.50
         #
         # Rule 4 (NAT)
         #
@@ -850,6 +890,14 @@ table ip fwf_nat {
         oifname "eth1" ip saddr 192.168.1.10 counter snat to 22.22.22.23
         oifname "eth3" ip saddr 192.168.1.10 counter snat to 22.22.22.23
         oifname "eth2" ip saddr 192.168.1.10 counter snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 22.22.22.24
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 22.22.22.24
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 22.22.22.24
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 22.22.22.24
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 22.22.22.25
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 22.22.22.25
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 22.22.22.25
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 22.22.22.25
         #
         # Rule 8 (NAT)
         #
@@ -860,8 +908,18 @@ table ip fwf_nat {
         #
         # Rule 9 (NAT)
         #
+        ip saddr 22.22.22.22 ip daddr 192.168.2.10 counter accept
+        ip saddr 22.22.22.22 ip daddr 192.168.2.11 counter accept
+        ip saddr 22.22.23.23 ip daddr 192.168.2.10 counter accept
+        ip saddr 22.22.23.23 ip daddr 192.168.2.11 counter accept
+        ip saddr 22.22.25.50 ip daddr 192.168.2.10 counter accept
+        ip saddr 22.22.25.50 ip daddr 192.168.2.11 counter accept
         ip saddr 192.168.1.1 ip daddr 192.168.2.10 counter accept
         ip saddr 192.168.1.1 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.2.1 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.2.1 ip daddr 192.168.2.11 counter accept
+        ip saddr 192.168.2.40 ip daddr 192.168.2.10 counter accept
+        ip saddr 192.168.2.40 ip daddr 192.168.2.11 counter accept
         ip saddr 192.168.1.10 ip daddr 192.168.2.10 counter accept
         ip saddr 192.168.1.10 ip daddr 192.168.2.11 counter accept
         ip saddr 192.168.1.20 ip daddr 192.168.2.10 counter accept

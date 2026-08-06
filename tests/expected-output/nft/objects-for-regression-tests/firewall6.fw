@@ -318,14 +318,14 @@ table ip fwf_nat {
         #
         # Rule 5 (NAT)
         #
-        ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.11
-        ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.12
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.11
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.12
-        ip daddr 192.168.2.1 tcp dport 80 counter dnat to 192.168.1.11
-        ip daddr 192.168.2.1 tcp dport 80 counter dnat to 192.168.1.12
         ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.11
         ip daddr 22.22.23.23 tcp dport 80 counter dnat to 192.168.1.12
+        ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.11
+        ip daddr 192.168.1.1 tcp dport 80 counter dnat to 192.168.1.12
+        ip daddr 192.168.2.1 tcp dport 80 counter dnat to 192.168.1.11
+        ip daddr 192.168.2.1 tcp dport 80 counter dnat to 192.168.1.12
         #
         # Rule 6 (NAT)
         #
@@ -333,7 +333,7 @@ table ip fwf_nat {
         #
         # Rule 7 (NAT)
         #
-        ip saddr 192.168.1.0/24 ip daddr != 222.222.222.40 tcp dport 80 counter dnat to 192.168.1.100:3128
+        ip saddr 192.168.1.0/24 ip daddr != { 222.222.222.40, 222.222.222.41 } tcp dport 80 counter dnat to 192.168.1.100:3128
     }
 
     chain postrouting {
@@ -357,25 +357,25 @@ table ip fwf_nat {
         #
         # Rule 4 (NAT)
         #
-        oifname "eth0" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.1.1
         oifname "eth1" ip daddr 192.168.1.11 tcp dport 80 counter snat to 22.22.22.22
-        oifname "eth2" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth3" ip daddr 192.168.1.11 tcp dport 80 counter snat to 22.22.23.23
-        oifname "eth0" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth2" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth1" ip daddr 192.168.1.12 tcp dport 80 counter snat to 22.22.22.22
-        oifname "eth2" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth3" ip daddr 192.168.1.12 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth0" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth2" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.2.1
         #
         # Rule 5 (NAT)
         #
-        oifname "eth0" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.1.1
         oifname "eth1" ip daddr 192.168.1.11 tcp dport 80 counter snat to 22.22.22.22
-        oifname "eth2" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth3" ip daddr 192.168.1.11 tcp dport 80 counter snat to 22.22.23.23
-        oifname "eth0" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth0" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth2" ip daddr 192.168.1.11 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth1" ip daddr 192.168.1.12 tcp dport 80 counter snat to 22.22.22.22
-        oifname "eth2" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.2.1
         oifname "eth3" ip daddr 192.168.1.12 tcp dport 80 counter snat to 22.22.23.23
+        oifname "eth0" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.1.1
+        oifname "eth2" ip daddr 192.168.1.12 tcp dport 80 counter snat to 192.168.2.1
         #
         # Rule 6 (NAT)
         #
@@ -392,8 +392,8 @@ table ip fwf_nat {
         # Rule 9 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 22.22.22.22
-        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
         oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 22.22.23.23
+        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
     }
 }
 

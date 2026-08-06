@@ -590,8 +590,8 @@ table ip fwf_nat {
         # Rule 2 (NAT)
         #
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
-        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         #
         # Rule 3 (NAT)
         #
@@ -603,8 +603,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "ppp*" ip saddr 192.168.1.0/24 counter masquerade
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
+        oifname "ppp*" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 1 (NAT)
         #

@@ -313,6 +313,7 @@ table ip fwf_nat {
         #
         # for #1686
         ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
+        ip saddr 192.168.1.100 tcp dport 10000-11000 counter accept
     }
 }
 

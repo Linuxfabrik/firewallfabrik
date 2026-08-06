@@ -8,14 +8,9 @@
 #
 # files: * heartbeat_cluster_1_d.fw /etc/fwf.sh
 #
-# Rule 0 (NAT): Interface "eth0" has no addresses
 # Rule 0 (NAT): SNAT rule has no translated source address
-# Rule 1 (NAT): Interface "eth0" has no addresses
 # Rule 1 (NAT): SNAT rule has no translated source address
-# Rule 2 (NAT): Interface "eth0" has no addresses
 # Rule 2 (NAT): SNAT rule has no translated source address
-# Rule 3 (NAT): Interface "eth0" has no addresses
-# Rule 3 (NAT): Could not resolve any original destination addresses
 # Rule 4 (NAT): Interface "eth0" has no addresses
 # Rule 4 (NAT): Could not resolve any original destination addresses
 # Rule 5 (global): Interface "eth0" has no addresses
@@ -83,6 +78,8 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_nat {}
+delete table ip fwf_nat
 
 table ip fwf_filter {
     chain input {
@@ -149,6 +146,20 @@ table ip fwf_filter {
         # All other attempts to connect to
         # the firewall are denied and logged
         ip daddr 192.168.1.254 counter log prefix "RULE 12 -- DENY " level info drop
+    }
+}
+
+table ip fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule 3 (NAT)
+        #
+        counter dnat to 192.168.1.100
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
     }
 }
 

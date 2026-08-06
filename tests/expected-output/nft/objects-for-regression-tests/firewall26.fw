@@ -459,8 +459,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "ppp" ip saddr 192.168.1.0/24 counter masquerade
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
+        oifname "ppp" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 1 (NAT)
         #

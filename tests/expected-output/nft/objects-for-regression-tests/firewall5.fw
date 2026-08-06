@@ -467,8 +467,8 @@ table ip fwf_nat {
         # Rule 3 (NAT)
         #
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
-        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
     }
 
     chain postrouting {
@@ -476,8 +476,8 @@ table ip fwf_nat {
         #
         # Rule 0 (NAT)
         #
-        oifname "ppp0" ip saddr 192.168.1.0/24 counter masquerade
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.2.1
+        oifname "ppp0" ip saddr 192.168.1.0/24 counter masquerade
         oifname "ppp1" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 1 (NAT)
@@ -490,11 +490,21 @@ table ip fwf_nat {
         #
         # Rule 2 (NAT)
         #
+        oifname "ppp0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "eth0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "ppp1" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "sixxs0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
         oifname "ppp0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
         oifname "eth0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
         oifname "eth2" ip saddr 192.168.1.1 counter snat to 22.22.22.23
         oifname "ppp1" ip saddr 192.168.1.1 counter snat to 22.22.22.23
         oifname "sixxs0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
+        oifname "ppp0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "eth0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "eth2" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "ppp1" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "sixxs0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
     }
 }
 

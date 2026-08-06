@@ -283,6 +283,7 @@ table ip fwf_nat {
         #
         # I guess this rule does not make much sense
         oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 22.22.23.128/25 counter snat to 22.22.23.22
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 22.22.23.128/25 counter snat to 22.22.23.160
         #
         # Rule 5 (NAT)
         #

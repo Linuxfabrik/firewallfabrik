@@ -32,6 +32,7 @@ from firewallfabrik.compiler.processors._generic import (
     DropIPv6Rules,
     EmptyGroupsInRE,
     ExpandGroups,
+    ExpandMultipleAddressesInNAT,
     RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
@@ -203,7 +204,7 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
         self.add(ReplaceFirewallObjectsTSrc('replace firewall in TSrc'))
-        self.add(ExpandMultipleAddresses('expand multiple addresses'))
+        self.add(ExpandMultipleAddressesInNAT('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         if self.ipv6_policy:
@@ -1487,12 +1488,6 @@ class VerifyRuleWithMAC(NATRuleProcessor):
 
         self.tmp_queue.append(rule)
         return True
-
-
-class ExpandMultipleAddresses(_PassthroughNAT):
-    """Expand hosts/firewalls with multiple addresses."""
-
-    pass
 
 
 class GroupServicesByProtocol(NATRuleProcessor):

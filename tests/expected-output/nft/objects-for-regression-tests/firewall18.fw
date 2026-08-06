@@ -10,6 +10,18 @@
 #
 #  this firewall translates outgoing connections using address of the particular interface (not external one). Also testing different cmbinations of objects in the policy rules on loopback interface. Finally, testing for a situation when dynamic interface "shades" a rule with old broadcast
 #
+# Rule 0 (NAT): Interface "ppp0" has no addresses
+# Rule 0 (NAT): Could not resolve any original source addresses
+# Rule 1 (NAT): Interface "ppp0" has no addresses
+# Rule 1 (NAT): Could not resolve any original source addresses
+# Rule 4 (NAT): Interface "ppp0" has no addresses
+# Rule 4 (NAT): Could not resolve any original source addresses
+# Rule 4 (NAT): Interface "ppp0" has no addresses
+# Rule 4 (NAT): Could not resolve any original source addresses
+# Rule 4 (NAT): Interface "ppp0" has no addresses
+# Rule 4 (NAT): Could not resolve any original source addresses
+# Rule 4 (NAT): Interface "ppp0" has no addresses
+# Rule 4 (NAT): Could not resolve any original source addresses
 
 FWBDEBUG=""
 
@@ -322,10 +334,14 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.1 counter snat to 66.66.66.130
         #
         # Rule 1 (NAT)
         #
         oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.1 counter snat to 66.66.66.130
         #
         # Rule 2 (NAT)
         #
@@ -341,6 +357,14 @@ table ip fwf_nat {
         oifname "eth0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
         oifname "eth1" ip saddr 66.66.66.1 counter snat to 66.66.66.130
         oifname "ppp0" ip saddr 66.66.66.1 counter snat to 66.66.66.130
+        oifname "eth2" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "eth0" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "ppp0" ip saddr 66.66.66.130 counter snat to 66.66.66.130
+        oifname "eth2" ip saddr 192.168.1.1 counter snat to 66.66.66.130
+        oifname "eth0" ip saddr 192.168.1.1 counter snat to 66.66.66.130
+        oifname "eth1" ip saddr 192.168.1.1 counter snat to 66.66.66.130
+        oifname "ppp0" ip saddr 192.168.1.1 counter snat to 66.66.66.130
         #
         # Rule 5 (NAT)
         #

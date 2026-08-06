@@ -25,6 +25,7 @@ import sqlalchemy
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import (
     BasicRuleProcessor,
+    NATRuleProcessor,
     PolicyRuleProcessor,
 )
 from firewallfabrik.core._util import SLOT_VALUES
@@ -40,6 +41,7 @@ from firewallfabrik.core.objects import (
     Interface,
     IPService,
     MultiAddress,
+    NATRuleType,
     Network,
     NetworkIPv6,
     PolicyAction,
@@ -1217,4 +1219,80 @@ class AssignUniqueRuleId(BasicRuleProcessor):
         rule.abs_rule_number = self._counter
         self._counter += 1
         self.tmp_queue.append(rule)
+        return True
+
+
+class ExpandMultipleAddressesInNAT(NATRuleProcessor):
+    """Replace a Host, Firewall or Interface in a NAT element by its addresses.
+
+    Corresponds to C++ ``NATCompiler::ExpandMultipleAddresses``.  A host
+    with several interfaces, or an interface with several addresses, stands
+    for all of them, so the rule has to carry every one: the print rule
+    would otherwise silently translate to the first address only.  Which
+    elements are expanded follows the rule type, because a NONAT rule has
+    no translated elements and a Redirect rule has no translated
+    destination.
+    """
+
+    @staticmethod
+    def _expand_slot(objects: list) -> list:
+        """Expand one element list, replacing composite objects.
+
+        A dynamic interface keeps its object: its address is only known at
+        run time.  A loopback interface is skipped when it is reached
+        through its parent host, because NAT never applies to it.
+        """
+        result = []
+        for obj in objects:
+            if isinstance(obj, Interface):
+                if obj.is_dynamic():
+                    result.append(obj)
+                elif obj.is_loopback():
+                    continue
+                else:
+                    result.extend(obj.addresses)
+            elif isinstance(obj, Host):
+                for iface in getattr(obj, 'interfaces', []):
+                    if iface.is_loopback():
+                        continue
+                    if iface.is_dynamic():
+                        result.append(iface)
+                    else:
+                        result.extend(iface.addresses)
+            else:
+                result.append(obj)
+
+        def _sort_key(o):
+            addr = getattr(o, 'get_address', lambda: None)()
+            if addr is not None:
+                try:
+                    return _ipa.ip_address(addr).packed
+                except (ValueError, TypeError):
+                    pass
+            return b'\xff' * 16
+
+        result.sort(key=_sort_key)
+        return result
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        rt = rule.nat_rule_type
+        if rt in (NATRuleType.NONAT, NATRuleType.Return):
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+        elif rt in (NATRuleType.SNAT, NATRuleType.SDNAT, NATRuleType.DNAT):
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+            rule.tsrc = self._expand_slot(rule.tsrc)
+            rule.tdst = self._expand_slot(rule.tdst)
+        elif rt == NATRuleType.Redirect:
+            rule.osrc = self._expand_slot(rule.osrc)
+            rule.odst = self._expand_slot(rule.odst)
+            rule.tsrc = self._expand_slot(rule.tsrc)
+
         return True

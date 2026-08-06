@@ -482,9 +482,9 @@ table ip fwf_nat {
         # Rule 5 (NAT)
         #
         ip daddr 192.168.1.1 tcp dport 22 counter dnat to 192.168.1.10:22
-        ip daddr 0.0.0.0 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 192.168.2.1 tcp dport 22 counter dnat to 192.168.1.10:22
         ip daddr 222.222.222.222 tcp dport 22 counter dnat to 192.168.1.10:22
+        ip daddr 0.0.0.0 tcp dport 22 counter dnat to 192.168.1.10:22
         #
         # Rule 6 (NAT)
         #
@@ -497,9 +497,9 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         oifname "eth0" ip saddr 192.168.1.10 counter snat to 192.168.1.1
-        oifname "eth1" ip saddr 192.168.1.10 counter masquerade
         oifname "eth2" ip saddr 192.168.1.10 counter snat to 192.168.2.1
         oifname "eth3" ip saddr 192.168.1.10 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.10 counter masquerade
         #
         # Rule 1 (NAT)
         #
@@ -507,6 +507,10 @@ table ip fwf_nat {
         oifname "eth1" ip saddr 192.168.1.10 counter snat to 222.222.222.40
         oifname "eth2" ip saddr 192.168.1.10 counter snat to 222.222.222.40
         oifname "eth3" ip saddr 192.168.1.10 counter snat to 222.222.222.40
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 222.222.222.41
         #
         # Rule 2 (NAT)
         #
@@ -514,16 +518,23 @@ table ip fwf_nat {
         oifname "eth1" ip saddr 192.168.1.10 counter snat to 222.222.222.40
         oifname "eth2" ip saddr 192.168.1.10 counter snat to 222.222.222.40
         oifname "eth3" ip saddr 192.168.1.10 counter snat to 222.222.222.40
+        oifname "eth0" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth1" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth2" ip saddr 192.168.1.10 counter snat to 222.222.222.41
+        oifname "eth3" ip saddr 192.168.1.10 counter snat to 222.222.222.41
         #
         # Rule 3 (NAT)
         #
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter masquerade
         oifname "eth3" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter snat to 222.222.222.222
+        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr != 192.168.2.0/24 counter masquerade
         #
         # Rule 4 (NAT)
         #
         oifname "eth1" ip saddr 192.168.1.0/24 counter masquerade
         oifname "eth1" ip saddr 192.168.1.1 counter masquerade
+        oifname "eth1" ip saddr 192.168.2.1 counter masquerade
+        oifname "eth1" ip saddr 222.222.222.222 counter masquerade
+        oifname "eth1" ip saddr 0.0.0.0 counter masquerade
     }
 }
 

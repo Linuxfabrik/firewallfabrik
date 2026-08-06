@@ -1312,7 +1312,7 @@ For DNAT/DNetnat/Redirect rules where OSrc matches the firewall, sets the chain 
 
 #### `ExpandMultipleAddresses` (NAT) — Transform
 
-Expands Host/Firewall/Interface objects in NAT element lists (OSrc, ODst, TSrc, TDst) to their Address objects. Expansion scope depends on rule type: NONAT/Return expand OSrc+ODst; SNAT/SDNAT/DNAT expand all four; Redirect expands OSrc+ODst+TSrc. Sorts results by address for deterministic output. Skips loopback interfaces when expanding from Host/Firewall.
+Expands Host/Firewall/Interface objects in NAT element lists (OSrc, ODst, TSrc, TDst) to their Address objects. Expansion scope depends on rule type: NONAT/Return expand OSrc+ODst; SNAT/SDNAT/DNAT expand all four; Redirect expands OSrc+ODst+TSrc. Sorts results by address for deterministic output. Skips loopback interfaces when expanding from Host/Firewall. Lives in `compiler/processors/_generic.py` and is wired into both NAT pipelines.
 
 > **C++**: `NATCompiler::ExpandMultipleAddresses`
 
@@ -1658,7 +1658,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `SplitIfOSrcAny` | `platforms/iptables/_nat_compiler.py:SplitIfOSrcAny` |
 | `SplitIfOSrcMatchesFw` | `platforms/iptables/_nat_compiler.py:SplitIfOSrcMatchesFw` |
 | `LocalNATRule` | `platforms/iptables/_nat_compiler.py:LocalNATRule` |
-| `ExpandMultipleAddresses` | `platforms/iptables/_nat_compiler.py:ExpandMultipleAddresses` |
+| `ExpandMultipleAddresses` | `compiler/processors/_generic.py:ExpandMultipleAddressesInNAT` (shared by both NAT pipelines) |
 | `ClassifyNATRule` | `platforms/iptables/_nat_compiler.py:ClassifyNATRule` |
 
 ---

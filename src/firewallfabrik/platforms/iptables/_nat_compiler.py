@@ -32,6 +32,7 @@ from firewallfabrik.compiler.processors._generic import (
     DropIPv6Rules,
     EmptyGroupsInRE,
     ExpandGroups,
+    ExpandMultipleAddressesInNAT,
     RecursiveGroupsInRE,
     ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
@@ -45,7 +46,6 @@ from firewallfabrik.core.objects import (
     Address,
     AddressRange,
     Firewall,
-    Host,
     ICMP6Service,
     ICMPService,
     Interface,
@@ -313,7 +313,7 @@ class NATCompiler_ipt(NATCompiler):
             SplitOnDynamicInterfaceInTSrc('split rule if TSrc is dynamic interface')
         )
 
-        self.add(ExpandMultipleAddresses('expand multiple addresses'))
+        self.add(ExpandMultipleAddressesInNAT('expand multiple addresses'))
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         if self.ipv6_policy:
@@ -1123,87 +1123,6 @@ class DecideOnTarget(NATRuleProcessor):
             target = target_map.get(rt, '')
             if target:
                 rule.ipt_target = target
-
-        return True
-
-
-class ExpandMultipleAddresses(NATRuleProcessor):
-    """Expand hosts/firewalls/interfaces into their addresses.
-
-    Corresponds to C++ NATCompiler::ExpandMultipleAddresses.
-    Replaces Host/Firewall/Interface objects in element lists with
-    their Address objects, then sorts by address.  The expansion
-    varies by rule type: 'expand_fully' means Host/Firewall expand
-    through interfaces to addresses; otherwise the element is kept
-    as-is.
-    """
-
-    @staticmethod
-    def _expand_slot(objects: list) -> list:
-        """Expand a single element list, replacing composite objects.
-
-        Host/Firewall objects are expanded through their interfaces to
-        addresses.  Interface objects are expanded to their addresses
-        (unless dynamic).  Loopback interfaces are skipped when
-        expanding from a parent Host/Firewall.
-        """
-        result = []
-        for obj in objects:
-            if isinstance(obj, Interface):
-                if obj.is_dynamic():
-                    result.append(obj)
-                elif obj.is_loopback():
-                    continue
-                else:
-                    for addr in obj.addresses:
-                        result.append(addr)
-            elif isinstance(obj, Host):
-                for iface in getattr(obj, 'interfaces', []):
-                    if iface.is_loopback():
-                        continue
-                    if iface.is_dynamic():
-                        result.append(iface)
-                    else:
-                        for addr in iface.addresses:
-                            result.append(addr)
-            else:
-                result.append(obj)
-
-        # Sort by address for deterministic output
-        def _sort_key(o):
-            addr = getattr(o, 'get_address', lambda: None)()
-            if addr is not None:
-                import ipaddress as _ipa
-
-                try:
-                    return _ipa.ip_address(addr).packed
-                except (ValueError, TypeError):
-                    pass
-            return b'\xff' * 16
-
-        result.sort(key=_sort_key)
-        return result
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        self.tmp_queue.append(rule)
-
-        rt = rule.nat_rule_type
-        if rt in (NATRuleType.NONAT, NATRuleType.Return):
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
-        elif rt in (NATRuleType.SNAT, NATRuleType.SDNAT) or rt == NATRuleType.DNAT:
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
-            rule.tsrc = self._expand_slot(rule.tsrc)
-            rule.tdst = self._expand_slot(rule.tdst)
-        elif rt == NATRuleType.Redirect:
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
-            rule.tsrc = self._expand_slot(rule.tsrc)
 
         return True
 
