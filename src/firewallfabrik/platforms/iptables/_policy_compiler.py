@@ -866,6 +866,22 @@ class PolicyCompiler_ipt(PolicyCompiler):
             except (TypeError, ValueError):
                 qthreshold = 1
 
+        # The configlet writes `--nflog-size`, which is the only option that
+        # actually shortens what NFLOG copies: `--nflog-range` sets the length
+        # but not XT_NFLOG_F_COPY_LEN, so the kernel ignores it and iptables
+        # warns about it on every activation (netfilter
+        # extensions/libxt_NFLOG.c).  `--nflog-size` arrived in iptables 1.6.1;
+        # an older target has no way to say this at all.  Same rule and same
+        # warning as the per-rule NFLOG parameters in the print rule.
+        if cprange > 0 and version_compare(version, '1.6.1') < 0:
+            self.warning(
+                'iptables before 1.6.1 cannot limit how much of a packet NFLOG '
+                'copies to userspace; the "Copy range" setting is left out of '
+                'the rule that logs invalid packets and the whole packet is '
+                'copied',
+            )
+            cprange = 0
+
         conf.set_variable('nlgroup', nlgroup)
         conf.set_variable('cprange', cprange)
         conf.set_variable('qthreshold', qthreshold)

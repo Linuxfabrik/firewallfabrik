@@ -140,7 +140,26 @@ class OSConfigurator_nft(OSConfigurator):
                 nlgroup = int(self.fw.get_option('ulog_nlgroup'))
             except (TypeError, ValueError):
                 nlgroup = 1
-            return f'log group {nlgroup} prefix "INVALID "'
+            parts = ['log', f'group {nlgroup}']
+            # The copy range and the queue threshold belong to the log
+            # statement the same way they belong to the NFLOG target
+            # (netfilter extensions/libxt_NFLOG.c maps them to `snaplen` and
+            # `queue-threshold`).  Same thresholds as the per-rule log
+            # statement in the print rule, so both places obey the setting.
+            try:
+                cprange = int(self.fw.get_option('ulog_cprange'))
+            except (TypeError, ValueError):
+                cprange = 0
+            if cprange > 0:
+                parts.append(f'snaplen {cprange}')
+            try:
+                qthreshold = int(self.fw.get_option('ulog_qthreshold'))
+            except (TypeError, ValueError):
+                qthreshold = 1
+            if qthreshold > 1:
+                parts.append(f'queue-threshold {qthreshold}')
+            parts.append('prefix "INVALID "')
+            return ' '.join(parts)
         return 'log prefix "INVALID " level debug'
 
     def generate_automatic_rules(
