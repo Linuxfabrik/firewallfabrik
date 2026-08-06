@@ -201,25 +201,6 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
         return True
 
 
-class CheckForObjectsWithErrors(PolicyRuleProcessor):
-    """Check for objects that were marked with errors.
-
-    In the CompRule model, objects don't carry error flags directly,
-    so this is largely a passthrough. Platform-specific processors
-    may set error conditions.
-    """
-
-    def __init__(self, name: str = 'Check for objects with errors') -> None:
-        super().__init__(name)
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        self.tmp_queue.append(rule)
-        return True
-
-
 class DropRuleWithImpossibleInterface(PolicyRuleProcessor):
     """Drop a rule whose chain cannot see the interface it matches on.
 

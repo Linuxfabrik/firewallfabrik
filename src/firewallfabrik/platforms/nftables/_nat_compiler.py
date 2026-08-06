@@ -834,7 +834,10 @@ class PortTranslationRules(NATRuleProcessor):
 class SeparatePortRanges(_PassthroughNAT):
     """Separate port range services in NAT.
 
-    nftables handles port ranges natively, so this is a pass-through.
+    Nothing to do here.  iptables has to pull a port range out of a rule
+    because ``-m multiport`` takes a list of single ports, but nftables
+    writes a range as it stands and accepts one inside a set as well
+    (``tcp dport { 22, 749-750 }``), which is what the print rule emits.
     """
 
     pass

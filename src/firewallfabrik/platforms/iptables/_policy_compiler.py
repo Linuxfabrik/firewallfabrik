@@ -1049,17 +1049,6 @@ class SpecialCasesWithCustomServices(PolicyRuleProcessor):
         return True
 
 
-class _Passthrough(PolicyRuleProcessor):
-    """Base for processors that pass rules through (stub)."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        self.tmp_queue.append(rule)
-        return True
-
-
 class Accounting(PolicyRuleProcessor):
     """Handle rules with Accounting action.
 

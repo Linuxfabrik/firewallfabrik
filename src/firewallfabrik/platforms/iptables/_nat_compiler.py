@@ -421,17 +421,6 @@ class NATCompiler_ipt(NATCompiler):
 # -- Rule Processors --
 
 
-class _PassthroughNAT(NATRuleProcessor):
-    """Base for processors that pass rules through (stub)."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        self.tmp_queue.append(rule)
-        return True
-
-
 class ExpandGroupsInItfInb(NATRuleProcessor):
     """Expand groups in the inbound interface element."""
 

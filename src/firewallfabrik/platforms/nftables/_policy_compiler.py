@@ -423,17 +423,6 @@ class PolicyCompiler_nft(PolicyCompiler):
 # ═══════════════════════════════════════════════════════════════════
 
 
-class _Passthrough(PolicyRuleProcessor):
-    """Base for processors that pass rules through."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        self.tmp_queue.append(rule)
-        return True
-
-
 class ConvertToAtomicForIntervals(PolicyRuleProcessor):
     """Split rules with multiple time intervals."""
 
