@@ -8,11 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**Highlights:** A large-scale correctness pass over both compilers. A whole class of rules that silently compiled into something other than what the GUI shows is now either compiled correctly or reported at compile time, instead of matching every address, every service, or nothing at all. On iptables, "Clear all rules" really clears them again, and dual-stack firewalls no longer carry a copy of every IPv6-only rule in their IPv4 chains. Re-compile and review your rulesets after updating, since rules that were silently wrong will change behaviour.
+
 ### Changed
 
-* CI: the lint, format, security and dead-code hooks run on every push and pull request, so the coding standards hold for contributors who have not installed the pre-commit hooks locally.
-* CI: the test suite runs on every push and pull request, on every Python version the package claims to support. Until now nothing in CI executed a single test.
-* CI: the documentation toolchain lockfile is watched by Dependabot, so it receives updates like every other lockfile in the repository.
 * FirewallFabrik installs on Python 3.11 and newer, so current distributions no longer need a custom Python build for it.
 * The nftables firewall settings no longer show three options that only ever applied to iptables. A firewall switched back to iptables keeps its values.
 
