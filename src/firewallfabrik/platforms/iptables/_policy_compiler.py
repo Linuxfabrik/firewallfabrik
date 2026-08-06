@@ -83,7 +83,6 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
-    normalize_set_name,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -2224,7 +2223,7 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
         source_name = get_address_table_source(mart) or getattr(mart, 'source_name', '')
         if ipt_comp.oscnf is not None and source_name:
             ipt_comp.oscnf.register_multi_address_object(
-                normalize_set_name(mart.name), source_name
+                mart.name, source_name, ipt_comp.ipv6_policy
             )
         if source_name:
             rule.set_option('address_table_file', source_name)

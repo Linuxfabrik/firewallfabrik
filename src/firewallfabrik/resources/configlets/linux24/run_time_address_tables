@@ -41,25 +41,43 @@ check_module_ipset() {
 ## with netmask between 1 and 31 bits (no 32 bits). Using a setlist
 ## set with two sub-sets, one for addresses and another for subnets.
 ##
+## The third argument is the address family of the ruleset this set
+## belongs to, "-4" or "-6".  A set holds one family, so a table used by
+## both rulesets gets one set per family, and each takes only the lines of
+## the file that belong to it: ipset refuses an IPv6 address in an inet
+## set with "resolving to IPv4 address failed" and vice versa.  The test
+## is on the first field, because a line may carry a trailing comment.
+##
 reload_address_table() {
     addrtbl_name=$1
     data_file=$2
+    af=${3:--4}
 
     test -z "$addrtbl_name" || test -z "$data_file" && {
-        echo "Usage: reload_address_table address_table_object_name file_name"
+        echo "Usage: reload_address_table address_table_object_name file_name [-4|-6]"
         exit 1
     }
+
+    if [ "$af" = "-6" ]; then
+        set_family="family inet6"
+        addr_filter="\$1 ~ /:/"
+    else
+        set_family="family inet"
+        addr_filter="\$1 !~ /:/"
+    fi
 
     "$IPSET" -X tmp_fwb_set:ip -q
     "$IPSET" -X tmp_fwb_set:net -q
 
-    "$IPSET" -N tmp_fwb_set:ip  iphash
-    "$IPSET" -N tmp_fwb_set:net nethash
+    # shellcheck disable=SC2086
+    "$IPSET" -N tmp_fwb_set:ip  iphash  $set_family
+    # shellcheck disable=SC2086
+    "$IPSET" -N tmp_fwb_set:net nethash $set_family
 
     DATAFILE_SIZE=$(wc -l "$data_file" | cut -d" " -f 1)
     echo "Processing $DATAFILE_SIZE items in file: $data_file"
 
-    grep -Ev '^#|^;|^\s*$' "$data_file" | while read -r L ; do
+    grep -Ev '^#|^;|^\s*$' "$data_file" | awk "$addr_filter" | while read -r L ; do
         # shellcheck disable=SC2086
         set -- $L
         addr=$1
@@ -71,8 +89,10 @@ reload_address_table() {
         fi
     done
 
-    "$IPSET" --list "${addrtbl_name}:ip" >/dev/null || "$IPSET" -N "${addrtbl_name}:ip" iphash
-    "$IPSET" --list "${addrtbl_name}:net" >/dev/null || "$IPSET" -N "${addrtbl_name}:net" nethash
+    # shellcheck disable=SC2086
+    "$IPSET" --list "${addrtbl_name}:ip" >/dev/null || "$IPSET" -N "${addrtbl_name}:ip" iphash $set_family
+    # shellcheck disable=SC2086
+    "$IPSET" --list "${addrtbl_name}:net" >/dev/null || "$IPSET" -N "${addrtbl_name}:net" nethash $set_family
 
     "$IPSET" -W "${addrtbl_name}:ip" tmp_fwb_set:ip
     "$IPSET" -W "${addrtbl_name}:net" tmp_fwb_set:net

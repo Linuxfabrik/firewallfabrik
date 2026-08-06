@@ -16,8 +16,16 @@
 {{endif}}
 
 
+##
+## An address table file may hold addresses of both families.  The awk
+## filter keeps only the ones this ruleset's tool can take: iptables
+## rejects an IPv6 address with "invalid mask specified" and ip6tables
+## rejects an IPv4 one with "host/network not found", and the rule is
+## then missing for every address behind the rejected line.  It tests
+## the first field, because a line may carry a trailing comment.
+##
 {{if address_table}}
-grep -Ev '^#|^;|^\s*$' {{$address_table_file}} | while read -r L ; do
+grep -Ev '^#|^;|^\s*$' {{$address_table_file}} | {{$address_table_family_filter}} | while read -r L ; do
   # shellcheck disable=SC2086
   set -- $L; at_{{$address_table_var}}=$1; {{$command}}
 done

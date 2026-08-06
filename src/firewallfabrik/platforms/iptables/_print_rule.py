@@ -514,8 +514,9 @@ class PrintRule(PolicyRuleProcessor):
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         source = get_address_table_source(obj)
         oscnf = getattr(ipt_comp, 'oscnf', None)
+        ipv6 = bool(getattr(ipt_comp, 'ipv6_policy', False))
         if oscnf is not None:
-            oscnf.register_multi_address_object(normalize_set_name(obj.name), source)
+            oscnf.register_multi_address_object(obj.name, source, ipv6)
 
         if getattr(ipt_comp, 'using_ipset', False):
             # `--set` was renamed in iptables 1.4.4 and only kept as a
@@ -526,7 +527,7 @@ class PrintRule(PolicyRuleProcessor):
                 else '--set'
             )
             suffix = 'src' if slot == 'src' else 'dst'
-            match = f'{option} {normalize_set_name(obj.name)} {suffix}'
+            match = f'{option} {normalize_set_name(obj.name, ipv6)} {suffix}'
             return f'-m set {self._print_single_option_with_negation("", rule, slot, match)}'
 
         rule.set_option('address_table_file', source)

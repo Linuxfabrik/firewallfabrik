@@ -146,10 +146,10 @@ case "$cmd" in
         ;;
 
 {{if using_ipset}}
-## Usage:  script.fw reload_address_table <address_table_name> <file_name>
+## Usage:  script.fw reload_address_table <address_table_name> <file_name> [-4|-6]
     reload_address_table)
         check_tools
-        reload_address_table "$2" "$3"
+        reload_address_table "$2" "$3" "$4"
         ;;
 
 ## Usage:  script.fw add_to_address_table <address_table_name> <file_name> <address>

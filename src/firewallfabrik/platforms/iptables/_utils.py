@@ -157,12 +157,18 @@ def get_address_table_var_name(at: AddressTable) -> str:
 IPSET_MAX_NAME_LENGTH = 31
 
 
-def normalize_set_name(name: str) -> str:
-    """Normalize an ipset set name (max 31 chars, valid chars only)."""
+def normalize_set_name(name: str, ipv6: bool = False) -> str:
+    """Normalize an ipset set name (max 31 chars, valid chars only).
+
+    A set carries one address family, so an address table used by both
+    rulesets needs one set per family; the IPv6 one gets a ``_v6`` suffix,
+    the same way the interface address variables are named.
+    """
     result = re.sub(r'[ +*!#|]', '_', name)
-    if len(result) > IPSET_MAX_NAME_LENGTH:
-        result = result[:IPSET_MAX_NAME_LENGTH]
-    return result
+    suffix = '_v6' if ipv6 else ''
+    if len(result) + len(suffix) > IPSET_MAX_NAME_LENGTH:
+        result = result[: IPSET_MAX_NAME_LENGTH - len(suffix)]
+    return result + suffix
 
 
 def expand_interface_with_phys_address(

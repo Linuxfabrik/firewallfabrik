@@ -31,11 +31,19 @@ from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
+    normalize_set_name,
     version_compare,
 )
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
+
+# An address table file may list addresses of both families.  Only the ones
+# the current tool understands may reach it, so the generated loop pipes the
+# file through one of these.  The test is on the first field, because a line
+# may carry a trailing comment.
+ADDRESS_TABLE_V4_FILTER = "awk '$1 !~ /:/'"
+ADDRESS_TABLE_V6_FILTER = "awk '$1 ~ /:/'"
 
 
 class OSConfigurator_linux24(OSConfigurator):
@@ -82,7 +90,7 @@ class OSConfigurator_linux24(OSConfigurator):
     ) -> None:
         super().__init__(session, fw, ipv6)
         self.using_ipset: bool = False
-        self.address_table_objects: dict[str, str] = {}
+        self.address_table_objects: dict[str, tuple[str, bool, str]] = {}
         self.virtual_addresses: list = []
         self.virtual_addresses_for_nat: dict[str, str] = {}
         self.known_interfaces: list[str] = []
@@ -416,13 +424,16 @@ class OSConfigurator_linux24(OSConfigurator):
                 variables[f'{base}_network'] = iface
         return variables
 
-    def _wrap_address_table(self, command: str, address_table_file: str) -> str:
+    def _wrap_address_table(
+        self, command: str, address_table_file: str, ipv6: bool = False
+    ) -> str:
         """Wrap *command* in the loop that reads one address per file line.
 
         Without the ipset module an address table has no kernel object, so
         the rule is written once per address: the loop assigns each line to
         the ``$at_<table>`` variable the command carries.  Ports fwbuilder's
-        ``OSConfigurator_linux24::addressTableWrapper``.
+        ``OSConfigurator_linux24::addressTableWrapper``, plus the address
+        family filter fwbuilder is missing.
         """
         match = re.search(r'\$(at_\S+)', command)
         if match is None or not address_table_file:
@@ -442,6 +453,10 @@ class OSConfigurator_linux24(OSConfigurator):
         wrappers.set_variable('two_dyn_addr', 0)
         wrappers.set_variable('address_table_file', address_table_file)
         wrappers.set_variable('address_table_var', match.group(1)[len('at_') :])
+        wrappers.set_variable(
+            'address_table_family_filter',
+            ADDRESS_TABLE_V6_FILTER if ipv6 else ADDRESS_TABLE_V4_FILTER,
+        )
         wrappers.set_variable('command', '\n'.join(lines))
         return wrappers.expand()
 
@@ -470,7 +485,7 @@ class OSConfigurator_linux24(OSConfigurator):
         # The address-table loop goes innermost, so an interface wrapper
         # around it still applies to every address the table contributes.
         if not self.using_ipset:
-            command = self._wrap_address_table(command, address_table_file)
+            command = self._wrap_address_table(command, address_table_file, ipv6)
 
         variables = self._dynamic_interface_variables()
         used: list[str] = []
@@ -536,9 +551,15 @@ class OSConfigurator_linux24(OSConfigurator):
 
         check_cmds = []
         load_cmds = []
-        for name, source in self.address_table_objects.items():
-            check_cmds.append(f'check_file "{name}" "{source}"')
-            load_cmds.append(f'reload_address_table "{name}" "{source}"')
+        checked = set()
+        for name, (source, ipv6, base_name) in self.address_table_objects.items():
+            # The file is the same for both families, so it is checked once.
+            if (base_name, source) not in checked:
+                check_cmds.append(f'check_file "{base_name}" "{source}"')
+                checked.add((base_name, source))
+            load_cmds.append(
+                f'reload_address_table "{name}" "{source}" "{"-6" if ipv6 else "-4"}"'
+            )
 
         rt.set_variable('check_files_commands', '\n'.join(check_cmds))
         rt.set_variable('load_files_commands', '\n'.join(load_cmds))
@@ -593,6 +614,18 @@ class OSConfigurator_linux24(OSConfigurator):
             return
         self.virtual_addresses.append(addr)
 
-    def register_multi_address_object(self, name: str, source: str) -> None:
-        """Register an address table object for runtime loading."""
-        self.address_table_objects[name] = source
+    def register_multi_address_object(
+        self, name: str, source: str, ipv6: bool = False
+    ) -> None:
+        """Register an address table object for runtime loading.
+
+        *name* is the base name; an ipset set carries one address family, so
+        a table used by both rulesets is registered once per family and each
+        set is filled from the same file with only the addresses that belong
+        to it.
+        """
+        self.address_table_objects[normalize_set_name(name, ipv6)] = (
+            source,
+            ipv6,
+            normalize_set_name(name),
+        )
