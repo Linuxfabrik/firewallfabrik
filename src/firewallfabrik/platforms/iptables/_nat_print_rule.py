@@ -208,7 +208,11 @@ class NATPrintRule(NATRuleProcessor):
         # OSrc
         osrc = ipt_comp.get_first_osrc(rule)
         if isinstance(osrc, PhysAddress):
-            cmd += self._print_mac_source(osrc, rule)
+            mac_match = self._print_mac_source(osrc, rule)
+            if mac_match is None:
+                # No MAC to match on; the reason was reported.
+                return ''
+            cmd += mac_match
         elif is_run_time_address_table(osrc):
             cmd += self._print_address_table(osrc, rule, 'osrc')
         elif osrc:
@@ -293,16 +297,22 @@ class NATPrintRule(NATRuleProcessor):
         cmd += self._end_rule_line()
         return cmd
 
-    def _print_mac_source(self, obj, rule: CompRule) -> str:
-        """Print a MAC address match.
+    def _print_mac_source(self, obj, rule: CompRule) -> str | None:
+        """Print a MAC address match, None when the object carries no MAC.
 
         iptables cannot match a MAC with ``-s``, it needs the mac module
-        (fwbuilder does the same in NATCompiler_PrintRule.cpp).
+        (fwbuilder does the same in NATCompiler_PrintRule.cpp).  An object
+        with an empty MAC used to become ``--mac-source 00:00:00:00:00:00``,
+        a rule no packet can ever match; fwbuilder leaves such an object out
+        of the ruleset instead, and so does this.
         """
         mac = obj.get_address()
         if not mac:
-            self.compiler.warning(rule, 'Empty MAC address in rule')
-            mac = '00:00:00:00:00:00'
+            self.compiler.warning(
+                rule,
+                f'"{obj.name}" has no MAC address, so the rule is left out',
+            )
+            return None
         neg = self._print_single_option_with_negation(
             ' --mac-source', rule, 'osrc', mac
         )

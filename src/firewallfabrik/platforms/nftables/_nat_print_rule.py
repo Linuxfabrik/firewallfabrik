@@ -224,9 +224,20 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'{ip_keyword} {neg}{_as_set(plain)}')
         if objects and not parts:
             what = 'source' if 'saddr' in ip_keyword else 'destination'
-            self.compiler.error(
-                rule, f'Could not resolve any original {what} addresses'
-            )
+            empty = [o.name for o in objects if not (o.get_address() or '')]
+            if len(empty) == len(objects):
+                # Not a compiler limit: the objects carry no address at all.
+                # fwbuilder leaves them out of the ruleset, and a warning
+                # says so without failing the compile.
+                self.compiler.warning(
+                    rule,
+                    f'{", ".join(repr(n) for n in empty)} has no address, '
+                    f'so the rule is left out',
+                )
+            else:
+                self.compiler.error(
+                    rule, f'Could not resolve any original {what} addresses'
+                )
             return None
         return parts
 

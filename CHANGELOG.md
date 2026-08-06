@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
 * Compiler (iptables, nftables): a firewall whose rule sets produce no rules at all generates a script that runs instead of one the shell refuses to parse.
 * Compiler (iptables, nftables): a NAT rule whose translated service uses a different protocol than the original is reported instead of being compiled into a translation the rule does not ask for.
+* Compiler (iptables, nftables): a rule naming a host whose MAC address is empty is left out with a warning naming the object, instead of iptables matching an all-zero MAC no packet ever carries.
 * Compiler (iptables, nftables): a source translation to an unnumbered interface is reported instead of stopping the activation script on iptables and translating to the wrong address on nftables.
 * Compiler (iptables, nftables): address ranges are no longer emitted into the wrong address family, which produced a ruleset that did not load.
 * Compiler (iptables, nftables): an IP service with an unknown DiffServ class name is reported with a clear error instead of producing a ruleset that does not load.

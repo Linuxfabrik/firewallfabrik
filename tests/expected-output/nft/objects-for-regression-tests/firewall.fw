@@ -10,9 +10,6 @@
 #
 #  this is simple firewall with two interfaces. Test regular policy rules, including IP_fragments rule
 #
-# Rule 14 (NAT): Could not resolve any original source addresses
-# Rule 14 (NAT): Could not resolve any original source addresses
-# Rule 16 (NAT): Could not resolve any original source addresses
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
@@ -39,7 +36,10 @@
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # firewall:NAT:11: warning: SNAT rule can not match MAC address. Object 'host-with-mac-1:1-pa' removed from the rule
+# firewall:NAT:14: warning: 'host-with-mac-4:1-pa' has no address, so the rule is left out
+# firewall:NAT:14: warning: 'host-with-mac-4:1-pa' has no address, so the rule is left out
 # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-1:1-pa' removed from the rule
+# firewall:NAT:16: warning: 'host-with-mac-4:1-pa' has no address, so the rule is left out
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
