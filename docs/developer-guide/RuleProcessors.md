@@ -1184,7 +1184,10 @@ The final processor. Generates iptables shell commands. For each rule:
 1. Checks `chain_usage_counter` — skips if the rule's chain has zero usage.
 2. Outputs rule label and comments via `_printRuleLabel()`.
 3. Creates chains as needed via `_createChain()` (emits `$IPTABLES -N chain`).
-4. Delegates to `OSConfigurator` for runtime wrappers (dynamic interfaces).
+4. Delegates to `OSConfigurator_linux24.print_run_time_wrappers()` for the
+   dynamic-interface shell wrapper (`run_time_wrappers` configlet): a
+   `for`/`test -n` loop over the address list, or a `getinterfaces` loop for
+   a wildcard interface. `NATPrintRule` does the same.
 5. Calls `PolicyRuleToString()` to assemble the actual command.
 
 **`PolicyRuleToString()`** assembles the command in this order:

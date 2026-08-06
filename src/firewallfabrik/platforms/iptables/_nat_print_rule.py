@@ -133,9 +133,17 @@ class NATPrintRule(NATRuleProcessor):
         if target_create:
             self.compiler.output.write(target_create)
 
-        self.compiler.output.write(cmd)
+        self.compiler.output.write(self._wrap_run_time(cmd))
 
         return True
+
+    def _wrap_run_time(self, cmd: str) -> str:
+        """Let the OS configurator add the dynamic-address shell wrapper."""
+        oscnf = getattr(self.compiler, 'oscnf', None)
+        if oscnf is None or not hasattr(oscnf, 'print_run_time_wrappers'):
+            return cmd
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        return oscnf.print_run_time_wrappers(cmd, ipv6)
 
     def _build_nat_command(self, rule: CompRule) -> str:
         """Build NAT iptables command, empty when the rule cannot be expressed."""

@@ -20,6 +20,7 @@ Corresponds to fwbuilder's iptlib/os_configurator_linux24.py.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, ClassVar
 
 from firewallfabrik.compiler._os_configurator import OSConfigurator
@@ -395,6 +396,91 @@ class OSConfigurator_linux24(OSConfigurator):
             result += f'getnet6 {name}  {var_name_v6}_network\n'
 
         return result
+
+    def _dynamic_interface_variables(self) -> dict[str, Interface]:
+        """Map every shell variable a dynamic interface can appear as.
+
+        ``getaddr`` / ``getnet`` fill one variable per interface and address
+        family, plus the ``_network`` variants, and the print rules write
+        exactly these names into the generated commands.
+        """
+        variables: dict[str, Interface] = {}
+        for iface in self.fw.interfaces:
+            if not iface.is_dynamic():
+                continue
+            for base in (
+                get_interface_var_name(iface),
+                get_interface_var_name(iface, suffix='v6'),
+            ):
+                variables[base] = iface
+                variables[f'{base}_network'] = iface
+        return variables
+
+    def print_run_time_wrappers(self, command: str, ipv6: bool = False) -> str:
+        """Wrap *command* in the shell code that fills in dynamic addresses.
+
+        A rule that matches on the address of a dynamic interface cannot name
+        it at compile time, so the print rules write a ``$i_<interface>``
+        variable instead.  Nothing assigns that variable on its own:
+        ``getaddr`` (configlets/linux24/shell_functions) only fills
+        ``$i_<interface>_list``, and a wildcard interface such as ``ppp*``
+        does not even get a ``getaddr`` call, because which interfaces it
+        covers is only known on the firewall.  Without this wrapper the
+        command runs with an empty argument, which iptables rejects
+        ("Bad argument") and which stops the activation script.
+
+        Ports fwbuilder's ``OSConfigurator_linux24::printRunTimeWrappers``
+        and renders the ``run_time_wrappers`` configlet, which loops over the
+        address list and skips a run where the interface has no address.
+        """
+        if not command.strip():
+            return command
+
+        variables = self._dynamic_interface_variables()
+        used: list[str] = []
+        wildcard_family = ''
+        for match in re.finditer(r'\$(i_[A-Za-z0-9_]+)', command):
+            iface = variables.get(match.group(1))
+            if iface is None:
+                continue
+            if '*' in iface.name:
+                # Only one wildcard interface per rule, the same limit
+                # fwbuilder documents in the configlet.  The loop resolves
+                # the address into $addr, so the variable is replaced.
+                wildcard_family = iface.name.split('*', 1)[0]
+                command = command[: match.start()] + '$addr' + command[match.end() :]
+                break
+            if match.group(1) not in used:
+                used.append(match.group(1))
+
+        if not wildcard_family and not used:
+            return command
+
+        lines = [line for line in command.split('\n') if line.strip()]
+        if len(lines) > 1:
+            lines = ['{', *lines, '}']
+        command = '\n'.join(lines)
+
+        wrappers = Configlet('linux24', 'run_time_wrappers')
+        wrappers.collapse_empty_strings(True)
+        wrappers.set_variable('ipv6', 1 if ipv6 else 0)
+        wrappers.set_variable('address_table', 0)
+        wrappers.set_variable('no_wrapper', 0)
+        wrappers.set_variable('wildcard_interface', 1 if wildcard_family else 0)
+        wrappers.set_variable('interface_family_name', wildcard_family)
+        wrappers.set_variable(
+            'one_dyn_addr', 1 if not wildcard_family and len(used) == 1 else 0
+        )
+        wrappers.set_variable(
+            'two_dyn_addr', 1 if not wildcard_family and len(used) > 1 else 0
+        )
+        for index, var in enumerate(used[:2], start=1):
+            # The configlet spells the variable as ``i_{{$intf_N_var_name}}``,
+            # so it wants the name without the ``i_`` prefix.
+            wrappers.set_variable(f'intf_{index}_var_name', var[2:])
+        wrappers.set_variable('command', command)
+
+        return wrappers.expand() + '\n'
 
     def print_commands_to_clear_known_interfaces(self) -> str:
         """Generate commands to clear addresses on unknown interfaces."""

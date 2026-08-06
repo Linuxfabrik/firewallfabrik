@@ -158,9 +158,17 @@ class PrintRule(PolicyRuleProcessor):
         if target and not target.startswith('.'):
             self.compiler.output.write(self._create_chain(target))
 
-        self.compiler.output.write(cmd)
+        self.compiler.output.write(self._wrap_run_time(cmd))
 
         return True
+
+    def _wrap_run_time(self, cmd: str) -> str:
+        """Let the OS configurator add the dynamic-address shell wrapper."""
+        oscnf = getattr(self.compiler, 'oscnf', None)
+        if oscnf is None or not hasattr(oscnf, 'print_run_time_wrappers'):
+            return cmd
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        return oscnf.print_run_time_wrappers(cmd, ipv6)
 
     def policy_rule_to_string(self, rule: CompRule) -> str:
         """Generate rule string for dedup (used by Optimize3)."""

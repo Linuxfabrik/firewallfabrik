@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): rules combining a TCP flag or IP option match with a rate limit or a time restriction load again. They were missing from the running firewall.
 * Compiler (iptables): rules that assign a traffic class do so. Traffic shaping never saw the class.
 * Compiler (iptables): rules that set a mark, a traffic class or a route and list several addresses or services set it only for those. The mark was set on every packet the rule's other conditions matched, and the listed addresses and services were never checked at all.
+* Compiler (iptables): rules that match the address of a dynamic interface are filled in at activation time instead of running with an empty address. iptables rejected such a command, so the activation stopped there; a rule on a wildcard interface such as "ppp*" now covers every interface it matches.
 * Compiler (iptables): rules that name an interface and apply in both directions no longer stop the activation script.
 * Compiler (iptables): rules that reject with a TCP reset also work when they are logged or negate their source, destination or service. The traffic fell through to the rule below instead.
 * Compiler (iptables): rules that use a custom service load again instead of being rejected for a missing protocol match.
