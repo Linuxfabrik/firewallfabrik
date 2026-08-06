@@ -3272,23 +3272,34 @@ class OptimizeForMinusIOPlus(PolicyRuleProcessor):
 
 
 class CheckMACInOUTPUTChain(PolicyRuleProcessor):
-    """Abort if MAC address (PhysAddress) is used in src in OUTPUT chain.
+    """Abort if a MAC address is matched where the kernel cannot see one.
 
-    iptables cannot match the MAC address of the firewall itself in
-    the OUTPUT chain.
+    The mac match registers for PREROUTING, INPUT and FORWARD only
+    (netfilter ``net/netfilter/xt_mac.c``, ``.hooks``), because by the time
+    a packet reaches OUTPUT or POSTROUTING it has no source MAC yet.
+    iptables refuses such a rule, which stops the activation script.
 
-    Corresponds to C++ ``PolicyCompiler_ipt::checkMACinOUTPUTChain``.
+    Corresponds to C++ ``PolicyCompiler_ipt::checkMACinOUTPUTChain``, which
+    only guards OUTPUT; POSTROUTING is reachable through the mangle pass and
+    the kernel rejects it just the same.
     """
+
+    #: The chains the mac match cannot be used in.
+    FORBIDDEN_CHAINS = ('OUTPUT', 'POSTROUTING')
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        if rule.ipt_chain == 'OUTPUT':
+        if rule.ipt_chain in self.FORBIDDEN_CHAINS:
             src = rule.src[0] if rule.src else None
             if isinstance(src, PhysAddress):
-                self.compiler.abort(rule, 'Can not match MAC address of the firewall')
+                self.compiler.abort(
+                    rule,
+                    f'Can not match a MAC address in the {rule.ipt_chain} chain, '
+                    f'where the packet no longer carries one',
+                )
                 return True
 
         self.tmp_queue.append(rule)
@@ -3316,12 +3327,14 @@ class CheckUserServiceInWrongChains(PolicyRuleProcessor):
 
         if (
             isinstance(srv, UserService)
-            and chain != 'OUTPUT'
+            and chain not in ('OUTPUT', 'POSTROUTING')
             and not ipt_comp.is_chain_descendant_of_output(chain)
         ):
             self.compiler.warning(
                 rule,
-                "Iptables does not support module 'owner' in a chain other than OUTPUT",
+                "Iptables matches module 'owner' only in the OUTPUT and "
+                'POSTROUTING chains, where the packet still has the socket '
+                'that produced it',
             )
             return True  # drop rule
 

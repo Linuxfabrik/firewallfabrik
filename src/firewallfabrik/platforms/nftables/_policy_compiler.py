@@ -748,10 +748,20 @@ class CheckUserServiceInWrongChains(PolicyRuleProcessor):
         srv = rule.srv[0] if rule.srv else None
         chain = (rule.ipt_chain or '').upper()
 
-        if isinstance(srv, UserService) and chain != 'OUTPUT':
+        # "meta skuid" reads the socket that produced the packet, which only
+        # exists once the packet is on its way out; elsewhere the match
+        # simply never fires (netfilter net/netfilter/nft_meta.c,
+        # nft_meta_get_eval).  The iptables owner match is restricted to the
+        # same two hooks, so the rule is dropped rather than shipped as one
+        # that can never match.
+        # Unlike iptables there is no temporary-chain hierarchy to walk here:
+        # the nftables rules live in the hook chains themselves.
+        if isinstance(srv, UserService) and chain not in ('OUTPUT', 'POSTROUTING'):
             self.compiler.warning(
                 rule,
-                "nftables matches 'meta skuid' only in the OUTPUT chain",
+                "nftables matches 'meta skuid' only in the output and "
+                'postrouting chains, where the packet still has the socket '
+                'that produced it',
             )
             return True
 
@@ -2380,18 +2390,32 @@ class BridgingFw(PolicyRuleProcessor):
 
 
 class CheckMACInOUTPUTChain(PolicyRuleProcessor):
-    """Abort if MAC/PhysAddress is used in src in output chain."""
+    """Abort if a MAC address is matched where the kernel cannot see one.
+
+    By the time a packet reaches the output or postrouting hook it has no
+    source MAC yet, which is why the iptables mac match registers for
+    prerouting, input and forward only (netfilter
+    ``net/netfilter/xt_mac.c``).  The same holds for the nftables ``ether
+    saddr`` match, so the rule is refused for both chains.
+    """
+
+    #: The chains an ethernet source address cannot be matched in.
+    FORBIDDEN_CHAINS = ('output', 'postrouting')
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
         if (
-            rule.ipt_chain == 'output'
+            rule.ipt_chain in self.FORBIDDEN_CHAINS
             and rule.src
             and isinstance(rule.src[0], PhysAddress)
         ):
-            self.compiler.abort(rule, 'Can not match MAC address of the firewall')
+            self.compiler.abort(
+                rule,
+                f'Can not match a MAC address in the {rule.ipt_chain} chain, '
+                f'where the packet no longer carries one',
+            )
             return True
         self.tmp_queue.append(rule)
         return True
