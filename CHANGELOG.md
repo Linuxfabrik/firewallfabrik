@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): the `--xp` rule trace works on firewalls imported from a `.fwb` file instead of aborting the whole compile with an internal error.
 * Compiler (iptables): the automatic MSS clamping and connection mark rules survive activation on firewalls that activate through iptables-restore. They were wiped again right after being set.
 * Compiler (iptables): the generated script no longer creates and fills chains nothing ever jumps to. Dual-stack firewalls carried a copy of every IPv6-only rule in their IPv4 chains and vice versa.
+* Compiler (iptables): the generated script no longer tries to create a chain named after the NFLOG or ULOG target on firewalls that log that way. iptables refuses such a name, so the command failed on every activation.
 * Compiler (iptables): the generated script waits at most five seconds for the iptables lock instead of blocking forever, which stalled unattended rollouts without an error.
 * Compiler (iptables): the NFLOG "Copy range" setting takes effect, so the logging daemon receives only as much of each packet as the firewall asks for instead of always the whole one. Firewalls pinned to an iptables older than 1.6.1, which cannot express this, get a warning.
 * Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.

@@ -93,6 +93,13 @@ if TYPE_CHECKING:
 # Module-level chain counter
 _chain_no = 0
 
+# Chain names PrintRule must never try to create: the built-in chains and
+# every target the compiler can put into ``ipt_target``.  iptables refuses a
+# chain whose name is one of its targets ("chain name may not clash with
+# target name", assert_valid_chain_name in netfilter iptables/xshared.c), so
+# a missing entry here produces a `-N` command that always fails.  NFLOG and
+# ULOG are missing from the same list in fwbuilder
+# (PolicyCompiler_ipt::getStandardChains).
 STANDARD_CHAINS = [
     'INPUT',
     'OUTPUT',
@@ -101,6 +108,8 @@ STANDARD_CHAINS = [
     'POSTROUTING',
     'RETURN',
     'LOG',
+    'NFLOG',
+    'ULOG',
     'ACCEPT',
     'DROP',
     'REJECT',
