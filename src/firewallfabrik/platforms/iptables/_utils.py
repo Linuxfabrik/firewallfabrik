@@ -143,6 +143,20 @@ def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
     )
 
 
+def is_run_time_address_table(obj) -> bool:
+    """Report whether *obj* is an AddressTable that is read on the firewall.
+
+    A compile-time table is replaced by its addresses in
+    ``ResolveMultiAddress``; only a run-time one still reaches a print rule.
+    """
+    return isinstance(obj, AddressTable) and bool((obj.data or {}).get('run_time'))
+
+
+def get_address_table_source(at: AddressTable) -> str:
+    """Return the file an AddressTable is read from, as the script sees it."""
+    return str((at.data or {}).get('filename', ''))
+
+
 def get_address_table_var_name(at: AddressTable) -> str:
     """Generate a shell variable name for an address table."""
     name = at.name
@@ -150,11 +164,18 @@ def get_address_table_var_name(at: AddressTable) -> str:
     return f'at_{var_name}'
 
 
+# ipset stores a set name in a field of IPSET_MAXNAMELEN bytes (32, see
+# include/linux/netfilter/ipset/ip_set.h in the netfilter ipset tree), so 31
+# characters is the longest name that can be created.  fwbuilder only
+# replaces the characters that would break the shell command around the name.
+IPSET_MAX_NAME_LENGTH = 31
+
+
 def normalize_set_name(name: str) -> str:
     """Normalize an ipset set name (max 31 chars, valid chars only)."""
-    result = re.sub(r'[^a-zA-Z0-9_]', '_', name)
-    if len(result) > 31:
-        result = result[:31]
+    result = re.sub(r'[ +*!#|]', '_', name)
+    if len(result) > IPSET_MAX_NAME_LENGTH:
+        result = result[:IPSET_MAX_NAME_LENGTH]
     return result
 
 

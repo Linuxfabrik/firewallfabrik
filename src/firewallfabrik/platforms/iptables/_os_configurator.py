@@ -416,7 +416,38 @@ class OSConfigurator_linux24(OSConfigurator):
                 variables[f'{base}_network'] = iface
         return variables
 
-    def print_run_time_wrappers(self, command: str, ipv6: bool = False) -> str:
+    def _wrap_address_table(self, command: str, address_table_file: str) -> str:
+        """Wrap *command* in the loop that reads one address per file line.
+
+        Without the ipset module an address table has no kernel object, so
+        the rule is written once per address: the loop assigns each line to
+        the ``$at_<table>`` variable the command carries.  Ports fwbuilder's
+        ``OSConfigurator_linux24::addressTableWrapper``.
+        """
+        match = re.search(r'\$(at_\S+)', command)
+        if match is None or not address_table_file:
+            return command
+
+        lines = [line for line in command.split('\n') if line.strip()]
+        if len(lines) > 1:
+            lines = ['{', *lines, '}']
+
+        wrappers = Configlet('linux24', 'run_time_wrappers')
+        wrappers.collapse_empty_strings(True)
+        wrappers.set_variable('ipv6', 0)
+        wrappers.set_variable('address_table', 1)
+        wrappers.set_variable('no_wrapper', 0)
+        wrappers.set_variable('wildcard_interface', 0)
+        wrappers.set_variable('one_dyn_addr', 0)
+        wrappers.set_variable('two_dyn_addr', 0)
+        wrappers.set_variable('address_table_file', address_table_file)
+        wrappers.set_variable('address_table_var', match.group(1)[len('at_') :])
+        wrappers.set_variable('command', '\n'.join(lines))
+        return wrappers.expand()
+
+    def print_run_time_wrappers(
+        self, command: str, ipv6: bool = False, address_table_file: str = ''
+    ) -> str:
         """Wrap *command* in the shell code that fills in dynamic addresses.
 
         A rule that matches on the address of a dynamic interface cannot name
@@ -436,6 +467,11 @@ class OSConfigurator_linux24(OSConfigurator):
         if not command.strip():
             return command
 
+        # The address-table loop goes innermost, so an interface wrapper
+        # around it still applies to every address the table contributes.
+        if not self.using_ipset:
+            command = self._wrap_address_table(command, address_table_file)
+
         variables = self._dynamic_interface_variables()
         used: list[str] = []
         wildcard_family = ''
@@ -454,7 +490,7 @@ class OSConfigurator_linux24(OSConfigurator):
                 used.append(match.group(1))
 
         if not wildcard_family and not used:
-            return command
+            return command if command.endswith('\n') else command + '\n'
 
         lines = [line for line in command.split('\n') if line.strip()]
         if len(lines) > 1:

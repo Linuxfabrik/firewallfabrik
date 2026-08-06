@@ -47,9 +47,13 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
     check_chain_name,
+    get_address_table_source,
+    get_address_table_var_name,
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
+    is_run_time_address_table,
+    normalize_set_name,
     version_compare,
 )
 
@@ -133,17 +137,50 @@ class NATPrintRule(NATRuleProcessor):
         if target_create:
             self.compiler.output.write(target_create)
 
-        self.compiler.output.write(self._wrap_run_time(cmd))
+        self.compiler.output.write(self._wrap_run_time(rule, cmd))
 
         return True
 
-    def _wrap_run_time(self, cmd: str) -> str:
-        """Let the OS configurator add the dynamic-address shell wrapper."""
+    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str:
+        """Print the match for an address table that is read on the firewall.
+
+        See the policy print rule for the two forms; a NAT rule names its
+        original source in ``osrc`` and its original destination in ``odst``,
+        which the ipset match still has to spell ``src`` and ``dst``.
+        """
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
+        source = get_address_table_source(obj)
+        oscnf = getattr(ipt_comp, 'oscnf', None)
+        if oscnf is not None:
+            oscnf.register_multi_address_object(normalize_set_name(obj.name), source)
+
+        if getattr(ipt_comp, 'using_ipset', False):
+            option = (
+                '--match-set'
+                if version_compare(self.version, '1.4.4') >= 0
+                else '--set'
+            )
+            suffix = 'src' if slot == 'osrc' else 'dst'
+            match = f'{option} {normalize_set_name(obj.name)} {suffix}'
+            return (
+                '-m set '
+                f'{self._print_single_option_with_negation("", rule, slot, match)}'
+            )
+
+        rule.set_option('address_table_file', source)
+        var = get_address_table_var_name(obj)
+        flag = ' -s' if slot == 'osrc' else ' -d'
+        return self._print_single_option_with_negation(flag, rule, slot, f'${var}')
+
+    def _wrap_run_time(self, rule: CompRule, cmd: str) -> str:
+        """Let the OS configurator add the run-time shell wrappers."""
         oscnf = getattr(self.compiler, 'oscnf', None)
         if oscnf is None or not hasattr(oscnf, 'print_run_time_wrappers'):
             return cmd
         ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-        return oscnf.print_run_time_wrappers(cmd, ipv6)
+        return oscnf.print_run_time_wrappers(
+            cmd, ipv6, rule.get_option('address_table_file', '')
+        )
 
     def _build_nat_command(self, rule: CompRule) -> str:
         """Build NAT iptables command, empty when the rule cannot be expressed."""
@@ -171,6 +208,8 @@ class NATPrintRule(NATRuleProcessor):
         osrc = ipt_comp.get_first_osrc(rule)
         if isinstance(osrc, PhysAddress):
             cmd += self._print_mac_source(osrc, rule)
+        elif is_run_time_address_table(osrc):
+            cmd += self._print_address_table(osrc, rule, 'osrc')
         elif osrc:
             addr_str = self._print_addr(osrc)
             if not addr_str:
@@ -202,6 +241,8 @@ class NATPrintRule(NATRuleProcessor):
                 f'MAC address "{odst.get_address()}" cannot be used as a '
                 'destination, iptables can only match the source MAC',
             )
+        elif is_run_time_address_table(odst):
+            cmd += self._print_address_table(odst, rule, 'odst')
         elif odst:
             addr_str = self._print_addr(odst)
             if not addr_str:

@@ -53,9 +53,13 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import (
     check_chain_name,
+    get_address_table_source,
+    get_address_table_var_name,
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
+    is_run_time_address_table,
+    normalize_set_name,
     version_compare,
 )
 
@@ -158,17 +162,19 @@ class PrintRule(PolicyRuleProcessor):
         if target and not target.startswith('.'):
             self.compiler.output.write(self._create_chain(target))
 
-        self.compiler.output.write(self._wrap_run_time(cmd))
+        self.compiler.output.write(self._wrap_run_time(rule, cmd))
 
         return True
 
-    def _wrap_run_time(self, cmd: str) -> str:
-        """Let the OS configurator add the dynamic-address shell wrapper."""
+    def _wrap_run_time(self, rule: CompRule, cmd: str) -> str:
+        """Let the OS configurator add the run-time shell wrappers."""
         oscnf = getattr(self.compiler, 'oscnf', None)
         if oscnf is None or not hasattr(oscnf, 'print_run_time_wrappers'):
             return cmd
         ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-        return oscnf.print_run_time_wrappers(cmd, ipv6)
+        return oscnf.print_run_time_wrappers(
+            cmd, ipv6, rule.get_option('address_table_file', '')
+        )
 
     def policy_rule_to_string(self, rule: CompRule) -> str:
         """Generate rule string for dedup (used by Optimize3)."""
@@ -497,6 +503,37 @@ class PrintRule(PolicyRuleProcessor):
             return ' -m multiport '
         return ''
 
+    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str:
+        """Print the match for an address table that is read on the firewall.
+
+        With the ipset module the table is a named set and the match reads
+        it directly.  Without it the address comes from a shell variable
+        that the wrapper around the command assigns per line of the file
+        (fwbuilder ``_printIpSetMatch`` / ``_printAddr``).
+        """
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        source = get_address_table_source(obj)
+        oscnf = getattr(ipt_comp, 'oscnf', None)
+        if oscnf is not None:
+            oscnf.register_multi_address_object(normalize_set_name(obj.name), source)
+
+        if getattr(ipt_comp, 'using_ipset', False):
+            # `--set` was renamed in iptables 1.4.4 and only kept as a
+            # deprecated alias since (netfilter extensions/libxt_set.c).
+            option = (
+                '--match-set'
+                if version_compare(self.version, '1.4.4') >= 0
+                else '--set'
+            )
+            suffix = 'src' if slot == 'src' else 'dst'
+            match = f'{option} {normalize_set_name(obj.name)} {suffix}'
+            return f'-m set {self._print_single_option_with_negation("", rule, slot, match)}'
+
+        rule.set_option('address_table_file', source)
+        var = get_address_table_var_name(obj)
+        flag = ' -s' if slot == 'src' else ' -d'
+        return self._print_single_option_with_negation(flag, rule, slot, f'${var}')
+
     def _print_src_addr_from_rule(self, rule: CompRule) -> str | None:
         """Print the source match, None when the object could not be rendered."""
         if rule.is_src_any():
@@ -508,6 +545,8 @@ class PrintRule(PolicyRuleProcessor):
             return self._print_mac_source(obj, rule)
         if isinstance(obj, AddressRange):
             return self._print_address_range(obj, rule, 'src')
+        if is_run_time_address_table(obj):
+            return self._print_address_table(obj, rule, 'src')
         addr = self._print_addr(obj)
         if addr:
             return self._print_single_option_with_negation(' -s', rule, 'src', addr)
@@ -534,6 +573,8 @@ class PrintRule(PolicyRuleProcessor):
             return None
         if isinstance(obj, AddressRange):
             return self._print_address_range(obj, rule, 'dst')
+        if is_run_time_address_table(obj):
+            return self._print_address_table(obj, rule, 'dst')
         addr = self._print_addr(obj)
         if addr:
             return self._print_single_option_with_negation(' -d', rule, 'dst', addr)

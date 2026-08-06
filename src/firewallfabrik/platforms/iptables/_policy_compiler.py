@@ -80,7 +80,10 @@ from firewallfabrik.core.objects import (
     UserService,
 )
 from firewallfabrik.platforms.iptables._utils import (
+    get_address_table_source,
     get_iptables_version,
+    is_run_time_address_table,
+    normalize_set_name,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -2173,8 +2176,14 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # Find runtime MultiAddress objects
-        runtime_objs = [obj for obj in elements if isinstance(obj, MultiAddressRunTime)]
+        # Find runtime MultiAddress objects.  A run-time AddressTable is one
+        # of them: ResolveMultiAddress leaves it alone because its addresses
+        # are only known on the firewall.
+        runtime_objs = [
+            obj
+            for obj in elements
+            if isinstance(obj, MultiAddressRunTime) or is_run_time_address_table(obj)
+        ]
 
         if not runtime_objs:
             self.tmp_queue.append(rule)
@@ -2203,14 +2212,20 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
         return True
 
     def _register_runtime_object(self, rule, mart) -> None:
-        """Register a runtime MultiAddress object with the OS configurator."""
+        """Register a runtime MultiAddress object with the OS configurator.
+
+        The registration is what puts the table into the script's
+        ``check_run_time_address_table_files`` (and, with ipset, into
+        ``load_run_time_address_table_files``), so the activation stops with
+        a clear message when the file is gone instead of loading a ruleset
+        that matches nothing.
+        """
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        if ipt_comp.oscnf is not None and hasattr(
-            ipt_comp.oscnf, 'register_multi_address'
-        ):
-            ipt_comp.oscnf.register_multi_address(mart)
-        # Set address table file path if applicable
-        source_name = getattr(mart, 'source_name', '') or ''
+        source_name = get_address_table_source(mart) or getattr(mart, 'source_name', '')
+        if ipt_comp.oscnf is not None and source_name:
+            ipt_comp.oscnf.register_multi_address_object(
+                normalize_set_name(mart.name), source_name
+            )
         if source_name:
             rule.set_option('address_table_file', source_name)
 
