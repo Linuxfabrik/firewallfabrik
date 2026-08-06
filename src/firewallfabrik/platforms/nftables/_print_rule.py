@@ -76,8 +76,16 @@ def nft_set_name(name: str) -> str:
     outside it become underscores; the length is bounded by the kernel's
     NFT_SET_MAXNAMELEN of 256 (netfilter linux/include/uapi/linux/
     netfilter/nf_tables.h).
+
+    The first character may only be a letter, an underscore or a dot
+    (netfilter nftables src/scanner.l: ``string``).  A name starting with a
+    digit, such as the DNS name "6bone.net", is lexed as a number instead
+    and nft rejects the whole ruleset, so it gets an underscore in front.
     """
-    return re.sub(r'[^A-Za-z0-9_.\-]', '_', name)[:NFT_SET_MAX_NAME_LENGTH]
+    result = re.sub(r'[^A-Za-z0-9_.\-]', '_', name)
+    if result[:1].isdigit():
+        result = f'_{result}'
+    return result[:NFT_SET_MAX_NAME_LENGTH]
 
 
 NFT_SET_MAX_NAME_LENGTH = 255
@@ -701,6 +709,24 @@ class PrintRule_nft(PolicyRuleProcessor):
             self.compiler.address_tables[name] = (
                 get_address_table_source(obj),
                 ipv6,
+                'file',
+            )
+            return f'@{name}'
+
+        if isinstance(obj, DNSName):
+            # A name is resolved on the firewall, and nft refuses a hostname
+            # that resolves to more than one address - it rejects the whole
+            # ruleset, not just the rule (netfilter nftables
+            # src/datatype.c:647).  So the rule points at a set and the
+            # script resolves the name into it after the ruleset is loaded,
+            # which is what iptables does when it expands the name into one
+            # rule per address.
+            ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            self.compiler.address_tables[name] = (
+                (obj.data or {}).get('dnsrec') or obj.name,
+                ipv6,
+                'host',
             )
             return f'@{name}'
 

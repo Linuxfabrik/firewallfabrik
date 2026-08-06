@@ -264,10 +264,36 @@ load_address_table() {
     $NFT add element "$family" "$table" "$setname" "{ $addrs }"
 }
 
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
 load_address_tables() {
     :
     load_address_table "ip" "fwf_filter" "atbl.1" "addr-table-1.tbl" "-4"
     load_address_table "ip" "fwf_filter" "block_these" "block-hosts.tbl" "-4"
+    load_dns_name "ip" "fwf_filter" "heise" "www.heise.de" "-4"
 }
 
 script_body() {
@@ -282,6 +308,11 @@ table ip fwf_filter {
         auto-merge
     }
     set block_these {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set heise {
         type ipv4_addr
         flags interval
         auto-merge
@@ -316,7 +347,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        ip daddr www.heise.de ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
+        ip daddr @heise ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 1 (global)
         #

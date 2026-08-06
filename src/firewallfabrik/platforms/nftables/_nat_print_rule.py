@@ -275,9 +275,14 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         return ' '.join(parts)
 
-    def _print_addr(self, obj, rule: CompRule) -> str:
-        """Print an address object in nftables format."""
-        if is_run_time_address_table(obj):
+    def _print_addr(self, obj, rule: CompRule, for_match: bool = True) -> str:
+        """Print an address object in nftables format.
+
+        *for_match* tells the two uses apart.  A match may point at a named
+        set, a translation target may not: ``snat to`` takes an address or a
+        map, never a plain set reference.
+        """
+        if for_match and is_run_time_address_table(obj):
             # The addresses live in a file on the firewall, so the rule
             # points at a named set and the script fills that set in at
             # activation time (netfilter nftables doc/sets.txt).  A set is
@@ -287,6 +292,24 @@ class NATPrintRule_nft(NATRuleProcessor):
             self.compiler.address_tables[name] = (
                 get_address_table_source(obj),
                 ipv6,
+                'file',
+            )
+            return f'@{name}'
+
+        if for_match and isinstance(obj, DNSName):
+            # A name is resolved on the firewall, and nft refuses a hostname
+            # that resolves to more than one address - it rejects the whole
+            # ruleset, not just the rule (netfilter nftables
+            # src/datatype.c:647).  So the rule points at a set and the
+            # script resolves the name into it after the ruleset is loaded,
+            # which is what iptables does when it expands the name into one
+            # rule per address.
+            ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            self.compiler.address_tables[name] = (
+                (obj.data or {}).get('dnsrec') or obj.name,
+                ipv6,
+                'host',
             )
             return f'@{name}'
 
@@ -572,7 +595,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
-                addr = self._print_addr(tsrc, rule)
+                addr = self._print_addr(tsrc, rule, for_match=False)
                 if not addr:
                     # Masquerading instead would translate the traffic to the
                     # address of whatever interface it leaves by, which is not
@@ -600,7 +623,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
-                addr = self._print_addr(tdst, rule)
+                addr = self._print_addr(tdst, rule, for_match=False)
                 if addr:
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
@@ -642,7 +665,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         NF_NAT_RANGE_NETMAP only for ``prefix to``).
         """
         verb = 'snat' if rt is NATRuleType.SNetnat else 'dnat'
-        addr = self._print_addr(target, rule) if target else ''
+        addr = self._print_addr(target, rule, for_match=False) if target else ''
         if not addr:
             side = 'source' if verb == 'snat' else 'destination'
             self.compiler.error(

@@ -68,7 +68,7 @@ def _declare_counters(names: list[str]) -> str:
     return ''.join(out)
 
 
-def _declare_address_tables(tables: dict[str, tuple[str, bool]]) -> str:
+def _declare_address_tables(tables: dict[str, tuple[str, bool, str]]) -> str:
     """Declare the named sets an address table rule matches against.
 
     The set has to exist before a rule can name it.  ``flags interval``
@@ -82,7 +82,7 @@ def _declare_address_tables(tables: dict[str, tuple[str, bool]]) -> str:
     if not tables:
         return ''
     out = []
-    for name, (_source, ipv6) in sorted(tables.items()):
+    for name, (_source, ipv6, _kind) in sorted(tables.items()):
         addr_type = 'ipv6_addr' if ipv6 else 'ipv4_addr'
         out.append(
             f'    set {name} {{\n'
@@ -120,9 +120,9 @@ class CompilerDriver_nft(CompilerDriver):
         self.mangle_counters: list[str] = []
         # Address tables rendered as named sets, per table of the ruleset.
         # Each maps the set name to the file the script reads it from.
-        self.filter_address_tables: dict[str, tuple[str, bool]] = {}
-        self.mangle_address_tables: dict[str, tuple[str, bool]] = {}
-        self.nat_address_tables: dict[str, dict[str, tuple[str, bool]]] = {}
+        self.filter_address_tables: dict[str, tuple[str, bool, str]] = {}
+        self.mangle_address_tables: dict[str, tuple[str, bool, str]] = {}
+        self.nat_address_tables: dict[str, dict[str, tuple[str, bool, str]]] = {}
 
     def run(
         self,
@@ -966,18 +966,19 @@ class CompilerDriver_nft(CompilerDriver):
             (filter_table, self.filter_address_tables),
             (mangle_table, self.mangle_address_tables),
         ):
-            for name, (source, ipv6) in sorted(tables.items()):
+            for name, (source, ipv6, kind) in sorted(tables.items()):
                 af = '-6' if ipv6 else '-4'
+                loader = 'load_address_table' if kind == 'file' else 'load_dns_name'
                 lines.append(
-                    f'    load_address_table "{filter_family}" "{table}" '
+                    f'    {loader} "{filter_family}" "{table}" '
                     f'"{name}" "{source}" "{af}"'
                 )
         for fam, tables in sorted(self.nat_address_tables.items()):
-            for name, (source, ipv6) in sorted(tables.items()):
+            for name, (source, ipv6, kind) in sorted(tables.items()):
                 af = '-6' if ipv6 else '-4'
+                loader = 'load_address_table' if kind == 'file' else 'load_dns_name'
                 lines.append(
-                    f'    load_address_table "{fam}" "{nat_table}" '
-                    f'"{name}" "{source}" "{af}"'
+                    f'    {loader} "{fam}" "{nat_table}" "{name}" "{source}" "{af}"'
                 )
         return '\n'.join(lines)
 

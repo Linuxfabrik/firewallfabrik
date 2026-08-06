@@ -100,7 +100,7 @@ class NATCompiler_nft(NATCompiler):
         self.have_dynamic_interfaces: bool = False
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
-        self.address_tables: dict[str, tuple[str, bool]] = {}
+        self.address_tables: dict[str, tuple[str, bool, str]] = {}
 
         # Per-chain rule collection for nftables output assembly
         self.chain_rules: dict[str, list[str]] = {
