@@ -1,0 +1,86 @@
+#!/bin/bash
+# Copyright (C) 2026 Linuxfabrik <info@linuxfabrik.ch>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# On Debian systems, the complete text of the GNU General Public License
+# version 2 can be found in /usr/share/common-licenses/GPL-2.
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Compare the generated iptables rules against the Firewall Builder output
+# checked in beside its regression suite (the ".fw.orig" files).  That output
+# came from the known-good C++ compiler and is the definition of correct for
+# the fixtures it covers.
+#
+# Read the two columns separately.  "missing" counts reference rules we do not
+# produce and must never grow: a correct fix leaves it alone.  "extra" counts
+# rules the reference never emitted, and dropping it is what progress looks
+# like.  A single total hides that.
+#
+# The comparison normalises what carries no meaning: the lock timeout, the
+# generated chain names, the conntrack spelling of the state match, and a few
+# protocol numbers the two compilers write differently.  Rules wrapped in a
+# run-time loop (address tables, dynamic interfaces) are no longer plain
+# command lines and count as missing, so the number is pessimistic by design.
+#
+# Usage: compare-reference.sh <output-directory> [reference-directory] [fixture-name]
+#
+# The reference directory defaults to $FWF_FWBUILDER_REFERENCE, which should
+# point at "fwbuilder5/test/ipt" in a Firewall Builder checkout.
+
+set -u
+OUT=$(cd "${1:?usage: compare-reference.sh <output-directory> [reference-dir] [fixture]}" && pwd)
+REFERENCE=${2:-${FWF_FWBUILDER_REFERENCE:-}}
+FIXTURE=${3:-objects-for-regression-tests}
+
+if [ -z "$REFERENCE" ] || [ ! -d "$REFERENCE" ]; then
+    echo "No reference directory. Pass it as the second argument or set" >&2
+    echo "FWF_FWBUILDER_REFERENCE to <fwbuilder>/fwbuilder5/test/ipt." >&2
+    exit 2
+fi
+
+normalise() {
+    grep -E '\$(IPTABLES|IP6TABLES)|echo "-[AI] ' "$1" |
+        sed -e 's/-w [0-9]*//' -e 's/-w //' \
+            -e 's/C[0-9a-fA-F]\{6,\}\.[0-9]*/CHAIN/g' \
+            -e 's/Cid[0-9A-Za-z]*\.[0-9]*/CHAIN/g' \
+            -e 's/-m conntrack --ctstate/-m state --state/' \
+            -e 's/-p 0 /-p all /' -e 's/-p 51 /-p ah /' -e 's/-p 50 /-p esp /' \
+            -e 's/[[:space:]]\+/ /g' -e 's/^ //' -e 's/ $//' | sort
+}
+
+compared=0
+reference_rules=0
+missing_total=0
+extra_total=0
+for ref in "$REFERENCE"/*.fw.orig; do
+    [ -e "$ref" ] || continue
+    name=$(basename "$ref" .fw.orig)
+    ours="$OUT/ipt/$FIXTURE/$name.fw"
+    [ -f "$ours" ] || continue
+    compared=$((compared + 1))
+    n=$(normalise "$ref" | wc -l)
+    missing=$(diff <(normalise "$ref") <(normalise "$ours") | grep -c '^<')
+    extra=$(diff <(normalise "$ref") <(normalise "$ours") | grep -c '^>')
+    reference_rules=$((reference_rules + n))
+    missing_total=$((missing_total + missing))
+    extra_total=$((extra_total + extra))
+    [ "$missing" -gt 0 ] || [ "$extra" -gt 0 ] &&
+        printf '  %-40s missing %-5s extra %s\n' "$name" "$missing" "$extra"
+done
+
+if [ "$compared" -eq 0 ]; then
+    echo "No firewall of fixture '$FIXTURE' matched a reference file." >&2
+    exit 2
+fi
+
+echo "---"
+echo "firewalls compared      : $compared"
+echo "reference rules         : $reference_rules"
+echo "reproduced              : $((reference_rules - missing_total))"
+echo "missing (must not grow) : $missing_total"
+echo "extra                   : $extra_total"

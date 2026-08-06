@@ -253,6 +253,23 @@ This means the nft expected output files are **regression tests only** — they 
 
 When reviewing nft expected output files (especially newly created ones), pay extra attention to correctness. The expected output encodes "what the compiler currently produces", not "what is known to be correct".
 
+## Running the Output Through the Real Tools
+
+The tests in this document guard against *changes* in the compiler output.
+They never hand a generated script to iptables or nftables, so a ruleset that
+does not load passes them just as happily as one that does.
+
+`tools/compiler-audit/` closes that gap. It compiles a corpus and then asks
+the real tools whether the result is any good: `nft --check` on every
+nftables ruleset, a replay of every iptables command in an unprivileged
+private network namespace, `iptables-restore --test` on the restore form, and
+`bash -n` on the script itself. It also compares the iptables output against
+the Firewall Builder reference and measures which firewalls a change actually
+affects, which is what a release note needs.
+
+See `tools/compiler-audit/README.md`. These checks are not part of `pytest`:
+they need `unshare`, `nft` and `iptables`, and a full run takes minutes.
+
 ## Investigating Failures
 
 When an expected output test fails, the assertion message shows both file paths:
