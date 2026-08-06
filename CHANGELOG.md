@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): the NFLOG "Copy range" setting takes effect, so the logging daemon receives only as much of each packet as the firewall asks for instead of always the whole one. Firewalls pinned to an iptables older than 1.6.1, which cannot express this, get a warning.
 * Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.
 * Compiler (iptables, nftables): "Add rules to permit IPv6 Neighbor Discovery" generates those rules. Dual-stack firewalls that drop by default lost IPv6 connectivity.
+* Compiler (iptables, nftables): "Add virtual addresses for NAT" adds them, so a NAT rule that translates to a spare address of an attached segment works instead of dying in the ARP resolution the firewall never answers ([#143](https://github.com/Linuxfabrik/firewallfabrik/issues/143)).
 * Compiler (iptables, nftables): a bridge port is recognised as one, so the generated script no longer tries to configure an address on it and rules that name one are compiled again.
 * Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
 * Compiler (iptables, nftables): a firewall whose rule sets produce no rules at all generates a script that runs instead of one the shell refuses to parse.

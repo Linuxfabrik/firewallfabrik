@@ -27,6 +27,7 @@ from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._nat_compiler import NATCompiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
+    AddVirtualAddress,
     Begin,
     DropIPv4Rules,
     DropIPv6Rules,
@@ -44,7 +45,6 @@ from firewallfabrik.compiler.processors._service import (
 )
 from firewallfabrik.core.objects import (
     Address,
-    AddressRange,
     Firewall,
     ICMP6Service,
     ICMPService,
@@ -2337,70 +2337,6 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
                 rule.nat_rule_type = NATRuleType.Masq
                 if not rule.ipt_target or rule.ipt_target == 'SNAT':
                     rule.ipt_target = 'MASQUERADE'
-
-        return True
-
-
-class AddVirtualAddress(NATRuleProcessor):
-    """Register virtual addresses needed for NAT with the OS configurator.
-
-    Corresponds to C++ NATCompiler_ipt::addVirtualAddress.
-    For SNAT rules, registers TSrc as a virtual address if it is not
-    an address on the firewall. For DNAT rules, registers ODst.
-    For SNetnat/DNetnat, registers the network object.
-    """
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        self.tmp_queue.append(rule)
-
-        nat_comp = cast('NATCompiler_ipt', self.compiler)
-
-        if rule.nat_rule_type in (NATRuleType.SNAT, NATRuleType.DNAT):
-            if rule.nat_rule_type == NATRuleType.SNAT:
-                a = rule.tsrc[0] if rule.tsrc else None
-            else:
-                a = rule.odst[0] if rule.odst else None
-
-            if a is None:
-                return True
-
-            # Skip non-regular interfaces
-            if isinstance(a, Interface) and not a.is_regular():
-                return True
-
-            # AddressRange targets cannot be turned into interface aliases
-            # (neither fwf nor fwbuilder implement that), so we simply skip
-            # the virtual-address hook for them.  The DNAT/SNAT rule itself
-            # is still compiled; the kernel only needs the virtual address
-            # when a local process actually has to bind to the mapped IP,
-            # which is not the common case.
-            if (
-                not nat_comp.complex_match(a, nat_comp.fw)
-                and not isinstance(a, AddressRange)
-                and nat_comp.oscnf is not None
-            ):
-                nat_comp.oscnf.add_virtual_address_for_nat(a)
-
-            return True
-
-        if rule.nat_rule_type in (NATRuleType.SNetnat, NATRuleType.DNetnat):
-            if rule.nat_rule_type == NATRuleType.SNetnat:
-                a = rule.tsrc[0] if rule.tsrc else None
-            else:
-                a = rule.odst[0] if rule.odst else None
-
-            if (
-                a is not None
-                and isinstance(a, Network | NetworkIPv6)
-                and nat_comp.oscnf is not None
-            ):
-                nat_comp.oscnf.add_virtual_address_for_nat(a)
-
-            return True
 
         return True
 

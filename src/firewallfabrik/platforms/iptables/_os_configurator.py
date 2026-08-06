@@ -24,7 +24,10 @@ import re
 from typing import TYPE_CHECKING, ClassVar
 
 from firewallfabrik.compiler._os_configurator import OSConfigurator
-from firewallfabrik.core.objects import Firewall, Interface
+from firewallfabrik.core.objects import (
+    Firewall,
+    Interface,
+)
 from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.driver._interface_properties import LinuxInterfaceProperties
 from firewallfabrik.platforms.iptables._utils import (
@@ -358,6 +361,9 @@ class OSConfigurator_linux24(OSConfigurator):
             )
 
             if should_manage:
+                virtual = self.virtual_addresses_for_nat.get(iface.name, '')
+                if virtual and self.fw.get_option('manage_virtual_addr'):
+                    update_addresses.append(virtual)
                 gencmd.append(
                     self._print_update_address_command(
                         iface, update_addresses, ignore_addresses
@@ -607,12 +613,6 @@ class OSConfigurator_linux24(OSConfigurator):
             gencmd.append(f'$IP link set {bridge.name} type bridge stp_state {stp_val}')
 
         return bridge_configlet.expand() + '\n' + '\n'.join(gencmd) + '\n'
-
-    def add_virtual_address_for_nat(self, addr) -> None:
-        """Register a virtual address needed for NAT."""
-        if not self.fw.get_option('manage_virtual_addr'):
-            return
-        self.virtual_addresses.append(addr)
 
     def register_multi_address_object(
         self, name: str, source: str, ipv6: bool = False

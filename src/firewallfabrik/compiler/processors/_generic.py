@@ -1296,3 +1296,74 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
             rule.tsrc = self._expand_slot(rule.tsrc)
 
         return True
+
+
+class AddVirtualAddress(NATRuleProcessor):
+    """Register virtual addresses needed for NAT with the OS configurator.
+
+    Corresponds to C++ NATCompiler_ipt::addVirtualAddress.  Shared by
+    both NAT pipelines: a virtual address is an interface address the
+    firewall has to carry, which has nothing to do with the packet
+    filter the rules are compiled for.
+    For SNAT rules, registers TSrc as a virtual address if it is not
+    an address on the firewall. For DNAT rules, registers ODst.
+    For SNetnat/DNetnat, registers the network object.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        nat_comp = self.compiler
+
+        if rule.nat_rule_type in (NATRuleType.SNAT, NATRuleType.DNAT):
+            if rule.nat_rule_type == NATRuleType.SNAT:
+                a = rule.tsrc[0] if rule.tsrc else None
+            else:
+                a = rule.odst[0] if rule.odst else None
+
+            if a is None:
+                return True
+
+            # Skip non-regular interfaces
+            if isinstance(a, Interface) and not a.is_regular():
+                return True
+
+            # AddressRange targets cannot be turned into interface aliases
+            # (neither fwf nor fwbuilder implement that), so we simply skip
+            # the virtual-address hook for them.  The DNAT/SNAT rule itself
+            # is still compiled; the kernel only needs the virtual address
+            # when a local process actually has to bind to the mapped IP,
+            # which is not the common case.
+            if (
+                not nat_comp.complex_match(a, nat_comp.fw)
+                and not isinstance(a, AddressRange)
+                and nat_comp.oscnf is not None
+            ):
+                nat_comp.oscnf.add_virtual_address_for_nat(a)
+
+            return True
+
+        if rule.nat_rule_type in (NATRuleType.SNetnat, NATRuleType.DNetnat):
+            if rule.nat_rule_type == NATRuleType.SNetnat:
+                a = rule.tsrc[0] if rule.tsrc else None
+            else:
+                a = rule.odst[0] if rule.odst else None
+
+            if (
+                a is not None
+                and isinstance(a, Network | NetworkIPv6)
+                and nat_comp.oscnf is not None
+            ):
+                # A NETMAP rule maps a whole network, so the firewall has to
+                # answer for every address in it, not just the network
+                # address.  This is fwbuilder's Network overload of
+                # addVirtualAddressForNAT.
+                nat_comp.oscnf.add_virtual_address_for_nat(a, expand_network=True)
+
+            return True
+
+        return True

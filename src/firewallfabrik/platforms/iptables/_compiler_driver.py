@@ -435,6 +435,12 @@ class CompilerDriver_ipt(CompilerDriver):
 
                 if options.get('configure_interfaces', False):
                     iface_buf.write(oscnf.print_interface_configuration_commands())
+                elif options.get('manage_virtual_addr', False):
+                    # The addresses a NAT rule needs are added even when the
+                    # interfaces themselves are configured elsewhere; the
+                    # firewall has to carry them or it will not answer ARP for
+                    # them and the translated traffic never arrives.
+                    iface_buf.write(oscnf.print_virtual_addresses_for_nat_commands())
 
                 if options.get('configure_bridge_interfaces', False):
                     iface_buf.write(

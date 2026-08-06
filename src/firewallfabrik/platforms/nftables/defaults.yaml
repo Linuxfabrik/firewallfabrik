@@ -419,10 +419,11 @@ options:
   manage_virtual_addr:
     type: 'bool'
     default: true
-    supported: false
+    supported: true
     widget: 'addVirtualsforNAT'
     description: >-
-      Not yet implemented for nftables. Reserved for cluster support.
+      Automatically add virtual IP addresses for NAT rules to the
+      corresponding interfaces.
 
   mgmt_addr:
     type: 'str'

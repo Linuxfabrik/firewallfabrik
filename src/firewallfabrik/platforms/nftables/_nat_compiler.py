@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, cast
 from firewallfabrik.compiler._nat_compiler import NATCompiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
+    AddVirtualAddress,
     Begin,
     DropIPv4Rules,
     DropIPv6Rules,
@@ -225,6 +226,7 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(SplitMultipleICMP('split rule with multiple ICMP services'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
+        self.add(AddVirtualAddress('add virtual addresses'))
         self.add(AssignInterface('assign rules to interfaces'))
         self.add(
             DynamicInterfaceInTSrc('masquerade if TSrc has no compile-time address')

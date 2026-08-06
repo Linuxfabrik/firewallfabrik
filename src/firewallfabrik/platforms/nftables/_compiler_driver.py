@@ -873,9 +873,14 @@ class CompilerDriver_nft(CompilerDriver):
 
         if oscnf is not None:
             # Include shell functions when any interface feature is enabled
+            manage_virtual_addr = bool(
+                options.get('manage_virtual_addr', False)
+                and oscnf.virtual_addresses_for_nat
+            )
             need_shell_functions = (
                 configure_interfaces
                 or verify_interfaces_opt
+                or manage_virtual_addr
                 or options.get('configure_bridge_interfaces', False)
                 or any(iface.is_dynamic() for iface in fw.interfaces)
             )
@@ -893,6 +898,14 @@ class CompilerDriver_nft(CompilerDriver):
                 buf.write(oscnf.print_dynamic_addresses_configuration_commands())
                 raw = textwrap.dedent(buf.getvalue()).strip()
                 configure_interfaces_code = textwrap.indent(raw, '    ')
+            elif manage_virtual_addr:
+                # The addresses a NAT rule needs are added even when the
+                # interfaces themselves are configured elsewhere; the firewall
+                # has to carry them or it will not answer ARP for them and the
+                # translated traffic never arrives.
+                raw = oscnf.print_virtual_addresses_for_nat_commands().strip()
+                if raw:
+                    configure_interfaces_code = textwrap.indent(raw, '    ')
 
             if verify_interfaces_opt:
                 raw = textwrap.dedent(oscnf.print_verify_interfaces_commands()).strip()

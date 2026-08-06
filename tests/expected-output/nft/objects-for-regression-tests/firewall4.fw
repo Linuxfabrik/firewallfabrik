@@ -231,13 +231,20 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
     getaddr eth1  i_eth1
     getaddr6 eth1  i_eth1_v6
     getnet eth1  i_eth1_network
     getnet6 eth1  i_eth1_v6_network
     update_addresses_of_interface "eth0 192.168.1.1/24" ""
     update_addresses_of_interface "eth2 192.168.2.1/24" ""
-    update_addresses_of_interface "eth3 222.222.222.222/24" ""
+    update_addresses_of_interface "eth3 222.222.222.222/24 222.222.222.40/24 222.222.222.41/24" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 

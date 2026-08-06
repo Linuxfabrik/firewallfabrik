@@ -226,9 +226,9 @@ configure_interfaces() {
     test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
         echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
     update_addresses_of_interface "eth0 192.168.1.1/24" ""
-    update_addresses_of_interface "eth1 222.222.222.222/24" ""
+    update_addresses_of_interface "eth1 222.222.222.222/24 222.222.222.40/24 222.222.222.41/24" ""
     update_addresses_of_interface "eth2 33.33.33.3/29 33.33.33.4/29" ""
-    update_addresses_of_interface "eth3 33.33.33.25/29" ""
+    update_addresses_of_interface "eth3 33.33.33.25/29 33.33.33.24/32 33.33.33.26/32 33.33.33.27/32 33.33.33.28/32 33.33.33.29/32 33.33.33.30/32" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 

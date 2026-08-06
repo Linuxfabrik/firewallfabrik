@@ -403,6 +403,9 @@ class OSConfigurator_nft(OSConfigurator):
             )
 
             if should_manage:
+                virtual = self.virtual_addresses_for_nat.get(iface.name, '')
+                if virtual and self.fw.get_option('manage_virtual_addr'):
+                    update_addresses.append(virtual)
                 gencmd.append(
                     self._print_update_address_command(
                         iface, update_addresses, ignore_addresses
