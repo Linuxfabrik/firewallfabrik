@@ -184,6 +184,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.registered_chains: set[str] = set()
         self.tmp_chain_counters: dict[str, int] = {}
 
+        # The chain a branch rule set writes into, set by the driver through
+        # `register_rule_set_chain()`. Empty for the top rule set.
+        self.rule_set_chain: str = ''
+
         # Print rule processor reference
         self.print_rule_processor = None
 
@@ -211,6 +215,16 @@ class PolicyCompiler_ipt(PolicyCompiler):
             self.chain_usage_counter[chain] = 1
 
         n = super().prolog()
+
+        # A branch rule set is only reached through the jump of the rule that
+        # branches into it, so its rules live in a chain of their own.  Every
+        # chain decision downstream keeps a chain that is already set, so
+        # presetting it here is all it takes (fwbuilder
+        # CompilerDriver_ipt::assignRuleSetChain).  Without it the rules end
+        # up in INPUT, OUTPUT and FORWARD and apply to all traffic.
+        if self.rule_set_chain:
+            for rule in self.rules:
+                rule.ipt_chain = self.rule_set_chain
 
         if n > 0:
             for iface in self.fw.interfaces:
@@ -688,6 +702,11 @@ class PolicyCompiler_ipt(PolicyCompiler):
     def register_rule_set_chain(self, chain_name: str) -> None:
         self.register_chain(chain_name)
         self.chain_usage_counter[chain_name] = 1
+        # Every rule of this rule set belongs into that chain, not into a
+        # built-in one; `prolog()` puts it there.  Only the first call names
+        # this compiler's own rule set.
+        if not self.rule_set_chain:
+            self.rule_set_chain = chain_name
 
     def set_chain(self, rule: CompRule, chain: str) -> None:
         rule.ipt_chain = chain
@@ -2773,6 +2792,19 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Custom: '.CUSTOM',
         }
         action = rule.action
+        if action == PolicyAction.Branch:
+            # The branch rule set compiles into a chain named after itself,
+            # so branching is a jump to that chain
+            # (PolicyCompiler_ipt::decideOnTarget).
+            branch_name = rule.get_option('branch_name', '')
+            if branch_name:
+                rule.ipt_target = branch_name
+            else:
+                self.compiler.error(
+                    rule, 'Branching rule refers to a rule set that does not exist'
+                )
+            return True
+
         if isinstance(action, PolicyAction):
             target = target_map.get(action)
             if target is not None:

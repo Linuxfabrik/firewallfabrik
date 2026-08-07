@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes
 
+* A rule set that is not the firewall's top rule set is compiled into a chain of its own and only runs when a rule with the Branch action jumps to it, the way Firewall Builder has always compiled it. Until now its rules were installed in INPUT, OUTPUT and FORWARD and applied to all traffic, which turns a branch that accepts into a hole in the firewall. Review every additional Policy or NAT rule set after updating: merge it into the top rule set if it is meant to apply everywhere, or point a rule with the Branch action at it if it is meant to be a branch.
 * A rule set that sets neither "IPv4" nor "IPv6" is compiled for IPv4 only, the way Firewall Builder has always read that state. Until now such a rule set was compiled into the IPv6 ruleset as well. If one of them carries IPv6 rules, those rules disappear from the generated script: open the rule set in the editor and set it to "IPv4 and IPv6" to keep them.
 
 ### Changed
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
 * Compiler (iptables): a rate limit higher than iptables can express is reported at compile time instead of stopping the activation script. nftables is unaffected.
 * Compiler (iptables): a rule set or branch whose name iptables cannot use as a chain name is reported at compile time instead of failing during activation. nftables is unaffected.
+* Compiler (iptables): a rule with the Branch action jumps to the rule set it names instead of matching traffic and doing nothing ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
 * Compiler (iptables): a rule whose time restriction is negated is compiled instead of being left out, so a policy that applies outside a time window works again.
 * Compiler (iptables): an address table file that lists both IPv4 and IPv6 addresses gives each ruleset only the addresses that ruleset's tool accepts, so rules built on such a table are no longer missing from the running firewall.
 * Compiler (iptables): bridging firewalls whose rules use an interface as a destination compile again instead of failing with an internal error and no script at all.
@@ -57,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): time-restricted rules load on firewalls pinned to an older iptables release.
 * Compiler (iptables, nftables): "Add rules to permit IPv6 Neighbor Discovery" generates those rules. Dual-stack firewalls that drop by default lost IPv6 connectivity.
 * Compiler (iptables, nftables): "Add virtual addresses for NAT" adds them, so a NAT rule that translates to a spare address of an attached segment works instead of dying in the ARP resolution the firewall never answers ([#143](https://github.com/Linuxfabrik/firewallfabrik/issues/143)).
+* Compiler (iptables, nftables): a branching rule imported from a `.fwb` file finds the rule set it points at. Firewall Builder records that rule set by an internal identifier the import dropped, so the branch had no target.
 * Compiler (iptables, nftables): a bridge port is recognised as one, so the generated script no longer tries to configure an address on it and rules that name one are compiled again.
 * Compiler (iptables, nftables): a dual-stack interface or host is matched by its IPv4 address in the IPv4 ruleset and by its IPv6 address in the IPv6 one, instead of always the first. A single-stack object is left out of the other family instead of producing a ruleset that does not load.
 * Compiler (iptables, nftables): a firewall whose rule sets produce no rules at all generates a script that runs instead of one the shell refuses to parse.

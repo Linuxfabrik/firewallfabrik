@@ -318,6 +318,8 @@ class XmlReader:
         self._deferred_memberships = []
         self._deferred_rule_elements = []
         self._deferred_option_refs = []
+        self._deferred_branch_refs = []
+        self._rule_set_names = {}
 
     def _register(self, xml_id):
         """Map *xml_id* to a new UUID (or return an existing one)."""
@@ -348,6 +350,8 @@ class XmlReader:
         self._deferred_memberships.clear()
         self._deferred_rule_elements.clear()
         self._deferred_option_refs.clear()
+        self._deferred_branch_refs.clear()
+        self._rule_set_names.clear()
 
         tree = defusedxml.ElementTree.parse(path)
         database = self._parse_database(tree.getroot(), exclude_libraries or set())
@@ -370,6 +374,24 @@ class XmlReader:
                 logger.warning('Unresolved rule option reference: %s', ref_id)
                 continue
             rule.options[key] = str(target_id)
+
+        # A branching rule names its target rule set by XML id.  Files
+        # written by later Firewall Builder releases carry the name as well,
+        # older ones only the id, and the compiler needs the name to build
+        # the chain it jumps to.
+        for rule in self._deferred_branch_refs:
+            options = rule.options or {}
+            if options.get('branch_name'):
+                continue
+            name = self._rule_set_names.get(options.get('branch_id'))
+            if name is None:
+                logger.warning(
+                    'Unresolved branch rule set reference: %s',
+                    options.get('branch_id'),
+                )
+                continue
+            options['branch_name'] = name
+            rule.options = options
 
         group_positions: dict = {}
         for group_id, ref_id in self._deferred_memberships:
@@ -615,6 +637,7 @@ class XmlReader:
         rs.ipv6 = _bool(elem.get('ipv6_rule_set', 'False'))
         rs.top = _bool(elem.get('top_rule_set', 'False'))
         rs.device = device
+        self._rule_set_names[elem.get('id', '')] = rs.name
 
         for child in elem:
             tag = _tag(child)
@@ -660,5 +683,8 @@ class XmlReader:
 
         if (rule.options or {}).get('tagobject_id'):
             self._deferred_option_refs.append((rule, 'tagobject_id'))
+
+        if (rule.options or {}).get('branch_id'):
+            self._deferred_branch_refs.append(rule)
 
         return rule

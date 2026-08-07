@@ -118,6 +118,10 @@ class NATCompiler_ipt(NATCompiler):
         # Branch ruleset chain mapping (set by the driver)
         self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
 
+        # The chain a branch rule set writes into, set by the driver through
+        # `register_rule_set_chain()`. Empty for the top rule set.
+        self.rule_set_chain: str = ''
+
         # Print rule processor reference
         self.print_rule_processor: NATRuleProcessor | None = None
 
@@ -160,6 +164,10 @@ class NATCompiler_ipt(NATCompiler):
     def register_rule_set_chain(self, chain_name: str) -> None:
         self.register_chain(chain_name)
         self.chain_usage_counter[chain_name] = 1
+        # Only the first call names this compiler's own rule set; the later
+        # ones register the chains a branching rule jumps to.
+        if not self.rule_set_chain:
+            self.rule_set_chain = chain_name
 
     def register_chain(self, chain: str) -> None:
         self.registered_chains.add(chain)
@@ -180,6 +188,14 @@ class NATCompiler_ipt(NATCompiler):
             self.chain_usage_counter[chain] = 1
 
         n = super().prolog()
+
+        # A branch rule set is only reached through the jump of the rule that
+        # branches into it, so its rules live in a chain of their own
+        # (fwbuilder CompilerDriver_ipt::assignRuleSetChain).  `DecideOnChain`
+        # turns that into the per-direction chain the rule really needs.
+        if self.rule_set_chain:
+            for rule in self.rules:
+                rule.ipt_chain = self.rule_set_chain
 
         if n > 0:
             for iface in self.fw.interfaces:
@@ -1071,14 +1087,23 @@ class DecideOnChain(NATRuleProcessor):
             NATRuleType.Redirect: 'PREROUTING',
         }
 
+        rt = rule.nat_rule_type
+        chain = chain_map.get(rt, '') if rt is not None else ''
+
         if rule.ipt_chain:
+            nat_comp = cast('NATCompiler_ipt', self.compiler)
+            if rule.ipt_chain == nat_comp.rule_set_chain and chain:
+                # A branch rule set writes into a chain of its own, but the
+                # nat table reaches PREROUTING and POSTROUTING through
+                # different hooks, so the branch needs one chain per
+                # direction (NATCompiler_ipt::decideOnChain).
+                new_chain = f'{nat_comp.rule_set_chain}_{chain}'
+                nat_comp.register_rule_set_chain(new_chain)
+                rule.ipt_chain = new_chain
             return True
 
-        rt = rule.nat_rule_type
-        if rt is not None:
-            chain = chain_map.get(rt, '')
-            if chain:
-                rule.ipt_chain = chain
+        if chain:
+            rule.ipt_chain = chain
 
         return True
 
