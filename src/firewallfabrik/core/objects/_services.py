@@ -301,15 +301,23 @@ VALID_DSCP_CLASSES = frozenset(
     }
 )  # fmt: skip
 
+# A DiffServ code point occupies the upper six bits of the traffic class
+# byte, so it counts from 0 to 63.  iptables bounds its --dscp argument by
+# XT_DSCP_MAX (netfilter include/linux/netfilter/xt_dscp.h) and nftables
+# rejects anything above 63 as well.
+MAX_DSCP = 0x3F
+
 
 def is_valid_dscp(value: str) -> bool:
     """Return True if ``value`` is a usable DSCP match value.
 
-    Accepts a numeric code point (decimal or ``0x`` hex) or one of the
+    Accepts a code point in range (decimal or ``0x`` hex) or one of the
     symbolic DiffServ class names both back ends understand.  An unknown
     class name (for example ``AF4``, which is missing its drop-precedence
-    digit) is rejected so the compiler can report it instead of emitting an
-    unloadable rule.
+    digit) is rejected, and so is a number outside 0-63 -- the common way
+    to write EF as the whole traffic class byte, ``184`` or ``0xb8``,
+    lands there.  The compiler can then report the value instead of
+    emitting an unloadable rule.
     """
     if not value:
         return False
@@ -317,10 +325,10 @@ def is_valid_dscp(value: str) -> bool:
     if normalized in VALID_DSCP_CLASSES:
         return True
     try:
-        int(normalized, 0)
+        code_point = int(normalized, 0)
     except ValueError:
         return False
-    return True
+    return 0 <= code_point <= MAX_DSCP
 
 
 class CustomService(Service):
