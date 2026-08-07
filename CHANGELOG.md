@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): rules that match the address of a dynamic interface are filled in at activation time instead of running with an empty address. iptables rejected such a command, so the activation stopped there; a rule on a wildcard interface such as "ppp*" now covers every interface it matches.
 * Compiler (iptables): rules that name an interface and apply in both directions no longer stop the activation script.
 * Compiler (iptables): rules that reject with a TCP reset also work when they are logged or negate their source, destination or service. The traffic fell through to the rule below instead.
+* Compiler (iptables): rules that reject with a TCP reset and cover a non-TCP service reject it with the default ICMP message instead of stopping the activation script, which left every rule after them uninstalled.
 * Compiler (iptables): rules that use a custom service load again instead of being rejected for a missing protocol match.
 * Compiler (iptables): the `--xp` rule trace works on firewalls imported from a `.fwb` file instead of aborting the whole compile with an internal error.
 * Compiler (iptables): the automatic MSS clamping and connection mark rules survive activation on firewalls that activate through iptables-restore. They were wiped again right after being set.

@@ -3290,6 +3290,29 @@ libraries:
                       disabled: false
                       group: ''
                       log: false
+                      action_on_reject: 'TCP RST'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Addresses/IPv4:external-host'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 6
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'

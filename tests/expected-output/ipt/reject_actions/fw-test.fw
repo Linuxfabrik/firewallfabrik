@@ -12,6 +12,8 @@
 # Compiled for iptables (any version)
 #
 
+# fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+
 FWBDEBUG=""
 RETVAL=0
 
@@ -448,6 +450,13 @@ script_body() {
  # Rule 5 (global)
  #
  echo "Rule 5 (global)"
+ #
+ $IPTABLES -w 5 -A INPUT -p udp -m udp -s 203.0.113.42 --dport 53 -j REJECT
+ $IPTABLES -w 5 -A FORWARD -i + -p udp -m udp -s 203.0.113.42 --dport 53 -j REJECT
+ #
+ # Rule 6 (global)
+ #
+ echo "Rule 6 (global)"
  #
  $IPTABLES -w 5 -A INPUT -j DROP
  $IPTABLES -w 5 -A FORWARD -i + -j DROP

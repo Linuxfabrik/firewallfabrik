@@ -93,6 +93,50 @@ _LOG_LEVEL_MAP = {
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 
+# Everything the REJECT target accepts after --reject-with, primary names and
+# aliases, per address family (netfilter iptables extensions/libipt_REJECT.c
+# and libip6t_REJECT.c, reject_table).  REJECT_parse() compares against this
+# table and calls xtables_error() on anything else, which stops the whole
+# activation script, so a value coming from the rule options is checked
+# against it before it reaches the command line.
+REJECT_TYPES_IPV4 = frozenset(
+    {
+        'admin-prohib',
+        'host-prohib',
+        'host-unreach',
+        'icmp-admin-prohibited',
+        'icmp-host-prohibited',
+        'icmp-host-unreachable',
+        'icmp-net-prohibited',
+        'icmp-net-unreachable',
+        'icmp-port-unreachable',
+        'icmp-proto-unreachable',
+        'net-prohib',
+        'net-unreach',
+        'port-unreach',
+        'proto-unreach',
+        'tcp-reset',
+        'tcp-rst',
+    }
+)
+REJECT_TYPES_IPV6 = frozenset(
+    {
+        'addr-unreach',
+        'adm-prohibited',
+        'icmp6-addr-unreachable',
+        'icmp6-adm-prohibited',
+        'icmp6-no-route',
+        'icmp6-policy-fail',
+        'icmp6-port-unreachable',
+        'icmp6-reject-route',
+        'no-route',
+        'policy-fail',
+        'port-unreach',
+        'reject-route',
+        'tcp-reset',
+    }
+)
+
 # The limit match stores its rate as XT_LIMIT_SCALE * unit / rate in a
 # 32-bit field, so a rate above XT_LIMIT_SCALE per unit rounds to zero and
 # iptables refuses it with "Rate too fast" (netfilter
@@ -1233,12 +1277,22 @@ class PrintRule(PolicyRuleProcessor):
                             return ''
                         return '--reject-with icmp-admin-prohibited'
 
-        # Caller already gave us the iptables token (e.g. an explicit
-        # "icmp-port-unreachable"); pass through for IPv4 only so we
-        # never emit IPv4 tokens into an ip6tables rule.
-        if is_ipv6:
-            return ''
-        return f'--reject-with {reject_with}'
+        # The value may already be an iptables token (e.g. an explicit
+        # "icmp-port-unreachable" from an imported file).  Pass it through,
+        # but only when the REJECT target of this family really knows it.
+        # fwbuilder's own placeholders for "no reject type here", "none" and
+        # "NOP" (PolicyCompiler_ipt::resetActionOnReject), arrive here too,
+        # and iptables stops the activation script on an unknown type.
+        if reject_with.lower() in (REJECT_TYPES_IPV6 if is_ipv6 else REJECT_TYPES_IPV4):
+            return f'--reject-with {reject_with}'
+
+        if reject_with not in ('NOP', 'none'):
+            self.compiler.warning(
+                rule,
+                f'Reject type "{reject_with}" is not one this platform '
+                'accepts; rejecting with the default type instead',
+            )
+        return ''
 
     def _print_log_parameters(self, rule: CompRule) -> str:
         """Print logging parameters for LOG or NFLOG target."""
