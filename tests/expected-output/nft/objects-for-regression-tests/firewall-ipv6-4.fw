@@ -266,7 +266,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
+        meta nfproto ipv4 ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 1 (global)
         #
@@ -297,15 +297,15 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 0 (global)
         #
-        ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
+        meta nfproto ipv6 ct state new counter log prefix "RULE 0 -- ACCEPT " level info accept
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 11 -- DENY " level info drop
     }
 
     chain forward {
@@ -338,11 +338,11 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 11 -- DENY " level info drop
     }
 
     chain output {
@@ -375,7 +375,7 @@ table inet fwf_filter {
         # Rule 6 (global)
         #
         # for bug 2047082
-        ct state new counter accept
+        meta nfproto ipv4 ct state new counter accept
         #
         # Rule 9 (global)
         #
@@ -389,16 +389,16 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY " level info drop
         #
         # Rule 6 (global)
         #
         # for bug 2047082
-        ct state new counter accept
+        meta nfproto ipv6 ct state new counter accept
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 11 -- DENY " level info drop
     }
 }
 

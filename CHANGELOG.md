@@ -92,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a rule that matches the address of a dynamic interface is filled in at activation time instead of being left out, and a rule on a wildcard interface such as "ppp*" covers every interface it matches.
 * Compiler (nftables): a rule whose time restriction is negated is reported and left out instead of being compiled without the negation, where it applied at exactly the times it was written to skip.
 * Compiler (nftables): a rule that uses a loopback interface without an IP address reports a clear error instead of disappearing silently.
+* Compiler (nftables): a rule without an address match applies to the address family it was written for. On a dual-stack firewall such a rule acted on both families, so an IPv4-only "accept" rule let the same traffic through over IPv6 and an IPv6-only one over IPv4.
 * Compiler (nftables): an IP service that matches fragmented packets does so instead of letting fragments through.
 * Compiler (nftables): a rule that negates an IP service the compiler cannot invert is left out instead of being written the other way round, where it acted on exactly the traffic it was meant to spare.
 * Compiler (nftables): an IP service that matches IP options carries that condition instead of matching every packet. The timestamp option, which nftables cannot match, is reported.

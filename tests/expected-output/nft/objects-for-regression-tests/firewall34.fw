@@ -369,17 +369,17 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule Policy_ipv6 1 (global)
         #
-        counter log prefix "RULE 1 -- DENY on global " level debug drop
+        meta nfproto ipv6 counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain forward {
@@ -426,13 +426,13 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #
@@ -458,7 +458,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 1 (global)
         #
-        counter log prefix "RULE 1 -- DENY on global " level debug drop
+        meta nfproto ipv6 counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 
     chain output {
@@ -501,13 +501,13 @@ table inet fwf_filter {
         #
         # Rule 11 (global)
         #
-        counter log prefix "RULE 11 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
         # Rule 12 (global)
         #
         # using address table
         # object with no addresses
-        counter log prefix "RULE 12 -- DENY on global " level debug drop
+        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #
@@ -533,7 +533,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 1 (global)
         #
-        counter log prefix "RULE 1 -- DENY on global " level debug drop
+        meta nfproto ipv6 counter log prefix "RULE 1 -- DENY on global " level debug drop
     }
 }
 

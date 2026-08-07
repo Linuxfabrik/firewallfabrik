@@ -264,7 +264,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv4 counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
@@ -276,7 +276,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv6 counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
@@ -301,12 +301,12 @@ table inet fwf_filter {
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        iifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter
     }
 
     chain forward {
@@ -317,7 +317,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv4 counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
@@ -330,7 +330,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv6 counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
@@ -367,14 +367,14 @@ table inet fwf_filter {
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        iifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter
         # # Rule 15: Branch action not yet supported by nftables compiler
-        oifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter
     }
 
     chain output {
@@ -385,7 +385,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv4 counter drop
         #
         # Rule Policy_OSPF 0 (eth0)
         #
@@ -397,7 +397,7 @@ table inet fwf_filter {
         #
         # Rule Policy_OSPF 2 (global)
         #
-        counter drop
+        meta nfproto ipv6 counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
@@ -452,12 +452,12 @@ table inet fwf_filter {
         # Rule Policy_v6 14 (global)
         #
         # # Rule 14: Branch action not yet supported by nftables compiler
-        meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter
         #
         # Rule Policy_v6 15 (eth0)
         #
         # # Rule 15: Branch action not yet supported by nftables compiler
-        oifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter
     }
 }
 

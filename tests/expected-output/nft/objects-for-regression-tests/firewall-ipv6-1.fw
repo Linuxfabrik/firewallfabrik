@@ -286,7 +286,7 @@ table inet fwf_filter {
         #
         # Rule 7 (global)
         #
-        ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
+        meta nfproto ipv4 ct state new counter log prefix "RULE 7 -- ACCEPT " level info accept
         #
         # Rule 10 (global)
         #
@@ -337,42 +337,42 @@ table inet fwf_filter {
         # Rule Policy_ipv6 6 (global)
         #
         # # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 7 (global)
         #
         # # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 8 (global)
         #
         # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 9 (global)
         #
-        tcp dport 993 ct state new counter accept
+        meta nfproto ipv6 tcp dport 993 ct state new counter accept
         # # firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 10 (global)
         #
-        tcp dport { 3268, 3269, 445, 42, 53, 88, 389, 636, 135, 139 } ct state new counter accept
-        udp dport { 53, 88, 138, 137 } ct state new counter accept
+        meta nfproto ipv6 tcp dport { 3268, 3269, 445, 42, 53, 88, 389, 636, 135, 139 } ct state new counter accept
+        meta nfproto ipv6 udp dport { 53, 88, 138, 137 } ct state new counter accept
         # # firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 11 (global)
         #
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 12 (global)
         #
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 13 (global)
         #
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
     }
 
     chain forward {
@@ -419,11 +419,11 @@ table inet fwf_filter {
         # Rule Policy_ipv6 8 (global)
         #
         # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 13 (global)
         #
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
     }
 
     chain output {
@@ -461,7 +461,7 @@ table inet fwf_filter {
         # Rule Policy_ipv6 0 (global)
         #
         # for bug 2047082
-        ct state new counter accept
+        meta nfproto ipv6 ct state new counter accept
         #
         # Rule Policy_ipv6 3 (global)
         #
@@ -481,7 +481,7 @@ table inet fwf_filter {
         # Rule Policy_ipv6 8 (global)
         #
         # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 11 (global)
         #
@@ -489,7 +489,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 13 (global)
         #
-        meta l4proto ipv6-icmp counter accept
+        meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 14 (global)
         #

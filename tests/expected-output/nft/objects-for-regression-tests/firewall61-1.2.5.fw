@@ -294,50 +294,50 @@ table inet fwf_filter {
         # Rule fw61-Policy 0 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:6: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:7: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:8: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain forward {
@@ -348,50 +348,50 @@ table inet fwf_filter {
         # Rule fw61-Policy 0 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:6: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:7: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:8: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 0 -- DENY " level info drop
     }
 
     chain output {
@@ -401,50 +401,50 @@ table inet fwf_filter {
         # Rule fw61-Policy 0 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Saturday" } counter log prefix "RULE 0 -- DENY " level info drop
         #
         # Rule fw61-Policy 1 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday" } counter log prefix "RULE 1 -- DENY " level info drop
         #
         # Rule fw61-Policy 2 (global)
         #
-        meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 64800-86340 counter log prefix "RULE 2 -- DENY " level info drop
         #
         # Rule fw61-Policy 3 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-86340 meta day { "Sunday", "Saturday" } counter log prefix "RULE 3 -- DENY " level info drop
         #
         # Rule fw61-Policy 4 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter log prefix "RULE 4 -- DENY " level info drop
         #
         # Rule fw61-Policy 5 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 5 -- DENY " level info drop
         #
         # Rule fw61-Policy 6 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:6: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log prefix "RULE 6 -- DENY " level info drop
         #
         # Rule fw61-Policy 7 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:7: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 0-3600 meta day { "Friday", "Saturday" } counter log prefix "RULE 7 -- DENY " level info drop
         #
         # Rule fw61-Policy 8 (global)
         #
         # # firewall61-1.2.5:fw61-Policy:8: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-        meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
+        meta nfproto ipv4 meta hour 3600-7200 meta day { "Friday", "Saturday" } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule Policy_ipv6 0 (global)
         #
-        counter log prefix "RULE 0 -- DENY " level info drop
+        meta nfproto ipv6 counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

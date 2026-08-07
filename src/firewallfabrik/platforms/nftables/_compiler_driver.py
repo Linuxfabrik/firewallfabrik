@@ -121,6 +121,10 @@ class CompilerDriver_nft(CompilerDriver):
         super().__init__(db)
         self.have_nat: bool = False
         self.have_filter: bool = False
+        # Whether any rule set asks for IPv6.  Decides the filter and mangle
+        # table family (`inet` when both families share one, `ip` otherwise)
+        # and, through that, whether a rule has to name its family itself.
+        self._any_rs_ipv6: bool = False
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.filter_counters: list[str] = []
@@ -501,6 +505,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         policy_compiler = PolicyCompiler_nft(session, fw, ipv6_policy, oscnf)
+        policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.set_source_ruleset(pol_rs)
         policy_compiler.source_ruleset = pol_rs
 
@@ -551,6 +556,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
+        mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.set_source_ruleset(pol_rs)
         mangle_compiler.source_ruleset = pol_rs
 

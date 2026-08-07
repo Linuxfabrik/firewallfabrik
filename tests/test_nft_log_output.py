@@ -38,6 +38,9 @@ class _FakeNftCompiler:
     def __init__(self, options):
         self.fw = _FakeFw(options)
         self.ipv6_policy = False
+        # Single-family table, so no rule needs a `meta nfproto` qualifier
+        # and the assertions below see the match clauses on their own.
+        self.shared_inet_table = False
         self.output = io.StringIO()
         self.warnings: list[str] = []
 

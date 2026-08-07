@@ -120,6 +120,12 @@ class PolicyCompiler_nft(PolicyCompiler):
         # rules go into a mangle table of their own.
         self.my_table: str = 'filter'
 
+        # Set by the driver: the table this run writes into is `inet` and
+        # therefore shared with the other address family's pass.  The print
+        # rule then has to pin each rule to its family, because nftables
+        # would otherwise let a family-neutral match apply to both.
+        self.shared_inet_table: bool = False
+
         # Set by the mangle run when a rule saves its packet mark to the
         # connection; the driver then prepends the matching restore rules.
         self.have_connmark: bool = False

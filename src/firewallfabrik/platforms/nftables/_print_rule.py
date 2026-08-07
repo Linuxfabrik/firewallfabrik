@@ -227,6 +227,11 @@ def print_mark_match(tag_code: str, negated: bool) -> str:
     return f'meta mark and {mask.strip()} {op} {value}'
 
 
+# The payload-match keywords that tell nftables which address family a rule
+# belongs to.  Only these carry a family dependency into an `inet` table
+# (netfilter nftables src/proto.c); see PrintRule_nft._needs_family_qualifier.
+_FAMILY_ANCHORING_KEYWORDS = frozenset({'icmp', 'icmpv6', 'ip', 'ip6'})
+
 # ICMP and ICMPv6 type numbers mapped to the keywords nftables accepts
 # (netfilter nftables src/proto.c, icmp_type_tbl / icmpv6_type_tbl).
 _ICMP_TYPE_NAMES = {
@@ -479,6 +484,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit_match:
             parts.append(limit_match)
 
+        # Everything collected so far matches on the packet; what follows
+        # only acts on it.  The address family has to be pinned down here,
+        # while `parts` still holds the match half and nothing else.
+        if self._needs_family_qualifier(parts):
+            family = 'ipv6' if self.compiler.ipv6_policy else 'ipv4'
+            parts.insert(0, f'meta nfproto {family}')
+
         # Logging, mangle statements and verdict
         log_match = self._print_log(rule)
         mangle_stmt = self._print_mangle_statement(rule)
@@ -517,6 +529,30 @@ class PrintRule_nft(PolicyRuleProcessor):
             line = f'        # {errors}\n' + line
 
         return line
+
+    def _needs_family_qualifier(self, match_parts: list[str]) -> bool:
+        """Say whether the rule has to name its address family itself.
+
+        A dual-stack firewall gets a single ``inet`` filter table holding
+        the rules of both compilation passes.  nftables ties a rule to one
+        family only through an ``ip``, ``ip6``, ``icmp`` or ``icmpv6``
+        payload expression (netfilter nftables ``src/proto.c``); ``meta``,
+        ``ct``, ``th``, ``tcp``, ``udp`` and the interface matches say
+        nothing about it.  A rule matching only ports, connection state,
+        interfaces, marks or time therefore applies to both families, so an
+        IPv4-only rule acts on IPv6 traffic and the other way round.
+        Prefixing it with ``meta nfproto`` puts it back where it belongs.
+
+        A table of a single family needs no qualifier: everything reaching
+        an ``ip`` table is IPv4 already.
+        """
+        if not self.compiler.shared_inet_table:
+            return False
+        return not any(
+            token in _FAMILY_ANCHORING_KEYWORDS
+            for part in match_parts
+            for token in part.split()
+        )
 
     def _get_af_prefix(self, rule: CompRule, srv) -> str:
         """Get the address family prefix (ip/ip6) for matching."""

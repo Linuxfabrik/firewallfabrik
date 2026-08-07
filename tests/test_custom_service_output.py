@@ -120,6 +120,9 @@ class _FakeNftCompiler:
         self.ipv6_policy = False
         self.output = io.StringIO()
         self._errors: list[str] = []
+        # Single-family table, so no rule needs a `meta nfproto` qualifier
+        # and the assertions below see the match clauses on their own.
+        self.shared_inet_table = False
 
     def my_platform_name(self):
         return 'nftables'
