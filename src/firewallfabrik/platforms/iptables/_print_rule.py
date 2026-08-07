@@ -707,7 +707,13 @@ class PrintRule(PolicyRuleProcessor):
                 try:
                     net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
                     length = net.prefixlen
-                    if length != 32:
+                    # A host mask says nothing and is left out, the way
+                    # fwbuilder's InetAddr::isHostMask() decides it: what
+                    # counts as one depends on the address family.  Testing
+                    # against 32 alone would strip the prefix off an IPv6
+                    # /32 -- the size of a provider allocation -- and turn
+                    # the match into a single host.
+                    if length != net.max_prefixlen:
                         return f'{addr_str}/{length} '
                 except ValueError:
                     pass

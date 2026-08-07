@@ -855,7 +855,12 @@ class NATPrintRule(NATRuleProcessor):
                 try:
                     net = ipaddress.ip_network(f'{addr_str}/{mask_str}', strict=False)
                     length = net.prefixlen
-                    return f'{addr_str}/{length}'
+                    # Same host-mask rule as the policy print rule, and the
+                    # same one NATCompiler_PrintRule.cpp applies: a mask
+                    # covering a single address is left out, and which mask
+                    # that is depends on the address family.
+                    if length != net.max_prefixlen:
+                        return f'{addr_str}/{length}'
                 except ValueError:
                     pass
 

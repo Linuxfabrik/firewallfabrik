@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): a source translation to an unnumbered interface is reported instead of stopping the activation script on iptables and translating to the wrong address on nftables.
 * Compiler (iptables, nftables): address ranges are no longer emitted into the wrong address family, which produced a ruleset that did not load.
 * Compiler (iptables, nftables): an IP service with an unknown DiffServ class name is reported with a clear error instead of producing a ruleset that does not load.
+* Compiler (iptables, nftables): an IPv6 network with a /32 netmask is matched as the whole prefix again instead of as a single address, so a rule written for a provider allocation covers it.
 * Compiler (iptables, nftables): dual-stack firewalls whose rules mix IPv4 and IPv6 addresses compile again.
 * Compiler (iptables, nftables): IPv6 NAT rules that also translate the port produce a ruleset that loads.
 * Compiler (iptables, nftables): NAT rules that name an interface which cannot apply to them are reported and left out. They stopped the activation script on iptables and translated nothing on nftables.

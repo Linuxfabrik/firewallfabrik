@@ -332,7 +332,7 @@ table inet fwf_filter {
         #
         # for bug 2462927, ipv6 networks with /32
         # netmask
-        ip6 saddr { 2001:db8::, 3fff:ffff::/16, 3fff:ffff:: } counter drop
+        ip6 saddr { 2001:db8::/32, 3fff:ffff::/16, 3fff:ffff::/32 } counter drop
         #
         # Rule Policy_ipv6 6 (global)
         #
