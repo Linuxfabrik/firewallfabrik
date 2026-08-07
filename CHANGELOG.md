@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): NAT rules whose original service matches ICMP as a whole load instead of stopping the activation script, which left every rule after them uninstalled.
 * Compiler (iptables): log prefixes are written correctly on firewalls that activate through iptables-restore. Log messages ran into the packet data and broke log parsers.
 * Compiler (iptables): masquerading rules that also translate the source port keep the configured port range instead of letting the kernel pick a port.
+* Compiler (iptables): NAT rules translating into a port range that names only one of its two bounds load instead of stopping the activation script. nftables wrote the working form already.
 * Compiler (iptables): NAT rules whose translated address cannot be determined are reported and left out instead of stopping the activation script half way.
 * Compiler (iptables): rules combining a TCP flag or IP option match with a rate limit or a time restriction load again. They were missing from the running firewall.
 * Compiler (iptables): rules that assign a traffic class do so. Traffic shaping never saw the class.

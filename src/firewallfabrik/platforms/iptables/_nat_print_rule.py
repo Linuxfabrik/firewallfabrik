@@ -722,16 +722,25 @@ class NATPrintRule(NATRuleProcessor):
 
     @staticmethod
     def _print_t_ports(rs: int, re_: int) -> str:
-        """Print translated ports (uses '-' separator instead of ':')."""
+        """Print translated ports (uses '-' separator instead of ':').
+
+        A match port range may leave a bound out -- ``:1024`` reads as "from
+        0" to the tcp and udp matches (``extensions/libxt_tcp.c``:
+        ``parse_tcp_ports``).  A translation target has no such shorthand:
+        ``parse_ports`` in ``extensions/libxt_NAT.c`` hands each side to
+        ``xtables_strtoui`` and answers ``Port `-1024' not valid`` for a
+        missing lower bound and ``Port range `0' funky`` for a missing
+        upper one, either of which stops the activation script.  So a
+        half-open range is written out: no lower bound means from 0, no
+        upper bound means the single port named.  Same as nftables.
+        """
         if rs < 0:
             rs = 0
         if re_ < 0:
             re_ = 0
         if rs > 0 or re_ > 0:
-            if rs == re_:
+            if rs == re_ or re_ == 0:
                 return str(rs)
-            if rs == 0 and re_ != 0:
-                return f'-{re_}'
             return f'{rs}-{re_}'
         return ''
 

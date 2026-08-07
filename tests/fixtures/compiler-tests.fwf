@@ -4780,6 +4780,30 @@ libraries:
                         ports 1024-2048'
                   - type: 'NATRule'
                     position: 8
+                    comment: 'Translated source ports name an end but no start'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:https'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    tsrv:
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:source
+                        ports up to 1024'
+                  - type: 'NATRule'
+                    position: 9
                     comment: 'Original service matches ICMP as a whole'
                     options:
                       disabled: false
@@ -7023,6 +7047,26 @@ libraries:
                   established: false
                 src_range_start: 1024
                 src_range_end: 2048
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'source ports up to 1024'
+                comment: 'Range end only, no start'
+                data:
+                  established: false
+                src_range_end: 1024
                 tcp_flags:
                   urg: false
                   ack: false
