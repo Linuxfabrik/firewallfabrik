@@ -58,6 +58,7 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     range_to_cidr,
 )
+from firewallfabrik.platforms.linux._netfilter import sanitize_log_prefix
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -1537,6 +1538,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         result = result.replace('%I', iface_name)
         result = result.replace('%C', chain)
         result = result.replace('%R', ruleset_name)
+        cleaned = sanitize_log_prefix(result)
+        if cleaned != result:
+            self.compiler.warning(
+                rule,
+                f'Log prefix "{result}" holds a character nftables cannot carry '
+                f'and was written as "{cleaned}"',
+            )
+        result = cleaned
         # The kernel takes a log prefix of up to NF_LOG_PREFIXLEN - 1 = 127
         # characters, for a netlink group as well as for plain logging
         # (netfilter linux/include/uapi/linux/netfilter/nf_log.h and

@@ -62,6 +62,7 @@ from firewallfabrik.platforms.iptables._utils import (
     normalize_set_name,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import sanitize_log_prefix
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -1441,7 +1442,15 @@ class PrintRule(PolicyRuleProcessor):
         result = result.replace('%I', iface_name)
         result = result.replace('%C', chain)
         result = result.replace('%R', ruleset_name)
-        return result
+
+        cleaned = sanitize_log_prefix(result)
+        if cleaned != result:
+            self.compiler.warning(
+                rule,
+                f'Log prefix "{result}" holds a character the generated script '
+                f'cannot pass on and was written as "{cleaned}"',
+            )
+        return cleaned
 
     def _start_rule_line(self) -> str:
         """Generate rule line prefix: $IPTABLES [-w] [-t table] -A"""

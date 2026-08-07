@@ -67,3 +67,27 @@ def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> 
         if problem:
             return f'matches on the outgoing interface but {problem}'
     return ''
+
+
+def sanitize_log_prefix(prefix: str) -> str:
+    """Return *prefix* with the characters no back end can carry removed.
+
+    A log prefix is free text, and the macros splice a rule set name and an
+    interface name into it, so it can hold anything the user typed.  Two
+    kinds of character do not survive the trip:
+
+    * A double quote.  nftables has no escape for it -- its scanner reads a
+      quoted string as ``\\"[^"]*\\"`` (netfilter nftables src/scanner.l), so
+      the first inner quote ends the string and the rest is lexed as
+      syntax.  The ruleset then fails to load as a whole and the firewall
+      keeps its old rules.  In the iptables script the prefix sits inside a
+      shell-quoted argument, where the shell swallows the quotes and the
+      logged prefix silently loses them.  Replacing it with a single quote
+      keeps the text readable and identical on both platforms.
+    * A control character.  Both a rule line and a shell command line end at
+      a newline, and a tab or carriage return in a kernel log message only
+      confuses whatever reads it.
+    """
+    return ''.join(
+        "'" if char == '"' else char for char in prefix if char.isprintable()
+    )

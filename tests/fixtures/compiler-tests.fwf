@@ -4382,7 +4382,7 @@ libraries:
                       limit_value: '0'
                       limit_value_not: false
                       log_level: ''
-                      log_prefix: 'SSH_DENIED'
+                      log_prefix: 'SSH "DENIED" '
                       routing: false
                       stateless: true
                       tagging: false
