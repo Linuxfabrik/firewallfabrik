@@ -85,6 +85,8 @@ NFT_KEYWORDS = (
     'ip6 nexthdr',
     'ip6 saddr',
     'limit rate',
+    'mark',
+    'ct mark',
     'meta day',
     'meta hour',
     'meta l4proto',
@@ -121,6 +123,10 @@ SYNONYMS = {
     'ip6 daddr': 'ip daddr',
     'ip6 nexthdr': 'ip protocol',
     'meta l4proto': 'ip protocol',
+    # `mark` is the short spelling of `meta mark`, and the one
+    # iptables-translate writes.  `ct mark` is a different match and is in
+    # the list above only so it wins the longest-match against `mark`.
+    'mark': 'meta mark',
 }
 
 KEYWORD_RE = re.compile(
@@ -147,8 +153,17 @@ STATEMENTS = (
     'dnat',
 )
 
-LABEL_RE = re.compile(r'^\s*#\s*(Rule\s+.*?)\s*$')
-IPT_CMD_RE = re.compile(r'^\s*\$(IP6?TABLES)\s+(.*)$')
+# `# Rule 0 (global)`, `# Rule Policy:ipv4 16 (eth0,eth1)`, `# Rule 8`.  The
+# warnings a rule collected are comments of the same shape ("# Rule 8 shadows
+# Rule 28 below it: ..."), so the label has to end where the position and its
+# optional interface list end.
+LABEL_RE = re.compile(
+    r'^\s*#\s*(Rule\s+[\w:.\[\]-]+(?:\s+[\w:.\[\]-]+)?(?:\s+\([^)]*\))?)\s*$'
+)
+# Not anchored: a command that reads an address at run time sits behind a
+# `test -n "$i_ppp0" &&` on the same line, and those are exactly the labels
+# that have to be recognised so they can be skipped.
+IPT_CMD_RE = re.compile(r'\$(IP6?TABLES)\s+(.*)$')
 # A command that is only complete once the firewall runs it.
 RUNTIME_RE = re.compile(r'\$\{?[A-Za-z_][A-Za-z0-9_]*')
 
@@ -170,7 +185,7 @@ def read_ipt(path: Path) -> dict[tuple[str, str], list[tuple[str, bool]]]:
         if label_match:
             label = label_match.group(1)
             continue
-        cmd_match = IPT_CMD_RE.match(line)
+        cmd_match = IPT_CMD_RE.search(line)
         if not cmd_match or not label:
             continue
         binary, args = cmd_match.groups()
@@ -190,10 +205,16 @@ def read_nft(path: Path) -> dict[tuple[str, str], list[str]]:
         table = re.match(r'^table\s+\w+\s+(\S+)\s*\{\s*$', line)
         if table:
             # The table is named after the firewall: `fwf_filter`, `fwf_nat`.
-            section, inside = table.group(1).rsplit('_', 1)[-1], True
+            section, inside, label = table.group(1).rsplit('_', 1)[-1], True, ''
             continue
-        if line.startswith('}'):
-            inside = False
+        stripped = line.strip()
+        # A chain boundary ends the label.  Without this the automatic rules
+        # at the top of the next chain are counted against the last labelled
+        # rule of the previous one.
+        if stripped.startswith(('chain ', 'set ', 'counter ')) or stripped == '}':
+            label = ''
+            if line.startswith('}'):
+                inside = False
             continue
         if not inside:
             continue
@@ -201,13 +222,10 @@ def read_nft(path: Path) -> dict[tuple[str, str], list[str]]:
         if label_match:
             label = label_match.group(1)
             continue
-        rule = line.strip()
-        if not rule or rule.startswith(
-            ('#', 'chain', 'type ', 'set ', 'counter ', '}')
-        ):
+        if not stripped or stripped.startswith(('#', 'type ', 'elements', 'flags')):
             continue
         if label:
-            groups[(section, label)].append(rule)
+            groups[(section, label)].append(stripped)
     return groups
 
 
