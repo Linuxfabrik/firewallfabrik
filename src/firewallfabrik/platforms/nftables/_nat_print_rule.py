@@ -286,12 +286,22 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         return ' '.join(parts)
 
-    def _print_addr(self, obj, rule: CompRule, for_match: bool = True) -> str:
+    def _print_addr(
+        self,
+        obj,
+        rule: CompRule,
+        for_match: bool = True,
+        fold_range: bool = True,
+    ) -> str:
         """Print an address object in nftables format.
 
         *for_match* tells the two uses apart.  A match may point at a named
         set, a translation target may not: ``snat to`` takes an address or a
         map, never a plain set reference.
+
+        *fold_range* says whether an address range may be written as the
+        prefix covering it.  The caller clears it when a ``:port`` part
+        follows; see the address range branch below.
         """
         if for_match and is_run_time_address_table(obj):
             # The addresses live in a file on the firewall, so the rule
@@ -330,9 +340,17 @@ class NATPrintRule_nft(NATRuleProcessor):
             if start and end:
                 if start == end:
                     return start
-                cidr = range_to_cidr(start, end)
-                if cidr:
-                    return cidr
+                # A range whose bounds fall on a prefix boundary can be
+                # written either way and means the same to nftables -- a
+                # plain `snat to <prefix>` picks any address out of it, the
+                # netmap flag is set only by `snat prefix to`.  But the
+                # prefix form cannot carry a port: `snat to 192.0.2.0/24:80`
+                # is a syntax error, and nft throws away the whole ruleset
+                # over it.  The caller clears fold_range when ports follow.
+                if fold_range:
+                    cidr = range_to_cidr(start, end)
+                    if cidr:
+                        return cidr
                 return f'{start}-{end}'
 
         if isinstance(obj, Interface):
@@ -621,7 +639,9 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if tsrc:
-                addr = self._print_addr(tsrc, rule, for_match=False)
+                addr = self._print_addr(
+                    tsrc, rule, for_match=False, fold_range=not ports
+                )
                 if not addr:
                     # Masquerading instead would translate the traffic to the
                     # address of whatever interface it leaves by, which is not
@@ -649,7 +669,9 @@ class NATPrintRule_nft(NATRuleProcessor):
             flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if tdst:
-                addr = self._print_addr(tdst, rule, for_match=False)
+                addr = self._print_addr(
+                    tdst, rule, for_match=False, fold_range=not ports
+                )
                 if addr:
                     if ports:
                         addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)

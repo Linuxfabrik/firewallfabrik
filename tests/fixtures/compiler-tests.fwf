@@ -4755,6 +4755,31 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                   - type: 'NATRule'
                     position: 7
+                    comment: 'Translated source is a range covering a whole prefix,
+                      plus a port range'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Address Ranges/AddressRange:addr-range-on-prefix-boundary'
+                    tsrv:
+                      - 'Library:User/ServiceGroup:Services/ServiceGroup:TCP/TCPService:source
+                        ports 1024-2048'
+                  - type: 'NATRule'
+                    position: 8
                     comment: 'Original service matches ICMP as a whole'
                     options:
                       disabled: false
@@ -6755,6 +6780,13 @@ libraries:
                   address: '192.168.1.100'
                 end_address:
                   address: '192.168.1.200'
+              - type: 'AddressRange'
+                name: 'addr-range-on-prefix-boundary'
+                comment: 'Bounds line up with 203.0.113.0/24'
+                start_address:
+                  address: '203.0.113.0'
+                end_address:
+                  address: '203.0.113.255'
           - type: 'ObjectGroup'
             name: 'Address Tables'
           - type: 'ObjectGroup'
@@ -6971,6 +7003,26 @@ libraries:
                   established: false
                 dst_range_start: 8080
                 dst_range_end: 8080
+                tcp_flags:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+                tcp_flags_masks:
+                  urg: false
+                  ack: false
+                  psh: false
+                  rst: false
+                  syn: false
+                  fin: false
+              - type: 'TCPService'
+                name: 'source ports 1024-2048'
+                data:
+                  established: false
+                src_range_start: 1024
+                src_range_end: 2048
                 tcp_flags:
                   urg: false
                   ack: false
