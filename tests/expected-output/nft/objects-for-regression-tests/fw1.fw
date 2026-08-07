@@ -12,9 +12,11 @@
 #  Policy includes basic rules to permit unrestricted outbound access and anti-spoofing rules. Access to the firewall is permitted only from internal network and only using SSH. The firewall uses one of the machines on internal network for DNS. Internal network is configured with address 192.168.1.0/255.255.255.0
 #
 # Rule 8 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# Rule 1 shadows Rule 2 below it
-# Rule 1 shadows Rule 3 below it
-# Rule 1 shadows Rule 5 below it
+# Rule '1 (global)' shadows rule '2 (global)' below it
+# Rule '1 (global)' shadows rule '3 (global)' below it
+# Rule '1 (global)' shadows rule '4 (global)' below it
+# Rule '1 (global)' shadows rule '5 (global)' below it
+# Rule '1 (global)' shadows rule '6 (global)' below it
 
 FWBDEBUG=""
 

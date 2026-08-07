@@ -89,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables, nftables): rules whose source or destination cannot be resolved are left out instead of applying to every address, where an "accept from these hosts" rule accepted from everywhere.
 * Compiler (iptables, nftables): rules with a custom action run it instead of doing nothing. nftables cannot run one and reports the rule.
 * Compiler (iptables, nftables): a rule whose address table could not be read is left out instead of matching every address. An "accept from this table" rule accepted from everywhere.
+* Compiler (iptables, nftables): the check for rules that can never fire reports three cases it used to miss, among them an "accept everything" above a "deny everything" and a rule whose address is a host or a group; it also names the rule set of each rule, so a finding in one branch no longer hides the same finding in another.
+* Compiler (iptables, nftables): the check for rules that can never fire no longer reports a rule as covered by one above it that only fires at a limited rate.
 * Compiler (iptables, nftables): the connection-tracking settings are applied. A firewall that also tunes a kernel hardening setting wrote the last of those settings to a non-existent file and skipped the connection-tracking table size entirely.
 * Compiler (iptables, nftables): the firewall-wide limit on log messages reaches the generated ruleset. A logging firewall under load could fill its disk.
 * Compiler (iptables, nftables): the rule that logs invalid packets through NFLOG obeys the "Copy range" and "Queue threshold" settings. iptables also stops printing a warning about a no-op option on every activation.

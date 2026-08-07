@@ -11,6 +11,8 @@
 #  fw is part of any is OFF
 #  ip forwarding is OFF
 #
+# Rule '0 (eth0)' shadows rule '2 (eth0)' below it
+# Rule '0 (eth0)' shadows rule '3 (eth0)' below it
 
 FWBDEBUG=""
 

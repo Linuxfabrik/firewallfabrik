@@ -8,7 +8,7 @@
 #
 # files: * firewall28.fw /etc/fw/fwf.sh
 #
-# Rule 0 shadows Rule 1 below it
+# Rule '0 (global)' shadows rule '1 (global)' below it
 
 FWBDEBUG=""
 

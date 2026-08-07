@@ -14,8 +14,17 @@
 # Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 7: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 8: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 2 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
+# Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
+# Rule 'fw-ipv6-3 4 (global)' shadows rule 'fw-ipv6-3 6 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 8 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 9 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 10 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 11 (global)' below it
+# Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 8 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 9 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 10 (global)' below it
+# Rule 'fw-ipv6-3 7 (global)' shadows rule 'fw-ipv6-3 11 (global)' below it
 
 FWBDEBUG=""
 

@@ -20,20 +20,48 @@
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 10 shadows Rule 14 below it
-# Rule 15 shadows Rule 17 below it
-# Rule 16 shadows Rule 18 below it
-# Rule 16 shadows Rule 19 below it
-# Rule 15 shadows Rule 19 below it
-# Rule 7 shadows Rule 27 below it
-# Rule 7 shadows Rule 28 below it
-# Rule 10 shadows Rule 14 below it
-# Rule 15 shadows Rule 17 below it
-# Rule 16 shadows Rule 18 below it
-# Rule 16 shadows Rule 19 below it
-# Rule 15 shadows Rule 19 below it
-# Rule 7 shadows Rule 27 below it
-# Rule 7 shadows Rule 28 below it
+# Rule '3 (global)' shadows rule '4 (global)' below it
+# Rule '5 (global)' shadows rule '6 (global)' below it
+# Rule '8 (global)' shadows rule '9 (global)' below it
+# Rule '11 (global)' shadows rule '12 (global)' below it
+# Rule '10 (global)' shadows rule '14 (global)' below it
+# Rule '15 (global)' shadows rule '17 (global)' below it
+# Rule '16 (global)' shadows rule '18 (global)' below it
+# Rule '16 (global)' shadows rule '19 (global)' below it
+# Rule '15 (global)' shadows rule '19 (global)' below it
+# Rule '20 (global)' shadows rule '22 (global)' below it
+# Rule '23 (global)' shadows rule '24 (global)' below it
+# Rule '23 (global)' shadows rule '25 (global)' below it
+# Rule '23 (global)' shadows rule '26 (global)' below it
+# Rule '7 (global)' shadows rule '27 (global)' below it
+# Rule '7 (global)' shadows rule '28 (global)' below it
+# Rule '23 (global)' shadows rule '29 (global)' below it
+# Rule '23 (global)' shadows rule '30 (global)' below it
+# Rule '23 (global)' shadows rule '31 (global)' below it
+# Rule '23 (global)' shadows rule '32 (global)' below it
+# Rule '23 (global)' shadows rule '33 (global)' below it
+# Rule '23 (global)' shadows rule '34 (global)' below it
+# Rule '3 (global)' shadows rule '4 (global)' below it
+# Rule '5 (global)' shadows rule '6 (global)' below it
+# Rule '8 (global)' shadows rule '9 (global)' below it
+# Rule '11 (global)' shadows rule '12 (global)' below it
+# Rule '10 (global)' shadows rule '14 (global)' below it
+# Rule '15 (global)' shadows rule '17 (global)' below it
+# Rule '16 (global)' shadows rule '18 (global)' below it
+# Rule '16 (global)' shadows rule '19 (global)' below it
+# Rule '15 (global)' shadows rule '19 (global)' below it
+# Rule '10 (global)' shadows rule '22 (global)' below it
+# Rule '23 (global)' shadows rule '24 (global)' below it
+# Rule '23 (global)' shadows rule '25 (global)' below it
+# Rule '23 (global)' shadows rule '26 (global)' below it
+# Rule '7 (global)' shadows rule '27 (global)' below it
+# Rule '7 (global)' shadows rule '28 (global)' below it
+# Rule '23 (global)' shadows rule '29 (global)' below it
+# Rule '23 (global)' shadows rule '30 (global)' below it
+# Rule '23 (global)' shadows rule '31 (global)' below it
+# Rule '23 (global)' shadows rule '32 (global)' below it
+# Rule '23 (global)' shadows rule '33 (global)' below it
+# Rule '23 (global)' shadows rule '34 (global)' below it
 # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6

@@ -34,6 +34,7 @@
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
+# Rule '5 (eth2)' shadows rule '6 (eth2)' below it
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees

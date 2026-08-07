@@ -29,6 +29,15 @@ from firewallfabrik.compiler.processors._generic import (
     ConvertAnyToNotFWForShadowing,
     ConvertToAtomic,
     DetectShadowing,
+    DropRuleWithEmptyRE,
+    EliminateDuplicatesInDST,
+    EliminateDuplicatesInSRC,
+    EliminateDuplicatesInSRV,
+    ExpandGroups,
+)
+from firewallfabrik.compiler.processors._policy import (
+    ExpandMultipleAddresses,
+    InterfacePolicyRules,
 )
 from firewallfabrik.core.objects import (
     Firewall,
@@ -133,8 +142,23 @@ class PolicyCompiler(Compiler):
         # fw->fw atomic variants from rules with "any" source or destination,
         # which then appeared to be shadowed by earlier rules that legitimately
         # targeted the firewall itself - emitting false positives.
-        self.add(Begin('Detecting rule shadowing'))
+        # On copies: the processors below expand groups and host objects in
+        # place, and the main pass compiles the same rule objects afterwards.
+        self.add(Begin('Detecting rule shadowing', clone=True))
+        # One rule per interface, or two rules naming different interfaces,
+        # which can never see the same packet, are compared as if they could.
+        self.add(InterfacePolicyRules('process interface policy rules'))
         self.add(ConvertAnyToNotFWForShadowing("convert 'any' to '!fw'"))
+        # The comparison asks whether one address contains another, which a
+        # group or a host object cannot answer: both have to be down to plain
+        # addresses first.  Without this a rule with a host in its source was
+        # never seen as covered by a rule with the network it sits in.
+        self.add(ExpandGroups('expand groups'))
+        self.add(EliminateDuplicatesInSRC('eliminate duplicates in SRC'))
+        self.add(EliminateDuplicatesInDST('eliminate duplicates in DST'))
+        self.add(EliminateDuplicatesInSRV('eliminate duplicates in SRV'))
+        self.add(ExpandMultipleAddresses('expand multiple addresses'))
+        self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
         self.add(ConvertToAtomic('convert to atomic rules'))
         self.add(DetectShadowing('Detect shadowing'))
 

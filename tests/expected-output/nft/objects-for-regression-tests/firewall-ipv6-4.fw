@@ -14,8 +14,17 @@
 # Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 2 shadows Rule 3 below it
-# Rule 2 shadows Rule 3 below it
+# Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule '4 (global)' shadows rule '6 (global)' below it
+# Rule '7 (global)' shadows rule '8 (global)' below it
+# Rule '7 (global)' shadows rule '9 (global)' below it
+# Rule '7 (global)' shadows rule '10 (global)' below it
+# Rule '7 (global)' shadows rule '11 (global)' below it
+# Rule '2 (global)' shadows rule '3 (global)' below it
+# Rule '7 (global)' shadows rule '8 (global)' below it
+# Rule '7 (global)' shadows rule '9 (global)' below it
+# Rule '7 (global)' shadows rule '10 (global)' below it
+# Rule '7 (global)' shadows rule '11 (global)' below it
 
 FWBDEBUG=""
 

@@ -12,6 +12,9 @@
 #  compiler runs with -xt flag
 #  testing shadowing when rules have non-default options
 #
+# Rule 'Policy_1 0 (eth0)' shadows rule 'Policy_1 1 (eth0)' below it
+# Rule 'Policy_6 0 (global)' shadows rule 'Policy_6 1 (global)' below it
+# Rule 'Policy_7 0 (global)' shadows rule 'Policy_7 1 (global)' below it
 
 FWBDEBUG=""
 

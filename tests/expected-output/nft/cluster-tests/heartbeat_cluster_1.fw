@@ -10,13 +10,13 @@
 #
 #  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
 #
-# Rule 12 shadows Rule 13 below it
-# Rule 12 shadows Rule 14 below it
-# Rule 12 shadows Rule 15 below it
-# Rule 16 shadows Rule 17 below it
-# Rule 16 shadows Rule 18 below it
-# Rule 8 shadows Rule 19 below it
-# Rule 10 shadows Rule 20 below it
+# Rule '12 (global)' shadows rule '13 (global)' below it
+# Rule '12 (global)' shadows rule '14 (eth0)' below it
+# Rule '12 (global)' shadows rule '15 (eth0)' below it
+# Rule '16 (global)' shadows rule '17 (eth0)' below it
+# Rule '16 (global)' shadows rule '18 (eth0)' below it
+# Rule '8 (global)' shadows rule '19 (global)' below it
+# Rule '10 (global)' shadows rule '20 (global)' below it
 
 FWBDEBUG=""
 

@@ -23,6 +23,16 @@
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
+# Rule '13 (eth0)' shadows rule '17 (eth0)' below it
+# Rule '13 (eth0)' shadows rule '18 (eth0,eth1)' below it
+# Rule '14 (eth0,eth1)' shadows rule '18 (eth0,eth1)' below it
+# Rule '13 (eth0)' shadows rule '19 (eth0)' below it
+# Rule '13 (eth0)' shadows rule '20 (eth0,eth1)' below it
+# Rule '14 (eth0,eth1)' shadows rule '20 (eth0,eth1)' below it
+# Rule '12 (global)' shadows rule '21 (eth0)' below it
+# Rule '12 (global)' shadows rule '22 (eth0,eth1)' below it
+# Rule '12 (global)' shadows rule '23 (eth0)' below it
+# Rule '12 (global)' shadows rule '24 (eth0,eth1)' below it
 
 FWBDEBUG=""
 

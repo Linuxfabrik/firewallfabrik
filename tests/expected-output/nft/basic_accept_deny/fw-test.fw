@@ -8,6 +8,7 @@
 #
 # files: * fw-test.fw /etc/fwf.sh
 #
+# Rule '2 (global)' shadows rule '3 (global)' below it
 
 FWBDEBUG=""
 

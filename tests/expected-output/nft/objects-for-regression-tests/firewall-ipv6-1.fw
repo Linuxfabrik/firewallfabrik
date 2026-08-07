@@ -17,16 +17,30 @@
 # Rule 21 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 1: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 2: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 8 shadows Rule 12 below it
-# Rule 13 shadows Rule 15 below it
-# Rule 14 shadows Rule 16 below it
-# Rule 14 shadows Rule 17 below it
-# Rule 13 shadows Rule 17 below it
-# Rule 6 shadows Rule 7 below it
-# Rule 6 shadows Rule 9 below it
-# Rule 6 shadows Rule 10 below it
-# Rule 7 shadows Rule 11 below it
-# Rule 6 shadows Rule 12 below it
+# Rule '3 (global)' shadows rule '4 (global)' below it
+# Rule '5 (global)' shadows rule '6 (global)' below it
+# Rule '9 (global)' shadows rule '10 (global)' below it
+# Rule '8 (global)' shadows rule '12 (global)' below it
+# Rule '13 (global)' shadows rule '15 (global)' below it
+# Rule '14 (global)' shadows rule '16 (global)' below it
+# Rule '14 (global)' shadows rule '17 (global)' below it
+# Rule '13 (global)' shadows rule '17 (global)' below it
+# Rule '20 (global)' shadows rule '21 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 2 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 3 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 4 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 5 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 6 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 7 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 8 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 9 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 10 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 11 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 12 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 13 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 14 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 15 (global)' below it
+# Rule 'Policy_ipv6 1 (global)' shadows rule 'Policy_ipv6 16 (global)' below it
 # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6

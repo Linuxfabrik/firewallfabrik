@@ -19,6 +19,7 @@ rewritten for CompRule dataclasses.
 from __future__ import annotations
 
 import ipaddress as _ipa
+import sys
 
 import sqlalchemy
 
@@ -83,18 +84,28 @@ def _get_group_members(session, group: Group) -> list:
 
 
 class Begin(BasicRuleProcessor):
-    """Injects CompRules from the compiler's rules list into the pipeline."""
+    """Injects CompRules from the compiler's rules list into the pipeline.
 
-    def __init__(self, name: str = 'Begin') -> None:
+    With *clone* the pipeline gets copies instead of the rules themselves.
+    fwbuilder always works on copies (`Begin` puts them in
+    ``compiler->dbcopy``); here the main pass deliberately works on the
+    originals, so a second pipeline over the same rules - the shadowing
+    detection - has to ask for copies. Without them any processor that
+    modifies a rule in place, such as group or address expansion, changes
+    what the main pass then compiles.
+    """
+
+    def __init__(self, name: str = 'Begin', clone: bool = False) -> None:
         super().__init__(name)
         self._init = False
+        self._clone = clone
 
     def process_next(self) -> bool:
         if not self._init:
             for rule in self.compiler.rules:
                 if rule.disabled:
                     continue
-                self.tmp_queue.append(rule)
+                self.tmp_queue.append(rule.clone() if self._clone else rule)
             self._init = True
             return bool(self.tmp_queue)
         return False
@@ -781,11 +792,15 @@ class DetectShadowing(BasicRuleProcessor):
                 # shadow relationship.
                 if self._rules_equivalent(prev, rule):
                     continue
-                key = (prev.position, rule.position)
+                # Keyed by label, not position: a branch rule set numbers
+                # its rules from 0 like every other one, so a position pair
+                # alone reports the first rule set and silently swallows the
+                # same finding in all the others.
+                key = (prev.label, rule.label)
                 if key not in self._reported_shadows:
                     self._reported_shadows.add(key)
                     self.compiler.warning(
-                        f'Rule {prev.position} shadows Rule {rule.position} below it',
+                        f"Rule '{prev.label}' shadows rule '{rule.label}' below it",
                     )
                 break
 
@@ -873,12 +888,59 @@ class DetectShadowing(BasicRuleProcessor):
         if d1 != d2:
             return False
 
+        # A rule that only fires at a limited rate cannot cover one that
+        # fires without a limit, or with a looser one.
+        if not self._limits_allow_shadowing(r1, r2):
+            return False
+
         # All three rule elements must satisfy containment
         return (
             self._element_shadows(r1.src, r2.src)
             and self._element_shadows(r1.dst, r2.dst)
             and self._srv_element_shadows(r1.srv, r2.srv)
         )
+
+    @staticmethod
+    def _limits_allow_shadowing(above: CompRule, below: CompRule) -> bool:
+        """Return whether the rate limits let *above* shadow *below*.
+
+        Ports ``PolicyCompiler_ipt::checkForShadowingPlatformSpecific``. A
+        rule with a limit only acts on the packets that stay under it, so it
+        covers a rule below only when its own limit is at least as generous
+        and counts the same way. The comparison lives here rather than in
+        the iptables compiler because the rule options are
+        platform-independent and nftables renders them as ``limit rate``.
+        """
+
+        def rate(rule: CompRule, key: str) -> int:
+            try:
+                value = int(rule.get_option(key, 0) or 0)
+            except (TypeError, ValueError):
+                return 0
+            # -1 is how the GUI stores "no limit", which is the loosest
+            # setting there is.
+            return sys.maxsize if value == -1 else value
+
+        for value_key, companions in (
+            ('limit_value', ('limit_value_not', 'limit_suffix')),
+            ('connlimit_value', ('connlimit_value_not', 'connlimit_suffix')),
+            (
+                'hashlimit_value',
+                ('hashlimit_suffix', 'hashlimit_mode', 'hashlimit_name'),
+            ),
+        ):
+            above_rate = rate(above, value_key)
+            below_rate = rate(below, value_key)
+            if above_rate <= 0 and below_rate <= 0:
+                continue
+            if below_rate > above_rate:
+                return False
+            for key in companions:
+                if str(above.get_option(key, '') or '') != str(
+                    below.get_option(key, '') or ''
+                ):
+                    return False
+        return True
 
     @staticmethod
     def _element_shadows(e1: list, e2: list) -> bool:
@@ -896,9 +958,21 @@ class DetectShadowing(BasicRuleProcessor):
 
     @staticmethod
     def _srv_element_shadows(e1: list, e2: list) -> bool:
-        """Return True if service element e1 is a superset of e2."""
-        if not e1 and not e2:  # both "any" → no shadowing (C++ semantics)
-            return False
+        """Return True if service element e1 is a superset of e2.
+
+        Two elements that are both "any" cover each other.  fwbuilder looks
+        as if it said otherwise - `Compiler_ops.cpp:364` reads
+        ``if (o1.isAny() && o2.isAny()) RETURN(false)`` - but the identity
+        test three lines above it wins: both rules point at the *same* "any"
+        service object, so ``o1.getId()==o2.getId()`` returns true first.
+        That line only ever fires for two different objects that each report
+        `isAny()`.  `_srv_contains` already models this correctly; only the
+        shortcut for the empty list did not, which is why an
+        "accept everything" above a "deny everything" - the most obvious
+        shadowing there is - went unreported.
+        """
+        if not e1 and not e2:  # both "any" → the same object on both sides
+            return True
         if not e1:  # e1 is "any" → contains everything
             return True
         if not e2:  # e2 is "any" → only contained by "any"

@@ -12,6 +12,7 @@
 #
 # AddressTable "missing table": file not found (this_table_does_not_exist.tbl)
 # DNSName "does not resolve" cannot resolve "does_not_resolve.local": DNS lookup failed
+# Rule '3 (global)' shadows rule '4 (global)' below it
 
 FWBDEBUG=""
 
