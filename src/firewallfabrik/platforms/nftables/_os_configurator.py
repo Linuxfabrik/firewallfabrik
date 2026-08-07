@@ -237,7 +237,12 @@ class OSConfigurator_nft(OSConfigurator):
         settings are also applied to the IPv6 stack — the only IPv4
         hardening sysctls with an IPv6 equivalent on supported kernels.
         """
-        result = ''
+        # One entry per configlet.  `Configlet.expand()` drops the trailing
+        # newline when it collapses empty lines, so the blocks have to be
+        # joined explicitly - concatenating them glues the last sysctl of
+        # one block to the first of the next (fwbuilder writes an `endl`
+        # between them, OSConfigurator_linux24.cpp:197).
+        blocks: list[str] = []
 
         # These are linux24 host-OS options. A firewall with an
         # unsupported host_OS (e.g. a legacy ipcop appliance) has no
@@ -301,7 +306,7 @@ class OSConfigurator_nft(OSConfigurator):
             'if_accept_source_route_v6', '1' if v6_source_route else '0'
         )
 
-        result += kernel_vars.expand()
+        blocks.append(kernel_vars.expand())
 
         # Conntrack settings. The conntrack configlet uses unprefixed macro
         # names ({{$conntrack_max}}), so the option key is mapped to the
@@ -324,8 +329,8 @@ class OSConfigurator_nft(OSConfigurator):
                 val = -1
             self._set_configlet_macro_int(val, conntrack, macro_name)
 
-        result += conntrack.expand()
-        return result
+        blocks.append(conntrack.expand())
+        return '\n'.join(block for block in blocks if block)
 
     @staticmethod
     def _set_configlet_macro_str(

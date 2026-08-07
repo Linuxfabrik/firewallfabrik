@@ -120,7 +120,12 @@ class OSConfigurator_linux24(OSConfigurator):
         on supported kernels (RHEL 8+).
         """
         version = get_iptables_version(self.fw)
-        result = ''
+        # One entry per configlet.  `Configlet.expand()` drops the trailing
+        # newline when it collapses empty lines, so the blocks have to be
+        # joined explicitly - concatenating them glues the last sysctl of
+        # one block to the first of the next (fwbuilder writes an `endl`
+        # between them, OSConfigurator_linux24.cpp:197).
+        blocks: list[str] = []
 
         # Kernel variables
         kernel_vars = Configlet('linux24', 'kernel_vars')
@@ -180,7 +185,7 @@ class OSConfigurator_linux24(OSConfigurator):
             'if_accept_source_route_v6', '1' if v6_source_route else '0'
         )
 
-        result += kernel_vars.expand()
+        blocks.append(kernel_vars.expand())
 
         # Conntrack settings
         conntrack = Configlet('linux24', 'conntrack')
@@ -211,8 +216,8 @@ class OSConfigurator_linux24(OSConfigurator):
                 val = -1
             self._set_configlet_macro_int(val, conntrack, macro_name)
 
-        result += conntrack.expand()
-        return result
+        blocks.append(conntrack.expand())
+        return '\n'.join(block for block in blocks if block)
 
     def _set_configlet_macro_str(
         self,
