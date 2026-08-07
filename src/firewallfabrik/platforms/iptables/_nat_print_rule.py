@@ -318,6 +318,39 @@ class NATPrintRule(NATRuleProcessor):
         )
         return f' -m mac{neg}'
 
+    def _print_nat_placement(self, rule: CompRule) -> list[str]:
+        """Print the options that steer how the NAT target picks an address.
+
+        Both options belong to every NAT target that translates an address,
+        and both are refused by an iptables that predates them, which stops
+        the activation script.  `--random` arrived in 1.3.8 (netfilter
+        commit "iptables: add random option to SNAT") and `--persistent` in
+        1.4.4 ("SNAT/DNAT: add support for persistent multi-range NAT
+        mappings"); fwbuilder gates the latter on 1.4.3, one release too
+        early.
+        """
+        parts = []
+        if rule.get_option('ipt_nat_random', False):
+            if version_compare(self.version, '1.3.8') >= 0:
+                parts.append('--random')
+            else:
+                self.compiler.warning(
+                    rule,
+                    'iptables before 1.3.8 cannot randomise the translated '
+                    'port; the "Random" option is left out',
+                )
+        if rule.get_option('ipt_nat_persistent', False):
+            if version_compare(self.version, '1.4.4') >= 0:
+                parts.append('--persistent')
+            else:
+                self.compiler.warning(
+                    rule,
+                    'iptables before 1.4.4 cannot map a client to the same '
+                    'translated address every time; the "Persistent" option '
+                    'is left out',
+                )
+        return parts
+
     def _print_target_args(self, rule: CompRule) -> str | None:
         """Print NAT target-specific arguments.
 
@@ -345,8 +378,7 @@ class NATPrintRule(NATRuleProcessor):
             ports = self._print_snat_ports(tsrv) if tsrv else ''
             if ports:
                 parts.append(f'--to-ports {ports}')
-            if rule.get_option('ipt_nat_random', False):
-                parts.append('--random')
+            parts.extend(self._print_nat_placement(rule))
             return ' '.join(parts)
 
         if rt == NATRuleType.SNAT and target == 'SNAT':
@@ -366,12 +398,7 @@ class NATPrintRule(NATRuleProcessor):
                 # stops the activation script, so report the rule instead.
                 self.compiler.error(rule, 'SNAT rule has no translated source address')
                 return None
-            if rule.get_option('ipt_nat_random', False):
-                parts.append('--random')
-            if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
-            ):
-                parts.append('--persistent')
+            parts.extend(self._print_nat_placement(rule))
             return ' '.join(parts)
 
         if rt == NATRuleType.DNAT and target == 'DNAT':
@@ -391,12 +418,7 @@ class NATPrintRule(NATRuleProcessor):
                     rule, 'DNAT rule has no translated destination address'
                 )
                 return None
-            if rule.get_option('ipt_nat_random', False):
-                parts.append('--random')
-            if version_compare(self.version, '1.4.3') >= 0 and rule.get_option(
-                'ipt_nat_persistent', False
-            ):
-                parts.append('--persistent')
+            parts.extend(self._print_nat_placement(rule))
             return ' '.join(parts)
 
         if target == 'NETMAP' and rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):

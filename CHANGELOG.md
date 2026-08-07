@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Compiler (iptables): "Clear all rules" really clears them on current distributions. The firewall kept its old rules and grew with every activation, with all traffic blocked in the meantime.
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
+* Compiler (iptables): a NAT rule with the "Persistent" or "Random" option is compiled for the iptables release the firewall is pinned to. Firewalls pinned to 1.4.3 or older got an option that release does not know, which stopped the activation script and left every rule after it uninstalled.
 * Compiler (iptables): a rate limit higher than iptables can express is reported at compile time instead of stopping the activation script. nftables is unaffected.
 * Compiler (iptables): a rule set or branch whose name iptables cannot use as a chain name is reported at compile time instead of failing during activation. nftables is unaffected.
 * Compiler (iptables, nftables): a rule with the Branch action jumps to the rule set it names instead of matching traffic and doing nothing. A branch into the firewall's top rule set, or into a rule set of another firewall object, is still reported as unsupported ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)).
