@@ -763,40 +763,52 @@ class NATPrintRule(NATRuleProcessor):
         data = srv.data or {}
         parts = []
         if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
-            parts.append('-f')
-        if _is_true(data.get('any_opt')):
-            if version_compare(self.version, '1.4.3') >= 0:
-                parts.append('-m ipv4options --any')
+            if self.compiler.ipv6_policy:
+                # ip6tables refuses -f outright and names the replacement
+                # itself: "`-f' is not supported in IPv6, use -m frag
+                # instead" (netfilter iptables/xshared.c:1793).  The option
+                # is not even in ip6tables' option table.  Same split as the
+                # policy print rule.
+                parts.append('-m frag --fragmore')
             else:
-                parts.append('-m ipv4options --any-opt')
-        elif version_compare(self.version, '1.4.3') >= 0:
-            options = []
-            if _is_true(data.get('lsrr')):
-                options.append('lsrr')
-            if _is_true(data.get('ssrr')):
-                options.append('ssrr')
-            if _is_true(data.get('rr')):
-                options.append('record-route')
-            if _is_true(data.get('ts')):
-                options.append('timestamp')
-            if _is_true(data.get('rtralt')):
-                options.append('router-alert')
-            if options:
-                parts.append(f'-m ipv4options --flags {",".join(options)}')
-        else:
-            options = []
-            if _is_true(data.get('lsrr')):
-                options.append('--lsrr')
-            if _is_true(data.get('ssrr')):
-                options.append('--ssrr')
-            if _is_true(data.get('rr')):
-                options.append('--rr')
-            if _is_true(data.get('ts')):
-                options.append('--ts')
-            if _is_true(data.get('rtralt')):
-                options.append('--ra')
-            if options:
-                parts.append('-m ipv4options ' + ' '.join(options))
+                parts.append('-f')
+        # The ipv4options match reads the IPv4 header option field, which an
+        # IPv6 packet does not have, so ip6tables has no such module.  The
+        # policy print rule leaves the block out for IPv6 for that reason.
+        if not self.compiler.ipv6_policy:
+            if _is_true(data.get('any_opt')):
+                if version_compare(self.version, '1.4.3') >= 0:
+                    parts.append('-m ipv4options --any')
+                else:
+                    parts.append('-m ipv4options --any-opt')
+            elif version_compare(self.version, '1.4.3') >= 0:
+                options = []
+                if _is_true(data.get('lsrr')):
+                    options.append('lsrr')
+                if _is_true(data.get('ssrr')):
+                    options.append('ssrr')
+                if _is_true(data.get('rr')):
+                    options.append('record-route')
+                if _is_true(data.get('ts')):
+                    options.append('timestamp')
+                if _is_true(data.get('rtralt')):
+                    options.append('router-alert')
+                if options:
+                    parts.append(f'-m ipv4options --flags {",".join(options)}')
+            else:
+                options = []
+                if _is_true(data.get('lsrr')):
+                    options.append('--lsrr')
+                if _is_true(data.get('ssrr')):
+                    options.append('--ssrr')
+                if _is_true(data.get('rr')):
+                    options.append('--rr')
+                if _is_true(data.get('ts')):
+                    options.append('--ts')
+                if _is_true(data.get('rtralt')):
+                    options.append('--ra')
+                if options:
+                    parts.append('-m ipv4options ' + ' '.join(options))
         return ' '.join(parts)
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:

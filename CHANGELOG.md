@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (iptables): firewalls that do not pin an iptables version are compiled for current iptables. Rules with a negated address or interface failed to load.
 * Compiler (iptables): firewalls with routing rules generate a working script. One packet filter rule and the first route were lost.
 * Compiler (iptables): IPv6 NAT rules that match a specific ICMPv6 type produce a valid rule.
+* Compiler (iptables): IPv6 NAT rules whose original service matches fragments or IPv4 header options load instead of stopping the activation script, which left every rule after them uninstalled.
 * Compiler (iptables): NAT rules whose original service matches ICMP as a whole load instead of stopping the activation script, which left every rule after them uninstalled.
 * Compiler (iptables): log prefixes are written correctly on firewalls that activate through iptables-restore. Log messages ran into the packet data and broke log parsers.
 * Compiler (iptables): masquerading rules that also translate the source port keep the configured port range instead of letting the kernel pick a port.

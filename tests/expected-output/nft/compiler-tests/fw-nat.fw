@@ -227,20 +227,29 @@ run_epilog_and_exit() {
 
 configure_interfaces() {
     :
-    update_addresses_of_interface "eth0 198.51.100.1/24" ""
+    # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+    # this ensures that secondary ip address is "promoted" to primary
+    # when primary address is deleted, instead of deleting both
+    # primary and secondary addresses. It looks like this is only
+    # available starting from Linux 2.6.16
+    test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+        echo 1 >  /proc/sys/net/ipv4/conf/all/promote_secondaries
+    update_addresses_of_interface "eth0 198.51.100.1/24 2001:db8:1::1/64" ""
     update_addresses_of_interface "eth1 192.168.1.1/24" ""
-    update_addresses_of_interface "eth2 10.0.0.1/24" ""
+    update_addresses_of_interface "eth2 10.0.0.1/24 2001:db8:3::1/64" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
 script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
-table ip fwf_filter {}
-delete table ip fwf_filter
+table inet fwf_filter {}
+delete table inet fwf_filter
 table ip fwf_nat {}
 delete table ip fwf_nat
+table ip6 fwf_nat {}
+delete table ip6 fwf_nat
 
-table ip fwf_filter {
+table inet fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -251,7 +260,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain forward {
@@ -268,7 +277,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 2 -- DENY " level info drop
     }
 
     chain output {
@@ -277,7 +286,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        counter log prefix "RULE 2 -- DENY " level info drop
+        meta nfproto ipv4 counter log prefix "RULE 2 -- DENY " level info drop
     }
 }
 
@@ -330,6 +339,21 @@ table ip fwf_nat {
         # Rule 6 (NAT)
         #
         oifname "eth2" ip daddr 10.0.0.1 counter snat to 10.0.0.1
+    }
+}
+
+table ip6 fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+        #
+        # Rule NAT_ipv6 0 (NAT)
+        #
+        # Original service matches fragmented packets
+        ip6 daddr 2001:db8:1::1 frag more-fragments 1 counter dnat to 2001:db8:3::53
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
     }
 }
 

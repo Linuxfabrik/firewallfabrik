@@ -415,9 +415,16 @@ run_epilog_and_exit() {
 configure_interfaces() {
  :
  # Configure interfaces
- update_addresses_of_interface "eth0 198.51.100.1/24" ""
+ # See http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=429689
+ # this ensures that secondary ip address is "promoted" to primary
+ # when primary address is deleted, instead of deleting both
+ # primary and secondary addresses. It looks like this is only
+ # available starting from Linux 2.6.16
+ test -f /proc/sys/net/ipv4/conf/all/promote_secondaries && \
+ echo 1 > /proc/sys/net/ipv4/conf/all/promote_secondaries
+ update_addresses_of_interface "eth0 198.51.100.1/24 2001:db8:1::1/64" ""
  update_addresses_of_interface "eth1 192.168.1.1/24" ""
- update_addresses_of_interface "eth2 10.0.0.1/24" ""
+ update_addresses_of_interface "eth2 10.0.0.1/24 2001:db8:3::1/64" ""
  update_addresses_of_interface "lo 127.0.0.1/8" ""
 }
 
@@ -513,6 +520,17 @@ script_body() {
  $IPTABLES -w 5 -A FORWARD -j RULE_2
  $IPTABLES -w 5 -A RULE_2 -j LOG --log-level info --log-prefix "RULE 2 -- DENY "
  $IPTABLES -w 5 -A RULE_2 -j DROP
+
+ # ================ IPv6
+
+ # ================ Table 'nat', rule set NAT_ipv6
+ #
+ # Rule NAT_ipv6 0 (NAT)
+ #
+ echo "Rule NAT_ipv6 0 (NAT)"
+ #
+ # Original service matches fragmented packets
+ $IP6TABLES -w 5 -t nat -A PREROUTING -p 0 -d 2001:db8:1::1 -m frag --fragmore -j DNAT --to-destination 2001:db8:3::53
 }
 
 ip_forward() {
@@ -524,6 +542,7 @@ reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
  reset_iptables_v4
+ reset_iptables_v6
 }
 
 block_action() {
@@ -567,7 +586,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules "nat "
+ load_modules "nat ipv6"
  configure_interfaces
  verify_interfaces
 

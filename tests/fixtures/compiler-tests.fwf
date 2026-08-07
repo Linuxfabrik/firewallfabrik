@@ -4536,6 +4536,11 @@ libraries:
                     inet_addr_mask:
                       address: '198.51.100.1'
                       netmask: '255.255.255.0'
+                  - type: 'IPv6'
+                    name: 'fw-nat:eth0:ip6'
+                    inet_addr_mask:
+                      address: '2001:db8:1::1'
+                      netmask: '64'
               - name: 'eth1'
                 data:
                   dedicated_failover: false
@@ -4570,6 +4575,11 @@ libraries:
                     inet_addr_mask:
                       address: '10.0.0.1'
                       netmask: '255.255.255.0'
+                  - type: 'IPv6'
+                    name: 'fw-nat:eth2:ip6'
+                    inet_addr_mask:
+                      address: '2001:db8:3::1'
+                      netmask: '64'
               - name: 'lo'
                 data:
                   dedicated_failover: false
@@ -4763,6 +4773,32 @@ libraries:
                         ICMP'
                     tdst:
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+              - type: 'NAT'
+                name: 'NAT_ipv6'
+                ipv6: true
+                rules:
+                  - type: 'NATRule'
+                    comment: 'Original service matches fragmented packets'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:ip_fragments'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Addresses/IPv6:web-server-v6'
                     tsrc:
                       - 'Library:Standard/Network:Any'
                     tsrv:
@@ -6723,6 +6759,12 @@ libraries:
             name: 'Address Tables'
           - type: 'ObjectGroup'
             name: 'Addresses'
+            children:
+              - type: 'IPv6'
+                name: 'web-server-v6'
+                inet_addr_mask:
+                  address: '2001:db8:3::53'
+                  netmask: '128'
           - type: 'ObjectGroup'
             name: 'DNS Names'
             children:
