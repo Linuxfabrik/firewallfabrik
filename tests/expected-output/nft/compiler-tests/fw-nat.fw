@@ -298,6 +298,11 @@ table ip fwf_nat {
         ip daddr 10.0.0.1 tcp dport 80 counter redirect to :8080
         ip daddr 192.168.1.1 tcp dport 80 counter redirect to :8080
         ip daddr 198.51.100.1 tcp dport 80 counter redirect to :8080
+        #
+        # Rule 7 (NAT)
+        #
+        # Original service matches ICMP as a whole
+        ip daddr 198.51.100.1 meta l4proto icmp counter dnat to 10.0.0.53
     }
 
     chain postrouting {

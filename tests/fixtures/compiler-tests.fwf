@@ -4743,6 +4743,30 @@ libraries:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat'
                     tsrv:
                       - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 7
+                    comment: 'Original service matches ICMP as a whole'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:any
+                        ICMP'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
               - type: 'Policy'
                 name: 'Policy'
                 top: true

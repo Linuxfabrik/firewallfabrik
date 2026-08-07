@@ -480,6 +480,13 @@ script_body() {
  echo "Rule 6 (NAT)"
  #
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth2 -d 10.0.0.1 -j SNAT --to-source 10.0.0.1
+ #
+ # Rule 7 (NAT)
+ #
+ echo "Rule 7 (NAT)"
+ #
+ # Original service matches ICMP as a whole
+ $IPTABLES -w 5 -t nat -A PREROUTING -p icmp -m icmp -d 198.51.100.1 --icmp-type any -j DNAT --to-destination 10.0.0.53
 
  # ================ Table 'filter', rule set Policy
  #

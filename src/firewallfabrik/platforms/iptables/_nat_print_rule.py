@@ -742,7 +742,15 @@ class NATPrintRule(NATRuleProcessor):
         icmp_type = -1 if raw_type is None else int(raw_type)
         icmp_code = -1 if raw_code is None else int(raw_code)
         if icmp_type < 0:
-            return ''
+            # A service naming no type matches ICMP as a whole.  The IPv4
+            # icmp match still insists on --icmp-type (XTOPT_MAND in
+            # extensions/libipt_icmp.c, enforced in
+            # libxtables/xtoptions.c), and its own type table spells that
+            # "any" (extensions/libxt_icmp.h).  ip6tables has no such
+            # keyword, so IPv6 drops the -m icmp6 match instead; the
+            # protocol match alone already covers every ICMPv6 message.
+            # Same split as the policy print rule.
+            return '' if self.compiler.ipv6_policy else 'any'
         if icmp_code >= 0:
             return f'{icmp_type}/{icmp_code}'
         return str(icmp_type)
