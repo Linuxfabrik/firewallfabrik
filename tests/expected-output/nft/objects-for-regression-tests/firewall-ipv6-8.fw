@@ -10,13 +10,6 @@
 #
 #  matching multicast with different directions
 #
-# Rule 14: Branch action not yet supported by nftables compiler
-# Rule 14: Branch action not yet supported by nftables compiler
-# Rule 14: Branch action not yet supported by nftables compiler
-# Rule 15: Branch action not yet supported by nftables compiler
-# Rule 15: Branch action not yet supported by nftables compiler
-# Rule 15: Branch action not yet supported by nftables compiler
-# Rule 15: Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -262,22 +255,6 @@ table inet fwf_filter {
         ct state invalid counter log prefix "INVALID " level debug drop
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
         #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv4 counter drop
-        #
-        # Rule Policy_OSPF 0 (eth0)
-        #
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 1 (global)
-        #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv6 counter drop
-        #
         # Rule Policy_v6 0 (eth0)
         #
         # see #1523
@@ -300,13 +277,11 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule 14: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule 15: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter jump Policy_OSPF
     }
 
     chain forward {
@@ -314,23 +289,6 @@ table inet fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
-        #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv4 counter drop
-        #
-        # Rule Policy_OSPF 0 (eth0)
-        #
-        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 1 (global)
-        #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv6 counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
@@ -366,15 +324,12 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule 14: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule 15: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter
-        # # Rule 15: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 iifname "eth0" meta l4proto 89 counter jump Policy_OSPF
+        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter jump Policy_OSPF
     }
 
     chain output {
@@ -382,22 +337,6 @@ table inet fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
         icmpv6 type { nd-router-solicit, nd-router-advert, nd-neighbor-solicit, nd-neighbor-advert } ip6 hoplimit 255 counter accept
-        #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv4 counter drop
-        #
-        # Rule Policy_OSPF 0 (eth0)
-        #
-        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 1 (global)
-        #
-        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
-        #
-        # Rule Policy_OSPF 2 (global)
-        #
-        meta nfproto ipv6 counter drop
         #
         # Rule Policy_v6 0 (eth0)
         #
@@ -451,13 +390,31 @@ table inet fwf_filter {
         #
         # Rule Policy_v6 14 (global)
         #
-        # # Rule 14: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 meta l4proto 89 counter
+        meta nfproto ipv6 meta l4proto 89 counter jump Policy_OSPF
         #
         # Rule Policy_v6 15 (eth0)
         #
-        # # Rule 15: Branch action not yet supported by nftables compiler
-        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter
+        meta nfproto ipv6 oifname "eth0" meta l4proto 89 counter jump Policy_OSPF
+    }
+
+    chain Policy_OSPF {
+        #
+        # Rule Policy_OSPF 2 (global)
+        #
+        meta nfproto ipv4 counter drop
+        #
+        # Rule Policy_OSPF 0 (eth0)
+        #
+        iifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        oifname "eth0" ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        #
+        # Rule Policy_OSPF 1 (global)
+        #
+        ip6 saddr fe80::/10 ip6 daddr { fe80::/10, ff00::/8 } counter accept
+        #
+        # Rule Policy_OSPF 2 (global)
+        #
+        meta nfproto ipv6 counter drop
     }
 }
 

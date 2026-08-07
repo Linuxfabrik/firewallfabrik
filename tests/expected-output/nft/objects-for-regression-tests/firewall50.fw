@@ -10,9 +10,6 @@
 #
 #  testing action 'Continue'
 #
-# Rule 2 (global): Branch action not yet supported by nftables compiler
-# Rule 2 (global): Branch action not yet supported by nftables compiler
-# Rule 2 (global): Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -60,10 +57,6 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 0 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
@@ -74,8 +67,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16 counter
+        ip saddr 192.168.0.0/16 counter jump rule2_branch
         #
         # Rule 3 (global)
         #
@@ -90,10 +82,6 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 0 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
@@ -104,8 +92,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16 counter
+        ip saddr 192.168.0.0/16 counter jump rule2_branch
         #
         # Rule 3 (global)
         #
@@ -120,10 +107,6 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 0 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } counter
@@ -134,8 +117,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.0.0/16 counter
+        ip saddr 192.168.0.0/16 counter jump rule2_branch
         #
         # Rule 3 (global)
         #
@@ -144,6 +126,13 @@ table ip fwf_filter {
         # Rule 4 (global)
         #
         counter log level debug drop
+    }
+
+    chain rule2_branch {
+        #
+        # Rule rule2_branch 0 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
     }
 }
 

@@ -10,9 +10,12 @@
 #
 #  testing time litmiting for iptables 1.4.0
 #
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
 
 FWBDEBUG=""
 
@@ -248,7 +251,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule Policy_ipv6 0 (global)
@@ -263,7 +266,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule Policy_ipv6 0 (global)
@@ -277,7 +280,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule Policy_ipv6 0 (global)

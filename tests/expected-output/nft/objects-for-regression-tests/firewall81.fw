@@ -234,28 +234,26 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (global)
-        #
-        counter log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+    }
+
+    chain Policy {
         #
         # Rule 0 (global)
         #
         counter log prefix "RULE 0 -- DENY on interface global " level debug drop
     }
 
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related counter accept
-        #
-        # Rule 0 (global)
-        #
-        counter log prefix "RULE 0 -- DENY on interface global " level debug drop
+    chain Policy_ipv6 {
     }
 }
 

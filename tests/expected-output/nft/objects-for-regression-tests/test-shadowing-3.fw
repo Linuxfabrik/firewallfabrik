@@ -251,6 +251,23 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 0 (eth0)
+        #
+        # limit
+        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit rate 10/second counter accept
+        #
+        # Rule 1 (eth0)
+        #
+        oifname "eth0" ip saddr 192.168.1.0/24 counter drop
+    }
+
+    chain output {
+        type filter hook output priority filter; policy drop;
+        ct state established,related counter accept
+    }
+
+    chain Policy_1 {
+        #
         # Rule Policy_1 0 (eth0)
         #
         # connlimit
@@ -259,6 +276,9 @@ table ip fwf_filter {
         # Rule Policy_1 1 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter drop
+    }
+
+    chain Policy_2 {
         #
         # Rule Policy_2 0 (eth0)
         #
@@ -268,6 +288,9 @@ table ip fwf_filter {
         # Rule Policy_2 1 (eth0)
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter drop
+    }
+
+    chain Policy_3 {
         #
         # Rule Policy_3 0 (eth0)
         #
@@ -278,6 +301,9 @@ table ip fwf_filter {
         #
         # 50/sec
         oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+
+    chain Policy_4 {
         #
         # Rule Policy_4 0 (eth0)
         #
@@ -298,6 +324,9 @@ table ip fwf_filter {
         #
         # htable_rule_5
         oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+
+    chain Policy_5 {
         #
         # Rule Policy_5 0 (eth0)
         #
@@ -308,6 +337,9 @@ table ip fwf_filter {
         #
         # 30/sec
         oifname "eth0" ip saddr 192.168.1.0/24 ct state new counter accept
+    }
+
+    chain Policy_6 {
         #
         # Rule Policy_6 0 (global)
         #
@@ -316,6 +348,9 @@ table ip fwf_filter {
         # Rule Policy_6 1 (global)
         #
         ip saddr 192.168.11.10/31 counter drop
+    }
+
+    chain Policy_7 {
         #
         # Rule Policy_7 0 (global)
         #
@@ -324,6 +359,9 @@ table ip fwf_filter {
         # Rule Policy_7 1 (global)
         #
         ip saddr 192.168.11.11 counter drop
+    }
+
+    chain Policy_8 {
         #
         # Rule Policy_8 0 (global)
         #
@@ -334,20 +372,6 @@ table ip fwf_filter {
         # Rule Policy_8 1 (global)
         #
         ip saddr 222.222.222.0/24 counter drop
-        #
-        # Rule 0 (eth0)
-        #
-        # limit
-        oifname "eth0" ip saddr 192.168.1.0/24 ct state new limit rate 10/second counter accept
-        #
-        # Rule 1 (eth0)
-        #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter drop
-    }
-
-    chain output {
-        type filter hook output priority filter; policy drop;
-        ct state established,related counter accept
     }
 }
 

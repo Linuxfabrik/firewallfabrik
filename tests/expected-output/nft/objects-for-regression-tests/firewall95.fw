@@ -262,6 +262,9 @@ table inet fwf_filter {
         # address 192.168.1.11 should not be considered a broadcast on the subnet attached to eth0
         ip daddr 192.168.1.11 ct state new counter accept
     }
+
+    chain Policy_v6 {
+    }
 }
 
 NFT_RULES

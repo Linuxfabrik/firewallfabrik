@@ -12,10 +12,6 @@
 
 #  same as heartbeat_cluster_1 except using unicast for conntrack and heartbeat
 #
-# Rule 6 (global): Branch action not yet supported by nftables compiler
-# Rule 6 (global): Branch action not yet supported by nftables compiler
-# Rule 7 (global): Branch action not yet supported by nftables compiler
-# Rule 7 (global): Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -84,6 +80,11 @@ table ip fwf_filter {
         # only from internal network
         ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
+        # Rule 6 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        counter jump to_fw
+        #
         # Rule 8 (global)
         #
         counter log prefix "RULE 8 -- DENY " level info drop
@@ -123,8 +124,7 @@ table ip fwf_filter {
         # Rule 7 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 7 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter jump to_fw
         #
         # Rule 9 (global)
         #
@@ -166,14 +166,12 @@ table ip fwf_filter {
         # Rule 6 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 6 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.1, 192.168.1.1 } counter
+        ip daddr { 172.24.0.1, 192.168.1.1 } counter jump to_fw
         #
         # Rule 7 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 7 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter jump to_fw
         #
         # Rule 8 (global)
         #
@@ -190,6 +188,9 @@ table ip fwf_filter {
         # Rule 11 (global)
         #
         counter log prefix "RULE 11 -- DENY " level info drop
+    }
+
+    chain to_fw {
     }
 }
 

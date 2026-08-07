@@ -148,12 +148,35 @@ class PolicyCompiler_nft(PolicyCompiler):
             'output': [],
         }
 
+        # The chain a branch rule set writes into, set by the driver.
+        # Empty for the top rule set.
+        self.rule_set_chain: str = ''
+
+        # The chains of all branch rule sets of this firewall, set by the
+        # driver so a jump into one is recognised as a branch rather than a
+        # jump into a chain nobody declares.
+        self.branch_chains: set[str] = set()
+
     def my_platform_name(self) -> str:
         return 'nftables'
+
+    def register_rule_set_chain(self, chain_name: str) -> None:
+        """Give this branch rule set a regular chain of its own."""
+        self.rule_set_chain = chain_name
+        self.chain_rules.setdefault(chain_name, [])
 
     def prolog(self) -> int:
         """Initialize compiler."""
         n = super().prolog()
+
+        # A branch rule set runs only where a rule with the Branch action
+        # jumps to it, so its rules belong in a regular chain, not in one
+        # that a hook feeds.  Every chain decision downstream keeps a chain
+        # that is already set, so presetting it here is all it takes
+        # (fwbuilder CompilerDriver_ipt::assignRuleSetChain).
+        if self.rule_set_chain:
+            for rule in self.rules:
+                rule.ipt_chain = self.rule_set_chain
 
         if n > 0:
             for iface in self.fw.interfaces:
@@ -1872,6 +1895,19 @@ class DecideOnTarget(PolicyRuleProcessor):
             PolicyAction.Custom: '.CUSTOM',
         }
         action = rule.action
+        if action == PolicyAction.Branch:
+            # The branch rule set compiles into a regular chain named after
+            # itself, so branching is a jump to that chain
+            # (PolicyCompiler_ipt::decideOnTarget).
+            branch_name = rule.get_option('branch_name', '')
+            if branch_name:
+                rule.ipt_target = branch_name
+            else:
+                self.compiler.error(
+                    rule, 'Branching rule refers to a rule set that does not exist'
+                )
+            return True
+
         target = target_map.get(action) if isinstance(action, PolicyAction) else None
         if target == '.CUSTOM':
             # The custom target of such a rule is free-form iptables text

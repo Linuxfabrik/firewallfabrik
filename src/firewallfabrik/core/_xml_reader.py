@@ -375,14 +375,15 @@ class XmlReader:
                 continue
             rule.options[key] = str(target_id)
 
-        # A branching rule names its target rule set by XML id.  Files
-        # written by later Firewall Builder releases carry the name as well,
-        # older ones only the id, and the compiler needs the name to build
-        # the chain it jumps to.
+        # A branching rule names its target rule set by XML id, and the
+        # compiler needs the name to build the chain it jumps to.  Later
+        # Firewall Builder releases write a `branch_name` next to the id, but
+        # they do not keep it up to date - firewall51 of the regression suite
+        # branches into `mail_server_inbound` by id while its `branch_name`
+        # still says `rule0_branch`.  Firewall Builder resolves the id
+        # (`PolicyRule::getBranch()`), so the id wins here too.
         for rule in self._deferred_branch_refs:
             options = rule.options or {}
-            if options.get('branch_name'):
-                continue
             name = self._rule_set_names.get(options.get('branch_id'))
             if name is None:
                 logger.warning(

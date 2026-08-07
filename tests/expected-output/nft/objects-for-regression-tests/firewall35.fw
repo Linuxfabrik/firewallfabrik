@@ -12,7 +12,6 @@
 
 #  like firewall34, but uses different script format
 #
-# Rule 5 (global): Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -347,6 +346,12 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
+        # Rule 5 (global)
+        #
+        # test rule for the discussion
+        # https://sourceforge.net/projects/fwbuilder/forums/forum/16372/topic/3733964/index/page/1
+        counter jump block_local_bcast
+        #
         # Rule 6 (global)
         #
         ip saddr @block_these counter log prefix "RULE 6 -- DENY on global " level debug drop
@@ -373,11 +378,6 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
-        #
-        # Rule block_local_bcast 0 (global)
-        #
-        # an attempt to build rule blocking local broadcast packets on the subnet where firewall has dynamic interface
-        ip daddr 192.168.222.255 counter drop
         #
         # Rule 0 (global)
         #
@@ -426,11 +426,6 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule block_local_bcast 0 (global)
-        #
-        # an attempt to build rule blocking local broadcast packets on the subnet where firewall has dynamic interface
-        ip daddr 192.168.222.255 counter drop
-        #
         # Rule 0 (global)
         #
         ip daddr { 192.168.1.0/30, 192.168.1.1, 192.168.1.2, 192.168.1.200, 192.168.1.201, 192.168.2.128/25 } ct state new counter accept
@@ -468,6 +463,14 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         counter log prefix "RULE 12 -- DENY on global " level debug drop
+    }
+
+    chain block_local_bcast {
+        #
+        # Rule block_local_bcast 0 (global)
+        #
+        # an attempt to build rule blocking local broadcast packets on the subnet where firewall has dynamic interface
+        ip daddr 192.168.222.255 counter drop
     }
 }
 

@@ -43,6 +43,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.nftables import __compiler_version__
+from firewallfabrik.platforms.nftables._print_rule import nft_set_name
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -125,6 +126,7 @@ class CompilerDriver_nft(CompilerDriver):
         # table family (`inet` when both families share one, `ip` otherwise)
         # and, through that, whether a rule has to name its family itself.
         self._any_rs_ipv6: bool = False
+        self._branch_chains: set[str] = set()
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.filter_counters: list[str] = []
@@ -216,6 +218,16 @@ class CompilerDriver_nft(CompilerDriver):
                 self._any_rs_ipv6 = any(rs.ipv6 for rs in (*all_policies, *all_nat))
                 if not self._any_rs_ipv6:
                     self.ipv6_run = False
+
+                # Every branch rule set becomes a regular chain of that name.
+                # Each rule set is compiled by a compiler of its own, so the
+                # names have to be collected here for the one compiling the
+                # rule that jumps into a branch to recognise its target.
+                self._branch_chains = {
+                    nft_set_name(rs.name)
+                    for rs in all_policies
+                    if not self._is_top_ruleset(rs)
+                }
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
                 ipv4_6_runs: list[int] = []
@@ -506,6 +518,9 @@ class CompilerDriver_nft(CompilerDriver):
 
         policy_compiler = PolicyCompiler_nft(session, fw, ipv6_policy, oscnf)
         policy_compiler.shared_inet_table = self._any_rs_ipv6
+        policy_compiler.branch_chains = self._branch_chains
+        if not self._is_top_ruleset(pol_rs):
+            policy_compiler.register_rule_set_chain(nft_set_name(pol_rs.name))
         policy_compiler.set_source_ruleset(pol_rs)
         policy_compiler.source_ruleset = pol_rs
 
@@ -522,7 +537,12 @@ class CompilerDriver_nft(CompilerDriver):
             policy_compiler.compile()
             policy_compiler.epilog()
 
-        # Collect per-chain rules from the compiler
+        # Collect per-chain rules from the compiler.  A branch chain is kept
+        # even when it stays empty: nftables refuses the whole ruleset over a
+        # jump to a chain that is not declared, and the rule that jumps into
+        # this branch lives in another rule set.
+        if policy_compiler.rule_set_chain:
+            filter_chains.setdefault(policy_compiler.rule_set_chain, [])
         for chain_name, rules in policy_compiler.chain_rules.items():
             if rules:
                 self.have_filter = True
@@ -642,10 +662,19 @@ class CompilerDriver_nft(CompilerDriver):
         input_rules = ''.join(filter_chains.get('input', []))
         forward_rules = ''.join(filter_chains.get('forward', []))
         output_rules = ''.join(filter_chains.get('output', []))
+        # Everything else a rule set claimed is a branch chain.  Empty ones
+        # are declared too, because nftables refuses the whole ruleset over a
+        # jump to a chain that does not exist.
+        branch_chains = sorted(
+            chain
+            for chain in filter_chains
+            if chain not in ('input', 'forward', 'output')
+        )
         have_filter = bool(
             input_rules.strip()
             or forward_rules.strip()
             or output_rules.strip()
+            or any(''.join(filter_chains[chain]).strip() for chain in branch_chains)
             or any(text.strip() for text in auto_rules.values())
         )
 
@@ -782,6 +811,16 @@ class CompilerDriver_nft(CompilerDriver):
             if output_rules.strip():
                 out.write(output_rules)
             out.write('    }\n')
+
+            # A branch rule set gets a regular chain: no hook, no policy, so
+            # it runs only where a rule jumps to it.  nftables needs the
+            # chain declared before the jump, and a chain block may only be
+            # written once, so they come last inside the same table.
+            for chain in branch_chains:
+                out.write('\n')
+                out.write(f'    chain {chain} {{\n')
+                out.write(''.join(filter_chains[chain]))
+                out.write('    }\n')
 
             out.write('}\n')
             out.write('\n')

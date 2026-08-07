@@ -306,41 +306,20 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule Policy_1 2 (global)
-        #
-        # This permits access from internal net
-        # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule Policy_1 5 (global)
-        #
-        counter log prefix "RULE 5 -- DENY " level info drop
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
-        #
-        # Rule Policy_1 2 (global)
-        #
-        # This permits access from internal net
-        # to the Internet and DMZ
-        ip saddr 192.168.1.0/24 ct state new counter accept
-        #
-        # Rule Policy_1 5 (global)
-        #
-        counter log prefix "RULE 5 -- DENY " level info drop
-        #
-        # Rule Policy_1 6 (global)
-        #
-        ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter log prefix "RULE 6 -- CONTINUE " level info
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+    }
+
+    chain Policy_1 {
         #
         # Rule Policy_1 2 (global)
         #

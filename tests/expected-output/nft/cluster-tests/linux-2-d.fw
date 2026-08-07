@@ -259,6 +259,9 @@ table ip fwf_filter {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
     }
+
+    chain Policy {
+    }
 }
 
 NFT_RULES

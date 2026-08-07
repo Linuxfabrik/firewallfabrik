@@ -10,10 +10,6 @@
 #
 #  This is an example of linux/heartbeat cluster with two policy rule sets. Branching rule in the top policy passes control to rule set to_fw, which is different in member firewalls.  See ticket #372 for explanation.
 #
-# Rule 6 (global): Branch action not yet supported by nftables compiler
-# Rule 6 (global): Branch action not yet supported by nftables compiler
-# Rule 7 (global): Branch action not yet supported by nftables compiler
-# Rule 7 (global): Branch action not yet supported by nftables compiler
 # Rule 12 shadows Rule 13 below it
 # Rule 12 shadows Rule 14 below it
 # Rule 12 shadows Rule 15 below it
@@ -89,6 +85,11 @@ table ip fwf_filter {
         # only from internal network
         ip saddr 192.168.1.0/24 tcp dport 22 ct state new counter accept
         #
+        # Rule 6 (global)
+        #
+        # branch rule set is different in members linux-1 and linux-2
+        counter jump to_fw
+        #
         # Rule 8 (global)
         #
         counter drop
@@ -163,8 +164,7 @@ table ip fwf_filter {
         # Rule 7 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 7 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter jump to_fw
         #
         # Rule 14 (eth0)
         #
@@ -223,14 +223,12 @@ table ip fwf_filter {
         # Rule 6 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 6 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.1, 192.168.1.1 } counter
+        ip daddr { 172.24.0.1, 192.168.1.1 } counter jump to_fw
         #
         # Rule 7 (global)
         #
         # branch rule set is different in members linux-1 and linux-2
-        # # Rule 7 (global): Branch action not yet supported by nftables compiler
-        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter
+        ip daddr { 172.24.0.2, 192.168.1.2, 192.168.100.1 } counter jump to_fw
         #
         # Rule 8 (global)
         #
@@ -281,6 +279,9 @@ table ip fwf_filter {
         # Rule 22 (global)
         #
         counter log prefix "RULE 22 -- DENY " level info drop
+    }
+
+    chain to_fw {
     }
 }
 

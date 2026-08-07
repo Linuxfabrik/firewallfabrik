@@ -15,7 +15,6 @@
 # Rule 2 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'
-# Rule 1 (global): Branch action not yet supported by nftables compiler
 # Rule 1 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
 # Rule 2 (global): Custom service 'owner_anonymous' is not configured for 'nftables'
 
@@ -260,11 +259,14 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+    }
+
+    chain Policy_1 {
         #
         # Rule Policy_1 0 (global)
         #
-        tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
-        udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
+        ip saddr { 192.0.2.1, 192.168.1.1 } tcp dport 9040 counter log prefix "RULE 0 -- DENY " level info drop
+        ip saddr { 192.0.2.1, 192.168.1.1 } udp dport 53 counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 

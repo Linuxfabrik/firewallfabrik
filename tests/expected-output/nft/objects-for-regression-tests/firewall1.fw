@@ -301,10 +301,6 @@ table ip fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
         #
-        # Rule GOOD_GUYS 0 (global)
-        #
-        ip saddr != { 1.1.1.0/24, 192.168.1.0/24 } counter log level debug drop
-        #
         # Rule 2 (eth1)
         #
         # Anti-spoofing rule
@@ -409,10 +405,6 @@ table ip fwf_filter {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
-        #
-        # Rule GOOD_GUYS 0 (global)
-        #
-        ip saddr != { 1.1.1.0/24, 192.168.1.0/24 } counter log level debug drop
         #
         # Rule 0 (eth0)
         #
@@ -577,10 +569,6 @@ table ip fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
         #
-        # Rule GOOD_GUYS 0 (global)
-        #
-        ip saddr != { 1.1.1.0/24, 192.168.1.0/24 } counter log level debug drop
-        #
         # Rule 3 (eth1)
         #
         # Anti-spoofing rule
@@ -692,6 +680,13 @@ table ip fwf_filter {
         # Rule 41 (global)
         #
         ip saddr != 192.168.1.0/24 ip daddr { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } tcp dport 80 counter drop
+    }
+
+    chain GOOD_GUYS {
+        #
+        # Rule GOOD_GUYS 0 (global)
+        #
+        ip saddr != { 1.1.1.0/24, 192.168.1.0/24 } counter log level debug drop
     }
 }
 

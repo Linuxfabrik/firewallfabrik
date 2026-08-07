@@ -10,9 +10,12 @@
 #
 #  testing time litmiting for iptables 1.2.6
 #
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -254,7 +257,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
@@ -274,7 +277,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)
@@ -293,7 +296,7 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
         meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule 1 (global)

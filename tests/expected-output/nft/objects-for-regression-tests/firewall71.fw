@@ -15,9 +15,6 @@
 #  option "Clamp MSS to MTU" should be off because it puts rule
 #  in mangle table.
 #
-# Rule 1 (global): Branch action not yet supported by nftables compiler
-# Rule 1 (global): Branch action not yet supported by nftables compiler
-# Rule 1 (global): Branch action not yet supported by nftables compiler
 
 FWBDEBUG=""
 
@@ -255,14 +252,9 @@ table ip fwf_filter {
         ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
-        # Rule fw71_policy_2 0 (global)
-        #
-        counter log drop
-        #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Branch action not yet supported by nftables compiler
-        counter log
+        counter log jump fw71_policy_2
         #
         # Rule 2 (global)
         #
@@ -276,18 +268,13 @@ table ip fwf_filter {
         ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
-        # Rule fw71_policy_2 0 (global)
-        #
-        counter log drop
-        #
         # Rule 0 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Branch action not yet supported by nftables compiler
-        counter log
+        counter log jump fw71_policy_2
         #
         # Rule 2 (global)
         #
@@ -301,23 +288,28 @@ table ip fwf_filter {
         ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
         #
-        # Rule fw71_policy_2 0 (global)
-        #
-        counter log drop
-        #
         # Rule 0 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr 200.200.200.200 ct state new counter accept
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Branch action not yet supported by nftables compiler
-        counter log
+        counter log jump fw71_policy_2
         #
         # Rule 2 (global)
         #
         # Automatically generated 'catch all' rule
         counter log drop
+    }
+
+    chain fw71_policy_2 {
+        #
+        # Rule fw71_policy_2 0 (global)
+        #
+        counter log drop
+    }
+
+    chain mangle_ruleset {
     }
 }
 

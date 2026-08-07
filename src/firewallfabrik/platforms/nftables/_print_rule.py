@@ -1637,11 +1637,20 @@ class PrintRule_nft(PolicyRuleProcessor):
                 if verdict == 'reject':
                     return self._print_reject(rule)
                 return verdict
-            # Custom chain jump
-            self.compiler.warning(
-                rule,
-                f'Custom chain jump not yet supported by nftables compiler: {target}',
-            )
+            # A branch rule set has a regular chain of its own, so the jump
+            # is exactly what the rule means.  Any other name is a chain no
+            # part of this ruleset declares - branching back into the top
+            # rule set, for one, whose chains are hooked and cannot be
+            # jumped to.  nftables refuses the whole ruleset over such a
+            # jump, so the rule is reported and left without a verdict.
+            nft_comp = cast('PolicyCompiler_nft', self.compiler)
+            if target not in getattr(nft_comp, 'branch_chains', set()):
+                self.compiler.error(
+                    rule,
+                    f'Rule branches to "{target}", which is not a rule set '
+                    'nftables can jump to',
+                )
+                return ''
             return f'jump {target}'
 
         # Fall back to action

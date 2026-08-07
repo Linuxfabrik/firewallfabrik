@@ -12,20 +12,28 @@
 #  at rule sets defined in object
 #  firewall-base-rulesets
 #
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 0 (global): Branch action not yet supported by nftables compiler
-# Rule 1 (global): Branch action not yet supported by nftables compiler
-# Rule 1 (global): Branch action not yet supported by nftables compiler
-# Rule 2 (global): Branch action not yet supported by nftables compiler
-# Rule 2 (global): Branch action not yet supported by nftables compiler
-# Rule 3 (global): Branch action not yet supported by nftables compiler
-# Rule 3 (global): Branch action not yet supported by nftables compiler
-# Rule 4 (global): Branch action not yet supported by nftables compiler
-# Rule 4 (global): Branch action not yet supported by nftables compiler
-# Rule 4 (global): Branch action not yet supported by nftables compiler
-# Rule 5 (global): Branch action not yet supported by nftables compiler
-# Rule 5 (global): Branch action not yet supported by nftables compiler
-# Rule 5 (global): Branch action not yet supported by nftables compiler
+# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
+# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
 
 FWBDEBUG=""
 
@@ -73,82 +81,74 @@ table ip fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Branch action not yet supported by nftables compiler
+        # # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.10 counter
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Branch action not yet supported by nftables compiler
+        # # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.20 counter
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
+        ip saddr 192.168.1.0/24 counter jump rule2_branch
     }
 
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.10 counter
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Branch action not yet supported by nftables compiler
+        # # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.10 counter
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Branch action not yet supported by nftables compiler
+        # # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.20 counter
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Branch action not yet supported by nftables compiler
+        # # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.20 counter
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
+        ip saddr 192.168.1.0/24 counter jump rule2_branch
     }
 
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule rule2_branch 0 (global)
-        #
-        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
-        #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Branch action not yet supported by nftables compiler
+        # # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.10 counter
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Branch action not yet supported by nftables compiler
+        # # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.20 counter
         #
         # Rule 5 (global)
         #
-        # # Rule 5 (global): Branch action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
+        ip saddr 192.168.1.0/24 counter jump rule2_branch
+    }
+
+    chain rule2_branch {
+        #
+        # Rule rule2_branch 0 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } counter log level debug drop
     }
 }
 
