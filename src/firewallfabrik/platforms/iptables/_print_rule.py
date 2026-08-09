@@ -147,6 +147,28 @@ REJECT_TYPES_IPV6 = frozenset(
 XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
 
+# The release a match first shipped in, per address family (IPv4, IPv6).
+# Several of these started out as IPv4-only extensions and only reached
+# ip6tables when netfilter merged the two extension trees into `libxt_`,
+# which is why the two columns differ.  Reproduce with, in the netfilter
+# iptables checkout:
+#
+#   c=$(git log --all --format=%H --diff-filter=A -- extensions/libxt_tos.c \
+#         | tail -1)
+#   git tag --contains $c | grep -E '^v1\.[0-9]' | sort -V | head -1
+#
+# tos:     libipt_tos.c v1.0.0-alpha, libxt_tos.c v1.4.1
+# dscp:    libipt_dscp.c v1.2.6,      libxt_dscp.c v1.4.0
+# iprange: libipt_iprange.c v1.2.9,   libxt_iprange.c v1.4.1
+# set:     libipt_set.c v1.3.0,       libxt_set.c v1.4.9
+# There never was a libip6t_ variant of any of them.
+_MATCH_FIRST_RELEASE = {
+    'tos': ('1.0.0', '1.4.1'),
+    'dscp': ('1.2.6', '1.4.0'),
+    'iprange': ('1.2.9', '1.4.1'),
+    'set': ('1.3.0', '1.4.9'),
+}
+
 # The LOG target carries its prefix in a 30-byte field and the NFLOG one
 # in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
 # xt_LOG.h and xt_NFLOG.h), so one character of each is the terminator.
@@ -172,7 +194,6 @@ class PrintRule(PolicyRuleProcessor):
     def __init__(self, name: str = 'generate iptables shell script') -> None:
         super().__init__(name)
         self.minus_n_tracker_initialized: bool = False
-        self.have_m_iprange: bool = False
         self.current_rule_label: str = ''
         self.version: str = ''
         self.reported_long_chains: set[str] = set()
@@ -180,7 +201,6 @@ class PrintRule(PolicyRuleProcessor):
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
         self.version = get_iptables_version(self.compiler.fw)
-        self.have_m_iprange = version_compare(self.version, '1.2.11') >= 0
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -256,7 +276,12 @@ class PrintRule(PolicyRuleProcessor):
         command_line += self._print_dst_service_from_rule(rule)
 
         if srv:
-            command_line += self._print_ip_service_options(rule, srv)
+            ip_options = self._print_ip_service_options(rule, srv)
+            if ip_options is None:
+                if not self._keeps_the_ruleset_tighter(rule):
+                    return ''
+                ip_options = ''
+            command_line += ip_options
             custom_srv = self._print_custom_services(rule, srv)
             if custom_srv is None:
                 if not self._keeps_the_ruleset_tighter(rule):
@@ -669,6 +694,8 @@ class PrintRule(PolicyRuleProcessor):
             cidr = range_to_cidr(start, end)
             if cidr:
                 return f'{neg}{flag} {cidr} '
+            if not self._match_available(rule, 'iprange'):
+                return ''
             range_flag = '--src-range' if slot == 'src' else '--dst-range'
             return f'-m iprange {neg}{range_flag} {start}-{end} '
         return f'{neg}{flag} {start} '
@@ -847,10 +874,33 @@ class PrintRule(PolicyRuleProcessor):
             return f' {flag} {icmp_type} '
         return f' {flag} {icmp_type}/{icmp_code}  '
 
-    def _print_ip_service_options(self, rule: CompRule, srv) -> str:
+    def _match_available(self, rule: CompRule, match: str) -> bool:
+        """Report whether the pinned iptables knows a match, for this family.
+
+        Several matches reached ip6tables later than iptables, because they
+        only became family neutral when netfilter merged the two extension
+        trees.  A binary that predates the merge answers "Couldn't load
+        match", which stops the activation script with the built-in policies
+        already set to DROP, so the rule is reported and left out instead.
+        """
+        first = _MATCH_FIRST_RELEASE[match][bool(self.compiler.ipv6_policy)]
+        if version_compare(self.version, first) >= 0:
+            return True
+        tool = 'ip6tables' if self.compiler.ipv6_policy else 'iptables'
+        self.compiler.error(
+            rule,
+            f'{tool} before {first} has no "{match}" match; the rule is left out',
+        )
+        return False
+
+    def _print_ip_service_options(self, rule: CompRule, srv) -> str | None:
         """Print IPService options (fragments, TOS/DSCP, IP options, TCP flags).
 
         Matches fwbuilder PolicyCompiler_PrintRule::_printIP().
+
+        Returns ``None`` when the pinned iptables cannot carry one of the
+        options, so the caller can leave the rule out; emitting it without
+        the option would apply it to traffic the rule does not name.
         """
         if srv is None:
             return ''
@@ -866,6 +916,10 @@ class PrintRule(PolicyRuleProcessor):
             # TOS / DSCP
             tos = data.get('tos', '')
             dscp = data.get('dscp', '')
+            if (tos and not self._match_available(rule, 'tos')) or (
+                dscp and not self._match_available(rule, 'dscp')
+            ):
+                return None
             if tos:
                 parts.append(f'-m tos --tos {tos}')
             elif dscp:

@@ -98,8 +98,15 @@ class OSConfigurator_linux24(OSConfigurator):
         self.virtual_addresses_for_nat: dict[str, str] = {}
         self.known_interfaces: list[str] = []
 
+        # ipset started out as an IPv4-only extension: `libipt_set.c` is
+        # `.family = NFPROTO_IPV4` up to and including 1.4.8, and only the
+        # family-neutral `libxt_set.c` of 1.4.9 gave ip6tables a `set` match
+        # (netfilter extensions/). An older ip6tables answers "Couldn't load
+        # match 'set'", which stops the activation script, so the ruleset
+        # falls back to reading the table file into a shell variable.
         version = get_iptables_version(fw)
-        if version_compare(version, '1.4.1.1') >= 0:
+        first_release = '1.4.9' if ipv6 else '1.4.1.1'
+        if version_compare(version, first_release) >= 0:
             self.using_ipset = bool(fw.get_option('use_m_set'))
 
     def my_platform_name(self) -> str:

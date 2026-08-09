@@ -1315,10 +1315,29 @@ class StoreAction(PolicyRuleProcessor):
 class Logging2(PolicyRuleProcessor):
     """Process logging — create log chain with LOG/NFLOG + action rules."""
 
+    def __init__(self, name: str) -> None:
+        super().__init__(name)
+        self._reported_no_nflog = False
+
     def _log_target(self) -> str:
-        """Return 'NFLOG' when the firewall option is set, otherwise 'LOG'."""
+        """Return 'NFLOG' when the firewall option is set, otherwise 'LOG'.
+
+        The NFLOG target arrived in iptables 1.3.7 (netfilter
+        extensions/libipt_NFLOG.c and libip6t_NFLOG.c, merged into
+        libxt_NFLOG.c in 1.4.0).  An older binary answers "Couldn't load
+        target 'NFLOG'", which stops the activation script, so such a
+        firewall keeps the LOG target it has always had.
+        """
         if self.compiler.fw.get_option('use_NFLOG'):
-            return 'NFLOG'
+            ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+            if version_compare(ipt_comp.version, '1.3.7') >= 0:
+                return 'NFLOG'
+            if not self._reported_no_nflog:
+                self._reported_no_nflog = True
+                self.compiler.warning(
+                    'iptables before 1.3.7 has no NFLOG target; logging goes '
+                    'through LOG instead'
+                )
         return 'LOG'
 
     def process_next(self) -> bool:
