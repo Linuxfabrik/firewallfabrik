@@ -58,7 +58,10 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     range_to_cidr,
 )
-from firewallfabrik.platforms.linux._netfilter import sanitize_log_prefix
+from firewallfabrik.platforms.linux._netfilter import (
+    reject_type_token,
+    sanitize_log_prefix,
+)
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 
 if TYPE_CHECKING:
@@ -215,6 +218,47 @@ def print_mark_match(tag_code: str, negated: bool) -> str:
         return f'meta mark {"!= " if negated else ""}{value}'
     return f'meta mark and {mask.strip()} {op} {value}'
 
+
+# Every reject type iptables accepts after `--reject-with`, mapped to the
+# code name nftables uses for the same ICMP message.  The iptables names are
+# the primary spellings and the aliases of `reject_table` (netfilter
+# extensions/libipt_REJECT.c and libip6t_REJECT.c); the nftables names are
+# `icmp_code_tbl` and `icmpv6_code_tbl` (netfilter nftables
+# src/datatype.c), which is also what `iptables-translate` produces
+# (extensions/libipt_REJECT.txlate, libip6t_REJECT.txlate).  IPv6 has six
+# codes and no equivalent of the IPv4 net/host/protocol distinction, so
+# those three collapse onto addr-unreachable and port-unreachable the way
+# the kernel does.
+_REJECT_CODE_IPV4 = {
+    'admin-prohib': 'admin-prohibited',
+    'host-prohib': 'host-prohibited',
+    'host-unreach': 'host-unreachable',
+    'icmp-admin-prohibited': 'admin-prohibited',
+    'icmp-host-prohibited': 'host-prohibited',
+    'icmp-host-unreachable': 'host-unreachable',
+    'icmp-net-prohibited': 'net-prohibited',
+    'icmp-net-unreachable': 'net-unreachable',
+    'icmp-port-unreachable': 'port-unreachable',
+    'icmp-proto-unreachable': 'prot-unreachable',
+    'net-prohib': 'net-prohibited',
+    'net-unreach': 'net-unreachable',
+    'port-unreach': 'port-unreachable',
+    'proto-unreach': 'prot-unreachable',
+}
+_REJECT_CODE_IPV6 = {
+    'addr-unreach': 'addr-unreachable',
+    'adm-prohibited': 'admin-prohibited',
+    'icmp6-addr-unreachable': 'addr-unreachable',
+    'icmp6-adm-prohibited': 'admin-prohibited',
+    'icmp6-no-route': 'no-route',
+    'icmp6-policy-fail': 'policy-fail',
+    'icmp6-port-unreachable': 'port-unreachable',
+    'icmp6-reject-route': 'reject-route',
+    'no-route': 'no-route',
+    'policy-fail': 'policy-fail',
+    'port-unreach': 'port-unreachable',
+    'reject-route': 'reject-route',
+}
 
 # The payload-match keywords that tell nftables which address family a rule
 # belongs to.  Only these carry a family dependency into an `inet` table
@@ -1681,43 +1725,15 @@ class PrintRule_nft(PolicyRuleProcessor):
         is_ipv6 = getattr(self.compiler, 'ipv6_policy', False)
         icmp_kw = 'icmpv6' if is_ipv6 else 'icmp'
 
-        s = action_on_reject.lower()
+        token = reject_type_token(action_on_reject, is_ipv6)
 
-        if 'tcp' in s and ('rst' in s or 'reset' in s):
+        if token == 'tcp-reset':  # nosec B105
             return 'reject with tcp reset'
 
-        if 'icmp' in s or 'unreachable' in s or 'prohibited' in s:
-            if is_ipv6:
-                # IPv6: only addr-/port-unreachable and adm-prohibited
-                # are meaningful.  "net" and "host" map to
-                # addr-unreachable; "proto" (unreachable) has no exact
-                # IPv6 equivalent and is closest to port-unreachable.
-                if 'unreachable' in s:
-                    if 'net' in s or 'host' in s or 'addr' in s:
-                        return f'reject with {icmp_kw} addr-unreachable'
-                    if 'port' in s or 'proto' in s:
-                        return f'reject with {icmp_kw} port-unreachable'
-                    return f'reject with {icmp_kw} addr-unreachable'
-                if 'prohibited' in s:
-                    return f'reject with {icmp_kw} admin-prohibited'
-            else:
-                if 'unreachable' in s:
-                    if 'net' in s:
-                        return f'reject with {icmp_kw} net-unreachable'
-                    if 'host' in s:
-                        return f'reject with {icmp_kw} host-unreachable'
-                    if 'port' in s:
-                        return f'reject with {icmp_kw} port-unreachable'
-                    if 'proto' in s:
-                        return f'reject with {icmp_kw} prot-unreachable'
-                    return f'reject with {icmp_kw} host-unreachable'
-                if 'prohibited' in s:
-                    if 'net' in s:
-                        return f'reject with {icmp_kw} net-prohibited'
-                    if 'host' in s:
-                        return f'reject with {icmp_kw} host-prohibited'
-                    if 'admin' in s:
-                        return f'reject with {icmp_kw} admin-prohibited'
+        table = _REJECT_CODE_IPV6 if is_ipv6 else _REJECT_CODE_IPV4
+        code = table.get(token)
+        if code:
+            return f'reject with {icmp_kw} {code}'
 
         self.compiler.warning(
             rule,

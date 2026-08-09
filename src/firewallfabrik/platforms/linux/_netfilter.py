@@ -91,3 +91,104 @@ def sanitize_log_prefix(prefix: str) -> str:
     return ''.join(
         "'" if char == '"' else char for char in prefix if char.isprintable()
     )
+
+
+# Everything the REJECT target accepts after --reject-with, primary names and
+# aliases, per address family (netfilter iptables extensions/libipt_REJECT.c
+# and libip6t_REJECT.c, reject_table).  REJECT_parse() compares against this
+# table and calls xtables_error() on anything else, which stops the whole
+# activation script, so a value coming from the rule options is checked
+# against it before it reaches the command line.
+REJECT_TYPES_IPV4 = frozenset(
+    {
+        'admin-prohib',
+        'host-prohib',
+        'host-unreach',
+        'icmp-admin-prohibited',
+        'icmp-host-prohibited',
+        'icmp-host-unreachable',
+        'icmp-net-prohibited',
+        'icmp-net-unreachable',
+        'icmp-port-unreachable',
+        'icmp-proto-unreachable',
+        'net-prohib',
+        'net-unreach',
+        'port-unreach',
+        'proto-unreach',
+        'tcp-reset',
+        'tcp-rst',
+    }
+)
+REJECT_TYPES_IPV6 = frozenset(
+    {
+        'addr-unreach',
+        'adm-prohibited',
+        'icmp6-addr-unreachable',
+        'icmp6-adm-prohibited',
+        'icmp6-no-route',
+        'icmp6-policy-fail',
+        'icmp6-port-unreachable',
+        'icmp6-reject-route',
+        'no-route',
+        'policy-fail',
+        'port-unreach',
+        'reject-route',
+        'tcp-reset',
+    }
+)
+
+
+def reject_type_token(value: str, ipv6: bool) -> str:
+    """Return the iptables ``--reject-with`` token *value* stands for.
+
+    The GUI stores a human-readable name such as "ICMP host unreachable",
+    which fwbuilder maps to a token by looking for substrings
+    (``PolicyCompiler_PrintRule::_printActionOnReject``).  An imported
+    ``.fwb`` may instead carry the token itself.  Both go through here, so
+    the two backends pick the same ICMP message for the same rule: the
+    iptables printer writes the token out, the nftables one looks up the
+    code nftables calls it by.
+
+    Returns an empty string for a value neither of the two is, which
+    includes fwbuilder's own placeholders "none" and "NOP"
+    (``PolicyCompiler_ipt::resetActionOnReject``).
+    """
+    if not value:
+        return ''
+
+    if value == 'TCP RST':
+        return 'tcp-reset'
+
+    if value.startswith('ICMP') or value == 'ICMP-unreachable':
+        s = value.lower()
+        if ipv6:
+            # IPv6 has no net/host/protocol distinction: the kernel knows
+            # only address- and port-unreachable plus admin-prohibited
+            # (netfilter nftables src/datatype.c, icmpv6_code_tbl).
+            if 'unreachable' in s:
+                if 'port' in s or 'proto' in s:
+                    return 'icmp6-port-unreachable'
+                return 'icmp6-addr-unreachable'
+            if 'prohibited' in s:
+                return 'icmp6-adm-prohibited'
+        else:
+            if 'unreachable' in s:
+                if 'net' in s:
+                    return 'icmp-net-unreachable'
+                if 'port' in s:
+                    return 'icmp-port-unreachable'
+                if 'proto' in s:
+                    return 'icmp-proto-unreachable'
+                return 'icmp-host-unreachable'
+            if 'prohibited' in s:
+                if 'net' in s:
+                    return 'icmp-net-prohibited'
+                if 'admin' in s:
+                    return 'icmp-admin-prohibited'
+                return 'icmp-host-prohibited'
+
+    token = value.lower()
+    if token in (REJECT_TYPES_IPV6 if ipv6 else REJECT_TYPES_IPV4):
+        return token
+
+    return ''
