@@ -12,6 +12,8 @@
 # Compiled for iptables (any version)
 #
 
+# Rule 11 (NAT): MAC address "00:10:4b:de:e9:6f" cannot be used as a destination, iptables can only match the source MAC; the rule is left out
+
 FWBDEBUG=""
 RETVAL=0
 

@@ -240,12 +240,19 @@ class NATPrintRule(NATRuleProcessor):
         odst = ipt_comp.get_first_odst(rule)
         if isinstance(odst, PhysAddress):
             # The mac module only matches the source address; iptables has
-            # no destination equivalent.
+            # no destination equivalent (netfilter extensions/libxt_mac.c
+            # knows `--mac-source` alone).  Reporting it is not enough: a
+            # rule that keeps its target but loses its destination match
+            # translates every address the rest of the rule allows, so it
+            # goes the way of the other objects that cannot be rendered.
             self.compiler.error(
                 rule,
                 f'MAC address "{odst.get_address()}" cannot be used as a '
-                'destination, iptables can only match the source MAC',
+                'destination, iptables can only match the source MAC; the '
+                'rule is left out',
             )
+            if rule.ipt_target != 'RETURN':
+                return ''
         elif is_run_time_address_table(odst):
             cmd += self._print_address_table(odst, rule, 'odst')
         elif odst:

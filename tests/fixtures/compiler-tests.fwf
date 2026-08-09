@@ -4867,6 +4867,29 @@ libraries:
                       - 'Library:Standard/Network:Any'
                     tsrv:
                       - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 11
+                    comment: 'Original destination is a host that only has a MAC address'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:mac-only-host'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
               - type: 'NAT'
                 name: 'NAT_ipv6'
                 ipv6: true
@@ -6979,6 +7002,37 @@ libraries:
                         inet_addr_mask:
                           address: '203.0.113.42'
                           netmask: '255.255.255.0'
+              - type: 'Host'
+                name: 'mac-only-host'
+                comment: 'Only reachable by its MAC, so it can name no IP address'
+                management:
+                  address: '0.0.0.0'
+                  snmp:
+                    enabled: false
+                    read_community: ''
+                    write_community: ''
+                  fwbd:
+                    enabled: false
+                    identity: ''
+                    port: -1
+                  install_script:
+                    enabled: false
+                    command: ''
+                    arguments: ''
+                interfaces:
+                  - name: 'eth0'
+                    data:
+                      dedicated_failover: false
+                      dyn: false
+                      label: ''
+                      security_level: '0'
+                      unnum: false
+                      unprotected: false
+                    addresses:
+                      - type: 'PhysAddress'
+                        name: 'mac-only-host:eth0:mac'
+                        inet_addr_mask:
+                          address: '00:10:4b:de:e9:6f'
               - type: 'Host'
                 name: 'web-server'
                 management:
