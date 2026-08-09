@@ -339,7 +339,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule 17 (global)
         #
@@ -479,7 +479,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule 17 (global)
         #
@@ -582,7 +582,7 @@ table inet fwf_filter {
         #
         # Rule 15 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule 17 (global)
         #

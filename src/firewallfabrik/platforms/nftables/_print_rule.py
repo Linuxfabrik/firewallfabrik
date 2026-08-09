@@ -537,10 +537,16 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         if not self.compiler.shared_inet_table:
             return False
+        # Only the *leading* keyword of a clause decides this, because only
+        # a payload expression carries a family.  Reading any token would
+        # take `meta l4proto icmp` - which an ICMP service without a type
+        # renders to - for an `icmp` payload match, and that clause is
+        # family neutral: it matches an IPv6 packet whose last next-header
+        # is 1 just as happily (netfilter nftables src/meta.c).
         return not any(
-            token in _FAMILY_ANCHORING_KEYWORDS
+            part.split()[0] in _FAMILY_ANCHORING_KEYWORDS
             for part in match_parts
-            for token in part.split()
+            if part.split()
         )
 
     def _get_af_prefix(self, rule: CompRule, srv) -> str:

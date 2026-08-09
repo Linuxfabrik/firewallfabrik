@@ -278,7 +278,7 @@ table inet fwf_filter {
         #
         # Rule fw-ipv6-3 2 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule fw-ipv6-3 3 (global)
         #
@@ -319,7 +319,7 @@ table inet fwf_filter {
         #
         # Rule fw-ipv6-3 2 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule fw-ipv6-3 3 (global)
         #
@@ -360,7 +360,7 @@ table inet fwf_filter {
         #
         # Rule fw-ipv6-3 2 (global)
         #
-        meta l4proto icmp ct state new counter accept
+        meta nfproto ipv4 meta l4proto icmp ct state new counter accept
         #
         # Rule fw-ipv6-3 3 (global)
         #

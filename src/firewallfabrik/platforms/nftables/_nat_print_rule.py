@@ -770,10 +770,15 @@ class NATPrintRule_nft(NATRuleProcessor):
         return f'dnat to numgen inc mod {count} map {{ {mapping} }}'
 
     # A transport protocol is already constrained when the assembled match
-    # carries a tcp/udp/sctp/dccp keyword, an explicit `meta l4proto`, or the
-    # merged `th sport`/`th dport` matcher.
+    # carries a protocol payload expression, an explicit `meta l4proto`, or
+    # the merged `th sport`/`th dport` matcher.  The protocol keyword has to
+    # be the head of its own clause: a bare `\btcp\b` also matches inside a
+    # set name such as `@tcp.hosts`, and the missing `meta l4proto` then
+    # costs the whole ruleset ("transport protocol mapping is only valid
+    # after transport protocol match").
     _HAS_L4PROTO_RE: ClassVar[re.Pattern] = re.compile(
-        r'\b(?:tcp|udp|sctp|dccp|udplite)\b|l4proto|\bth [sd]port\b'
+        r'(?:^|\s)(?:(?:tcp|udp|sctp|dccp|udplite|th)\s+[sd]port|'
+        r'meta\s+l4proto)\b'
     )
 
     def _nat_l4proto_prefix(self, rule: CompRule, existing_parts: list[str]) -> str:
