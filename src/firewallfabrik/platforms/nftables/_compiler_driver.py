@@ -577,6 +577,16 @@ class CompilerDriver_nft(CompilerDriver):
 
         mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
+        mangle_compiler.branch_chains = self._branch_chains
+        # A branch rule set has a chain of its own in the mangle table too.
+        # Without this the chain of its rules is never pinned, and
+        # SetChainPreroutingForTag, SetChainPostroutingForTag and
+        # DecideOnChainForClassify put them into the hooked mangle chains,
+        # where they act on all traffic instead of only where a rule with
+        # the Branch action jumps to them (CompilerDriver_ipt does the same
+        # for the mangle table).
+        if not self._is_top_ruleset(pol_rs):
+            mangle_compiler.register_rule_set_chain(nft_object_name(pol_rs.name))
         mangle_compiler.set_source_ruleset(pol_rs)
         mangle_compiler.source_ruleset = pol_rs
 
@@ -593,6 +603,11 @@ class CompilerDriver_nft(CompilerDriver):
             mangle_compiler.compile()
             mangle_compiler.epilog()
 
+        # A branch chain is kept even when it stays empty: nftables refuses
+        # the whole ruleset over a jump to a chain that is not declared, and
+        # the rule that jumps into this branch lives in another rule set.
+        if mangle_compiler.rule_set_chain:
+            mangle_chains.setdefault(mangle_compiler.rule_set_chain, [])
         for chain_name, rules in mangle_compiler.chain_rules.items():
             if rules:
                 mangle_chains.setdefault(chain_name, []).extend(rules)
@@ -708,14 +723,26 @@ class CompilerDriver_nft(CompilerDriver):
         if self.have_connmark_in_output:
             auto_mangle['output'] = restore_mark
 
-        # Only the chains that actually carry a rule are declared: an empty
-        # chain at the mangle priority would hook every packet for nothing.
+        # Only the hooked chains that actually carry a rule are declared: an
+        # empty chain at the mangle priority would hook every packet for
+        # nothing.
+        mangle_hooks = ('prerouting', 'input', 'forward', 'output', 'postrouting')
         mangle_by_chain = [
             (chain, auto_mangle.get(chain, '') + ''.join(mangle_chains.get(chain, [])))
-            for chain in ('prerouting', 'input', 'forward', 'output', 'postrouting')
+            for chain in mangle_hooks
         ]
         mangle_by_chain = [(c, r) for c, r in mangle_by_chain if r.strip()]
-        have_mangle = bool(mangle_by_chain)
+        # Everything else a rule set claimed is a branch chain, declared
+        # even when empty for the same reason as in the filter table.
+        mangle_branch_chains = sorted(
+            chain for chain in mangle_chains if chain not in mangle_hooks
+        )
+        have_mangle = bool(
+            mangle_by_chain
+            or any(
+                ''.join(mangle_chains[chain]).strip() for chain in mangle_branch_chains
+            )
+        )
 
         # Atomically delete our tables before recreating them.
         # "create + delete" ensures deletion works even on first run
@@ -745,6 +772,13 @@ class CompilerDriver_nft(CompilerDriver):
                     ' policy accept;\n'
                 )
                 out.write(rules)
+                out.write('    }\n')
+            # A branch rule set gets a regular chain here as well: no hook,
+            # no policy, so it runs only where a rule jumps to it.
+            for chain in mangle_branch_chains:
+                out.write('\n')
+                out.write(f'    chain {chain} {{\n')
+                out.write(''.join(mangle_chains[chain]))
                 out.write('    }\n')
             out.write('}\n')
             out.write('\n')

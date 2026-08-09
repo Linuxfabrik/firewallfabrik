@@ -340,14 +340,6 @@ table ip fwf_mangle {
         type filter hook prerouting priority mangle; policy accept;
         counter meta mark set ct mark
         #
-        # Rule mymark 0 (global)
-        #
-        ip daddr 192.168.2.0/24 ct state new counter meta mark set 16
-        #
-        # Rule mymark 1 (global)
-        #
-        ct state new counter meta mark set 2
-        #
         # Rule 0 (global)
         #
         meta l4proto 50 ct state new counter meta mark set 16
@@ -411,17 +403,25 @@ table ip fwf_mangle {
         tcp dport 80 ct state new counter ct mark set mark
     }
 
+    chain input {
+        type filter hook input priority mangle; policy accept;
+        #
+        # Rule 37 (global)
+        #
+        counter jump mymark
+    }
+
+    chain forward {
+        type filter hook forward priority mangle; policy accept;
+        #
+        # Rule 37 (global)
+        #
+        counter jump mymark
+    }
+
     chain output {
         type filter hook output priority mangle; policy accept;
         counter meta mark set ct mark
-        #
-        # Rule mymark 0 (global)
-        #
-        ip daddr 192.168.2.0/24 ct state new counter meta mark set 16
-        #
-        # Rule mymark 1 (global)
-        #
-        ct state new counter meta mark set 2
         #
         # Rule 0 (global)
         #
@@ -511,6 +511,10 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 51 ct state new counter meta mark set 10
         oifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         oifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 37 (global)
+        #
+        counter jump mymark
         #
         # Rule mangle_rules 1 (global)
         #
@@ -610,6 +614,17 @@ table ip fwf_mangle {
         # Rule mangle_rules 2 (global)
         #
         meta mark 1 counter meta priority set 1:12
+    }
+
+    chain mymark {
+        #
+        # Rule mymark 0 (global)
+        #
+        ip daddr 192.168.2.0/24 ct state new counter meta mark set 16
+        #
+        # Rule mymark 1 (global)
+        #
+        ct state new counter meta mark set 2
     }
 }
 

@@ -1596,6 +1596,14 @@ class KeepMangleTableRules(PolicyRuleProcessor):
             or rule.get_option('routing', False)
             or rule.get_option('classification', False)
             or rule.get_option('put_in_mangle_table', False)
+            # A rule branching into a rule set that carries mangle rules has
+            # to survive this pass, or nothing would ever jump into that
+            # rule set's mangle chain (MangleTableCompiler_ipt does the
+            # same).  Despite its name the option is platform neutral.
+            or (
+                rule.action == PolicyAction.Branch
+                and rule.get_option('ipt_branch_in_mangle', False)
+            )
             or _is_mangle_only_rule_set(self.compiler)
         ):
             self.tmp_queue.append(rule)

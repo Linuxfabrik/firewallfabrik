@@ -325,8 +325,7 @@ table ip fwf_mangle {
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta mark set 2
     }
 
-    chain postrouting {
-        type filter hook postrouting priority mangle; policy accept;
+    chain classify_2 {
         #
         # Rule classify_2 0 (global)
         #

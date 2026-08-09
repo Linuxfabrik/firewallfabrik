@@ -236,8 +236,145 @@ script_body() {
     $NFT -f /dev/stdin <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_mangle {}
+delete table ip fwf_mangle
 table ip fwf_nat {}
 delete table ip fwf_nat
+
+table ip fwf_mangle {
+    chain prerouting {
+        type filter hook prerouting priority mangle; policy accept;
+        #
+        # Rule 10 (eth1)
+        #
+        iifname "eth1" meta l4proto 50 counter jump rule3_branch
+        iifname "eth1" meta l4proto 51 counter jump rule3_branch
+    }
+
+    chain input {
+        type filter hook input priority mangle; policy accept;
+        #
+        # Rule 7 (global)
+        #
+        # green rules branch
+        # also in mangle table
+        meta l4proto 50 counter jump rule0_branch
+        meta l4proto 51 counter jump rule0_branch
+        #
+        # Rule 8 (global)
+        #
+        meta l4proto 50 counter jump rule1_branch
+        meta l4proto 51 counter jump rule1_branch
+        #
+        # Rule 9 (global)
+        #
+        ip saddr != 192.168.1.0/24 meta l4proto 50 counter jump rule2_branch
+        ip saddr != 192.168.1.0/24 meta l4proto 51 counter jump rule2_branch
+        #
+        # Rule 13 (global)
+        #
+        ip saddr 192.168.1.0/24 counter jump rule5_branch
+    }
+
+    chain forward {
+        type filter hook forward priority mangle; policy accept;
+        #
+        # Rule 7 (global)
+        #
+        # green rules branch
+        # also in mangle table
+        meta l4proto 50 counter jump rule0_branch
+        meta l4proto 51 counter jump rule0_branch
+        #
+        # Rule 8 (global)
+        #
+        meta l4proto 50 counter jump rule1_branch
+        meta l4proto 51 counter jump rule1_branch
+        #
+        # Rule 9 (global)
+        #
+        ip saddr != 192.168.1.0/24 meta l4proto 50 counter jump rule2_branch
+        ip saddr != 192.168.1.0/24 meta l4proto 51 counter jump rule2_branch
+        #
+        # Rule 12 (global)
+        #
+        ip daddr 192.168.2.10 tcp dport 80 counter jump rule4_branch
+        #
+        # Rule 13 (global)
+        #
+        ip saddr 192.168.1.0/24 counter jump rule5_branch
+    }
+
+    chain output {
+        type filter hook output priority mangle; policy accept;
+        #
+        # Rule 7 (global)
+        #
+        # green rules branch
+        # also in mangle table
+        meta l4proto 50 counter jump rule0_branch
+        meta l4proto 51 counter jump rule0_branch
+        #
+        # Rule 8 (global)
+        #
+        meta l4proto 50 counter jump rule1_branch
+        meta l4proto 51 counter jump rule1_branch
+        #
+        # Rule 9 (global)
+        #
+        ip saddr != 192.168.1.0/24 meta l4proto 50 counter jump rule2_branch
+        ip saddr != 192.168.1.0/24 meta l4proto 51 counter jump rule2_branch
+        #
+        # Rule 11 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 counter jump rule3_branch
+        oifname "eth1" meta l4proto 51 counter jump rule3_branch
+        #
+        # Rule 12 (global)
+        #
+        ip daddr 192.168.2.10 tcp dport 80 counter jump rule4_branch
+        #
+        # Rule 13 (global)
+        #
+        ip saddr 192.168.1.0/24 counter jump rule5_branch
+    }
+
+    chain postrouting {
+        type filter hook postrouting priority mangle; policy accept;
+        #
+        # Rule 11 (eth1)
+        #
+        oifname "eth1" meta l4proto 50 counter jump rule3_branch
+        oifname "eth1" meta l4proto 51 counter jump rule3_branch
+    }
+
+    chain rule0_branch {
+    }
+
+    chain rule1_branch {
+    }
+
+    chain rule2_branch {
+    }
+
+    chain rule3_branch {
+    }
+
+    chain rule4_branch {
+    }
+
+    chain rule5_branch {
+    }
+
+    chain rule6_branch {
+    }
+
+    chain rule_4_0_branch {
+    }
+
+    chain rule_4_1_branch {
+    }
+}
 
 table ip fwf_filter {
     chain input {
