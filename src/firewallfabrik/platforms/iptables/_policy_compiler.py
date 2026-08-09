@@ -46,6 +46,8 @@ from firewallfabrik.compiler.processors._generic import (
     SingleRuleFilter,
 )
 from firewallfabrik.compiler.processors._policy import (
+    AddressRangesInDst,
+    AddressRangesInSrc,
     DropRuleWithImpossibleInterface,
     ItfNegation,
     SpecialCaseAddressRangeInDst,
@@ -376,15 +378,30 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(ProcessMultiAddressObjectsInSrc('process MultiAddress objects in Src'))
         self.add(ProcessMultiAddressObjectsInDst('process MultiAddress objects in Dst'))
 
-        # Address range handling (iptables >= 1.2.11)
-        self.add(SpecialCaseAddressRangeInSrc('replace single address range in Src'))
-        self.add(SpecialCaseAddressRangeInDst('replace single address range in Dst'))
-        self.add(
-            SplitIfSrcMatchingAddressRange('split if Src has matching address range')
-        )
-        self.add(
-            SplitIfDstMatchingAddressRange('split if Dst has matching address range')
-        )
+        # The iprange match arrived in iptables 1.2.11; before that an
+        # address range has to be written out as the networks covering it
+        # (PolicyCompiler_ipt::compile picks addressRanges over
+        # specialCaseAddressRangeInRE below that release).
+        if version_compare(self.version, '1.2.11') < 0:
+            self.add(AddressRangesInSrc('process address ranges in Src'))
+            self.add(AddressRangesInDst('process address ranges in Dst'))
+        else:
+            self.add(
+                SpecialCaseAddressRangeInSrc('replace single address range in Src')
+            )
+            self.add(
+                SpecialCaseAddressRangeInDst('replace single address range in Dst')
+            )
+            self.add(
+                SplitIfSrcMatchingAddressRange(
+                    'split if Src has matching address range'
+                )
+            )
+            self.add(
+                SplitIfDstMatchingAddressRange(
+                    'split if Dst has matching address range'
+                )
+            )
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
         self.add(SplitIfSrcMatchesFw('split if src matches FW'))

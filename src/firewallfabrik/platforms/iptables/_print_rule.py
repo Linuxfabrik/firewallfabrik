@@ -118,13 +118,11 @@ MAX_LIMIT_BURST = 10000
 #
 # tos:     libipt_tos.c v1.0.0-alpha, libxt_tos.c v1.4.1
 # dscp:    libipt_dscp.c v1.2.6,      libxt_dscp.c v1.4.0
-# iprange: libipt_iprange.c v1.2.9,   libxt_iprange.c v1.4.1
 # set:     libipt_set.c v1.3.0,       libxt_set.c v1.4.9
 # There never was a libip6t_ variant of any of them.
 _MATCH_FIRST_RELEASE = {
     'tos': ('1.0.0', '1.4.1'),
     'dscp': ('1.2.6', '1.4.0'),
-    'iprange': ('1.2.9', '1.4.1'),
     'set': ('1.3.0', '1.4.9'),
 }
 
@@ -653,8 +651,6 @@ class PrintRule(PolicyRuleProcessor):
             cidr = range_to_cidr(start, end)
             if cidr:
                 return f'{neg}{flag} {cidr} '
-            if not self._match_available(rule, 'iprange'):
-                return ''
             range_flag = '--src-range' if slot == 'src' else '--dst-range'
             return f'-m iprange {neg}{range_flag} {start}-{end} '
         return f'{neg}{flag} {start} '

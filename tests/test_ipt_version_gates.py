@@ -37,7 +37,6 @@ from firewallfabrik.platforms.iptables._print_rule import _MATCH_FIRST_RELEASE
 _EXTENSION_FILES = {
     'tos': ('libipt_tos.c', 'libxt_tos.c'),
     'dscp': ('libipt_dscp.c', 'libxt_dscp.c'),
-    'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
 }
 

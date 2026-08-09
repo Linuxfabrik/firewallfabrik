@@ -28,6 +28,8 @@ from firewallfabrik.core.objects import (
     Interface,
     IPv4,
     IPv6,
+    Network,
+    NetworkIPv6,
     PhysAddress,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -376,6 +378,95 @@ class SpecialCaseAddressRangeInSrc(SpecialCaseAddressRangeInRE):
 
 class SpecialCaseAddressRangeInDst(SpecialCaseAddressRangeInRE):
     """Replace single-address AddressRange in Dst with an IPv4/IPv6 object."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'dst')
+
+
+class AddressRangesInRE(PolicyRuleProcessor):
+    """Replace an AddressRange with the networks that cover it.
+
+    The ``iprange`` match arrived in iptables 1.2.11, so an older binary
+    has no way to compare an address against a range.  fwbuilder answers
+    that by writing the range out as the smallest set of CIDR blocks that
+    covers it and letting the rule match on those instead
+    (``PolicyCompiler_ipt::compile`` picks ``addressRanges`` over
+    ``specialCaseAddressRangeInRE`` below 1.2.11).  The blocks become one
+    rule each further down the pipeline, which is what the reference
+    output shows: `-d 192.168.1.10/31`, `-d 192.168.1.12/30`, ...
+
+    Corresponds to C++ ``PolicyCompiler::addressRanges``.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements:
+            self.tmp_queue.append(rule)
+            return True
+
+        new_elements: list = []
+        for obj in elements:
+            networks = self._to_networks(obj, rule)
+            if networks is None:
+                new_elements.append(obj)
+            else:
+                new_elements.extend(networks)
+        setattr(rule, self._slot, new_elements)
+
+        self.tmp_queue.append(rule)
+        return True
+
+    def _to_networks(self, obj, rule) -> list | None:
+        """Return the networks covering *obj*, or None if it is not a range."""
+        if not isinstance(obj, AddressRange):
+            return None
+        start, end = obj.get_start_address(), obj.get_end_address()
+        if not start or not end:
+            return None
+        try:
+            blocks = list(
+                _ipa.summarize_address_range(
+                    _ipa.ip_address(start), _ipa.ip_address(end)
+                )
+            )
+        except (ValueError, TypeError):
+            self.compiler.error(
+                rule,
+                f'Address range "{obj.name}" does not name two addresses of '
+                'the same family',
+            )
+            return None
+
+        networks = []
+        for index, block in enumerate(blocks):
+            is_v4 = block.version == 4
+            cls = Network if is_v4 else NetworkIPv6
+            net = cls(id=uuid.uuid4(), name=f'{obj.name}_{index}')
+            net.inet_addr_mask = {
+                'address': str(block.network_address),
+                'netmask': str(block.netmask) if is_v4 else str(block.prefixlen),
+            }
+            networks.append(net)
+        return networks
+
+
+class AddressRangesInSrc(AddressRangesInRE):
+    """Replace an AddressRange in Src with the networks covering it."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'src')
+
+
+class AddressRangesInDst(AddressRangesInRE):
+    """Replace an AddressRange in Dst with the networks covering it."""
 
     def __init__(self, name: str) -> None:
         super().__init__(name, 'dst')
