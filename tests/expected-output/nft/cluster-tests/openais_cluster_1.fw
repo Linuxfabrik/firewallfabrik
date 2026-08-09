@@ -45,8 +45,8 @@ run_epilog_and_exit() {
     exit "$1"
 }
 
-script_body() {
-    $NFT -f /dev/stdin <<'NFT_RULES'
+nft_ruleset() {
+    cat <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
 table ip fwf_nat {}
@@ -192,6 +192,18 @@ table ip fwf_nat {
 NFT_RULES
 }
 
+# nft parses and evaluates the whole batch before it installs anything, and
+# refuses all of it over a single bad rule.  Asking first, while the running
+# ruleset is still in place, is what keeps a rejected ruleset from turning
+# into a firewall with no rules at all: the check touches nothing.
+check_ruleset() {
+    nft_ruleset | $NFT --check -f /dev/stdin
+}
+
+script_body() {
+    nft_ruleset | $NFT -f /dev/stdin
+}
+
 routing_script() {
     ip route add 172.24.1.0/24 via 172.24.0.100 dev eth0
 ip route add 172.24.1.0/24 via 172.24.0.100 dev eth1
@@ -287,13 +299,17 @@ case "$cmd" in
         log "Activating firewall script generated TIMESTAMP"
         check_nft
         prolog_commands
+        check_ruleset || {
+            log "Ruleset rejected by nft, keeping the running firewall"
+            run_epilog_and_exit 1
+        }
         stop_action
         script_body || run_epilog_and_exit 1
         routing_script
         ip_forward
+        RETVAL=$?
         epilog_commands
         log "Firewall script is done"
-        RETVAL=$?
         ;;
 
     stop)
