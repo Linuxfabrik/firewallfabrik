@@ -615,9 +615,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.NONAT:
             return 'accept'
 
-        # Flags mirror what the iptables compiler emits per rule type:
-        # MASQUERADE takes only --random; SNAT/DNAT take --random and
-        # --persistent; NETMAP (SNetnat/DNetnat) and REDIRECT take none.
+        # NETMAP (SNetnat/DNetnat) and REDIRECT take no flags.
         random_only = ' random' if rule.get_option('ipt_nat_random', False) else ''
 
         if rt == NATRuleType.Masq:
@@ -625,10 +623,14 @@ class NATPrintRule_nft(NATRuleProcessor):
             # still accepts a source port range, which is how a translation
             # to an address only known at run time keeps its ports (netfilter
             # extensions/libipt_MASQUERADE.txlate: `masquerade to :10-20`).
+            # Unlike the iptables MASQUERADE target, which has no such
+            # option, nftables can pin a client to the same translated
+            # address (netfilter nftables tests/py/ip/masquerade.t:12).
+            flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=True)
             if ports:
-                return f'masquerade to :{ports}{random_only}'
-            return f'masquerade{random_only}'
+                return f'masquerade to :{ports}{flags}'
+            return f'masquerade{flags}'
 
         if rt in (NATRuleType.SNetnat, NATRuleType.DNetnat):
             return self._print_netmap_action(

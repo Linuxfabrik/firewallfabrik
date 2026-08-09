@@ -318,16 +318,27 @@ class NATPrintRule(NATRuleProcessor):
         )
         return f' -m mac{neg}'
 
-    def _print_nat_placement(self, rule: CompRule) -> list[str]:
+    def _print_nat_placement(
+        self, rule: CompRule, masquerade: bool = False
+    ) -> list[str]:
         """Print the options that steer how the NAT target picks an address.
 
-        Both options belong to every NAT target that translates an address,
-        and both are refused by an iptables that predates them, which stops
-        the activation script.  `--random` arrived in 1.3.8 (netfilter
+        Both options are refused by an iptables that predates them, which
+        stops the activation script.  `--random` arrived in 1.3.8 (netfilter
         commit "iptables: add random option to SNAT") and `--persistent` in
         1.4.4 ("SNAT/DNAT: add support for persistent multi-range NAT
         mappings"); fwbuilder gates the latter on 1.4.3, one release too
         early.
+
+        MASQUERADE never had `--persistent` at all: its option table lists
+        `to-ports`, `random` and `random-fully` and nothing else (netfilter
+        extensions/libxt_NAT.c, and extensions/libipt_MASQUERADE.c in every
+        release before it), so iptables answers `unknown option
+        "--persistent"` and the activation script stops with the built-in
+        policies already set to DROP.  fwbuilder emits only `--random` for a
+        masquerading rule (NATCompiler_PrintRule.cpp).  nftables can express
+        it (`masquerade persistent`, nftables tests/py/ip/masquerade.t), so
+        the option is not lost there.
         """
         parts = []
         if rule.get_option('ipt_nat_random', False):
@@ -340,7 +351,13 @@ class NATPrintRule(NATRuleProcessor):
                     'port; the "Random" option is left out',
                 )
         if rule.get_option('ipt_nat_persistent', False):
-            if version_compare(self.version, '1.4.4') >= 0:
+            if masquerade:
+                self.compiler.warning(
+                    rule,
+                    'the MASQUERADE target has no "Persistent" option; it is '
+                    'left out of this rule',
+                )
+            elif version_compare(self.version, '1.4.4') >= 0:
                 parts.append('--persistent')
             else:
                 self.compiler.warning(
@@ -378,7 +395,7 @@ class NATPrintRule(NATRuleProcessor):
             ports = self._print_snat_ports(tsrv) if tsrv else ''
             if ports:
                 parts.append(f'--to-ports {ports}')
-            parts.extend(self._print_nat_placement(rule))
+            parts.extend(self._print_nat_placement(rule, masquerade=True))
             return ' '.join(parts)
 
         if rt == NATRuleType.SNAT and target == 'SNAT':
