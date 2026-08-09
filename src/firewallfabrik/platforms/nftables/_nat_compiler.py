@@ -49,6 +49,7 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
     TCPUDPService,
+    UserService,
 )
 from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
 from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
@@ -219,6 +220,9 @@ class NATCompiler_nft(NATCompiler):
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
         self.add(VerifyRuleWithMAC('verify MAC address usage in NAT rules'))
+        self.add(
+            CheckUserServiceInWrongChains('check user service against the NAT chain')
+        )
 
         self.add(GroupServicesByProtocol('group services by protocol'))
         self.add(VerifyRules2('check correctness of TSrv'))
@@ -1493,6 +1497,39 @@ class VerifyRuleWithMAC(NATRuleProcessor):
                 f"SNAT rule can not match MAC address. Object '{mac_name}' "
                 f'removed from the rule',
             )
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckUserServiceInWrongChains(NATRuleProcessor):
+    """Drop a NAT rule that matches the connection owner in prerouting.
+
+    ``meta skuid`` reads the socket the packet came from, which a packet
+    arriving from the wire does not have.  The kernel registers the socket
+    metadata for the local-out and postrouting hooks only (the same mask
+    ``net/netfilter/xt_owner.c`` declares for the iptables owner match), so
+    the rule is refused and, with it, the whole ruleset.  The policy
+    compiler already guards this; a NAT rule reaches prerouting through
+    every DNAT and Redirect rule.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        srv = rule.osrv[0] if rule.osrv else None
+        if isinstance(srv, UserService) and (rule.ipt_chain or '').lower() == (
+            'prerouting'
+        ):
+            self.compiler.warning(
+                rule,
+                'nftables matches the connection owner only in the output and '
+                'postrouting chains, where the packet still has the socket '
+                'that produced it',
+            )
+            return True  # drop rule
 
         self.tmp_queue.append(rule)
         return True

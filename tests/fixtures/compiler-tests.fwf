@@ -2947,6 +2947,10 @@ libraries:
                 dst_range_end: 33524
           - type: 'ServiceGroup'
             name: 'UserServices'
+            children:
+              - type: 'UserService'
+                name: 'user500'
+                userid: '500'
       - type: 'IntervalGroup'
         name: 'Time'
         children:
@@ -4884,6 +4888,30 @@ libraries:
                       - 'Library:Standard/Network:Any'
                     osrv:
                       - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 12
+                    comment: 'Original service matches the connection owner, which
+                      the prerouting hook cannot see'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UserServices/UserService:user500'
                     tdst:
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
                     tsrc:

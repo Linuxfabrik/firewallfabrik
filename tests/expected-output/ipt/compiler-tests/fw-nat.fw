@@ -13,6 +13,7 @@
 #
 
 # Rule 11 (NAT): MAC address "00:10:4b:de:e9:6f" cannot be used as a destination, iptables can only match the source MAC; the rule is left out
+# fw-nat:NAT:12: warning: Iptables matches module 'owner' only in the OUTPUT and POSTROUTING chains, where the packet still has the socket that produced it
 
 FWBDEBUG=""
 RETVAL=0

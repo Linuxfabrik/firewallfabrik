@@ -56,6 +56,7 @@ from firewallfabrik.core.objects import (
     TCPService,
     TCPUDPService,
     UDPService,
+    UserService,
 )
 from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
@@ -350,6 +351,9 @@ class NATCompiler_ipt(NATCompiler):
             )
         )
         self.add(VerifyRuleWithMAC('verify MAC address usage in NAT rules'))
+        self.add(
+            CheckUserServiceInWrongChains('check user service against the NAT chain')
+        )
         self.add(NATExpandAddressRanges('expand address ranges in NAT rules'))
 
         self.add(
@@ -1600,6 +1604,38 @@ class VerifyRuleWithMAC(NATRuleProcessor):
                     f"SNAT rule can not match MAC address. Object '{mac_name}' "
                     f'removed from the rule',
                 )
+
+        self.tmp_queue.append(rule)
+        return True
+
+
+class CheckUserServiceInWrongChains(NATRuleProcessor):
+    """Drop a NAT rule that matches the connection owner in prerouting.
+
+    The kernel registers the owner match for the local-out and postrouting
+    hooks only (``net/netfilter/xt_owner.c``: ``.hooks = (1 <<
+    NF_INET_LOCAL_OUT) | (1 << NF_INET_POST_ROUTING)``), because a packet
+    arriving from the wire has no socket to ask.  ``xt_check_match``
+    (``net/netfilter/x_tables.c``) refuses the rule with -EINVAL, and the
+    command iptables then reports as "Invalid argument" stops the
+    activation script.  The policy compiler has always guarded this; the
+    NAT one reaches prerouting through every DNAT and Redirect rule.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        srv = rule.osrv[0] if rule.osrv else None
+        if isinstance(srv, UserService) and rule.ipt_chain == 'PREROUTING':
+            self.compiler.warning(
+                rule,
+                "Iptables matches module 'owner' only in the OUTPUT and "
+                'POSTROUTING chains, where the packet still has the socket '
+                'that produced it',
+            )
+            return True  # drop rule
 
         self.tmp_queue.append(rule)
         return True

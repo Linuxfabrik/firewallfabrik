@@ -8,6 +8,7 @@
 #
 # files: * fw-nat.fw /etc/fwf.sh
 #
+# fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
 
 FWBDEBUG=""
 
