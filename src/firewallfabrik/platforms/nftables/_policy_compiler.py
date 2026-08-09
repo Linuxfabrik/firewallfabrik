@@ -2113,19 +2113,41 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
 
     @staticmethod
     def _can_merge_tcp_udp(groups: dict[int, list]) -> bool:
-        """Check if groups consist only of TCP+UDP with identical ports."""
+        """Check whether TCP and UDP describe the same ports and fit one rule.
+
+        The source and destination ports have to be compared as **pairs**.
+        Comparing the two sets on their own says yes to
+        ``{sport A, dport 80}`` next to ``{sport B, dport 25}``, and the
+        merged rule then reads ``th sport { A, B } th dport { 80, 25 }`` -
+        the cross product, which lets through what only one of the two
+        services allowed and blocks what neither did.
+
+        The merged form also carries exactly one destination port set, so
+        the services have to fit into a single printable chunk; otherwise
+        the split the non-merged path performs would be skipped.
+        """
         if set(groups.keys()) != {6, 17}:
             return False
 
         tcp_srvs = groups[6]
         udp_srvs = groups[17]
 
-        tcp_dst = {(s.dst_range_start or 0, s.dst_range_end or 0) for s in tcp_srvs}
-        udp_dst = {(s.dst_range_start or 0, s.dst_range_end or 0) for s in udp_srvs}
-        tcp_src = {(s.src_range_start or 0, s.src_range_end or 0) for s in tcp_srvs}
-        udp_src = {(s.src_range_start or 0, s.src_range_end or 0) for s in udp_srvs}
+        def port_pairs(srvs: list) -> set[tuple[int, int, int, int]]:
+            return {
+                (
+                    s.src_range_start or 0,
+                    s.src_range_end or 0,
+                    s.dst_range_start or 0,
+                    s.dst_range_end or 0,
+                )
+                for s in srvs
+            }
 
-        return tcp_dst == udp_dst and tcp_src == udp_src
+        if port_pairs(tcp_srvs) != port_pairs(udp_srvs):
+            return False
+
+        chunks = GroupServicesByProtocol._printable_chunks
+        return len(chunks(tcp_srvs)) == 1 and len(chunks(udp_srvs)) == 1
 
 
 class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
