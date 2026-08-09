@@ -620,7 +620,18 @@ class NATPrintRule(NATRuleProcessor):
         return ''
 
     def _print_multiport(self, rule: CompRule) -> str:
-        if rule.ipt_multiport:
+        """Print `-m multiport` for a rule that lists more than one service.
+
+        The flag alone is not enough: PrepareForMultiport sets it on every
+        chunk it produces, and a service list of 16 leaves a trailing chunk
+        of one, which then prints the single-service `--dport`.  That
+        belongs to the tcp/udp match, so the multiport module ends up with
+        no option of its own and iptables refuses the command with
+        "multiport expection an option" (netfilter
+        extensions/libxt_multiport.c:248, ``multiport_check``).  The policy
+        print rule has always counted the services first.
+        """
+        if len(rule.osrv) > 1 and rule.ipt_multiport:
             return '-m multiport '
         return ''
 

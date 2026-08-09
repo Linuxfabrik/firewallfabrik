@@ -312,6 +312,11 @@ table ip fwf_nat {
         #
         # Original service matches ICMP as a whole
         ip daddr 198.51.100.1 meta l4proto icmp counter dnat to 10.0.0.53
+        #
+        # Rule 10 (NAT)
+        #
+        # Original service holds more services than one -m multiport match can carry
+        ip daddr 198.51.100.1 tcp dport { 5190, 1494, 709, 710, 1720, 3268, 3269, 2000, 5631, 7070, 2998, 445, 49, 548, 113, 179 } counter dnat to 10.0.0.53
     }
 
     chain postrouting {

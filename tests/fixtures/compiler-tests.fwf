@@ -4826,6 +4826,47 @@ libraries:
                       - 'Library:Standard/Network:Any'
                     tsrv:
                       - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 10
+                    comment: 'Original service holds more services than one -m multiport
+                      match can carry'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:AOL'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Citrix-ICA'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Entrust-Admin'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Entrust-KeyMgmt'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:H323'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP
+                        GC'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:LDAP
+                        GC SSL'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:OpenWindows'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:PCAnywhere-data'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:Real-Audio'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:RealSecure'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:SMB'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:TACACSplus'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:afp'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:auth'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:bgp'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
               - type: 'NAT'
                 name: 'NAT_ipv6'
                 ipv6: true
