@@ -100,6 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
 * Compiler (nftables): a NAT rule that translates into an address range and a port range produces a ruleset that loads. It was written in a form nftables rejects, and a rejected ruleset means the firewall keeps its old rules.
 * Compiler (nftables): a NAT rule that translates the source and the destination is labelled in both chains of the generated ruleset, so its second half is no longer filed under an unrelated rule number.
+* Compiler (nftables): a rule set, address table, DNS name or accounting counter whose name happens to be an nftables keyword, such as "log" or "drop", is renamed with a trailing underscore and the rename is reported. Such a name made the whole ruleset fail to load, so the firewall kept its old rules.
 * Compiler (nftables): a rule that lists several ICMP, IP or custom services covers all of them instead of only the first.
 * Compiler (nftables): a rule that matches a DNS name resolved on the firewall covers every address the name resolves to instead of making the whole ruleset fail to load.
 * Compiler (nftables): a rule that matches the address of a dynamic interface is filled in at activation time instead of being left out, and a rule on a wildcard interface such as "ppp*" covers every interface it matches.

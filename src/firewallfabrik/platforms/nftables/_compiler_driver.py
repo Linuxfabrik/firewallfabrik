@@ -43,7 +43,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.nftables import __compiler_version__
-from firewallfabrik.platforms.nftables._print_rule import nft_set_name
+from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -224,7 +224,7 @@ class CompilerDriver_nft(CompilerDriver):
                 # names have to be collected here for the one compiling the
                 # rule that jumps into a branch to recognise its target.
                 self._branch_chains = {
-                    nft_set_name(rs.name)
+                    nft_object_name(rs.name)
                     for rs in all_policies
                     if not self._is_top_ruleset(rs)
                 }
@@ -520,7 +520,7 @@ class CompilerDriver_nft(CompilerDriver):
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
         if not self._is_top_ruleset(pol_rs):
-            policy_compiler.register_rule_set_chain(nft_set_name(pol_rs.name))
+            policy_compiler.register_rule_set_chain(nft_object_name(pol_rs.name))
         policy_compiler.set_source_ruleset(pol_rs)
         policy_compiler.source_ruleset = pol_rs
 
@@ -630,7 +630,9 @@ class CompilerDriver_nft(CompilerDriver):
         remain untouched.
         """
         options = fw.options or {}
-        table_name = options.get('table_name', '') or 'fwf'
+        # The base name comes from the firewall object, so it goes
+        # through the sanitiser before it names three nft tables.
+        table_name = nft_object_name(options.get('table_name', '') or 'fwf')
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
         mangle_table = f'{table_name}_mangle'
@@ -972,7 +974,9 @@ class CompilerDriver_nft(CompilerDriver):
             manifest += f' {remote}'
 
         # Named table support — only flush our own tables
-        table_name = options.get('table_name', '') or 'fwf'
+        # The base name comes from the firewall object, so it goes
+        # through the sanitiser before it names three nft tables.
+        table_name = nft_object_name(options.get('table_name', '') or 'fwf')
         filter_table = f'{table_name}_filter'
         nat_table = f'{table_name}_nat'
         mangle_table = f'{table_name}_mangle'

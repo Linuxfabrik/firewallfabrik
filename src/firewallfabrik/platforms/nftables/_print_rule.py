@@ -59,6 +59,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import sanitize_log_prefix
+from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -70,31 +71,9 @@ def _is_true(val) -> bool:
     return str(val) == 'True'
 
 
-def nft_set_name(name: str) -> str:
-    """Return the nftables set name for an object called *name*.
-
-    A set name is an identifier of the nftables grammar, so the characters
-    outside it become underscores; the length is bounded by the kernel's
-    NFT_SET_MAXNAMELEN of 256 (netfilter linux/include/uapi/linux/
-    netfilter/nf_tables.h).
-
-    The first character may only be a letter, an underscore or a dot
-    (netfilter nftables src/scanner.l: ``string``).  A name starting with a
-    digit, such as the DNS name "6bone.net", is lexed as a number instead
-    and nft rejects the whole ruleset, so it gets an underscore in front.
-    """
-    result = re.sub(r'[^A-Za-z0-9_.\-]', '_', name)
-    if result[:1].isdigit():
-        result = f'_{result}'
-    return result[:NFT_SET_MAX_NAME_LENGTH]
-
-
-NFT_SET_MAX_NAME_LENGTH = 255
-
-
 def _as_iface_set(names: list[str]) -> str:
     """Render one interface name as it is, several as an anonymous set."""
-    quoted = [f'"{name}"' for name in names]
+    quoted = [nft_quote(name) for name in names]
     if len(quoted) == 1:
         return quoted[0]
     return '{ ' + ', '.join(quoted) + ' }'
@@ -751,7 +730,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # activation time (netfilter nftables doc/sets.txt).  A set is
             # typed, so the two address families need one set each.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
             self.compiler.address_tables[name] = (
                 get_address_table_source(obj),
                 ipv6,
@@ -768,7 +747,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # which is what iptables does when it expands the name into one
             # rule per address.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
             self.compiler.address_tables[name] = (
                 (obj.data or {}).get('dnsrec') or obj.name,
                 ipv6,
@@ -797,7 +776,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                 # name such as "ppp*" collects the addresses of every
                 # interface it matches into the same set.
                 ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-                name = nft_set_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
+                name = nft_object_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
                 self.compiler.address_tables[name] = (obj.name, ipv6, 'interface')
                 return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))
@@ -854,7 +833,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # rejected, so quote those to force hostname interpretation.
             dnsrec = (obj.data or {}).get('dnsrec', obj.name)
             if dnsrec and dnsrec[:1].isdigit():
-                return f'"{dnsrec}"'
+                return nft_quote(dnsrec)
             return dnsrec
 
         if not isinstance(obj, Address):

@@ -47,9 +47,9 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     range_to_cidr,
 )
+from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
-    nft_set_name,
     print_fragment_match,
     print_icmp_service,
     print_ip_option_matches,
@@ -309,7 +309,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             # activation time (netfilter nftables doc/sets.txt).  A set is
             # typed, so the two address families need one set each.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
             self.compiler.address_tables[name] = (
                 get_address_table_source(obj),
                 ipv6,
@@ -326,7 +326,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             # which is what iptables does when it expands the name into one
             # rule per address.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_set_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
             self.compiler.address_tables[name] = (
                 (obj.data or {}).get('dnsrec') or obj.name,
                 ipv6,
@@ -361,7 +361,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 # target cannot use this: DynamicInterfaceInTSrc has already
                 # turned that case into a masquerade rule.
                 ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-                name = nft_set_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
+                name = nft_object_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
                 self.compiler.address_tables[name] = (obj.name, ipv6, 'interface')
                 return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))

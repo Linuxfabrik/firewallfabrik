@@ -21,7 +21,6 @@ Unlike iptables, nftables does not need:
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, cast
 
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
@@ -73,23 +72,15 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
+from firewallfabrik.platforms.nftables._identifiers import (
+    is_valid_nft_identifier,
+    nft_object_name,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
-
-
-# The name of an nftables object has to be an identifier of the nft
-# scanner: `({letter}|[_.])({letter}|{digit}|[/\-_\.])*` (netfilter
-# nftables src/scanner.l). Quoting does not help - the grammar of an object
-# declaration takes a bare identifier only.
-_NFT_IDENTIFIER_RE = re.compile(r'[A-Za-z_.][A-Za-z0-9/\-_.]*\Z')
-
-
-def is_valid_nft_identifier(name: str) -> bool:
-    """Return whether *name* can name an nftables object."""
-    return bool(name) and bool(_NFT_IDENTIFIER_RE.match(name))
 
 
 class PolicyCompiler_nft(PolicyCompiler):
@@ -1901,7 +1892,11 @@ class DecideOnTarget(PolicyRuleProcessor):
             # (PolicyCompiler_ipt::decideOnTarget).
             branch_name = rule.get_option('branch_name', '')
             if branch_name:
-                rule.ipt_target = branch_name
+                # The chain carries the sanitised name, so the jump has to
+                # name it the same way; the raw name would not be found in
+                # `branch_chains` and the rule would be reported as pointing
+                # at a rule set that cannot be jumped to.
+                rule.ipt_target = nft_object_name(branch_name)
             else:
                 self.compiler.error(
                     rule, 'Branching rule refers to a rule set that does not exist'
@@ -2299,16 +2294,19 @@ class Accounting(PolicyRuleProcessor):
         name = rule.get_option('rule_name_accounting', '') or nft_comp.new_counter_name(
             rule
         )
-        if is_valid_nft_identifier(name):
-            nft_comp.register_counter(name)
-            rule.set_option('nft_counter_name', name)
-        else:
-            self.compiler.error(
+        if not is_valid_nft_identifier(name):
+            # Refusing here would turn a name into a compile failure, so the
+            # counter is renamed instead; nft would refuse the whole ruleset
+            # over the name, which is the worse of the two.
+            renamed = nft_object_name(name)
+            self.compiler.warning(
                 rule,
-                f'Accounting name "{name}" cannot name an nftables counter, '
-                'which has to start with a letter, an underscore or a dot and '
-                'may go on with letters, digits, "/", "-", "_" and "."',
+                f'Accounting name "{name}" cannot name an nftables counter; '
+                f'the counter is called "{renamed}" instead',
             )
+            name = renamed
+        nft_comp.register_counter(name)
+        rule.set_option('nft_counter_name', name)
 
         # Counting does not decide anything, so the packet has to carry on
         # to the rules below.
