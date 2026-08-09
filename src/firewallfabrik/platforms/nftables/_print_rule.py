@@ -136,18 +136,27 @@ def print_mark_set(tag_code: str) -> str:
 
     A bare value is assigned directly (``meta mark set 0x10``).  A masked
     value keeps the bits outside the mask, which nftables spells out as the
-    bitwise expression ``meta mark set mark and <~mask> xor <value>`` (the
-    form ``iptables-translate`` produces for ``--set-xmark``, netfilter
-    ``extensions/libxt_MARK.txlate``).
+    bitwise expression ``meta mark set mark and <~mask> xor <value>``.
+
+    The mask ``--set-mark`` clears is **value | mask**, not the mask alone -
+    that is exactly what separates it from ``--set-xmark`` (netfilter
+    ``extensions/libxt_MARK.c``, ``mark_tg_parse``: ``O_SET_MARK`` assigns
+    ``info->mask = cb->val.mark | cb->val.mask`` where ``O_SET_XMARK``
+    assigns ``cb->val.mask``).  For ``0x40/0x32`` netfilter's own translator
+    therefore emits ``mark and 0xffffff8d xor 0x40``
+    (``extensions/libxt_MARK.txlate``, read together with
+    ``mark_tg_xlate``), and a packet that already carries bit ``0x40`` comes
+    out of both rules with the bit set.
     """
     value, sep, mask = tag_code.partition('/')
     value = value.strip()
     if not sep:
         return f'meta mark set {value}'
     try:
-        keep = (~int(mask.strip(), 0)) & 0xFFFFFFFF
+        clear = int(value, 0) | int(mask.strip(), 0)
     except ValueError:
         return f'meta mark set {value}'
+    keep = (~clear) & 0xFFFFFFFF
     return f'meta mark set mark and {keep:#010x} xor {value}'
 
 
