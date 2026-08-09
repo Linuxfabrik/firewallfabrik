@@ -16,6 +16,7 @@
 #  Interfaces eth0 and eth1 are parts of the bridge; Interface eth2 is external interface (doing NAT and routing on this interface) Interface eth3 is connected to protected network and is used to manage firewall. This is rather realistic configuration for the bridging firewall
 #
 # Rule 3 (NAT): Interface "br0" has no addresses
+# Rule 3 (NAT): DNAT rule has no translated destination address
 
 FWBDEBUG=""
 
@@ -483,11 +484,6 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        #
-        # Rule 3 (NAT)
-        #
-        # see SF bug 3057503
-        tcp dport 80 counter dnat to :3128
     }
 
     chain postrouting {

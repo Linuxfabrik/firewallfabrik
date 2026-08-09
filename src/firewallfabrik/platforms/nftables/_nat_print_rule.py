@@ -385,14 +385,24 @@ class NATPrintRule_nft(NATRuleProcessor):
             return ''
 
         if isinstance(obj, DNSName):
-            # Runtime DNSName — use the DNS record directly as address, so nft
-            # resolves it at load time. A bare hostname beginning with a digit
-            # (e.g. "6bone.net") is tokenized as a number by the nft parser and
-            # rejected, so quote those to force hostname interpretation.
-            dnsrec = (obj.data or {}).get('dnsrec', obj.name)
-            if dnsrec and dnsrec[:1].isdigit():
-                return f'"{dnsrec}"'
-            return dnsrec
+            # Only the translation target reaches this: the match side is
+            # handled above and points at a named set the script fills after
+            # the ruleset loads.  A target cannot do that - there is no
+            # `snat to @set` - so the name would have to go in literally,
+            # and nft resolves it while parsing.  The moment it has a second
+            # address, or DNS is not up when the firewall script runs at
+            # boot, nft answers "Hostname resolves to multiple addresses" or
+            # fails to resolve at all and throws away the **whole** ruleset
+            # (netfilter nftables src/datatype.c).  Refusing the rule is the
+            # honest answer.
+            self.compiler.error(
+                rule,
+                f'DNS name "{obj.name}" cannot be a NAT translation target: '
+                'nftables resolves it while loading the ruleset and refuses '
+                'the whole ruleset when it has more than one address; use an '
+                'address object instead',
+            )
+            return ''
 
         if not isinstance(obj, Address):
             self.compiler.error(
@@ -616,8 +626,6 @@ class NATPrintRule_nft(NATRuleProcessor):
             return 'accept'
 
         # NETMAP (SNetnat/DNetnat) and REDIRECT take no flags.
-        random_only = ' random' if rule.get_option('ipt_nat_random', False) else ''
-
         if rt == NATRuleType.Masq:
             # Masquerading takes the address of the outgoing interface but
             # still accepts a source port range, which is how a translation
@@ -674,11 +682,19 @@ class NATPrintRule_nft(NATRuleProcessor):
                 addr = self._print_addr(
                     tdst, rule, for_match=False, fold_range=not ports
                 )
-                if addr:
-                    if ports:
-                        addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
-                        return f'dnat to {addr}:{ports}{flags}'
-                    return f'dnat to {addr}{flags}'
+                if not addr:
+                    # The reason was reported.  Falling through to the
+                    # port-only form below would translate the port and
+                    # leave the address alone, which is not what the rule
+                    # says.
+                    self.compiler.error(
+                        rule, 'DNAT rule has no translated destination address'
+                    )
+                    return ''
+                if ports:
+                    addr = self._bracket_v6_for_port(addr, nft_comp.ipv6_policy)
+                    return f'dnat to {addr}:{ports}{flags}'
+                return f'dnat to {addr}{flags}'
             if ports:
                 # The rule translates the destination port only; the address
                 # is left alone, which is `--to-destination :port` on iptables.
