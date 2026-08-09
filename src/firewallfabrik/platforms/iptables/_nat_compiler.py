@@ -420,10 +420,12 @@ class NATCompiler_ipt(NATCompiler):
             return ''
         if self.single_rule_compile_mode:
             return ''
+        # Quoted, so the shell does not read `[0:0]` as a glob; see
+        # PolicyCompiler_ipt.flush_and_set_default_policy.
         return (
-            'echo :PREROUTING ACCEPT [0:0]\n'
-            'echo :POSTROUTING ACCEPT [0:0]\n'
-            'echo :OUTPUT ACCEPT [0:0]\n'
+            'echo ":PREROUTING ACCEPT [0:0]"\n'
+            'echo ":POSTROUTING ACCEPT [0:0]"\n'
+            'echo ":OUTPUT ACCEPT [0:0]"\n'
         )
 
     def print_automatic_rules(self) -> str:

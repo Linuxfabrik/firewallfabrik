@@ -1555,7 +1555,7 @@ class PrintRuleIptRst(PrintRule):
             and chain not in ipt_comp.minus_n_commands
         ):
             ipt_comp.minus_n_commands[chain] = True
-            return f'echo :{chain} - [0:0]\n'
+            return f'echo ":{chain} - [0:0]"\n'
         return ''
 
     def _start_rule_line(self) -> str:

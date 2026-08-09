@@ -771,10 +771,17 @@ class PolicyCompiler_ipt(PolicyCompiler):
         if not self.fw.get_option('use_iptables_restore'):
             return ''
 
+        # The counters are quoted: unquoted, `[0:0]` is a bracket glob
+        # and the shell replaces it with a file named `0` or `:` if one
+        # happens to sit in the directory the script runs from.  The
+        # line then reads `:INPUT DROP 0`, which iptables-restore
+        # refuses (netfilter iptables-restore.c: parse_counters wants
+        # `[%llu:%llu]`), and the restore stops at the first chain with
+        # the built-in policies already set to DROP.
         result = ''
-        result += 'echo :INPUT DROP [0:0]\n'
-        result += 'echo :FORWARD DROP [0:0]\n'
-        result += 'echo :OUTPUT DROP [0:0]\n'
+        result += 'echo ":INPUT DROP [0:0]"\n'
+        result += 'echo ":FORWARD DROP [0:0]"\n'
+        result += 'echo ":OUTPUT DROP [0:0]"\n'
         return result
 
     def print_automatic_rules(self) -> str:
