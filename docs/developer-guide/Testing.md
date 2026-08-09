@@ -255,9 +255,22 @@ When reviewing nft expected output files (especially newly created ones), pay ex
 
 ## Running the Output Through the Real Tools
 
-The tests in this document guard against *changes* in the compiler output.
-They never hand a generated script to iptables or nftables, so a ruleset that
-does not load passes them just as happily as one that does.
+The expected-output tests guard against *changes* in the compiler output, not
+against output that does not work. Two tests in the suite do ask the real
+tools, and both skip themselves when the tool is missing, so the suite still
+runs without them:
+
+| Test | Asks | Needs |
+|---|---|---|
+| `test_nft_check.py` | Does every checked-in nftables expected output load? Each ruleset goes through `nft --check` in a private network namespace. | `nft`, `unshare` |
+| `test_nft_identifiers.py` | Is the list of nft keywords still true? Every name in it is offered to `nft` as a table, chain, set and counter name. | `nft`, `unshare` |
+| `test_ipt_version_gates.py` | Did the compiler get the release right in which a match first shipped? Re-derived from the netfilter git history. | `FWF_IPTABLES_SOURCE` pointing at an iptables clone with tags |
+
+`nft --check` cannot initialise its cache without `CAP_NET_ADMIN`, which is
+why those two run under `unshare -rn`: it gives a private network namespace
+where the parse and evaluation pass work in full.
+
+That still leaves the iptables side and everything around the rules.
 
 `tools/compiler-audit/` closes that gap. It compiles a corpus and then asks
 the real tools whether the result is any good: `nft --check` on every
@@ -268,7 +281,8 @@ the Firewall Builder reference and measures which firewalls a change actually
 affects, which is what a release note needs.
 
 See `tools/compiler-audit/README.md`. These checks are not part of `pytest`:
-they need `unshare`, `nft` and `iptables`, and a full run takes minutes.
+they need `unshare`, `nft` and `iptables`, run over a corpus rather than
+over the fixtures, and a full run takes minutes.
 
 ## Investigating Failures
 
