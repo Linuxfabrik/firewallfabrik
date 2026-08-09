@@ -457,6 +457,7 @@ table ip fwf_filter {
         # plus "ALL UDP" service, which has
         # empty ports specs. This is special
         # case for multiport.
+        ip saddr 192.168.1.0/24 meta l4proto udp ct state new counter accept
         ip saddr 192.168.1.0/24 udp dport { 68, 67 } ct state new counter accept
         #
         # Rule 51 (global)

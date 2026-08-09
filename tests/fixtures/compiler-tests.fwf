@@ -6519,6 +6519,28 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                     when:
                       - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 8
+                    comment: 'Service names a whole protocol next to a single port'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Deny'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-services'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:All
+                        TCP'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    when:
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true

@@ -1536,6 +1536,22 @@ class FinalizeChain(PolicyRuleProcessor):
         return True
 
 
+def _names_a_port(srv) -> bool:
+    """Return whether a TCP/UDP service restricts the ports at all.
+
+    All four bounds at zero is how "All TCP" and "All UDP" are stored; the
+    iptables ``SeparatePortRanges`` reads that as the full range 0-65535.
+    """
+    return any(
+        (
+            srv.src_range_start or 0,
+            srv.src_range_end or 0,
+            srv.dst_range_start or 0,
+            srv.dst_range_end or 0,
+        )
+    )
+
+
 def _is_mangle_only_rule_set(compiler) -> bool:
     """Return whether the rule set being compiled is mangle-only."""
     rs = compiler.source_ruleset
@@ -2075,13 +2091,24 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
         agree on the source port.  Any other service type carries its own
         match (ICMP type, IP options, custom code, mark, uid) that cannot be
         expressed as a set, so it gets a rule of its own.
+
+        A service that names no port at all ("All TCP") describes every
+        port, which no member of a port set can say.  Merged into a set it
+        simply disappears, and on a Deny rule that means the traffic it was
+        written to stop passes.  It gets a rule of its own, where the print
+        rule falls back to the bare ``meta l4proto`` match - the same split
+        the iptables ``SeparatePortRanges`` performs, which reads all-zero
+        bounds as the full range.
         """
         if all(isinstance(s, (TCPService, UDPService)) for s in srvs):
+            any_port = [s for s in srvs if not _names_a_port(s)]
+            with_port = [s for s in srvs if _names_a_port(s)]
             by_src_port: dict[tuple[int, int], list] = {}
-            for srv in srvs:
+            for srv in with_port:
                 key = (srv.src_range_start or 0, srv.src_range_end or 0)
                 by_src_port.setdefault(key, []).append(srv)
-            return [chunk for _key, chunk in sorted(by_src_port.items())]
+            chunks = [chunk for _key, chunk in sorted(by_src_port.items())]
+            return [[srv] for srv in any_port] + chunks
         return [[srv] for srv in srvs]
 
     @staticmethod
