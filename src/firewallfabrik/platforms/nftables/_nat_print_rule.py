@@ -47,7 +47,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     range_to_cidr,
 )
-from firewallfabrik.platforms.nftables._identifiers import nft_object_name
+from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
     print_fragment_match,
@@ -263,7 +263,14 @@ class NATPrintRule_nft(NATRuleProcessor):
         return result
 
     def _print_interface(self, rule: CompRule) -> str:
-        """Print interface matching for NAT rules."""
+        """Print interface matching for NAT rules.
+
+        The name goes through ``nft_quote`` for the same reason as in the
+        policy print rule: the scanner has no escape inside a quoted string
+        (netfilter nftables src/scanner.l), so one quotation mark in an
+        interface name would end the string early and take the rest of the
+        ruleset with it.
+        """
         parts = []
 
         # Outbound interface (for SNAT/masquerade)
@@ -273,7 +280,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 name = obj.name
                 if name:
                     neg = '!= ' if rule.itf_outb_single_object_negation else ''
-                    parts.append(f'oifname {neg}"{name}"')
+                    parts.append(f'oifname {neg}{nft_quote(name)}')
 
         # Inbound interface (for DNAT)
         if rule.itf_inb:
@@ -282,7 +289,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                 name = obj.name
                 if name:
                     neg = '!= ' if rule.itf_inb_single_object_negation else ''
-                    parts.append(f'iifname {neg}"{name}"')
+                    parts.append(f'iifname {neg}{nft_quote(name)}')
 
         return ' '.join(parts)
 
