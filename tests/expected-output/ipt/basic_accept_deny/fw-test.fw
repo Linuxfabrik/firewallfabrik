@@ -341,6 +341,20 @@ setup_fwf_jumps_v4() {
  $IPTABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
  $IPTABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
  $IPTABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat and mangle tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IPTABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IPTABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IPTABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IPTABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
 }
 
 setup_fwf_jumps_v6() {
@@ -357,6 +371,20 @@ setup_fwf_jumps_v6() {
  $IP6TABLES -w 5 -I INPUT 1 -j "${prefix}_INPUT"
  $IP6TABLES -w 5 -I FORWARD 1 -j "${prefix}_FORWARD"
  $IP6TABLES -w 5 -I OUTPUT 1 -j "${prefix}_OUTPUT"
+
+ # The nat and mangle tables need the same treatment: a rule that lands in
+ # the real PREROUTING or POSTROUTING cannot be told apart from another
+ # tool's later on, so reset_fwf_chains would never remove it and every
+ # activation would add another copy. Their policies stay ACCEPT - only
+ # the filter table decides whether a packet lives.
+ for table in nat mangle; do
+ for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+ $IP6TABLES -w 5 -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+ $IP6TABLES -w 5 -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+ $IP6TABLES -w 5 -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+ || $IP6TABLES -w 5 -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+ done
+ done
 }
 
 check_file() {
@@ -410,6 +438,24 @@ script_body() {
  $IPTABLES -A fwf_INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A fwf_OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A fwf_FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+ # ================ Table 'nat', rule set NAT
+ #
+ # Rule 0 (NAT)
+ #
+ echo "Rule 0 (NAT)"
+ #
+ # Gives the nat table a rule of its own
+ $IPTABLES -w 5 -t nat -A fwf_POSTROUTING -o eth0 -s 192.168.1.0/24 -j SNAT --to-source 203.0.113.1
+
+ # ================ Table 'mangle', rule set Policy
+ #
+ # Rule 4 (global)
+ #
+ echo "Rule 4 (global)"
+ #
+ # Classifies packets, so the mangle table gets a rule too
+ $IPTABLES -w 5 -t mangle -A fwf_POSTROUTING -o + -s 192.168.1.0/24 -m conntrack --ctstate NEW -j CLASSIFY --set-class 1:10
 
  # ================ Table 'filter', rule set Policy
  #
@@ -493,7 +539,7 @@ case "$cmd" in
  prolog_commands
  check_run_time_address_table_files
 
- load_modules " "
+ load_modules "nat "
  configure_interfaces
  verify_interfaces
 

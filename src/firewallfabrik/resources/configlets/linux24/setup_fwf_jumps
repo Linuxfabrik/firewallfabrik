@@ -27,6 +27,20 @@ setup_fwf_jumps_v4() {
   $IPTABLES {{$opt_wait}} -I INPUT   1 -j "${prefix}_INPUT"
   $IPTABLES {{$opt_wait}} -I FORWARD 1 -j "${prefix}_FORWARD"
   $IPTABLES {{$opt_wait}} -I OUTPUT  1 -j "${prefix}_OUTPUT"
+
+  # The nat and mangle tables need the same treatment: a rule that lands in
+  # the real PREROUTING or POSTROUTING cannot be told apart from another
+  # tool's later on, so reset_fwf_chains would never remove it and every
+  # activation would add another copy. Their policies stay ACCEPT - only
+  # the filter table decides whether a packet lives.
+  for table in nat mangle; do
+    for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+      $IPTABLES {{$opt_wait}} -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+      $IPTABLES {{$opt_wait}} -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+      $IPTABLES {{$opt_wait}} -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+        || $IPTABLES {{$opt_wait}} -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+    done
+  done
 }
 
 setup_fwf_jumps_v6() {
@@ -43,4 +57,18 @@ setup_fwf_jumps_v6() {
   $IP6TABLES {{$opt_wait}} -I INPUT   1 -j "${prefix}_INPUT"
   $IP6TABLES {{$opt_wait}} -I FORWARD 1 -j "${prefix}_FORWARD"
   $IP6TABLES {{$opt_wait}} -I OUTPUT  1 -j "${prefix}_OUTPUT"
+
+  # The nat and mangle tables need the same treatment: a rule that lands in
+  # the real PREROUTING or POSTROUTING cannot be told apart from another
+  # tool's later on, so reset_fwf_chains would never remove it and every
+  # activation would add another copy. Their policies stay ACCEPT - only
+  # the filter table decides whether a packet lives.
+  for table in nat mangle; do
+    for chain in PREROUTING INPUT FORWARD OUTPUT POSTROUTING; do
+      $IP6TABLES {{$opt_wait}} -t "$table" -L "$chain" -n >/dev/null 2>&1 || continue
+      $IP6TABLES {{$opt_wait}} -t "$table" -N "${prefix}_${chain}" 2>/dev/null
+      $IP6TABLES {{$opt_wait}} -t "$table" -C "$chain" -j "${prefix}_${chain}" 2>/dev/null \
+        || $IP6TABLES {{$opt_wait}} -t "$table" -I "$chain" 1 -j "${prefix}_${chain}"
+    done
+  done
 }

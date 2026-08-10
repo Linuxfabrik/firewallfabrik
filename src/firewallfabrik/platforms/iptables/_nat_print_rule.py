@@ -74,6 +74,20 @@ if TYPE_CHECKING:
 # table and none of the targets.
 IP6TABLES_NAT_FIRST_RELEASE = '1.4.17'
 
+# Everything a NAT rule can name as a target that is not a chain of ours,
+# so the coexistence prefix must not be put in front of it.
+_BUILTIN_NAT_TARGETS = frozenset(
+    {
+        'ACCEPT',
+        'DNAT',
+        'MASQUERADE',
+        'NETMAP',
+        'REDIRECT',
+        'RETURN',
+        'SNAT',
+    }
+)
+
 
 def _is_true(val) -> bool:
     """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
@@ -118,6 +132,11 @@ class NATPrintRule(NATRuleProcessor):
         ):
             for chain in STANDARD_NAT_CHAINS:
                 ipt_comp.minus_n_commands[chain] = True
+                # In coexistence mode setup_fwf_jumps creates the prefixed
+                # standard chains, so they must not be created again here.
+                prefixed = self._prefix_chain(chain)
+                if prefixed != chain:
+                    ipt_comp.minus_n_commands[prefixed] = True
         self.minus_n_tracker_initialized = True
 
     def process_next(self) -> bool:
@@ -334,6 +353,8 @@ class NATPrintRule(NATRuleProcessor):
 
         # Target
         target = rule.ipt_target
+        if target and not target.startswith('.') and target not in _BUILTIN_NAT_TARGETS:
+            target = self._prefix_chain(target)
         cmd += f'-j {target} '
 
         # Target-specific args
@@ -524,10 +545,24 @@ class NATPrintRule(NATRuleProcessor):
         else:
             return f'{option} {self._print_single_object_negation(rule, slot)}{arg} '
 
+    def _prefix_chain(self, chain: str) -> str:
+        """Apply the coexistence chain prefix, as the policy printer does.
+
+        Without it the NAT rules land in the real PREROUTING and
+        POSTROUTING chains, where reset_fwf_chains cannot find them again -
+        it only knows the prefixed ones - so every activation adds another
+        copy of the whole NAT ruleset.
+        """
+        prefix = getattr(self.compiler, 'chain_prefix', '')
+        if prefix and chain:
+            chain = f'{prefix}_{chain}'
+        check_chain_name(self.compiler, chain, self.reported_long_chains)
+        return chain
+
     def _create_chain(self, chain: str) -> str:
         if not chain:
             return ''
-        check_chain_name(self.compiler, chain, self.reported_long_chains)
+        chain = self._prefix_chain(chain)
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
@@ -588,7 +623,7 @@ class NATPrintRule(NATRuleProcessor):
         if rule.nat_iface_out == 'nil':
             iface_out_name = ''
 
-        parts.append(rule.ipt_chain)
+        parts.append(self._prefix_chain(rule.ipt_chain))
 
         if iface_in_name:
             parts.append(

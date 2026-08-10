@@ -824,6 +824,9 @@ class CompilerDriver_ipt(CompilerDriver):
             session, fw, ipv6_policy, oscnf, minus_n_commands_mangle
         )
 
+        if not self._flush_ruleset:
+            mangle_compiler.chain_prefix = self._table_name
+
         if not self._is_top_ruleset(pol_rs):
             mangle_compiler.register_rule_set_chain(branch_name)
 

@@ -50,6 +50,21 @@ nft_ruleset() {
     cat <<'NFT_RULES'
 table ip fwf_filter {}
 delete table ip fwf_filter
+table ip fwf_mangle {}
+delete table ip fwf_mangle
+table ip fwf_nat {}
+delete table ip fwf_nat
+
+table ip fwf_mangle {
+    chain postrouting {
+        type filter hook postrouting priority mangle; policy accept;
+        #
+        # Rule 4 (global)
+        #
+        # Classifies packets, so the mangle table gets a rule too
+        ip saddr 192.168.1.0/24 ct state new counter meta priority set 1:10
+    }
+}
 
 table ip fwf_filter {
     chain input {
@@ -90,6 +105,21 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         ip saddr 192.168.1.0/24 ip daddr 203.0.113.42 ct state new counter accept
+    }
+}
+
+table ip fwf_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+        #
+        # Rule 0 (NAT)
+        #
+        # Gives the nat table a rule of its own
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 203.0.113.1
     }
 }
 

@@ -52,6 +52,18 @@ libraries:
                   address: '127.0.0.1'
                   netmask: '255.0.0.0'
         rule_sets:
+          - type: 'NAT'
+            name: 'NAT'
+            ipv4: true
+            top: true
+            rules:
+              - type: 'NATRule'
+                comment: 'Gives the nat table a rule of its own'
+                action: 'Translate'
+                osrc:
+                  - 'Library:Test Objects/Network:internal-net'
+                tsrc:
+                  - 'Library:Test Objects/Firewall:fw-test/Interface:eth0'
           - type: 'Policy'
             name: 'Policy'
             ipv4: true
@@ -86,6 +98,16 @@ libraries:
                 direction: 'Both'
                 dst:
                   - 'Library:Test Objects/IPv4:external-host'
+                src:
+                  - 'Library:Test Objects/Network:internal-net'
+              - type: 'PolicyRule'
+                position: 4
+                comment: 'Classifies packets, so the mangle table gets a rule too'
+                options:
+                  classification: true
+                  classify_str: '1:10'
+                action: 'Continue'
+                direction: 'Outbound'
                 src:
                   - 'Library:Test Objects/Network:internal-net'
       - type: 'Network'
