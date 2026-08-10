@@ -12,6 +12,9 @@
 #  https://trac.torproject.org/projects/tor/wiki/TheOnionRouter/TransparentProxy
 #  See ticket 1685
 #
+# Rule 0 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
+# Rule 1 (NAT): Custom service 'owner_anonymous tcp' is not configured for the platform 'nftables'
+# Rule 2 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
 # Rule 2 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 0 (global): Custom service 'owner_anonymous tcp' is not configured for 'nftables'
 # Rule 0 (global): Custom service 'owner_anonymous udp' is not configured for 'nftables'

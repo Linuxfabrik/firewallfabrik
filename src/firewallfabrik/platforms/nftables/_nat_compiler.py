@@ -39,6 +39,7 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
 )
+from firewallfabrik.compiler.processors._service import VerifyCustomServices
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
@@ -227,6 +228,15 @@ class NATCompiler_nft(NATCompiler):
         )
 
         self.add(GroupServicesByProtocol('group services by protocol'))
+        # A Custom Service is a fragment of platform text, so a rule using
+        # one on a platform it carries no text for cannot be built.  The
+        # processor reads a NAT rule's OSrv as well as a policy rule's Srv,
+        # but only the policy pipelines ever ran it, on either platform and
+        # in fwbuilder.  On nftables that is the whole rule: the print rule
+        # answers None for the missing code and the rule disappears without
+        # a word, so traffic the administrator meant to translate crosses
+        # the firewall untranslated.
+        self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 

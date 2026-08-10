@@ -43,6 +43,7 @@ from firewallfabrik.compiler.processors._generic import (
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcAndDstPort,
     SeparateSrcPort,
+    VerifyCustomServices,
 )
 from firewallfabrik.core.objects import (
     Address,
@@ -363,6 +364,14 @@ class NATCompiler_ipt(NATCompiler):
         )
 
         self.add(GroupServicesByProtocol('group services by protocol'))
+        # A Custom Service is a fragment of platform text, so a rule using
+        # one on a platform it carries no text for cannot be built.  The
+        # processor reads a NAT rule's OSrv as well as a policy rule's Srv,
+        # but only the policy pipelines ever ran it, on either platform and
+        # in fwbuilder: a NAT rule kept its place in the pipeline and lost
+        # the match in the print rule, so the translation went out matching
+        # everything else the rule named.
+        self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 

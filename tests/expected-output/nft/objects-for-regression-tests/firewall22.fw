@@ -10,6 +10,10 @@
 #
 #  testing NAT rules using custom services
 #
+# Rule 0 (NAT): Custom service 'string' is not configured for the platform 'nftables'
+# Rule 1 (NAT): Custom service 'string' is not configured for the platform 'nftables'
+# Rule 2 (NAT): Custom service 'string' is not configured for the platform 'nftables'
+# Rule 2 (NAT): Custom service 'string' is not configured for the platform 'nftables'
 
 FWBDEBUG=""
 
