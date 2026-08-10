@@ -312,7 +312,16 @@ class PrintRule(PolicyRuleProcessor):
     def _print_single_option_with_negation(
         self, option: str, rule: CompRule, slot: str, arg: str
     ) -> str:
-        """Print --option with negation, respecting iptables version."""
+        """Print --option with negation, respecting iptables version.
+
+        The two spellings do not overlap: iptables 1.4.3 both taught the
+        parser the leading ``!`` and turned the deprecation of the old
+        ``--option ! value`` into an error (netfilter iptables
+        ``0f16c725`` and ``e0390bee``, both first in v1.4.3), so a release
+        takes one of them and refuses the other.  Every option the compiler
+        can negate goes through here, including the ones fwbuilder writes
+        with a fixed leading ``!``.
+        """
         if version_compare(self.version, '1.4.3') >= 0:
             return f'{self._print_single_object_negation(rule, slot)}{option} {arg} '
         else:
@@ -688,15 +697,17 @@ class PrintRule(PolicyRuleProcessor):
         end = obj.get_end_address()
         if not start:
             return ''
-        neg = self._print_single_object_negation(rule, slot)
         flag = '-s' if slot == 'src' else '-d'
         if end and start != end:
             cidr = range_to_cidr(start, end)
             if cidr:
-                return f'{neg}{flag} {cidr} '
+                return self._print_single_option_with_negation(flag, rule, slot, cidr)
             range_flag = '--src-range' if slot == 'src' else '--dst-range'
-            return f'-m iprange {neg}{range_flag} {start}-{end} '
-        return f'{neg}{flag} {start} '
+            option = self._print_single_option_with_negation(
+                range_flag, rule, slot, f'{start}-{end}'
+            )
+            return f'-m iprange {option}'
+        return self._print_single_option_with_negation(flag, rule, slot, start)
 
     def _print_addr(self, obj) -> str:
         """Print an address object in iptables format."""
@@ -995,7 +1006,10 @@ class PrintRule(PolicyRuleProcessor):
                     rule, f'Tag service "{srv.name}" carries no tag to match on'
                 )
                 return None
-            return f'-m mark {neg}--mark {tag_code} '
+            option = self._print_single_option_with_negation(
+                '--mark', rule, 'srv', tag_code
+            )
+            return f'-m mark {option}'
 
         if isinstance(srv, UserService):
             uid = srv.userid or ''
@@ -1004,7 +1018,10 @@ class PrintRule(PolicyRuleProcessor):
                     rule, f'User service "{srv.name}" names no user to match on'
                 )
                 return None
-            return f'-m owner {neg}--uid-owner {uid} '
+            option = self._print_single_option_with_negation(
+                '--uid-owner', rule, 'srv', uid
+            )
+            return f'-m owner {option}'
 
         return ''
 
