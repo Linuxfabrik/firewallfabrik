@@ -75,6 +75,7 @@ from firewallfabrik.core.objects import (
     NetworkIPv6,
     PhysAddress,
     PolicyAction,
+    TagService,
     TCPService,
     UDPService,
     UserService,
@@ -1478,53 +1479,84 @@ class Logging1(PolicyRuleProcessor):
         return True
 
 
-class SingleSrcNegation(PolicyRuleProcessor):
+class SingleRENegation(PolicyRuleProcessor):
+    """Negate a rule element holding one object with iptables' own ``!``.
+
+    Ports ``PolicyCompiler_ipt::SingleRENegation``
+    (fwbuilder iptlib/PolicyCompiler_ipt.cpp).  Everything else that is
+    negated needs the three-rule temporary chain of ``SrcNegation`` and its
+    siblings; what can be said in one ``!`` is said in one ``!``.
+
+    Whether an address object qualifies is the C++ test
+    ``countInetAddresses(true) == 1``, and only IPv4, IPv6, Network and
+    NetworkIPv6 answer 1 there (fwbuilder libfwbuilder/fwbuilder/Address.cpp
+    returns 0 by default).  An AddressRange is deliberately not one of them:
+    below iptables 1.2.11 it is written out as the networks covering it, and
+    one ``!`` per network is the negation of each rather than of the range,
+    which matches almost everything.
+    """
+
+    #: Address types that stand for exactly one ``-s`` / ``-d`` argument.
+    _SINGLE_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def _qualifies(self, obj) -> bool:
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        # A run-time address table matched through ipset is a single set
+        # name, so `-m set ! --match-set` says it exactly. Without ipset
+        # the rule is written once per address in the file, where one `!`
+        # per address would again negate each of them separately.
+        if is_run_time_address_table(obj):
+            return bool(ipt_comp.using_ipset)
+        if isinstance(obj, TagService | UserService):
+            # `-m mark` and `-m owner` both take the `!`.
+            return True
+        return isinstance(obj, self._SINGLE_ADDRESS_TYPES) and not (
+            self.compiler.complex_match(obj, self.compiler.fw)
+        )
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        elements = getattr(rule, self._slot)
+        if (
+            rule.get_neg(self._slot)
+            and len(elements) == 1
+            and self._qualifies(elements[0])
+        ):
+            setattr(rule, f'{self._slot}_single_object_negation', True)
+            rule.set_neg(self._slot, False)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class SingleSrcNegation(SingleRENegation):
     """Handle single-object src negation with inline '!' syntax."""
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        if rule.get_neg('src') and len(rule.src) == 1:
-            obj = rule.src[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.src_single_object_negation = True
-                rule.set_neg('src', False)
-        self.tmp_queue.append(rule)
-        return True
+    def __init__(self, name: str = 'single src negation') -> None:
+        super().__init__(name, 'src')
 
 
-class SingleDstNegation(PolicyRuleProcessor):
+class SingleDstNegation(SingleRENegation):
     """Handle single-object dst negation with inline '!' syntax."""
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        if rule.get_neg('dst') and len(rule.dst) == 1:
-            obj = rule.dst[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.dst_single_object_negation = True
-                rule.set_neg('dst', False)
-        self.tmp_queue.append(rule)
-        return True
+    def __init__(self, name: str = 'single dst negation') -> None:
+        super().__init__(name, 'dst')
 
 
-class SingleSrvNegation(PolicyRuleProcessor):
-    """Handle single-object srv negation (TagService/UserService only)."""
+class SingleSrvNegation(SingleRENegation):
+    """Handle single-object srv negation with inline '!' syntax.
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        # TagService/UserService would get single_object_negation here.
-        # Currently no-op — all common services use temp chain pattern.
-        self.tmp_queue.append(rule)
-        return True
+    Only a Tag or a User service: every other service is matched by more
+    than one option, and iptables has no ``!`` for a whole match.
+    """
+
+    def __init__(self, name: str = 'single srv negation') -> None:
+        super().__init__(name, 'srv')
 
 
 class SplitIfSrcNegAndFw(PolicyRuleProcessor):
