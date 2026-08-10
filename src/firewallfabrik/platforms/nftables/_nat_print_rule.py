@@ -784,9 +784,15 @@ class NATPrintRule_nft(NATRuleProcessor):
     def _nat_l4proto_prefix(self, rule: CompRule, existing_parts: list[str]) -> str:
         """Return a `meta l4proto <proto>` match to inject before the action.
 
-        nftables rejects a port mapping such as ``redirect to :53`` or
-        ``dnat to 10.0.0.1:80`` unless a transport-protocol match precedes
-        it.  The port comes from the translated service, which also pins the
+        nftables rejects a port mapping such as ``redirect to :53``,
+        ``masquerade to :1024-2048`` or ``dnat to 10.0.0.1:80`` unless a
+        transport-protocol match precedes it (netfilter nftables
+        src/evaluate.c: nat_evaluate_transport, "transport protocol mapping
+        is only valid after transport protocol match"; the accepted forms
+        are in tests/py/ip/masquerade.t).  Every rule type that can carry a
+        translated port therefore has to be listed below, masquerade
+        included.
+        The port comes from the translated service, which also pins the
         protocol; when the rule's own match carries no tcp/udp/l4proto (for
         example a UserService REDIRECT whose only match is on the owner),
         derive the protocol from the translated service and inject it so the
@@ -796,7 +802,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         nft_comp = cast('NATCompiler_nft', self.compiler)
         rt = rule.nat_rule_type
         tsrv = nft_comp.get_first_tsrv(rule)
-        if rt in (NATRuleType.SNAT, NATRuleType.SNetnat):
+        if rt in (NATRuleType.Masq, NATRuleType.SNAT, NATRuleType.SNetnat):
             ports = self._print_translated_ports(tsrv, src=True)
         elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
             ports = self._print_translated_ports(tsrv, src=False)

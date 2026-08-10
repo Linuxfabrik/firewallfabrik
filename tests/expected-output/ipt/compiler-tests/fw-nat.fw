@@ -528,6 +528,13 @@ script_body() {
  #
  # Asks for the MASQUERADE target instead of SNAT
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE
+ #
+ # Rule 14 (NAT)
+ #
+ echo "Rule 14 (NAT)"
+ #
+ # Masquerades into a source port range, with an original service that names no protocol
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -s 192.168.1.0/24 -m owner --uid-owner 500 -j MASQUERADE --to-ports 61000-65095
 
  # ================ Table 'filter', rule set Policy
  #
