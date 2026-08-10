@@ -107,6 +107,31 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
 
+# Reject types that the REJECT target only learnt along the way.  Everything
+# else in reject_table dates from the first release that has the target at
+# all, so only these three need a gate (netfilter iptables history):
+#
+#   icmp-admin-prohibited  extensions/libipt_REJECT.c, v1.2.9
+#   icmp6-policy-fail      extensions/libip6t_REJECT.c, v1.6.0
+#   icmp6-reject-route     extensions/libip6t_REJECT.c, v1.6.0
+#
+# The last two arrived together in "added missing icmpv6 codes in REJECT"
+# (RFC 4443 codes 5 and 6).  An older binary answers "unknown reject type",
+# which stops the activation script, so the rule keeps the target's default
+# type and the change is reported.
+#
+# Every entry of reject_table has a primary name and an alias, and REJECT
+# accepts either, so both spellings need the same gate.  An imported .fwb
+# carries whichever one the administrator picked.
+REJECT_TOKEN_FIRST_RELEASE = {
+    'admin-prohib': '1.2.9',
+    'icmp-admin-prohibited': '1.2.9',
+    'icmp6-policy-fail': '1.6.0',
+    'icmp6-reject-route': '1.6.0',
+    'policy-fail': '1.6.0',
+    'reject-route': '1.6.0',
+}
+
 # The LOG target carries its prefix in a 30-byte field and the NFLOG one
 # in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
 # xt_LOG.h and xt_NFLOG.h), so one character of each is the terminator.
@@ -1270,11 +1295,14 @@ class PrintRule(PolicyRuleProcessor):
                 )
             return ''
 
-        # icmp-admin-prohibited requires iptables >= 1.2.9.
-        if (
-            token == 'icmp-admin-prohibited'  # nosec B105
-            and version_compare(self.version, '1.2.9') < 0
-        ):
+        first = REJECT_TOKEN_FIRST_RELEASE.get(token)
+        if first and version_compare(self.version, first) < 0:
+            tool = 'ip6tables' if is_ipv6 else 'iptables'
+            self.compiler.warning(
+                rule,
+                f'{tool} before {first} does not know the reject type '
+                f'"{token}"; rejecting with the default type instead',
+            )
             return ''
 
         return f'--reject-with {token}'

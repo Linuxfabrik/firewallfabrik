@@ -256,6 +256,11 @@ table inet fwf_filter {
         # Rule 0 (global)
         #
         meta nfproto ipv6 tcp dport 22 ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        # Reject type this release does not know yet
+        meta nfproto ipv6 tcp dport 80 ct state new counter reject with icmpv6 reject-route
     }
 
     chain forward {
