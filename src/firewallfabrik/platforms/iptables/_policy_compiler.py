@@ -2119,11 +2119,6 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if not rule.srv:
-            # srv is "any" — can't split services, pass through
-            self.tmp_queue.append(rule)
-            return True
-
         tcp_services: list = []
         other_services: list = []
         for srv in rule.srv:
@@ -2132,6 +2127,21 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
                 tcp_services.append(srv)
             else:
                 other_services.append(srv)
+
+        if not rule.srv:
+            # "any" is every protocol, so it belongs with the non-TCP ones.
+            # fwbuilder reaches the same branch because its service element
+            # holds a reference to the "Any" object, which does not report
+            # protocol "tcp"; fwf stores "any" as an empty list, so the case
+            # has to be named.  Leaving the TCP reset in place produces a
+            # rule the kernel refuses outright (netfilter linux
+            # net/ipv4/netfilter/ipt_REJECT.c: reject_tg_check returns
+            # -EINVAL unless the rule pins IPPROTO_TCP), which stops the
+            # activation script with the built-in policies already set to
+            # DROP.  nftables takes the same rule and silently narrows it to
+            # TCP instead, so the traffic the rule was written to reject
+            # passes.
+            other_services = [None]
 
         if other_services and not tcp_services:
             # Only non-TCP services with TCP RST reject — warn and reset

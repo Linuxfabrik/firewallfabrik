@@ -3313,6 +3313,29 @@ libraries:
                       disabled: false
                       group: ''
                       log: false
+                      action_on_reject: 'TCP RST'
+                      custom_str: ''
+                      ipfw_pipe_port_num: '0'
+                      rule_name_accounting: ''
+                      stateless: true
+                    action: 'Reject'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Networks/Network:internal-net'
+                    srv:
+                      - 'Library:Standard/IPService:Any'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 7
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
                       stateless: true
                     action: 'Deny'
                     direction: 'Inbound'

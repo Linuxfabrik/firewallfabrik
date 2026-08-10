@@ -667,10 +667,6 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        if not rule.srv:
-            self.tmp_queue.append(rule)
-            return True
-
         tcp_services: list = []
         other_services: list = []
         for srv in rule.srv:
@@ -678,6 +674,15 @@ class SplitServicesIfRejectWithTCPReset(PolicyRuleProcessor):
                 tcp_services.append(srv)
             else:
                 other_services.append(srv)
+
+        if not rule.srv:
+            # "any" is every protocol, so it belongs with the non-TCP ones.
+            # A TCP reset on such a rule is not the rule the admin wrote:
+            # nftables adds the missing `meta l4proto tcp` itself (netfilter
+            # nftables src/evaluate.c, the reject statement needs the
+            # transport protocol), so everything that is not TCP passes,
+            # and iptables refuses the same rule outright.
+            other_services = [None]
 
         if other_services and not tcp_services:
             if rule.position not in self._seen_rules:

@@ -13,6 +13,7 @@
 #
 
 # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+# fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""
 RETVAL=0
@@ -485,6 +486,13 @@ script_body() {
  # Rule 6 (global)
  #
  echo "Rule 6 (global)"
+ #
+ $IPTABLES -w 5 -A INPUT -s 192.168.1.0/24 -j REJECT
+ $IPTABLES -w 5 -A FORWARD -i + -s 192.168.1.0/24 -j REJECT
+ #
+ # Rule 7 (global)
+ #
+ echo "Rule 7 (global)"
  #
  $IPTABLES -w 5 -A INPUT -j DROP
  $IPTABLES -w 5 -A FORWARD -i + -j DROP
