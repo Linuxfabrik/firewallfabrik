@@ -81,6 +81,83 @@ def get_iptables_version(fw) -> str:
     return fw.version or DEFAULT_IPTABLES_VERSION
 
 
+# The ipv4options match is not part of netfilter iptables.  It came from
+# patch-o-matic, was carried in the tree as extensions/libipt_ipv4options.c
+# until "Move extensions for pom patches to individual patchlets"
+# (29f91845) took it out, and the first release without it is v1.3.8.  It
+# lives on in xtables-addons, where it grew the --flags / --any spelling
+# Firewall Builder gates on 1.4.3.  Both spellings are therefore emitted as
+# written, because an administrator who set the option means it - but a
+# stock iptables answers "Couldn't load match", which stops the activation
+# script, so saying where the match comes from is worth a warning.
+IPV4OPTIONS_LAST_RELEASE = '1.3.7'
+IPV4OPTIONS_NOTE = (
+    'The "ipv4options" match left netfilter iptables after '
+    f'{IPV4OPTIONS_LAST_RELEASE} and is only available from xtables-addons; '
+    'the firewall needs that package installed or the rule will not load'
+)
+
+
+def ipv4_options_match(data: dict, version: str) -> tuple[str, str]:
+    """Return the ``-m ipv4options`` match for *data*, plus a problem with it.
+
+    The two spellings are the two releases of the module: the one carried
+    in iptables until 1.3.7 takes an option per flag, the one in
+    xtables-addons takes a comma-separated ``--flags`` list.  Firewall
+    Builder tells them apart by the iptables version, at 1.4.3.
+
+    The older spelling refuses ``--ssrr`` next to ``--lsrr``
+    ("Can't specify --ssrr with --lsrr", the last in-tree
+    extensions/libipt_ipv4options.c), so that combination yields no match
+    and a problem to report; the newer one takes both in one list.
+
+    Returns ``(match, problem)``.  An empty *match* with a non-empty
+    *problem* means the caller must not emit the rule as it stands.
+    """
+
+    def is_set(key: str) -> bool:
+        return str(data.get(key)) == 'True'
+
+    modern = version_compare(version, '1.4.3') >= 0
+
+    if is_set('any_opt'):
+        return ('-m ipv4options --any' if modern else '-m ipv4options --any-opt'), (
+            IPV4OPTIONS_NOTE
+        )
+
+    if modern:
+        names = {
+            'lsrr': 'lsrr',
+            'rr': 'record-route',
+            'rtralt': 'router-alert',
+            'ssrr': 'ssrr',
+            'ts': 'timestamp',
+        }
+        options = [name for key, name in names.items() if is_set(key)]
+        if not options:
+            return '', ''
+        return f'-m ipv4options --flags {",".join(options)}', IPV4OPTIONS_NOTE
+
+    if is_set('lsrr') and is_set('ssrr'):
+        return '', (
+            'The "ipv4options" match of this iptables release cannot ask for '
+            'loose and strict source routing at once; it answers "Can\'t '
+            'specify --ssrr with --lsrr"'
+        )
+
+    names = {
+        'lsrr': '--lsrr',
+        'rr': '--rr',
+        'rtralt': '--ra',
+        'ssrr': '--ssrr',
+        'ts': '--ts',
+    }
+    options = [name for key, name in names.items() if is_set(key)]
+    if not options:
+        return '', ''
+    return '-m ipv4options ' + ' '.join(options), IPV4OPTIONS_NOTE
+
+
 def version_compare(v1: str, v2: str) -> int:
     """Compare two iptables version strings. Returns -1, 0, or 1.
 

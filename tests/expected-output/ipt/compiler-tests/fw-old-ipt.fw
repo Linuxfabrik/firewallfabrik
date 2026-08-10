@@ -9,11 +9,15 @@
 #
 # files: * fw-old-ipt.fw /etc/fwf.sh
 #
-# Compiled for iptables 1.4.3
+# Compiled for iptables 1.4.0
 #
 # Pinned to an iptables release that predates several matches and targets the compiler emits
 
 # Rule 0 (NAT): ip6tables before 1.4.17 has no NAT table; the rule is left out
+# fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead
+# fw-old-ipt:Policy:2: warning: The "ipv4options" match of this iptables release cannot ask for loose and strict source routing at once; it answers "Can't specify --ssrr with --lsrr"
+# fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead
+# fw-old-ipt:Policy:2: warning: The "ipv4options" match of this iptables release cannot ask for loose and strict source routing at once; it answers "Can't specify --ssrr with --lsrr"
 # fw-old-ipt:Policy:1: warning: ip6tables before 1.6.0 does not know the reject type "reject-route"; rejecting with the default type instead
 # fw-old-ipt:Policy:1: warning: ip6tables before 1.6.0 does not know the reject type "reject-route"; rejecting with the default type instead
 
@@ -434,6 +438,29 @@ configure_interfaces() {
 
 script_body() {
  :
+ # ================ IPv4
+
+ # ================ Table 'filter', automatic rules
+ # accept established sessions
+ $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+ $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+ # ================ Table 'filter', rule set Policy
+ #
+ # Rule 0 (global)
+ #
+ echo "Rule 0 (global)"
+ #
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 22 -m state --state NEW -j ACCEPT
+ #
+ # Rule 1 (global)
+ #
+ echo "Rule 1 (global)"
+ #
+ # Reject type this release does not know yet
+ $IPTABLES -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j REJECT
+
  # ================ IPv6
 
  # ================ Table 'filter', automatic rules
@@ -456,6 +483,13 @@ script_body() {
  #
  # Reject type this release does not know yet
  $IP6TABLES -A INPUT -p tcp -m tcp --dport 80 -m state --state NEW -j REJECT
+ #
+ # Rule 2 (global)
+ #
+ echo "Rule 2 (global)"
+ #
+ # IP options this ipv4options module cannot ask for together
+ $IP6TABLES -A INPUT -p 0 -j DROP
 }
 
 ip_forward() {
@@ -466,6 +500,7 @@ ip_forward() {
 reset_all() {
  :
  command -v nft >/dev/null 2>&1 && nft flush ruleset
+ reset_iptables_v4
  reset_iptables_v6
 }
 

@@ -53,6 +53,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
+    ipv4_options_match,
     normalize_set_name,
     version_compare,
 )
@@ -764,7 +765,9 @@ class NATPrintRule(NATRuleProcessor):
                         return f'-m icmp6 --icmpv6-type {icmp} '
                     return f'--icmp-type {icmp} '
             elif isinstance(srv, IPService):
-                ip_str = self._print_ip(srv)
+                ip_str = self._print_ip(rule, srv)
+                if ip_str is None:
+                    return None
                 if ip_str:
                     return f'{ip_str} '
         else:
@@ -860,7 +863,7 @@ class NATPrintRule(NATRuleProcessor):
             return f'{icmp_type}/{icmp_code}'
         return str(icmp_type)
 
-    def _print_ip(self, srv) -> str:
+    def _print_ip(self, rule: CompRule, srv) -> str | None:
         """Print IPService fragment and IP option matching for NAT rules.
 
         Matches fwbuilder PolicyCompiler_PrintRule::_printIP().
@@ -879,41 +882,18 @@ class NATPrintRule(NATRuleProcessor):
                 parts.append('-f')
         # The ipv4options match reads the IPv4 header option field, which an
         # IPv6 packet does not have, so ip6tables has no such module.  The
-        # policy print rule leaves the block out for IPv6 for that reason.
+        # policy print rule leaves the block out for IPv6 for that reason,
+        # and both build the match with the same shared helper.
         if not self.compiler.ipv6_policy:
-            if _is_true(data.get('any_opt')):
-                if version_compare(self.version, '1.4.3') >= 0:
-                    parts.append('-m ipv4options --any')
-                else:
-                    parts.append('-m ipv4options --any-opt')
-            elif version_compare(self.version, '1.4.3') >= 0:
-                options = []
-                if _is_true(data.get('lsrr')):
-                    options.append('lsrr')
-                if _is_true(data.get('ssrr')):
-                    options.append('ssrr')
-                if _is_true(data.get('rr')):
-                    options.append('record-route')
-                if _is_true(data.get('ts')):
-                    options.append('timestamp')
-                if _is_true(data.get('rtralt')):
-                    options.append('router-alert')
-                if options:
-                    parts.append(f'-m ipv4options --flags {",".join(options)}')
-            else:
-                options = []
-                if _is_true(data.get('lsrr')):
-                    options.append('--lsrr')
-                if _is_true(data.get('ssrr')):
-                    options.append('--ssrr')
-                if _is_true(data.get('rr')):
-                    options.append('--rr')
-                if _is_true(data.get('ts')):
-                    options.append('--ts')
-                if _is_true(data.get('rtralt')):
-                    options.append('--ra')
-                if options:
-                    parts.append('-m ipv4options ' + ' '.join(options))
+            ip_opts, problem = ipv4_options_match(data, self.version)
+            if problem:
+                self.compiler.warning(rule, problem)
+            if ip_opts:
+                parts.append(ip_opts)
+            elif problem:
+                # Without the match the rule would translate every packet,
+                # options or not.
+                return None
         return ' '.join(parts)
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:

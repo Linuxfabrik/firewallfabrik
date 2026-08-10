@@ -1027,6 +1027,18 @@ libraries:
                 named_protocols:
                   protocol_num: '0'
               - type: 'IPService'
+                name: 'source-routed'
+                comment: 'Loose and strict source routing at once'
+                data:
+                  fragm: false
+                  lsrr: true
+                  rr: false
+                  short_fragm: false
+                  ssrr: true
+                  ts: false
+                named_protocols:
+                  protocol_num: '0'
+              - type: 'IPService'
                 name: 'tos-and-dscp'
                 comment: 'Carries a ToS byte and a DiffServ code point at once'
                 data:
@@ -5489,7 +5501,7 @@ libraries:
               lastInstalled: '0'
               lastModified: '1770914360'
               platform: 'iptables'
-              version: '1.4.3'
+              version: '1.4.0'
             options:
               accept_established: true
               accept_new_tcp_with_no_syn: true
@@ -5611,6 +5623,7 @@ libraries:
                       - 'Library:Standard/IPService:Any'
               - type: 'Policy'
                 name: 'Policy'
+                ipv4: true
                 ipv6: true
                 top: true
                 rules:
@@ -5651,6 +5664,26 @@ libraries:
                       - 'Library:Standard/Network:Any'
                     srv:
                       - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 2
+                    comment: 'IP options this ipv4options module cannot ask for together'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: true
+                    action: 'Deny'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-old-ipt'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:IP/IPService:source-routed'
                     when:
                       - 'Library:Standard/Interval:Any'
               - type: 'Routing'

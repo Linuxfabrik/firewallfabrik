@@ -60,6 +60,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_interface_var_name,
     get_iptables_version,
     get_wait_option,
+    ipv4_options_match,
     normalize_set_name,
     version_compare,
 )
@@ -907,9 +908,15 @@ class PrintRule(PolicyRuleProcessor):
                     parts.append(f'-m dscp --dscp {dscp}')
             # IP options (IPv4 only)
             if not self.compiler.ipv6_policy:
-                ip_opts = self._print_ipv4_options(data)
+                ip_opts, problem = ipv4_options_match(data, self.version)
+                if problem:
+                    self.compiler.warning(rule, problem)
                 if ip_opts:
                     parts.append(ip_opts)
+                elif problem:
+                    # The match cannot be written; without it the rule would
+                    # apply to every packet, options or not.
+                    return None
         if isinstance(srv, TCPService):
             flags = self._print_tcp_flags(srv)
             if flags:
@@ -960,48 +967,6 @@ class PrintRule(PolicyRuleProcessor):
                 return None
             return f'-m owner {neg}--uid-owner {uid} '
 
-        return ''
-
-    def _print_ipv4_options(self, data: dict) -> str:
-        """Print ``-m ipv4options`` matching.
-
-        Matches fwbuilder: old module (<1.4.3) uses individual flags,
-        new module (>=1.4.3) uses ``--flags`` with comma-separated list.
-        """
-        if _is_true(data.get('any_opt')):
-            if version_compare(self.version, '1.4.3') >= 0:
-                return '-m ipv4options --any'
-            return '-m ipv4options --any-opt'
-        if version_compare(self.version, '1.4.3') >= 0:
-            # New ipv4options module: --flags opt1,opt2,...
-            options = []
-            if _is_true(data.get('lsrr')):
-                options.append('lsrr')
-            if _is_true(data.get('ssrr')):
-                options.append('ssrr')
-            if _is_true(data.get('rr')):
-                options.append('record-route')
-            if _is_true(data.get('ts')):
-                options.append('timestamp')
-            if _is_true(data.get('rtralt')):
-                options.append('router-alert')
-            if options:
-                return f'-m ipv4options --flags {",".join(options)}'
-        else:
-            # Old ipv4options module: individual flags
-            options = []
-            if _is_true(data.get('lsrr')):
-                options.append('--lsrr')
-            if _is_true(data.get('ssrr')):
-                options.append('--ssrr')
-            if _is_true(data.get('rr')):
-                options.append('--rr')
-            if _is_true(data.get('ts')):
-                options.append('--ts')
-            if _is_true(data.get('rtralt')):
-                options.append('--ra')
-            if options:
-                return '-m ipv4options ' + ' '.join(options)
         return ''
 
     def _print_tcp_flags(self, srv) -> str:

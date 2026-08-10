@@ -10,6 +10,8 @@
 #
 #  Pinned to an iptables release that predates several matches and targets the compiler emits
 #
+# fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
+# fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
 
 FWBDEBUG=""
 
@@ -255,12 +257,32 @@ table inet fwf_filter {
         #
         # Rule 0 (global)
         #
+        meta nfproto ipv4 tcp dport 22 ct state new counter accept
+        #
+        # Rule 1 (global)
+        #
+        # Reject type this release does not know yet
+        # # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
+        meta nfproto ipv4 tcp dport 80 ct state new counter reject
+        #
+        # Rule 2 (global)
+        #
+        # IP options this ipv4options module cannot ask for together
+        ip option lsrr exists ip option ssrr exists counter drop
+        #
+        # Rule 0 (global)
+        #
         meta nfproto ipv6 tcp dport 22 ct state new counter accept
         #
         # Rule 1 (global)
         #
         # Reject type this release does not know yet
         meta nfproto ipv6 tcp dport 80 ct state new counter reject with icmpv6 reject-route
+        #
+        # Rule 2 (global)
+        #
+        # IP options this ipv4options module cannot ask for together
+        meta nfproto ipv6 counter drop
     }
 
     chain forward {
