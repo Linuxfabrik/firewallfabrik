@@ -134,6 +134,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): dropping TCP sessions that were open before a firewall restart no longer drops legitimate new connections along with them.
 * Compiler (nftables): firewalls that log through NFLOG with one of the IP or TCP option logging settings enabled produce a ruleset that loads.
 * Compiler (nftables): generated rules carry a counter, so `nft list ruleset` shows per-rule hit counts as the iptables output does.
+* Compiler (nftables): an IP service that carries a ToS byte as well as a DiffServ code point is reported, as it is on iptables, instead of quietly matching the DiffServ field. The same service matched a different header field on each platform.
 * Compiler (nftables): IP services that match a DSCP value produce a ruleset that loads. A match on the legacy ToS byte, which nftables cannot express, is reported.
 * Compiler (nftables): IPv6 NAT rules produce a ruleset that loads.
 * Compiler (nftables): logging of invalid packets uses the debug level and the configured NFLOG group. Under a packet flood those messages reached the console.

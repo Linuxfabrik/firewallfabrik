@@ -967,7 +967,25 @@ class PrintRule_nft(PolicyRuleProcessor):
             unrenderable = False
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 parts.append(print_fragment_match(self.compiler.ipv6_policy))
-            if dscp:
+            # An IP service can hold a ToS byte and a DiffServ code point at
+            # once, and only one of them can become a match. The ToS byte
+            # wins, because that is the order the iptables print rule and
+            # fwbuilder use (PolicyCompiler_PrintRule.cpp:953: `if
+            # (!tos.empty()) ... else if (!dscp.empty())`). Deciding it the
+            # other way round here meant the same service matched the ToS
+            # byte on one platform and the DiffServ field on the other.
+            if tos:
+                # nftables has no ToS-byte matcher: the IPv4 ToS field was
+                # split into dscp + ecn, so iptables' `-m tos --tos` has no
+                # nftables equivalent. Fail loudly instead of emitting an
+                # `ip tos` expression that nft rejects.
+                self.compiler.error(
+                    rule,
+                    'IP service with a ToS value is not supported by nftables; '
+                    'use a DSCP value instead',
+                )
+                unrenderable = True
+            elif dscp:
                 if not is_valid_dscp(dscp):
                     # An unknown DiffServ class (e.g. "AF4") is rejected by
                     # nftables; report it instead of emitting a rule that
@@ -985,17 +1003,6 @@ class PrintRule_nft(PolicyRuleProcessor):
                     # class names fwbuilder stores are uppercase (BE, CS0,
                     # AF11). Numeric values (0x20) are unaffected by lower().
                     parts.append(f'{af} dscp {dscp.lower()}')
-            elif tos:
-                # nftables has no ToS-byte matcher: the IPv4 ToS field was
-                # split into dscp + ecn, so iptables' `-m tos --tos` has no
-                # nftables equivalent. Fail loudly instead of emitting an
-                # `ip tos` expression that nft rejects.
-                self.compiler.error(
-                    rule,
-                    'IP service with a ToS value is not supported by nftables; '
-                    'use a DSCP value instead',
-                )
-                unrenderable = True
             if not self.compiler.ipv6_policy:
                 # IP options are an IPv4 header feature; the iptables compiler
                 # also emits `-m ipv4options` for IPv4 policies only.
