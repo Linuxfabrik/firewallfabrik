@@ -446,6 +446,12 @@ script_body() {
  $IPTABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # drop TCP sessions opened prior firewall restart
+ $IPTABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ $IPTABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ # drop packets that do not match any valid state
+ $IPTABLES -A OUTPUT -m state --state INVALID -j DROP
+ $IPTABLES -A INPUT -m state --state INVALID -j DROP
 
  # ================ Table 'filter', rule set Policy
  #
@@ -469,6 +475,12 @@ script_body() {
  $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # drop TCP sessions opened prior firewall restart
+ $IP6TABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ $IP6TABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ # drop packets that do not match any valid state
+ $IP6TABLES -A OUTPUT -m state --state INVALID -j DROP
+ $IP6TABLES -A INPUT -m state --state INVALID -j DROP
 
  # ================ Table 'filter', rule set Policy
  #
@@ -488,7 +500,7 @@ script_body() {
 
 ip_forward() {
  :
- echo 1 > /proc/sys/net/ipv4/ip_forward
+ echo 0 > /proc/sys/net/ipv4/ip_forward
 }
 
 reset_all() {

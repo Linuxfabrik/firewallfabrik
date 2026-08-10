@@ -180,10 +180,26 @@ class OSConfigurator_nft(OSConfigurator):
         if self.fw.get_option('accept_established'):
             rules.append('        ct state established,related counter accept')
 
+        # The forward chain only needs the rules below when the firewall
+        # forwards at all.  The iptables configlet wraps the same two blocks
+        # in `{{if ipforw}}` (resources/configlets/linux24/automatic_rules,
+        # fwbuilder bug #1092141, "irritating FORWARD rule for established
+        # connections"), and "no change" counts as forwarding, because the
+        # kernel setting is then whatever the host already has.  The
+        # established/related rule is deliberately not gated: the configlet
+        # emits it in the forward chain unconditionally.
+        forwards = str(self.fw.get_option('linux24_ip_forward')) in (
+            '1',
+            'On',
+            'on',
+            '',
+        )
+        in_forward = chain == 'forward'
+
         # Drop invalid packets
         drop_invalid = self.fw.get_option('drop_invalid')
         log_invalid = self.fw.get_option('log_invalid')
-        if drop_invalid:
+        if drop_invalid and (forwards or not in_forward):
             if log_invalid:
                 rules.append(
                     f'        ct state invalid counter {self._invalid_log()} drop'
@@ -199,7 +215,9 @@ class OSConfigurator_nft(OSConfigurator):
         # (`! --tcp-flags SYN,RST,ACK SYN`, configlets/linux24/automatic_rules)
         # and the form iptables-translate produces for it (netfilter
         # extensions/libxt_tcp.c, tcp_xlate).
-        if not self.fw.get_option('accept_new_tcp_with_no_syn'):
+        if not self.fw.get_option('accept_new_tcp_with_no_syn') and (
+            forwards or not in_forward
+        ):
             rules.append(
                 '        tcp flags != syn / syn,rst,ack ct state new counter drop'
             )
