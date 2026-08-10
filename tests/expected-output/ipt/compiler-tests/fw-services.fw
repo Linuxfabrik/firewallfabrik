@@ -12,6 +12,8 @@
 # Compiled for iptables (any version)
 #
 
+# Rule 10 (global): Rate limit is negated, which the iptables limit match cannot express; the rule is left without it
+# Rule 10 (global): Rate limit is negated, which the iptables limit match cannot express; the rule is left without it
 # Rule '7 (global)' shadows rule '8 (global)' below it
 # Rule '1 (global)' shadows rule '8 (global)' below it
 # Rule '7 (global)' shadows rule '9 (global)' below it
@@ -506,6 +508,13 @@ script_body() {
  #
  # Service carries a ToS byte and a DiffServ code point at once
  $IPTABLES -w 5 -A INPUT -p 0 -s 192.168.1.0/24 -m tos --tos 0x10 -m conntrack --ctstate NEW -j DROP
+ #
+ # Rule 10 (global)
+ #
+ echo "Rule 10 (global)"
+ #
+ # Fires only above the rate, not below it
+ $IPTABLES -w 5 -A INPUT -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j DROP
 }
 
 ip_forward() {

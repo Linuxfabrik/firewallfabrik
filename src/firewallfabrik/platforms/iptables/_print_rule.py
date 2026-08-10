@@ -1075,6 +1075,7 @@ class PrintRule(PolicyRuleProcessor):
         log rules and the limit configured on the rule itself to every
         other rule (PolicyCompiler_PrintRule.cpp:271).
         """
+        negated = False
         if rule.ipt_target in LOG_TARGETS:
             limit_val = self.compiler.fw.get_option('limit_value')
             limit_suffix = self.compiler.fw.get_option('limit_suffix')
@@ -1083,12 +1084,29 @@ class PrintRule(PolicyRuleProcessor):
             limit_val = rule.get_option('limit_value', -1)
             limit_suffix = rule.get_option('limit_suffix', '')
             burst = rule.get_option('limit_burst', 0)
+            negated = bool(rule.get_option('limit_value_not', False))
 
         try:
             limit_val = int(limit_val)
         except (ValueError, TypeError):
             limit_val = -1
         if limit_val <= 0:
+            return ''
+
+        if negated:
+            # The limit match has no inverted form: --limit carries no
+            # XTOPT_INVERT (netfilter extensions/libxt_limit.c), and
+            # xtables_option_parse() answers a leading "!" with
+            # 'option "--limit" cannot be inverted'
+            # (netfilter libxtables/xtoptions.c).  Emitting the rule with a
+            # plain --limit would turn "only above this rate" into "only
+            # below it", so the condition is reported instead.  nftables
+            # writes it as `limit rate over`.
+            self.compiler.error(
+                rule,
+                'Rate limit is negated, which the iptables limit match cannot '
+                'express; the rule is left without it',
+            )
             return ''
 
         limit_suffix = limit_suffix or '/second'

@@ -1279,6 +1279,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         ``limit_suffix`` (``/second``, ``/minute``, ``/hour``, ``/day``) is
         already the spelling nftables expects.
         """
+        negated = False
         if rule.ipt_target in LOG_TARGETS:
             # fwbuilder applies the limit configured in the firewall settings
             # to log rules and the limit configured on the rule itself to
@@ -1290,6 +1291,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             limit_val = rule.get_option('limit_value', -1)
             limit_suffix = rule.get_option('limit_suffix', '')
             burst = rule.get_option('limit_burst', 0)
+            negated = bool(rule.get_option('limit_value_not', False))
 
         try:
             limit_val = int(limit_val)
@@ -1304,7 +1306,12 @@ class PrintRule_nft(PolicyRuleProcessor):
         except (ValueError, TypeError):
             burst = 0
 
-        result = f'limit rate {limit_val}{limit_suffix}'
+        # "over" is nftables' inverted rate limit: the statement matches once
+        # the rate has been exceeded (netfilter nftables src/parser_bison.y
+        # maps it to NFT_LIMIT_F_INV, tests/py/any/limit.t).  iptables has no
+        # such form and reports the rule instead.
+        mode = 'over ' if negated else ''
+        result = f'limit rate {mode}{limit_val}{limit_suffix}'
         if burst > 0:
             result += f' burst {burst} packets'
         return result

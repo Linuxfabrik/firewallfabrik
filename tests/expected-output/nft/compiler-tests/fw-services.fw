@@ -280,6 +280,11 @@ table ip fwf_filter {
         # Service names a whole protocol next to a single port
         ip saddr 192.168.1.0/24 meta l4proto tcp ct state new counter drop
         ip saddr 192.168.1.0/24 tcp dport 80 ct state new counter drop
+        #
+        # Rule 10 (global)
+        #
+        # Fires only above the rate, not below it
+        ip saddr 192.168.1.0/24 tcp dport 80 limit rate over 10/second counter drop
     }
 
     chain forward {
