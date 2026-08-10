@@ -5538,6 +5538,8 @@ libraries:
               load_modules: true
               local_nat: false
               log_level: 'info'
+              mgmt_addr: '2001:db8:1::9'
+              mgmt_ssh: true
               log_prefix: 'RULE %N -- %A '
               loopback_interface: 'lo'
               manage_virtual_addr: true

@@ -933,6 +933,11 @@ class CompilerDriver_nft(CompilerDriver):
         mgmt_access = bool(options.get('mgmt_ssh', False)) and bool(
             ssh_management_address
         )
+        # The rule goes into an inet table, where an address match has to
+        # name its family: `ip saddr` on an IPv6 address is a datatype
+        # error, and it happens at the moment the block action has just set
+        # every chain to drop, so the firewall stays shut.
+        ssh_management_family = 'ip6' if ':' in ssh_management_address else 'ip'
 
         # IP forwarding commands. Indent every line so multi-line output
         # (IPv4 plus IPv6) lines up inside the ip_forward() function body.
@@ -1035,6 +1040,7 @@ class CompilerDriver_nft(CompilerDriver):
             'kernel_vars_commands': kernel_vars_commands,
             'mgmt_access': mgmt_access,
             'ssh_management_address': ssh_management_address,
+            'ssh_management_family': ssh_management_family,
             'shell_functions': shell_functions,
             'configure_interfaces_code': configure_interfaces_code,
             'verify_interfaces_code': verify_interfaces_code,

@@ -30,7 +30,7 @@ block_action() {
 
 {{if mgmt_access}}
     # backup ssh access
-    $IPTABLES {{$opt_wait}} -A INPUT  -p tcp -m tcp  -s {{$ssh_management_address}}  --dport 22  -m state --state NEW,ESTABLISHED -j  ACCEPT
-    $IPTABLES {{$opt_wait}} -A OUTPUT  -p tcp -m tcp  -d {{$ssh_management_address}}  --sport 22  -m state --state ESTABLISHED,RELATED -j ACCEPT
+    {{$mgmt_tool}} {{$opt_wait}} -A INPUT  -p tcp -m tcp  -s {{$ssh_management_address}}  --dport 22  -m {{$state_module_option}} NEW,ESTABLISHED -j  ACCEPT
+    {{$mgmt_tool}} {{$opt_wait}} -A OUTPUT  -p tcp -m tcp  -d {{$ssh_management_address}}  --sport 22  -m {{$state_module_option}} ESTABLISHED,RELATED -j ACCEPT
 {{endif}}
 }

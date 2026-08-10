@@ -263,8 +263,8 @@ block_action() {
     $NFT add chain inet {{ filter_table }} output '{ type filter hook output priority 0; policy drop; }'
 {% if mgmt_access %}
     # backup ssh access
-    $NFT add rule inet {{ filter_table }} input tcp dport 22 ip saddr {{ ssh_management_address }} ct state new,established accept
-    $NFT add rule inet {{ filter_table }} output tcp sport 22 ip daddr {{ ssh_management_address }} ct state established accept
+    $NFT add rule inet {{ filter_table }} input tcp dport 22 {{ ssh_management_family }} saddr {{ ssh_management_address }} ct state new,established accept
+    $NFT add rule inet {{ filter_table }} output tcp sport 22 {{ ssh_management_family }} daddr {{ ssh_management_address }} ct state established accept
 {% endif %}
 }
 

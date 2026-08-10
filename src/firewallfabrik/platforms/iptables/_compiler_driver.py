@@ -44,6 +44,7 @@ from firewallfabrik.platforms.iptables import __compiler_version__
 from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
     get_wait_option,
+    version_compare,
 )
 
 if TYPE_CHECKING:
@@ -587,6 +588,17 @@ class CompilerDriver_ipt(CompilerDriver):
                 mgmt_ssh = bool(options.get('mgmt_ssh', False))
                 mgmt_addr = options.get('mgmt_addr', '')
                 mgmt_access = 1 if (mgmt_ssh and mgmt_addr) else 0
+                # The backup rule has to go to the binary that speaks the
+                # family of the address.  iptables answers an IPv6 address
+                # with "host/network not found", and it does so right after
+                # the block action set every policy to DROP, which is the
+                # one moment the administrator needs this rule.
+                mgmt_tool = '$IP6TABLES' if ':' in mgmt_addr else '$IPTABLES'
+                mgmt_state_option = (
+                    'conntrack --ctstate'
+                    if version_compare(real_version, '1.4.4') >= 0
+                    else 'state --state'
+                )
 
                 # Block action configlet
                 block_action = Configlet('linux24', 'block_action')
@@ -597,6 +609,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     'ssh_management_address',
                     mgmt_addr,
                 )
+                block_action.set_variable('mgmt_tool', mgmt_tool)
+                block_action.set_variable('state_module_option', mgmt_state_option)
                 script_skeleton.set_variable('block_action', block_action.expand())
 
                 # Stop action configlet — in full-flush mode policies
@@ -611,6 +625,8 @@ class CompilerDriver_ipt(CompilerDriver):
                     'ssh_management_address',
                     mgmt_addr,
                 )
+                stop_action.set_variable('mgmt_tool', mgmt_tool)
+                stop_action.set_variable('state_module_option', mgmt_state_option)
                 stop_action.set_variable(
                     'coexistence_v4',
                     1 if (not flush_ruleset and have_ipv4) else 0,

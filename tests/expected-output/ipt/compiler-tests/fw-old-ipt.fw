@@ -512,6 +512,9 @@ reset_all() {
 
 block_action() {
  reset_all
+ # backup ssh access
+ $IP6TABLES -A INPUT -p tcp -m tcp -s 2001:db8:1::9 --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d 2001:db8:1::9 --sport 22 -m state --state ESTABLISHED,RELATED -j ACCEPT
 }
 
 stop_action() {
@@ -522,6 +525,9 @@ stop_action() {
  $IP6TABLES -P OUTPUT ACCEPT
  $IP6TABLES -P INPUT ACCEPT
  $IP6TABLES -P FORWARD ACCEPT
+ # backup ssh access
+ $IP6TABLES -A INPUT -p tcp -m tcp -s 2001:db8:1::9 --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d 2001:db8:1::9 --sport 22 -m state --state ESTABLISHED,RELATED -j ACCEPT
 }
 
 status_action() {
