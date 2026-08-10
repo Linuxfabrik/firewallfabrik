@@ -5479,6 +5479,163 @@ libraries:
                 name: 'Routing'
                 top: true
           - type: 'Firewall'
+            name: 'fw-old-ipt'
+            comment: 'Pinned to an iptables release that predates several matches
+              and targets the compiler emits'
+            data:
+              host_OS: 'linux24'
+              inactive: false
+              lastCompiled: '1770922821'
+              lastInstalled: '0'
+              lastModified: '1770914360'
+              platform: 'iptables'
+              version: '1.4.3'
+            options:
+              accept_established: true
+              accept_new_tcp_with_no_syn: true
+              check_shading: true
+              configure_interfaces: true
+              firewall_is_part_of_any_and_networks: true
+              flush_and_set_default_policy: true
+              limit_value: '0'
+              linux24_ip_forward: '1'
+              load_modules: true
+              local_nat: false
+              log_level: 'info'
+              log_prefix: 'RULE %N -- %A '
+              loopback_interface: 'lo'
+              manage_virtual_addr: true
+              modules_dir: '/lib/modules/`uname -r`/kernel/net/'
+              ulog_nlgroup: '1'
+              verify_interfaces: true
+            management:
+              address: '0.0.0.0'
+              snmp:
+                enabled: false
+                read_community: ''
+                write_community: ''
+              fwbd:
+                enabled: false
+                identity: ''
+                port: -1
+              install_script:
+                enabled: false
+                command: ''
+                arguments: ''
+            interfaces:
+              - name: 'eth0'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'external'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-old-ipt:eth0:ip'
+                    inet_addr_mask:
+                      address: '198.51.100.9'
+                      netmask: '255.255.255.0'
+                  - type: 'IPv6'
+                    name: 'fw-old-ipt:eth0:ip6'
+                    inet_addr_mask:
+                      address: '2001:db8:1::1'
+                      netmask: '64'
+              - name: 'eth1'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: 'internal'
+                  mgmt: false
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                options:
+                  type: 'ethernet'
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-old-ipt:eth1:ip'
+                    inet_addr_mask:
+                      address: '192.168.9.1'
+                      netmask: '255.255.255.0'
+                  - type: 'IPv6'
+                    name: 'fw-old-ipt:eth1:ip6'
+                    inet_addr_mask:
+                      address: '2001:db8:2::1'
+                      netmask: '64'
+              - name: 'lo'
+                data:
+                  dedicated_failover: false
+                  dyn: false
+                  label: ''
+                  security_level: '0'
+                  unnum: false
+                  unprotected: false
+                addresses:
+                  - type: 'IPv4'
+                    name: 'fw-old-ipt:lo:ip'
+                    inet_addr_mask:
+                      address: '127.0.0.1'
+                      netmask: '255.0.0.0'
+            rule_sets:
+              - type: 'NAT'
+                name: 'NAT'
+                ipv6: true
+                top: true
+                rules:
+                  - type: 'NATRule'
+                    comment: 'IPv6 NAT, which this release has no table for'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-old-ipt/Interface:eth0'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+              - type: 'Policy'
+                name: 'Policy'
+                ipv6: true
+                top: true
+                rules:
+                  - type: 'PolicyRule'
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: false
+                    action: 'Accept'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-old-ipt'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:ssh'
+                    when:
+                      - 'Library:Standard/Interval:Any'
+              - type: 'Routing'
+                name: 'Routing'
+                top: true
+          - type: 'Firewall'
             name: 'fw-part-of-any'
             data:
               host_OS: 'linux24'

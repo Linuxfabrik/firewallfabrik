@@ -62,6 +62,14 @@ if TYPE_CHECKING:
     from firewallfabrik.platforms.iptables._nat_compiler import NATCompiler_ipt
 
 
+# The release that brought NAT to ip6tables.  libip6t_SNAT.c,
+# libip6t_DNAT.c, libip6t_MASQUERADE.c, libip6t_REDIRECT.c and
+# libip6t_NETMAP.c were all added at once and are first contained in
+# v1.4.17 (netfilter iptables history).  Before that ip6tables has no NAT
+# table and none of the targets.
+IP6TABLES_NAT_FIRST_RELEASE = '1.4.17'
+
+
 def _is_true(val) -> bool:
     """Check a data-dict value that may be a Python bool or a string 'True'/'False'."""
     return str(val) == 'True'
@@ -183,10 +191,36 @@ class NATPrintRule(NATRuleProcessor):
             cmd, ipv6, rule.get_option('address_table_file', '')
         )
 
+    def _nat_available(self, rule: CompRule) -> bool:
+        """Report whether the pinned ip6tables has a NAT table at all.
+
+        IPv6 NAT is much younger than the IPv4 one: the four targets a NAT
+        rule can use arrived as libip6t_SNAT.c, libip6t_DNAT.c,
+        libip6t_MASQUERADE.c, libip6t_REDIRECT.c and libip6t_NETMAP.c in
+        one go, all first tagged v1.4.17 (netfilter iptables history).  An
+        older ip6tables answers "can't initialize ip6tables table `nat'" or
+        "Couldn't load target", which stops the activation script with the
+        built-in policies already at DROP, so the rule is reported and left
+        out instead.
+        """
+        if not getattr(self.compiler, 'ipv6_policy', False):
+            return True
+        if version_compare(self.version, IP6TABLES_NAT_FIRST_RELEASE) >= 0:
+            return True
+        self.compiler.error(
+            rule,
+            f'ip6tables before {IP6TABLES_NAT_FIRST_RELEASE} has no NAT table; '
+            'the rule is left out',
+        )
+        return False
+
     def _build_nat_command(self, rule: CompRule) -> str:
         """Build NAT iptables command, empty when the rule cannot be expressed."""
         cmd = ''
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
+
+        if not self._nat_available(rule):
+            return ''
 
         cmd += self._start_rule_line()
         cmd += self._print_chain_direction_and_interface(rule)
