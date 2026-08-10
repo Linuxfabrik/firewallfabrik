@@ -41,6 +41,40 @@ __all__ = ['get_interface_var_name']
 # such as the intrapositioned ``-s ! 192.0.2.0/24``.
 DEFAULT_IPTABLES_VERSION = '1.8'
 
+# The release a match first shipped in, per address family (IPv4, IPv6).
+# Several of these started out as IPv4-only extensions and only reached
+# ip6tables later, either through a libip6t_ file of their own or when
+# netfilter merged the two extension trees into ``libxt_``, which is why
+# the two columns differ.  Reproduce with, in the netfilter iptables
+# checkout:
+#
+#   c=$(git log --all --format=%H --diff-filter=A -- extensions/libxt_tos.c \
+#         | tail -1)
+#   git tag --contains $c | grep -E '^v1\.[0-9]' | sort -V | head -1
+#
+# tos:     libipt_tos.c v1.0.0-alpha, libxt_tos.c v1.4.1
+# dscp:    libipt_dscp.c v1.2.6,      libxt_dscp.c v1.4.0
+# set:     libipt_set.c v1.3.0,       libxt_set.c v1.4.9
+# iprange: libipt_iprange.c v1.2.9,   libxt_iprange.c v1.4.1
+# time:    libipt_time.c v1.2.2,      libxt_time.c v1.4.0
+#
+# An IPv4 column of ``0`` means the match predates every target Firewall
+# Builder can express, so it is never gated for IPv4.  The oldest entry of
+# its version list is "1.2.5 or earlier", stored as ``lt_1.2.6``, and
+# version_compare reads that as 0.2.6 on purpose (see there): a real
+# release number in this column would then rank above it and take the
+# match away from the one target that certainly has it.
+#
+# tests/test_ipt_version_gates.py re-derives the IPv6 column of every row
+# from that history, so a new row is checked rather than trusted.
+MATCH_FIRST_RELEASE = {
+    'dscp': ('1.2.6', '1.4.0'),
+    'iprange': ('1.2.9', '1.4.1'),
+    'set': ('1.3.0', '1.4.9'),
+    'time': ('0', '1.4.0'),
+    'tos': ('0', '1.4.1'),
+}
+
 
 def get_iptables_version(fw) -> str:
     """Return the iptables version a firewall is compiled for."""

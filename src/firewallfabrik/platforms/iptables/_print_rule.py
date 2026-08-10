@@ -54,6 +54,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import (
+    MATCH_FIRST_RELEASE,
     check_chain_name,
     get_address_table_var_name,
     get_interface_var_name,
@@ -105,26 +106,6 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # directly and has neither ceiling.
 XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
-
-# The release a match first shipped in, per address family (IPv4, IPv6).
-# Several of these started out as IPv4-only extensions and only reached
-# ip6tables when netfilter merged the two extension trees into `libxt_`,
-# which is why the two columns differ.  Reproduce with, in the netfilter
-# iptables checkout:
-#
-#   c=$(git log --all --format=%H --diff-filter=A -- extensions/libxt_tos.c \
-#         | tail -1)
-#   git tag --contains $c | grep -E '^v1\.[0-9]' | sort -V | head -1
-#
-# tos:     libipt_tos.c v1.0.0-alpha, libxt_tos.c v1.4.1
-# dscp:    libipt_dscp.c v1.2.6,      libxt_dscp.c v1.4.0
-# set:     libipt_set.c v1.3.0,       libxt_set.c v1.4.9
-# There never was a libip6t_ variant of any of them.
-_MATCH_FIRST_RELEASE = {
-    'tos': ('1.0.0', '1.4.1'),
-    'dscp': ('1.2.6', '1.4.0'),
-    'set': ('1.3.0', '1.4.9'),
-}
 
 # The LOG target carries its prefix in a 30-byte field and the NFLOG one
 # in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
@@ -247,7 +228,12 @@ class PrintRule(PolicyRuleProcessor):
             command_line += custom_srv
 
         command_line += self._print_modules(rule, command_line)
-        command_line += self._print_time_interval(rule)
+        time_interval = self._print_time_interval(rule)
+        if time_interval is None:
+            # Without the time match the rule would apply around the clock,
+            # which is wider than what it says. The reason was reported.
+            return ''
+        command_line += time_interval
         command_line += self._print_limit(rule)
         command_line += self._print_target(rule)
 
@@ -838,7 +824,7 @@ class PrintRule(PolicyRuleProcessor):
         match", which stops the activation script with the built-in policies
         already set to DROP, so the rule is reported and left out instead.
         """
-        first = _MATCH_FIRST_RELEASE[match][bool(self.compiler.ipv6_policy)]
+        first = MATCH_FIRST_RELEASE[match][bool(self.compiler.ipv6_policy)]
         if version_compare(self.version, first) >= 0:
             return True
         tool = 'ip6tables' if self.compiler.ipv6_policy else 'iptables'
@@ -1024,7 +1010,7 @@ class PrintRule(PolicyRuleProcessor):
 
         return ''
 
-    def _print_time_interval(self, rule: CompRule) -> str:
+    def _print_time_interval(self, rule: CompRule) -> str | None:
         """Print ``-m time`` matching for time/weekday constraints.
 
         Ports fwbuilder's ``PolicyCompiler_ipt::PrintRule::_printTimeInterval``
@@ -1035,7 +1021,10 @@ class PrintRule(PolicyRuleProcessor):
         The option names depend on the iptables version. The time module was
         rewritten in 1.4.0: the weekday list is ``--days`` before that and
         ``--weekdays`` since (netfilter extensions/libxt_time.c), and
-        ``--kerneltz`` only exists from 1.4.11 on.
+        ``--kerneltz`` only exists from 1.4.11 on.  That rewrite is also
+        when the match reached ip6tables at all, so an older ip6tables gets
+        no time match; returns ``None`` then, so the caller can leave the
+        rule out instead of running it around the clock.
         """
         if not rule.when:
             return ''
@@ -1045,6 +1034,9 @@ class PrintRule(PolicyRuleProcessor):
 
         if is_any_interval(data):
             return ''
+
+        if not self._match_available(rule, 'time'):
+            return None
 
         start_h, start_m, end_h, end_m, days = parse_interval_data(data)
 

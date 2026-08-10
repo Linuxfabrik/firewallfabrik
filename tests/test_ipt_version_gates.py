@@ -14,7 +14,7 @@
 
 Several iptables matches started out IPv4-only and only reached ip6tables
 when netfilter merged the two extension trees into ``libxt_``. The compiler
-keeps that in ``_MATCH_FIRST_RELEASE`` so a firewall pinned to an older
+keeps that in ``MATCH_FIRST_RELEASE`` so a firewall pinned to an older
 release does not get a command its binary refuses.
 
 ``test_first_release_matches_the_netfilter_history`` re-derives the table
@@ -29,15 +29,17 @@ import subprocess  # nosec B404
 
 import pytest
 
-from firewallfabrik.platforms.iptables._print_rule import _MATCH_FIRST_RELEASE
+from firewallfabrik.platforms.iptables._utils import MATCH_FIRST_RELEASE
 
-# The extension file a match ships in, per family. There never was a
-# libip6t_ variant of any of them: the IPv6 side only arrived with the
-# family-neutral libxt_ file.
+# The extension file a match ships in, per family. None of these ever had
+# a libip6t_ variant: the IPv6 side only arrived with the family-neutral
+# libxt_ file, which is what makes the second column a real cut-off.
 _EXTENSION_FILES = {
-    'tos': ('libipt_tos.c', 'libxt_tos.c'),
     'dscp': ('libipt_dscp.c', 'libxt_dscp.c'),
+    'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
+    'time': ('libipt_time.c', 'libxt_time.c'),
+    'tos': ('libipt_tos.c', 'libxt_tos.c'),
 }
 
 _SOURCE = os.environ.get('FWF_IPTABLES_SOURCE', '')
@@ -77,11 +79,11 @@ def _first_release(repo: pathlib.Path, extension: str) -> str:
 
 
 def test_table_covers_every_match_the_compiler_gates():
-    assert set(_MATCH_FIRST_RELEASE) == set(_EXTENSION_FILES)
+    assert set(MATCH_FIRST_RELEASE) == set(_EXTENSION_FILES)
 
 
 def test_ipv6_never_arrives_before_ipv4():
-    for match, (v4, v6) in _MATCH_FIRST_RELEASE.items():
+    for match, (v4, v6) in MATCH_FIRST_RELEASE.items():
         assert v4 <= v6, match
 
 
@@ -91,9 +93,13 @@ def test_first_release_matches_the_netfilter_history(match):
     repo = pathlib.Path(_SOURCE)
     _ipv4_file, ipv6_file = _EXTENSION_FILES[match]
     expected_v6 = _first_release(repo, ipv6_file)
-    assert _MATCH_FIRST_RELEASE[match][1] == expected_v6, (
+    assert MATCH_FIRST_RELEASE[match][1] == expected_v6, (
         f'{match} reached ip6tables in {expected_v6}'
     )
-    # The IPv4 column of `tos` predates the release tags the loop above can
-    # sort, so it is only checked to be no later than the merged file.
-    assert _MATCH_FIRST_RELEASE[match][0] <= expected_v6
+    # The IPv4 column is either a real release or "0", which stands for a
+    # match older than every target Firewall Builder can express. Either
+    # way it must not be later than the merged file.
+    assert MATCH_FIRST_RELEASE[match][0] <= expected_v6
+    ipv4_file = _EXTENSION_FILES[match][0]
+    if MATCH_FIRST_RELEASE[match][0] != '0':
+        assert MATCH_FIRST_RELEASE[match][0] == _first_release(repo, ipv4_file)

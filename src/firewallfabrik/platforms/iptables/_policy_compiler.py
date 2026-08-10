@@ -81,6 +81,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
 )
 from firewallfabrik.platforms.iptables._utils import (
+    MATCH_FIRST_RELEASE,
     get_iptables_version,
     version_compare,
 )
@@ -378,11 +379,22 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.add(ProcessMultiAddressObjectsInSrc('process MultiAddress objects in Src'))
         self.add(ProcessMultiAddressObjectsInDst('process MultiAddress objects in Dst'))
 
-        # The iprange match arrived in iptables 1.2.11; before that an
+        # fwbuilder switches pipelines at iptables 1.2.11: below it an
         # address range has to be written out as the networks covering it
         # (PolicyCompiler_ipt::compile picks addressRanges over
-        # specialCaseAddressRangeInRE below that release).
-        if version_compare(self.version, '1.2.11') < 0:
+        # specialCaseAddressRangeInRE below that release).  ip6tables needs
+        # the same fallback much longer: there never was a
+        # libip6t_iprange.c, the match only became family neutral with
+        # libxt_iprange.c in 1.4.1, and its NFPROTO_IPV6 registration sits
+        # in revision 1 of that file.  Before that the generated
+        # `-m iprange --src-range` command fails to load and stops the
+        # activation script.
+        first_iprange = MATCH_FIRST_RELEASE['iprange'][bool(self.ipv6_policy)]
+        no_iprange = (
+            version_compare(self.version, '1.2.11') < 0
+            or version_compare(self.version, first_iprange) < 0
+        )
+        if no_iprange:
             self.add(AddressRangesInSrc('process address ranges in Src'))
             self.add(AddressRangesInDst('process address ranges in Dst'))
         else:
