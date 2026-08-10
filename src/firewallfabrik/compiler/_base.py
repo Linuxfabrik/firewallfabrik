@@ -58,6 +58,16 @@ class BaseCompiler:
     def status(self) -> CompilerStatus:
         return self._status
 
+    @property
+    def muted_now(self) -> bool:
+        """Whether messages are being discarded right now.
+
+        A check that reports a problem only once has to ask: marking the
+        subject as reported inside a muted block would swallow the message
+        for good.
+        """
+        return self._muted > 0
+
     @staticmethod
     def _format_rule_id(rule) -> str:
         """Format rule identifier using position, falling back to label."""

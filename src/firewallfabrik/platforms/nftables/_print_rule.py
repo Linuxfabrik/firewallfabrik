@@ -59,6 +59,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    check_interface_name,
     has_ip_options,
     reject_type_token,
     sanitize_log_prefix,
@@ -382,6 +383,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         # Track per-chain: rules go to separate chain blocks, so label
         # dedup must be independent per chain.
         self._chain_labels: dict[str, str] = {}
+        self.reported_long_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -675,6 +677,9 @@ class PrintRule_nft(PolicyRuleProcessor):
         # A negated element covers all of its interfaces at once; without
         # negation the rule is atomic by then and carries exactly one.
         names = [obj.name for obj in ifaces] if neg else [ifaces[0].name]
+        for name in names:
+            if not check_interface_name(self.compiler, name, self.reported_long_ifaces):
+                return None
 
         # nftables uses iifname/oifname for wildcard matching
         # and iif/oif for exact interface matching.

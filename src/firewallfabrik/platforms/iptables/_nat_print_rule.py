@@ -57,7 +57,10 @@ from firewallfabrik.platforms.iptables._utils import (
     normalize_set_name,
     version_compare,
 )
-from firewallfabrik.platforms.linux._netfilter import has_ip_options
+from firewallfabrik.platforms.linux._netfilter import (
+    check_interface_name,
+    has_ip_options,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -102,6 +105,7 @@ class NATPrintRule(NATRuleProcessor):
         self.current_rule_label: str = ''
         self.version: str = ''
         self.reported_long_chains: set[str] = set()
+        self.reported_long_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         self.version = get_iptables_version(self.compiler.fw)
@@ -225,7 +229,12 @@ class NATPrintRule(NATRuleProcessor):
             return ''
 
         cmd += self._start_rule_line()
-        cmd += self._print_chain_direction_and_interface(rule)
+        chain_and_iface = self._print_chain_direction_and_interface(rule)
+        if chain_and_iface is None:
+            # The reason was reported; without the interface match the rule
+            # would translate traffic of every interface.
+            return ''
+        cmd += chain_and_iface
 
         osrv = ipt_comp.get_first_osrv(rule)
         if osrv:
@@ -565,11 +574,14 @@ class NATPrintRule(NATRuleProcessor):
             return result
         return ''
 
-    def _print_chain_direction_and_interface(self, rule: CompRule) -> str:
+    def _print_chain_direction_and_interface(self, rule: CompRule) -> str | None:
         parts = []
 
         iface_in_name = self._get_interface_name(rule.itf_inb)
         iface_out_name = self._get_interface_name(rule.itf_outb)
+        for name in (iface_in_name, iface_out_name):
+            if not check_interface_name(self.compiler, name, self.reported_long_ifaces):
+                return None
 
         if rule.nat_iface_in == 'nil':
             iface_in_name = ''

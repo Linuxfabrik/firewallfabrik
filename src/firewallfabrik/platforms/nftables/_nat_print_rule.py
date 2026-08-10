@@ -47,6 +47,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     range_to_cidr,
 )
+from firewallfabrik.platforms.linux._netfilter import check_interface_name
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 from firewallfabrik.platforms.nftables._print_rule import (
     get_mac_only_address,
@@ -81,6 +82,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         # Track per-chain: NAT rules go to separate chain blocks, so label
         # dedup must be independent per chain.
         self._chain_labels: dict[str, str] = {}
+        self.reported_long_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -121,6 +123,10 @@ class NATPrintRule_nft(NATRuleProcessor):
 
         # Interface matching
         iface_match = self._print_interface(rule)
+        if iface_match is None:
+            # The reason was reported; without the interface match the rule
+            # would translate traffic of every interface.
+            return ''
         if iface_match:
             parts.append(iface_match)
 
@@ -262,7 +268,7 @@ class NATPrintRule_nft(NATRuleProcessor):
                     result += f'        # {line}\n'
         return result
 
-    def _print_interface(self, rule: CompRule) -> str:
+    def _print_interface(self, rule: CompRule) -> str | None:
         """Print interface matching for NAT rules.
 
         The name goes through ``nft_quote`` for the same reason as in the
@@ -279,6 +285,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             if isinstance(obj, Interface):
                 name = obj.name
                 if name:
+                    check_interface_name(self.compiler, name, self.reported_long_ifaces)
                     neg = '!= ' if rule.itf_outb_single_object_negation else ''
                     parts.append(f'oifname {neg}{nft_quote(name)}')
 
@@ -288,6 +295,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             if isinstance(obj, Interface):
                 name = obj.name
                 if name:
+                    check_interface_name(self.compiler, name, self.reported_long_ifaces)
                     neg = '!= ' if rule.itf_inb_single_object_negation else ''
                     parts.append(f'iifname {neg}{nft_quote(name)}')
 

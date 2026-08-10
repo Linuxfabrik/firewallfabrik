@@ -10,9 +10,12 @@
 #
 #  Pinned to an iptables release that predates several matches and targets the compiler emits
 #
+# Interface name "this-name-is-too-long" is longer than the 15 characters iptables and nftables can carry; the rules matching on it are left out. Rename the interface.
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 
 FWBDEBUG=""
 
@@ -204,8 +207,8 @@ check_nft() {
 
 verify_interfaces() {
     :
-    echo "Verifying interfaces: eth0 eth1 lo"
-    for i in eth0 eth1 lo ; do
+    echo "Verifying interfaces: eth0 eth1 lo this-name-is-too-long"
+    for i in eth0 eth1 lo this-name-is-too-long ; do
         $IP link show "$i" > /dev/null 2>&1 || {
             log "Interface $i does not exist"
             exit 1
@@ -242,6 +245,7 @@ configure_interfaces() {
     update_addresses_of_interface "eth0 198.51.100.9/24 2001:db8:1::1/64" ""
     update_addresses_of_interface "eth1 192.168.9.1/24 2001:db8:2::1/64" ""
     update_addresses_of_interface "lo 127.0.0.1/8" ""
+    update_addresses_of_interface "this-name-is-too-long 10.9.9.1/24" ""
 }
 
 nft_ruleset() {

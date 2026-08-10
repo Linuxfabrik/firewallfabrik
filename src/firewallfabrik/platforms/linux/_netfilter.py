@@ -69,6 +69,41 @@ def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> 
     return ''
 
 
+# The longest interface name either tool takes.  IFNAMSIZ is 16 and holds
+# the terminator, so 15 characters fit.  iptables checks it itself
+# ("interface name `%s' must be shorter than IFNAMSIZ (%i)",
+# netfilter iptables libxtables/xtables.c: xtables_parse_interface) and
+# nftables answers "String exceeds maximum length of 16"; the kernel
+# cannot carry a longer name either.
+MAX_INTERFACE_NAME_LENGTH = 15
+
+
+def check_interface_name(compiler, name: str, already_reported: set[str]) -> bool:
+    """Whether a rule can match on *name*, reporting the reason once.
+
+    Such a name cannot come from a running system - the kernel enforces
+    the same limit - but it can come from an imported or hand-edited data
+    file.  iptables then stops the activation script and nftables refuses
+    the whole ruleset, so the rule is left out rather than emitted without
+    its interface match, which would widen it to every interface.
+    """
+    if not name or len(name.rstrip('*+')) <= MAX_INTERFACE_NAME_LENGTH:
+        return True
+    if getattr(compiler, 'muted_now', False):
+        # Marking the name as reported now would swallow the message: the
+        # dedup pass renders every rule with messages discarded.
+        return False
+    if name not in already_reported:
+        already_reported.add(name)
+        compiler.error(
+            f'Interface name "{name}" is longer than the '
+            f'{MAX_INTERFACE_NAME_LENGTH} characters iptables and nftables can '
+            'carry; the rules matching on it are left out. Rename the '
+            'interface.',
+        )
+    return False
+
+
 # The flags of an IPService that name an IPv4 header option.  "any_opt"
 # stands for "carries any option at all".
 _IP_OPTION_FLAGS = ('any_opt', 'lsrr', 'rr', 'rtralt', 'ssrr', 'ts')

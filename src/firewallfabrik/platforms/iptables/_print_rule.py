@@ -65,6 +65,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    check_interface_name,
     has_ip_options,
     reject_type_token,
     sanitize_log_prefix,
@@ -162,6 +163,7 @@ class PrintRule(PolicyRuleProcessor):
         self.current_rule_label: str = ''
         self.version: str = ''
         self.reported_long_chains: set[str] = set()
+        self.reported_long_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -216,7 +218,12 @@ class PrintRule(PolicyRuleProcessor):
 
         command_line += self._start_rule_line()
         command_line += self._print_chain(rule)
-        command_line += self._print_direction_and_interface(rule)
+        iface_match = self._print_direction_and_interface(rule)
+        if iface_match is None:
+            # The reason was reported; without the interface match the rule
+            # would apply to every interface.
+            return ''
+        command_line += iface_match
 
         srv = self._get_first_srv(rule)
         if srv:
@@ -407,8 +414,8 @@ class PrintRule(PolicyRuleProcessor):
             chain = 'UNKNOWN'
         return self._prefix_chain(chain) + ' '
 
-    def _print_direction_and_interface(self, rule: CompRule) -> str:
-        """Print -i/-o interface matching."""
+    def _print_direction_and_interface(self, rule: CompRule) -> str | None:
+        """Print -i/-o interface matching, None when the rule cannot carry it."""
         if rule.iface_label == 'nil':
             return ''
 
@@ -434,6 +441,10 @@ class PrintRule(PolicyRuleProcessor):
         iface_name = iface_obj.name
         if not iface_name:
             return ''
+        if not check_interface_name(
+            self.compiler, iface_name, self.reported_long_ifaces
+        ):
+            return None
 
         # iptables spells a trailing wildcard '+', fwbuilder stores '*'.
         if iface_name.endswith('*'):

@@ -244,6 +244,10 @@ def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
     """Report chain names iptables would refuse, once per name."""
     if chain in already_reported:
         return
+    if getattr(compiler, 'muted_now', False):
+        # See check_interface_name: reporting once must not be spent on a
+        # pass whose messages are thrown away.
+        return
     problem = _chain_name_problem(chain)
     if not problem:
         return

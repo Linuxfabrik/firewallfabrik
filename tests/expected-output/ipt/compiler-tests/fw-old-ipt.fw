@@ -13,12 +13,17 @@
 #
 # Pinned to an iptables release that predates several matches and targets the compiler emits
 
+# Interface name "this-name-is-too-long" is longer than the 15 characters iptables and nftables can carry; the rules matching on it are left out. Rename the interface.
 # Rule 0 (NAT): ip6tables before 1.4.17 has no NAT table; the rule is left out
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 # fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead
 # fw-old-ipt:Policy:2: warning: The "ipv4options" match of this iptables release cannot ask for loose and strict source routing at once; it answers "Can't specify --ssrr with --lsrr"
 # fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead
 # fw-old-ipt:Policy:2: warning: The "ipv4options" match of this iptables release cannot ask for loose and strict source routing at once; it answers "Can't specify --ssrr with --lsrr"
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
+# Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 # fw-old-ipt:Policy:1: warning: ip6tables before 1.6.0 does not know the reject type "reject-route"; rejecting with the default type instead
 # fw-old-ipt:Policy:1: warning: ip6tables before 1.6.0 does not know the reject type "reject-route"; rejecting with the default type instead
 
@@ -398,8 +403,8 @@ load_modules() {
 
 verify_interfaces() {
  :
- echo "Verifying interfaces: eth0 eth1 lo"
- for i in eth0 eth1 lo ; do
+ echo "Verifying interfaces: eth0 eth1 lo this-name-is-too-long"
+ for i in eth0 eth1 lo this-name-is-too-long ; do
  $IP link show "$i" > /dev/null 2>&1 || {
  log "Interface $i does not exist"
  exit 1
@@ -435,6 +440,7 @@ configure_interfaces() {
  update_addresses_of_interface "eth0 198.51.100.9/24 2001:db8:1::1/64" ""
  update_addresses_of_interface "eth1 192.168.9.1/24 2001:db8:2::1/64" ""
  update_addresses_of_interface "lo 127.0.0.1/8" ""
+ update_addresses_of_interface "this-name-is-too-long 10.9.9.1/24" ""
 }
 
 script_body() {
