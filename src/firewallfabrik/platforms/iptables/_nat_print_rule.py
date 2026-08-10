@@ -576,13 +576,18 @@ class NATPrintRule(NATRuleProcessor):
         a port, need an explicit protocol; the port comes from the translated
         service, which also pins the protocol. Mirrors the `meta l4proto` the
         nftables compiler injects for the same rules.
+
+        NETMAP is deliberately not in the list: its only option is `--to`
+        (netfilter extensions/libipt_NETMAP.c), so a network translation
+        never carries a port and has no reason to be narrowed to one
+        protocol.
         """
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
         rt = rule.nat_rule_type
         tsrv = ipt_comp.get_first_tsrv(rule)
-        if rt in (NATRuleType.Masq, NATRuleType.SNAT, NATRuleType.SNetnat):
+        if rt in (NATRuleType.Masq, NATRuleType.SNAT):
             has_port = bool(self._print_snat_ports(tsrv)) if tsrv else False
-        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
+        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT):
             has_port = bool(self._print_dnat_ports(tsrv)) if tsrv else False
         else:
             has_port = False

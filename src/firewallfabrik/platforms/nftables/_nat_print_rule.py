@@ -791,7 +791,11 @@ class NATPrintRule_nft(NATRuleProcessor):
         is only valid after transport protocol match"; the accepted forms
         are in tests/py/ip/masquerade.t).  Every rule type that can carry a
         translated port therefore has to be listed below, masquerade
-        included.
+        included, and no other: a network translation is written as
+        ``snat prefix to``/``dnat prefix to`` and never carries a port -
+        NETMAP, its iptables counterpart, has no option but ``--to``
+        (netfilter extensions/libipt_NETMAP.c) - so deriving a protocol for
+        it would narrow a 1:1 mapping of all traffic to one protocol.
         The port comes from the translated service, which also pins the
         protocol; when the rule's own match carries no tcp/udp/l4proto (for
         example a UserService REDIRECT whose only match is on the owner),
@@ -802,9 +806,9 @@ class NATPrintRule_nft(NATRuleProcessor):
         nft_comp = cast('NATCompiler_nft', self.compiler)
         rt = rule.nat_rule_type
         tsrv = nft_comp.get_first_tsrv(rule)
-        if rt in (NATRuleType.Masq, NATRuleType.SNAT, NATRuleType.SNetnat):
+        if rt in (NATRuleType.Masq, NATRuleType.SNAT):
             ports = self._print_translated_ports(tsrv, src=True)
-        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT, NATRuleType.DNetnat):
+        elif rt in (NATRuleType.Redirect, NATRuleType.DNAT):
             ports = self._print_translated_ports(tsrv, src=False)
         else:
             ports = ''
