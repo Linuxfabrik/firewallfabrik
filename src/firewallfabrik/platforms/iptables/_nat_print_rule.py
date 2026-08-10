@@ -906,10 +906,15 @@ class NATPrintRule(NATRuleProcessor):
                 # accepts "ipaddr-ipaddr" syntax, not CIDR.
                 if print_range:
                     return f'{start}-{end}'
-                # NAT match (-s / -d): prefer the short CIDR form when
-                # the range covers an exact subnet, otherwise fall
-                # back to "ipaddr-ipaddr" so the caller can wrap it
-                # in "-m iprange --src-range/--dst-range".
+                # NAT match (-s / -d).  A range that is not a prefix does
+                # not reach here: NATExpandAddressRanges writes every range
+                # in OSrc and ODst out as the networks covering it, which is
+                # what the C++ NAT compiler does as well
+                # (NATCompiler_ipt::ExpandAddressRanges, wired
+                # unconditionally, unlike the policy compiler's -m iprange).
+                # The last line is therefore a safety net, not a form the
+                # generated script relies on - `-s a-b` is not an address
+                # and iptables answers "host/network not found".
                 if start == end:
                     return start
                 cidr = range_to_cidr(start, end)

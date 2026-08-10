@@ -542,6 +542,18 @@ script_body() {
  #
  # Maps a whole network 1:1, with an original service that names no protocol
  $IPTABLES -w 5 -t nat -A POSTROUTING -s 192.168.1.0/24 -m owner --uid-owner 500 -j NETMAP --to 198.51.100.0/24
+ #
+ # Rule 16 (NAT)
+ #
+ echo "Rule 16 (NAT)"
+ #
+ # Original source is an address range that is no prefix
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.100/30 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.104/29 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.112/28 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.128/26 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.192/29 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.200 -j SNAT --to-source 198.51.100.1
 
  # ================ Table 'filter', rule set Policy
  #

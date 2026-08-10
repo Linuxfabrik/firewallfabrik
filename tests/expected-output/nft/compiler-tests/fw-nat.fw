@@ -377,6 +377,11 @@ table ip fwf_nat {
         #
         # Maps a whole network 1:1, with an original service that names no protocol
         ip saddr 192.168.1.0/24 meta skuid 500 counter snat prefix to 198.51.100.0/24
+        #
+        # Rule 16 (NAT)
+        #
+        # Original source is an address range that is no prefix
+        oifname "eth0" ip saddr 192.168.1.100-192.168.1.200 counter snat to 198.51.100.1
     }
 }
 
