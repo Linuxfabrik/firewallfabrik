@@ -23,7 +23,10 @@ from typing import TYPE_CHECKING
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._routing_compiler import RoutingCompiler
 from firewallfabrik.compiler._rule_processor import RoutingRuleProcessor
-from firewallfabrik.compiler.processors._generic import Begin
+from firewallfabrik.compiler.processors._generic import (
+    Begin,
+    PrintTotalNumberOfRules,
+)
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
@@ -55,6 +58,7 @@ class RoutingCompilerLinux(RoutingCompiler):
         self.info(banner)
 
         self.add(Begin())
+        self.add(PrintTotalNumberOfRules())
         self.add(RoutingPrintRule('generate ip route commands'))
         self.run_rule_processors()
 

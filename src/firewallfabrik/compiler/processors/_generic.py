@@ -112,13 +112,22 @@ class Begin(BasicRuleProcessor):
 
 
 class PrintTotalNumberOfRules(BasicRuleProcessor):
-    """Counts total rules (uses slurp). Passes all rules through."""
+    """Say how many rules the pass starts with, then pass them all through.
+
+    Ports ``Compiler::printTotalNumberOfRules`` (Compiler.cpp:764), which
+    every pass of the C++ compiler carries right behind ``Begin``.  The
+    line only appears in verbose mode, where it is what makes a fwf trace
+    line up with a fwb_ipt one when the two are diffed
+    (docs/developer-guide/Debugging.md).
+    """
 
     def __init__(self, name: str = 'Print total number of rules') -> None:
         super().__init__(name)
 
     def process_next(self) -> bool:
         if self.slurp():
+            if getattr(self.compiler, 'verbose', False):
+                self.compiler.info(f' processing {len(self.tmp_queue)} rules')
             return True
         return bool(self.tmp_queue)
 

@@ -37,6 +37,7 @@ from firewallfabrik.compiler.processors._generic import (
     EliminateDuplicatesInSRV,
     EmptyGroupsInRE,
     ExpandGroups,
+    PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ReplaceClusterInterfaceInItfRE,
     ResolveMultiAddress,
@@ -206,6 +207,7 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         # -- Processor pipeline --
         self.add(Begin('Begin compilation'))
+        self.add(PrintTotalNumberOfRules())
         self.add(SingleRuleFilter('single rule filter'))
 
         self.add_rule_filter()

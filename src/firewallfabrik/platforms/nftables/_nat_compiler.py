@@ -34,6 +34,7 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
+    PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
@@ -136,6 +137,7 @@ class NATCompiler_nft(NATCompiler):
         super().compile()
 
         self.add(Begin())
+        self.add(PrintTotalNumberOfRules())
 
         self.add(ExpandGroupsInItfInb('expand groups in inbound Interface'))
         self.add(
