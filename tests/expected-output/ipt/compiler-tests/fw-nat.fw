@@ -469,6 +469,15 @@ script_body() {
  $IPTABLES -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
  $IPTABLES -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
+ # ================ Table 'nat', rule set NAT_branch
+ #
+ # Rule NAT_branch 0 (NAT)
+ #
+ echo "Rule NAT_branch 0 (NAT)"
+ #
+ $IPTABLES -w 5 -t nat -N NAT_branch_PREROUTING
+ $IPTABLES -w 5 -t nat -A NAT_branch_PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination 10.0.0.53
+
  # ================ Table 'nat', rule set NAT
  #
  # Rule 0 (NAT)
@@ -590,6 +599,13 @@ script_body() {
  # Original service names two connection owners
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -m owner --uid-owner 500 -j SNAT --to-source 198.51.100.1
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -m owner --uid-owner 501 -j SNAT --to-source 198.51.100.1
+ #
+ # Rule 18 (NAT)
+ #
+ echo "Rule 18 (NAT)"
+ #
+ # Branches into a NAT rule set of its own
+ $IPTABLES -w 5 -t nat -A PREROUTING -j NAT_branch_PREROUTING
 
  # ================ Table 'filter', rule set Policy
  #

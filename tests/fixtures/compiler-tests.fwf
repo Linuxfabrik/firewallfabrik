@@ -5069,6 +5069,53 @@ libraries:
                       - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
                     tsrv:
                       - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 18
+                    comment: 'Branches into a NAT rule set of its own'
+                    options:
+                      branch_name: 'NAT_branch'
+                      disabled: false
+                      group: ''
+                    action: 'Branch'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+              - type: 'NAT'
+                name: 'NAT_branch'
+                comment: 'Branch target of the Branch rule in the top NAT set'
+                rules:
+                  - type: 'NATRule'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:http'
+                    tdst:
+                      - 'Library:User/ObjectGroup:Objects/ObjectGroup:Hosts/Host:web-server'
+                    tsrc:
+                      - 'Library:Standard/Network:Any'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
               - type: 'NAT'
                 name: 'NAT_ipv6'
                 ipv6: true

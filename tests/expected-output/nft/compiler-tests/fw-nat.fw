@@ -9,6 +9,7 @@
 # files: * fw-nat.fw /etc/fwf.sh
 #
 # fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
+# fw-nat:NAT:18: warning: NAT branching rule: splitting into prerouting and postrouting chains
 
 FWBDEBUG=""
 
@@ -295,6 +296,10 @@ table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
+        # Rule NAT_branch 0 (NAT)
+        #
+        tcp dport 80 counter dnat to 10.0.0.53
+        #
         # Rule 1 (NAT)
         #
         ip daddr 198.51.100.1 tcp dport 80 counter dnat to 10.0.0.53
@@ -323,6 +328,11 @@ table ip fwf_nat {
         #
         # Original destination is a host that only has a MAC address
         ether daddr 00:10:4b:de:e9:6f tcp dport 22 counter dnat to 10.0.0.53
+        #
+        # Rule 18 (NAT)
+        #
+        # Branches into a NAT rule set of its own
+        counter accept
     }
 
     chain postrouting {
@@ -388,6 +398,11 @@ table ip fwf_nat {
         # Original service names two connection owners
         oifname "eth0" meta skuid 500 counter snat to 198.51.100.1
         oifname "eth0" meta skuid 501 counter snat to 198.51.100.1
+        #
+        # Rule 18 (NAT)
+        #
+        # Branches into a NAT rule set of its own
+        counter accept
     }
 }
 

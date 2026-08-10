@@ -86,6 +86,11 @@ class CompilerDriver_ipt(CompilerDriver):
         self.have_connmark_in_output: bool = False
         self.have_nat: bool = False
         self.have_dynamic_interfaces: bool = False
+        # The chains each NAT rule set used, keyed by rule set name.  A rule
+        # with the Branch action reads it to jump into the chain of the
+        # branch that belongs to its own chain, instead of being copied into
+        # prerouting and postrouting at once.
+        self._nat_branch_chains: dict[str, list[str]] = {}
 
         # Prolog/epilog tracking
         self.prolog_done: bool = False
@@ -736,6 +741,13 @@ class CompilerDriver_ipt(CompilerDriver):
         nat_compiler = NATCompiler_ipt(
             session, fw, ipv6_policy, oscnf, minus_n_commands_nat
         )
+        # Which chains a branch rule set ended up using decides where a
+        # rule branching into it can jump.  Each rule set gets its own
+        # compiler, so the answer has to be collected here and handed to
+        # the next one, the way CompilerDriver_ipt_nat.cpp:93 and :122 do
+        # it.  A branch rule set is compiled before the top one, so a
+        # branch of the top rule set finds its entry.
+        nat_compiler.branch_ruleset_to_chain_mapping = self._nat_branch_chains
         if not self._flush_ruleset:
             nat_compiler.chain_prefix = self._table_name
 
@@ -757,6 +769,8 @@ class CompilerDriver_ipt(CompilerDriver):
         if nat_rules_count > 0:
             nat_compiler.compile()
             nat_compiler.epilog()
+
+        self._nat_branch_chains[branch_name] = nat_compiler.get_used_chains()
 
         self.have_nat = self.have_nat or (nat_rules_count > 0)
 
