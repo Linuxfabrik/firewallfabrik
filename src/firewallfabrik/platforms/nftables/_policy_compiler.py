@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
@@ -72,7 +73,10 @@ from firewallfabrik.core.objects import (
     UserService,
     is_run_time_address_table,
 )
-from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
+from firewallfabrik.platforms.linux._netfilter import (
+    get_mac_only_address,
+    interface_direction_problem,
+)
 from firewallfabrik.platforms.nftables._identifiers import (
     is_valid_nft_identifier,
     nft_object_name,
@@ -323,6 +327,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(RemoveFW('remove fw'))
         self.add(ExpandMultipleAddresses('expand multiple addresses'))
         self.add(ExpandLoopbackInterfaceAddress('replace loopback with address'))
+        self.add(SplitIfMacAndAddressInRE('split MAC from address in Src', 'src'))
+        self.add(SplitIfMacAndAddressInRE('split MAC from address in Dst', 'dst'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
         self.add(
@@ -2577,6 +2583,71 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
         if remaining:
             setattr(rule, self._slot, remaining)
             self.tmp_queue.append(rule)
+        return True
+
+
+class SplitIfMacAndAddressInRE(PolicyRuleProcessor):
+    """Give the MAC-matching objects of an element a rule of their own.
+
+    The objects of a rule element are alternatives, but the matches of one
+    nftables rule are ANDed, so alternatives can only share a rule when they
+    merge into one set.  A MAC lives in the ethernet header and an IP
+    address in the IP header, so they never do: written into the same rule
+    they ask for a packet that carries both, and ``ether saddr X`` next to
+    ``ether saddr { Y, Z }`` asks for a packet that can never exist at all.
+
+    The element is therefore split into the groups that *can* each become a
+    single match - the objects that name a MAC and an address, the objects
+    that name only a MAC, and the plain addresses - and every group gets its
+    own rule.  A negated element is left alone: "none of these" is a
+    conjunction and belongs in one rule.
+
+    The iptables compiler has no equivalent because ``ConvertToAtomic``
+    already gives every object its own rule there, and the alternatives
+    become the branches of a temporary chain.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    @staticmethod
+    def _group(obj) -> int:
+        """Return which match an object can be part of."""
+        if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+            return 0
+        if get_mac_only_address(obj):
+            return 1
+        return 2
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements or len(elements) == 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        negated = rule.get_neg(self._slot) or bool(
+            getattr(rule, f'{self._slot}_single_object_negation', False)
+        )
+        if negated:
+            self.tmp_queue.append(rule)
+            return True
+
+        groups: dict[int, list] = {}
+        for obj in elements:
+            groups.setdefault(self._group(obj), []).append(obj)
+        if len(groups) == 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for _, objects in sorted(groups.items()):
+            split = rule.clone()
+            setattr(split, self._slot, objects)
+            self.tmp_queue.append(split)
         return True
 
 

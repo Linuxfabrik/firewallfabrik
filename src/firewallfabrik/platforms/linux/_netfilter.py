@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from firewallfabrik.core.objects import Host, Interface, PhysAddress
+
 # A packet only carries the device it came in on until the routing decision
 # is made, and only carries the device it goes out on after it: netfilter
 # passes NULL for the other one.  A locally generated packet never has an
@@ -264,4 +266,32 @@ def reject_type_token(value: str, ipv6: bool) -> str:
     if token in (REJECT_TYPES_IPV6 if ipv6 else REJECT_TYPES_IPV4):
         return token
 
+    return ''
+
+
+def get_mac_only_address(obj) -> str:
+    """Return the MAC of an object that has no IP address.
+
+    A PhysAddress, or an Interface / Host whose only address is a MAC, can
+    only be matched on the ethernet header.  Rendering such an object as an
+    IP address produces a ruleset the packet filter refuses to load.
+    """
+    if isinstance(obj, PhysAddress):
+        return obj.get_address() or ''
+    if isinstance(obj, Interface):
+        addresses = list(getattr(obj, 'addresses', []))
+    elif isinstance(obj, Host):
+        addresses = [
+            addr
+            for iface in getattr(obj, 'interfaces', [])
+            if not iface.is_loopback()
+            for addr in getattr(iface, 'addresses', [])
+        ]
+    else:
+        return ''
+    if any(addr.is_v4() or addr.is_v6() for addr in addresses):
+        return ''
+    for addr in addresses:
+        if isinstance(addr, PhysAddress) and addr.get_address():
+            return addr.get_address()
     return ''

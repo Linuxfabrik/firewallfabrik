@@ -22,6 +22,7 @@ import ipaddress
 import uuid
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import (
     DOW_NAMES_SHORT,
     is_any_interval,
@@ -52,7 +53,6 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     range_to_cidr,
 )
-from firewallfabrik.platforms.iptables._combined_address import CombinedAddress
 from firewallfabrik.platforms.iptables._utils import (
     MATCH_FIRST_RELEASE,
     check_chain_name,

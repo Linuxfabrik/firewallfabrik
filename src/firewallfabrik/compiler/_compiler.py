@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import BaseCompiler, CompilerStatus
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
 from firewallfabrik.core.objects import (
@@ -45,6 +46,7 @@ from firewallfabrik.core.objects import (
     MultiAddress,
     Network,
     NetworkIPv6,
+    PhysAddress,
     RuleSet,
 )
 
@@ -461,6 +463,15 @@ class Compiler(BaseCompiler):
         Replaces Host/Firewall objects with their IPv4 or IPv6 addresses
         (depending on ipv6_policy). Skips loopback interfaces unless the
         rule is attached to loopback.
+
+        An interface that also carries a MAC address contributes the two
+        together, as a :class:`CombinedAddress` per IP address, so the rule
+        asks for the address *and* the MAC.  Which is what the host's
+        "MAC address matching" option means; without it the MAC stays out of
+        the ruleset entirely.  fwbuilder splits the same three cases in
+        ``expand_interface_with_phys_address`` (fwbuilder iptlib/ipt_utils.cpp)
+        and reads the option in ``Compiler::_expand_interface``
+        (libfwbuilder/fwcompiler/Compiler.cpp).
         """
         elements = getattr(comp_rule, slot)
         if not elements:
@@ -476,21 +487,48 @@ class Compiler(BaseCompiler):
         new_elements = []
         for obj in elements:
             if isinstance(obj, Host) and not isinstance(obj, Interface):
+                use_mac = _host_matches_by_mac(obj)
                 # Expand host to its interface addresses
                 for iface in obj.interfaces:
                     if iface.is_loopback() and not on_loopback:
                         continue
-                    for addr in iface.addresses:
-                        if (self.ipv6_policy and addr.is_v6()) or (
-                            not self.ipv6_policy and addr.is_v4()
-                        ):
-                            new_elements.append(addr)
+                    new_elements.extend(self._expand_interface(iface, use_mac))
             else:
                 new_elements.append(obj)
 
         # Sort by address
         new_elements.sort(key=_addr_sort_key)
         setattr(comp_rule, slot, new_elements)
+
+    def _expand_interface(self, iface: Interface, use_mac: bool) -> list:
+        """Return what one interface contributes to an expanded element.
+
+        A MAC address belongs to no address family, so the family filter
+        must not touch it: an interface known only by its MAC has to survive
+        both passes, otherwise the element silently loses its only object.
+
+        An address object that carries no address at all matches nothing and
+        is left out; the element it came from then either still names
+        something or is reported empty.
+        """
+        addresses = []
+        phys_address = None
+        for addr in iface.addresses:
+            if not addr.get_address():
+                continue
+            if isinstance(addr, PhysAddress):
+                phys_address = addr
+                continue
+            if (self.ipv6_policy and addr.is_v6()) or (
+                not self.ipv6_policy and addr.is_v4()
+            ):
+                addresses.append(addr)
+
+        if phys_address is None or not use_mac:
+            return addresses
+        if not addresses:
+            return [phys_address]
+        return [CombinedAddress(addr, phys_address) for addr in addresses]
 
     def eliminate_duplicates_in_element(self, comp_rule: CompRule, slot: str) -> None:
         """Remove duplicate objects from a rule element slot."""
@@ -721,6 +759,20 @@ class Compiler(BaseCompiler):
                     return addr
 
         return None
+
+
+def _host_matches_by_mac(host: Host) -> bool:
+    """Return whether the host's addresses are matched together with its MAC.
+
+    The "MAC address matching" checkbox of the host dialog, stored as the
+    ``use_mac_addr_filter`` option.  It is not part of any platform schema,
+    so it is read off the object rather than through ``get_option()``, and a
+    ``.fwb`` import stores it as the string "True".
+    """
+    value = (getattr(host, 'options', None) or {}).get('use_mac_addr_filter')
+    if isinstance(value, str):
+        return value.strip().lower() == 'true'
+    return bool(value)
 
 
 def _addr_sort_key(obj):

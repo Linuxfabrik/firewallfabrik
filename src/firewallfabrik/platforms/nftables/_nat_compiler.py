@@ -50,8 +50,10 @@ from firewallfabrik.core.objects import (
     TCPUDPService,
     UserService,
 )
-from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
-from firewallfabrik.platforms.nftables._print_rule import get_mac_only_address
+from firewallfabrik.platforms.linux._netfilter import (
+    get_mac_only_address,
+    nat_interface_problem,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm

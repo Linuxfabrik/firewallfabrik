@@ -28,6 +28,7 @@ import re
 import uuid
 from typing import TYPE_CHECKING, ClassVar, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import (
     DOW_NAMES_FULL,
     is_any_interval,
@@ -60,6 +61,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
+    get_mac_only_address,
     has_ip_options,
     reject_type_token,
     sanitize_log_prefix,
@@ -341,34 +343,6 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
         # concatenation of the two fields against a one-element set.
         return f'{proto} type . {proto} code != {{ {type_str} . {icmp_code} }}'
     return f'{proto} type {type_str} {proto} code {icmp_code}'
-
-
-def get_mac_only_address(obj) -> str:
-    """Return the MAC of an object that has no IP address.
-
-    A PhysAddress, or an Interface / Host whose only address is a MAC, can
-    only be matched on the ethernet header.  Rendering such an object as an
-    IP address produces a ruleset the packet filter refuses to load.
-    """
-    if isinstance(obj, PhysAddress):
-        return obj.get_address() or ''
-    if isinstance(obj, Interface):
-        addresses = list(getattr(obj, 'addresses', []))
-    elif isinstance(obj, Host):
-        addresses = [
-            addr
-            for iface in getattr(obj, 'interfaces', [])
-            if not iface.is_loopback()
-            for addr in getattr(iface, 'addresses', [])
-        ]
-    else:
-        return ''
-    if any(addr.is_v4() or addr.is_v6() for addr in addresses):
-        return ''
-    for addr in addresses:
-        if isinstance(addr, PhysAddress) and addr.get_address():
-            return addr.get_address()
-    return ''
 
 
 class PrintRule_nft(PolicyRuleProcessor):
@@ -725,11 +699,23 @@ class PrintRule_nft(PolicyRuleProcessor):
         A MAC address is not part of the IP header, so it needs its own
         ``ether saddr`` / ``ether daddr`` match. This is what
         iptables-translate produces for ``-m mac --mac-source``.
+
+        An object that carries both asks for both at once, so the two go
+        into one clause: a single pair as two matches side by side, several
+        pairs as a set over the concatenation of the two headers, because
+        two plain sets would match every combination of the addresses
+        instead of the pairs that were configured.
         """
         direction = keyword.rsplit(' ', 1)[1]
         macs = []
         addrs = []
+        pairs = []
         for obj in objects:
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                addr = self._print_addr(obj.address, rule)
+                if addr:
+                    pairs.append((obj.get_phys_address(), addr))
+                    continue
             mac = get_mac_only_address(obj)
             if mac:
                 macs.append(mac)
@@ -738,6 +724,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             if addr:
                 addrs.append(addr)
         parts = []
+        if pairs:
+            parts.append(self._pair_clause(keyword, direction, pairs, neg))
         if macs:
             parts.append(self._match_clause(f'ether {direction}', macs, neg))
         parts.extend(self._address_clauses(rule, keyword, addrs, neg))
@@ -786,6 +774,18 @@ class PrintRule_nft(PolicyRuleProcessor):
         if len(values) == 1:
             return f'{keyword} {neg}{values[0]}'
         return f'{keyword} {neg}{{ {", ".join(values)} }}'
+
+    @staticmethod
+    def _pair_clause(
+        keyword: str, direction: str, pairs: list[tuple[str, str]], neg: str
+    ) -> str:
+        """Return the match for MAC/address pairs that belong together."""
+        pairs = list(dict.fromkeys(pairs))
+        if len(pairs) == 1:
+            mac, addr = pairs[0]
+            return f'ether {direction} {neg}{mac} {keyword} {neg}{addr}'
+        elements = ', '.join(f'{mac} . {addr}' for mac, addr in pairs)
+        return f'ether {direction} . {keyword} {neg}{{ {elements} }}'
 
     def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""

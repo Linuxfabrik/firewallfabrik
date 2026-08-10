@@ -47,10 +47,12 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
     range_to_cidr,
 )
-from firewallfabrik.platforms.linux._netfilter import check_interface_name
+from firewallfabrik.platforms.linux._netfilter import (
+    check_interface_name,
+    get_mac_only_address,
+)
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 from firewallfabrik.platforms.nftables._print_rule import (
-    get_mac_only_address,
     print_fragment_match,
     print_icmp_service,
     print_ip_option_matches,

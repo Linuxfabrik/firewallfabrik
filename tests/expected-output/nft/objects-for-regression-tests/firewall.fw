@@ -423,7 +423,7 @@ table ip fwf_filter {
         #
         # Rule 34 (global)
         #
-        ip saddr 192.168.1.15 ct state new counter accept
+        ether saddr aa:bb:cc:dd:ee:ff ip saddr 192.168.1.15 ct state new counter accept
         #
         # Rule 35 (global)
         #
@@ -431,7 +431,8 @@ table ip fwf_filter {
         #
         # Rule 40 (global)
         #
-        ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } tcp dport 80 ct state new counter accept
         #
         # Rule 46 (global)
         #
@@ -596,11 +597,11 @@ table ip fwf_filter {
         #
         # Rule 29 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 31 (global)
         #
-        ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:70 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 33 (global)
         #
@@ -608,27 +609,33 @@ table ip fwf_filter {
         #
         # Rule 36 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 37 (global)
         #
-        ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } ip daddr 192.168.1.10 ct state new counter accept
+        ip saddr 192.168.1.20 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 38 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } ip daddr 192.168.1.10 tcp sport 53 ct state new counter accept
         #
         # Rule 39 (global)
         #
-        ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } ip daddr 192.168.1.10 tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 143, 993, 6667, 6667, 543, 544, 389, 98, 3306, 2049, 119, 110, 5432, 515, 26000, 512, 513, 514, 4321, 25, 465, 1080, 3128, 22, 111, 23, 10000-11000, 540, 7100 } ct state new counter accept
         #
         # Rule 40 (global)
         #
-        ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 tcp dport 80 ct state new counter accept
+        ether saddr { 00:10:4b:de:e9:70, 00:10:4b:de:e9:71 } tcp dport 80 ct state new counter accept
         #
         # Rule 41 (global)
         #
-        ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new counter accept
+        ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.1 ip daddr 192.168.1.10 ct state new counter accept
         #
         # Rule 42 (global)
         #
