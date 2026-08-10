@@ -69,6 +69,24 @@ def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> 
     return ''
 
 
+# The flags of an IPService that name an IPv4 header option.  "any_opt"
+# stands for "carries any option at all".
+_IP_OPTION_FLAGS = ('any_opt', 'lsrr', 'rr', 'rtralt', 'ssrr', 'ts')
+
+
+def has_ip_options(data: dict) -> bool:
+    """Whether an IPService asks for an IPv4 header option.
+
+    The IPv4 option field has no IPv6 counterpart: IPv6 moved what used to
+    be options into extension headers, and neither iptables nor nftables
+    offers a match for the old field there.  A rule whose service names one
+    therefore cannot be compiled for IPv6, and dropping just the condition
+    would widen the rule to every packet - which is why the callers report
+    it and leave the rule out of the IPv6 ruleset.
+    """
+    return any(str(data.get(flag)) == 'True' for flag in _IP_OPTION_FLAGS)
+
+
 # Characters the nftables preprocessor and the shell both read as syntax.
 # See sanitize_log_prefix below for why none of them can be escaped.
 _LOG_PREFIX_DROPPED = frozenset('$`\\')

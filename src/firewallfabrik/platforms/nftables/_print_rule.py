@@ -59,6 +59,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    has_ip_options,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -1016,6 +1017,14 @@ class PrintRule_nft(PolicyRuleProcessor):
                         'lsrr, ssrr, rr and router-alert options',
                     )
                     unrenderable = True
+            elif has_ip_options(data):
+                self.compiler.error(
+                    rule,
+                    'IP service matching an IPv4 header option cannot be '
+                    'compiled for IPv6, which has no such field; the rule is '
+                    'left out of the IPv6 ruleset',
+                )
+                unrenderable = True
             if unrenderable:
                 return None
             if negated:

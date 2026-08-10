@@ -65,6 +65,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    has_ip_options,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -917,6 +918,14 @@ class PrintRule(PolicyRuleProcessor):
                     # The match cannot be written; without it the rule would
                     # apply to every packet, options or not.
                     return None
+            elif has_ip_options(data):
+                self.compiler.error(
+                    rule,
+                    'IP service matching an IPv4 header option cannot be '
+                    'compiled for IPv6, which has no such field; the rule is '
+                    'left out of the IPv6 ruleset',
+                )
+                return None
         if isinstance(srv, TCPService):
             flags = self._print_tcp_flags(srv)
             if flags:

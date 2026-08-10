@@ -57,6 +57,7 @@ from firewallfabrik.platforms.iptables._utils import (
     normalize_set_name,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import has_ip_options
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -894,6 +895,14 @@ class NATPrintRule(NATRuleProcessor):
                 # Without the match the rule would translate every packet,
                 # options or not.
                 return None
+        elif has_ip_options(data):
+            self.compiler.error(
+                rule,
+                'IP service matching an IPv4 header option cannot be '
+                'compiled for IPv6, which has no such field; the rule is '
+                'left out of the IPv6 ruleset',
+            )
+            return None
         return ' '.join(parts)
 
     def _print_addr(self, obj, print_mask=True, print_range=False) -> str:
