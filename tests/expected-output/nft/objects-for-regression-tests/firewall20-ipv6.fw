@@ -16,6 +16,23 @@
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
+# firewall20-ipv6:Policy:3: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:11: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:11: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:12: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:12: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:13: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:13: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:14: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:14: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:15: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:15: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:16: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:16: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:17: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
+# firewall20-ipv6:Policy:17: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 
 FWBDEBUG=""
 
@@ -370,13 +387,6 @@ table inet fwf_filter {
         #
         ip6 daddr @i_ppp__v6 tcp dport 22 ct state new counter accept
         #
-        # Rule 15 (global)
-        #
-        # firewall is part of Any, compiler should
-        # generate code for both FORWARD and
-        # INPUT chains
-        meta nfproto ipv6 ct state new counter accept
-        #
         # Rule 19 (global)
         #
         # Automatically generated 'catch all' rule
@@ -385,38 +395,6 @@ table inet fwf_filter {
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        #
-        # Rule 3 (ppp*)
-        #
-        # ppp clients can only connect to the mail
-        # server and web proxy on DMZ
-        meta nfproto ipv6 iifname "ppp*" tcp dport { 25, 3128 } ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter accept
-        #
-        # Rule 12 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter accept
-        #
-        # Rule 13 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter log accept
-        #
-        # Rule 14 (global)
-        #
-        # firewall is part of Any, so compiler should
-        # generate code in both FORWARD and
-        # OUTPUT chains
-        meta nfproto ipv6 ct state new counter accept
-        #
-        # Rule 15 (global)
-        #
-        # firewall is part of Any, compiler should
-        # generate code for both FORWARD and
-        # INPUT chains
-        meta nfproto ipv6 ct state new counter accept
         #
         # Rule 19 (global)
         #
@@ -434,25 +412,6 @@ table inet fwf_filter {
         # Rule 9 (global)
         #
         ip6 daddr @i_ppp__v6 tcp dport 22 ct state new counter accept
-        #
-        # Rule 11 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter accept
-        #
-        # Rule 12 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter accept
-        #
-        # Rule 13 (global)
-        #
-        meta nfproto ipv6 tcp dport { 22, 23 } ct state new counter log accept
-        #
-        # Rule 14 (global)
-        #
-        # firewall is part of Any, so compiler should
-        # generate code in both FORWARD and
-        # OUTPUT chains
-        meta nfproto ipv6 ct state new counter accept
         #
         # Rule 19 (global)
         #

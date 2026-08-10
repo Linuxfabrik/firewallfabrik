@@ -472,6 +472,18 @@ class Compiler(BaseCompiler):
         ``expand_interface_with_phys_address`` (fwbuilder iptlib/ipt_utils.cpp)
         and reads the option in ``Compiler::_expand_interface``
         (libfwbuilder/fwcompiler/Compiler.cpp).
+
+        An element naming nothing but objects of the other address family
+        comes out of this empty, and an empty element means "any" here, so
+        the rule would ask for every address there is instead of the few it
+        names.  It is flagged for ``DropRuleWithEmptyRE`` instead.
+        fwbuilder arrives at the same place from the other side: an "any"
+        element is never empty there but holds a reference to the "Any"
+        object (``RuleElement::isAny()``,
+        libfwbuilder/fwbuilder/RuleElement.cpp), so
+        ``DropRulesByAddressFamilyAndServiceType`` compares the element
+        before and after the filtering and drops the rule when the filtering
+        turned it into "any" (libfwbuilder/fwcompiler/Compiler.cpp).
         """
         elements = getattr(comp_rule, slot)
         if not elements:
@@ -495,6 +507,13 @@ class Compiler(BaseCompiler):
                     new_elements.extend(self._expand_interface(iface, use_mac))
             else:
                 new_elements.append(obj)
+
+        if not new_elements:
+            comp_rule.has_empty_re = True
+            comp_rule.empty_re_reason = (
+                'none of the addresses it names belong to the address family '
+                'being compiled'
+            )
 
         # Sort by address
         new_elements.sort(key=_addr_sort_key)

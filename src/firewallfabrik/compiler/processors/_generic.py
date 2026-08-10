@@ -677,6 +677,13 @@ class DropRuleWithEmptyRE(BasicRuleProcessor):
         # etc.), it should be dropped.  The has_empty_re flag is set by
         # processors that remove objects from elements.
         if getattr(rule, 'has_empty_re', False):
+            # Saying so matters: the rule is in the policy, the GUI shows it,
+            # and it is missing from this ruleset for a reason the
+            # administrator cannot see anywhere else.
+            reason = (
+                getattr(rule, 'empty_re_reason', '') or 'one of its elements is empty'
+            )
+            self.compiler.warning(rule, f'Rule is left out because {reason}')
             return True  # drop
 
         self.tmp_queue.append(rule)

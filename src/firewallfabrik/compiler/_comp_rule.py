@@ -133,8 +133,12 @@ class CompRule:
     ipt_multiport: bool = False  # iptables -m multiport
     merged_tcp_udp: bool = False  # nftables meta l4proto { tcp, udp }
 
-    # Rule validity
+    # Rule validity.  A processor that empties a rule element it did not
+    # find empty sets the flag and says why, because an empty element reads
+    # as "any" here and would widen the rule instead of narrowing it.
+    # ``DropRuleWithEmptyRE`` drops the rule and reports the reason.
     has_empty_re: bool = False
+    empty_re_reason: str = ''
 
     def clone(self) -> CompRule:
         """Create a deep copy of this rule.
