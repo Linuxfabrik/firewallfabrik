@@ -13,9 +13,6 @@
 # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
 # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
 # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall61-1.2.6:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees

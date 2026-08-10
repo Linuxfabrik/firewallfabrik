@@ -2020,7 +2020,12 @@ class Optimize3(PolicyRuleProcessor):
             return True
 
         chain = rule.ipt_chain or ''
-        rule_str = f'{rule.label} {chain}:{pr.policy_rule_to_string(rule)}'
+        # Building the command again would record every message of this
+        # rule a second time and set the compiler status even on the rules
+        # dropped right below.
+        with self.compiler.muted():
+            command = pr.policy_rule_to_string(rule)
+        rule_str = f'{rule.label} {chain}:{command}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

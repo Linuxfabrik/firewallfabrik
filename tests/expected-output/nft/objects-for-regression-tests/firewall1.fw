@@ -13,24 +13,11 @@
 #
 # Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 30 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 31 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 38 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
-# Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 39 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out

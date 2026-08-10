@@ -16,8 +16,6 @@
 #  see SF bug #3439613
 #
 # Rule 0 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
-# Rule 0 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
-# Rule 1 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
 # Rule 1 (vnet+): Rule matches on the bridge port "vnet+", which nftables cannot see in a filter table; the rule is left out
 
 FWBDEBUG=""

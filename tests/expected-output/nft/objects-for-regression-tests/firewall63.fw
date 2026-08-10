@@ -13,9 +13,6 @@
 # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 
 FWBDEBUG=""
 

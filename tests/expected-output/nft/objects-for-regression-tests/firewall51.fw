@@ -14,23 +14,12 @@
 #
 # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
 # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
-# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
-# Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
 # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
 # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
 # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
 # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
-# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
-# Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
 # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
 # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
-# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
-# Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
-# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
-# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
-# Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
 # Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
 # Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to
 # Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to

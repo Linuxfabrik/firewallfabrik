@@ -15,7 +15,6 @@
 
 # Rule 0 (NAT): ip6tables before 1.4.17 has no NAT table; the rule is left out
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
-# Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
 # fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead
 # fw-old-ipt:Policy:2: warning: The "ipv4options" match of this iptables release cannot ask for loose and strict source routing at once; it answers "Can't specify --ssrr with --lsrr"
 # fw-old-ipt:Policy:1: warning: Reject type "reject-route" is not one this platform accepts; rejecting with the default type instead

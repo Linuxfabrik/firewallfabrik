@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import sys
 from enum import IntEnum
 
@@ -35,6 +36,23 @@ class BaseCompiler:
         self._warnings: list[str] = []
         self._rule_errors: dict[str, list[str]] = {}
         self._aborted: bool = False
+        self._muted: int = 0
+
+    @contextlib.contextmanager
+    def muted(self):
+        """Record nothing while the block runs.
+
+        A processor that renders a rule only to look at the result - the
+        dedup pass builds every command a second time to compare it - would
+        otherwise record every message of that rule twice and set the
+        compiler status on a rule it is about to drop.  Nesting is counted,
+        so an inner block does not unmute the outer one.
+        """
+        self._muted += 1
+        try:
+            yield
+        finally:
+            self._muted -= 1
 
     @property
     def status(self) -> CompilerStatus:
@@ -54,6 +72,8 @@ class BaseCompiler:
 
     def error(self, rule_or_msg, msg: str | None = None) -> None:
         """Record an error, optionally associated with a rule."""
+        if self._muted:
+            return
         if msg is None:
             self._errors.append(str(rule_or_msg))
         else:
@@ -67,6 +87,8 @@ class BaseCompiler:
 
     def warning(self, rule_or_msg, msg: str | None = None) -> None:
         """Record a warning, optionally associated with a rule."""
+        if self._muted:
+            return
         if msg is None:
             self._warnings.append(str(rule_or_msg))
         else:

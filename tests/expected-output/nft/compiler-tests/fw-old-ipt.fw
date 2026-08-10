@@ -11,7 +11,6 @@
 #  Pinned to an iptables release that predates several matches and targets the compiler emits
 #
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
-# Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
 

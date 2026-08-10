@@ -14,9 +14,6 @@
 # Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
 # Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
 # Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to
 
 FWBDEBUG=""
 

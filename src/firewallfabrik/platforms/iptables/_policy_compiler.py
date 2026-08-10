@@ -3927,7 +3927,12 @@ class Optimize3(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        rule_str = f'{rule.label} {pr.policy_rule_to_string(rule)}'
+        # Building the command again would record every message of this
+        # rule a second time and set the compiler status even on the rules
+        # dropped right below.
+        with self.compiler.muted():
+            command = pr.policy_rule_to_string(rule)
+        rule_str = f'{rule.label} {command}'
         if rule_str in self._seen:
             return True  # duplicate, drop
 

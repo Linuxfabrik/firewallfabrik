@@ -13,10 +13,6 @@
 # Rule 2 (NAT): SNAT rule has no translated source address
 # Rule 5 (global): Interface "eth0" has no addresses
 # Rule 5 (global): Could not resolve any source addresses
-# Rule 5 (global): Interface "eth0" has no addresses
-# Rule 5 (global): Could not resolve any source addresses
-# Rule 6 (global): Interface "eth0" has no addresses
-# Rule 6 (global): Could not resolve any source addresses
 # Rule 6 (global): Interface "eth0" has no addresses
 # Rule 6 (global): Could not resolve any source addresses
 # Rule 7 (global): Can not build rule using dynamic interface 'eth0' of object 'unknown'
