@@ -265,6 +265,7 @@ them:
 | `test_nft_check.py` | Does every checked-in nftables expected output load? Each ruleset goes through `nft --check` in a private network namespace. | `nft` and `unshare`, and a host that grants an unprivileged user namespace |
 | `test_nft_identifiers.py` | Is the list of nft keywords still true? Every name in it is offered to `nft` as a table, chain, set and counter name. | the same |
 | `test_ipt_version_gates.py` | Did the compiler get the release right in which a match first shipped? Re-derived from the netfilter git history. | `FWF_IPTABLES_SOURCE` pointing at an iptables clone with tags |
+| `test_ipt_target_names.py` | Is the list of names iptables refuses as a chain name still true? Re-derived from the extension files, and every name is offered to `iptables` and `ip6tables`. | `FWF_IPTABLES_SOURCE` for the first half, `unshare` and `iptables` for the second |
 
 `nft --check` cannot initialise its cache without `CAP_NET_ADMIN`, which is
 why those two run under `unshare -rn`: it gives a private network namespace

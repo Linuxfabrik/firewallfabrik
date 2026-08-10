@@ -134,7 +134,7 @@ class NATPrintRule(NATRuleProcessor):
                 ipt_comp.minus_n_commands[chain] = True
                 # In coexistence mode setup_fwf_jumps creates the prefixed
                 # standard chains, so they must not be created again here.
-                prefixed = self._prefix_chain(chain)
+                prefixed = self._apply_chain_prefix(chain)
                 if prefixed != chain:
                     ipt_comp.minus_n_commands[prefixed] = True
         self.minus_n_tracker_initialized = True
@@ -545,7 +545,7 @@ class NATPrintRule(NATRuleProcessor):
         else:
             return f'{option} {self._print_single_object_negation(rule, slot)}{arg} '
 
-    def _prefix_chain(self, chain: str) -> str:
+    def _apply_chain_prefix(self, chain: str) -> str:
         """Apply the coexistence chain prefix, as the policy printer does.
 
         Without it the NAT rules land in the real PREROUTING and
@@ -555,14 +555,27 @@ class NATPrintRule(NATRuleProcessor):
         """
         prefix = getattr(self.compiler, 'chain_prefix', '')
         if prefix and chain:
-            chain = f'{prefix}_{chain}'
+            return f'{prefix}_{chain}'
+        return chain
+
+    def _prefix_chain(self, chain: str) -> str:
+        """Return the chain a rule is written to, reporting a name iptables
+        would refuse.  See the policy printer for why the bookkeeping does
+        not go through here.
+        """
+        chain = self._apply_chain_prefix(chain)
         check_chain_name(self.compiler, chain, self.reported_long_chains)
         return chain
 
     def _create_chain(self, chain: str) -> str:
+        """Generate the chain creation command if the chain needs one.
+
+        The name is checked only once the chain turns out to need creating;
+        see the policy printer.
+        """
         if not chain:
             return ''
-        chain = self._prefix_chain(chain)
+        chain = self._apply_chain_prefix(chain)
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self.minus_n_tracker_initialized:
@@ -573,6 +586,7 @@ class NATPrintRule(NATRuleProcessor):
             and ipt_comp.minus_n_commands is not None
             and chain not in ipt_comp.minus_n_commands
         ):
+            check_chain_name(self.compiler, chain, self.reported_long_chains)
             opt_wait = get_wait_option(self.version)
             if opt_wait:
                 opt_wait += ' '

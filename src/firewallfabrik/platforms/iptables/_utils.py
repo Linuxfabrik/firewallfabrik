@@ -218,16 +218,88 @@ def get_wait_option(version: str) -> str:
 MAX_CHAIN_NAME_LENGTH = 28
 
 
+# Every name iptables can load as a target, which is therefore a name no
+# chain may have: `assert_valid_chain_name` asks
+# `xtables_find_target(name, XTF_TRY_LOAD)` and refuses the name when it
+# answers ("chain name may not clash with target name").
+#
+# The list is the extension files of the netfilter iptables tree whose name
+# after the `libxt_` / `libipt_` / `libip6t_` prefix is upper case, plus the
+# four verdicts the standard target provides:
+#
+#   ls extensions/ | grep -E '^lib(xt|ipt|ip6t)_[A-Z]' \
+#     | sed -E 's/^lib(xt|ipt|ip6t)_//; s/\.[a-z]+$//' | sort -u
+#
+# `NAT` is the one file that names no target of its own - it holds the
+# shared parser of SNAT and DNAT - and is left out; every other name was
+# offered to iptables 1.8.11 and ip6tables 1.8.11 one by one.  Which of the
+# two refuses a given name differs (`HL`, `DNPT` and `SNPT` are IPv6-only,
+# `TTL` and `ECN` IPv4-only), and a dual-stack firewall creates its chains
+# in both rulesets, so a name refused by either belongs here.
+IPTABLES_TARGET_NAMES = frozenset(
+    {
+        'ACCEPT',
+        'AUDIT',
+        'CHECKSUM',
+        'CLASSIFY',
+        'CLUSTERIP',
+        'CONNMARK',
+        'CONNSECMARK',
+        'CT',
+        'DNAT',
+        'DNPT',
+        'DROP',
+        'DSCP',
+        'ECN',
+        'HL',
+        'HMARK',
+        'IDLETIMER',
+        'LED',
+        'LOG',
+        'MARK',
+        'MASQUERADE',
+        'NETMAP',
+        'NFLOG',
+        'NFQUEUE',
+        'NOTRACK',
+        'QUEUE',
+        'RATEEST',
+        'REDIRECT',
+        'REJECT',
+        'RETURN',
+        'SECMARK',
+        'SET',
+        'SNAT',
+        'SNPT',
+        'SYNPROXY',
+        'TCPMSS',
+        'TCPOPTSTRIP',
+        'TEE',
+        'TOS',
+        'TPROXY',
+        'TRACE',
+        'TTL',
+        'ULOG',
+    }
+)
+
+
 def _chain_name_problem(chain: str) -> str:
     """Return why iptables would refuse *chain*, or an empty string.
 
-    Ports the length, leading-character and whitespace checks of
-    ``assert_valid_chain_name`` (netfilter iptables/xshared.c), which
-    iptables applies to every ``-N`` and every ``-j`` naming a chain.  Its
-    fourth check, the clash with a loadable target name, is left out: the
-    compiler routes its own targets through the same helper, so every one
-    of them would be reported.
+    Ports ``assert_valid_chain_name`` (netfilter iptables/xshared.c), which
+    iptables applies to every ``-N`` and every ``-j`` naming a chain.  The
+    compiler's own chains never reach the target-name test: the built-in
+    chains, the temporary chains and the rule chains are named by the
+    compiler, and a target it emits is recognised before the name is treated
+    as a chain.  What does reach it is the name of a rule set or a branch,
+    which the administrator chose.
     """
+    if chain in IPTABLES_TARGET_NAMES:
+        return (
+            'is the name of an iptables target, and a chain may not have one '
+            '("chain name may not clash with target name")'
+        )
     if len(chain) > MAX_CHAIN_NAME_LENGTH:
         return (
             f'is longer than {MAX_CHAIN_NAME_LENGTH} characters, iptables '

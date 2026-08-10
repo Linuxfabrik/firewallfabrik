@@ -331,17 +331,23 @@ class PrintRule(PolicyRuleProcessor):
                 ipt_comp.minus_n_commands[chain] = True
                 # In coexistence mode, the prefixed standard chains
                 # are created by setup_fwf_jumps, so mark them too.
-                prefixed = self._prefix_chain(chain)
+                prefixed = self._apply_chain_prefix(chain)
                 if prefixed != chain:
                     ipt_comp.minus_n_commands[prefixed] = True
         self.minus_n_tracker_initialized = True
 
     def _create_chain(self, chain: str, apply_prefix: bool = True) -> str:
-        """Generate chain creation command if needed."""
+        """Generate chain creation command if needed.
+
+        The name is checked only once the chain turns out to need creating.
+        This method is also handed the target of a rule, and a target that
+        shares its name with a standard chain is filtered out below, not
+        here - it is a target, not a name anybody chose for a chain.
+        """
         if not chain:
             return ''
         if apply_prefix:
-            chain = self._prefix_chain(chain)
+            chain = self._apply_chain_prefix(chain)
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
@@ -353,6 +359,7 @@ class PrintRule(PolicyRuleProcessor):
             and ipt_comp.minus_n_commands is not None
             and chain not in ipt_comp.minus_n_commands
         ):
+            check_chain_name(self.compiler, chain, self.reported_long_chains)
             ipv6 = ipt_comp.ipv6_policy
             iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
 
@@ -400,11 +407,23 @@ class PrintRule(PolicyRuleProcessor):
             return '\n'.join(res) + '\n'
         return ''
 
-    def _prefix_chain(self, chain: str) -> str:
-        """Apply coexistence chain prefix if configured."""
+    def _apply_chain_prefix(self, chain: str) -> str:
+        """Apply the coexistence chain prefix if one is configured."""
         prefix = getattr(self.compiler, 'chain_prefix', '')
         if prefix and chain:
-            chain = f'{prefix}_{chain}'
+            return f'{prefix}_{chain}'
+        return chain
+
+    def _prefix_chain(self, chain: str) -> str:
+        """Return the chain a rule is written to, reporting a name iptables
+        would refuse.
+
+        The bookkeeping of which chains exist goes through
+        :meth:`_apply_chain_prefix` instead: it seeds itself with the
+        standard chains, which carry the names of the targets the compiler
+        emits, and those are not chain names the administrator chose.
+        """
+        chain = self._apply_chain_prefix(chain)
         check_chain_name(self.compiler, chain, self.reported_long_chains)
         return chain
 
