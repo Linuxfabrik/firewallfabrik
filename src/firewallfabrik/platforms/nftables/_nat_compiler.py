@@ -433,6 +433,8 @@ class DropRuleWithEmptyRE(NATRuleProcessor):
             return False
 
         if rule.has_empty_re:
+            reason = rule.empty_re_reason or 'one of its elements is empty'
+            self.compiler.warning(rule, f'Rule is left out because {reason}')
             return True
 
         self.tmp_queue.append(rule)

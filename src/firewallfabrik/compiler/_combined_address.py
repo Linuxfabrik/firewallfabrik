@@ -22,8 +22,26 @@ import uuid
 
 from firewallfabrik.core.objects import (
     Address,
+    Host,
     PhysAddress,
 )
+
+
+def host_matches_by_mac(host: Host | None) -> bool:
+    """Return whether the host's addresses are matched together with its MAC.
+
+    The "MAC address matching" checkbox of the host dialog, stored as the
+    ``use_mac_addr_filter`` option.  fwbuilder reads it in
+    ``Compiler::_expand_interface`` (libfwbuilder/fwcompiler/Compiler.cpp)
+    and leaves the physAddress out of the expansion when it is off.  It is
+    not part of any platform schema, so it is read off the object rather
+    than through ``get_option()``, and a ``.fwb`` import stores it as the
+    string "True".
+    """
+    value = (getattr(host, 'options', None) or {}).get('use_mac_addr_filter')
+    if isinstance(value, str):
+        return value.strip().lower() == 'true'
+    return bool(value)
 
 
 @dataclasses.dataclass

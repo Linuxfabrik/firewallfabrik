@@ -28,7 +28,10 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import BaseCompiler, CompilerStatus
-from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._combined_address import (
+    CombinedAddress,
+    host_matches_by_mac,
+)
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import BasicRuleProcessor, Debug
 from firewallfabrik.core.objects import (
@@ -499,7 +502,7 @@ class Compiler(BaseCompiler):
         new_elements = []
         for obj in elements:
             if isinstance(obj, Host) and not isinstance(obj, Interface):
-                use_mac = _host_matches_by_mac(obj)
+                use_mac = host_matches_by_mac(obj)
                 # Expand host to its interface addresses
                 for iface in obj.interfaces:
                     if iface.is_loopback() and not on_loopback:
@@ -778,20 +781,6 @@ class Compiler(BaseCompiler):
                     return addr
 
         return None
-
-
-def _host_matches_by_mac(host: Host) -> bool:
-    """Return whether the host's addresses are matched together with its MAC.
-
-    The "MAC address matching" checkbox of the host dialog, stored as the
-    ``use_mac_addr_filter`` option.  It is not part of any platform schema,
-    so it is read off the object rather than through ``get_option()``, and a
-    ``.fwb`` import stores it as the string "True".
-    """
-    value = (getattr(host, 'options', None) or {}).get('use_mac_addr_filter')
-    if isinstance(value, str):
-        return value.strip().lower() == 'true'
-    return bool(value)
 
 
 def _addr_sort_key(obj):

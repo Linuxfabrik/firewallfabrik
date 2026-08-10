@@ -23,6 +23,7 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
@@ -271,7 +272,20 @@ class NATPrintRule(NATRuleProcessor):
 
         # OSrc
         osrc = ipt_comp.get_first_osrc(rule)
-        if isinstance(osrc, PhysAddress):
+        if isinstance(osrc, CombinedAddress) and osrc.has_phys_address():
+            # An object that names both is matched on both, the way the
+            # policy printer and fwbuilder's _printSrcAddr do it
+            # (iptlib/PolicyCompiler_PrintRule.cpp:1615). Rendering only one
+            # of the two would translate for every host carrying the other.
+            cmd += self._print_single_option_with_negation(
+                '-m mac --mac-source', rule, 'osrc', osrc.get_phys_address()
+            )
+            addr_str = self._print_addr(osrc.address)
+            if addr_str:
+                cmd += self._print_single_option_with_negation(
+                    ' -s', rule, 'osrc', addr_str
+                )
+        elif isinstance(osrc, PhysAddress):
             mac_match = self._print_mac_source(osrc, rule)
             if mac_match is None:
                 # No MAC to match on; the reason was reported.

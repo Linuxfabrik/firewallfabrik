@@ -7538,6 +7538,8 @@ libraries:
               - type: 'Host'
                 name: 'mac-only-host'
                 comment: 'Only reachable by its MAC, so it can name no IP address'
+                options:
+                  use_mac_addr_filter: true
                 management:
                   address: '0.0.0.0'
                   snmp:

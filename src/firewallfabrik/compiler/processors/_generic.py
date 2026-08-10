@@ -23,6 +23,10 @@ import sys
 
 import sqlalchemy
 
+from firewallfabrik.compiler._combined_address import (
+    CombinedAddress,
+    host_matches_by_mac,
+)
 from firewallfabrik.compiler._comp_rule import CompRule, expand_group
 from firewallfabrik.compiler._rule_processor import (
     BasicRuleProcessor,
@@ -45,6 +49,7 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    PhysAddress,
     PolicyAction,
     Service,
     TCPService,
@@ -1324,13 +1329,18 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
     destination.
     """
 
-    @staticmethod
-    def _expand_slot(objects: list) -> list:
+    def _expand_slot(self, objects: list) -> list:
         """Expand one element list, replacing composite objects.
 
         A dynamic interface keeps its object: its address is only known at
         run time.  A loopback interface is skipped when it is reached
         through its parent host, because NAT never applies to it.
+
+        An interface that carries a MAC address next to its addresses gives
+        the same ``CombinedAddress`` the policy side builds, so the rule
+        asks for the address *and* the MAC.  Without it the printer sees two
+        objects and renders whichever sorts first, which turns "this host"
+        into "anything with this MAC".
         """
         result = []
         for obj in objects:
@@ -1340,7 +1350,7 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
                 elif obj.is_loopback():
                     continue
                 else:
-                    result.extend(obj.addresses)
+                    result.extend(self._expand_interface(obj, obj.device))
             elif isinstance(obj, Host):
                 for iface in getattr(obj, 'interfaces', []):
                     if iface.is_loopback():
@@ -1348,7 +1358,7 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
                     if iface.is_dynamic():
                         result.append(iface)
                     else:
-                        result.extend(iface.addresses)
+                        result.extend(self._expand_interface(iface, obj))
             else:
                 result.append(obj)
 
@@ -1364,6 +1374,45 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
         result.sort(key=_sort_key)
         return result
 
+    @staticmethod
+    def _expand_interface(iface: Interface, host) -> list:
+        """Return what one interface contributes, pairing MAC and address.
+
+        The same three cases as ``Compiler._expand_interface``, minus the
+        address-family filter, which the NAT pipeline leaves to
+        ``DropIPv4Rules`` / ``DropIPv6Rules``.
+        """
+        addresses = []
+        phys_address = None
+        for addr in iface.addresses:
+            if not addr.get_address():
+                continue
+            if isinstance(addr, PhysAddress):
+                phys_address = addr
+            else:
+                addresses.append(addr)
+
+        if phys_address is None or not host_matches_by_mac(host):
+            return addresses
+        if not addresses:
+            return [phys_address]
+        return [CombinedAddress(addr, phys_address) for addr in addresses]
+
+    def _expand(self, rule: CompRule, slot: str) -> None:
+        """Expand one slot of *rule*, flagging it if nothing is left.
+
+        An empty element means "any", so a slot that held objects and holds
+        none afterwards has to leave with the rule rather than widen it.
+        """
+        elements = getattr(rule, slot)
+        expanded = self._expand_slot(elements)
+        if elements and not expanded:
+            rule.has_empty_re = True
+            rule.empty_re_reason = (
+                'the addresses it names carry nothing this rule can match on'
+            )
+        setattr(rule, slot, expanded)
+
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
@@ -1373,17 +1422,17 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
 
         rt = rule.nat_rule_type
         if rt in (NATRuleType.NONAT, NATRuleType.Return):
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
+            self._expand(rule, 'osrc')
+            self._expand(rule, 'odst')
         elif rt in (NATRuleType.SNAT, NATRuleType.SDNAT, NATRuleType.DNAT):
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
-            rule.tsrc = self._expand_slot(rule.tsrc)
-            rule.tdst = self._expand_slot(rule.tdst)
+            self._expand(rule, 'osrc')
+            self._expand(rule, 'odst')
+            self._expand(rule, 'tsrc')
+            self._expand(rule, 'tdst')
         elif rt == NATRuleType.Redirect:
-            rule.osrc = self._expand_slot(rule.osrc)
-            rule.odst = self._expand_slot(rule.odst)
-            rule.tsrc = self._expand_slot(rule.tsrc)
+            self._expand(rule, 'osrc')
+            self._expand(rule, 'odst')
+            self._expand(rule, 'tsrc')
 
         return True
 
