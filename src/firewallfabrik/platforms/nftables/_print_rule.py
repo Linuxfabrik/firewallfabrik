@@ -1580,8 +1580,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         if cleaned != result:
             self.compiler.warning(
                 rule,
-                f'Log prefix "{result}" holds a character nftables cannot carry '
-                f'and was written as "{cleaned}"',
+                f'Log prefix "{result}" holds a character the generated ruleset '
+                f'cannot pass on and was written as "{cleaned}"',
             )
         result = cleaned
         # The kernel takes a log prefix of up to NF_LOG_PREFIXLEN - 1 = 127

@@ -12,8 +12,8 @@
 # Compiled for iptables (any version)
 #
 
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' "
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' "
+# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' service "
+# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' service "
 
 FWBDEBUG=""
 RETVAL=0
@@ -441,7 +441,7 @@ script_body() {
  #
  $IPTABLES -w 5 -N In_RULE_0 2>/dev/null
  $IPTABLES -w 5 -A INPUT -p tcp -m tcp -s 203.0.113.42 --dport 22 -j In_RULE_0
- $IPTABLES -w 5 -A In_RULE_0 -j LOG --log-level info --log-prefix "SSH 'DENIED' "
+ $IPTABLES -w 5 -A In_RULE_0 -j LOG --log-level info --log-prefix "SSH 'DENIED' service "
  $IPTABLES -w 5 -A In_RULE_0 -j DROP
  #
  # Rule 1 (global)

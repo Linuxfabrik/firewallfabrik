@@ -8,8 +8,8 @@
 #
 # files: * fw-logging.fw /etc/fwf.sh
 #
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" " holds a character nftables cannot carry and was written as "SSH 'DENIED' "
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" " holds a character nftables cannot carry and was written as "SSH 'DENIED' "
+# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
+# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
 
 FWBDEBUG=""
 
@@ -246,8 +246,8 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" " holds a character nftables cannot carry and was written as "SSH 'DENIED' "
-        ip saddr 203.0.113.42 tcp dport 22 counter log prefix "SSH 'DENIED' " level info drop
+        # # fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
+        ip saddr 203.0.113.42 tcp dport 22 counter log prefix "SSH 'DENIED' service " level info drop
         #
         # Rule 1 (global)
         #

@@ -69,12 +69,19 @@ def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> 
     return ''
 
 
+# Characters the nftables preprocessor and the shell both read as syntax.
+# See sanitize_log_prefix below for why none of them can be escaped.
+_LOG_PREFIX_DROPPED = frozenset('$`\\')
+
+
 def sanitize_log_prefix(prefix: str) -> str:
     """Return *prefix* with the characters no back end can carry removed.
 
     A log prefix is free text, and the macros splice a rule set name and an
-    interface name into it, so it can hold anything the user typed.  Two
-    kinds of character do not survive the trip:
+    interface name into it, so it can hold anything the user typed.  It then
+    has to survive two grammars that both give some characters a meaning of
+    their own: the nftables parser and, on iptables, the shell that runs the
+    generated script.  Three kinds of character do not make it through:
 
     * A double quote.  nftables has no escape for it -- its scanner reads a
       quoted string as ``\\"[^"]*\\"`` (netfilter nftables src/scanner.l), so
@@ -84,12 +91,25 @@ def sanitize_log_prefix(prefix: str) -> str:
       shell-quoted argument, where the shell swallows the quotes and the
       logged prefix silently loses them.  Replacing it with a single quote
       keeps the text readable and identical on both platforms.
+    * ``$``, a backtick and a backslash.  nftables runs the prefix through
+      its own preprocessor (netfilter nftables src/parser_bison.y hands it
+      to ``str_preprocess``, src/preprocess.c), which reads a ``$`` before a
+      letter or an underscore as a variable reference and refuses the whole
+      ruleset with "unknown identifier".  On iptables the prefix ends up in
+      a double-quoted shell word, where the very same three characters are
+      the shell's variable expansion, command substitution and escape -- so
+      a prefix picked up from an object name could not only mangle the text
+      but run a command on the firewall at activation time.  There is no
+      spelling that means the literal character in both places, so they are
+      dropped.
     * A control character.  Both a rule line and a shell command line end at
       a newline, and a tab or carriage return in a kernel log message only
       confuses whatever reads it.
     """
     return ''.join(
-        "'" if char == '"' else char for char in prefix if char.isprintable()
+        "'" if char == '"' else char
+        for char in prefix
+        if char.isprintable() and char not in _LOG_PREFIX_DROPPED
     )
 
 
