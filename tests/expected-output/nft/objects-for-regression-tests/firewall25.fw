@@ -13,7 +13,7 @@
 #  two rule sets for the filter table, to make sure there is only
 #  one COMMIT for both
 #
-# Rule 1: Action Reject is not allowed in mangle table
+# Rule policy_2_mangle 1 (global): Action Reject is not allowed in mangle table
 
 FWBDEBUG=""
 

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import contextlib
+import re
 import sys
 from enum import IntEnum
 
@@ -70,14 +71,23 @@ class BaseCompiler:
 
     @staticmethod
     def _format_rule_id(rule) -> str:
-        """Format rule identifier using position, falling back to label."""
-        # label is set by the compiler prolog: "N (global)", "N (NAT)" etc.
-        # But custom-labeled rules keep their DB label (e.g. "color2")
-        # which is not useful for error messages. Prefer position.
+        """Format rule identifier using the compiler label, else the position.
+
+        The compiler prolog builds the label as ``[<rule set> ]N (<where>)``
+        -- "3 (global)" in the top rule set, "mail_in 3 (eth0)" in a branch.
+        A rule that carries a name from the data file instead keeps that
+        name, and "color2" says nothing about which rule failed, so such a
+        label is replaced by the position.
+
+        The rule set part has to survive: every rule set numbers its rules
+        from 0, so "Rule 0" in a firewall with a branch names three
+        different rules at once, and the reader has no way to tell which.
+        """
         pos = getattr(rule, 'position', None)
         label = getattr(rule, 'label', '') or ''
         if pos is not None:
-            return label if label.startswith(f'{pos} ') else str(pos)
+            built_by_the_prolog = re.search(rf'(?:^|\s){pos} \(', label)
+            return label if built_by_the_prolog else str(pos)
         return label or '?'
 
     def error(self, rule_or_msg, msg: str | None = None) -> None:

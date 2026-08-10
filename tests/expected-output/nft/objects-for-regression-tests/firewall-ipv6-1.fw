@@ -15,8 +15,8 @@
 #
 # Rule 20 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 21 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 1: Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 2: Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule Policy_ipv6 1 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule Policy_ipv6 2 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule '3 (global)' shadows rule '4 (global)' below it
 # Rule '5 (global)' shadows rule '6 (global)' below it
 # Rule '9 (global)' shadows rule '10 (global)' below it
