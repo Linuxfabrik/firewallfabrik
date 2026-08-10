@@ -21,11 +21,11 @@
 The interesting part of this module is not the unit tests but
 ``test_keywords_are_still_rejected`` / ``test_renamed_keywords_are_accepted``,
 which ask the installed ``nft`` whether ``NFT_KEYWORDS`` is still true.  They
-are skipped when ``nft`` or ``unshare`` is missing so the suite keeps running
-without them.
+are skipped where the installed ``nft`` cannot be asked - it needs a private
+network namespace, which not every machine grants - so the suite keeps
+running without them.  See ``tests/nft_probe.py``.
 """
 
-import shutil
 import subprocess  # nosec B404
 
 import pytest
@@ -37,8 +37,7 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_object_name,
     nft_quote,
 )
-
-_HAVE_NFT = bool(shutil.which('nft')) and bool(shutil.which('unshare'))
+from tests.nft_probe import CAN_ASK_NFT, SKIP_REASON
 
 
 def _name_accepted(name: str) -> bool:
@@ -129,14 +128,14 @@ def test_no_keyword_carries_an_underscore():
     assert not [k for k in NFT_KEYWORDS if '_' in k or k != k.lower()]
 
 
-@pytest.mark.skipif(not _HAVE_NFT, reason='needs nft and unshare')
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
 def test_keywords_are_still_rejected():
     """Every name in the list really is one nft refuses."""
     accepted = [k for k in sorted(NFT_KEYWORDS) if _name_accepted(k)]
     assert not accepted, f'no longer nft keywords: {accepted}'
 
 
-@pytest.mark.skipif(not _HAVE_NFT, reason='needs nft and unshare')
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
 def test_renamed_keywords_are_accepted():
     """And the rename really does produce something nft takes."""
     rejected = [

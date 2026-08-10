@@ -20,15 +20,17 @@ which is what every other test compares against.
 
 ``nft --check`` parses and evaluates the ruleset without installing it, but
 it cannot initialise its cache without CAP_NET_ADMIN, so it runs inside a
-private network namespace. Without ``nft`` or ``unshare`` the test skips.
+private network namespace. Where that namespace cannot be created the test
+skips; see ``tests/nft_probe.py``.
 """
 
 import re
-import shutil
 import subprocess  # nosec B404
 from pathlib import Path
 
 import pytest
+
+from tests.nft_probe import CAN_ASK_NFT, SKIP_REASON
 
 EXPECTED_OUTPUT_DIR = Path(__file__).parent / 'expected-output' / 'nft'
 
@@ -42,9 +44,7 @@ _NFT_RULES_RE = re.compile(r"<<'NFT_RULES'\n(.*?)\nNFT_RULES", re.S)
 # name with more than one address.
 _DNS_DEPENDENT = {'firewall33.fw', 'firewall33-1.fw'}
 
-_HAVE_NFT = bool(shutil.which('nft')) and bool(shutil.which('unshare'))
-
-pytestmark = pytest.mark.skipif(not _HAVE_NFT, reason='needs nft and unshare')
+pytestmark = pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
 
 
 def _rulesets() -> list[Path]:

@@ -256,19 +256,26 @@ When reviewing nft expected output files (especially newly created ones), pay ex
 ## Running the Output Through the Real Tools
 
 The expected-output tests guard against *changes* in the compiler output, not
-against output that does not work. Two tests in the suite do ask the real
-tools, and both skip themselves when the tool is missing, so the suite still
-runs without them:
+against output that does not work. Three tests in the suite do ask the real
+tools, and each skips itself when it cannot, so the suite still runs without
+them:
 
 | Test | Asks | Needs |
 |---|---|---|
-| `test_nft_check.py` | Does every checked-in nftables expected output load? Each ruleset goes through `nft --check` in a private network namespace. | `nft`, `unshare` |
-| `test_nft_identifiers.py` | Is the list of nft keywords still true? Every name in it is offered to `nft` as a table, chain, set and counter name. | `nft`, `unshare` |
+| `test_nft_check.py` | Does every checked-in nftables expected output load? Each ruleset goes through `nft --check` in a private network namespace. | `nft` and `unshare`, and a host that grants an unprivileged user namespace |
+| `test_nft_identifiers.py` | Is the list of nft keywords still true? Every name in it is offered to `nft` as a table, chain, set and counter name. | the same |
 | `test_ipt_version_gates.py` | Did the compiler get the release right in which a match first shipped? Re-derived from the netfilter git history. | `FWF_IPTABLES_SOURCE` pointing at an iptables clone with tags |
 
 `nft --check` cannot initialise its cache without `CAP_NET_ADMIN`, which is
 why those two run under `unshare -rn`: it gives a private network namespace
 where the parse and evaluation pass work in full.
+
+Having both binaries is not enough. A hardened host, a container and the
+GitHub runner all refuse to write `/proc/self/uid_map`, and then every
+invocation fails for a reason that has nothing to do with the ruleset -
+which reads as "nft refuses this" and turns the suite red. `tests/nft_probe.py`
+therefore tries one empty ruleset once and both tests skip on the answer.
+Add the same guard to any new test that reaches for `unshare -rn`.
 
 That still leaves the iptables side and everything around the rules.
 
