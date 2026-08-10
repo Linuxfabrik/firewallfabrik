@@ -279,12 +279,12 @@ script_body() {
 }
 
 routing_script() {
-    ip route add default via 200.200.200.200 dev eth3
-ip route add 192.168.101.0/24 via 192.168.1.200 dev bond0.1
-ip route add 192.168.102.0/24 via 192.168.2.200 dev bond0.2
-ip route add 192.168.111.0/24 via 192.168.11.200 dev bond1
-ip route add 192.168.211.0/24 via 192.168.201.200 dev eth2.201
-ip route add 192.168.212.0/24 via 192.168.202.200 dev eth2.202
+    $IP route add default via 200.200.200.200 dev eth3
+$IP route add 192.168.101.0/24 via 192.168.1.200 dev bond0.1
+$IP route add 192.168.102.0/24 via 192.168.2.200 dev bond0.2
+$IP route add 192.168.111.0/24 via 192.168.11.200 dev bond1
+$IP route add 192.168.211.0/24 via 192.168.201.200 dev eth2.201
+$IP route add 192.168.212.0/24 via 192.168.202.200 dev eth2.202
 
 }
 

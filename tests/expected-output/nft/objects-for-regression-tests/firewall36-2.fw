@@ -273,7 +273,7 @@ script_body() {
 }
 
 routing_script() {
-    ip route add default via 192.0.2.100 dev eth0
+    $IP route add default via 192.0.2.100 dev eth0
 
 }
 

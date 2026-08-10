@@ -92,9 +92,29 @@ class RoutingPrintRule(RoutingRuleProcessor):
         self.tmp_queue.append(rule)
         return True
 
+    @staticmethod
+    def _is_ipv6_route(rule: CompRule) -> bool:
+        """Return whether this route belongs to the IPv6 routing table.
+
+        iproute2 takes the family from the destination or the gateway and
+        only falls back to IPv4 when it can read it from neither, which is
+        exactly the case of a route to "default" out of an interface.  Such
+        a rule would install an IPv4 default route, so the family is stated
+        rather than inferred.
+        """
+        for slot in ('rdst', 'rgtw'):
+            for obj in getattr(rule, slot, None) or []:
+                if getattr(obj, 'is_v6', None) and obj.is_v6():
+                    return True
+        return False
+
     def _routing_rule_to_string(self, rule: CompRule) -> str:
         """Convert a routing CompRule to an 'ip route' command string."""
-        parts = ['ip route add']
+        # The script defines IP from the firewall's "path to ip" setting,
+        # the same way it defines IPTABLES; writing the bare name here ran
+        # whatever the PATH happened to find instead.
+        family = ' -6' if self._is_ipv6_route(rule) else ''
+        parts = [f'$IP{family} route add']
 
         dst = self._print_rdst(rule)
         gtw = self._print_rgtw(rule)

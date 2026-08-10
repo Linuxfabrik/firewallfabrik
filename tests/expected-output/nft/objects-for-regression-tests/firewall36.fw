@@ -276,12 +276,12 @@ script_body() {
 }
 
 routing_script() {
-    ip route add default dev eth0
-ip route add default dev eth2
-ip route add 192.168.2.0/24 via 192.168.1.254 dev eth1
-ip route add default via 192.168.1.254 dev eth1
-ip route add 2001:db8::/32 dev eth1
-ip route add default dev eth1
+    $IP route add default dev eth0
+$IP route add default dev eth2
+$IP route add 192.168.2.0/24 via 192.168.1.254 dev eth1
+$IP route add default via 192.168.1.254 dev eth1
+$IP -6 route add 2001:db8::/32 dev eth1
+$IP route add default dev eth1
 
 }
 

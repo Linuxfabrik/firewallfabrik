@@ -15,6 +15,8 @@ PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
 
 NFT="/usr/sbin/nft"
+IP="ip"
+LOGGER="logger"
 
 log() {
     echo "$1"
@@ -201,8 +203,8 @@ script_body() {
 }
 
 routing_script() {
-    ip route add 172.24.1.0/24 via 172.24.0.100 dev eth0
-ip route add 172.24.1.0/24 via 172.24.0.100 dev eth1
+    $IP route add 172.24.1.0/24 via 172.24.0.100 dev eth0
+$IP route add 172.24.1.0/24 via 172.24.0.100 dev eth1
 
 }
 
