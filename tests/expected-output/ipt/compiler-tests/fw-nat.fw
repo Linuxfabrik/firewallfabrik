@@ -554,6 +554,14 @@ script_body() {
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.128/26 -j SNAT --to-source 198.51.100.1
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.192/29 -j SNAT --to-source 198.51.100.1
  $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.200 -j SNAT --to-source 198.51.100.1
+ #
+ # Rule 17 (NAT)
+ #
+ echo "Rule 17 (NAT)"
+ #
+ # Original service names two connection owners
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -m owner --uid-owner 500 -j SNAT --to-source 198.51.100.1
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -m owner --uid-owner 501 -j SNAT --to-source 198.51.100.1
 
  # ================ Table 'filter', rule set Policy
  #

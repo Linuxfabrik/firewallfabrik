@@ -41,8 +41,6 @@ from firewallfabrik.compiler.processors._generic import (
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
-    ICMP6Service,
-    ICMPService,
     Interface,
     NATAction,
     NATRuleType,
@@ -228,7 +226,7 @@ class NATCompiler_nft(NATCompiler):
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
 
-        self.add(SplitMultipleICMP('split rule with multiple ICMP services'))
+        self.add(SplitMultipleServices('split rule with several services'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
         self.add(AddVirtualAddress('add virtual addresses'))
         self.add(AssignInterface('assign rules to interfaces'))
@@ -848,11 +846,15 @@ class SeparatePortRanges(_PassthroughNAT):
     pass
 
 
-class SplitMultipleICMP(NATRuleProcessor):
-    """Split rules with multiple ICMP services into individual rules.
+class SplitMultipleServices(NATRuleProcessor):
+    """Give every service that cannot share a match a rule of its own.
 
-    ICMP services cannot be combined in a single match expression,
-    so each ICMP service gets its own rule.
+    Only TCP and UDP ports go into one set.  An ICMP type, an IP protocol
+    number, a custom service, a packet mark and a connection owner each
+    need their own match, and the print rule renders one service per rule,
+    so a list of them would otherwise be cut down to its first entry and
+    the rest would translate nothing.  The counterpart of the policy
+    compiler's ``PrepareForMultiport``, which splits the same way.
     """
 
     def process_next(self) -> bool:
@@ -865,7 +867,7 @@ class SplitMultipleICMP(NATRuleProcessor):
             return True
 
         first_srv = rule.osrv[0]
-        if not isinstance(first_srv, ICMPService | ICMP6Service):
+        if isinstance(first_srv, TCPUDPService):
             self.tmp_queue.append(rule)
             return True
 

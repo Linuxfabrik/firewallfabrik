@@ -1277,10 +1277,18 @@ class PrepareForMultiport(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # Only set multiport for TCP/UDP services
+        # Only TCP and UDP ports go into one multiport match.  An ICMP
+        # type, an IP protocol number, a custom service, a packet mark and
+        # a connection owner each need their own match, and the print rule
+        # renders one service per rule, so a list of them has to be split
+        # or everything but the first entry is lost.  Same split as the
+        # policy compiler's PrepareForMultiport.
         first_srv = rule.osrv[0]
         if not isinstance(first_srv, TCPService | UDPService):
-            self.tmp_queue.append(rule)
+            for srv in rule.osrv:
+                r = rule.clone()
+                r.osrv = [srv]
+                self.tmp_queue.append(r)
             return True
 
         rule.ipt_multiport = True

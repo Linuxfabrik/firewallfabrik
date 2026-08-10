@@ -382,6 +382,12 @@ table ip fwf_nat {
         #
         # Original source is an address range that is no prefix
         oifname "eth0" ip saddr 192.168.1.100-192.168.1.200 counter snat to 198.51.100.1
+        #
+        # Rule 17 (NAT)
+        #
+        # Original service names two connection owners
+        oifname "eth0" meta skuid 500 counter snat to 198.51.100.1
+        oifname "eth0" meta skuid 501 counter snat to 198.51.100.1
     }
 }
 

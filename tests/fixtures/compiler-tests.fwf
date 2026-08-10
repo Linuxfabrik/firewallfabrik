@@ -2977,6 +2977,9 @@ libraries:
               - type: 'UserService'
                 name: 'user500'
                 userid: '500'
+              - type: 'UserService'
+                name: 'user501'
+                userid: '501'
       - type: 'IntervalGroup'
         name: 'Time'
         children:
@@ -5036,6 +5039,30 @@ libraries:
                       - 'Library:User/ObjectGroup:Objects/ObjectGroup:Address Ranges/AddressRange:addr-range-1'
                     osrv:
                       - 'Library:Standard/IPService:Any'
+                    tdst:
+                      - 'Library:Standard/Network:Any'
+                    tsrc:
+                      - 'Library:User/ObjectGroup:Firewalls/Firewall:fw-nat/Interface:eth0'
+                    tsrv:
+                      - 'Library:Standard/IPService:Any'
+                  - type: 'NATRule'
+                    position: 17
+                    comment: 'Original service names two connection owners'
+                    options:
+                      disabled: false
+                      group: ''
+                    action: 'Translate'
+                    itf_inb:
+                      - 'Library:Standard/Network:Any'
+                    itf_outb:
+                      - 'Library:Standard/Network:Any'
+                    odst:
+                      - 'Library:Standard/Network:Any'
+                    osrc:
+                      - 'Library:Standard/Network:Any'
+                    osrv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UserServices/UserService:user500'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UserServices/UserService:user501'
                     tdst:
                       - 'Library:Standard/Network:Any'
                     tsrc:
