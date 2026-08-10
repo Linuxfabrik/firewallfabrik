@@ -107,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): a firewall with weekday-restricted rules is warned when its time zone setting makes iptables and nftables pick different days. The warning was the wrong way round and fired exactly when the two agreed.
 * Compiler (nftables): a firewall whose only rules are the automatic ones installs them together with its default-drop policy, instead of an empty ruleset that left the host open.
 * Compiler (nftables): a NAT rule for an ICMP service translates only the message types it names instead of every ICMP packet between the addresses in the rule.
+* Compiler (nftables): a NAT rule marked "Use MASQUERADE target" masquerades, as the same rule does on iptables. The setting was ignored and the traffic was translated to a fixed address instead, which breaks as soon as the outgoing interface gets a different one.
 * Compiler (nftables): a NAT rule that excludes a group of addresses excludes all of them instead of still translating every one.
 * Compiler (nftables): a NAT rule that translates into an address range and a port range produces a ruleset that loads. It was written in a form nftables rejects, and a rejected ruleset means the firewall keeps its old rules.
 * Compiler (nftables): a NAT rule that translates the source and the destination is labelled in both chains of the generated ruleset, so its second half is no longer filed under an unrelated rule number.

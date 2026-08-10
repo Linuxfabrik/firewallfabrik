@@ -235,6 +235,7 @@ class NATCompiler_nft(NATCompiler):
         self.add(
             DynamicInterfaceInTSrc('masquerade if TSrc has no compile-time address')
         )
+        self.add(AlwaysUseMasquerade('always use masquerading target instead of SNAT'))
         self.add(VerifyRules3('check combination of interface spec and chain'))
 
         self.add(ConvertToAtomicForItfInb('convert to atomic for inbound interface'))
@@ -1445,6 +1446,38 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
 
         tsrc = rule.tsrc[0]
         if isinstance(tsrc, Interface) and not tsrc.is_regular():
+            rule.nat_rule_type = NATRuleType.Masq
+            rule.ipt_target = 'masquerade'
+
+        return True
+
+
+class AlwaysUseMasquerade(NATRuleProcessor):
+    """Masquerade a source translation the rule asks to masquerade.
+
+    The NAT rule options carry a "Use MASQUERADE target" checkbox
+    (``ipt_use_masq``).  Its name is historical, the option is offered for
+    every NAT rule, and nftables has the ``masquerade`` statement, so the
+    answer has to be the same on both platforms: translate the source to
+    the address of the interface the packet leaves by instead of the
+    address the rule names.  Same shape as the iptables
+    ``AlwaysUseMasquerade`` (C++ ``NATCompiler_ipt::alwaysUseMasquerading``,
+    NATCompiler_ipt.cpp:1335), and it runs after
+    ``DynamicInterfaceInTSrc`` for the same reason: a translation that
+    already masquerades needs no second look.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        self.tmp_queue.append(rule)
+
+        if rule.nat_rule_type != NATRuleType.SNAT:
+            return True
+
+        if rule.get_option('ipt_use_masq', False):
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 

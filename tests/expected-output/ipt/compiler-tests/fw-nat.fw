@@ -521,6 +521,13 @@ script_body() {
  # Original service holds more services than one -m multiport match can carry
  $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -m multiport -d 198.51.100.1 --dports 5190,1494,709,710,1720,3268,3269,2000,5631,7070,2998,445,49,548,113 -j DNAT --to-destination 10.0.0.53
  $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 198.51.100.1 --dport 179 -j DNAT --to-destination 10.0.0.53
+ #
+ # Rule 13 (NAT)
+ #
+ echo "Rule 13 (NAT)"
+ #
+ # Asks for the MASQUERADE target instead of SNAT
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -s 192.168.1.0/24 -j MASQUERADE
 
  # ================ Table 'filter', rule set Policy
  #
