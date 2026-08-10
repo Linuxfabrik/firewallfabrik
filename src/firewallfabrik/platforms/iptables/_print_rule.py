@@ -55,6 +55,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._utils import (
     MATCH_FIRST_RELEASE,
+    TARGET_FIRST_RELEASE,
     check_chain_name,
     get_address_table_var_name,
     get_interface_var_name,
@@ -269,7 +270,12 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         command_line += time_interval
         command_line += self._print_limit(rule)
-        command_line += self._print_target(rule)
+        target_part = self._print_target(rule)
+        if target_part is None:
+            # The target does not exist on this release, which was reported.
+            # A rule that only marks or classifies has nothing left to do.
+            return ''
+        command_line += target_part
 
         target = rule.ipt_target
         if target in ('LOG', 'ULOG', 'NFLOG'):
@@ -1215,7 +1221,28 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         return tag_obj.get_code() if tag_obj else ''
 
-    def _print_target(self, rule: CompRule) -> str:
+    def _target_available(self, rule: CompRule, target: str) -> bool:
+        """Whether the pinned iptables knows a target, for this family.
+
+        Reports the reason once per rule and leaves the answer to the
+        caller, which drops the rule: a classifying or marking rule exists
+        only for its target, so emitting it without one would install a
+        rule that counts packets and does nothing.  The alternative is
+        worse - ip6tables answers "Couldn't load target" and stops the
+        activation script with every built-in policy already set to DROP.
+        """
+        first = TARGET_FIRST_RELEASE[target][bool(self.compiler.ipv6_policy)]
+        if version_compare(self.version, first) >= 0:
+            return True
+        tool = 'ip6tables' if self.compiler.ipv6_policy else 'iptables'
+        self.compiler.error(
+            rule,
+            f'{tool} before {first} has no "{target}" target; the rule is left out',
+        )
+        return False
+
+    def _print_target(self, rule: CompRule) -> str | None:
+        """Print the ``-j`` part, or ``None`` when the rule cannot be built."""
         # Tagging and classification pick their own target and carry the
         # value with it, so they come before the generic target mapping
         # (fwbuilder PolicyCompiler_PrintRule::_printTarget).
@@ -1237,6 +1264,8 @@ class PrintRule(PolicyRuleProcessor):
                     'classification rule has no traffic class to set',
                 )
                 return ''
+            if not self._target_available(rule, 'CLASSIFY'):
+                return None
             return f' -j CLASSIFY --set-class {classify_str}'
 
         target = rule.ipt_target
@@ -1262,6 +1291,8 @@ class PrintRule(PolicyRuleProcessor):
                 # specified"); the operation is set by SplitIfTagAndConnmark.
                 connmark_arg = rule.get_option('CONNMARK_arg', '')
                 if connmark_arg:
+                    if not self._target_available(rule, 'CONNMARK'):
+                        return None
                     return f' -j CONNMARK {connmark_arg}'
             # Prefix user-chain targets, but not built-in targets.
             if target not in self._BUILTIN_TARGETS:

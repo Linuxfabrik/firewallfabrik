@@ -24,6 +24,7 @@ from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import PolicyAction
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 from firewallfabrik.platforms.iptables._utils import (
+    TARGET_FIRST_RELEASE,
     get_iptables_version,
     get_wait_option,
     version_compare,
@@ -97,10 +98,19 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         version = get_iptables_version(self.fw)
         ipv6 = self.ipv6_policy
 
-        if have_connmark:
+        # The rules that save a mark to the connection are already left out
+        # of a ruleset whose tool has no CONNMARK target, so the ones that
+        # restore it have nothing to restore and would only stop the
+        # activation script (netfilter iptables extensions: CONNMARK reached
+        # ip6tables in 1.3.5, libip6t_CONNMARK.c).
+        connmark_ok = (
+            version_compare(version, TARGET_FIRST_RELEASE['CONNMARK'][bool(ipv6)]) >= 0
+        )
+
+        if have_connmark and connmark_ok:
             result += self._automatic_rule_line('PREROUTING -j CONNMARK --restore-mark')
 
-        if have_connmark_in_output:
+        if have_connmark_in_output and connmark_ok:
             result += self._automatic_rule_line('OUTPUT -j CONNMARK --restore-mark')
 
         # TCPMSS clamping.  Matches fwbuilder's

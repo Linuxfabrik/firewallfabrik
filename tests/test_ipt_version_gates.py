@@ -10,17 +10,18 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""The release a match first shipped in, per address family.
+"""The release a match or target first shipped in, per address family.
 
-Several iptables matches started out IPv4-only and only reached ip6tables
-when netfilter merged the two extension trees into ``libxt_``. The compiler
-keeps that in ``MATCH_FIRST_RELEASE`` so a firewall pinned to an older
-release does not get a command its binary refuses.
+Several iptables extensions started out IPv4-only and only reached
+ip6tables later, either through a ``libip6t_`` file of their own or when
+netfilter merged the two trees into ``libxt_``. The compiler keeps that in
+``MATCH_FIRST_RELEASE`` and ``TARGET_FIRST_RELEASE`` so a firewall pinned
+to an older release does not get a command its binary refuses.
 
-``test_first_release_matches_the_netfilter_history`` re-derives the table
+The two ``*_matches_the_netfilter_history`` tests re-derive both tables
 from the netfilter iptables checkout, so the numbers can be re-checked
 rather than trusted. Point ``FWF_IPTABLES_SOURCE`` at a clone with tags to
-run it; without the variable it is skipped.
+run them; without the variable they are skipped.
 """
 
 import os
@@ -29,7 +30,10 @@ import subprocess  # nosec B404
 
 import pytest
 
-from firewallfabrik.platforms.iptables._utils import MATCH_FIRST_RELEASE
+from firewallfabrik.platforms.iptables._utils import (
+    MATCH_FIRST_RELEASE,
+    TARGET_FIRST_RELEASE,
+)
 
 # The extension file a match ships in, per family. None of these ever had
 # a libip6t_ variant: the IPv6 side only arrived with the family-neutral
@@ -40,6 +44,14 @@ _EXTENSION_FILES = {
     'set': ('libipt_set.c', 'libxt_set.c'),
     'time': ('libipt_time.c', 'libxt_time.c'),
     'tos': ('libipt_tos.c', 'libxt_tos.c'),
+}
+
+# The same for the targets. CLASSIFY reached ip6tables through the merged
+# libxt_ file, CONNMARK through a libip6t_ file of its own, which is why
+# the second column names different kinds of file.
+_TARGET_FILES = {
+    'CLASSIFY': ('libipt_CLASSIFY.c', 'libxt_CLASSIFY.c'),
+    'CONNMARK': ('libipt_CONNMARK.c', 'libip6t_CONNMARK.c'),
 }
 
 _SOURCE = os.environ.get('FWF_IPTABLES_SOURCE', '')
@@ -103,3 +115,16 @@ def test_first_release_matches_the_netfilter_history(match):
     ipv4_file = _EXTENSION_FILES[match][0]
     if MATCH_FIRST_RELEASE[match][0] != '0':
         assert MATCH_FIRST_RELEASE[match][0] == _first_release(repo, ipv4_file)
+
+
+def test_target_table_covers_every_target_the_compiler_gates():
+    assert set(TARGET_FIRST_RELEASE) == set(_TARGET_FILES)
+
+
+@pytest.mark.skipif(not _SOURCE, reason='set FWF_IPTABLES_SOURCE to a git clone')
+@pytest.mark.parametrize('target', sorted(_TARGET_FILES))
+def test_target_first_release_matches_the_netfilter_history(target):
+    repo = pathlib.Path(_SOURCE)
+    ipv4_file, ipv6_file = _TARGET_FILES[target]
+    assert TARGET_FIRST_RELEASE[target][0] == _first_release(repo, ipv4_file)
+    assert TARGET_FIRST_RELEASE[target][1] == _first_release(repo, ipv6_file)

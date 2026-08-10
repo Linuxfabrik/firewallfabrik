@@ -75,6 +75,24 @@ MATCH_FIRST_RELEASE = {
     'tos': ('0', '1.4.1'),
 }
 
+# The same question for the targets the compiler writes, derived the same
+# way.  A target that reached ip6tables late costs more than a match does:
+# ip6tables answers "Couldn't load target", which stops the activation
+# script with the built-in policies already set to DROP.
+#
+# CLASSIFY: libipt_CLASSIFY.c v1.2.8, libxt_CLASSIFY.c v1.4.0 -- there
+#           never was a libip6t_ file, so the merge is the cut-off.
+# CONNMARK: libipt_CONNMARK.c v1.2.6, libip6t_CONNMARK.c v1.3.5.
+#
+# Not listed, and why: TCPMSS is gated where it is emitted (the mangle
+# compiler knows the forwarding option it hangs on), NFLOG in the log
+# printer, the NAT targets through IP6TABLES_NAT_FIRST_RELEASE, and LOG,
+# MARK and REJECT are older than every release Firewall Builder can pin.
+TARGET_FIRST_RELEASE = {
+    'CLASSIFY': ('1.2.8', '1.4.0'),
+    'CONNMARK': ('1.2.6', '1.3.5'),
+}
+
 
 def get_iptables_version(fw) -> str:
     """Return the iptables version a firewall is compiled for."""
