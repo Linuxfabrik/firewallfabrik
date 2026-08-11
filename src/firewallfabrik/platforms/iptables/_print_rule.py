@@ -522,6 +522,13 @@ class PrintRule(PolicyRuleProcessor):
         once the firewall has more than one bridge, so the rule still tells
         the two apart.  Same as C++
         ``PolicyCompiler_ipt::PrintRule::_printDirectionAndInterface``.
+
+        A negated interface element negates the port match, not the bridge
+        it hangs on: "everything except what comes in on vnet0" still only
+        concerns that bridge.  Both physdev options carry XTOPT_INVERT
+        (netfilter extensions/libxt_physdev.c), so the ``!`` goes where the
+        non-bridge branch puts it.  Without it the rule loads and matches
+        the exact opposite set of packets, and nothing reports that.
         """
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         parent = getattr(iface_obj, 'parent_interface', None)
@@ -534,11 +541,17 @@ class PrintRule(PolicyRuleProcessor):
         if inbound:
             if name_the_bridge:
                 parts.append(f'-i {parent_name}')
-            parts.append(f'-m physdev --physdev-in {iface_name}')
+            option = self._print_single_option_with_negation(
+                '--physdev-in', rule, 'itf', iface_name
+            )
+            parts.append(f'-m physdev {option.rstrip()}')
         else:
             if name_the_bridge:
                 parts.append(f'-o {parent_name}')
-            parts.append(f'-m physdev --physdev-is-bridged --physdev-out {iface_name}')
+            option = self._print_single_option_with_negation(
+                '--physdev-out', rule, 'itf', iface_name
+            )
+            parts.append(f'-m physdev --physdev-is-bridged {option.rstrip()}')
         return ' '.join(parts) + ' '
 
     def _print_protocol(self, srv) -> str:
