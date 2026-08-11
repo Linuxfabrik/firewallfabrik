@@ -1462,7 +1462,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             else:
                 keys.append(f'{af} {field}')
         if not keys:
-            return ''
+            # Every key the mode named was a port and the rule has none, so
+            # the whole key is the zero the kernel writes: one bucket for
+            # the rule, which is a plain `limit rate`.  Returning nothing
+            # here would leave the rule with no limit at all.
+            return rate
 
         parts = [' . '.join(keys)]
 

@@ -260,6 +260,10 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         meta l4proto { tcp, udp } th dport 53 meter htable_rule_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
+        #
+        # Rule 4 (global)
+        #
+        meta l4proto icmp limit rate 10/minute counter drop
     }
 
     chain forward {
@@ -273,6 +277,10 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         meta l4proto { tcp, udp } th dport 53 meter htable_rule_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
+        #
+        # Rule 4 (global)
+        #
+        meta l4proto icmp limit rate 10/minute counter drop
     }
 
     chain output {

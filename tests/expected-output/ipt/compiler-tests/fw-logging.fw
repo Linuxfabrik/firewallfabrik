@@ -500,6 +500,13 @@ script_body() {
  $IPTABLES -w 5 -A INPUT -p udp -m udp --dport 53 -m hashlimit --hashlimit 20/second --hashlimit-burst 5 --hashlimit-mode srcip,srcport --hashlimit-name htable_rule_3 --hashlimit-htable-expire 30000 -j DROP
  $IPTABLES -w 5 -A FORWARD -i + -p tcp -m tcp --dport 53 -m hashlimit --hashlimit 20/second --hashlimit-burst 5 --hashlimit-mode srcip,srcport --hashlimit-name htable_rule_3 --hashlimit-htable-expire 30000 -j DROP
  $IPTABLES -w 5 -A FORWARD -i + -p udp -m udp --dport 53 -m hashlimit --hashlimit 20/second --hashlimit-burst 5 --hashlimit-mode srcip,srcport --hashlimit-name htable_rule_3 --hashlimit-htable-expire 30000 -j DROP
+ #
+ # Rule 4 (global)
+ #
+ echo "Rule 4 (global)"
+ #
+ $IPTABLES -w 5 -A INPUT -p icmp -m icmp --icmp-type any -m hashlimit --hashlimit 10/minute --hashlimit-mode srcport --hashlimit-name htable_rule_4 -j DROP
+ $IPTABLES -w 5 -A FORWARD -i + -p icmp -m icmp --icmp-type any -m hashlimit --hashlimit 10/minute --hashlimit-mode srcport --hashlimit-name htable_rule_4 -j DROP
 }
 
 ip_forward() {

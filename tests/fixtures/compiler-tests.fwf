@@ -4532,6 +4532,29 @@ libraries:
                       - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
                     when:
                       - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 4
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: true
+                      hashlimit_mode_srcport: true
+                      hashlimit_suffix: '/minute'
+                      hashlimit_value: '10'
+                    action: 'Deny'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:ICMP/ICMPService:any
+                        ICMP'
+                    when:
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true
