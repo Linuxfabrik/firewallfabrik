@@ -218,6 +218,23 @@ _NFT_ILLEGAL_CHARS_RE = re.compile(r'[^A-Za-z0-9_.\-]')
 # Used when a name sanitises down to nothing at all.
 _FALLBACK_NAME = '_unnamed'
 
+# The chain names the compiler gives the hooked chains of its own tables.
+# nftables has no objection to them, but the compiler is competing with
+# itself here: a branch rule set named after one of them would be merged
+# into the hooked chain, so its rules would run on all traffic, and the
+# jump into it is one the kernel refuses outright - `nf_tables_api.c`
+# answers -EOPNOTSUPP for a jump to a base chain
+# (`if (nft_is_base_chain(chain))`), which throws away the whole ruleset.
+NFT_HOOKED_CHAIN_NAMES = frozenset(
+    {
+        'forward',
+        'input',
+        'output',
+        'postrouting',
+        'prerouting',
+    }
+)
+
 
 def is_valid_nft_identifier(name: str) -> bool:
     """Return whether *name* can name an nftables object as it is.
@@ -241,10 +258,14 @@ def nft_object_name(name: str) -> str:
       lex as a number, and a leading "-" is outside the first-character
       class as well;
     * a name longer than the kernel's limit is cut;
-    * a name that collides with an nft keyword gets an underscore appended.
+    * a name that collides with an nft keyword, or with one of the hooked
+      chain names the compiler gives its own tables, gets an underscore
+      appended.
 
     The suffix goes at the end so the name still reads and sorts next to the
-    one the admin typed.
+    one the admin typed, and it is the load-bearing part: neither an nft
+    keyword nor a hooked chain name contains an underscore, so the
+    transform stays correct even if either list rots.
     """
     result = _NFT_ILLEGAL_CHARS_RE.sub('_', name)
     if not result:
@@ -252,7 +273,7 @@ def nft_object_name(name: str) -> str:
     if not (result[0].isalpha() or result[0] in '_.'):
         result = f'_{result}'
     result = result[:NFT_NAME_MAXLEN]
-    if result in NFT_KEYWORDS:
+    if result in NFT_KEYWORDS or result in NFT_HOOKED_CHAIN_NAMES:
         result = f'{result}_'
     return result
 

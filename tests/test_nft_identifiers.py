@@ -31,6 +31,7 @@ import subprocess  # nosec B404
 import pytest
 
 from firewallfabrik.platforms.nftables._identifiers import (
+    NFT_HOOKED_CHAIN_NAMES,
     NFT_KEYWORDS,
     NFT_NAME_MAXLEN,
     is_valid_nft_identifier,
@@ -74,6 +75,8 @@ def _name_accepted(name: str) -> bool:
         ('log', 'log_'),  # keyword
         ('drop', 'drop_'),  # keyword
         ('counter', 'counter_'),  # keyword
+        ('output', 'output_'),  # a chain the compiler hooks itself
+        ('prerouting', 'prerouting_'),  # same, in the nat and mangle tables
         ('outside', 'outside'),  # ordinary name, untouched
         ('Log', 'Log'),  # keywords are lower case only
         ('log_dmz', 'log_dmz'),  # only the whole name collides
@@ -123,9 +126,11 @@ def test_no_keyword_carries_an_underscore():
 
     ``_`` is reserved to the first-character class of the scanner's
     ``string`` production, so no keyword can contain one and a name ending
-    in ``_`` can never collide with one.
+    in ``_`` can never collide with one.  The hooked chain names the
+    compiler picks itself have to hold to the same rule.
     """
-    assert not [k for k in NFT_KEYWORDS if '_' in k or k != k.lower()]
+    reserved = NFT_KEYWORDS | NFT_HOOKED_CHAIN_NAMES
+    assert not [k for k in reserved if '_' in k or k != k.lower()]
 
 
 @pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
