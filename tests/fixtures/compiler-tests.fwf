@@ -4506,6 +4506,32 @@ libraries:
                       - 'Library:Standard/IPService:Any'
                     when:
                       - 'Library:Standard/Interval:Any'
+                  - type: 'PolicyRule'
+                    position: 3
+                    options:
+                      disabled: false
+                      group: ''
+                      log: false
+                      stateless: true
+                      hashlimit_burst: '5'
+                      hashlimit_expire: '30000'
+                      hashlimit_mode_srcip: true
+                      hashlimit_mode_srcport: true
+                      hashlimit_suffix: '/second'
+                      hashlimit_value: '20'
+                    action: 'Deny'
+                    direction: 'Inbound'
+                    dst:
+                      - 'Library:Standard/Network:Any'
+                    itf:
+                      - 'Library:Standard/Network:Any'
+                    src:
+                      - 'Library:Standard/Network:Any'
+                    srv:
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:TCP/TCPService:domain'
+                      - 'Library:Standard/ServiceGroup:Services/ServiceGroup:UDP/UDPService:domain'
+                    when:
+                      - 'Library:Standard/Interval:Any'
               - type: 'Routing'
                 name: 'Routing'
                 top: true

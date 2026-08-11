@@ -1393,8 +1393,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         return f'add @{set_name} {{ {key} ct count {over}{limit} }}'
 
     #: What each hashlimit mode keys on, as an nftables expression.  The
-    #: port halves need the protocol, which the rule's own service match
-    #: has already pinned wherever a port mode makes sense.
+    #: port halves are read out of the generic transport header rather than
+    #: out of ``tcp`` or ``udp``: a rule listing both protocols is compiled
+    #: into one rule matching ``meta l4proto { tcp, udp }``, and naming
+    #: either of them in the key makes nftables answer "conflicting
+    #: protocols specified" and refuse the whole ruleset.
     _HASHLIMIT_KEYS: ClassVar[dict[str, str]] = {
         'srcip': 'saddr',
         'dstip': 'daddr',
@@ -1442,15 +1445,20 @@ class PrintRule_nft(PolicyRuleProcessor):
             return rate
 
         af = 'ip6' if self.compiler.ipv6_policy else 'ip'
-        proto = self._hashlimit_protocol(rule)
+        has_ports = self._hashlimit_has_ports(rule)
         keys = []
         for mode in modes:
             field = self._HASHLIMIT_KEYS[mode]
             if mode.endswith('port'):
-                if not proto:
-                    # Without a protocol there is no port header to key on.
+                if not has_ports:
+                    # The kernel reads the ports only for the protocols that
+                    # have them (net/netfilter/xt_hashlimit.c asks
+                    # proto_ports_offset) and leaves the field at zero
+                    # otherwise, so the port half of the key contributes
+                    # nothing.  Leaving it out says the same and keeps the
+                    # rule away from bytes that are not a port.
                     continue
-                keys.append(f'{proto} {field}')
+                keys.append(f'th {field}')
             else:
                 keys.append(f'{af} {field}')
         if not keys:
@@ -1516,14 +1524,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         }
 
     @staticmethod
-    def _hashlimit_protocol(rule: CompRule) -> str:
-        """Return the transport protocol of the rule's service, if it has one."""
-        for srv in rule.srv:
-            if isinstance(srv, TCPService):
-                return 'tcp'
-            if isinstance(srv, UDPService):
-                return 'udp'
-        return ''
+    def _hashlimit_has_ports(rule: CompRule) -> bool:
+        """Report whether the rule's service carries a port at all.
+
+        Only the protocols the kernel knows ports for can be keyed on one
+        (net/netfilter/xt_hashlimit.c asks ``proto_ports_offset``); for any
+        other the port half of the key stays zero.
+        """
+        return any(isinstance(srv, (TCPService, UDPService)) for srv in rule.srv)
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print native nftables rate limiting.

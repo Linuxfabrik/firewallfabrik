@@ -256,6 +256,10 @@ table ip fwf_filter {
         # Rule 2 (global)
         #
         counter log prefix "RULE 2 -- DENY " level info drop
+        #
+        # Rule 3 (global)
+        #
+        meta l4proto { tcp, udp } th dport 53 meter htable_rule_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
     }
 
     chain forward {
@@ -265,6 +269,10 @@ table ip fwf_filter {
         # Rule 2 (global)
         #
         counter log prefix "RULE 2 -- DENY " level info drop
+        #
+        # Rule 3 (global)
+        #
+        meta l4proto { tcp, udp } th dport 53 meter htable_rule_3 { ip saddr . th sport timeout 30s limit rate 20/second burst 5 packets } counter drop
     }
 
     chain output {
