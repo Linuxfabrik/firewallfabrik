@@ -128,6 +128,40 @@ class SrvNegation(PolicyRuleProcessor):
         return True
 
 
+def expand_interface_negation(compiler, rule, slot: str) -> bool:
+    """Turn "not these interfaces" into "all the other ones".
+
+    Returns whether the rule should stay in the pipeline.  It should not
+    when the negated set covers every interface the firewall has: the
+    element then holds nothing, and an empty element means "any" here, so
+    the rule would apply on exactly the interfaces it was written to skip.
+    fwbuilder cannot land in that state - its empty element is not "any",
+    and both `PolicyCompiler::InterfacePolicyRules` and
+    `NATCompiler::ConvertToAtomicForItf*` iterate zero times and drop the
+    rule (Compiler.cpp:1036, RuleElement.cpp:141).
+    """
+    if not rule.get_neg(slot):
+        return True
+
+    negated_ids = {obj.id for obj in getattr(rule, slot) if isinstance(obj, Interface)}
+    remaining = [
+        iface
+        for iface in compiler.fw.interfaces
+        if iface.id not in negated_ids and not iface.is_loopback()
+    ]
+    rule.set_neg(slot, False)
+    setattr(rule, slot, remaining)
+
+    if not remaining:
+        compiler.warning(
+            rule,
+            'The rule excludes every interface the firewall has, so there is '
+            'none left for it to match on; the rule is left out',
+        )
+        return False
+    return True
+
+
 class ItfNegation(PolicyRuleProcessor):
     """Process negation in interface rule element.
 
@@ -143,23 +177,8 @@ class ItfNegation(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if not rule.get_neg('itf'):
+        if expand_interface_negation(self.compiler, rule, 'itf'):
             self.tmp_queue.append(rule)
-            return True
-
-        # Get the negated interface IDs
-        negated_ids = {obj.id for obj in rule.itf if isinstance(obj, Interface)}
-
-        # Replace with all other non-loopback interfaces
-        all_ifaces = self.compiler.fw.interfaces
-        rule.set_neg('itf', False)
-        rule.itf = [
-            iface
-            for iface in all_ifaces
-            if iface.id not in negated_ids and not iface.is_loopback()
-        ]
-
-        self.tmp_queue.append(rule)
         return True
 
 

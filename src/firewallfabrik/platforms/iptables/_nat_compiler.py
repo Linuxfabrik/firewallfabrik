@@ -44,6 +44,9 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
 )
+from firewallfabrik.compiler.processors._policy import (
+    expand_interface_negation,
+)
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcAndDstPort,
     SeparateSrcPort,
@@ -531,18 +534,8 @@ class ItfInbNegation(NATRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
-        if not rule.get_neg('itf_inb'):
+        if expand_interface_negation(self.compiler, rule, 'itf_inb'):
             self.tmp_queue.append(rule)
-            return True
-        negated_ids = {obj.id for obj in rule.itf_inb if isinstance(obj, Interface)}
-        all_ifaces = self.compiler.fw.interfaces
-        rule.set_neg('itf_inb', False)
-        rule.itf_inb = [
-            iface
-            for iface in all_ifaces
-            if iface.id not in negated_ids and not iface.is_loopback()
-        ]
-        self.tmp_queue.append(rule)
         return True
 
 
@@ -553,18 +546,8 @@ class ItfOutbNegation(NATRuleProcessor):
         rule = self.get_next()
         if rule is None:
             return False
-        if not rule.get_neg('itf_outb'):
+        if expand_interface_negation(self.compiler, rule, 'itf_outb'):
             self.tmp_queue.append(rule)
-            return True
-        negated_ids = {obj.id for obj in rule.itf_outb if isinstance(obj, Interface)}
-        all_ifaces = self.compiler.fw.interfaces
-        rule.set_neg('itf_outb', False)
-        rule.itf_outb = [
-            iface
-            for iface in all_ifaces
-            if iface.id not in negated_ids and not iface.is_loopback()
-        ]
-        self.tmp_queue.append(rule)
         return True
 
 
