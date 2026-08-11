@@ -297,25 +297,27 @@ class NATPrintRule_nft(NATRuleProcessor):
         """
         parts = []
 
-        # Outbound interface (for SNAT/masquerade)
-        if rule.itf_outb:
-            obj = rule.itf_outb[0]
-            if isinstance(obj, Interface):
-                name = obj.name
-                if name:
-                    check_interface_name(self.compiler, name, self.reported_long_ifaces)
-                    neg = '!= ' if rule.itf_outb_single_object_negation else ''
-                    parts.append(f'oifname {neg}{nft_quote(name)}')
-
-        # Inbound interface (for DNAT)
-        if rule.itf_inb:
-            obj = rule.itf_inb[0]
-            if isinstance(obj, Interface):
-                name = obj.name
-                if name:
-                    check_interface_name(self.compiler, name, self.reported_long_ifaces)
-                    neg = '!= ' if rule.itf_inb_single_object_negation else ''
-                    parts.append(f'iifname {neg}{nft_quote(name)}')
+        # A name nftables refuses takes the whole ruleset with it, not just
+        # this rule: `expr_evaluate_string` (netfilter nftables
+        # src/evaluate.c) errors with "String exceeds maximum length" and
+        # `nft -f` throws away the entire batch.  The policy printer has
+        # honoured the answer since the check was written; here the return
+        # value was dropped, so the name went out anyway.
+        for element, keyword, negated in (
+            (rule.itf_outb, 'oifname', rule.itf_outb_single_object_negation),
+            (rule.itf_inb, 'iifname', rule.itf_inb_single_object_negation),
+        ):
+            if not element:
+                continue
+            obj = element[0]
+            if not isinstance(obj, Interface) or not obj.name:
+                continue
+            if not check_interface_name(
+                self.compiler, obj.name, self.reported_long_ifaces
+            ):
+                return None
+            neg = '!= ' if negated else ''
+            parts.append(f'{keyword} {neg}{nft_quote(obj.name)}')
 
         return ' '.join(parts)
 
