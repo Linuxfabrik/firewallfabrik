@@ -685,8 +685,14 @@ class PrintRule(PolicyRuleProcessor):
                 f'"{obj.name}" has no MAC address, so the rule is left out',
             )
             return None
-        neg = self._print_single_option_with_negation(' --mac-source', rule, 'src', mac)
-        return f' -m mac{neg}'
+        # The `!` of the extrapositioned form goes between `-m mac` and
+        # `--mac-source`: `--mac-source` carries XTOPT_INVERT (netfilter
+        # extensions/libxt_mac.c), while `-m mac!` is not a module iptables
+        # knows and a `!` in front of the `-m` is a parse error of its own,
+        # "unexpected ! flag before --match" (iptables xshared.c,
+        # command_match).
+        neg = self._print_single_option_with_negation('--mac-source', rule, 'src', mac)
+        return f' -m mac {neg}'
 
     def _print_address_range(self, obj: AddressRange, rule: CompRule, slot: str) -> str:
         """Print AddressRange with ``-m iprange``.

@@ -277,9 +277,15 @@ class NATPrintRule(NATRuleProcessor):
             # policy printer and fwbuilder's _printSrcAddr do it
             # (iptlib/PolicyCompiler_PrintRule.cpp:1615). Rendering only one
             # of the two would translate for every host carrying the other.
-            cmd += self._print_single_option_with_negation(
-                '-m mac --mac-source', rule, 'osrc', osrc.get_phys_address()
+            # The negation belongs behind `-m mac`, not in front of it:
+            # `--mac-source` carries XTOPT_INVERT (netfilter
+            # extensions/libxt_mac.c) while a `!` before a `-m` is a parse
+            # error, "unexpected ! flag before --match" (iptables
+            # xshared.c, command_match).
+            neg = self._print_single_option_with_negation(
+                '--mac-source', rule, 'osrc', osrc.get_phys_address()
             )
+            cmd += f'-m mac {neg}'
             addr_str = self._print_addr(osrc.address)
             if addr_str:
                 cmd += self._print_single_option_with_negation(
