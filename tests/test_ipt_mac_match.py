@@ -28,6 +28,9 @@ import re
 
 import pytest
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
+from firewallfabrik.compiler._rule_processor import NATRuleProcessor
+from firewallfabrik.platforms.iptables._nat_compiler import VerifyRuleWithMAC
 from firewallfabrik.platforms.iptables._nat_print_rule import NATPrintRule
 from firewallfabrik.platforms.iptables._print_rule import PrintRule
 
@@ -50,6 +53,9 @@ class _Compiler:
         self.messages.append(msg)
 
     def error(self, _rule, msg: str) -> None:
+        self.messages.append(msg)
+
+    def abort(self, _rule, msg: str) -> None:
         self.messages.append(msg)
 
 
@@ -106,3 +112,74 @@ def test_negated_mac_match(render, version, expected):
 @pytest.mark.parametrize('version', ['1.8.11', '1.3.0'])
 def test_plain_mac_match(render, version):
     assert _squeeze(render(version, False)) == f'-m mac --mac-source {MAC}'
+
+
+class _Address:
+    """An address object as the MAC guard sees it."""
+
+    def __init__(self, name: str, address: str) -> None:
+        self.name = name
+        self._address = address
+
+    def get_address(self) -> str:
+        return self._address
+
+
+class _NATRule:
+    type = 'NATRule'
+
+    def __init__(self, chain: str, osrc: list) -> None:
+        self.ipt_chain = chain
+        self.osrc = osrc
+
+
+class _Feeder(NATRuleProcessor):
+    def __init__(self, rule) -> None:
+        super().__init__(name='feeder')
+        self.tmp_queue.append(rule)
+
+    def process_next(self) -> bool:
+        return False
+
+
+def _verify_mac(chain: str, osrc: list):
+    """Run VerifyRuleWithMAC over a rule and return (rule or None, messages)."""
+    compiler = _Compiler()
+    rule = _NATRule(chain, osrc)
+    proc = VerifyRuleWithMAC('verify MAC')
+    proc.compiler = compiler
+    proc.set_data_source(_Feeder(rule))
+    proc.process_next()
+    out = proc.tmp_queue[0] if proc.tmp_queue else None
+    return out, compiler.messages
+
+
+def test_combined_address_keeps_its_ip_half_in_postrouting():
+    """The chain cannot match a MAC, but it can match the address.
+
+    fwbuilder clears the MAC and keeps the address
+    (NATCompiler_ipt.cpp:2288); leaving the object whole produced a
+    `-m mac` in POSTROUTING, which the kernel refuses with -EINVAL
+    because xt_mac registers for PREROUTING, INPUT and FORWARD only.
+    """
+    combined = CombinedAddress(_Address('host-with-mac/addr', '192.0.2.5'), _Phys())
+    out, messages = _verify_mac('POSTROUTING', [combined])
+    assert out is not None
+    assert [obj.get_address() for obj in out.osrc] == ['192.0.2.5']
+    assert not any(getattr(obj, 'has_phys_address', bool)() for obj in out.osrc)
+    assert messages and 'can not match MAC address' in messages[0]
+
+
+def test_combined_address_with_no_ip_leaves_the_rule_without_a_source():
+    combined = CombinedAddress(_Address('mac-only/addr', ''), _Phys())
+    out, messages = _verify_mac('POSTROUTING', [combined])
+    assert out is None
+    assert messages and "it becomes 'Any'" in messages[0]
+
+
+def test_prerouting_keeps_the_mac():
+    combined = CombinedAddress(_Address('host-with-mac/addr', '192.0.2.5'), _Phys())
+    out, messages = _verify_mac('PREROUTING', [combined])
+    assert out is not None
+    assert out.osrc == [combined]
+    assert not messages

@@ -87,3 +87,16 @@ class CombinedAddress:
         if self.phys_address and self.phys_address.get_address():
             return self.phys_address.get_address()
         return ''
+
+    def drop_phys_address(self) -> None:
+        """Keep the IP half and forget the MAC.
+
+        What ``combinedAddress::setPhysAddress("")`` does in fwbuilder's
+        ``NATCompiler_ipt::verifyRuleWithMAC``: a chain that cannot match a
+        MAC can still match the address the object also carries.
+        """
+        self.phys_address = None
+
+    def is_address_any(self) -> bool:
+        """Return whether nothing but the MAC is left to match on."""
+        return not (self.address.get_address() or '')

@@ -24,6 +24,7 @@ import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._policy_compiler import PolicyCompiler
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
@@ -3402,10 +3403,24 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
     Corresponds to C++ ``PolicyCompiler_ipt::checkMACinOUTPUTChain``, which
     only guards OUTPUT; POSTROUTING is reachable through the mangle pass and
     the kernel rejects it just the same.
+
+    A host with "MAC address matching" turned on expands to a
+    ``CombinedAddress``, not to a bare ``PhysAddress``, and the print rule
+    renders a ``-m mac`` for it as well, so both shapes have to be looked
+    for - and in every object of the element, not only the first.
     """
 
     #: The chains the mac match cannot be used in.
     FORBIDDEN_CHAINS = ('OUTPUT', 'POSTROUTING')
+
+    @staticmethod
+    def _mac_object(rule) -> object | None:
+        for obj in rule.src:
+            if isinstance(obj, PhysAddress):
+                return obj
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                return obj
+        return None
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -3413,8 +3428,8 @@ class CheckMACInOUTPUTChain(PolicyRuleProcessor):
             return False
 
         if rule.ipt_chain in self.FORBIDDEN_CHAINS:
-            src = rule.src[0] if rule.src else None
-            if isinstance(src, PhysAddress):
+            obj = self._mac_object(rule)
+            if obj is not None:
                 self.compiler.abort(
                     rule,
                     f'Can not match a MAC address in the {rule.ipt_chain} chain, '

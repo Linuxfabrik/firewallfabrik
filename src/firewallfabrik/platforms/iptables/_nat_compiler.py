@@ -23,6 +23,7 @@ import hashlib
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._nat_compiler import NATCompiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
@@ -1587,10 +1588,20 @@ class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
 
 
 class VerifyRuleWithMAC(NATRuleProcessor):
-    """Verify MAC address usage in NAT rules.
+    """Take the MAC out of a NAT rule in a chain that cannot match one.
 
-    MAC addresses can only be matched in PREROUTING/FORWARD/INPUT chains.
-    In POSTROUTING (SNAT), remove PhysAddress objects and warn.
+    The mac match registers for PREROUTING, INPUT and FORWARD only
+    (``net/netfilter/xt_mac.c``, ``.hooks``), so ``xt_check_match``
+    (``net/netfilter/x_tables.c``) refuses the rule with -EINVAL anywhere
+    else and iptables stops the activation script with "Invalid argument".
+    A NAT rule reaches POSTROUTING through every SNAT and Masquerade rule
+    and OUTPUT through local NAT.
+
+    Ports ``NATCompiler_ipt::verifyRuleWithMAC``: a bare physAddress is
+    removed, and a combined address - which is what a host with "MAC
+    address matching" expands to, and therefore the usual shape here -
+    keeps its IP half and loses only the MAC.  Only a combined address
+    with no address at all goes with it.
     """
 
     def process_next(self) -> bool:
@@ -1609,25 +1620,40 @@ class VerifyRuleWithMAC(NATRuleProcessor):
 
         from firewallfabrik.core.objects import PhysAddress
 
-        mac_objs = [obj for obj in rule.osrc if isinstance(obj, PhysAddress)]
-        if mac_objs:
-            remaining = [obj for obj in rule.osrc if not isinstance(obj, PhysAddress)]
-            rule.osrc = remaining
-            mac_name = mac_objs[0].name if mac_objs else ''
-            if not remaining:
-                self.compiler.abort(
-                    rule,
-                    f'SNAT rule can not match MAC address, and after removing '
-                    f"object '{mac_name}' from OSrc it becomes 'Any'",
-                )
-                return True
-            else:
-                self.compiler.warning(
-                    rule,
-                    f"SNAT rule can not match MAC address. Object '{mac_name}' "
-                    f'removed from the rule',
-                )
+        mac_name = ''
+        kept = []
+        for obj in rule.osrc:
+            if isinstance(obj, PhysAddress):
+                mac_name = mac_name or obj.name
+                continue
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                mac_name = mac_name or obj.name
+                if not obj.is_address_any():
+                    # The IP half is a match this chain can make, so the
+                    # object is handed on as the plain address it wraps.
+                    kept.append(obj.address)
+                continue
+            kept.append(obj)
 
+        if not mac_name:
+            self.tmp_queue.append(rule)
+            return True
+
+        rule.osrc = kept
+
+        if not rule.osrc:
+            self.compiler.abort(
+                rule,
+                f'SNAT rule can not match MAC address, and after removing '
+                f"object '{mac_name}' from OSrc it becomes 'Any'",
+            )
+            return True
+
+        self.compiler.warning(
+            rule,
+            f"SNAT rule can not match MAC address. Object '{mac_name}' "
+            f'removed from the rule',
+        )
         self.tmp_queue.append(rule)
         return True
 
