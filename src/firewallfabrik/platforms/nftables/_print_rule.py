@@ -1409,7 +1409,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         iptables-translate produces for it (netfilter
         extensions/libxt_hashlimit.txlate):
 
-            meter <name> { ip saddr timeout 60s limit rate over 1/hour }
+            meter <name> { ip saddr timeout 60s limit rate 1/hour }
 
         A meter is a set keyed on what the mode names, holding a rate limit
         per element, which is what makes the limit per source rather than
@@ -1476,9 +1476,20 @@ class PrintRule_nft(PolicyRuleProcessor):
         return f'meter {nft_object_name(name)} {{ {" ".join(parts)} }}'
 
     def _hashlimit_rate(self, rule: CompRule, limit: int) -> str:
-        """Return the `limit rate over ...` half of a hashlimit."""
+        """Return the `limit rate ...` half of a hashlimit.
+
+        The rate is a ceiling, not a floor.  The iptables side writes
+        ``--hashlimit <n>``, which is the old spelling of
+        ``--hashlimit-upto`` (netfilter extensions/libxt_hashlimit.c binds
+        both to ``O_UPTO``), so the rule matches while the traffic stays
+        *below* the rate.  nftables says that with a plain ``limit rate``;
+        ``limit rate over`` is the opposite (``NFT_LIMIT_F_INV``) and
+        belongs to ``--hashlimit-above``, which the editor cannot ask for.
+        The gold shows both mappings side by side
+        (extensions/libxt_hashlimit.txlate).
+        """
         suffix = str(rule.get_option('hashlimit_suffix', '') or '') or '/second'
-        rate = f'limit rate over {limit}{suffix}'
+        rate = f'limit rate {limit}{suffix}'
         try:
             burst = int(rule.get_option('hashlimit_burst', 0) or 0)
         except (TypeError, ValueError):

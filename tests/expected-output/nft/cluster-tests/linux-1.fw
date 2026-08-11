@@ -261,7 +261,7 @@ table ip fwf_filter {
         # Rule to_fw 0 (global)
         #
         # hashlimit 10/sec
-        limit rate over 10/second counter log prefix "RULE 0 -- DENY " level info drop
+        limit rate 10/second counter log prefix "RULE 0 -- DENY " level info drop
     }
 }
 
