@@ -2496,31 +2496,56 @@ class BridgingFw(PolicyRuleProcessor):
 class CheckMACInOUTPUTChain(PolicyRuleProcessor):
     """Abort if a MAC address is matched where the kernel cannot see one.
 
-    By the time a packet reaches the output or postrouting hook it has no
-    source MAC yet, which is why the iptables mac match registers for
-    prerouting, input and forward only (netfilter
-    ``net/netfilter/xt_mac.c``).  The same holds for the nftables ``ether
-    saddr`` match, so the rule is refused for both chains.
+    A locally generated packet has no link-layer header when it reaches
+    the output hook, and ``nft_payload_eval`` gives up on any
+    ``NFT_PAYLOAD_LL_HEADER`` read without one
+    (``net/netfilter/nft_payload.c``: ``if (!skb_mac_header_was_set(skb)
+    || skb_mac_header_len(skb) == 0) goto err``).  The rule loads and then
+    never matches, which lets through what a Deny rule was written to stop
+    and drops what an Accept rule was written to allow, with nothing said
+    about it anywhere.
+
+    Postrouting is not on the list, and that is the one place nftables can
+    do what iptables cannot: a forwarded packet still carries the header it
+    arrived with, so an ``ether saddr`` there is a real match.  The iptables
+    mac match has no such distinction - ``xt_mac`` does not register for the
+    hook at all (``net/netfilter/xt_mac.c``) - so the two platforms
+    deliberately differ on that chain.
+
+    Both rule elements are searched, and all three shapes a MAC arrives in:
+    a bare ``PhysAddress``, a ``CombinedAddress`` pairing one with an
+    address, and an interface or host whose only address is a MAC.  The
+    print rule renders an ``ether`` match for every one of them.
     """
 
-    #: The chains an ethernet source address cannot be matched in.
-    FORBIDDEN_CHAINS = ('output', 'postrouting')
+    #: The chains an ethernet address cannot be matched in.
+    FORBIDDEN_CHAINS = ('output',)
+
+    @staticmethod
+    def _mac_object(rule) -> object | None:
+        for obj in (*rule.src, *rule.dst):
+            if isinstance(obj, PhysAddress):
+                return obj
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                return obj
+            if get_mac_only_address(obj):
+                return obj
+        return None
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if (
-            rule.ipt_chain in self.FORBIDDEN_CHAINS
-            and rule.src
-            and isinstance(rule.src[0], PhysAddress)
-        ):
-            self.compiler.abort(
-                rule,
-                f'Can not match a MAC address in the {rule.ipt_chain} chain, '
-                f'where the packet no longer carries one',
-            )
-            return True
+        if rule.ipt_chain in self.FORBIDDEN_CHAINS:
+            obj = self._mac_object(rule)
+            if obj is not None:
+                self.compiler.abort(
+                    rule,
+                    f'Can not match the MAC address of "{obj.name}" in the '
+                    f'{rule.ipt_chain} chain, where the packet does not carry '
+                    f'one yet',
+                )
+                return True
         self.tmp_queue.append(rule)
         return True
 
