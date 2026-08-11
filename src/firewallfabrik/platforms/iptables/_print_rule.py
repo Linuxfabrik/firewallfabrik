@@ -270,6 +270,13 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         command_line += time_interval
         command_line += self._print_limit(rule)
+        connlimit = self._print_connlimit(rule)
+        if connlimit is None:
+            # The release has no such match and the reason was reported.
+            # Without it an Accept rule would let through more connections
+            # than the rule allows, and a Deny rule would stop all of them.
+            return ''
+        command_line += connlimit
         target_part = self._print_target(rule)
         if target_part is None:
             # The target does not exist on this release, which was reported.
@@ -1133,6 +1140,41 @@ class PrintRule(PolicyRuleProcessor):
             parts.append('--kerneltz')
 
         return ' '.join(parts) + ' '
+
+    def _print_connlimit(self, rule: CompRule) -> str | None:
+        """Print ``-m connlimit``, the limit on concurrent connections.
+
+        Ports ``PolicyCompiler_PrintRule.cpp:301``.  The option counts the
+        connections of one source address, or of the ``/mask`` block it sits
+        in, and the rule matches while that count is *above* the limit; the
+        editor's "not" turns it into "up to", which the match expresses with
+        its own ``!`` (``--connlimit-above`` carries XTOPT_INVERT, netfilter
+        extensions/libxt_connlimit.c).
+
+        Returns ``None`` when the pinned iptables has no such match, so the
+        caller can leave the rule out: a rule that silently loses its limit
+        accepts every connection or drops every one, depending on its
+        action, instead of the ones over the limit.
+        """
+        try:
+            limit = int(rule.get_option('connlimit_value', 0) or 0)
+        except (TypeError, ValueError):
+            return ''
+        if limit <= 0:
+            return ''
+        if not self._match_available(rule, 'connlimit'):
+            return None
+
+        negated = bool(rule.get_option('connlimit_above_not', False))
+        neg = '! ' if negated else ''
+        result = f' -m connlimit {neg}--connlimit-above {limit}'
+        try:
+            masklen = int(rule.get_option('connlimit_masklen', 0) or 0)
+        except (TypeError, ValueError):
+            masklen = 0
+        if masklen > 0:
+            result += f' --connlimit-mask {masklen}'
+        return result + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print ``-m limit`` rate limiting.

@@ -54,6 +54,27 @@ AF_INET = socket.AF_INET
 AF_INET6 = socket.AF_INET6
 
 
+def _declare_dynamic_sets(sets: dict[str, str]) -> str:
+    """Declare the dynamic sets a per-source connection limit counts in.
+
+    A rule can only add elements to a set that is already an object of the
+    table (netfilter nftables doc/sets.txt).  `flags dynamic` is what lets
+    the rule create the elements as it sees new addresses.
+    """
+    if not sets:
+        return ''
+    out = []
+    for name, addr_type in sorted(sets.items()):
+        out.append(
+            f'    set {name} {{\n'
+            f'        type {addr_type}\n'
+            f'        flags dynamic\n'
+            f'    }}\n'
+        )
+    out.append('\n')
+    return ''.join(out)
+
+
 def _declare_counters(names: list[str]) -> str:
     """Declare the named counter objects an accounting rule counts into.
 
@@ -135,6 +156,9 @@ class CompilerDriver_nft(CompilerDriver):
         self.have_connmark_in_output: bool = False
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
+        # Dynamic sets a per-source connection limit counts in, per table.
+        self.filter_dynamic_sets: dict[str, str] = {}
+        self.mangle_dynamic_sets: dict[str, str] = {}
         # Address tables rendered as named sets, per table of the ruleset.
         # Each maps the set name to the file the script reads it from.
         self.filter_address_tables: dict[str, tuple[str, bool, str]] = {}
@@ -574,6 +598,8 @@ class CompilerDriver_nft(CompilerDriver):
             if counter not in self.filter_counters:
                 self.filter_counters.append(counter)
 
+        self.filter_dynamic_sets.update(policy_compiler.dynamic_sets)
+
         self.filter_address_tables.update(policy_compiler.address_tables)
 
         if policy_compiler.get_errors() or policy_compiler.get_warnings():
@@ -642,6 +668,8 @@ class CompilerDriver_nft(CompilerDriver):
         for counter in mangle_compiler.counters:
             if counter not in self.mangle_counters:
                 self.mangle_counters.append(counter)
+
+        self.mangle_dynamic_sets.update(mangle_compiler.dynamic_sets)
 
         self.mangle_address_tables.update(mangle_compiler.address_tables)
 
@@ -797,6 +825,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_mangle:
             out.write(f'table {family} {mangle_table} {{\n')
             out.write(_declare_counters(self.mangle_counters))
+            out.write(_declare_dynamic_sets(self.mangle_dynamic_sets))
             out.write(_declare_address_tables(self.mangle_address_tables))
             for index, (chain, rules) in enumerate(mangle_by_chain):
                 if index:
@@ -821,6 +850,7 @@ class CompilerDriver_nft(CompilerDriver):
         if have_filter:
             out.write(f'table {family} {filter_table} {{\n')
             out.write(_declare_counters(self.filter_counters))
+            out.write(_declare_dynamic_sets(self.filter_dynamic_sets))
             out.write(_declare_address_tables(self.filter_address_tables))
 
             # Input chain

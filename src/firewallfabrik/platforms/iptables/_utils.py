@@ -74,8 +74,12 @@ DEFAULT_IPTABLES_VERSION = '1.8'
 #
 # tests/test_ipt_version_gates.py re-derives the IPv6 column of every row
 # from that history, so a new row is checked rather than trusted.
+# connlimit:  libipt_connlimit.c v1.2.1,  libip6t_connlimit.c v1.4.0
+# hashlimit:  libipt_hashlimit.c v1.3.0,  libip6t_hashlimit.c v1.3.7
 MATCH_FIRST_RELEASE = {
+    'connlimit': ('1.2.1', '1.4.0'),
     'dscp': ('1.2.6', '1.4.0'),
+    'hashlimit': ('1.3.0', '1.3.7'),
     'iprange': ('1.2.9', '1.4.1'),
     'set': ('1.3.0', '1.4.9'),
     'time': ('0', '1.4.0'),

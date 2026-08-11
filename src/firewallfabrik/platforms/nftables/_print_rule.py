@@ -520,6 +520,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit_match:
             parts.append(limit_match)
 
+        connlimit_match = self._print_connlimit(rule)
+        if connlimit_match:
+            parts.append(connlimit_match)
+
         # Everything collected so far matches on the packet; what follows
         # only acts on it.  The address family has to be pinned down here,
         # while `parts` still holds the match half and nothing else.
@@ -1335,6 +1339,54 @@ class PrintRule_nft(PolicyRuleProcessor):
     def _print_icmp_service(self, srv, negated: bool = False) -> str:
         """Print ICMP type/code matching."""
         return print_icmp_service(srv, self.compiler.ipv6_policy, negated)
+
+    def _print_connlimit(self, rule: CompRule) -> str:
+        """Print the limit on concurrent connections per source.
+
+        The nftables counterpart of ``-m connlimit --connlimit-above N
+        [--connlimit-mask M]``, in the shape iptables-translate produces
+        for it (netfilter extensions/libxt_connlimit.txlate):
+
+            add @<set> { ip saddr and 255.255.255.0 ct count over 2 }
+
+        The set is what makes the count per source rather than per rule: an
+        element is created for each address the rule sees and carries that
+        address's connection count.  ``over`` is the plain form and matches
+        while the count is above the limit; the editor's "not" asks for the
+        opposite, which the same expression says by leaving ``over`` out.
+        """
+        try:
+            limit = int(rule.get_option('connlimit_value', 0) or 0)
+        except (TypeError, ValueError):
+            return ''
+        if limit <= 0:
+            return ''
+
+        ipv6 = bool(self.compiler.ipv6_policy)
+        keyword = 'ip6 saddr' if ipv6 else 'ip saddr'
+        key = keyword
+        try:
+            masklen = int(rule.get_option('connlimit_masklen', 0) or 0)
+        except (TypeError, ValueError):
+            masklen = 0
+        full = 128 if ipv6 else 32
+        if 0 < masklen < full:
+            mask = ipaddress.ip_network(
+                f'::/{masklen}' if ipv6 else f'0.0.0.0/{masklen}'
+            )
+            key = f'{keyword} and {mask.netmask}'
+
+        # One set per rule, so the counts of two rules do not mix.  The
+        # rule set name is part of it because every rule set numbers its
+        # rules from zero.
+        rule_set = self.compiler.get_rule_set_name()
+        suffix = '_v6' if ipv6 else ''
+        set_name = nft_object_name(f'connlimit_{rule_set}_{rule.position}') + suffix
+        self.compiler.register_dynamic_set(
+            set_name, 'ipv6_addr' if ipv6 else 'ipv4_addr'
+        )
+        over = '' if rule.get_option('connlimit_above_not', False) else 'over '
+        return f'add @{set_name} {{ {key} ct count {over}{limit} }}'
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print native nftables rate limiting.

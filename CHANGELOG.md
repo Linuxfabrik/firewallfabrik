@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * FirewallFabrik installs on Python 3.11 and newer, so current distributions no longer need a custom Python build for it.
 * The nftables firewall settings no longer show three options that only ever applied to iptables. A firewall switched back to iptables keeps its values.
 
+### Added
+
+* Compiler (iptables, nftables): the "Limit number of simultaneous connections" rule option is compiled ([#120](https://github.com/Linuxfabrik/firewallfabrik/issues/120)).
+
 ### Fixed
 
 * Compiler (iptables): "Clear all rules" really clears them on current distributions. The firewall kept its old rules and grew with every activation, with all traffic blocked in the meantime.

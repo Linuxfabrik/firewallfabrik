@@ -333,6 +333,15 @@ table ip fwf_nat {}
 delete table ip fwf_nat
 
 table ip fwf_filter {
+    set connlimit_Policy_3 {
+        type ipv4_addr
+        flags dynamic
+    }
+    set connlimit_Policy_4 {
+        type ipv4_addr
+        flags dynamic
+    }
+
     set i_eth0.100 {
         type ipv4_addr
         flags interval
@@ -362,12 +371,12 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         # should be --connlimit-above 10
-        tcp dport 22 ct state new counter accept
+        tcp dport 22 ct state new add @connlimit_Policy_3 { ip saddr ct count over 10 } counter accept
         #
         # Rule 4 (global)
         #
         # should be ! --connlimit-above 10
-        tcp dport 22 ct state new counter accept
+        tcp dport 22 ct state new add @connlimit_Policy_4 { ip saddr ct count 10 } counter accept
         #
         # Rule 5 (global)
         #

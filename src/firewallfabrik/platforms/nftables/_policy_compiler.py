@@ -130,6 +130,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Named counter objects the accounting rules count into. The driver
         # declares them at the top of the table.
         self.counters: list[str] = []
+        # Dynamic sets a per-source limit counts in, keyed by set name and
+        # holding the address type of the key.
+        self.dynamic_sets: dict[str, str] = {}
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
@@ -405,6 +408,15 @@ class PolicyCompiler_nft(PolicyCompiler):
         """Remember a counter object so the driver can declare it."""
         if name not in self.counters:
             self.counters.append(name)
+
+    def register_dynamic_set(self, name: str, addr_type: str) -> None:
+        """Remember a dynamic set so the driver can declare it.
+
+        A rule that adds elements to a set can only do so once the set is an
+        object of the table (netfilter nftables doc/sets.txt), the same way
+        a named counter has to exist before a rule counts into it.
+        """
+        self.dynamic_sets.setdefault(name, addr_type)
 
     def add_rule_filter(self) -> None:
         """Add the processor that selects the rules of this table.

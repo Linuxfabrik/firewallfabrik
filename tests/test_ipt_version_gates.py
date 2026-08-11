@@ -35,11 +35,14 @@ from firewallfabrik.platforms.iptables._utils import (
     TARGET_FIRST_RELEASE,
 )
 
-# The extension file a match ships in, per family. None of these ever had
+# The extension file a match ships in, per family. Most of these never had
 # a libip6t_ variant: the IPv6 side only arrived with the family-neutral
 # libxt_ file, which is what makes the second column a real cut-off.
+# hashlimit is the exception, it got a libip6t_ file of its own first.
 _EXTENSION_FILES = {
+    'connlimit': ('libipt_connlimit.c', 'libxt_connlimit.c'),
     'dscp': ('libipt_dscp.c', 'libxt_dscp.c'),
+    'hashlimit': ('libipt_hashlimit.c', 'libip6t_hashlimit.c'),
     'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
     'time': ('libipt_time.c', 'libxt_time.c'),
