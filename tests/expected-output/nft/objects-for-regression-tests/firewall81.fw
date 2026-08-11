@@ -260,32 +260,10 @@ table ip fwf_filter {
 table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
-        #
-        # Rule NAT_2 0 (NAT)
-        #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 counter jump NAT_1_prerouting
-        #
-        # Rule NAT_2 1 (NAT)
-        #
-        # DNAT Rule
-        counter jump NAT_1_prerouting
     }
 
     chain postrouting {
         type nat hook postrouting priority srcnat;
-        #
-        # Rule NAT_2 0 (NAT)
-        #
-        # Branch rule with actual translation.
-        # Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 counter jump NAT_1_postrouting
-        #
-        # Rule NAT_2 1 (NAT)
-        #
-        # DNAT Rule
-        counter jump NAT_1_postrouting
     }
 
     chain NAT_1_postrouting {
@@ -302,6 +280,34 @@ table ip fwf_nat {
         #
         # DNAT Rule
         ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+    }
+
+    chain NAT_2_postrouting {
+        #
+        # Rule NAT_2 0 (NAT)
+        #
+        # Branch rule with actual translation.
+        # Translation is ignored and warning should be issued
+        ip daddr 192.0.2.1 counter jump NAT_1_postrouting
+        #
+        # Rule NAT_2 1 (NAT)
+        #
+        # DNAT Rule
+        counter jump NAT_1_postrouting
+    }
+
+    chain NAT_2_prerouting {
+        #
+        # Rule NAT_2 0 (NAT)
+        #
+        # Branch rule with actual translation.
+        # Translation is ignored and warning should be issued
+        ip daddr 192.0.2.1 counter jump NAT_1_prerouting
+        #
+        # Rule NAT_2 1 (NAT)
+        #
+        # DNAT Rule
+        counter jump NAT_1_prerouting
     }
 }
 

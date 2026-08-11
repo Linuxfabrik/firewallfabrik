@@ -2061,6 +2061,15 @@ class SplitNATBranchRule(NATRuleProcessor):
                 for branch_chain in chains:
                     if branch_chain.startswith(branch_name + '_'):
                         my_chain = branch_chain[len(branch_name) + 1 :]
+                        # A branching rule that is itself part of a branch
+                        # rule set belongs in that rule set's chain, not in
+                        # the built-in one.  The C++ writes the bare chain
+                        # here (NATCompiler_ipt.cpp:1838) and so installs
+                        # the jump on all traffic; the fallback below has
+                        # the prefix, so the two halves disagree.
+                        if nat_comp.rule_set_chain:
+                            my_chain = f'{nat_comp.rule_set_chain}_{my_chain}'
+                            nat_comp.register_rule_set_chain(my_chain)
                         r = rule.clone()
                         r.ipt_chain = my_chain
                         r.ipt_target = branch_chain

@@ -973,8 +973,14 @@ class SplitNATBranchRule(NATRuleProcessor):
             prefix = f'{nft_object_name(branch_name)}_'
             if not branch_chain.startswith(prefix):
                 continue
+            my_chain = branch_chain[len(prefix) :]
+            # A branching rule that is itself part of a branch rule set
+            # belongs in that rule set's chain, not in the hooked one.
+            if nat_comp.rule_set_chain:
+                my_chain = f'{nat_comp.rule_set_chain}_{my_chain}'
+                nat_comp.register_rule_set_chain(my_chain)
             r = rule.clone()
-            r.ipt_chain = branch_chain[len(prefix) :]
+            r.ipt_chain = my_chain
             r.ipt_target = branch_chain
             self.tmp_queue.append(r)
 
