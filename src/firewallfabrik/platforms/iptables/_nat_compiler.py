@@ -63,6 +63,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
+    single_negation_qualifies,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
@@ -563,54 +564,52 @@ class ItfOutbNegation(NATRuleProcessor):
         return True
 
 
-class SingleObjectNegationOSrc(NATRuleProcessor):
-    """Handle single-object negation for OSrc in NAT rules.
+class SingleObjectNegationInRE(NATRuleProcessor):
+    """Negate a NAT rule element holding one object with iptables' own ``!``.
 
-    If OSrc has negation and contains exactly one address object with
-    a single IP that doesn't match the firewall, convert to inline
-    '!' negation.
-
-    Corresponds to C++ NATCompiler::singleObjectNegationOSrc.
+    Corresponds to C++ ``NATCompiler::singleObjectNegationOSrc`` and its
+    ODst twin, and asks :func:`single_negation_qualifies`, the same
+    question the policy pipeline asks.  Asking a looser one here - any
+    ``Address`` would do - let an AddressRange through, and
+    ``NATExpandAddressRanges`` runs afterwards and writes the range out as
+    the networks covering it: the rule then carried one ``!`` per network,
+    which is the negation of each network rather than of the range, so a
+    packet from inside the range matched the very first of them and the
+    rule did the opposite of what it says.
     """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
-        if rule.get_neg('osrc') and len(rule.osrc) == 1:
-            obj = rule.osrc[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.osrc_single_object_negation = True
-                rule.set_neg('osrc', False)
+        elements = getattr(rule, self._slot)
+        if (
+            rule.get_neg(self._slot)
+            and len(elements) == 1
+            and single_negation_qualifies(self.compiler, elements[0])
+        ):
+            setattr(rule, f'{self._slot}_single_object_negation', True)
+            rule.set_neg(self._slot, False)
         self.tmp_queue.append(rule)
         return True
 
 
-class SingleObjectNegationODst(NATRuleProcessor):
-    """Handle single-object negation for ODst in NAT rules.
+class SingleObjectNegationOSrc(SingleObjectNegationInRE):
+    """Single-object negation for the original source."""
 
-    If ODst has negation and contains exactly one address object with
-    a single IP that doesn't match the firewall, convert to inline
-    '!' negation.
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'osrc')
 
-    Corresponds to C++ NATCompiler::singleObjectNegationODst.
-    """
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        if rule.get_neg('odst') and len(rule.odst) == 1:
-            obj = rule.odst[0]
-            if isinstance(obj, Address) and not self.compiler.complex_match(
-                obj, self.compiler.fw
-            ):
-                rule.odst_single_object_negation = True
-                rule.set_neg('odst', False)
-        self.tmp_queue.append(rule)
-        return True
+class SingleObjectNegationODst(SingleObjectNegationInRE):
+    """Single-object negation for the original destination."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(name, 'odst')
 
 
 class DropRuleWithEmptyRE(NATRuleProcessor):

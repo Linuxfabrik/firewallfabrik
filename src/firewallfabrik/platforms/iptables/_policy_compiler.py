@@ -86,6 +86,7 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.platforms.iptables._utils import (
     MATCH_FIRST_RELEASE,
     get_iptables_version,
+    single_negation_qualifies,
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
@@ -1488,36 +1489,16 @@ class SingleRENegation(PolicyRuleProcessor):
     negated needs the three-rule temporary chain of ``SrcNegation`` and its
     siblings; what can be said in one ``!`` is said in one ``!``.
 
-    Whether an address object qualifies is the C++ test
-    ``countInetAddresses(true) == 1``, and only IPv4, IPv6, Network and
-    NetworkIPv6 answer 1 there (fwbuilder libfwbuilder/fwbuilder/Address.cpp
-    returns 0 by default).  An AddressRange is deliberately not one of them:
-    below iptables 1.2.11 it is written out as the networks covering it, and
-    one ``!`` per network is the negation of each rather than of the range,
-    which matches almost everything.
+    Which objects qualify is :func:`single_negation_qualifies`, shared with
+    the NAT pipeline.
     """
-
-    #: Address types that stand for exactly one ``-s`` / ``-d`` argument.
-    _SINGLE_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
 
     def __init__(self, name: str, slot: str) -> None:
         super().__init__(name)
         self._slot = slot
 
     def _qualifies(self, obj) -> bool:
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        # A run-time address table matched through ipset is a single set
-        # name, so `-m set ! --match-set` says it exactly. Without ipset
-        # the rule is written once per address in the file, where one `!`
-        # per address would again negate each of them separately.
-        if is_run_time_address_table(obj):
-            return bool(ipt_comp.using_ipset)
-        if isinstance(obj, TagService | UserService):
-            # `-m mark` and `-m owner` both take the `!`.
-            return True
-        return isinstance(obj, self._SINGLE_ADDRESS_TYPES) and not (
-            self.compiler.complex_match(obj, self.compiler.fw)
-        )
+        return single_negation_qualifies(self.compiler, obj)
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -3903,7 +3884,6 @@ class PrepareForMultiport(PolicyRuleProcessor):
             CustomService,
             ICMPService,
             IPService,
-            TagService,
             TCPService,
             UDPService,
         )

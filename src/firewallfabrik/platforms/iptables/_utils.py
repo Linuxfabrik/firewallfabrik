@@ -23,7 +23,14 @@ from firewallfabrik.core.objects import (
     Address,
     AddressTable,
     Interface,
+    IPv4,
+    IPv6,
+    Network,
+    NetworkIPv6,
     PhysAddress,
+    TagService,
+    UserService,
+    is_run_time_address_table,
 )
 from firewallfabrik.driver._interface_properties import (
     get_interface_var_name,
@@ -97,6 +104,40 @@ TARGET_FIRST_RELEASE = {
 def get_iptables_version(fw) -> str:
     """Return the iptables version a firewall is compiled for."""
     return fw.version or DEFAULT_IPTABLES_VERSION
+
+
+# Address types that stand for exactly one ``-s`` / ``-d`` argument, and can
+# therefore be negated with iptables' own ``!``.
+_SINGLE_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
+
+
+def single_negation_qualifies(compiler, obj) -> bool:
+    """Return whether *obj* alone can be negated with one ``!``.
+
+    The C++ test is ``countInetAddresses(true) == 1``, and only IPv4,
+    IPv6, Network and NetworkIPv6 answer 1 (fwbuilder
+    libfwbuilder/fwbuilder/Address.cpp returns 0 by default).  An
+    AddressRange is deliberately not one of them: below iptables 1.2.11 -
+    and, in a NAT rule, always - it is written out as the networks
+    covering it, and one ``!`` per network negates each of them rather
+    than the range, which matches nearly everything.
+
+    Shared by the policy and the NAT pipelines: they ask the same question
+    about the same objects, and the NAT half having its own, looser answer
+    is what turned a negated range in a NAT rule into its own opposite.
+    """
+    # A run-time address table matched through ipset is a single set name,
+    # so `-m set ! --match-set` says it exactly.  Without ipset the rule is
+    # written once per address in the file, where one `!` per address would
+    # again negate each of them separately.
+    if is_run_time_address_table(obj):
+        return bool(getattr(compiler, 'using_ipset', False))
+    if isinstance(obj, TagService | UserService):
+        # `-m mark` and `-m owner` both take the `!`.
+        return True
+    return isinstance(obj, _SINGLE_ADDRESS_TYPES) and not compiler.complex_match(
+        obj, compiler.fw
+    )
 
 
 # The ipv4options match is not part of netfilter iptables.  It came from
