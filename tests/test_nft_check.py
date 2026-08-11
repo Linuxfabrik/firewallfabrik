@@ -21,7 +21,7 @@ which is what every other test compares against.
 ``nft --check`` parses and evaluates the ruleset without installing it, but
 it cannot initialise its cache without CAP_NET_ADMIN, so it runs inside a
 private network namespace. Where that namespace cannot be created the test
-skips; see ``tests/nft_probe.py``.
+skips; see ``tests/tool_probe.py``.
 """
 
 import re
@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.nft_probe import CAN_ASK_NFT, SKIP_REASON
+from tests.tool_probe import CAN_ASK_NFT, SKIP_REASON
 
 EXPECTED_OUTPUT_DIR = Path(__file__).parent / 'expected-output' / 'nft'
 

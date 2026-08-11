@@ -271,12 +271,19 @@ them:
 why those two run under `unshare -rn`: it gives a private network namespace
 where the parse and evaluation pass work in full.
 
-Having both binaries is not enough. A hardened host, a container and the
+Having the binaries is not enough. A hardened host, a container and the
 GitHub runner all refuse to write `/proc/self/uid_map`, and then every
-invocation fails for a reason that has nothing to do with the ruleset -
-which reads as "nft refuses this" and turns the suite red. `tests/nft_probe.py`
-therefore tries one empty ruleset once and both tests skip on the answer.
-Add the same guard to any new test that reaches for `unshare -rn`.
+invocation fails for a reason that has nothing to do with what was asked -
+which reads as "nft refuses this" and turns the suite red.
+`tests/tool_probe.py` therefore tries once, per tool, something the tool
+has to accept: an empty ruleset for `nft`, an ordinary chain name for
+`iptables`. The tests skip unless that worked.
+
+**Add the same guard to any new test that reaches for `unshare -rn`, and
+make the probe assert a success, not a failure.** A test that asks "does
+the tool refuse this?" cannot guard itself with the same question: a denied
+namespace looks exactly like an accepted name, so the guard reads green and
+every case fails.
 
 That still leaves the iptables side and everything around the rules.
 

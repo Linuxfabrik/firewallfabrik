@@ -195,6 +195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * GUI: the "Use kernel timezone instead of UTC" tooltip in the nftables firewall settings describes what nftables does instead of naming an iptables version requirement.
 * GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor, so a firewall imported with "ICMP admin prohibited" or "ICMP protocol unreachable" keeps it.
 * Installing the GUI variant (`firewallfabrik[gui]`) no longer fails to resolve its Qt dependency.
+* Test suite: the check that asks the installed iptables which chain names it refuses skips itself on a host that denies unprivileged network namespaces, instead of reporting every name as a failure. Only the test suite is affected.
 
 
 ## [v1.9.0] - 2026-07-12

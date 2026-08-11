@@ -23,7 +23,7 @@ The interesting part of this module is not the unit tests but
 which ask the installed ``nft`` whether ``NFT_KEYWORDS`` is still true.  They
 are skipped where the installed ``nft`` cannot be asked - it needs a private
 network namespace, which not every machine grants - so the suite keeps
-running without them.  See ``tests/nft_probe.py``.
+running without them.  See ``tests/tool_probe.py``.
 """
 
 import subprocess  # nosec B404
@@ -37,7 +37,7 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_object_name,
     nft_quote,
 )
-from tests.nft_probe import CAN_ASK_NFT, SKIP_REASON
+from tests.tool_probe import CAN_ASK_NFT, SKIP_REASON
 
 
 def _name_accepted(name: str) -> bool:

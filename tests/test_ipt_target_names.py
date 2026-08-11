@@ -21,7 +21,8 @@ The compiler keeps the names in ``IPTABLES_TARGET_NAMES``. The two tests
 here re-derive that list instead of trusting it: one from the extension
 files of a netfilter iptables checkout (``FWF_IPTABLES_SOURCE``), one by
 offering every name to the installed binaries. Both skip themselves when
-what they need is missing.
+what they need is missing; see ``tests/tool_probe.py`` for why the second
+cannot decide that on its own.
 """
 
 import os
@@ -36,6 +37,7 @@ from firewallfabrik.platforms.iptables._utils import (
     IPTABLES_TARGET_NAMES,
     _chain_name_problem,
 )
+from tests.tool_probe import CAN_ASK_IPTABLES, SKIP_REASON_IPTABLES
 
 _SOURCE = os.environ.get('FWF_IPTABLES_SOURCE', '')
 
@@ -71,12 +73,6 @@ def _chain_name_refused(tool: str, name: str) -> bool:
     return 'may not clash with target name' in result.stderr
 
 
-def _namespace_works() -> bool:
-    if not shutil.which('unshare') or not shutil.which('iptables'):
-        return False
-    return not _chain_name_refused('iptables', 'fwf_probe_chain')
-
-
 def test_verdicts_are_listed():
     assert _VERDICTS <= IPTABLES_TARGET_NAMES
 
@@ -97,7 +93,7 @@ def test_list_matches_the_netfilter_extensions():
     assert expected == IPTABLES_TARGET_NAMES
 
 
-@pytest.mark.skipif(not _namespace_works(), reason='needs unshare -rn and iptables')
+@pytest.mark.skipif(not CAN_ASK_IPTABLES, reason=SKIP_REASON_IPTABLES)
 @pytest.mark.parametrize('name', sorted(IPTABLES_TARGET_NAMES))
 def test_the_tools_refuse_every_listed_name(name):
     refused = _chain_name_refused('iptables', name)
