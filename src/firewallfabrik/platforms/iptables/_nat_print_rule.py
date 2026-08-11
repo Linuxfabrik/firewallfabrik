@@ -55,6 +55,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
     get_wait_option,
     ipv4_options_match,
+    match_available,
     normalize_set_name,
     version_compare,
 )
@@ -175,12 +176,15 @@ class NATPrintRule(NATRuleProcessor):
 
         return True
 
-    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str:
+    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str | None:
         """Print the match for an address table that is read on the firewall.
 
         See the policy print rule for the two forms; a NAT rule names its
         original source in ``osrc`` and its original destination in ``odst``,
         which the ipset match still has to spell ``src`` and ``dst``.
+
+        Returns ``None`` when the pinned iptables has no ``set`` match, so
+        the caller can leave the rule out.
         """
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
         source = get_address_table_source(obj)
@@ -190,6 +194,8 @@ class NATPrintRule(NATRuleProcessor):
             oscnf.register_multi_address_object(obj.name, source, ipv6)
 
         if getattr(ipt_comp, 'using_ipset', False):
+            if not match_available(self.compiler, rule, self.version, 'set'):
+                return None
             option = (
                 '--match-set'
                 if version_compare(self.version, '1.4.4') >= 0
@@ -298,7 +304,12 @@ class NATPrintRule(NATRuleProcessor):
                 return ''
             cmd += mac_match
         elif is_run_time_address_table(osrc):
-            cmd += self._print_address_table(osrc, rule, 'osrc')
+            table_match = self._print_address_table(osrc, rule, 'osrc')
+            if table_match is None:
+                # The reason was reported; the rule would otherwise
+                # translate every address instead of the table's.
+                return ''
+            cmd += table_match
         elif osrc:
             addr_str = self._print_addr(osrc)
             if not addr_str:
@@ -338,7 +349,12 @@ class NATPrintRule(NATRuleProcessor):
             if rule.ipt_target != 'RETURN':
                 return ''
         elif is_run_time_address_table(odst):
-            cmd += self._print_address_table(odst, rule, 'odst')
+            table_match = self._print_address_table(odst, rule, 'odst')
+            if table_match is None:
+                # The reason was reported; the rule would otherwise
+                # translate every address instead of the table's.
+                return ''
+            cmd += table_match
         elif odst:
             addr_str = self._print_addr(odst)
             if not addr_str:

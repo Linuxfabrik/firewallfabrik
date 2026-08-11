@@ -82,6 +82,32 @@ MATCH_FIRST_RELEASE = {
     'tos': ('0', '1.4.1'),
 }
 
+
+def match_available(compiler, rule, version: str, match: str) -> bool:
+    """Report whether the pinned iptables knows *match*, for this family.
+
+    Several matches reached ip6tables later than iptables, because they
+    only became family neutral when netfilter merged the two extension
+    trees.  A binary that predates the merge answers "Couldn't load
+    match", which stops the activation script with the built-in policies
+    already set to DROP, so the rule is reported and left out instead.
+
+    Shared by the policy and the NAT printers: both emit matches out of
+    MATCH_FIRST_RELEASE, and a gate only half the output goes through is
+    no gate.
+    """
+    ipv6 = bool(getattr(compiler, 'ipv6_policy', False))
+    first = MATCH_FIRST_RELEASE[match][ipv6]
+    if version_compare(version, first) >= 0:
+        return True
+    tool = 'ip6tables' if ipv6 else 'iptables'
+    compiler.error(
+        rule,
+        f'{tool} before {first} has no "{match}" match; the rule is left out',
+    )
+    return False
+
+
 # The same question for the targets the compiler writes, derived the same
 # way.  A target that reached ip6tables late costs more than a match does:
 # ip6tables answers "Couldn't load target", which stops the activation

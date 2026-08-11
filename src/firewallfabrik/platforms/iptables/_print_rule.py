@@ -54,7 +54,6 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._utils import (
-    MATCH_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
     check_chain_name,
     get_address_table_var_name,
@@ -62,6 +61,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_iptables_version,
     get_wait_option,
     ipv4_options_match,
+    match_available,
     normalize_set_name,
     version_compare,
 )
@@ -588,13 +588,16 @@ class PrintRule(PolicyRuleProcessor):
             return ' -m multiport '
         return ''
 
-    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str:
+    def _print_address_table(self, obj, rule: CompRule, slot: str) -> str | None:
         """Print the match for an address table that is read on the firewall.
 
         With the ipset module the table is a named set and the match reads
         it directly.  Without it the address comes from a shell variable
         that the wrapper around the command assigns per line of the file
         (fwbuilder ``_printIpSetMatch`` / ``_printAddr``).
+
+        Returns ``None`` when the pinned iptables has no ``set`` match, so
+        the caller can leave the rule out.
         """
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
         source = get_address_table_source(obj)
@@ -604,6 +607,13 @@ class PrintRule(PolicyRuleProcessor):
             oscnf.register_multi_address_object(obj.name, source, ipv6)
 
         if getattr(ipt_comp, 'using_ipset', False):
+            # MATCH_FIRST_RELEASE carries the row for exactly this, but
+            # nothing asked it: `libxt_set.c` first shipped in v1.4.9 and
+            # there never was a `libip6t_set.c`, so an older ip6tables
+            # answers "Couldn't load match `set'" and the activation script
+            # stops with the built-in policies already at DROP.
+            if not self._match_available(rule, 'set'):
+                return None
             # `--set` was renamed in iptables 1.4.4 and only kept as a
             # deprecated alias since (netfilter extensions/libxt_set.c).
             option = (
@@ -896,23 +906,7 @@ class PrintRule(PolicyRuleProcessor):
         return f' {flag} {icmp_type}/{icmp_code}  '
 
     def _match_available(self, rule: CompRule, match: str) -> bool:
-        """Report whether the pinned iptables knows a match, for this family.
-
-        Several matches reached ip6tables later than iptables, because they
-        only became family neutral when netfilter merged the two extension
-        trees.  A binary that predates the merge answers "Couldn't load
-        match", which stops the activation script with the built-in policies
-        already set to DROP, so the rule is reported and left out instead.
-        """
-        first = MATCH_FIRST_RELEASE[match][bool(self.compiler.ipv6_policy)]
-        if version_compare(self.version, first) >= 0:
-            return True
-        tool = 'ip6tables' if self.compiler.ipv6_policy else 'iptables'
-        self.compiler.error(
-            rule,
-            f'{tool} before {first} has no "{match}" match; the rule is left out',
-        )
-        return False
+        return match_available(self.compiler, rule, self.version, match)
 
     def _print_ip_service_options(self, rule: CompRule, srv) -> str | None:
         """Print IPService options (fragments, TOS/DSCP, IP options, TCP flags).
