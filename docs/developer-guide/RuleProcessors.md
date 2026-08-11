@@ -1473,24 +1473,45 @@ ConvertToAtomicForAddresses → countChainUsage → PrintRule → simplePrintPro
 
 ### iptables NAT pipeline order
 
-The NAT compilation pipeline (`NATCompiler_ipt.compile()`) processes NAT rules through ~30 processors:
+The NAT compilation pipeline (`NATCompiler_ipt.compile()`) processes NAT rules
+through some 90 processor instances. Read it as the shape of the pass, not as
+a ledger: verify the wiring against `compile()` itself, which is where this
+listing is derived from.
 
 ```
-Begin → SingleObjectNegationItfInb → SingleObjectNegationItfOutb →
-EmptyGroupsInRE(osrc) → EmptyGroupsInRE(odst) → EmptyGroupsInRE(osrv) →
-EmptyGroupsInRE(tsrc) → EmptyGroupsInRE(tdst) → EmptyGroupsInRE(tsrv) →
+Begin → PrintTotalNumberOfRules →
+ExpandGroupsInItfInb → ReplaceClusterInterfaceInItfRE(itf_inb) →
+SingleObjectNegationItfInb → ItfInbNegation →
+ExpandGroupsInItfOutb → ReplaceClusterInterfaceInItfRE(itf_outb) →
+SingleObjectNegationItfOutb → ItfOutbNegation →
+ResolveMultiAddress → RecursiveGroupsInRE(osrc/odst/osrv/tsrc/tdst/tsrv) →
+EmptyGroupsInRE(osrc/odst/osrv/tsrc/tdst/tsrv) →
 ExpandGroups → DropRuleWithEmptyRE → [DropIPv4Rules OR DropIPv6Rules] →
 EliminateDuplicatesInOSRC → EliminateDuplicatesInODST → EliminateDuplicatesInOSRV →
-ClassifyNATRule → VerifyRules →
+NATProcessMultiAddressObjectsInRE(osrc/odst/tsrc/tdst) →
+DoOSrvNegation → ConvertToAtomicForOSrv →
+ClassifyNATRule → SplitSDNATRule → ClassifyNATRule(reclassify) →
+ConvertLoadBalancingRules → VerifyRules →
 SingleObjectNegationOSrc → SingleObjectNegationODst →
+DoOSrcNegation → DoODstNegation → SplitOnODst →
 PortTranslationRules → SpecialCaseWithRedirect →
 [SplitIfOSrcAny → SplitIfOSrcMatchesFw (if local_nat)] →
-SplitNONATRule → LocalNATRule → DecideOnChain → DecideOnTarget →
-ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc →
-ExpandMultipleAddresses → DropRuleWithEmptyRE →
+SplitNONATRule → SplitNATBranchRule → LocalNATRule → DecideOnChain → DecideOnTarget →
+SplitODstForSNAT → ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc →
+SplitOnDynamicInterfaceInODst → SplitOnDynamicInterfaceInTSrc →
+ExpandMultipleAddressesInNAT → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
-GroupServicesByProtocol → PrepareForMultiport → ConvertToAtomicForAddresses →
-AssignInterface → CountChainUsage →
+NATSpecialCaseWithUnnumberedInterface →
+NATCheckForDynamicInterfacesOfOtherObjects →
+VerifyRuleWithMAC → CheckUserServiceInWrongChains →
+NATExpandAddressRanges → SplitMultiSrcAndDst →
+GroupServicesByProtocol → VerifyCustomServices → VerifyRules2 →
+SeparatePortRanges → SeparateSrcPort → SeparateSrcAndDstPort →
+PrepareForMultiport → SplitMultipleICMP → ConvertToAtomicForAddresses →
+AddVirtualAddress → AssignInterface → VerifyRules3 →
+DynamicInterfaceInODst → DynamicInterfaceInTSrc → AlwaysUseMasquerade →
+ConvertToAtomicForItfInb → ConvertToAtomicForItfOutb →
+CheckForObjectsWithErrors → CountChainUsage →
 NATPrintRule → SimplePrintProgress
 ```
 
@@ -1993,10 +2014,12 @@ NftNegationOSrc → NftNegationODst → NftNegationOSrv →
 SplitOnODst → PortTranslationRules → SpecialCaseWithRedirect →
 [if local_nat: [if fw_part_of_any: SplitIfOSrcAny] → SplitIfOSrcMatchesFw] →
 SplitNONATRule → SplitNATBranchRule → LocalNATRule → DecideOnChain → DecideOnTarget →
-ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc → ExpandMultipleAddresses → DropRuleWithEmptyRE →
+SplitODstForSNAT → ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc →
+ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
-GroupServicesByProtocol → VerifyRules2 → SeparatePortRanges →
-SplitMultipleICMP → ConvertToAtomicForAddresses → AssignInterface →
+VerifyRuleWithMAC → CheckUserServiceInWrongChains →
+GroupServicesByProtocol → VerifyCustomServices → VerifyRules2 → SeparatePortRanges →
+SeparateSrcPort → SplitMultipleServices → ConvertToAtomicForAddresses → AssignInterface →
 ConvertToAtomicForItfInb → ConvertToAtomicForItfOutb →
 CheckForObjectsWithErrors → NATPrintRule_nft → SimplePrintProgress
 ```
@@ -2040,6 +2063,6 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 |---------|------------------|-----------|-------|
 | Inline logging with verdict | Partial | ⚠️ Partial | `log ... accept` works; LOG branching with multiple actions does not |
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
-| Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Policy Branch errors; NAT Branch rules split into prerouting+postrouting with a warning (`SplitNATBranchRule`), no actual `jump` to the branch ruleset yet |
+| Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. Still unsupported and reported: a branch into the firewall's top rule set, whose chains are hooked, and a branch into a rule set of another firewall object ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)) |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |
 | Policy routing | `fib` + marks | ❌ Not yet | Error emitted for the routing option |
