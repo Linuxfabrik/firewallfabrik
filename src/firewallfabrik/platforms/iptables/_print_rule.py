@@ -375,21 +375,30 @@ class PrintRule(PolicyRuleProcessor):
             and chain not in ipt_comp.minus_n_commands
         ):
             check_chain_name(self.compiler, chain, self.reported_long_chains)
-            ipv6 = ipt_comp.ipv6_policy
-            iptables_cmd = '$IP6TABLES' if ipv6 else '$IPTABLES'
-
-            opt_wait = get_wait_option(self.version)
-            if opt_wait:
-                opt_wait += ' '
-
-            my_table = getattr(ipt_comp, 'my_table', 'filter')
-            table_opt = f' -t {my_table}' if my_table != 'filter' else ''
-            result = f'{iptables_cmd} {opt_wait}-N {chain}{table_opt} 2>/dev/null\n'
-
+            result = self._chain_declaration(chain)
             ipt_comp.minus_n_commands[chain] = True
             return result
 
         return ''
+
+    def _chain_declaration(self, chain: str) -> str:
+        """Return the line that brings *chain* into existence.
+
+        Only the wording differs between the output formats; which name is
+        declared, whether it needs declaring at all and whether iptables
+        would accept it are decided once, in :meth:`_create_chain`.  The
+        restore formats used to answer all four questions again and got the
+        first one wrong, declaring the unprefixed name while the rules
+        referred to the prefixed one.
+        """
+        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
+        iptables_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
+        opt_wait = get_wait_option(self.version)
+        if opt_wait:
+            opt_wait += ' '
+        my_table = getattr(ipt_comp, 'my_table', 'filter')
+        table_opt = f' -t {my_table}' if my_table != 'filter' else ''
+        return f'{iptables_cmd} {opt_wait}-N {chain}{table_opt} 2>/dev/null\n'
 
     # -- Rule components --
 
@@ -1574,20 +1583,12 @@ class PrintRuleIptRst(PrintRule):
     def __init__(self, name: str = 'generate code for iptables-restore') -> None:
         super().__init__(name)
 
-    def _create_chain(self, chain: str) -> str:
-        if not chain:
-            return ''
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        if not self.minus_n_tracker_initialized:
-            self.initialize_minus_n_tracker()
-        if (
-            hasattr(ipt_comp, 'minus_n_commands')
-            and ipt_comp.minus_n_commands is not None
-            and chain not in ipt_comp.minus_n_commands
-        ):
-            ipt_comp.minus_n_commands[chain] = True
-            return f'echo ":{chain} - [0:0]"\n'
-        return ''
+    def _chain_declaration(self, chain: str) -> str:
+        # This format writes the restore stream itself, so the declaration
+        # is a plain line, the way its rules are plain `-A` lines and the
+        # way the NAT twin already wrote it.  It used to `echo`, which only
+        # the Echo subclass below wants.
+        return f':{chain} - [0:0]\n'
 
     def _start_rule_line(self) -> str:
         # fwbuilder PolicyCompiler_PrintRuleIptRst::_startRuleLine: ``-A ``
@@ -1625,20 +1626,13 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
     ) -> None:
         super().__init__(name)
 
-    def _create_chain(self, chain: str) -> str:
-        if not chain:
-            return ''
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        if not self.minus_n_tracker_initialized:
-            self.initialize_minus_n_tracker()
-        if (
-            hasattr(ipt_comp, 'minus_n_commands')
-            and ipt_comp.minus_n_commands is not None
-            and chain not in ipt_comp.minus_n_commands
-        ):
-            ipt_comp.minus_n_commands[chain] = True
-            return f'echo ":{chain} - [0:0]"\n'
-        return ''
+    def _chain_declaration(self, chain: str) -> str:
+        # This format builds the restore stream with `echo`, so the
+        # declaration is echoed like every rule line.  The quotes are
+        # load-bearing: an unquoted `[0:0]` is a bracket glob, and a file
+        # named `0` in the directory the script runs from would rewrite the
+        # line, whereupon iptables-restore stops at the first chain.
+        return f'echo ":{chain} - [0:0]"\n'
 
     def _start_rule_line(self) -> str:
         # fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_startRuleLine

@@ -623,15 +623,24 @@ class NATPrintRule(NATRuleProcessor):
             and chain not in ipt_comp.minus_n_commands
         ):
             check_chain_name(self.compiler, chain, self.reported_long_chains)
-            opt_wait = get_wait_option(self.version)
-            if opt_wait:
-                opt_wait += ' '
-            ipt_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
-            result = f'{ipt_cmd} {opt_wait}-t nat -N {chain}\n'
+            result = self._chain_declaration(chain)
             ipt_comp.minus_n_commands[chain] = True
             return result
 
         return ''
+
+    def _chain_declaration(self, chain: str) -> str:
+        """Return the line that brings *chain* into existence.
+
+        Only the wording differs between the output formats; see the policy
+        printer for why the rest is decided once, above.
+        """
+        ipt_comp = cast('NATCompiler_ipt', self.compiler)
+        opt_wait = get_wait_option(self.version)
+        if opt_wait:
+            opt_wait += ' '
+        ipt_cmd = '$IP6TABLES' if ipt_comp.ipv6_policy else '$IPTABLES'
+        return f'{ipt_cmd} {opt_wait}-t nat -N {chain}\n'
 
     def _start_rule_line(self) -> str:
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
@@ -1118,27 +1127,10 @@ class NATPrintRule(NATRuleProcessor):
 class NATPrintRuleIptRst(NATPrintRule):
     """NAT rules in iptables-restore format."""
 
-    def _create_chain(self, chain: str) -> str:
-        if not chain:
+    def _chain_declaration(self, chain: str) -> str:
+        if self.compiler.single_rule_compile_mode:
             return ''
-        ipt_comp = cast('NATCompiler_ipt', self.compiler)
-
-        if not self.minus_n_tracker_initialized:
-            self._initialize_minus_n_tracker()
-
-        if (
-            hasattr(ipt_comp, 'minus_n_commands')
-            and ipt_comp.minus_n_commands is not None
-            and chain not in ipt_comp.minus_n_commands
-        ):
-            if not self.compiler.single_rule_compile_mode:
-                result = f':{chain} - [0:0]\n'
-            else:
-                result = ''
-            ipt_comp.minus_n_commands[chain] = True
-            return result
-
-        return ''
+        return f':{chain} - [0:0]\n'
 
     def _start_rule_line(self) -> str:
         return '-A '
@@ -1171,27 +1163,11 @@ class NATPrintRuleIptRst(NATPrintRule):
 class NATPrintRuleIptRstEcho(NATPrintRuleIptRst):
     """NAT rules in iptables-restore format using echo (for variables)."""
 
-    def _create_chain(self, chain: str) -> str:
-        if not chain:
+    def _chain_declaration(self, chain: str) -> str:
+        if self.compiler.single_rule_compile_mode:
             return ''
-        ipt_comp = cast('NATCompiler_ipt', self.compiler)
-
-        if not self.minus_n_tracker_initialized:
-            self._initialize_minus_n_tracker()
-
-        if (
-            hasattr(ipt_comp, 'minus_n_commands')
-            and ipt_comp.minus_n_commands is not None
-            and chain not in ipt_comp.minus_n_commands
-        ):
-            if not self.compiler.single_rule_compile_mode:
-                result = f'echo ":{chain} - [0:0]"\n'
-            else:
-                result = ''
-            ipt_comp.minus_n_commands[chain] = True
-            return result
-
-        return ''
+        # The quotes keep the shell from reading `[0:0]` as a glob.
+        return f'echo ":{chain} - [0:0]"\n'
 
     def _start_rule_line(self) -> str:
         return 'echo "-A '
