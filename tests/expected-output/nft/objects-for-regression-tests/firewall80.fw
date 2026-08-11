@@ -254,17 +254,22 @@ table ip fwf_nat {
         # Rule 0 (NAT)
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
+        ip daddr 192.0.2.1 counter jump NAT_1_prerouting
         #
         # Rule 1 (NAT)
         #
         # DNAT Rule
-        counter accept
+        counter jump NAT_1_prerouting
         #
         # Rule 2 (NAT)
         #
         # for #1686
-        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter jump NAT_1_prerouting
+        #
+        # Rule 3 (NAT)
+        #
+        # for #1686
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter jump NAT_1_prerouting
     }
 
     chain output {
@@ -274,36 +279,30 @@ table ip fwf_nat {
         #
         # DNAT Rule
         ip daddr 192.0.2.1 counter dnat to 192.168.1.10
-        #
-        # Rule 0 (NAT)
-        #
-        # Branch rule with actual translation. Translation is ignored and warning should be issued
-        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
-        #
-        # Rule 3 (NAT)
-        #
-        # for #1686
-        tcp dport 10000-11000 counter accept
     }
 
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
+        # Rule 0 (NAT)
+        #
+        # Branch rule with actual translation. Translation is ignored and warning should be issued
+        ip daddr 192.0.2.1 counter jump NAT_1_postrouting
+        #
         # Rule 1 (NAT)
         #
         # DNAT Rule
-        counter accept
+        counter jump NAT_1_postrouting
         #
         # Rule 2 (NAT)
         #
         # for #1686
-        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter jump NAT_1_postrouting
         #
         # Rule 3 (NAT)
         #
         # for #1686
-        ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
-        ip saddr 192.168.1.100 tcp dport 10000-11000 counter accept
+        ip saddr 192.0.2.1 tcp dport 10000-11000 counter jump NAT_1_postrouting
     }
 
     chain NAT_1_postrouting {

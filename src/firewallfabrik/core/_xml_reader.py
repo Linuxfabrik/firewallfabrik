@@ -86,6 +86,16 @@ def _enum_value(enum_cls, name, default=0):
         return default
 
 
+# What Firewall Builder writes for a NAT rule's action, where the name in
+# the file is not the name of the enumerator.  ``NATRule::getActionAsString``
+# writes "NATBranch" for the Branch action and its ``setAction`` reads both
+# spellings back (fwbuilder libfwbuilder/src/fwbuilder/Rule.cpp:804,810).
+# Without the alias the action falls back to Translate, and a rule meant to
+# branch is compiled as an ordinary translation using the very TSrc/TDst
+# Firewall Builder ignores for a branch rule.
+_NAT_ACTION_ALIASES = {'NATBranch': 'Branch'}
+
+
 def _tag(elem):
     """Strip the fwbuilder namespace prefix from an element tag."""
     return elem.tag.removeprefix(NS)
@@ -671,7 +681,10 @@ class XmlReader:
         elif cls is objects.NATRule:
             rule.nat_action = _enum_value(
                 objects.NATAction,
-                elem.get('action', ''),
+                _NAT_ACTION_ALIASES.get(
+                    elem.get('action', ''),
+                    elem.get('action', ''),
+                ),
             )
         elif cls is objects.RoutingRule:
             rule.routing_rule_type = _enum_value(

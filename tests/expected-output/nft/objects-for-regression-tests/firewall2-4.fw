@@ -13,6 +13,7 @@
 # Can not use negation in translated source
 # Can not use negation in translated destination
 # Can not use negation in translated service
+# Rule 7 (NAT): NAT branching rule misses branch rule set.
 # Rule 9 (NAT): Can not use unnumbered interface in Translated Source of a Source translation rule.
 # Rule 12 (NAT): Can not use service object in Translated Service if Original Service is 'Any'.
 # Rule 13 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
@@ -304,10 +305,6 @@ table ip fwf_nat {
         #
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.10
         ip daddr 22.22.22.22 tcp dport 80 counter dnat to 192.168.1.20
-        #
-        # Rule 7 (NAT)
-        #
-        ip saddr 192.168.1.0/24 tcp dport 80 counter accept
     }
 
     chain output {
@@ -340,10 +337,6 @@ table ip fwf_nat {
         oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
         oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
-        #
-        # Rule 7 (NAT)
-        #
-        ip saddr 192.168.1.0/24 tcp dport 80 counter accept
         #
         # Rule 8 (NAT)
         #
