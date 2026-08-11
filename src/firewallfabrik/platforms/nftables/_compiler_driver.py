@@ -840,14 +840,21 @@ class CompilerDriver_nft(CompilerDriver):
             out.write(
                 f'        type filter hook forward priority filter; policy {forward_policy};\n'
             )
-            if auto_rules['forward']:
-                out.write(auto_rules['forward'])
             # TCPMSS clamping on forwarded traffic — nft equivalent of
             # the iptables "-t mangle -A FORWARD -p tcp --tcp-flags
             # SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu" rule.  Guarded
             # by `clamp_mss_to_mtu` firewall option and by the
             # platform's IP-forwarding option (matching fwbuilder's
             # PolicyCompiler_PrintRule::_clampTcpToMssRule).
+            #
+            # It goes ahead of the automatic rules, because one of those
+            # accepts everything the connection tracker already knows.  The
+            # SYN of the client is new and would be clamped either way, but
+            # the SYN/ACK coming back is "established": behind the accept it
+            # never reaches the clamp, and the server keeps announcing an
+            # MSS the path cannot carry.  iptables has no such ordering
+            # question - it clamps in the mangle table, which the filter
+            # hooks run after.
             if fw.get_option('clamp_mss_to_mtu'):
                 ipv4_fwd_raw = fw.get_option('linux24_ip_forward')
                 ipv6_fwd_raw = fw.get_option('linux24_ipv6_forward')
@@ -867,6 +874,8 @@ class CompilerDriver_nft(CompilerDriver):
                         '        tcp flags syn / syn,rst '
                         'counter tcp option maxseg size set rt mtu\n'
                     )
+            if auto_rules['forward']:
+                out.write(auto_rules['forward'])
             if forward_rules.strip():
                 out.write(forward_rules)
             out.write('    }\n')

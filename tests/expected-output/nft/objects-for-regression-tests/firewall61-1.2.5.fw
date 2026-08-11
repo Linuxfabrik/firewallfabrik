@@ -342,8 +342,8 @@ table inet fwf_filter {
 
     chain forward {
         type filter hook forward priority filter; policy drop;
-        ct state established,related counter accept
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
+        ct state established,related counter accept
         #
         # Rule fw61-Policy 0 (global)
         #
