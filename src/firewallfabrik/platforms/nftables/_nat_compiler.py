@@ -247,6 +247,11 @@ class NATCompiler_nft(NATCompiler):
         self.add(DecideOnChain('decide on chain'))
         self.add(DecideOnTarget('decide on target'))
 
+        self.add(
+            SplitODstForSNAT(
+                'split rule if objects in ODst belong to different subnets'
+            )
+        )
         self.add(ReplaceFirewallObjectsODst('replace firewall in ODst'))
         self.add(ReplaceFirewallObjectsTSrc('replace firewall in TSrc'))
         self.add(ExpandMultipleAddressesInNAT('expand multiple addresses'))
@@ -1422,6 +1427,62 @@ class ReplaceFirewallObjectsODst(NATRuleProcessor):
             ]
             if interfaces:
                 rule.odst = interfaces
+
+        return True
+
+
+class SplitODstForSNAT(NATRuleProcessor):
+    """Give each group of destinations behind one interface its own rule.
+
+    Ports ``NATCompiler::splitODstForSNAT`` (NATCompiler.cpp:851).
+    ``ReplaceFirewallObjectsTSrc`` resolves the firewall object in TSrc
+    from the *first* original destination and writes the answer into the
+    whole rule, and ``AssignInterface`` derives the outgoing interface
+    from that same answer.  With destinations behind two interfaces the
+    second rule therefore carried the first interface's name and address:
+    it could never match, so that traffic left the firewall with its
+    private source address untranslated and nothing came back.
+
+    Must run before ``ReplaceFirewallObjectsTSrc``, which is where the
+    single answer is picked.
+
+    A negated destination is left whole: "none of these" is one condition,
+    and one rule per destination would ask "not this one" in each, which
+    together let nearly everything through.  nftables keeps such an element
+    as a single ``!=`` over a set, so there is nothing to group anyway.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if (
+            rule.nat_rule_type != NATRuleType.SNAT
+            or len(rule.odst) <= 1
+            or rule.odst_single_object_negation
+            or rule.get_neg('odst')
+        ):
+            self.tmp_queue.append(rule)
+            return True
+
+        groups: dict[str, list] = {}
+        for obj in rule.odst:
+            iface = ReplaceFirewallObjectsTSrc._find_interface_for(
+                obj, self.compiler.fw
+            )
+            groups.setdefault(str(iface.id) if iface is not None else '', []).append(
+                obj
+            )
+
+        if len(groups) <= 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for objects in groups.values():
+            r = rule.clone()
+            r.odst = objects
+            self.tmp_queue.append(r)
 
         return True
 
