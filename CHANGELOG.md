@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 * Compiler (iptables): "Clear all rules" really clears them on current distributions. The firewall kept its old rules and grew with every activation, with all traffic blocked in the meantime.
+* Compiler (iptables): a logging rule whose prefix consists only of characters the generated script cannot pass on activates. It went out as an empty prefix, which iptables refuses, stopping the activation script and leaving every rule after it uninstalled; the rule now logs without a prefix and says so.
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
 * Compiler (iptables): a NAT rule with the "Persistent" or "Random" option is compiled for the iptables release the firewall is pinned to. Firewalls pinned to 1.4.3 or older got an option that release does not know, which stopped the activation script and left every rule after it uninstalled.
 * Compiler (iptables): a firewall that activates through iptables-restore writes its chain lines so the shell cannot rewrite them. A file named "0" or ":" in the directory the activation script runs from turned the packet counters into a glob, and iptables-restore then stopped at the first chain with all traffic already blocked.

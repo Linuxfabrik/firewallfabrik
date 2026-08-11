@@ -1389,12 +1389,8 @@ class PrintRule(PolicyRuleProcessor):
                 log_level = _LOG_LEVEL_MAP.get(str(log_level), log_level)
             parts.append(f'--log-level {log_level}')
 
-        log_prefix = rule.get_option('log_prefix', '')
-        if not log_prefix:
-            log_prefix = self.compiler.fw.get_option('log_prefix')
+        log_prefix = self._log_prefix(rule, MAX_LOG_PREFIX)
         if log_prefix:
-            log_prefix = self._expand_log_prefix(rule, str(log_prefix))
-            log_prefix = self._truncate_log_prefix(rule, log_prefix, MAX_LOG_PREFIX)
             parts.append(f'--log-prefix {self._quote(log_prefix)}')
 
         # Per-rule option overrides firewall-level default (matching fwbuilder).
@@ -1427,12 +1423,8 @@ class PrintRule(PolicyRuleProcessor):
             nlgroup = 1
         parts.append(f'--nflog-group {nlgroup}')
 
-        log_prefix = rule.get_option('log_prefix', '')
-        if not log_prefix:
-            log_prefix = self.compiler.fw.get_option('log_prefix')
+        log_prefix = self._log_prefix(rule, MAX_NFLOG_PREFIX)
         if log_prefix:
-            log_prefix = self._expand_log_prefix(rule, str(log_prefix))
-            log_prefix = self._truncate_log_prefix(rule, log_prefix, MAX_NFLOG_PREFIX)
             parts.append(f'--nflog-prefix {self._quote(log_prefix)}')
 
         cprange = self.compiler.fw.get_option('ulog_cprange')
@@ -1465,6 +1457,35 @@ class PrintRule(PolicyRuleProcessor):
             parts.append(f'--nflog-threshold {qthreshold}')
 
         return ' '.join(parts)
+
+    def _log_prefix(self, rule: CompRule, limit: int) -> str:
+        """Return the log prefix to emit, empty when there is none left.
+
+        The emptiness test has to come *after* the expansion: a macro can
+        expand to nothing, and `sanitize_log_prefix` drops the characters
+        the shell would treat as expansion or substitution, so a prefix
+        made only of those ends up empty here.  Emitting it anyway gives
+        `--log-prefix ""`, and both targets declare their prefix with
+        `.min = 1` (netfilter extensions/libxt_LOG.c and libxt_NFLOG.c),
+        which `xtopt_parse_string` (libxtables/xtoptions.c) answers with
+        "Argument must have a minimum length of 1 characters" - the
+        activation script stops there with the policies already at DROP.
+        """
+        prefix = rule.get_option('log_prefix', '')
+        if not prefix:
+            prefix = self.compiler.fw.get_option('log_prefix')
+        if not prefix:
+            return ''
+        prefix = self._expand_log_prefix(rule, str(prefix))
+        if not prefix:
+            self.compiler.warning(
+                rule,
+                'Nothing is left of the log prefix once the characters the '
+                'generated script cannot pass on are removed; the rule logs '
+                'without one',
+            )
+            return ''
+        return self._truncate_log_prefix(rule, prefix, limit)
 
     def _truncate_log_prefix(self, rule: CompRule, prefix: str, limit: int) -> str:
         """Cut *prefix* to what the target can carry, and say so.
