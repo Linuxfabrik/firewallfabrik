@@ -1099,12 +1099,46 @@ class PrintRule_nft(PolicyRuleProcessor):
         )
         return None
 
-    # Map iptables/syslog level names to the abbreviated keywords nftables
-    # accepts. Only the two divergent spellings need mapping.
+    # Every spelling a stored log level can have, mapped to the keyword
+    # nftables takes.  `level_type` (netfilter nftables src/parser_bison.y)
+    # is exactly `emerg alert crit err warn notice info debug audit`, and
+    # LEVEL takes that production rather than a number, so anything else -
+    # `panic`, `error`, `warning`, or a numeric syslog level from an
+    # imported file or the "numeric log levels" setting - is a syntax error
+    # that costs the whole ruleset, not just the rule.
+    #
+    # The names come from the iptables printer's `_LOG_LEVEL_MAP`, which is
+    # the set Firewall Builder can store, plus the numbers that map names.
     _NFT_LOG_LEVELS: ClassVar[dict[str, str]] = {
+        '0': 'emerg',
+        '1': 'alert',
+        '2': 'crit',
+        '3': 'err',
+        '4': 'warn',
+        '5': 'notice',
+        '6': 'info',
+        '7': 'debug',
         'error': 'err',
+        # The historical name of LOG_EMERG, which iptables still accepts
+        # and maps to 0; nftables knows only `emerg`.
+        'panic': 'emerg',
         'warning': 'warn',
     }
+
+    #: What nftables itself accepts after `level`.
+    _NFT_LOG_LEVEL_KEYWORDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            'alert',
+            'audit',
+            'crit',
+            'debug',
+            'emerg',
+            'err',
+            'info',
+            'notice',
+            'warn',
+        }
+    )
 
     def _print_tcp_flags(self, srv, negated: bool = False) -> str:
         """Format TCP flag inspection for nftables.
@@ -1559,11 +1593,21 @@ class PrintRule_nft(PolicyRuleProcessor):
             if log_level:
                 # nftables uses the abbreviated syslog level keywords
                 # (see nftables src/statement.c: syslog_level[]), so map the
-                # spellings iptables accepts to what nft parses. Levels not in
-                # the map (alert, crit, debug, emerg, info, notice) are already
-                # valid nft keywords and pass through unchanged.
-                log_level = self._NFT_LOG_LEVELS.get(log_level, log_level)
-                parts.append(f'level {log_level}')
+                # spellings iptables accepts to what nft parses.
+                log_level = self._NFT_LOG_LEVELS.get(
+                    str(log_level).strip().lower(), log_level
+                )
+                if log_level in self._NFT_LOG_LEVEL_KEYWORDS:
+                    parts.append(f'level {log_level}')
+                else:
+                    # Emitting it anyway is a syntax error, and nft answers
+                    # one of those by throwing away the whole ruleset, so
+                    # the firewall would keep every rule it has.
+                    self.compiler.warning(
+                        rule,
+                        f'nftables has no log level "{log_level}"; the rule '
+                        f'logs at the default level instead',
+                    )
 
         # Optional log flags (per-rule overrides firewall-level default).
         # Each flag becomes its own `flags <category> <flag>` clause; nftables

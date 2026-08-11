@@ -69,6 +69,26 @@ def _name_accepted(name: str) -> bool:
     return True
 
 
+def _log_level_accepted(level: str) -> bool:
+    """Ask nft whether it takes *level* after the log statement's `level`."""
+    ruleset = (
+        'table inet t {\n'
+        '    chain c {\n'
+        '        type filter hook input priority filter; policy accept;\n'
+        f'        counter log level {level} accept\n'
+        '    }\n'
+        '}\n'
+    )
+    proc = subprocess.run(  # nosec B603 B607
+        ['unshare', '-rn', 'nft', '--check', '-f', '-'],
+        input=ruleset,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
 @pytest.mark.parametrize(
     ('name', 'expected'),
     [
@@ -147,3 +167,39 @@ def test_renamed_keywords_are_accepted():
         k for k in sorted(NFT_KEYWORDS) if not _name_accepted(nft_object_name(k))
     ]
     assert not rejected, f'rename does not help for: {rejected}'
+
+
+def test_every_stored_log_level_maps_to_one_nftables_takes():
+    """The two log-level vocabularies have to meet.
+
+    `level_type` (netfilter nftables src/parser_bison.y:3519) is exactly
+    `emerg alert crit err warn notice info debug audit`, and LEVEL takes
+    that production, not a number.  Anything else is a syntax error, and
+    nft answers one of those by refusing the whole ruleset.  The names a
+    stored level can have are the keys of the iptables printer's map, plus
+    the numbers it maps them to when "numeric log levels" is on.
+    """
+    from firewallfabrik.platforms.iptables._print_rule import _LOG_LEVEL_MAP
+    from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
+
+    spellings = set(_LOG_LEVEL_MAP) | set(_LOG_LEVEL_MAP.values())
+    unmappable = sorted(
+        name
+        for name in spellings
+        if PrintRule_nft._NFT_LOG_LEVELS.get(name, name)
+        not in PrintRule_nft._NFT_LOG_LEVEL_KEYWORDS
+    )
+    assert not unmappable, f'no nftables log level for: {unmappable}'
+
+
+@pytest.mark.skipif(not CAN_ASK_NFT, reason=SKIP_REASON)
+def test_the_nftables_log_levels_are_still_the_ones_nft_takes():
+    """Every keyword in the list is offered to the installed nft."""
+    from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
+
+    refused = [
+        level
+        for level in sorted(PrintRule_nft._NFT_LOG_LEVEL_KEYWORDS)
+        if not _log_level_accepted(level)
+    ]
+    assert not refused, f'no longer nft log levels: {refused}'
