@@ -206,6 +206,32 @@ def print_priority_set(classify_str: str) -> str:
     return f'meta priority set {handle}'
 
 
+def print_pair_clause(
+    ip_keyword: str,
+    ether_keyword: str,
+    pairs: list[tuple[str, str]],
+    neg: str,
+) -> str:
+    """Return the match for MAC/address pairs that belong together.
+
+    An object that names both is matched on both at once.  A single pair
+    is two matches side by side; several pairs need a set over the
+    concatenation of the two headers, because two plain sets would match
+    every combination of the addresses instead of the pairs the
+    administrator configured.
+
+    Shared with the NAT printer: it renders the same objects, and letting
+    the two drift is how a NAT rule ends up translating for a host the
+    policy would not have accepted.
+    """
+    pairs = list(dict.fromkeys(pairs))
+    if len(pairs) == 1:
+        mac, addr = pairs[0]
+        return f'{ether_keyword} {neg}{mac} {ip_keyword} {neg}{addr}'
+    elements = ', '.join(f'{mac} . {addr}' for mac, addr in pairs)
+    return f'{ether_keyword} . {ip_keyword} {neg}{{ {elements} }}'
+
+
 def print_mark_match(tag_code: str, negated: bool) -> str:
     """Return the nftables match for an iptables ``--mark value[/mask]``.
 
@@ -779,13 +805,7 @@ class PrintRule_nft(PolicyRuleProcessor):
     def _pair_clause(
         keyword: str, direction: str, pairs: list[tuple[str, str]], neg: str
     ) -> str:
-        """Return the match for MAC/address pairs that belong together."""
-        pairs = list(dict.fromkeys(pairs))
-        if len(pairs) == 1:
-            mac, addr = pairs[0]
-            return f'ether {direction} {neg}{mac} {keyword} {neg}{addr}'
-        elements = ', '.join(f'{mac} . {addr}' for mac, addr in pairs)
-        return f'ether {direction} . {keyword} {neg}{{ {elements} }}'
+        return print_pair_clause(keyword, f'ether {direction}', pairs, neg)
 
     def _print_addr(self, obj, rule: CompRule) -> str:
         """Print an address object in nftables format."""

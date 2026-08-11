@@ -24,6 +24,7 @@ import ipaddress
 import re
 from typing import TYPE_CHECKING, ClassVar, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.core.objects import (
     Address,
@@ -57,6 +58,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_icmp_service,
     print_ip_option_matches,
     print_mark_match,
+    print_pair_clause,
 )
 
 if TYPE_CHECKING:
@@ -203,11 +205,23 @@ class NATPrintRule_nft(NATRuleProcessor):
         rendered as an anonymous set.  A MAC address is not part of the IP
         header and needs its own ``ether`` match, which is what
         iptables-translate produces for ``-m mac --mac-source``.
+
+        An object that carries both - what a host with "MAC address
+        matching" expands to - asks for both at once, so the two go into
+        one clause, exactly as the policy printer does it.  Rendering them
+        as two independent sets would translate for every combination of
+        the addresses instead of the pairs that were configured.
         """
         neg = '!= ' if negated else ''
         macs = []
         addrs = []
+        pairs = []
         for obj in objects:
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                addr = self._print_addr(obj.address, rule)
+                if addr:
+                    pairs.append((obj.get_phys_address(), addr))
+                    continue
             mac = get_mac_only_address(obj)
             if mac:
                 macs.append(mac)
@@ -217,6 +231,8 @@ class NATPrintRule_nft(NATRuleProcessor):
                 addrs.append(addr)
 
         parts = []
+        if pairs:
+            parts.append(print_pair_clause(ip_keyword, ether_keyword, pairs, neg))
         if macs:
             parts.append(f'{ether_keyword} {neg}{_as_set(macs)}')
         if addrs:
