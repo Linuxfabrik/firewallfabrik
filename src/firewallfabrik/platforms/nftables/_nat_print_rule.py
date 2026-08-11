@@ -817,15 +817,28 @@ class NATPrintRule_nft(NATRuleProcessor):
         return f'dnat to numgen inc mod {count} map {{ {mapping} }}'
 
     # A transport protocol is already constrained when the assembled match
-    # carries a protocol payload expression, an explicit `meta l4proto`, or
-    # the merged `th sport`/`th dport` matcher.  The protocol keyword has to
-    # be the head of its own clause: a bare `\btcp\b` also matches inside a
-    # set name such as `@tcp.hosts`, and the missing `meta l4proto` then
-    # costs the whole ruleset ("transport protocol mapping is only valid
-    # after transport protocol match").
+    # carries a protocol payload expression or an `meta l4proto` equality.
+    # Anything else and `nat_evaluate_transport` (netfilter nftables
+    # src/evaluate.c) refuses the port mapping with "transport protocol
+    # mapping is only valid after transport protocol match", which costs
+    # the whole ruleset.  Each form below was offered to nft 1.1.6:
+    #
+    # * `tcp dport 80`, `udp dport != 53` - accepted.  A payload expression
+    #   pins the protocol whether it is negated or not, because nft injects
+    #   the `meta l4proto` dependency for the payload itself.
+    # * `meta l4proto 6`, `meta l4proto { tcp, udp }` - accepted.
+    # * `meta l4proto != 6` - refused.  The protocol context is carried
+    #   forward for an equality only: `relational_expr_pctx_update` runs
+    #   for OP_EQ and OP_IMPLICIT, and OP_NEQ falls through past it.
+    # * `th dport 80` on its own - refused.  `th` is the generic transport
+    #   header and names no protocol; the printer only ever emits it behind
+    #   a `meta l4proto { tcp, udp }`, which is what makes that form legal.
+    #
+    # The keyword has to be the head of its own clause: a bare `\btcp\b`
+    # also matches inside a set name such as `@tcp.hosts`.
     _HAS_L4PROTO_RE: ClassVar[re.Pattern] = re.compile(
-        r'(?:^|\s)(?:(?:tcp|udp|sctp|dccp|udplite|th)\s+[sd]port|'
-        r'meta\s+l4proto)\b'
+        r'(?:^|\s)(?:(?:tcp|udp|sctp|dccp|udplite)\s+[sd]port|'
+        r'meta\s+l4proto(?!\s+!=))\b'
     )
 
     def _nat_l4proto_prefix(self, rule: CompRule, existing_parts: list[str]) -> str:
