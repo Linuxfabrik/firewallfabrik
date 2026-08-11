@@ -277,6 +277,11 @@ class PrintRule(PolicyRuleProcessor):
             # than the rule allows, and a Deny rule would stop all of them.
             return ''
         command_line += connlimit
+        hashlimit = self._print_hashlimit(rule)
+        if hashlimit is None:
+            # The release has no such match and the reason was reported.
+            return ''
+        command_line += hashlimit
         target_part = self._print_target(rule)
         if target_part is None:
             # The target does not exist on this release, which was reported.
@@ -1175,6 +1180,95 @@ class PrintRule(PolicyRuleProcessor):
         if masklen > 0:
             result += f' --connlimit-mask {masklen}'
         return result + ' '
+
+    #: The four things a hashlimit can key its buckets on, in the order
+    #: iptables prints them (PolicyCompiler_PrintRule.cpp:334).
+    _HASHLIMIT_MODES = ('srcip', 'dstip', 'srcport', 'dstport')
+
+    def _hashlimit_mode(self, rule: CompRule) -> str:
+        """Return the ``--hashlimit-mode`` list the rule asks for.
+
+        Firewall Builder stored one string in v2.1 and four booleans from
+        v3 on, and an imported file can carry either, so both are read.
+        The GUI writes the booleans without the ``mode_`` infix, which is a
+        third spelling of the same four.
+        """
+        stored = str(rule.get_option('hashlimit_mode', '') or '').strip()
+        if stored:
+            return stored
+        modes = [
+            mode
+            for mode in self._HASHLIMIT_MODES
+            if rule.get_option(f'hashlimit_mode_{mode}', False)
+            or rule.get_option(f'hashlimit_{mode}', False)
+        ]
+        return ','.join(modes)
+
+    def _print_hashlimit(self, rule: CompRule) -> str | None:
+        """Print ``-m hashlimit``, the rate limit kept per source or port.
+
+        Ports ``PolicyCompiler_PrintRule.cpp:312``.  Every option of the
+        match is spelled with the module's own name, and the module is
+        called ``dstlimit`` in its older incarnation, which is why the name
+        is a variable rather than a literal.
+
+        Returns ``None`` when the pinned iptables has no such match, so the
+        caller can leave the rule out rather than let a rule meant to cap a
+        rate through unconditionally.
+        """
+        try:
+            limit = int(rule.get_option('hashlimit_value', 0) or 0)
+        except (TypeError, ValueError):
+            return ''
+        if limit <= 0:
+            return ''
+        if not self._match_available(rule, 'hashlimit'):
+            return None
+
+        module = (
+            'dstlimit'
+            if rule.get_option('hashlimit_dstlimit', False)
+            else ('hashlimit')
+        )
+        parts = [
+            f'-m {module}',
+            f'--{module} {limit}{rule.get_option("hashlimit_suffix", "") or ""}',
+        ]
+
+        def number(key: str) -> int:
+            try:
+                return int(rule.get_option(key, 0) or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        burst = number('hashlimit_burst')
+        if burst > 0:
+            parts.append(f'--{module}-burst {burst}')
+
+        mode = self._hashlimit_mode(rule)
+        if mode:
+            parts.append(f'--{module}-mode {mode}')
+
+        # The name is what the module files its hash table under, and it is
+        # mandatory (XTOPT_MAND, netfilter extensions/libxt_hashlimit.c), so
+        # a rule that names none gets one derived from its position, the way
+        # fwbuilder does it.
+        name = str(rule.get_option('hashlimit_name', '') or '').strip()
+        if not name:
+            name = f'htable_rule_{rule.position}'
+        parts.append(f'--{module}-name {name}')
+
+        for key, option in (
+            ('hashlimit_size', 'htable-size'),
+            ('hashlimit_max', 'htable-max'),
+            ('hashlimit_expire', 'htable-expire'),
+            ('hashlimit_gcinterval', 'htable-gcinterval'),
+        ):
+            value = number(key)
+            if value > 0:
+                parts.append(f'--{module}-{option} {value}')
+
+        return ' ' + ' '.join(parts) + ' '
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print ``-m limit`` rate limiting.

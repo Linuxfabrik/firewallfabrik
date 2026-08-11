@@ -524,6 +524,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         if connlimit_match:
             parts.append(connlimit_match)
 
+        hashlimit_match = self._print_hashlimit(rule)
+        if hashlimit_match:
+            parts.append(hashlimit_match)
+
         # Everything collected so far matches on the packet; what follows
         # only acts on it.  The address family has to be pinned down here,
         # while `parts` still holds the match half and nothing else.
@@ -1387,6 +1391,128 @@ class PrintRule_nft(PolicyRuleProcessor):
         )
         over = '' if rule.get_option('connlimit_above_not', False) else 'over '
         return f'add @{set_name} {{ {key} ct count {over}{limit} }}'
+
+    #: What each hashlimit mode keys on, as an nftables expression.  The
+    #: port halves need the protocol, which the rule's own service match
+    #: has already pinned wherever a port mode makes sense.
+    _HASHLIMIT_KEYS: ClassVar[dict[str, str]] = {
+        'srcip': 'saddr',
+        'dstip': 'daddr',
+        'srcport': 'sport',
+        'dstport': 'dport',
+    }
+
+    def _print_hashlimit(self, rule: CompRule) -> str:
+        """Print the rate limit kept per source, destination or port.
+
+        The nftables counterpart of ``-m hashlimit``, in the shape
+        iptables-translate produces for it (netfilter
+        extensions/libxt_hashlimit.txlate):
+
+            meter <name> { ip saddr timeout 60s limit rate over 1/hour }
+
+        A meter is a set keyed on what the mode names, holding a rate limit
+        per element, which is what makes the limit per source rather than
+        per rule.  The keys are concatenated with ``.`` when the mode names
+        more than one, and the whole match is left out when it names none:
+        without a key there is nothing to keep the buckets apart, and a
+        plain ``limit rate`` would cap the rule as a whole, which is a
+        different rule from the one the editor shows.
+        """
+        try:
+            limit = int(rule.get_option('hashlimit_value', 0) or 0)
+        except (TypeError, ValueError):
+            return ''
+        if limit <= 0:
+            return ''
+
+        modes = [
+            mode
+            for mode in ('srcip', 'dstip', 'srcport', 'dstport')
+            if mode in self._hashlimit_modes(rule)
+        ]
+        rate = self._hashlimit_rate(rule, limit)
+
+        if not modes:
+            # iptables takes `-m hashlimit` without a mode - only the name
+            # is mandatory in the current revision, and the real tool
+            # accepts it - and the hash table then has a single bucket,
+            # which is a rate limit for the rule as a whole.  That is a
+            # plain `limit rate` here, with no meter to key it by.
+            return rate
+
+        af = 'ip6' if self.compiler.ipv6_policy else 'ip'
+        proto = self._hashlimit_protocol(rule)
+        keys = []
+        for mode in modes:
+            field = self._HASHLIMIT_KEYS[mode]
+            if mode.endswith('port'):
+                if not proto:
+                    # Without a protocol there is no port header to key on.
+                    continue
+                keys.append(f'{proto} {field}')
+            else:
+                keys.append(f'{af} {field}')
+        if not keys:
+            return ''
+
+        parts = [' . '.join(keys)]
+
+        try:
+            expire = int(rule.get_option('hashlimit_expire', 0) or 0)
+        except (TypeError, ValueError):
+            expire = 0
+        if expire > 0:
+            # iptables counts the idle time of a bucket in milliseconds,
+            # nftables in seconds (libxt_hashlimit.txlate rounds the same
+            # way).
+            parts.append(f'timeout {max(1, expire // 1000)}s')
+
+        parts.append(rate)
+
+        name = str(rule.get_option('hashlimit_name', '') or '').strip()
+        if not name:
+            name = f'htable_rule_{rule.position}'
+        return f'meter {nft_object_name(name)} {{ {" ".join(parts)} }}'
+
+    def _hashlimit_rate(self, rule: CompRule, limit: int) -> str:
+        """Return the `limit rate over ...` half of a hashlimit."""
+        suffix = str(rule.get_option('hashlimit_suffix', '') or '') or '/second'
+        rate = f'limit rate over {limit}{suffix}'
+        try:
+            burst = int(rule.get_option('hashlimit_burst', 0) or 0)
+        except (TypeError, ValueError):
+            burst = 0
+        if burst > 0:
+            rate += f' burst {burst} packets'
+        return rate
+
+    def _hashlimit_modes(self, rule: CompRule) -> set[str]:
+        """Return the modes the rule asks the rate limit to key on.
+
+        Firewall Builder stored one comma-separated string in v2.1 and four
+        booleans from v3 on, and the GUI writes the booleans under a third
+        spelling, so all three are read.
+        """
+        stored = str(rule.get_option('hashlimit_mode', '') or '').strip()
+        if stored:
+            return {mode.strip() for mode in stored.split(',') if mode.strip()}
+        return {
+            mode
+            for mode in ('srcip', 'dstip', 'srcport', 'dstport')
+            if rule.get_option(f'hashlimit_mode_{mode}', False)
+            or rule.get_option(f'hashlimit_{mode}', False)
+        }
+
+    @staticmethod
+    def _hashlimit_protocol(rule: CompRule) -> str:
+        """Return the transport protocol of the rule's service, if it has one."""
+        for srv in rule.srv:
+            if isinstance(srv, TCPService):
+                return 'tcp'
+            if isinstance(srv, UDPService):
+                return 'udp'
+        return ''
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print native nftables rate limiting.

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* Compiler (iptables, nftables): the "Limit matching rate" rule options that keep their counts per source, destination or port are compiled ([#121](https://github.com/Linuxfabrik/firewallfabrik/issues/121)).
 * Compiler (iptables, nftables): the "Limit number of simultaneous connections" rule option is compiled ([#120](https://github.com/Linuxfabrik/firewallfabrik/issues/120)).
 
 ### Fixed
