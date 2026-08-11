@@ -20,6 +20,9 @@ NAT rules into iptables -t nat commands.
 from __future__ import annotations
 
 import hashlib
+import ipaddress
+import itertools
+import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING, cast
 
@@ -48,6 +51,7 @@ from firewallfabrik.compiler.processors._service import (
 )
 from firewallfabrik.core.objects import (
     Address,
+    AddressRange,
     Firewall,
     ICMP6Service,
     ICMPService,
@@ -808,6 +812,15 @@ class ClassifyNATRule(NATRuleProcessor):
         if (tsrc_any and not tdst_any) or (
             tsrc_any and tdst_any and tsrv_translates_dst_port
         ):
+            if len(rule.tdst) > 1:
+                # Several translated destinations mean load balancing
+                # (NATCompiler.cpp:291).  Without the type
+                # `ConvertLoadBalancingRules` never ran and
+                # `ConvertToAtomicForAddresses` made one DNAT rule per
+                # backend - and DNAT terminates, so the first rule took
+                # every connection and the other backends got none.
+                rule.nat_rule_type = NATRuleType.LB
+                return True
             if not tdst_any and isinstance(tdst, Network | NetworkIPv6):
                 rule.nat_rule_type = NATRuleType.DNetnat
             elif (
@@ -2128,12 +2141,19 @@ class SplitNATBranchRule(NATRuleProcessor):
 
 
 class ConvertLoadBalancingRules(NATRuleProcessor):
-    """Convert load balancing NAT rules with multiple TDst to DNAT.
+    """Fold the backends of a load-balancing NAT rule into one range.
 
-    Corresponds to C++ NATCompiler_ipt::ConvertLoadBalancingRules.
-    If a rule is classified as LB (load balancing), validates that
-    TDst addresses are contiguous and converts to a DNAT rule with
-    an address range.
+    Ports ``NATCompiler_ipt::ConvertLoadBalancingRules``.  DNAT spreads
+    connections over ``--to-destination first-last`` by hashing the source
+    (``nf_nat_core.c``, ``find_best_ips_proto``), so the backends have to
+    reach the target as a single address range.  Left as separate objects
+    they become one DNAT rule each, and since DNAT terminates the first
+    rule takes every connection.
+
+    The addresses have to be contiguous for a range to mean the same
+    thing, which is what the C++ checks with its temporary AddressRange's
+    ``dimension() != 2``; a gap is reported rather than quietly widened
+    to cover an address nobody named.
     """
 
     def process_next(self) -> bool:
@@ -2141,35 +2161,34 @@ class ConvertLoadBalancingRules(NATRuleProcessor):
         if rule is None:
             return False
 
-        self.tmp_queue.append(rule)
-
         if rule.nat_rule_type != NATRuleType.LB:
+            self.tmp_queue.append(rule)
             return True
 
-        if len(rule.tdst) <= 1:
-            return True
+        # The backends are usually Host objects, and only their addresses
+        # can be sorted and checked for gaps.  fwbuilder gets this for free
+        # because its Host derives from Address; here the expansion the
+        # pipeline runs later has to happen first.  It is idempotent, so
+        # `ExpandMultipleAddressesInNAT` still does the right thing after.
+        self.compiler.expand_addr(rule, 'tdst')
 
-        # Sort addresses
-        import contextlib
-        import ipaddress as _ipa
-
-        addr_list = []
+        addresses = []
         for obj in rule.tdst:
-            addr_str = getattr(obj, 'get_address', lambda: None)()
-            if addr_str:
-                with contextlib.suppress(ValueError, TypeError):
-                    addr_list.append((_ipa.ip_address(addr_str), obj))
+            addr_str = getattr(obj, 'get_address', lambda: '')() or ''
+            try:
+                addresses.append(ipaddress.ip_address(addr_str))
+            except ValueError:
+                self.compiler.abort(
+                    rule,
+                    f'Translated Destination of a load balancing NAT rule '
+                    f'holds "{getattr(obj, "name", obj)}", which is not a '
+                    f'single address',
+                )
+                return True
 
-        if not addr_list:
-            return True
-
-        addr_list.sort(key=lambda x: x[0])
-
-        # Verify contiguity
-        for i in range(1, len(addr_list)):
-            prev_ip = addr_list[i - 1][0]
-            curr_ip = addr_list[i][0]
-            if int(curr_ip) - int(prev_ip) != 1:
+        addresses.sort()
+        for previous, current in itertools.pairwise(addresses):
+            if int(current) - int(previous) != 1:
                 self.compiler.abort(
                     rule,
                     'Non-contiguous address range in '
@@ -2177,9 +2196,16 @@ class ConvertLoadBalancingRules(NATRuleProcessor):
                 )
                 return True
 
-        # Keep tdst as-is (the range will be handled by the print rule)
-        # and reclassify as DNAT
+        first, last = addresses[0], addresses[-1]
+        stand_in = AddressRange(
+            id=uuid.uuid4(),
+            name=f'%{first}-{last}%',
+        )
+        stand_in.start_address = {'address': str(first)}
+        stand_in.end_address = {'address': str(last)}
+        rule.tdst = [stand_in]
         rule.nat_rule_type = NATRuleType.DNAT
+        self.tmp_queue.append(rule)
         return True
 
 
