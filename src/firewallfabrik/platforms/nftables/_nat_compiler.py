@@ -55,6 +55,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     get_mac_only_address,
     nat_interface_problem,
 )
+from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -113,8 +114,30 @@ class NATCompiler_nft(NATCompiler):
             'output': [],
         }
 
+        # The chain a branch rule set writes into, set by the driver.
+        # Empty for the top rule set.
+        self.rule_set_chain: str = ''
+
+        # Which chains each branch rule set ended up using, set by the
+        # driver.  A rule branching into one of them can only jump to a
+        # chain the branch really filled, and each rule set is compiled by a
+        # compiler of its own, so the answer has to be handed over.
+        self.branch_ruleset_to_chain_mapping: dict[str, list[str]] | None = None
+
     def my_platform_name(self) -> str:
         return 'nftables'
+
+    def register_rule_set_chain(self, chain_name: str) -> None:
+        """Give a branch rule set a regular chain of its own."""
+        self.chain_rules.setdefault(chain_name, [])
+        # Only the first call names this compiler's own rule set; the later
+        # ones register the per-direction chains derived from it.
+        if not self.rule_set_chain:
+            self.rule_set_chain = chain_name
+
+    def get_used_chains(self) -> list[str]:
+        """Return the chains this rule set actually put rules into."""
+        return [chain for chain, rules in self.chain_rules.items() if rules]
 
     def get_rule_set_name(self) -> str:
         if self.source_ruleset:
@@ -123,6 +146,17 @@ class NATCompiler_nft(NATCompiler):
 
     def prolog(self) -> int:
         n = super().prolog()
+
+        # A branch rule set runs only where a rule with the Branch action
+        # jumps to it, so its rules belong in a regular chain rather than in
+        # one a hook feeds.  Every chain decision downstream keeps a chain
+        # that is already set, so presetting it here is all it takes
+        # (fwbuilder CompilerDriver_ipt::assignRuleSetChain), and
+        # `DecideOnChain` turns it into the per-direction chain the rule
+        # really needs.
+        if self.rule_set_chain:
+            for rule in self.rules:
+                rule.ipt_chain = self.rule_set_chain
 
         if n > 0:
             for iface in self.fw.interfaces:
@@ -896,11 +930,17 @@ class SplitMultipleServices(NATRuleProcessor):
 
 
 class SplitNATBranchRule(NATRuleProcessor):
-    """Split NATBranch rules into separate copies for each chain.
+    """Send a NAT Branch rule to the chains the branch rule set really uses.
 
-    Branch rules need to go into both prerouting and postrouting
-    chains since the branch may contain both DNAT and SNAT rules.
-    Uses nftables lowercase chain names.
+    A branch rule set is compiled into regular chains of its own, one per
+    direction, because NAT reaches prerouting and postrouting through
+    different hooks.  The branching rule therefore becomes one rule per
+    chain the branch filled, each jumping to the matching branch chain
+    (NATCompiler_ipt::splitNATBranchRule).
+
+    Without the mapping there is no way to tell which of the two the branch
+    needs, and a copy in the wrong chain carries a translation that chain
+    cannot perform, so the rule is reported and left out.
     """
 
     def process_next(self) -> bool:
@@ -912,23 +952,30 @@ class SplitNATBranchRule(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
+        nat_comp = cast('NATCompiler_nft', self.compiler)
         branch_name = rule.get_option('branch_name', '')
 
         if not branch_name:
             self.compiler.abort(rule, 'NAT branching rule misses branch rule set.')
-            rule.ipt_chain = 'prerouting'
-            self.tmp_queue.append(rule)
             return True
 
-        # Fallback: split into both prerouting and postrouting
-        self.compiler.warning(
-            rule,
-            'NAT branching rule: splitting into prerouting and postrouting chains',
-        )
+        mapping = nat_comp.branch_ruleset_to_chain_mapping or {}
+        chains = mapping.get(nft_object_name(branch_name))
+        if not chains:
+            self.compiler.error(
+                rule,
+                f'The NAT rule set "{branch_name}" this rule branches into '
+                'installs no rule, so there is nothing to jump to',
+            )
+            return True
 
-        for chain in ('prerouting', 'postrouting'):
+        for branch_chain in chains:
+            prefix = f'{nft_object_name(branch_name)}_'
+            if not branch_chain.startswith(prefix):
+                continue
             r = rule.clone()
-            r.ipt_chain = chain
+            r.ipt_chain = branch_chain[len(prefix) :]
+            r.ipt_target = branch_chain
             self.tmp_queue.append(r)
 
         return True
@@ -1245,11 +1292,21 @@ class DecideOnChain(NATRuleProcessor):
             NATRuleType.Redirect: 'prerouting',
         }
 
-        if rule.ipt_chain:
-            return True
-
         rt = rule.nat_rule_type
         chain = chain_map.get(rt, '') if rt is not None else ''
+
+        if rule.ipt_chain:
+            nat_comp = cast('NATCompiler_nft', self.compiler)
+            if rule.ipt_chain == nat_comp.rule_set_chain and chain:
+                # A branch rule set writes into a chain of its own, but NAT
+                # reaches prerouting and postrouting through different
+                # hooks, so the branch needs one chain per direction
+                # (NATCompiler_ipt::decideOnChain).
+                new_chain = f'{nat_comp.rule_set_chain}_{chain}'
+                nat_comp.register_rule_set_chain(new_chain)
+                rule.ipt_chain = new_chain
+            return True
+
         if chain:
             rule.ipt_chain = chain
         else:

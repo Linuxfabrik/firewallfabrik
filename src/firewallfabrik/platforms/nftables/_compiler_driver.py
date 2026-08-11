@@ -127,6 +127,10 @@ class CompilerDriver_nft(CompilerDriver):
         # and, through that, whether a rule has to name its family itself.
         self._any_rs_ipv6: bool = False
         self._branch_chains: set[str] = set()
+        # Which chains each NAT branch rule set filled, per address family.
+        # A NAT table is per family, so a branch that only has IPv4 rules
+        # must not be jumped to from the IPv6 table.
+        self._nat_branch_chains: dict[str, list[str]] = {}
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.filter_counters: list[str] = []
@@ -294,6 +298,11 @@ class CompilerDriver_nft(CompilerDriver):
                         prep.compile()
 
                     # --- NAT compilation ---
+                    # The NAT table is per address family, so what a branch
+                    # rule set filled in the other pass says nothing about
+                    # this one: a jump to a chain that stays empty here
+                    # would be a jump to a chain nobody declares.
+                    self._nat_branch_chains = {}
                     top_nat = None
                     for nat_rs in all_nat:
                         if not self._matching_address_family(nat_rs, policy_af):
@@ -463,6 +472,14 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         nat_compiler = NATCompiler_nft(session, fw, ipv6_policy, oscnf)
+        # Which chains a branch rule set ended up using decides where a rule
+        # branching into it can jump.  Each rule set gets its own compiler,
+        # so the answer is collected here and handed to the next one; a
+        # branch rule set is compiled before the top one, so a branch of the
+        # top rule set finds its entry.
+        nat_compiler.branch_ruleset_to_chain_mapping = self._nat_branch_chains
+        if not self._is_top_ruleset(nat_rs):
+            nat_compiler.register_rule_set_chain(nft_object_name(nat_rs.name))
         nat_compiler.set_source_ruleset(nat_rs)
         nat_compiler.source_ruleset = nat_rs
 
@@ -490,6 +507,11 @@ class CompilerDriver_nft(CompilerDriver):
         for chain_name, rules in nat_compiler.chain_rules.items():
             if rules:
                 fam_chains.setdefault(chain_name, []).extend(rules)
+
+        if not self._is_top_ruleset(nat_rs):
+            self._nat_branch_chains[nft_object_name(nat_rs.name)] = (
+                nat_compiler.get_used_chains()
+            )
 
         self.nat_address_tables.setdefault(family_key, {}).update(
             nat_compiler.address_tables
@@ -699,14 +721,27 @@ class CompilerDriver_nft(CompilerDriver):
         # nftables rejects an `ip6` payload match inside an `ip` table, so
         # IPv4 and IPv6 NAT rules go into separate `ip`/`ip6` tables that
         # share the filter table's name suffix.
+        nat_hooks = ('prerouting', 'postrouting', 'output')
         nat_by_family = []
         for fam in ('ip', 'ip6'):
             fam_chains = nat_chains.get(fam, {})
             pre = ''.join(fam_chains.get('prerouting', []))
             post = ''.join(fam_chains.get('postrouting', []))
             outp = ''.join(fam_chains.get('output', []))
-            if pre.strip() or post.strip() or outp.strip():
-                nat_by_family.append((fam, pre, post, outp))
+            # Everything else a NAT rule set claimed is a branch chain, and
+            # it runs only where a rule with the Branch action jumps to it.
+            nat_branches = {
+                chain: ''.join(rules)
+                for chain, rules in sorted(fam_chains.items())
+                if chain not in nat_hooks
+            }
+            if (
+                pre.strip()
+                or post.strip()
+                or outp.strip()
+                or any(text.strip() for text in nat_branches.values())
+            ):
+                nat_by_family.append((fam, pre, post, outp, nat_branches))
         have_nat = bool(nat_by_family)
 
         # --- Mangle table ---
@@ -861,7 +896,13 @@ class CompilerDriver_nft(CompilerDriver):
             out.write('}\n')
             out.write('\n')
 
-        for fam, prerouting_rules, postrouting_rules, output_nat_rules in nat_by_family:
+        for (
+            fam,
+            prerouting_rules,
+            postrouting_rules,
+            output_nat_rules,
+            nat_branches,
+        ) in nat_by_family:
             out.write(f'table {fam} {nat_table} {{\n')
             out.write(_declare_address_tables(self.nat_address_tables.get(fam, {})))
 
@@ -888,6 +929,16 @@ class CompilerDriver_nft(CompilerDriver):
             if postrouting_rules.strip():
                 out.write(postrouting_rules)
             out.write('    }\n')
+
+            # A branch rule set gets a regular chain: no hook, no policy, so
+            # it runs only where a rule jumps to it.  nftables needs the
+            # chain declared before the jump, so they come last inside the
+            # same table.
+            for chain, rules in nat_branches.items():
+                out.write('\n')
+                out.write(f'    chain {chain} {{\n')
+                out.write(rules)
+                out.write('    }\n')
 
             out.write('}\n')
             out.write('\n')

@@ -642,6 +642,18 @@ class NATPrintRule_nft(NATRuleProcessor):
         if rt == NATRuleType.NONAT:
             return 'accept'
 
+        if rt == NATRuleType.NATBranch:
+            # `SplitNATBranchRule` has put the branch chain of this
+            # direction into the target.  Falling through to the end of this
+            # method instead would answer `accept`, which in a nat chain
+            # installs a null binding for the whole connection
+            # (net/netfilter/nf_nat_core.c, nf_nat_inet_fn) and makes every
+            # NAT rule behind it unreachable.
+            if rule.ipt_target:
+                return f'jump {rule.ipt_target}'
+            self.compiler.error(rule, 'NAT branching rule has no branch chain')
+            return ''
+
         # NETMAP (SNetnat/DNetnat) and REDIRECT take no flags.
         if rt == NATRuleType.Masq:
             # Masquerading takes the address of the outgoing interface but

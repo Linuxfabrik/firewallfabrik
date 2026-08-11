@@ -9,7 +9,6 @@
 # files: * fw-nat.fw /etc/fwf.sh
 #
 # fw-nat:NAT:12: warning: nftables matches the connection owner only in the output and postrouting chains, where the packet still has the socket that produced it
-# fw-nat:NAT:18: warning: NAT branching rule: splitting into prerouting and postrouting chains
 
 FWBDEBUG=""
 
@@ -296,10 +295,6 @@ table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
-        # Rule NAT_branch 0 (NAT)
-        #
-        tcp dport 80 counter dnat to 10.0.0.53
-        #
         # Rule 1 (NAT)
         #
         ip daddr 198.51.100.1 tcp dport 80 counter dnat to 10.0.0.53
@@ -332,7 +327,7 @@ table ip fwf_nat {
         # Rule 18 (NAT)
         #
         # Branches into a NAT rule set of its own
-        counter accept
+        counter jump NAT_branch_prerouting
     }
 
     chain postrouting {
@@ -398,26 +393,31 @@ table ip fwf_nat {
         # Original service names two connection owners
         oifname "eth0" meta skuid 500 counter snat to 198.51.100.1
         oifname "eth0" meta skuid 501 counter snat to 198.51.100.1
+    }
+
+    chain NAT_branch_prerouting {
         #
-        # Rule 18 (NAT)
+        # Rule NAT_branch 0 (NAT)
         #
-        # Branches into a NAT rule set of its own
-        counter accept
+        tcp dport 80 counter dnat to 10.0.0.53
     }
 }
 
 table ip6 fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat;
+    }
+
+    chain NAT_ipv6_prerouting {
         #
         # Rule NAT_ipv6 0 (NAT)
         #
         # Original service matches fragmented packets
         ip6 daddr 2001:db8:1::1 frag more-fragments 1 counter dnat to 2001:db8:3::53
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat;
     }
 }
 

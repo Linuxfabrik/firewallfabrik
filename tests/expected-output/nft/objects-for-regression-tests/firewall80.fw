@@ -251,11 +251,6 @@ table ip fwf_nat {
     chain prerouting {
         type nat hook prerouting priority dstnat;
         #
-        # Rule NAT_1 0 (NAT)
-        #
-        # DNAT Rule
-        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
-        #
         # Rule 0 (NAT)
         #
         # Branch rule with actual translation. Translation is ignored and warning should be issued
@@ -294,11 +289,6 @@ table ip fwf_nat {
     chain postrouting {
         type nat hook postrouting priority srcnat;
         #
-        # Rule NAT_1 1 (NAT)
-        #
-        # SNAT rule
-        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
-        #
         # Rule 1 (NAT)
         #
         # DNAT Rule
@@ -314,6 +304,22 @@ table ip fwf_nat {
         # for #1686
         ip saddr 192.0.2.1 tcp dport 10000-11000 counter accept
         ip saddr 192.168.1.100 tcp dport 10000-11000 counter accept
+    }
+
+    chain NAT_1_postrouting {
+        #
+        # Rule NAT_1 1 (NAT)
+        #
+        # SNAT rule
+        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.0.2.1
+    }
+
+    chain NAT_1_prerouting {
+        #
+        # Rule NAT_1 0 (NAT)
+        #
+        # DNAT Rule
+        ip daddr 192.0.2.1 counter dnat to 192.168.1.10
     }
 }
 
