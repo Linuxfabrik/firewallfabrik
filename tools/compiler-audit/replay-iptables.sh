@@ -44,6 +44,18 @@ cd $DATA_DIR || exit 1
 # Everything above the command dispatch: the definitions, not the run.
 eval "\$(sed -e '/^# See how we were called/,\$d' "$script")"
 
+# A firewall may configure its own path to the tools, and that path does not
+# exist on this machine: every command then fails with "No such file or
+# directory" and the rules are never tested at all.  One firewall of the
+# reference corpus hid 393 commands that way, two of which were real
+# findings.  The script's own variables are overwritten after it has been
+# read, so the rules are handed to the iptables that is installed here.
+IPTABLES=\$(command -v iptables)
+IP6TABLES=\$(command -v ip6tables)
+IPTABLES_RESTORE=\$(command -v iptables-restore)
+IP6TABLES_RESTORE=\$(command -v ip6tables-restore)
+IP=\$(command -v ip)
+
 # A namespace has no real interfaces, and a corpus names ones that do not
 # exist here.  Keep the answers plausible so the rules themselves get tested.
 getinterfaces() { echo "\${1%[*+]}0"; }

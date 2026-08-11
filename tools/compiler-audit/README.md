@@ -34,6 +34,12 @@ tools/compiler-audit/replay-iptables.sh /tmp/audit
 tools/compiler-audit/check-iptables-restore.sh /tmp/audit
 ```
 
+`replay-iptables.sh` overwrites the tool paths the script sets for itself.
+A firewall may configure its own `/usr/local/sbin/iptables`, which does not
+exist here, and then every command fails for a reason that has nothing to do
+with the rule - one firewall of the reference corpus hid 393 commands that
+way, two of which were real findings.
+
 `check-nft.sh`, `replay-iptables.sh` and `check-iptables-restore.sh` need
 `unshare`, `nft` and `iptables`. They run everything in an unprivileged
 private network namespace, so nothing touches the machine's own firewall.
