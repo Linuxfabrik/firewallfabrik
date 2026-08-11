@@ -39,7 +39,10 @@ from firewallfabrik.compiler.processors._generic import (
     ResolveMultiAddress,
     SimplePrintProgress,
 )
-from firewallfabrik.compiler.processors._service import VerifyCustomServices
+from firewallfabrik.compiler.processors._service import (
+    SeparateSrcPort,
+    VerifyCustomServices,
+)
 from firewallfabrik.core.objects import (
     Address,
     Firewall,
@@ -273,6 +276,15 @@ class NATCompiler_nft(NATCompiler):
         self.add(VerifyCustomServices('verify custom services'))
         self.add(VerifyRules2('check correctness of TSrv'))
         self.add(SeparatePortRanges('separate port ranges'))
+
+        # One nft rule carries one source-port match, and the print rule
+        # takes it from the first service while merging the destination
+        # ports of all of them.  A service restricted to a source port
+        # therefore has to leave the group, or its restriction is either
+        # dropped or applied to services that never asked for it.  The
+        # iptables NAT pipeline has had this since forever
+        # (NATCompiler_ipt.cpp:2594).
+        self.add(SeparateSrcPort('separate services with a source port'))
 
         self.add(SplitMultipleServices('split rule with several services'))
         self.add(ConvertToAtomicForAddresses('convert to atomic rules'))
@@ -905,7 +917,22 @@ class SplitMultipleServices(NATRuleProcessor):
     so a list of them would otherwise be cut down to its first entry and
     the rest would translate nothing.  The counterpart of the policy
     compiler's ``PrepareForMultiport``, which splits the same way.
+
+    A service that names no port at all ("All TCP", "All UDP") cannot go
+    into the set either: it contributes no element, so merging it in
+    narrows the rule to the ports the other services name and the protocol
+    as a whole stops being translated.  The policy compiler pulls the same
+    service out for the same reason.
     """
+
+    @staticmethod
+    def _names_no_port(srv) -> bool:
+        return not (
+            (srv.src_range_start or 0)
+            or (srv.src_range_end or 0)
+            or (srv.dst_range_start or 0)
+            or (srv.dst_range_end or 0)
+        )
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -917,7 +944,9 @@ class SplitMultipleServices(NATRuleProcessor):
             return True
 
         first_srv = rule.osrv[0]
-        if isinstance(first_srv, TCPUDPService):
+        if isinstance(first_srv, TCPUDPService) and not any(
+            self._names_no_port(srv) for srv in rule.osrv
+        ):
             self.tmp_queue.append(rule)
             return True
 

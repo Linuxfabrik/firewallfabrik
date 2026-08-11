@@ -710,7 +710,9 @@ table ip fwf_nat {
         #
         # Rule 16 (NAT)
         #
-        ip daddr 22.22.22.23 tcp dport { 6667, 3128, 4000-4010, 5000-5010 } counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp sport 5000 tcp dport 5000-5010 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp sport 9000 counter dnat to 192.168.1.10
+        ip daddr 22.22.22.23 tcp dport { 6667, 3128, 4000-4010 } counter dnat to 192.168.1.10
         #
         # Rule 17 (NAT)
         #
