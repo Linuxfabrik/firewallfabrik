@@ -136,6 +136,18 @@ REJECT_TOKEN_FIRST_RELEASE = {
     'reject-route': '1.6.0',
 }
 
+# The dstlimit match is the older incarnation of hashlimit and left
+# netfilter iptables in "Remove extensions for unmaintained/obsolete
+# patchlets" (b1f56830); the first release without it is v1.3.8.  A rule
+# ticking "use dstlimit" on anything newer names a module the tool cannot
+# load, so it is emitted as written and the reason is reported.
+DSTLIMIT_LAST_RELEASE = '1.3.7'
+DSTLIMIT_NOTE = (
+    'The "dstlimit" match left netfilter iptables after '
+    f'{DSTLIMIT_LAST_RELEASE}; use the rate limit without the dstlimit '
+    'option, which compiles to the "hashlimit" match that replaced it'
+)
+
 # The LOG target carries its prefix in a 30-byte field and the NFLOG one
 # in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
 # xt_LOG.h and xt_NFLOG.h), so one character of each is the terminator.
@@ -1230,6 +1242,16 @@ class PrintRule(PolicyRuleProcessor):
             if rule.get_option('hashlimit_dstlimit', False)
             else ('hashlimit')
         )
+        if (
+            module == 'dstlimit'
+            and version_compare(self.version, DSTLIMIT_LAST_RELEASE) > 0
+        ):
+            # Same class as the ipv4options match: the option is honoured,
+            # because an administrator who ticked it means it, but the
+            # module it names has not been in iptables since 1.3.8 and the
+            # command answers "Couldn't load match", which stops the
+            # activation script.
+            self.compiler.warning(rule, DSTLIMIT_NOTE)
         parts = [
             f'-m {module}',
             f'--{module} {limit}{rule.get_option("hashlimit_suffix", "") or ""}',
