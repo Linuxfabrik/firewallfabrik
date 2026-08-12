@@ -19,6 +19,7 @@ Generates iptables command strings (shell or iptables-restore format).
 from __future__ import annotations
 
 import ipaddress
+import re
 import uuid
 from typing import TYPE_CHECKING, ClassVar, cast
 
@@ -111,6 +112,21 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # directly and has neither ceiling.
 XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
+
+# The same two ceilings for the hashlimit match, which keeps its own
+# constants: the scale of its current revisions (XT_HASHLIMIT_SCALE_v2,
+# include/uapi/linux/netfilter/xt_hashlimit.h) and the widest burst any
+# revision takes (XT_HASHLIMIT_BURST_MAX, extensions/libxt_hashlimit.c;
+# revision 1 stops at 10000, which fwf cannot tell apart from here).
+XT_HASHLIMIT_SCALE = 1000000
+MAX_HASHLIMIT_BURST = 1000000
+
+# What the kernel can make a name out of: the hash table shows up as a
+# file under /proc/net/ipt_hashlimit, and the name also has to survive the
+# generated shell command as one word.  NAME_MAX bounds the field of the
+# current revisions; revision 1 has only IFNAMSIZ and truncates silently,
+# which no compile-time check can tell apart from here.
+_HASHLIMIT_NAME_RE = re.compile(r'[^\s/]{1,254}')
 
 # Reject types that the REJECT target only learnt along the way.  Everything
 # else in reject_table dates from the first release that has the target at
@@ -1199,6 +1215,21 @@ class PrintRule(PolicyRuleProcessor):
         except (TypeError, ValueError):
             masklen = 0
         if masklen > 0:
+            widest = 128 if self.compiler.ipv6_policy else 32
+            if masklen > widest:
+                # xtopt_parse_plen reads the value as a prefix length of the
+                # rule's own family and falls back to reading it as a dotted
+                # mask (netfilter libxtables/xtoptions.c).  ip6tables then
+                # says "neither a valid network mask nor valid CIDR", which
+                # stops the activation script; iptables takes "64" as the
+                # mask 0.0.0.64 and groups by four bits of the last octet,
+                # which is nothing anybody asked for.
+                self.compiler.error(
+                    rule,
+                    f'a connection limit groups by at most {widest} bits '
+                    f'here, not {masklen}; the rule is left out',
+                )
+                return None
             result += f' --connlimit-mask {masklen}'
         return result + ' '
 
@@ -1317,7 +1348,30 @@ class PrintRule(PolicyRuleProcessor):
             except (TypeError, ValueError):
                 return 0
 
+        unit = LIMIT_UNIT_SECONDS.get(
+            str(rule.get_option('hashlimit_suffix', '') or '') or '/second', 1
+        )
+        if limit > XT_HASHLIMIT_SCALE * unit:
+            # parse_rate stores scale * unit / rate, so a rate above the
+            # scale rounds to zero and the tool answers "Rate too fast"
+            # (netfilter extensions/libxt_hashlimit.c).
+            self.compiler.error(
+                rule,
+                f'a rate limit of {limit} per {unit} second(s) is faster than '
+                f'iptables can express; the rule is left out',
+            )
+            return None
+
         burst = number('hashlimit_burst')
+        if burst > MAX_HASHLIMIT_BURST:
+            # .max on the option, checked again by the module
+            # (netfilter extensions/libxt_hashlimit.c, burst_error).
+            self.compiler.error(
+                rule,
+                f'a rate limit burst of {burst} is out of range '
+                f'(1-{MAX_HASHLIMIT_BURST}); the rule is left out',
+            )
+            return None
         if burst > 0:
             parts.append(f'--{module}-burst {burst}')
 
@@ -1345,6 +1399,18 @@ class PrintRule(PolicyRuleProcessor):
         name = str(rule.get_option('hashlimit_name', '') or '').strip()
         if not name:
             name = f'htable_rule_{rule.position}'
+        if not _HASHLIMIT_NAME_RE.fullmatch(name):
+            # The name becomes a file under /proc/net/ipt_hashlimit
+            # (net/netfilter/xt_hashlimit.c calls proc_create_seq_data with
+            # it), so a slash makes the kernel refuse the rule with
+            # "RULE_APPEND failed (Invalid argument)"; a space would end the
+            # argument in the generated shell command instead.
+            self.compiler.error(
+                rule,
+                f'the rate limit table name "{name}" holds a character the '
+                'kernel cannot make a name out of; the rule is left out',
+            )
+            return None
         parts.append(f'--{module}-name {name}')
         self._check_hashlimit_table(rule, name, limit, mode)
 
