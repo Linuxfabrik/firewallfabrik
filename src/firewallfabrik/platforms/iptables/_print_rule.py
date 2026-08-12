@@ -135,11 +135,16 @@ XT_HASHLIMIT_SCALE = 1000000
 MAX_HASHLIMIT_BURST = 1000000
 
 # What the kernel can make a name out of: the hash table shows up as a
-# file under /proc/net/ipt_hashlimit, and the name also has to survive the
-# generated shell command as one word.  NAME_MAX bounds the field of the
-# current revisions; revision 1 has only IFNAMSIZ and truncates silently,
-# which no compile-time check can tell apart from here.
-_HASHLIMIT_NAME_RE = re.compile(r'[^\s/]{1,254}')
+# file under /proc/net/ipt_hashlimit, and the name is spliced unquoted into
+# the generated shell command, where a dollar sign, a backtick, a semicolon
+# or a pipe is not part of a word but an instruction - and the command runs
+# at activation time as root.  So the alphabet is the one an identifier is
+# made of rather than "anything without a space or a slash"; the same
+# reasoning as _MGMT_ADDRESS_RE in platforms/linux/_netfilter.py.  NAME_MAX
+# bounds the field of the current revisions; revision 1 has only IFNAMSIZ
+# and truncates silently, which no compile-time check can tell apart from
+# here.
+_HASHLIMIT_NAME_RE = re.compile(r'[0-9A-Za-z._-]{1,254}')
 
 # Reject types that the REJECT target only learnt along the way.  Everything
 # else in reject_table dates from the first release that has the target at
@@ -1443,12 +1448,15 @@ class PrintRule(PolicyRuleProcessor):
             # The name becomes a file under /proc/net/ipt_hashlimit
             # (net/netfilter/xt_hashlimit.c calls proc_create_seq_data with
             # it), so a slash makes the kernel refuse the rule with
-            # "RULE_APPEND failed (Invalid argument)"; a space would end the
-            # argument in the generated shell command instead.
+            # "RULE_APPEND failed (Invalid argument)"; and the name goes
+            # unquoted into a shell command that runs as root, where a
+            # space ends the argument and a dollar sign, a backtick or a
+            # semicolon starts something else entirely.
             self.compiler.error(
                 rule,
-                f'the rate limit table name "{name}" holds a character the '
-                'kernel cannot make a name out of; the rule is left out',
+                f'the rate limit table name "{name}" holds a character that '
+                'is not part of a name; letters, digits, a dot, a dash and '
+                'an underscore are; the rule is left out',
             )
             return None
         parts.append(f'--{module}-name {name}')

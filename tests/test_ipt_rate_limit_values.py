@@ -86,9 +86,11 @@ def _rule(**options):
         ({'hashlimit_value': 100000000}, 'faster than'),
         # Wider than the burst any revision of the match takes.
         ({'hashlimit_value': 10, 'hashlimit_burst': 2000000}, 'out of range'),
-        # A name the kernel cannot make a file under /proc out of.
-        ({'hashlimit_value': 10, 'hashlimit_name': 'a/b'}, 'cannot make a name'),
-        ({'hashlimit_value': 10, 'hashlimit_name': 'a b'}, 'cannot make a name'),
+        # A name the kernel cannot make a file under /proc out of, and one
+        # the shell would read as an instruction.
+        ({'hashlimit_value': 10, 'hashlimit_name': 'a/b'}, 'not part of a name'),
+        ({'hashlimit_value': 10, 'hashlimit_name': 'a b'}, 'not part of a name'),
+        ({'hashlimit_value': 10, 'hashlimit_name': '$(id)'}, 'not part of a name'),
     ],
 )
 def test_a_rate_limit_iptables_refuses_leaves_the_rule_out(options, wanted):
@@ -173,3 +175,29 @@ def test_the_backup_ssh_address_holds_nothing_but_an_address(value, valid):
     from firewallfabrik.platforms.linux._netfilter import is_valid_mgmt_address
 
     assert is_valid_mgmt_address(value) is valid
+
+
+@pytest.mark.parametrize(
+    ('value', 'valid'),
+    [
+        ('htable_rule_3', True),
+        ('per-source.http', True),
+        # The name goes unquoted into a command the activation script runs
+        # as root, so everything the shell reads as syntax is refused.
+        ('$(id)', False),
+        ('`reboot`', False),
+        ('a;reboot', False),
+        ('a|sh', False),
+        ('a&b', False),
+        ("a'b", False),
+        ('a table', False),
+        # A slash would make the kernel refuse the rule: the name becomes a
+        # file under /proc/net/ipt_hashlimit.
+        ('a/b', False),
+        ('', False),
+    ],
+)
+def test_the_rate_limit_table_name_holds_nothing_but_a_name(value, valid):
+    from firewallfabrik.platforms.iptables._print_rule import _HASHLIMIT_NAME_RE
+
+    assert bool(_HASHLIMIT_NAME_RE.fullmatch(value)) is valid
