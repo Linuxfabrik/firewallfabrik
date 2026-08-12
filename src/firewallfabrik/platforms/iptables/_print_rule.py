@@ -69,6 +69,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
     has_ip_options,
+    is_valid_traffic_class,
     normalize_hashlimit_mode,
     reject_type_token,
     sanitize_log_prefix,
@@ -1618,6 +1619,18 @@ class PrintRule(PolicyRuleProcessor):
                     'classification rule has no traffic class to set',
                 )
                 return ''
+            if not is_valid_traffic_class(classify_str):
+                # The target reads the class with sscanf("%x:%x") and
+                # answers anything else with `Bad class value`, which stops
+                # the activation script (netfilter
+                # extensions/libxt_CLASSIFY.c).
+                self.compiler.error(
+                    rule,
+                    f'"{classify_str}" is not a traffic class; it takes two '
+                    'hexadecimal numbers separated by a colon, such as 1:11. '
+                    'The rule is left out',
+                )
+                return None
             if not self._target_available(rule, 'CLASSIFY'):
                 return None
             return f' -j CLASSIFY --set-class {classify_str}'
@@ -1643,11 +1656,21 @@ class PrintRule(PolicyRuleProcessor):
             if target == 'CONNMARK':
                 # A bare `-j CONNMARK` is refused by iptables ("No operation
                 # specified"); the operation is set by SplitIfTagAndConnmark.
+                # Falling through to the generic `-j <target>` below would
+                # write exactly that bare form, and would skip the release
+                # gate on the way, so a rule that got here without an
+                # operation is reported instead.
+                if not self._target_available(rule, 'CONNMARK'):
+                    return None
                 connmark_arg = rule.get_option('CONNMARK_arg', '')
-                if connmark_arg:
-                    if not self._target_available(rule, 'CONNMARK'):
-                        return None
-                    return f' -j CONNMARK {connmark_arg}'
+                if not connmark_arg:
+                    self.compiler.error(
+                        rule,
+                        'a rule marking the connection says nothing about what '
+                        'to do with the mark; the rule is left out',
+                    )
+                    return None
+                return f' -j CONNMARK {connmark_arg}'
             # Prefix user-chain targets, but not built-in targets.
             if target not in self._BUILTIN_TARGETS:
                 target = self._prefix_chain(target)

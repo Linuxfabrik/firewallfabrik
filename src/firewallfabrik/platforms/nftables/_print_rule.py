@@ -63,6 +63,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
     get_mac_only_address,
     has_ip_options,
+    is_valid_traffic_class,
     normalize_hashlimit_mode,
     normalize_rate_unit,
     reject_type_token,
@@ -2014,12 +2015,23 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         if rule.get_option('classification', False):
             classify_str = rule.get_option('classify_str', '')
-            if classify_str:
-                parts.append(print_priority_set(classify_str))
-            else:
+            if not classify_str:
                 self.compiler.error(
                     rule, 'classification rule has no traffic class to set'
                 )
+            elif not is_valid_traffic_class(classify_str):
+                # nftables takes a bare number here where the CLASSIFY
+                # target refuses one, and the two then mean different
+                # handles for the same policy, so the rule is reported on
+                # both platforms rather than compiled into a difference.
+                self.compiler.error(
+                    rule,
+                    f'"{classify_str}" is not a traffic class; it takes two '
+                    'hexadecimal numbers separated by a colon, such as 1:11. '
+                    'The rule sets no traffic class',
+                )
+            else:
+                parts.append(print_priority_set(classify_str))
 
         if rule.ipt_target == 'CONNMARK':
             connmark = print_connmark(rule.get_option('CONNMARK_arg', ''))

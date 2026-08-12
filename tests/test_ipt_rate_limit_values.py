@@ -126,3 +126,28 @@ def test_a_connection_limit_groups_by_at_most_the_address_width(ipv6, masklen, r
     else:
         assert f'--connlimit-mask {masklen}' in out
         assert printer.compiler.errors == []
+
+
+@pytest.mark.parametrize(
+    ('value', 'valid'),
+    [
+        ('1:11', True),
+        ('0:0', True),
+        ('ffff:ffff', True),
+        ('1', False),
+        ('1:2:3', False),
+        ('', False),
+        ('root', False),
+    ],
+)
+def test_a_traffic_class_is_two_hexadecimal_numbers(value, valid):
+    """iptables reads the class with sscanf("%x:%x").
+
+    Anything else is `Bad class value`, which stops the activation script -
+    verified against iptables 1.8.11 with `--set-class 1`.  nftables is
+    looser and takes a bare number, but that is a different handle than
+    the same policy would get on iptables, so both report it.
+    """
+    from firewallfabrik.platforms.linux._netfilter import is_valid_traffic_class
+
+    assert is_valid_traffic_class(value) is valid

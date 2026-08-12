@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import re
+
 from firewallfabrik.core.objects import Host, Interface, PhysAddress
 
 # A packet only carries the device it came in on until the routing decision
@@ -135,6 +137,21 @@ _HASHLIMIT_MODE_ALIASES = {
     'sourceip': 'srcip',
     'sourceport': 'srcport',
 }
+
+
+# A traffic class is a tc handle, two hexadecimal numbers separated by a
+# colon.  The CLASSIFY target reads it with sscanf("%x:%x") and answers
+# anything else with `Bad class value` (netfilter
+# extensions/libxt_CLASSIFY.c), which stops the activation script.
+# nftables is looser - it takes a bare number, and the two keywords `root`
+# and `none` - but a bare number means a different handle there than the
+# same policy would get on iptables, so it is worth saying.
+_TRAFFIC_CLASS_RE = re.compile(r'[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}')
+
+
+def is_valid_traffic_class(value: str) -> bool:
+    """Report whether both packet filters read *value* as the same handle."""
+    return bool(_TRAFFIC_CLASS_RE.fullmatch(str(value).strip()))
 
 
 def normalize_hashlimit_mode(mode: str) -> str:
