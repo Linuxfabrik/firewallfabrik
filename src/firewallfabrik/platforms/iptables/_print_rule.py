@@ -71,6 +71,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     has_ip_options,
     is_valid_traffic_class,
     normalize_hashlimit_mode,
+    normalize_rate_unit,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -205,11 +206,20 @@ DSTLIMIT_NOTE = (
 # for 127 characters and keeps the whole string.
 MAX_LOG_PREFIX = 29
 MAX_NFLOG_PREFIX = 63
+# How many seconds one rate unit stands for, keyed by the full name
+# normalize_rate_unit answers with.  iptables takes any prefix of a unit
+# (strncasecmp with the length of what the user wrote,
+# extensions/libxt_limit.c and libxt_hashlimit.c), so a stored "/sec" is a
+# valid rate there and a rate per second - but it is a syntax error to
+# nftables, and reading it as an unknown unit here would compare the rate
+# against the wrong ceiling.  Both printers therefore ask for the full
+# name and write that out, so one policy says the same thing on both
+# platforms.
 LIMIT_UNIT_SECONDS = {
-    '/day': 24 * 60 * 60,
-    '/hour': 60 * 60,
-    '/minute': 60,
-    '/second': 1,
+    'day': 24 * 60 * 60,
+    'hour': 60 * 60,
+    'minute': 60,
+    'second': 1,
 }
 
 
@@ -1389,9 +1399,21 @@ class PrintRule(PolicyRuleProcessor):
                 # 1.3.8 and the command answers "Couldn't load match", which
                 # stops the activation script.
                 self.compiler.warning(rule, DSTLIMIT_NOTE)
+        suffix = str(rule.get_option('hashlimit_suffix', '') or '')
+        unit_name = normalize_rate_unit(suffix)
+        if unit_name is None:
+            self.compiler.error(
+                rule,
+                f'"{suffix.strip()}" is not a unit a rate can be given in; '
+                f'the rule is left out',
+            )
+            return None
+        # An empty suffix means the default, and iptables' default is per
+        # second (extensions/libxt_hashlimit.c, parse_rate), so the rate
+        # goes out bare the way Firewall Builder writes it.
         parts = [
             f'-m {module}',
-            f'--{module} {limit}{rule.get_option("hashlimit_suffix", "") or ""}',
+            f'--{module} {limit}{f"/{unit_name}" if suffix.strip() else ""}',
         ]
 
         def number(key: str) -> int:
@@ -1400,9 +1422,7 @@ class PrintRule(PolicyRuleProcessor):
             except (TypeError, ValueError):
                 return 0
 
-        unit = LIMIT_UNIT_SECONDS.get(
-            str(rule.get_option('hashlimit_suffix', '') or '') or '/second', 1
-        )
+        unit = LIMIT_UNIT_SECONDS[unit_name]
         revision_2 = (
             module == 'hashlimit'
             and version_compare(self.version, HASHLIMIT_REVISION_2_SINCE) >= 0
@@ -1563,13 +1583,21 @@ class PrintRule(PolicyRuleProcessor):
             )
             return None
 
-        limit_suffix = limit_suffix or '/second'
+        unit_name = normalize_rate_unit(str(limit_suffix or ''))
+        if unit_name is None:
+            self.compiler.error(
+                rule,
+                f'"{str(limit_suffix).strip()}" is not a unit a rate can be '
+                f'given in; the rule is left out',
+            )
+            return None
+        limit_suffix = f'/{unit_name}'
         try:
             burst = int(burst)
         except (ValueError, TypeError):
             burst = 0
 
-        max_rate = XT_LIMIT_SCALE * LIMIT_UNIT_SECONDS.get(limit_suffix, 1)
+        max_rate = XT_LIMIT_SCALE * LIMIT_UNIT_SECONDS[unit_name]
         if limit_val > max_rate:
             self.compiler.error(
                 rule,

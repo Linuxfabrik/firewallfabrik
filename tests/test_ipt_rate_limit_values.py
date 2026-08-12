@@ -222,3 +222,42 @@ def test_the_rate_limit_table_name_holds_nothing_but_a_name(value, valid):
 def test_the_rate_limit_ceilings_follow_the_pinned_release(version, options, refused):
     printer = _printer(version=version)
     assert (printer._print_hashlimit(_rule(**options)) is None) is refused
+
+
+@pytest.mark.parametrize(
+    ('suffix', 'wanted'),
+    [
+        # iptables takes any prefix of a unit name, nftables only the full
+        # word, so the compiler settles on the full word for both.
+        ('/second', '--hashlimit 10/second'),
+        ('/sec', '--hashlimit 10/second'),
+        ('/m', '--hashlimit 10/minute'),
+        ('/HOUR', '--hashlimit 10/hour'),
+        ('', '--hashlimit 10 '),
+    ],
+)
+def test_a_rate_unit_is_written_out_in_full(suffix, wanted):
+    printer = _printer()
+    out = printer._print_hashlimit(
+        _rule(hashlimit_value=10, hashlimit_suffix=suffix, hashlimit_name='ok')
+    )
+    assert wanted in out
+
+
+def test_a_rate_unit_netfilter_does_not_know_leaves_the_rule_out():
+    printer = _printer()
+    rule = _rule(hashlimit_value=10, hashlimit_suffix='/fortnight', hashlimit_name='ok')
+    assert printer._print_hashlimit(rule) is None
+    assert any('not a unit' in message for message in printer.compiler.errors)
+
+
+def test_a_short_rate_unit_is_measured_against_the_right_ceiling():
+    # 500000/minute is below the revision-2 ceiling of a million per minute.
+    # Reading "/min" as an unknown unit would compare it against the
+    # per-second ceiling and refuse it.
+    printer = _printer()
+    out = printer._print_hashlimit(
+        _rule(hashlimit_value=500000, hashlimit_suffix='/min', hashlimit_name='ok')
+    )
+    assert out is not None
+    assert '--hashlimit 500000/minute' in out
