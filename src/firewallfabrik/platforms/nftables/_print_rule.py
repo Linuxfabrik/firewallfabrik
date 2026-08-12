@@ -2206,6 +2206,11 @@ def _split_entry(entry: str) -> tuple[str, str]:
     return (comments, rule_line)
 
 
+def _inside_braces(line: str, index: int) -> bool:
+    """Report whether *index* sits inside a ``{ ... }`` group of *line*."""
+    return line.count('{', 0, index) > line.count('}', 0, index)
+
+
 def _parse_addr(
     rule_line: str,
 ) -> tuple[str, str, str, str] | None:
@@ -2222,6 +2227,14 @@ def _parse_addr(
     for pattern, field in ((_SADDR_RE, 'saddr'), (_DADDR_RE, 'daddr')):
         m = pattern.search(rule_line)
         if m:
+            if _inside_braces(rule_line, m.start()):
+                # A rate limit or a connection limit carries its key inside
+                # `{ ... }`, and the key names the same header field:
+                # `add @s { ip saddr ct count over 10 }`.  That is not the
+                # rule's address match, and merging two of these would put
+                # a set inside the braces, which is a syntax error.  The
+                # other side of the rule may still hold a real one.
+                continue
             before_match = rule_line[: m.start()]
             prefix = before_match + m.group(1)
             addr = m.group(4)

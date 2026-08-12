@@ -124,3 +124,27 @@ def test_a_unit_that_names_nothing_is_reported():
         == 'limit rate 300/second'
     )
     assert any('not a unit' in message for message in printer.compiler.errors)
+
+
+@pytest.mark.parametrize(
+    ('line', 'merges_on'),
+    [
+        # An ordinary rule still merges on its address.
+        ('ip saddr 10.0.0.1 tcp dport 22 counter accept', 'saddr'),
+        # The `ip saddr` of a connection limit is the key of its set, not
+        # the rule's address match: merging two of these would write a set
+        # inside the braces, which nftables answers with a syntax error.
+        ('iifname "eth0" add @s { ip saddr ct count over 10 } counter drop', None),
+        ('meter m { ip saddr . th sport limit rate 20/second } counter drop', None),
+        # The other side of such a rule is still a real address match.
+        (
+            'ip daddr 10.0.0.1 add @s { ip saddr ct count over 10 } counter drop',
+            'daddr',
+        ),
+    ],
+)
+def test_the_set_merge_ignores_an_address_inside_a_rate_limit(line, merges_on):
+    from firewallfabrik.platforms.nftables._print_rule import _parse_addr
+
+    parsed = _parse_addr(line)
+    assert (parsed[3] if parsed else None) == merges_on
