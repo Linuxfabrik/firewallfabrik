@@ -794,11 +794,20 @@ class PrintRule_nft(PolicyRuleProcessor):
         plain = [a for a in addrs if not a.startswith('@')]
         if not set_refs:
             return [self._match_clause(keyword, plain, neg)]
-        if plain and not neg:
+        if not neg and (plain or len(set_refs) > 1):
+            # Every clause of one rule has to hold at the same time, which
+            # is what a negated element asks for.  A positive element asks
+            # for any one of its objects, so it needs a rule per clause -
+            # ProcessMultiAddressObjectsInRE splits an address table and a
+            # DNS name out for that reason, but not a dynamic interface,
+            # which renders as a set reference just the same.  Emitting the
+            # clauses side by side asks for a packet whose address is in
+            # two sets at once, which no packet is.
             self.compiler.error(
                 rule,
-                'An address table cannot be combined with other addresses in '
-                'one nftables rule; the rule is left out',
+                'An address table, a DNS name or a dynamic interface cannot '
+                'be combined with another address on the same side of one '
+                'nftables rule; the rule is left out',
             )
             return []
         clauses = [f'{keyword} {neg}{ref}' for ref in set_refs]
