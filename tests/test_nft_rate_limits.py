@@ -46,9 +46,13 @@ class _Compiler:
 
     def __init__(self):
         self.errors = []
+        self.warnings = []
 
     def error(self, rule, message):
         self.errors.append(message)
+
+    def warning(self, rule, message):
+        self.warnings.append(message)
 
 
 def _printer():
@@ -148,3 +152,41 @@ def test_the_set_merge_ignores_an_address_inside_a_rate_limit(line, merges_on):
 
     parsed = _parse_addr(line)
     assert (parsed[3] if parsed else None) == merges_on
+
+
+class _FirewallWithLogLimit:
+    """The bit of the firewall object the log-rate lookup reaches for."""
+
+    @staticmethod
+    def get_option(key):
+        return 5 if key == 'limit_value' else ''
+
+
+class _LoggedRule(_Rule):
+    """A rule the printer would split into a log line and a verdict line."""
+
+    nft_log = True
+
+
+@pytest.mark.parametrize(
+    ('options', 'splits'),
+    [
+        # No rate limit of its own: the pair the iptables compiler emits.
+        ({}, True),
+        # A meter and a connection limit are stateful, so a packet crossing
+        # both lines is counted twice and half the traffic passes.  iptables
+        # does not have the problem: the match sits on the rule that jumps
+        # into the pair's chain and is evaluated once.
+        ({'hashlimit_value': 20}, False),
+        ({'connlimit_value': 5}, False),
+        # A plain rate limit is two different limits on the two lines - the
+        # firewall's on the log line, the rule's on the verdict line - so it
+        # is no reason to keep the rule whole.
+        ({'limit_value': 20}, True),
+    ],
+)
+def test_a_logged_rule_that_keeps_a_rate_stays_on_one_line(options, splits):
+    printer = _printer()
+    printer.compiler.fw = _FirewallWithLogLimit()
+    assert printer._splits_for_log(_LoggedRule(**options)) is splits
+    assert bool(printer.compiler.warnings) is not splits

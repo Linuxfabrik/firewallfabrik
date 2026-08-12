@@ -438,8 +438,17 @@ class PrintRule_nft(PolicyRuleProcessor):
         log messages needs two, because the limit applies to the log message
         and not to the traffic: one rate-limited log rule and one rule that
         carries the verdict, the same pair the iptables compiler emits.
+
+        A rule that carries a rate limit of its own is the exception, and it
+        stays on one line.  nftables has no temporary chain to hang the
+        shared match on, so both lines would carry the connection limit or
+        the meter - and both are stateful: a packet crossing the log line
+        and then the verdict line is counted twice, so half the traffic the
+        rule is meant to stop passes it.  iptables does not have the problem
+        because the match sits on the rule that jumps into the pair's chain
+        and is evaluated once.
         """
-        if rule.nft_log and self._firewall_log_limit() > 0:
+        if self._splits_for_log(rule):
             log_rule = rule.clone()
             log_rule.ipt_target = 'LOG'
             action_rule = rule.clone()
@@ -448,6 +457,38 @@ class PrintRule_nft(PolicyRuleProcessor):
                 log_rule, with_errors=False
             ) + self._build_rule_line(action_rule)
         return self._build_rule_line(rule)
+
+    def _splits_for_log(self, rule: CompRule) -> bool:
+        """Return whether this rule becomes a log line and a verdict line."""
+        if not rule.nft_log or self._firewall_log_limit() <= 0:
+            return False
+        if not self._keeps_a_rate(rule):
+            return True
+        self.compiler.warning(
+            rule,
+            'the rule keeps its own rate limit, so its log messages are '
+            'limited by that and not by the log rate of the firewall; '
+            'splitting the rule would count the limit twice and let half the '
+            'traffic through',
+        )
+        return False
+
+    @staticmethod
+    def _keeps_a_rate(rule: CompRule) -> bool:
+        """Return whether the rule carries a stateful rate limit of its own.
+
+        A connection limit and a rate limit kept per source both hold state
+        that one evaluation consumes, unlike the plain ``limit rate``, whose
+        two halves of a split rule are two different limits anyway (the
+        firewall's for the log line, the rule's for the verdict line).
+        """
+        for key in ('connlimit_value', 'hashlimit_value'):
+            try:
+                if int(rule.get_option(key, 0) or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                continue
+        return False
 
     def _firewall_log_limit(self) -> int:
         """Return the log rate limit configured in the firewall settings."""

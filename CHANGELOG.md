@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a logging rule that keeps its own connection limit or rate limit stays one rule on a firewall that rate-limits its log messages. It was compiled into a log rule and a verdict rule that both carried the limit, and a limit is counted on every rule a packet crosses, so half the traffic the rule was meant to stop passed it.
 * Compiler (nftables): a rule naming two address tables, DNS names or dynamic interfaces on the same side is compiled as one rule per object. They were written into a single rule, which asks for a packet whose address is in two lists at once: no packet is, so a Deny rule stopped nothing and an Accept rule let nothing through. The compiler reported it and left the rule out since the last release; now the rule is compiled.
 * Compiler (iptables): a rate limit whose unit is abbreviated ("/sec", "/min") is compiled the same way nftables compiles it. The abbreviation was passed on unread, so the rate was measured against the wrong ceiling and a legal rate could be refused; a suffix naming no unit at all reached the activation script and stopped it with "bad rate".
 * Compiler (iptables): a rate limit kept per source, destination or port is checked against the ceilings of the release the firewall is pinned to. Releases before 1.6.1 accept a hundredth of the rate and of the burst, so a value between the two ceilings stopped the activation script with "Rate too fast" and left every rule after it uninstalled.
