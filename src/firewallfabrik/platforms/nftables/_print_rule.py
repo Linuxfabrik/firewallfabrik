@@ -1405,6 +1405,22 @@ class PrintRule_nft(PolicyRuleProcessor):
         'dstport': 'dport',
     }
 
+    #: How long a unit of the rate is, which is also how long an entry of
+    #: the hash table lives when the rule names no idle time (netfilter
+    #: extensions/libxt_hashlimit.c, parse_rate fills `mult`).
+    _RATE_UNIT_SECONDS: ClassVar[dict[str, int]] = {
+        'second': 1,
+        'minute': 60,
+        'hour': 60 * 60,
+        'day': 24 * 60 * 60,
+    }
+
+    @staticmethod
+    def _rate_unit(rule: CompRule) -> str:
+        """Return the unit of the rate, without its separator."""
+        suffix = str(rule.get_option('hashlimit_suffix', '') or '').strip()
+        return suffix.lstrip('/').lower() or 'second'
+
     def _print_hashlimit(self, rule: CompRule) -> str:
         """Print the rate limit kept per source, destination or port.
 
@@ -1475,13 +1491,19 @@ class PrintRule_nft(PolicyRuleProcessor):
             expire = int(rule.get_option('hashlimit_expire', 0) or 0)
         except (TypeError, ValueError):
             expire = 0
-        timeout = ''
-        if expire > 0:
-            # iptables counts the idle time of a bucket in milliseconds,
-            # nftables in seconds (libxt_hashlimit.txlate rounds the same
-            # way).
-            timeout = f'timeout {max(1, expire // 1000)}s'
-            parts.append(timeout)
+        if expire <= 0:
+            # An entry always expires on iptables: with no idle time given,
+            # hashlimit_mt_check fills it in from the unit of the rate
+            # (netfilter extensions/libxt_hashlimit.c, `expire = mult *
+            # 1000`), and the kernel refuses a zero
+            # (net/netfilter/xt_hashlimit.c).  A meter without a timeout
+            # never drops an entry, so it grows until the set is full and
+            # the rule stops limiting the sources it has not seen yet.
+            expire = self._RATE_UNIT_SECONDS.get(self._rate_unit(rule), 1) * 1000
+        # iptables counts the idle time of a bucket in milliseconds,
+        # nftables in seconds (libxt_hashlimit.txlate rounds the same way).
+        timeout = f'timeout {max(1, expire // 1000)}s'
+        parts.append(timeout)
 
         parts.append(rate)
 
