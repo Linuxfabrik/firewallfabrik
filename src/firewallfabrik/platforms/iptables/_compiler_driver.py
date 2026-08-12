@@ -922,8 +922,17 @@ class CompilerDriver_ipt(CompilerDriver):
         if self._is_top_ruleset(pol_rs) and auto_pos <= 0:
             auto_buf = io.StringIO()
 
+            # The loop above has already collected what the compiler said,
+            # so whatever the automatic rules report has to be picked up
+            # afterwards or it is lost.
+            seen_errors = len(policy_compiler.get_errors())
+            seen_warnings = len(policy_compiler.get_warnings())
+
             auto_buf.write(policy_compiler.flush_and_set_default_policy())
             auto_buf.write(policy_compiler.print_automatic_rules())
+
+            self.all_errors.extend(policy_compiler.get_errors()[seen_errors:])
+            self.all_warnings.extend(policy_compiler.get_warnings()[seen_warnings:])
 
             auto_text = auto_buf.getvalue()
             if auto_text:

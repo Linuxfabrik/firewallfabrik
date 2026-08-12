@@ -312,7 +312,12 @@ class PrintRule(PolicyRuleProcessor):
                 custom_srv = ''
             command_line += custom_srv
 
-        command_line += self._print_modules(rule, command_line)
+        modules = self._print_modules(rule, command_line)
+        if modules is None:
+            # The reason was reported; a rule without its state match would
+            # apply to every packet, not only to a new connection.
+            return ''
+        command_line += modules
         time_interval = self._print_time_interval(rule)
         if time_interval is None:
             # Without the time match the rule would apply around the clock,
@@ -1131,11 +1136,27 @@ class PrintRule(PolicyRuleProcessor):
         comp_str = ','.join(f.upper() for f in comp_names) if comp_names else 'NONE'
         return f'--tcp-flags {mask_str} {comp_str}'
 
-    def _print_modules(self, rule: CompRule, command_line: str = '') -> str:
-        """Print module matching (state, conntrack, etc.)."""
+    def _print_modules(self, rule: CompRule, command_line: str = '') -> str | None:
+        """Print module matching (state, conntrack, etc.).
+
+        Returns ``None`` when the rule needs a connection state match the
+        pinned binary has not got, so the caller can leave the rule out.
+        ip6tables learnt to match on state in 1.3.5, the release
+        libip6t_state.c first shipped in; an older one answers "Couldn't
+        load match", which stops the activation script with the built-in
+        policies already at DROP.  Writing the rule without the match would
+        widen it to every packet, which is not what it says.
+        """
         stateless = rule.get_option('stateless', False)
         force_state = rule.force_state_check
         if not stateless or force_state:
+            if self.compiler.ipv6_policy and version_compare(self.version, '1.3.5') < 0:
+                self.compiler.error(
+                    rule,
+                    'ip6tables before 1.3.5 cannot match on the connection '
+                    'state; the rule is left out',
+                )
+                return None
             if version_compare(self.version, '1.4.4') >= 0:
                 state_module_option = 'conntrack --ctstate'
             else:

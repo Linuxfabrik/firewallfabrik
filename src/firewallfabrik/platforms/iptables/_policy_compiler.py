@@ -855,6 +855,20 @@ class PolicyCompiler_ipt(PolicyCompiler):
         else:
             state_module_option = 'state --state'
 
+        # ip6tables learnt to match on connection state in 1.3.5, the
+        # release libip6t_state.c first shipped in; before that neither
+        # `state` nor `conntrack` exists for IPv6 and the command answers
+        # "Couldn't load match", which stops the activation script.  The
+        # automatic rules that need one are left out, all of them accepts
+        # or drops of traffic that cannot be recognised without state, so
+        # the firewall ends up stricter rather than more permissive.
+        stateful = not (ipv6 and version_compare(version, '1.3.5') < 0)
+        if not stateful:
+            self.warning(
+                'ip6tables before 1.3.5 has no connection state match; the '
+                'automatic rules that need one are left out'
+            )
+
         conf = Configlet('linux24', 'automatic_rules')
         conf.collapse_empty_strings(True)
 
@@ -889,7 +903,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         conf.set_variable(
             'accept_established',
-            1 if self.fw.get_option('accept_established') else 0,
+            1 if (stateful and self.fw.get_option('accept_established')) else 0,
         )
 
         ipv4_fwd = self.fw.get_option('linux24_ip_forward')
@@ -902,7 +916,9 @@ class PolicyCompiler_ipt(PolicyCompiler):
         )
         conf.set_variable(
             'drop_new_tcp_with_no_syn',
-            1 if not self.fw.get_option('accept_new_tcp_with_no_syn') else 0,
+            1
+            if (stateful and not self.fw.get_option('accept_new_tcp_with_no_syn'))
+            else 0,
         )
         conf.set_variable(
             'add_rules_for_ipv6_neighbor_discovery',
@@ -911,7 +927,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             else 0,
         )
 
-        drop_invalid = self.fw.get_option('drop_invalid')
+        drop_invalid = stateful and self.fw.get_option('drop_invalid')
         log_invalid = self.fw.get_option('log_invalid')
         conf.set_variable(
             'drop_invalid', 1 if (drop_invalid and not log_invalid) else 0
