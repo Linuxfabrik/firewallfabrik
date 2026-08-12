@@ -3690,8 +3690,15 @@ class Optimize1(PolicyRuleProcessor):
         r.set_option('tagging', False)
         self.tmp_queue.append(r)
 
-        # Original rule: moved to temp chain, made stateless
+        # Original rule: moved to temp chain, made stateless.  The rate
+        # limits stay on the jump rule alone: a packet passes both rules, so
+        # a limit left on this one is a second bucket the same packet has to
+        # pay, which halves the rate the editor shows (C++
+        # optimizeForRuleElement clears all three here).
         rule.set_option('stateless', True)
+        rule.set_option('limit_value', -1)
+        rule.set_option('connlimit_value', -1)
+        rule.set_option('hashlimit_value', -1)
         rule.force_state_check = False
         rule.ipt_chain = new_chain
         rule.upstream_rule_chain = this_chain
