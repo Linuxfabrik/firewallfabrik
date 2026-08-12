@@ -72,18 +72,34 @@ DEFAULT_IPTABLES_VERSION = '1.8'
 # release number in this column would then rank above it and take the
 # match away from the one target that certainly has it.
 #
-# tests/test_ipt_version_gates.py re-derives the IPv6 column of every row
-# from that history, so a new row is checked rather than trusted.
-# connlimit:  libipt_connlimit.c v1.2.1,  libip6t_connlimit.c v1.4.0
+# tests/test_ipt_version_gates.py re-derives every row from that history,
+# so a new row is checked rather than trusted.
 # hashlimit:  libipt_hashlimit.c v1.3.0,  libip6t_hashlimit.c v1.3.7
+#
+# connlimit is the row where the file is not the answer.  Its
+# libipt_connlimit.c goes back to v1.2.1, but up to and including v1.2.8
+# the match is called ``iplimit`` and spells its options
+# ``--iplimit-above`` / ``--iplimit-mask``; the connlimit spelling arrives
+# in v1.2.9.  What a gate has to ask is when the option first shipped, not
+# when the file did.
 MATCH_FIRST_RELEASE = {
-    'connlimit': ('1.2.1', '1.4.0'),
+    'connlimit': ('1.2.9', '1.4.0'),
     'dscp': ('1.2.6', '1.4.0'),
     'hashlimit': ('1.3.0', '1.3.7'),
     'iprange': ('1.2.9', '1.4.1'),
     'set': ('1.3.0', '1.4.9'),
     'time': ('0', '1.4.0'),
     'tos': ('0', '1.4.1'),
+}
+
+# A match can also disappear again.  The 1.3.8 release dropped the whole
+# set of extensions netfilter considered unmaintained, and the ones that
+# came back did so as a family-neutral libxt_ file in 1.4.0, so the
+# releases in between have no such match in either family.  Read as
+# "absent from the first, present again from the second".
+MATCH_ABSENT_BETWEEN = {
+    'connlimit': ('1.3.8', '1.4.0'),
+    'time': ('1.3.8', '1.4.0'),
 }
 
 
@@ -101,10 +117,23 @@ def match_available(compiler, rule, version: str, match: str) -> bool:
     no gate.
     """
     ipv6 = bool(getattr(compiler, 'ipv6_policy', False))
+    tool = 'ip6tables' if ipv6 else 'iptables'
+
+    gone, back = MATCH_ABSENT_BETWEEN.get(match, ('', ''))
+    if (
+        gone
+        and version_compare(version, gone) >= 0
+        and version_compare(version, back) < 0
+    ):
+        compiler.error(
+            rule,
+            f'{tool} {gone} up to {back} has no "{match}" match; the rule is left out',
+        )
+        return False
+
     first = MATCH_FIRST_RELEASE[match][ipv6]
     if version_compare(version, first) >= 0:
         return True
-    tool = 'ip6tables' if ipv6 else 'iptables'
     compiler.error(
         rule,
         f'{tool} before {first} has no "{match}" match; the rule is left out',

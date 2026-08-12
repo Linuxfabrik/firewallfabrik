@@ -31,6 +31,7 @@ import subprocess  # nosec B404
 import pytest
 
 from firewallfabrik.platforms.iptables._utils import (
+    MATCH_ABSENT_BETWEEN,
     MATCH_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
 )
@@ -58,6 +59,67 @@ _TARGET_FILES = {
 }
 
 _SOURCE = os.environ.get('FWF_IPTABLES_SOURCE', '')
+
+
+def _releases(repo: pathlib.Path) -> list[str]:
+    """Return every release tag of the checkout, oldest first."""
+    tags = subprocess.run(  # nosec B603 B607
+        ['git', '-C', str(repo), 'tag'],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    return sorted(
+        (t for t in tags if t.startswith('v1.') and t[1:].replace('.', '').isdigit()),
+        key=lambda t: [int(p) for p in t[1:].split('.')],
+    )
+
+
+def _offers_match(repo: pathlib.Path, tag: str, match: str, ipv6: bool) -> bool:
+    """Report whether *tag* ships an extension registering *match* by name.
+
+    Asking for the name rather than for the file is what makes the answer
+    right for a match that was renamed: libipt_connlimit.c goes back to
+    v1.2.1, but up to v1.2.8 the extension inside it registers itself as
+    ``iplimit`` and spells its options ``--iplimit-*``.
+    """
+    files = subprocess.run(  # nosec B603 B607
+        [
+            'git',
+            '-C',
+            str(repo),
+            'ls-tree',
+            '-r',
+            '--name-only',
+            tag,
+            '--',
+            'extensions/',
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    prefix = 'libip6t_' if ipv6 else 'libipt_'
+    candidates = [
+        name
+        for name in files
+        if name.endswith(f'{match}.c')
+        and (
+            name.startswith(f'extensions/{prefix}')
+            or name.startswith('extensions/libxt_')
+        )
+    ]
+    for name in candidates:
+        # Not text=True: an old extension file may carry a latin-1 author
+        # name, which is not the compiler's problem.
+        blob = subprocess.run(  # nosec B603 B607
+            ['git', '-C', str(repo), 'show', f'{tag}:{name}'],
+            capture_output=True,
+            check=True,
+        ).stdout
+        if f'"{match}"'.encode() in blob:
+            return True
+    return False
 
 
 def _first_release(repo: pathlib.Path, extension: str) -> str:
@@ -104,20 +166,28 @@ def test_ipv6_never_arrives_before_ipv4():
 
 @pytest.mark.skipif(not _SOURCE, reason='set FWF_IPTABLES_SOURCE to a git clone')
 @pytest.mark.parametrize('match', sorted(_EXTENSION_FILES))
-def test_first_release_matches_the_netfilter_history(match):
+def test_the_gate_names_the_release_the_match_first_shipped_in(match):
+    """The gate has to follow the match, not the file it lives in."""
     repo = pathlib.Path(_SOURCE)
-    _ipv4_file, ipv6_file = _EXTENSION_FILES[match]
-    expected_v6 = _first_release(repo, ipv6_file)
-    assert MATCH_FIRST_RELEASE[match][1] == expected_v6, (
-        f'{match} reached ip6tables in {expected_v6}'
-    )
-    # The IPv4 column is either a real release or "0", which stands for a
-    # match older than every target Firewall Builder can express. Either
-    # way it must not be later than the merged file.
-    assert MATCH_FIRST_RELEASE[match][0] <= expected_v6
-    ipv4_file = _EXTENSION_FILES[match][0]
-    if MATCH_FIRST_RELEASE[match][0] != '0':
-        assert MATCH_FIRST_RELEASE[match][0] == _first_release(repo, ipv4_file)
+    releases = _releases(repo)
+    for ipv6 in (False, True):
+        offering = [tag for tag in releases if _offers_match(repo, tag, match, ipv6)]
+        assert offering, f'{match} is in no release for ipv6={ipv6}'
+        gate = MATCH_FIRST_RELEASE[match][ipv6]
+        if gate != '0':
+            # A gate of "0" stands for a match older than every target
+            # Firewall Builder can express, so there is nothing to compare.
+            assert gate == offering[0][1:], (
+                f'{match} (ipv6={ipv6}) first ships in {offering[0]}'
+            )
+        # Every release from the first one on has to offer it, unless the
+        # table says the match went away again for a while.
+        gone, back = MATCH_ABSENT_BETWEEN.get(match, ('', ''))
+        for tag in releases[releases.index(offering[0]) :]:
+            absent = bool(gone) and gone <= tag[1:] < back
+            assert _offers_match(repo, tag, match, ipv6) is not absent, (
+                f'{match} (ipv6={ipv6}) at {tag} contradicts MATCH_ABSENT_BETWEEN'
+            )
 
 
 def test_target_table_covers_every_target_the_compiler_gates():
