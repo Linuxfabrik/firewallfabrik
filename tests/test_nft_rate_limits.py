@@ -41,6 +41,22 @@ class _Rule:
         return self._options.get(key, default)
 
 
+class _Compiler:
+    """The bit of PolicyCompiler_nft the rate printer reaches for."""
+
+    def __init__(self):
+        self.errors = []
+
+    def error(self, rule, message):
+        self.errors.append(message)
+
+
+def _printer():
+    printer = PrintRule_nft(name='PrintRule_nft')
+    printer.compiler = _Compiler()
+    return printer
+
+
 @pytest.mark.parametrize(
     ('options', 'expected'),
     [
@@ -55,12 +71,12 @@ class _Rule:
     ],
 )
 def test_hashlimit_rate_is_a_ceiling(options, expected):
-    assert PrintRule_nft._hashlimit_rate(None, _Rule(**options), 300) == expected
+    assert _printer()._hashlimit_rate(_Rule(**options), 300) == expected
 
 
 def test_hashlimit_rate_never_says_over():
     """`over` inverts the match and would let exactly the excess through."""
-    rate = PrintRule_nft._hashlimit_rate(None, _Rule(hashlimit_burst=2), 1)
+    rate = _printer()._hashlimit_rate(_Rule(hashlimit_burst=2), 1)
     assert 'over' not in rate
 
 
@@ -79,3 +95,32 @@ def test_the_v2_1_spellings_of_the_key_are_normalised():
     assert normalize_hashlimit_mode(' DstIP ') == 'dstip'
     # Anything already spelled the way netfilter wants it is left alone.
     assert normalize_hashlimit_mode('srcport') == 'srcport'
+
+
+@pytest.mark.parametrize(
+    ('suffix', 'expected'),
+    [
+        # iptables takes any prefix of a unit name, nftables the full word
+        # alone, so what an imported file carries has to be written out.
+        ('/sec', 'limit rate 300/second'),
+        ('/min', 'limit rate 300/minute'),
+        ('/h', 'limit rate 300/hour'),
+        ('/d', 'limit rate 300/day'),
+        ('/second', 'limit rate 300/second'),
+        ('', 'limit rate 300/second'),
+    ],
+)
+def test_a_short_rate_unit_is_written_out(suffix, expected):
+    printer = _printer()
+    assert printer._hashlimit_rate(_Rule(hashlimit_suffix=suffix), 300) == expected
+    assert printer.compiler.errors == []
+
+
+def test_a_unit_that_names_nothing_is_reported():
+    """Passing it on would be a syntax error and cost the whole ruleset."""
+    printer = _printer()
+    assert (
+        printer._hashlimit_rate(_Rule(hashlimit_suffix='/fortnight'), 300)
+        == 'limit rate 300/second'
+    )
+    assert any('not a unit' in message for message in printer.compiler.errors)

@@ -64,6 +64,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     get_mac_only_address,
     has_ip_options,
     normalize_hashlimit_mode,
+    normalize_rate_unit,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -1416,11 +1417,25 @@ class PrintRule_nft(PolicyRuleProcessor):
         'day': 24 * 60 * 60,
     }
 
-    @staticmethod
-    def _rate_unit(rule: CompRule) -> str:
-        """Return the unit of the rate, without its separator."""
-        suffix = str(rule.get_option('hashlimit_suffix', '') or '').strip()
-        return suffix.lstrip('/').lower() or 'second'
+    def _rate_unit(self, rule: CompRule) -> str:
+        """Return the unit of the rate as nftables spells it.
+
+        iptables takes any prefix of a unit name, so an imported file can
+        carry `/sec` or `/min`; nftables knows the full word alone and
+        answers anything else with a syntax error, which costs the whole
+        ruleset.  A suffix that names no unit at all is reported and the
+        rate falls back to the default both tools have.
+        """
+        suffix = str(rule.get_option('hashlimit_suffix', '') or '')
+        unit = normalize_rate_unit(suffix)
+        if unit is None:
+            self.compiler.error(
+                rule,
+                f'"{suffix.strip()}" is not a unit a rate can be given in; '
+                'the rate limit counts per second',
+            )
+            return 'second'
+        return unit
 
     def _print_hashlimit(self, rule: CompRule) -> str:
         """Print the rate limit kept per source, destination or port.
@@ -1552,8 +1567,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         The gold shows both mappings side by side
         (extensions/libxt_hashlimit.txlate).
         """
-        suffix = str(rule.get_option('hashlimit_suffix', '') or '') or '/second'
-        rate = f'limit rate {limit}{suffix}'
+        unit = self._rate_unit(rule)
+        rate = f'limit rate {limit}/{unit}'
         try:
             burst = int(rule.get_option('hashlimit_burst', 0) or 0)
         except (TypeError, ValueError):
@@ -1601,8 +1616,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         ``limit rate N/unit burst B packets`` form (see the netfilter
         ``libxt_limit.txlate`` gold output), so a rule that carries a rate
         limit produces the same effect on both backends. The stored
-        ``limit_suffix`` (``/second``, ``/minute``, ``/hour``, ``/day``) is
-        already the spelling nftables expects.
+        iptables takes any prefix of a unit name, so a stored ``/sec`` is
+        valid there and a syntax error here, which costs the whole ruleset;
+        the suffix is therefore written out to the full word nftables
+        knows.
         """
         negated = False
         if rule.ipt_target in LOG_TARGETS:
@@ -1625,7 +1642,15 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit_val <= 0:
             return ''
 
-        limit_suffix = limit_suffix or '/second'
+        unit = normalize_rate_unit(str(limit_suffix or ''))
+        if unit is None:
+            self.compiler.error(
+                rule,
+                f'"{str(limit_suffix).strip()}" is not a unit a rate can be '
+                'given in; the rate limit counts per second',
+            )
+            unit = 'second'
+        limit_suffix = f'/{unit}'
         try:
             burst = int(burst)
         except (ValueError, TypeError):

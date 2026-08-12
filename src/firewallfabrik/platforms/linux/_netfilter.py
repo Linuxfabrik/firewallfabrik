@@ -143,6 +143,31 @@ def normalize_hashlimit_mode(mode: str) -> str:
     return _HASHLIMIT_MODE_ALIASES.get(mode, mode)
 
 
+# The units a rate can be given in, in the order iptables tries them.  It
+# takes any prefix of a name (extensions/libxt_limit.c and
+# libxt_hashlimit.c both call strncasecmp with the length of what the user
+# wrote), so `/sec`, `/m` and `/h` are all valid there.  nftables takes the
+# full word and nothing else (src/parser_bison.y, time_unit), and answers a
+# short one with a syntax error that costs the whole ruleset.
+_RATE_UNITS = ('second', 'minute', 'hour', 'day')
+
+
+def normalize_rate_unit(suffix: str) -> str | None:
+    """Return the full unit name behind a rate suffix, or ``None``.
+
+    ``None`` means the suffix names no unit netfilter knows, which is
+    something the caller has to report rather than pass on.  An empty
+    suffix is a rate per second, the default on both platforms.
+    """
+    unit = suffix.strip().lstrip('/').lower()
+    if not unit:
+        return 'second'
+    for known in _RATE_UNITS:
+        if known.startswith(unit):
+            return known
+    return None
+
+
 # Characters the nftables preprocessor and the shell both read as syntax.
 # See sanitize_log_prefix below for why none of them can be escaped.
 _LOG_PREFIX_DROPPED = frozenset('$`\\')
