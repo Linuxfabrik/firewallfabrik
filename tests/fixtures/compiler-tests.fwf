@@ -4751,6 +4751,7 @@ libraries:
                     options:
                       disabled: false
                       group: ''
+                      ipt_nat_random: true
                     action: 'Translate'
                     itf_inb:
                       - 'Library:Standard/Network:Any'

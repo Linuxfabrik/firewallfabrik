@@ -503,9 +503,9 @@ script_body() {
  #
  echo "Rule 3 (NAT)"
  #
- $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 10.0.0.1 --dport 80 -j REDIRECT --to-ports 8080
- $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.1 --dport 80 -j REDIRECT --to-ports 8080
- $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 198.51.100.1 --dport 80 -j REDIRECT --to-ports 8080
+ $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 10.0.0.1 --dport 80 -j REDIRECT --to-ports 8080 --random
+ $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 192.168.1.1 --dport 80 -j REDIRECT --to-ports 8080 --random
+ $IPTABLES -w 5 -t nat -A PREROUTING -p tcp -m tcp -d 198.51.100.1 --dport 80 -j REDIRECT --to-ports 8080 --random
  #
  # Rule 4 (NAT)
  #

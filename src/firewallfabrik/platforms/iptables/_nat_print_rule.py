@@ -559,10 +559,16 @@ class NATPrintRule(NATRuleProcessor):
             return None
 
         if rt == NATRuleType.Redirect and target == 'REDIRECT':
+            parts = []
             ports = self._print_dnat_ports(tsrv) if tsrv else ''
             if ports:
-                return f'--to-ports {ports}'
-            return ''
+                parts.append(f'--to-ports {ports}')
+            # REDIRECT_opts carries `random` like the other NAT targets, and
+            # unlike them no `persistent` (netfilter extensions/libxt_NAT.c),
+            # which is the same shape MASQUERADE has.  fwbuilder drops the
+            # option here; keeping it is what the rule asks for.
+            parts.extend(self._print_nat_placement(rule, masquerade=True))
+            return ' '.join(parts)
 
         return ''
 

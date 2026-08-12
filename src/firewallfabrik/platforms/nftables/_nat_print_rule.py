@@ -750,10 +750,15 @@ class NATPrintRule_nft(NATRuleProcessor):
             return ''
 
         if rt == NATRuleType.Redirect:
+            # `redirect` takes the same trailing flags as the other NAT
+            # statements (netfilter nftables src/parser_bison.y,
+            # redir_stmt_arg), and REDIRECT_opts carries `random` on the
+            # iptables side, so the option is not lost on either platform.
+            flags = self._nat_flags(rule)
             ports = self._print_translated_ports(tsrv, src=False)
             if ports:
-                return f'redirect to :{ports}'
-            return 'redirect'
+                return f'redirect to :{ports}{flags}'
+            return f'redirect{flags}'
 
         if rt == NATRuleType.SDNAT:
             self.compiler.error(

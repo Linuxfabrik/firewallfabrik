@@ -305,9 +305,9 @@ table ip fwf_nat {
         #
         # Rule 3 (NAT)
         #
-        ip daddr 10.0.0.1 tcp dport 80 counter redirect to :8080
-        ip daddr 192.168.1.1 tcp dport 80 counter redirect to :8080
-        ip daddr 198.51.100.1 tcp dport 80 counter redirect to :8080
+        ip daddr 10.0.0.1 tcp dport 80 counter redirect to :8080 random
+        ip daddr 192.168.1.1 tcp dport 80 counter redirect to :8080 random
+        ip daddr 198.51.100.1 tcp dport 80 counter redirect to :8080 random
         #
         # Rule 9 (NAT)
         #
