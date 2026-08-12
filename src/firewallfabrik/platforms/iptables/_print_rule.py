@@ -324,7 +324,13 @@ class PrintRule(PolicyRuleProcessor):
             # which is wider than what it says. The reason was reported.
             return ''
         command_line += time_interval
-        command_line += self._print_limit(rule)
+        limit = self._print_limit(rule)
+        if limit is None:
+            # A rate limit is a condition, and a rule that keeps its action
+            # but loses the condition does the opposite of what it says.
+            # The reason was reported.
+            return ''
+        command_line += limit
         connlimit = self._print_connlimit(rule)
         if connlimit is None:
             # The release has no such match and the reason was reported.
@@ -1488,12 +1494,19 @@ class PrintRule(PolicyRuleProcessor):
                 'keeps the settings of the first one for both',
             )
 
-    def _print_limit(self, rule: CompRule) -> str:
-        """Print ``-m limit`` rate limiting.
+    def _print_limit(self, rule: CompRule) -> str | None:
+        """Print ``-m limit`` rate limiting, or None when it cannot be written.
 
         fwbuilder applies the limit configured in the firewall settings to
         log rules and the limit configured on the rule itself to every
         other rule (PolicyCompiler_PrintRule.cpp:271).
+
+        ``None`` means the caller has to leave the rule out.  A rate limit
+        is a condition like any other: a rule that keeps its action but
+        loses the condition does the opposite of what it says - "drop above
+        20 per second" becomes "drop", "accept up to 20 per second" becomes
+        "accept everything".  The connlimit and hashlimit blocks next door
+        have answered it that way since they were written.
         """
         negated = False
         if rule.ipt_target in LOG_TARGETS:
@@ -1525,9 +1538,9 @@ class PrintRule(PolicyRuleProcessor):
             self.compiler.error(
                 rule,
                 'Rate limit is negated, which the iptables limit match cannot '
-                'express; the rule is left without it',
+                'express; the rule is left out',
             )
-            return ''
+            return None
 
         limit_suffix = limit_suffix or '/second'
         try:
@@ -1541,16 +1554,16 @@ class PrintRule(PolicyRuleProcessor):
                 rule,
                 f'Rate limit {limit_val}{limit_suffix} is faster than iptables '
                 f'can express; the limit match tops out at {max_rate}'
-                f'{limit_suffix}',
+                f'{limit_suffix}; the rule is left out',
             )
-            return ''
+            return None
         if burst > MAX_LIMIT_BURST:
             self.compiler.error(
                 rule,
                 f'Rate limit burst {burst} is out of range; iptables accepts '
-                f'0 to {MAX_LIMIT_BURST}',
+                f'0 to {MAX_LIMIT_BURST}; the rule is left out',
             )
-            return ''
+            return None
 
         result = f'-m limit --limit {limit_val}{limit_suffix}'
         if burst > 0:
