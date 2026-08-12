@@ -27,7 +27,7 @@ from firewallfabrik.compiler._combined_address import (
     CombinedAddress,
     host_matches_by_mac,
 )
-from firewallfabrik.compiler._comp_rule import CompRule, expand_group
+from firewallfabrik.compiler._comp_rule import CompRule
 from firewallfabrik.compiler._rule_processor import (
     BasicRuleProcessor,
     NATRuleProcessor,
@@ -201,6 +201,14 @@ class ResolveMultiAddress(BasicRuleProcessor):
     - **Compile-time** MultiAddress (DNSName, AddressTable): resolved
       and replaced with the resulting Address objects in the slot.
     - **Runtime** MultiAddress: kept as-is.
+
+    An object that resolves to *nothing* - an address table whose file is
+    empty or unreadable, a DNS name with no record for the family being
+    compiled - stays in the element.  Replacing it with nothing would leave
+    the element empty, and an empty element is "any" everywhere downstream:
+    a rule written for the addresses in that file would match every address
+    there is.  ``EmptyGroupsInRE`` runs next and answers for it the way
+    fwbuilder does, naming the object.
     """
 
     def process_next(self) -> bool:
@@ -216,9 +224,11 @@ class ResolveMultiAddress(BasicRuleProcessor):
             changed = False
             for obj in elements:
                 if isinstance(obj, MultiAddress) and not _is_runtime(obj):
-                    new_elements.extend(
-                        self.compiler._resolve_multi_address(obj),
-                    )
+                    resolved = self.compiler._resolve_multi_address(obj)
+                    if not resolved:
+                        new_elements.append(obj)
+                        continue
+                    new_elements.extend(resolved)
                     changed = True
                 else:
                     new_elements.append(obj)
@@ -254,20 +264,35 @@ class EmptyGroupsInRE(BasicRuleProcessor):
         super().__init__(name)
         self._slot = slot
 
-    @staticmethod
-    def _count_children(session, obj) -> int:
+    @classmethod
+    def _count_children(cls, compiler, obj, _seen: set | None = None) -> int:
         """Count effective leaf members of a group recursively.
 
-        Matches C++ ``Compiler::emptyGroupsInRE::countChildren``.
-        Runtime MultiAddress objects count as 1 (their content is
-        unknown at compile time).
+        Matches C++ ``Compiler::emptyGroupsInRE::countChildren``, including
+        its recursion: a group counts what its members count, never itself,
+        because a group of empty groups is empty too.
+
+        A run-time MultiAddress counts as 1 - what is in it is not known
+        until the script runs.  A compile-time one counts what it resolved
+        to: an address table is a group whose members live in a file rather
+        than in the data file, so asking the database how many children it
+        has answers zero for every one of them.
         """
         if not isinstance(obj, Group):
             return 1
-        if isinstance(obj, MultiAddress) and _is_runtime(obj):
-            return 1
-        members = expand_group(session, obj)
-        return len(members)
+        if isinstance(obj, MultiAddress):
+            if _is_runtime(obj):
+                return 1
+            return len(compiler._resolve_multi_address(obj))
+        if _seen is None:
+            _seen = set()
+        if obj.id in _seen:
+            return 0
+        _seen.add(obj.id)
+        return sum(
+            cls._count_children(compiler, member, _seen)
+            for member in _get_group_members(compiler.session, obj)
+        )
 
     def process_next(self) -> bool:
         rule = self.prev_processor.get_next_rule()
@@ -287,10 +312,7 @@ class EmptyGroupsInRE(BasicRuleProcessor):
         for obj in elements:
             if isinstance(obj, MultiAddress) and _is_runtime(obj):
                 continue
-            if (
-                isinstance(obj, Group)
-                and self._count_children(self.compiler.session, obj) == 0
-            ):
+            if isinstance(obj, Group) and self._count_children(self.compiler, obj) == 0:
                 empty_groups.append(obj)
 
         if not empty_groups:

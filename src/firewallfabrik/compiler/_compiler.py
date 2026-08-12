@@ -158,6 +158,7 @@ class Compiler(BaseCompiler):
 
         self._current_rule_label: str = ''
         self._rule_counter: int = 0
+        self._multi_address_cache: dict = {}
 
     def set_source_ruleset(self, rs: RuleSet) -> None:
         self.source_ruleset = rs
@@ -273,27 +274,57 @@ class Compiler(BaseCompiler):
         """Expand all groups in a rule element slot, replacing group objects
         with their leaf members.
 
-        Compile-time MultiAddress objects (DNSName, AddressTable) have
-        already been resolved by the ``ResolveMultiAddress`` processor.
-        Runtime MultiAddress objects are kept as-is.
+        A compile-time MultiAddress (DNSName, AddressTable) named directly
+        in the element has already been resolved by ``ResolveMultiAddress``,
+        but one that sits *inside* a group only becomes visible here, so it
+        is resolved on the way out.  fwbuilder has no such second place
+        because it resolves every one of them in a preprocessor pass over
+        the whole object tree before any rule is looked at
+        (``Preprocessor::convertObject``).  A run-time MultiAddress is kept
+        as-is: what is in it is only known when the script runs.
 
         After expansion, elements are sorted by name to match C++
         Compiler::expandGroupsInRuleElement() which uses
         FWObjectNameCmpPredicate.
         """
         elements = getattr(comp_rule, slot)
+        if not elements:
+            return
         new_elements = []
+        emptied_by = []
         for obj in elements:
             if isinstance(obj, MultiAddress):
-                # Runtime MultiAddress — keep as-is
-                new_elements.append(obj)
-            elif isinstance(obj, Group):
-                members = expand_group(self.session, obj)
+                members = self._expand_multi_address_member(obj, emptied_by)
                 new_elements.extend(members)
+            elif isinstance(obj, Group):
+                for member in expand_group(self.session, obj):
+                    if isinstance(member, MultiAddress):
+                        new_elements.extend(
+                            self._expand_multi_address_member(member, emptied_by),
+                        )
+                    else:
+                        new_elements.append(member)
             else:
                 new_elements.append(obj)
+        if not new_elements and emptied_by:
+            # An element nothing is left in reads as "any" everywhere
+            # downstream, so a rule written for the addresses behind these
+            # objects would match every address there is.
+            comp_rule.has_empty_re = True
+            comp_rule.empty_re_reason = (
+                f'"{emptied_by[0]}" resolves to no address at all'
+            )
         new_elements.sort(key=lambda obj: getattr(obj, 'name', ''))
         setattr(comp_rule, slot, new_elements)
+
+    def _expand_multi_address_member(self, obj: MultiAddress, emptied_by: list) -> list:
+        """Return what one MultiAddress contributes to an expanded element."""
+        if (obj.data or {}).get('run_time'):
+            return [obj]
+        resolved = self._resolve_multi_address(obj)
+        if not resolved:
+            emptied_by.append(obj.name)
+        return resolved
 
     def _resolve_multi_address(self, obj: MultiAddress) -> list:
         """Resolve a compile-time MultiAddress to Address objects.
@@ -304,20 +335,32 @@ class Compiler(BaseCompiler):
         Falls back to obj.addresses if already populated.
 
         Matches C++ Preprocessor::convertObject() + MultiAddress::loadFromSource().
+
+        The answer is kept for the rest of the compile: fwbuilder resolves
+        each object once in a preprocessor pass, and a DNS lookup or a file
+        read that happens once per rule would both cost more and be able to
+        answer differently from one rule to the next.
         """
         # If the object already has child addresses (e.g. previously resolved),
         # return them directly.
         if obj.addresses:
             return list(obj.addresses)
 
-        if isinstance(obj, DynamicGroup):
-            return self._resolve_dynamic_group(obj)
-        if isinstance(obj, DNSName):
-            return self._resolve_dns_name(obj)
-        if isinstance(obj, AddressTable):
-            return self._load_address_table(obj)
+        cached = self._multi_address_cache.get(obj.id)
+        if cached is not None:
+            return list(cached)
 
-        return []
+        if isinstance(obj, DynamicGroup):
+            resolved = self._resolve_dynamic_group(obj)
+        elif isinstance(obj, DNSName):
+            resolved = self._resolve_dns_name(obj)
+        elif isinstance(obj, AddressTable):
+            resolved = self._load_address_table(obj)
+        else:
+            resolved = []
+
+        self._multi_address_cache[obj.id] = resolved
+        return list(resolved)
 
     def _resolve_dynamic_group(self, obj: DynamicGroup) -> list:
         """Resolve a DynamicGroup by evaluating its criteria against the DB.

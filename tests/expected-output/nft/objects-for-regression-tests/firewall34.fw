@@ -10,6 +10,8 @@
 #
 #  testing AddressTable object
 #
+# firewall34:Policy:12: warning: Empty group or address table object 'empty table'
+# firewall34:Policy:12: warning: After removal of all empty groups rule element dst becomes 'any'; dropping rule 12 (global) because option 'Ignore rules with empty groups' is in effect
 
 FWBDEBUG=""
 
@@ -376,12 +378,6 @@ table inet fwf_filter {
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
         #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
-        #
         # Rule Policy_ipv6 1 (global)
         #
         meta nfproto ipv6 counter log prefix "RULE 1 -- DENY on global " level debug drop
@@ -401,6 +397,7 @@ table inet fwf_filter {
         #
         # Rule 2 (global)
         #
+        ip daddr @block_these counter log prefix "RULE 2 -- DENY on global " level debug drop
         ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
@@ -432,12 +429,6 @@ table inet fwf_filter {
         # Rule 11 (global)
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
-        #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #
@@ -480,6 +471,7 @@ table inet fwf_filter {
         #
         # Rule 2 (global)
         #
+        ip daddr @block_these counter log prefix "RULE 2 -- DENY on global " level debug drop
         ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
@@ -507,12 +499,6 @@ table inet fwf_filter {
         # Rule 11 (global)
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY on global " level debug drop
-        #
-        # Rule 12 (global)
-        #
-        # using address table
-        # object with no addresses
-        meta nfproto ipv4 counter log prefix "RULE 12 -- DENY on global " level debug drop
         #
         # Rule 13 (global)
         #

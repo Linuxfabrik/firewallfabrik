@@ -389,6 +389,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        ip daddr @block_these counter log prefix "RULE 2 -- DENY on global " level debug drop
         ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)
@@ -436,6 +437,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
+        ip daddr @block_these counter log prefix "RULE 2 -- DENY on global " level debug drop
         ip daddr 61.150.47.112 counter log prefix "RULE 2 -- DENY on global " level debug drop
         #
         # Rule 3 (global)

@@ -10,21 +10,18 @@
 #
 #  Policy is configured as dual address family. Using iptables-restore. Firewall is NOT part of any
 #
-# Rule 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
-# Rule 7 (global): Empty group or address table object 'DNS objects' is used in the rule but option 'Ignore rules with empty groups' is off
+# Rule 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
+# Rule 7 (global): Could not resolve any destination addresses
+# DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
+# DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
+# Rule 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
+# Rule 7 (global): Could not resolve any destination addresses
 # Rule 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule '2 (global)' shadows rule '3 (global)' below it
 # Rule '4 (global)' shadows rule '6 (global)' below it
-# Rule '7 (global)' shadows rule '8 (global)' below it
-# Rule '7 (global)' shadows rule '9 (global)' below it
-# Rule '7 (global)' shadows rule '10 (global)' below it
-# Rule '7 (global)' shadows rule '11 (global)' below it
 # Rule '2 (global)' shadows rule '3 (global)' below it
-# Rule '7 (global)' shadows rule '8 (global)' below it
-# Rule '7 (global)' shadows rule '9 (global)' below it
-# Rule '7 (global)' shadows rule '10 (global)' below it
-# Rule '7 (global)' shadows rule '11 (global)' below it
+# firewall-ipv6-4-1:Policy:8: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
+# firewall-ipv6-4-1:Policy:8: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
 
 FWBDEBUG=""
 
@@ -258,6 +255,101 @@ configure_interfaces() {
     update_addresses_of_interface "eth0 1.1.1.1/24 fe80::21d:9ff:fe8b:8e94/64" ""
 }
 
+# An address table keeps its addresses in a file on this machine, so the set
+# the rules match against is filled in here and not by the ruleset itself.
+# Comments start with "#" or ";", and an address of the other family is
+# skipped: the set is typed and would refuse it.
+load_address_table() {
+    family=$1
+    table=$2
+    setname=$3
+    file=$4
+    af=$5
+
+    test -r "$file" || {
+        echo "Can not find file $file referenced by address table object $setname"
+        exit 1
+    }
+
+    cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
+        | grep -v '^$')
+    if [ "$af" = "-6" ]; then
+        addrs=$(printf '%s\n' "$cleaned" | grep ':')
+    else
+        addrs=$(printf '%s\n' "$cleaned" | grep -v ':')
+    fi
+    addrs=$(printf '%s\n' "$addrs" | grep -v '^$' | paste -sd, -)
+
+    test -n "$addrs" || return 0
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# A DNS name is resolved on this machine, and nft refuses a hostname that
+# resolves to more than one address - it rejects the whole ruleset over it.
+# So the name is resolved here and its addresses go into the set the rules
+# match against, which is what iptables does when it expands the name into
+# one rule per address.
+load_dns_name() {
+    family=$1
+    table=$2
+    setname=$3
+    host=$4
+    af=$5
+
+    if [ "$af" = "-6" ]; then
+        addrs=$(getent ahostsv6 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    else
+        addrs=$(getent ahostsv4 "$host" | awk '{print $1}' | sort -u | paste -sd, -)
+    fi
+
+    test -n "$addrs" || {
+        echo "Can not resolve $host referenced by DNS name object $setname"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+# The address of a dynamic interface is only known here, so the rules match
+# against a set that is filled from the running interface. A wildcard name
+# such as "ppp*" collects the addresses of every interface it matches, which
+# is the same set of rules iptables writes one loop iteration at a time.
+load_interface_address() {
+    family=$1
+    table=$2
+    setname=$3
+    pattern=$4
+    af=$5
+
+    addrs=""
+    for dev in $($IP -o link show | sed 's/^[0-9]*: //;s/[@:].*//' | sort -u); do
+        case "$dev" in
+        $pattern) ;;
+        *) continue ;;
+        esac
+        found=$($IP "$af" -o addr show dev "$dev" 2>/dev/null |
+            awk '{print $4}' | sed 's!/.*!!')
+        for a in $found; do
+            addrs="${addrs:+$addrs,}$a"
+        done
+    done
+
+    test -n "$addrs" || {
+        test "$af" = "-6" && fam=IPv6 || fam=IPv4
+        echo "No $fam address on any interface matching $pattern," \
+             "so the rules using set $setname match nothing"
+        return 0
+    }
+    $NFT add element "$family" "$table" "$setname" "{ $addrs }"
+}
+
+load_address_tables() {
+    :
+    load_dns_name "inet" "fwf_filter" "_6bone.net__rt_" "6bone.net" "-4"
+    load_dns_name "inet" "fwf_filter" "_6bone.net__rt__v6" "6bone.net" "-6"
+    load_dns_name "inet" "fwf_filter" "ny6ix.net__rt_" "ny6ix.net" "-4"
+    load_dns_name "inet" "fwf_filter" "ny6ix.net__rt__v6" "ny6ix.net" "-6"
+}
+
 nft_ruleset() {
     cat <<'NFT_RULES'
 table inet fwf_filter {}
@@ -268,6 +360,27 @@ table ip6 fwf_nat {}
 delete table ip6 fwf_nat
 
 table inet fwf_filter {
+    set _6bone.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set _6bone.net__rt__v6 {
+        type ipv6_addr
+        flags interval
+        auto-merge
+    }
+    set ny6ix.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set ny6ix.net__rt__v6 {
+        type ipv6_addr
+        flags interval
+        auto-merge
+    }
+
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
@@ -309,6 +422,10 @@ table inet fwf_filter {
         #
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
+        #
+        # Rule 8 (global)
+        #
+        ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 8 -- DENY " level info drop
         #
         # Rule 9 (global)
         #
@@ -386,6 +503,7 @@ check_ruleset() {
 
 script_body() {
     nft_ruleset | $NFT -f /dev/stdin
+    load_address_tables
 }
 
 ip_forward() {

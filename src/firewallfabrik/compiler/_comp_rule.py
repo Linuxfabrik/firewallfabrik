@@ -36,6 +36,7 @@ from firewallfabrik.core.objects import (
     Host,
     Interface,
     Interval,
+    MultiAddress,
     NATAction,
     NATRuleType,
     PolicyAction,
@@ -368,6 +369,12 @@ def expand_group(session, group, *, _seen: set | None = None) -> list:
 
     Returns a flat list of non-group objects (Address, Service, Host, etc.).
     Handles circular references via the _seen set.
+
+    A MultiAddress is a leaf here although it is a group by inheritance:
+    what is in it comes from a file or from DNS, never from the group
+    membership table, so recursing into it answers "no members" for every
+    single one of them and the object disappears from the rule.  The
+    caller resolves it instead.
     """
     if _seen is None:
         _seen = set()
@@ -400,7 +407,7 @@ def expand_group(session, group, *, _seen: set | None = None) -> list:
         obj = obj_map.get(mid)
         if obj is None:
             continue
-        if isinstance(obj, Group):
+        if isinstance(obj, Group) and not isinstance(obj, MultiAddress):
             result.extend(expand_group(session, obj, _seen=_seen))
         else:
             result.append(obj)

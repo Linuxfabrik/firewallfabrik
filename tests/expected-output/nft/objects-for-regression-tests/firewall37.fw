@@ -15,12 +15,14 @@
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
-# firewall37:mangle_rules:6: warning: Empty group or address table object 'DNS objects'
-# firewall37:mangle_rules:6: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 6 (global) because option 'Ignore rules with empty groups' is in effect
+# Rule mangle_rules 6 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
+# Rule mangle_rules 6 (global): Could not resolve any source addresses
+# Rule mangle_rules 6 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
+# Rule mangle_rules 6 (global): Could not resolve any source addresses
+# Rule mangle_rules 15 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
+# Rule mangle_rules 15 (global): Could not resolve any source addresses
 # firewall37:mangle_rules:7: warning: Empty group or address table object 'empty Ogroup'
 # firewall37:mangle_rules:7: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 7 (global) because option 'Ignore rules with empty groups' is in effect
-# firewall37:mangle_rules:15: warning: Empty group or address table object 'DNS objects'
-# firewall37:mangle_rules:15: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 15 (global) because option 'Ignore rules with empty groups' is in effect
 
 FWBDEBUG=""
 
@@ -324,6 +326,7 @@ load_interface_address() {
 load_address_tables() {
     :
     load_dns_name "ip" "fwf_filter" "_6bone.net__rt_" "6bone.net" "-4"
+    load_dns_name "ip" "fwf_filter" "ny6ix.net__rt_" "ny6ix.net" "-4"
 }
 
 nft_ruleset() {
@@ -630,6 +633,11 @@ table ip fwf_mangle {
 
 table ip fwf_filter {
     set _6bone.net__rt_ {
+        type ipv4_addr
+        flags interval
+        auto-merge
+    }
+    set ny6ix.net__rt_ {
         type ipv4_addr
         flags interval
         auto-merge
