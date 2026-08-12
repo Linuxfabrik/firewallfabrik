@@ -1468,24 +1468,53 @@ class PrintRule_nft(PolicyRuleProcessor):
             # here would leave the rule with no limit at all.
             return rate
 
-        parts = [' . '.join(keys)]
+        key = ' . '.join(keys)
+        parts = [key]
 
         try:
             expire = int(rule.get_option('hashlimit_expire', 0) or 0)
         except (TypeError, ValueError):
             expire = 0
+        timeout = ''
         if expire > 0:
             # iptables counts the idle time of a bucket in milliseconds,
             # nftables in seconds (libxt_hashlimit.txlate rounds the same
             # way).
-            parts.append(f'timeout {max(1, expire // 1000)}s')
+            timeout = f'timeout {max(1, expire // 1000)}s'
+            parts.append(timeout)
 
         parts.append(rate)
 
+        name = self._meter_name(rule)
+        if not self.compiler.register_meter(name, key, timeout):
+            self.compiler.error(
+                rule,
+                f'the rate limit table "{name}" is already in use by another '
+                'rule that keys it differently or expires its entries '
+                'differently; give one of the two its own name',
+            )
+        return f'meter {name} {{ {" ".join(parts)} }}'
+
+    def _meter_name(self, rule: CompRule) -> str:
+        """Return the name of the meter this rule's rate limit counts in.
+
+        A meter is a typed set, so an IPv4 and an IPv6 rule cannot share
+        one: the address of the second would be stored into the type of the
+        first, which for an IPv6 address in an ``ipv4_addr`` set means its
+        first four bytes, sharing buckets with IPv4.  nftables says nothing
+        about it.  The family therefore belongs in the name, exactly as it
+        does for the set behind a per-source connection limit.
+
+        The name the editor leaves empty is the rule's position, and every
+        rule set numbers its rules from zero, so the rule set belongs in it
+        too.
+        """
         name = str(rule.get_option('hashlimit_name', '') or '').strip()
         if not name:
-            name = f'htable_rule_{rule.position}'
-        return f'meter {nft_object_name(name)} {{ {" ".join(parts)} }}'
+            name = f'htable_{self.compiler.get_rule_set_name()}_{rule.position}'
+        if self.compiler.ipv6_policy:
+            name += '_v6'
+        return nft_object_name(name)
 
     def _hashlimit_rate(self, rule: CompRule, limit: int) -> str:
         """Return the `limit rate ...` half of a hashlimit.

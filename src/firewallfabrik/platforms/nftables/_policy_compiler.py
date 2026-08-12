@@ -136,6 +136,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
+        # Meters a rate limit kept per source, destination or port counts in,
+        # keyed by meter name and holding the shape the first rule gave it.
+        self.meters: dict[str, tuple[str, str]] = {}
 
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
@@ -417,6 +420,20 @@ class PolicyCompiler_nft(PolicyCompiler):
         a named counter has to exist before a rule counts into it.
         """
         self.dynamic_sets.setdefault(name, addr_type)
+
+    def register_meter(self, name: str, keys: str, timeout: str) -> bool:
+        """Remember a meter, and report whether it fits the one already there.
+
+        A meter is a set, so every rule naming it has to agree on the type
+        of its key and on whether its elements time out.  nftables refuses
+        the whole ruleset over the second question ("existing set '%s'
+        has/lacks timeout flag", netfilter nftables src/evaluate.c) and
+        answers the first one by silently keeping the shape the first rule
+        gave the set, which leaves the later rule counting something other
+        than what it says.
+        """
+        first = self.meters.setdefault(name, (keys, timeout))
+        return first == (keys, timeout)
 
     def add_rule_filter(self) -> None:
         """Add the processor that selects the rules of this table.

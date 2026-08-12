@@ -1279,6 +1279,7 @@ class PrintRule(PolicyRuleProcessor):
         if not name:
             name = f'htable_rule_{rule.position}'
         parts.append(f'--{module}-name {name}')
+        self._check_hashlimit_table(rule, name, limit, mode)
 
         for key, option in (
             ('hashlimit_size', 'htable-size'),
@@ -1291,6 +1292,34 @@ class PrintRule(PolicyRuleProcessor):
                 parts.append(f'--{module}-{option} {value}')
 
         return ' ' + ' '.join(parts) + ' '
+
+    def _check_hashlimit_table(
+        self, rule: CompRule, name: str, limit: int, mode: str
+    ) -> None:
+        """Warn when a second rule asks the same hash table for something else.
+
+        The kernel looks a hash table up by its name and family alone
+        (net/netfilter/xt_hashlimit.c, htable_find_get) and hands the
+        existing one back, configuration and all.  So the rate and the mode
+        of the second rule are never applied: it counts into the first
+        rule's buckets at the first rule's rate, which is not what the
+        editor shows and what nothing at activation time says a word about.
+        """
+        if getattr(self.compiler, 'muted_now', False):
+            # Optimize3 renders every rule a second time to compare the
+            # command; registering the table there would report the rule
+            # against itself.
+            return
+        tables = self.compiler.hashlimit_tables
+        shape = (limit, rule.get_option('hashlimit_suffix', '') or '', mode)
+        first = tables.setdefault(name, shape)
+        if first != shape:
+            self.compiler.warning(
+                rule,
+                f'the rate limit table "{name}" is already in use by another '
+                'rule with a different rate or a different key; the kernel '
+                'keeps the settings of the first one for both',
+            )
 
     def _print_limit(self, rule: CompRule) -> str:
         """Print ``-m limit`` rate limiting.

@@ -185,6 +185,12 @@ class PolicyCompiler_ipt(PolicyCompiler):
         self.minus_n_commands: dict[str, bool] | None = minus_n_commands
         self.bridge_count: int = 0
 
+        # Hash tables a rate limit kept per source, destination or port
+        # counts in, keyed by table name and holding the settings the first
+        # rule gave it. The kernel keeps those for every later rule naming
+        # the same table.
+        self.hashlimit_tables: dict[str, tuple[int, str, str]] = {}
+
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
         self.upstream_chains: dict[str, list[str]] = defaultdict(list)
