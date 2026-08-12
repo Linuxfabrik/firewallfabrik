@@ -126,3 +126,23 @@ def test_nflog_defaults_stay_out_of_the_rule():
     )
     assert 'snaplen' not in line
     assert 'queue-threshold' not in line
+
+
+def test_iptables_rejects_a_log_level_it_does_not_know():
+    """`--log-level audit` is answered with `log level "audit" unknown`.
+
+    That stops the activation script with the built-in policies already at
+    DROP, so the level is dropped and the rule logs at the target's
+    default.  Verified against iptables 1.8.11 in a network namespace,
+    where `audit` and `bogus` are refused and `info`, `6`, `panic` and
+    `warning` are taken.
+    """
+    from firewallfabrik.platforms.iptables._print_rule import _is_known_log_level
+
+    assert not _is_known_log_level('audit')
+    assert not _is_known_log_level('bogus')
+    assert not _is_known_log_level('8')
+    assert _is_known_log_level('info')
+    assert _is_known_log_level('6')
+    assert _is_known_log_level('panic')
+    assert _is_known_log_level('warning')

@@ -100,6 +100,18 @@ _LOG_LEVEL_MAP = {
     'warning': '4',
 }
 
+
+def _is_known_log_level(level) -> bool:
+    """Report whether iptables takes *level* after ``--log-level``.
+
+    XTTYPE_SYSLOGLEVEL takes one of the names above or a number from 0 to
+    7 (netfilter libxtables/xtoptions.c, xtopt_parse_sysloglevel), and
+    answers anything else with `log level "x" unknown`.
+    """
+    level = str(level).strip().lower()
+    return level in _LOG_LEVEL_MAP or (level.isdigit() and 0 <= int(level) <= 7)
+
+
 # Targets that only write a log message and let the packet fall through to
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
@@ -1715,6 +1727,18 @@ class PrintRule(PolicyRuleProcessor):
         log_level = rule.get_option('log_level', '')
         if not log_level:
             log_level = self.compiler.fw.get_option('log_level')
+        if log_level and not _is_known_log_level(log_level):
+            # `--log-level` takes one of the syslog names or a number from 0
+            # to 7 (XTTYPE_SYSLOGLEVEL, netfilter libxtables/xtoptions.c);
+            # anything else is answered with `log level "x" unknown`, which
+            # stops the activation script with the built-in policies already
+            # at DROP.  Logging at the target's default beats that.
+            self.compiler.warning(
+                rule,
+                f'iptables has no log level "{log_level}"; the rule logs at '
+                'the default level instead',
+            )
+            log_level = ''
         if log_level:
             # fwbuilder emits either the symbolic name (e.g. `info`) or the
             # numeric syslog level (e.g. `6`), controlled by the firewall-level

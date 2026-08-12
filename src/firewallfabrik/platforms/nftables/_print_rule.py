@@ -1879,7 +1879,20 @@ class PrintRule_nft(PolicyRuleProcessor):
                 log_level = self._NFT_LOG_LEVELS.get(
                     str(log_level).strip().lower(), log_level
                 )
-                if log_level in self._NFT_LOG_LEVEL_KEYWORDS:
+                if log_level == 'audit':
+                    # `log level audit` is a different facility, not a
+                    # severity, and nftables refuses every other option
+                    # next to it ("log level audit doesn't support any
+                    # further options", src/evaluate.c) - which costs the
+                    # whole ruleset.  The rule keeps its prefix and its
+                    # flags and logs at the default severity.
+                    self.compiler.warning(
+                        rule,
+                        'nftables cannot combine the "audit" log level with a '
+                        'prefix or with log flags; the rule logs at the '
+                        'default level instead',
+                    )
+                elif log_level in self._NFT_LOG_LEVEL_KEYWORDS:
                     parts.append(f'level {log_level}')
                 else:
                     # Emitting it anyway is a syntax error, and nft answers
