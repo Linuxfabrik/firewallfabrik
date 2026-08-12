@@ -42,6 +42,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
+from firewallfabrik.platforms.linux._netfilter import is_valid_mgmt_address
 from firewallfabrik.platforms.nftables import __compiler_version__
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 
@@ -1023,6 +1024,12 @@ class CompilerDriver_nft(CompilerDriver):
         mgmt_access = bool(options.get('mgmt_ssh', False)) and bool(
             ssh_management_address
         )
+        if mgmt_access and not is_valid_mgmt_address(ssh_management_address):
+            self.all_errors.append(
+                f'"{ssh_management_address}" cannot be the address of the '
+                'backup ssh rule; the block action leaves no way in'
+            )
+            mgmt_access = False
         # The rule goes into an inet table, where an address match has to
         # name its family: `ip saddr` on an IPv6 address is a datatype
         # error, and it happens at the moment the block action has just set

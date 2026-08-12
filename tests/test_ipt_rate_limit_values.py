@@ -151,3 +151,25 @@ def test_a_traffic_class_is_two_hexadecimal_numbers(value, valid):
     from firewallfabrik.platforms.linux._netfilter import is_valid_traffic_class
 
     assert is_valid_traffic_class(value) is valid
+
+
+@pytest.mark.parametrize(
+    ('value', 'valid'),
+    [
+        ('192.0.2.1', True),
+        ('192.0.2.0/24', True),
+        ('2001:db8::1', True),
+        ('mgmt.example.com', True),
+        # The value is spliced into a shell command and into an nftables
+        # rule at the moment the block action has set every chain to drop.
+        ('192.0.2.1; reboot', False),
+        ('192.0.2.1 -j ACCEPT', False),
+        ('$(id)', False),
+        ('"', False),
+        ('', False),
+    ],
+)
+def test_the_backup_ssh_address_holds_nothing_but_an_address(value, valid):
+    from firewallfabrik.platforms.linux._netfilter import is_valid_mgmt_address
+
+    assert is_valid_mgmt_address(value) is valid

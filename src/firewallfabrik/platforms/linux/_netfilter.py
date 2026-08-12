@@ -149,6 +149,20 @@ _HASHLIMIT_MODE_ALIASES = {
 _TRAFFIC_CLASS_RE = re.compile(r'[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}')
 
 
+# What the address of the backup SSH rule may be made of.  The value is
+# spliced into a shell command and into an nftables rule at the one moment
+# the block action has already set every chain to drop, so a space, a
+# quote or a shell metacharacter there costs the administrator the way
+# back in - and would run whatever it says.  An address, a prefix and a
+# host name all fit in this alphabet; nothing else has to.
+_MGMT_ADDRESS_RE = re.compile(r'[0-9A-Za-z.:_/-]{1,255}')
+
+
+def is_valid_mgmt_address(value: str) -> bool:
+    """Report whether *value* can be written into the backup SSH rule."""
+    return bool(_MGMT_ADDRESS_RE.fullmatch(str(value).strip()))
+
+
 def is_valid_traffic_class(value: str) -> bool:
     """Report whether both packet filters read *value* as the same handle."""
     return bool(_TRAFFIC_CLASS_RE.fullmatch(str(value).strip()))

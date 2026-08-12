@@ -46,6 +46,7 @@ from firewallfabrik.platforms.iptables._utils import (
     get_wait_option,
     version_compare,
 )
+from firewallfabrik.platforms.linux._netfilter import is_valid_mgmt_address
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -593,6 +594,15 @@ class CompilerDriver_ipt(CompilerDriver):
                 mgmt_ssh = bool(options.get('mgmt_ssh', False))
                 mgmt_addr = options.get('mgmt_addr', '')
                 mgmt_access = 1 if (mgmt_ssh and mgmt_addr) else 0
+                if mgmt_access and not is_valid_mgmt_address(mgmt_addr):
+                    # The value goes into a shell command at the one moment
+                    # every policy has just been set to DROP, so a space or
+                    # a shell metacharacter costs the way back in.
+                    self.all_errors.append(
+                        f'"{mgmt_addr}" cannot be the address of the backup '
+                        'ssh rule; the block action leaves no way in'
+                    )
+                    mgmt_access = 0
                 # The backup rule has to go to the binary that speaks the
                 # family of the address.  iptables answers an IPv6 address
                 # with "host/network not found", and it does so right after
