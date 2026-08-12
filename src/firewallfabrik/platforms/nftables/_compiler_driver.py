@@ -215,7 +215,7 @@ class CompilerDriver_nft(CompilerDriver):
             try:
                 options = fw.options or {}
 
-                self._warn_unsupported_options(options)
+                self._warn_unsupported_options(options, fw)
 
                 # Create OS configurator
                 oscnf = OSConfigurator_nft(session, fw)

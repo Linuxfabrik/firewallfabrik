@@ -160,7 +160,7 @@ class CompilerDriver_ipt(CompilerDriver):
                     )
                     return ''
 
-                self._warn_unsupported_options(options)
+                self._warn_unsupported_options(options, fw)
 
                 flush_ruleset = options.get('flush_ruleset', True)
                 table_name = options.get('table_name', '') or 'fwf'

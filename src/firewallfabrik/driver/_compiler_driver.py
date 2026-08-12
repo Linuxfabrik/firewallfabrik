@@ -18,6 +18,7 @@ and output file management.
 
 from __future__ import annotations
 
+import difflib
 import ipaddress
 import os
 from pathlib import Path
@@ -29,6 +30,7 @@ from firewallfabrik.core.objects import (
     Firewall,
 )
 from firewallfabrik.driver._configlet import Configlet
+from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
     from firewallfabrik.core._database import DatabaseManager
@@ -139,11 +141,39 @@ class CompilerDriver(BaseCompiler):
         ),
     ]
 
-    def _warn_unsupported_options(self, options: dict) -> None:
+    def _warn_unsupported_options(self, options: dict, fw=None) -> None:
         """Emit warnings for recognised but unimplemented firewall options."""
         for opt, msg in self._UNSUPPORTED_BOOL_OPTIONS:
             if options.get(opt, False):
                 self.warning(msg)
+        if fw is not None:
+            self._warn_misspelled_options(options, fw)
+
+    def _warn_misspelled_options(self, options: dict, fw) -> None:
+        """Warn about an option key that looks like a misspelled one.
+
+        get_option() falls back to the schema when a key is absent, so a
+        key nobody reads is silently ignored - which is what the option
+        schema was written to prevent (docs/developer-guide/
+        PlatformDefaults.md).  Reporting every unknown key is no use: a
+        data file imported from Firewall Builder carries the options of
+        every platform it ever knew, and none of those is a mistake here.
+        A key that is one edit away from a real one is a different matter,
+        and that is the case worth a word.
+        """
+        try:
+            known = get_known_keys(fw.platform, fw.host_os or '')
+        except (ModuleNotFoundError, FileNotFoundError):
+            # A data file can name a platform this compiler has no schema
+            # for, and then there is nothing to compare against.
+            return
+        for key in sorted(set(options) - known):
+            close = difflib.get_close_matches(key, known, n=1, cutoff=0.85)
+            if close:
+                self.warning(
+                    f'the firewall option "{key}" is not one this compiler '
+                    f'reads and looks like "{close[0]}"; it is ignored'
+                )
 
     # -- Script assembly --
 
