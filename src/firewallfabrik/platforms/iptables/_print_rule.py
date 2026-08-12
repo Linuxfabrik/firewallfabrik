@@ -143,6 +143,14 @@ REJECT_TOKEN_FIRST_RELEASE = {
 # ticking "use dstlimit" on anything newer names a module the tool cannot
 # load, so it is emitted as written and the reason is reported.
 DSTLIMIT_LAST_RELEASE = '1.3.7'
+
+# The release in which a hashlimit rule may leave its key unnamed.  Up to
+# and including 1.4.0 the only revision of the match is the one whose
+# final check ends with "You have to specify --hashlimit-mode"; 1.4.1
+# brought revision 1, whose check asks only for the rate and the name
+# (netfilter extensions/libxt_hashlimit.c, hashlimit_check versus
+# hashlimit_mt_check).
+HASHLIMIT_MODE_OPTIONAL_SINCE = '1.4.1'
 DSTLIMIT_NOTE = (
     'The "dstlimit" match left netfilter iptables after '
     f'{DSTLIMIT_LAST_RELEASE}; use the rate limit without the dstlimit '
@@ -1321,6 +1329,14 @@ class PrintRule(PolicyRuleProcessor):
             parts.append(f'--dstlimit-mode {word}')
         elif mode:
             parts.append(f'--{module}-mode {mode}')
+        elif version_compare(self.version, HASHLIMIT_MODE_OPTIONAL_SINCE) < 0:
+            self.compiler.error(
+                rule,
+                f'iptables before {HASHLIMIT_MODE_OPTIONAL_SINCE} needs the '
+                'rate limit to say what it keeps its counts per; the rule is '
+                'left out',
+            )
+            return None
 
         # The name is what the module files its hash table under, and it is
         # mandatory (XTOPT_MAND, netfilter extensions/libxt_hashlimit.c), so
