@@ -127,12 +127,19 @@ XT_LIMIT_SCALE = 10000
 MAX_LIMIT_BURST = 10000
 
 # The same two ceilings for the hashlimit match, which keeps its own
-# constants: the scale of its current revisions (XT_HASHLIMIT_SCALE_v2,
-# include/uapi/linux/netfilter/xt_hashlimit.h) and the widest burst any
-# revision takes (XT_HASHLIMIT_BURST_MAX, extensions/libxt_hashlimit.c;
-# revision 1 stops at 10000, which fwf cannot tell apart from here).
-XT_HASHLIMIT_SCALE = 1000000
-MAX_HASHLIMIT_BURST = 1000000
+# constants and has two sets of them.  Revision 1 counts in
+# XT_HASHLIMIT_SCALE and stops the burst at XT_HASHLIMIT_BURST_MAX_v1;
+# revision 2 raised both by a hundred (XT_HASHLIMIT_SCALE_v2,
+# XT_HASHLIMIT_BURST_MAX).  extensions/libxt_hashlimit.c picks between them
+# on the revision alone (parse_rate, parse_burst), and revision 2 first
+# shipped in iptables 1.6.1, so a firewall pinned below that gets the small
+# pair - offering it the large one produces "Rate too fast" or "out of
+# range (1-10000)" at activation time.
+XT_HASHLIMIT_SCALE_V1 = 10000
+XT_HASHLIMIT_SCALE_V2 = 1000000
+MAX_HASHLIMIT_BURST_V1 = 10000
+MAX_HASHLIMIT_BURST_V2 = 1000000
+HASHLIMIT_REVISION_2_SINCE = '1.6.1'
 
 # What the kernel can make a name out of: the hash table shows up as a
 # file under /proc/net/ipt_hashlimit, and the name is spliced unquoted into
@@ -1396,25 +1403,31 @@ class PrintRule(PolicyRuleProcessor):
         unit = LIMIT_UNIT_SECONDS.get(
             str(rule.get_option('hashlimit_suffix', '') or '') or '/second', 1
         )
-        if limit > XT_HASHLIMIT_SCALE * unit:
+        revision_2 = (
+            module == 'hashlimit'
+            and version_compare(self.version, HASHLIMIT_REVISION_2_SINCE) >= 0
+        )
+        scale = XT_HASHLIMIT_SCALE_V2 if revision_2 else XT_HASHLIMIT_SCALE_V1
+        max_burst = MAX_HASHLIMIT_BURST_V2 if revision_2 else MAX_HASHLIMIT_BURST_V1
+        if limit > scale * unit:
             # parse_rate stores scale * unit / rate, so a rate above the
             # scale rounds to zero and the tool answers "Rate too fast"
             # (netfilter extensions/libxt_hashlimit.c).
             self.compiler.error(
                 rule,
                 f'a rate limit of {limit} per {unit} second(s) is faster than '
-                f'iptables can express; the rule is left out',
+                f'this iptables can express; the rule is left out',
             )
             return None
 
         burst = number('hashlimit_burst')
-        if burst > MAX_HASHLIMIT_BURST:
+        if burst > max_burst:
             # .max on the option, checked again by the module
             # (netfilter extensions/libxt_hashlimit.c, burst_error).
             self.compiler.error(
                 rule,
                 f'a rate limit burst of {burst} is out of range '
-                f'(1-{MAX_HASHLIMIT_BURST}); the rule is left out',
+                f'(1-{max_burst}); the rule is left out',
             )
             return None
         if burst > 0:

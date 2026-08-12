@@ -201,3 +201,24 @@ def test_the_rate_limit_table_name_holds_nothing_but_a_name(value, valid):
     from firewallfabrik.platforms.iptables._print_rule import _HASHLIMIT_NAME_RE
 
     assert bool(_HASHLIMIT_NAME_RE.fullmatch(value)) is valid
+
+
+@pytest.mark.parametrize(
+    ('version', 'options', 'refused'),
+    [
+        # Revision 2 raised both ceilings by a hundred and first shipped in
+        # iptables 1.6.1 (XT_HASHLIMIT_SCALE_v2, XT_HASHLIMIT_BURST_MAX).
+        ('1.8.11', {'hashlimit_value': 500000}, False),
+        ('1.6.1', {'hashlimit_value': 500000}, False),
+        ('1.6.0', {'hashlimit_value': 500000}, True),
+        ('1.4.21', {'hashlimit_value': 500000}, True),
+        ('1.8.11', {'hashlimit_value': 10, 'hashlimit_burst': 500000}, False),
+        ('1.6.0', {'hashlimit_value': 10, 'hashlimit_burst': 500000}, True),
+        # Both releases take what revision 1 takes.
+        ('1.6.0', {'hashlimit_value': 10000}, False),
+        ('1.6.0', {'hashlimit_value': 10, 'hashlimit_burst': 10000}, False),
+    ],
+)
+def test_the_rate_limit_ceilings_follow_the_pinned_release(version, options, refused):
+    printer = _printer(version=version)
+    assert (printer._print_hashlimit(_rule(**options)) is None) is refused
