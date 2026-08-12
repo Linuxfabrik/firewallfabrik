@@ -308,6 +308,13 @@ def reject_type_token(value: str, ipv6: bool) -> str:
 
     token = value.lower()
     if token in (REJECT_TYPES_IPV6 if ipv6 else REJECT_TYPES_IPV4):
+        # Every entry of the REJECT target's reject_table has two names and
+        # an imported file carries whichever the administrator picked, so
+        # the alias is answered with the name the rest of the compiler
+        # knows.  Only this pair differs between the two names, the others
+        # are spelled the same way on both sides.
+        if token == 'tcp-rst':  # nosec B105
+            return 'tcp-reset'
         return token
 
     return ''

@@ -146,3 +146,21 @@ def test_iptables_rejects_a_log_level_it_does_not_know():
     assert _is_known_log_level('6')
     assert _is_known_log_level('panic')
     assert _is_known_log_level('warning')
+
+
+def test_the_alias_of_the_tcp_reset_reject_type_is_answered():
+    """Every entry of the REJECT target's table has two names.
+
+    An imported file carries whichever the administrator picked.  The
+    nftables printer knows `tcp-reset`, so a rule stored as `tcp-rst` fell
+    through to a plain reject - an ICMP message where the policy asks for
+    a TCP reset, while the iptables side sent the reset.  ip6tables spells
+    both entries of that pair `tcp-reset`, so only IPv4 has the alias
+    (netfilter extensions/libipt_REJECT.c versus libip6t_REJECT.c).
+    """
+    from firewallfabrik.platforms.linux._netfilter import reject_type_token
+
+    assert reject_type_token('tcp-rst', False) == 'tcp-reset'
+    assert reject_type_token('tcp-reset', False) == 'tcp-reset'
+    assert reject_type_token('TCP RST', False) == 'tcp-reset'
+    assert reject_type_token('tcp-rst', True) == ''
