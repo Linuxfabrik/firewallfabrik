@@ -361,8 +361,8 @@ table ip fwf_filter {
         # Rule 14 (eth0,eth1)
         #
         # reject using connlimit
-        iifname "eth0" limit rate 2/second burst 5 packets counter drop
-        iifname "eth1" limit rate 2/second burst 5 packets counter drop
+        iifname "eth0" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        iifname "eth1" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         #
         # Rule 15 (eth0,eth1)
         #

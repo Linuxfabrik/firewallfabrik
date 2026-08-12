@@ -27,6 +27,7 @@ the netfilter tree ships, and can be reproduced with
 
 import pytest
 
+from firewallfabrik.platforms.linux._netfilter import normalize_hashlimit_mode
 from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
 
 
@@ -61,3 +62,20 @@ def test_hashlimit_rate_never_says_over():
     """`over` inverts the match and would let exactly the excess through."""
     rate = PrintRule_nft._hashlimit_rate(None, _Rule(hashlimit_burst=2), 1)
     assert 'over' not in rate
+
+
+def test_the_v2_1_spellings_of_the_key_are_normalised():
+    """netfilter takes only the short ones.
+
+    Firewall Builder 2.1 stored one string for the key, and an imported
+    file can still carry it.  ``--hashlimit-mode destip`` is answered with
+    "Bad value for --hashlimit-mode" by the real iptables, and the nftables
+    side read the token as unknown and dropped the key altogether, which
+    turned a per-destination limit into a limit for the rule as a whole.
+    """
+    assert normalize_hashlimit_mode('destip') == 'dstip'
+    assert normalize_hashlimit_mode('destport') == 'dstport'
+    assert normalize_hashlimit_mode('sourceip') == 'srcip'
+    assert normalize_hashlimit_mode(' DstIP ') == 'dstip'
+    # Anything already spelled the way netfilter wants it is left alone.
+    assert normalize_hashlimit_mode('srcport') == 'srcport'

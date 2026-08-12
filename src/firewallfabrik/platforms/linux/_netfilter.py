@@ -124,6 +124,25 @@ def has_ip_options(data: dict) -> bool:
     return any(str(data.get(flag)) == 'True' for flag in _IP_OPTION_FLAGS)
 
 
+# Spellings Firewall Builder 2.1 stored for the key a rate limit counts
+# by, mapped to the ones netfilter takes.  hashlimit knows only the short
+# ones (extensions/libxt_hashlimit.c, parse_mode) and answers "Bad value
+# for --hashlimit-mode" for anything else; dstlimit takes `destport` only
+# inside its compound words and never `destip` at all.
+_HASHLIMIT_MODE_ALIASES = {
+    'destip': 'dstip',
+    'destport': 'dstport',
+    'sourceip': 'srcip',
+    'sourceport': 'srcport',
+}
+
+
+def normalize_hashlimit_mode(mode: str) -> str:
+    """Return the netfilter spelling of one rate-limit key."""
+    mode = mode.strip().lower()
+    return _HASHLIMIT_MODE_ALIASES.get(mode, mode)
+
+
 # Characters the nftables preprocessor and the shell both read as syntax.
 # See sanitize_log_prefix below for why none of them can be escaped.
 _LOG_PREFIX_DROPPED = frozenset('$`\\')

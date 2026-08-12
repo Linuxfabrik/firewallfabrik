@@ -63,6 +63,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
     get_mac_only_address,
     has_ip_options,
+    normalize_hashlimit_mode,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -1570,7 +1571,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         stored = str(rule.get_option('hashlimit_mode', '') or '').strip()
         if stored:
-            return {mode.strip() for mode in stored.split(',') if mode.strip()}
+            return {
+                normalize_hashlimit_mode(mode)
+                for mode in stored.split(',')
+                if mode.strip()
+            }
         return {
             mode
             for mode in ('srcip', 'dstip', 'srcport', 'dstport')

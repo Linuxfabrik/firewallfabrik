@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import ipaddress
 import uuid
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import (
@@ -68,6 +68,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     check_interface_name,
     has_ip_options,
+    normalize_hashlimit_mode,
     reject_type_token,
     sanitize_log_prefix,
 )
@@ -1207,7 +1208,11 @@ class PrintRule(PolicyRuleProcessor):
         """
         stored = str(rule.get_option('hashlimit_mode', '') or '').strip()
         if stored:
-            return stored
+            return ','.join(
+                normalize_hashlimit_mode(piece)
+                for piece in stored.split(',')
+                if piece.strip()
+            )
         modes = [
             mode
             for mode in self._HASHLIMIT_MODES
@@ -1215,6 +1220,41 @@ class PrintRule(PolicyRuleProcessor):
             or rule.get_option(f'hashlimit_{mode}', False)
         ]
         return ','.join(modes)
+
+    #: What the dstlimit module, the older incarnation of hashlimit, calls
+    #: the key combinations it can express.  It takes one fixed word, never
+    #: a comma list, and it knows no source port and no key that leaves the
+    #: destination address out (netfilter extensions/libipt_dstlimit.c, the
+    #: `--dstlimit-mode` branch of its parse function).
+    _DSTLIMIT_MODES: ClassVar[dict[tuple[str, ...], str]] = {
+        ('dstip',): 'dstip',
+        ('dstip', 'dstport'): 'dstip-dstport',
+        ('srcip', 'dstip'): 'srcip-dstip',
+        ('srcip', 'dstip', 'dstport'): 'srcip-dstip-dstport',
+    }
+
+    def _dstlimit_mode(self, rule: CompRule, mode: str) -> str | None:
+        """Return the ``--dstlimit-mode`` word, or ``None`` if there is none.
+
+        The option is mandatory for dstlimit, so a rule whose key it cannot
+        express has to be left out rather than written without it.
+        """
+        wanted = tuple(
+            part
+            for part in self._HASHLIMIT_MODES
+            if part in {piece.strip() for piece in mode.split(',') if piece.strip()}
+        )
+        word = self._DSTLIMIT_MODES.get(wanted)
+        if word is None:
+            self.compiler.error(
+                rule,
+                'the "dstlimit" variant of the rate limit cannot keep its '
+                'counts per '
+                + (', '.join(wanted) if wanted else 'rule')
+                + '; it knows only dstip, dstip-dstport, srcip-dstip and '
+                'srcip-dstip-dstport. The rule is left out',
+            )
+        return word
 
     def _print_hashlimit(self, rule: CompRule) -> str | None:
         """Print ``-m hashlimit``, the rate limit kept per source or port.
@@ -1242,16 +1282,22 @@ class PrintRule(PolicyRuleProcessor):
             if rule.get_option('hashlimit_dstlimit', False)
             else ('hashlimit')
         )
-        if (
-            module == 'dstlimit'
-            and version_compare(self.version, DSTLIMIT_LAST_RELEASE) > 0
-        ):
-            # Same class as the ipv4options match: the option is honoured,
-            # because an administrator who ticked it means it, but the
-            # module it names has not been in iptables since 1.3.8 and the
-            # command answers "Couldn't load match", which stops the
-            # activation script.
-            self.compiler.warning(rule, DSTLIMIT_NOTE)
+        if module == 'dstlimit':
+            if self.compiler.ipv6_policy:
+                # dstlimit never had a libip6t_ file, so ip6tables answers
+                # "Couldn't load match" no matter which release it is.
+                self.compiler.error(
+                    rule,
+                    'ip6tables has no "dstlimit" match; the rule is left out',
+                )
+                return None
+            if version_compare(self.version, DSTLIMIT_LAST_RELEASE) > 0:
+                # Same class as the ipv4options match: the option is
+                # honoured, because an administrator who ticked it means it,
+                # but the module it names has not been in iptables since
+                # 1.3.8 and the command answers "Couldn't load match", which
+                # stops the activation script.
+                self.compiler.warning(rule, DSTLIMIT_NOTE)
         parts = [
             f'-m {module}',
             f'--{module} {limit}{rule.get_option("hashlimit_suffix", "") or ""}',
@@ -1268,7 +1314,12 @@ class PrintRule(PolicyRuleProcessor):
             parts.append(f'--{module}-burst {burst}')
 
         mode = self._hashlimit_mode(rule)
-        if mode:
+        if module == 'dstlimit':
+            word = self._dstlimit_mode(rule, mode)
+            if word is None:
+                return None
+            parts.append(f'--dstlimit-mode {word}')
+        elif mode:
             parts.append(f'--{module}-mode {mode}')
 
         # The name is what the module files its hash table under, and it is
