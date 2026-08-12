@@ -13,16 +13,8 @@
 #  there is no ULOG for ip6tables yet
 #  Bug 2141911
 #
-# Rule 20 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 20 (global): Could not resolve any destination addresses
-# Rule 20 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 20 (global): Could not resolve any destination addresses
 # DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
-# Rule Policy_ipv6 1 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule Policy_ipv6 1 (global): Could not resolve any destination addresses
-# Rule Policy_ipv6 1 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule Policy_ipv6 1 (global): Could not resolve any destination addresses
 # Rule Policy_ipv6 2 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule '3 (global)' shadows rule '4 (global)' below it
 # Rule '5 (global)' shadows rule '6 (global)' below it
@@ -535,9 +527,19 @@ table inet fwf_filter {
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
         #
+        # Rule 20 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule 21 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 21 -- DENY " level info drop
+        #
+        # Rule Policy_ipv6 1 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule Policy_ipv6 3 (global)
         #
@@ -591,6 +593,11 @@ table inet fwf_filter {
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
         #
+        # Rule 20 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule 21 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 21 -- DENY " level info drop
@@ -599,6 +606,11 @@ table inet fwf_filter {
         #
         # for bug 2047082
         meta nfproto ipv6 ct state new counter accept
+        #
+        # Rule Policy_ipv6 1 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule Policy_ipv6 3 (global)
         #

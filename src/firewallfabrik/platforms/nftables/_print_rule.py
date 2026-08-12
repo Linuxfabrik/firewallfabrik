@@ -69,7 +69,11 @@ from firewallfabrik.platforms.linux._netfilter import (
     reject_type_token,
     sanitize_log_prefix,
 )
-from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
+from firewallfabrik.platforms.nftables._identifiers import (
+    nft_object_name,
+    nft_quote,
+    nft_set_reference_name,
+)
 
 if TYPE_CHECKING:
     from firewallfabrik.compiler._comp_rule import CompRule
@@ -835,7 +839,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # activation time (netfilter nftables doc/sets.txt).  A set is
             # typed, so the two address families need one set each.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_set_reference_name(obj, ipv6)
             self.compiler.address_tables[name] = (
                 get_address_table_source(obj),
                 ipv6,
@@ -852,7 +856,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # which is what iptables does when it expands the name into one
             # rule per address.
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-            name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
+            name = nft_set_reference_name(obj, ipv6)
             self.compiler.address_tables[name] = (
                 (obj.data or {}).get('dnsrec') or obj.name,
                 ipv6,
@@ -881,7 +885,7 @@ class PrintRule_nft(PolicyRuleProcessor):
                 # name such as "ppp*" collects the addresses of every
                 # interface it matches into the same set.
                 ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
-                name = nft_object_name(f'i_{obj.name}') + ('_v6' if ipv6 else '')
+                name = nft_set_reference_name(obj, ipv6)
                 self.compiler.address_tables[name] = (obj.name, ipv6, 'interface')
                 return f'@{name}'
             addr = self._select_af_address(getattr(obj, 'addresses', []))

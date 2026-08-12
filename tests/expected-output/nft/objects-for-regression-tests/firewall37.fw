@@ -15,12 +15,6 @@
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
 # Rule 36 (global): Custom action not yet supported by nftables compiler
-# Rule mangle_rules 6 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule mangle_rules 6 (global): Could not resolve any source addresses
-# Rule mangle_rules 6 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule mangle_rules 6 (global): Could not resolve any source addresses
-# Rule mangle_rules 15 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule mangle_rules 15 (global): Could not resolve any source addresses
 # firewall37:mangle_rules:7: warning: Empty group or address table object 'empty Ogroup'
 # firewall37:mangle_rules:7: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 7 (global) because option 'Ignore rules with empty groups' is in effect
 
@@ -808,6 +802,11 @@ table ip fwf_filter {
         #
         ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
         #
+        # Rule mangle_rules 6 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
+        #
         # Rule mangle_rules 8 (global)
         #
         ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } meta mark 1 ct state new counter accept
@@ -1016,6 +1015,11 @@ table ip fwf_filter {
         #
         ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
         #
+        # Rule mangle_rules 6 (global)
+        #
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
+        #
         # Rule mangle_rules 11 (global)
         #
         ip saddr != 192.168.1.0/24 meta mark 1 ct state new counter accept
@@ -1031,6 +1035,19 @@ table ip fwf_filter {
         # Rule mangle_rules 14 (global)
         #
         ip saddr != @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        #
+        # Rule mangle_rules 15 (global)
+        #
+        # rules in mangle-only ruleset with action
+        # Accept normally go to PREROUTING,
+        # but if direction is set to outbound,
+        # they go to POSTROUTING. This is just
+        # a convention since there is no better
+        # criteria as to how to tell the compiler
+        # that such rule should be placed in
+        # POSTROUTING.
+        ip saddr @_6bone.net__rt_ meta mark 1 ct state new counter accept
+        ip saddr @ny6ix.net__rt_ meta mark 1 ct state new counter accept
     }
 
     chain output {

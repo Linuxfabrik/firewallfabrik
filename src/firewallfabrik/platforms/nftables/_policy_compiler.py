@@ -80,6 +80,7 @@ from firewallfabrik.platforms.linux._netfilter import (
 from firewallfabrik.platforms.nftables._identifiers import (
     is_valid_nft_identifier,
     nft_object_name,
+    nft_set_reference_name,
 )
 
 if TYPE_CHECKING:
@@ -335,6 +336,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.add(ExpandLoopbackInterfaceAddress('replace loopback with address'))
         self.add(SplitIfMacAndAddressInRE('split MAC from address in Src', 'src'))
         self.add(SplitIfMacAndAddressInRE('split MAC from address in Dst', 'dst'))
+        self.add(SplitIfSeveralSetsInRE('split named sets in Src', 'src'))
+        self.add(SplitIfSeveralSetsInRE('split named sets in Dst', 'dst'))
         self.add(DropRuleWithEmptyRE('drop rules with empty elements'))
 
         self.add(
@@ -2699,6 +2702,68 @@ class SplitIfMacAndAddressInRE(PolicyRuleProcessor):
         groups: dict[int, list] = {}
         for obj in elements:
             groups.setdefault(self._group(obj), []).append(obj)
+        if len(groups) == 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        for _, objects in sorted(groups.items()):
+            split = rule.clone()
+            setattr(split, self._slot, objects)
+            self.tmp_queue.append(split)
+        return True
+
+
+class SplitIfSeveralSetsInRE(PolicyRuleProcessor):
+    """Give every named set of an element a rule of its own.
+
+    An address table, a DNS name and a dynamic interface have no address
+    at compile time, so each is matched through a named set the activation
+    script fills in.  A set reference cannot be an element of the anonymous
+    set the plain addresses of the element are merged into, so it needs a
+    match of its own - and the matches of one nftables rule are ANDed,
+    which asks for a packet whose address is in two sets at once.  No
+    packet is, so a Deny rule of that shape stops nothing and an Accept
+    rule lets nothing through.
+
+    The objects of an element are alternatives, so the answer is a rule per
+    set plus one for everything that can share an anonymous set.  Two
+    objects that render to the *same* set - an interface named in the rule
+    and the same interface reached through its host - stay together.
+
+    A negated element is left alone: "none of these" is a conjunction and
+    is exactly what several ANDed matches say.
+
+    Runs after ``ExpandMultipleAddresses``, which is where an interface
+    reached through its parent host first becomes visible.  The iptables
+    compiler needs no equivalent: it wraps such an address in a shell loop
+    and ``ConvertToAtomic`` has already given every object its own rule.
+    """
+
+    def __init__(self, name: str, slot: str) -> None:
+        super().__init__(name)
+        self._slot = slot
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        elements = getattr(rule, self._slot)
+        if not elements or len(elements) == 1:
+            self.tmp_queue.append(rule)
+            return True
+
+        negated = rule.get_neg(self._slot) or bool(
+            getattr(rule, f'{self._slot}_single_object_negation', False)
+        )
+        if negated:
+            self.tmp_queue.append(rule)
+            return True
+
+        ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
+        groups: dict[str, list] = {}
+        for obj in elements:
+            groups.setdefault(nft_set_reference_name(obj, ipv6) or '', []).append(obj)
         if len(groups) == 1:
             self.tmp_queue.append(rule)
             return True

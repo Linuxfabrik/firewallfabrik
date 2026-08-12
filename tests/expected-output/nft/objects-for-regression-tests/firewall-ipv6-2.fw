@@ -13,16 +13,8 @@
 #  there is no ULOG for ip6tables yet
 #  Bug 2141911
 #
-# Rule 23 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 23 (global): Could not resolve any destination addresses
-# Rule 23 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 23 (global): Could not resolve any destination addresses
 # DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
-# Rule 23 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 23 (global): Could not resolve any destination addresses
-# Rule 23 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule 23 (global): Could not resolve any destination addresses
 # Rule 24 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
@@ -605,6 +597,11 @@ table inet fwf_filter {
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
         #
+        # Rule 23 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule 24 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 24 -- DENY " level info drop
@@ -652,6 +649,11 @@ table inet fwf_filter {
         #
         # # firewall-ipv6-2:Policy:19: warning: Making rule stateless because it matches ICMPv6
         icmpv6 type echo-request icmpv6 code 0 counter accept
+        #
+        # Rule 23 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule 25 (global)
         #
@@ -717,6 +719,11 @@ table inet fwf_filter {
         # for bug 2047082
         meta nfproto ipv4 ct state new counter accept
         #
+        # Rule 23 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule 24 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 24 -- DENY " level info drop
@@ -770,6 +777,11 @@ table inet fwf_filter {
         #
         # for bug 2047082
         meta nfproto ipv6 ct state new counter accept
+        #
+        # Rule 23 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule 25 (global)
         #

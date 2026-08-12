@@ -289,3 +289,27 @@ def nft_quote(text: str) -> str:
     makes for a log prefix.
     """
     return '"{}"'.format(text.replace('"', "'"))
+
+
+def nft_set_reference_name(obj, ipv6: bool) -> str | None:
+    """Return the named set an address object is rendered as, or None.
+
+    Three kinds of object have no address at compile time and are matched
+    through a set the activation script fills in: a run-time address table,
+    a run-time DNS name and a dynamic interface.  The print rules derive
+    the name here so that a processor that has to reason about those sets -
+    two of them cannot share one rule, because the matches of one rule are
+    ANDed - agrees with what is finally written out.
+    """
+    from firewallfabrik.core.objects import (
+        DNSName,
+        Interface,
+        is_run_time_address_table,
+    )
+
+    suffix = '_v6' if ipv6 else ''
+    if is_run_time_address_table(obj) or isinstance(obj, DNSName):
+        return nft_object_name(obj.name) + suffix
+    if isinstance(obj, Interface) and obj.is_dynamic():
+        return nft_object_name(f'i_{obj.name}') + suffix
+    return None

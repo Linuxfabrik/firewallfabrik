@@ -10,16 +10,8 @@
 #
 #  Simple policy that makes sense in ipv4 but translates into a few wide-matching rules in ipv6. Policy is configured as dual address family
 #
-# Rule fw-ipv6-3 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule fw-ipv6-3 7 (global): Could not resolve any destination addresses
-# Rule fw-ipv6-3 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule fw-ipv6-3 7 (global): Could not resolve any destination addresses
 # DNSName "6bone.net (ct)" cannot resolve "6bone.net": DNS lookup failed
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
-# Rule fw-ipv6-3 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule fw-ipv6-3 7 (global): Could not resolve any destination addresses
-# Rule fw-ipv6-3 7 (global): An address table, a DNS name or a dynamic interface cannot be combined with another address on the same side of one nftables rule; the rule is left out
-# Rule fw-ipv6-3 7 (global): Could not resolve any destination addresses
 # Rule fw-ipv6-3 8 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 'fw-ipv6-3 2 (global)' shadows rule 'fw-ipv6-3 3 (global)' below it
 # Rule 'fw-ipv6-3 4 (global)' shadows rule 'fw-ipv6-3 6 (global)' below it
@@ -451,6 +443,11 @@ table inet fwf_filter {
         # INPUT, OUTPUT, FORWARD
         ip daddr 1.1.1.0/24 ct state new counter accept
         #
+        # Rule fw-ipv6-3 7 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule fw-ipv6-3 8 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 8 -- DENY " level info drop
@@ -463,6 +460,11 @@ table inet fwf_filter {
         # Rule fw-ipv6-3 11 (global)
         #
         meta nfproto ipv4 counter log prefix "RULE 11 -- DENY " level info drop
+        #
+        # Rule fw-ipv6-3 7 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule fw-ipv6-3 11 (global)
         #
@@ -501,6 +503,11 @@ table inet fwf_filter {
         # for bug 2047082
         meta nfproto ipv4 ct state new counter accept
         #
+        # Rule fw-ipv6-3 7 (global)
+        #
+        ip daddr @_6bone.net__rt_ ct state new counter accept
+        ip daddr @ny6ix.net__rt_ ct state new counter accept
+        #
         # Rule fw-ipv6-3 8 (global)
         #
         ip daddr { 157.112.176.24, 207.251.84.150 } counter log prefix "RULE 8 -- DENY " level info drop
@@ -523,6 +530,11 @@ table inet fwf_filter {
         #
         # for bug 2047082
         meta nfproto ipv6 ct state new counter accept
+        #
+        # Rule fw-ipv6-3 7 (global)
+        #
+        ip6 daddr @_6bone.net__rt__v6 ct state new counter accept
+        ip6 daddr @ny6ix.net__rt__v6 ct state new counter accept
         #
         # Rule fw-ipv6-3 11 (global)
         #

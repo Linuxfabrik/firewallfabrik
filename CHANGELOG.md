@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a rule naming two address tables, DNS names or dynamic interfaces on the same side is compiled as one rule per object. They were written into a single rule, which asks for a packet whose address is in two lists at once: no packet is, so a Deny rule stopped nothing and an Accept rule let nothing through. The compiler reported it and left the rule out since the last release; now the rule is compiled.
 * Compiler (iptables): "Clear all rules" really clears them on current distributions. The firewall kept its old rules and grew with every activation, with all traffic blocked in the meantime.
 * Compiler (iptables): a logging rule whose prefix consists only of characters the generated script cannot pass on activates. It went out as an empty prefix, which iptables refuses, stopping the activation script and leaving every rule after it uninstalled; the rule now logs without a prefix and says so.
 * Compiler (iptables): a log prefix longer than the LOG or NFLOG target can carry is reported instead of being cut silently. nftables has room for the whole string, so the same policy wrote differently shaped log lines on the two platforms.
