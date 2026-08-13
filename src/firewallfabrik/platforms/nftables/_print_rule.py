@@ -378,6 +378,40 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
     return f'{proto} type {type_str} {proto} code {icmp_code}'
 
 
+def tcp_flags_match_nft(srv, negated: bool = False) -> str:
+    """Format TCP flag inspection for nftables.
+
+    The service decides which flags go into the MASK and which into the
+    COMP (``TCPService.tcp_flag_match``), so both back ends match the same
+    packets.  nftables writes ``tcp flags <value> / <mask>`` with the value
+    before the slash and the mask after, the reverse order of iptables'
+    ``--tcp-flags MASK COMP`` (see nftables doc/data-types.txt and
+    tests/py/inet/tcp.t).
+
+    Shared with the NAT print rule: a NAT rule whose service names a flag
+    combination translates every TCP packet without it.
+    """
+    mask_names, comp_names = srv.tcp_flag_match()
+    if not mask_names:
+        return ''
+    mask_pipe = ' | '.join(mask_names)
+    if negated:
+        comp_pipe = ' | '.join(comp_names) if comp_names else '0x0'
+        return f'tcp flags & ({mask_pipe}) != {comp_pipe}'
+    if not comp_names:
+        # COMP is empty (iptables "NONE"): none of the inspected flags set.
+        return f'tcp flags & ({mask_pipe}) == 0x0'
+    if len(mask_names) == 1:
+        # nft rejects the `tcp flags <value> / <mask>` form when the mask
+        # is a single symbolic flag (e.g. `tcp flags syn / syn`, which
+        # iptables-translate itself emits for `--tcp-flags SYN SYN`).
+        # Emit the always-valid bitwise form instead; COMP is a subset of
+        # the single-flag MASK, so it is that same flag.
+        comp_pipe = ' | '.join(comp_names)
+        return f'tcp flags & ({mask_pipe}) == {comp_pipe}'
+    return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+
+
 class PrintRule_nft(PolicyRuleProcessor):
     """Generates nftables rule statements from compiled policy rules.
 
@@ -1206,34 +1240,8 @@ class PrintRule_nft(PolicyRuleProcessor):
     )
 
     def _print_tcp_flags(self, srv, negated: bool = False) -> str:
-        """Format TCP flag inspection for nftables.
-
-        The service decides which flags go into the MASK and which into
-        the COMP (``TCPService.tcp_flag_match``), so both back ends match
-        the same packets.  nftables writes ``tcp flags <value> / <mask>``
-        with the value before the slash and the mask after, the reverse
-        order of iptables' ``--tcp-flags MASK COMP`` (see nftables
-        doc/data-types.txt and tests/py/inet/tcp.t).
-        """
-        mask_names, comp_names = srv.tcp_flag_match()
-        if not mask_names:
-            return ''
-        mask_pipe = ' | '.join(mask_names)
-        if negated:
-            comp_pipe = ' | '.join(comp_names) if comp_names else '0x0'
-            return f'tcp flags & ({mask_pipe}) != {comp_pipe}'
-        if not comp_names:
-            # COMP is empty (iptables "NONE"): none of the inspected flags set.
-            return f'tcp flags & ({mask_pipe}) == 0x0'
-        if len(mask_names) == 1:
-            # nft rejects the `tcp flags <value> / <mask>` form when the mask
-            # is a single symbolic flag (e.g. `tcp flags syn / syn`, which
-            # iptables-translate itself emits for `--tcp-flags SYN SYN`).
-            # Emit the always-valid bitwise form instead; COMP is a subset of
-            # the single-flag MASK, so it is that same flag.
-            comp_pipe = ' | '.join(comp_names)
-            return f'tcp flags & ({mask_pipe}) == {comp_pipe}'
-        return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+        """Format TCP flag inspection for nftables."""
+        return tcp_flags_match_nft(srv, negated)
 
     def _print_tcp_udp_service(self, rule: CompRule, srv, proto: str) -> str:
         """Print TCP/UDP service matching.

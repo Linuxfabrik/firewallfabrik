@@ -133,6 +133,25 @@ def iptables_log_level(level) -> str:
     return _LOG_LEVEL_SPELLING.get(level, level)
 
 
+def tcp_flags_match(srv) -> str:
+    """Format TCP flags for iptables ``--tcp-flags MASK COMP``.
+
+    Matches fwbuilder PolicyCompiler_PrintRule::_printTCPFlags(); the
+    service decides which flags go into MASK and COMP.  Shared with the
+    NAT print rule: a NAT rule whose service names a flag combination
+    translates every TCP packet without it.
+    """
+    mask_names, comp_names = srv.tcp_flag_match()
+    if not mask_names:
+        return ''
+    if len(mask_names) == len(srv.TCP_FLAG_ORDER):
+        mask_str = 'ALL'
+    else:
+        mask_str = ','.join(f.upper() for f in mask_names)
+    comp_str = ','.join(f.upper() for f in comp_names) if comp_names else 'NONE'
+    return f'--tcp-flags {mask_str} {comp_str}'
+
+
 # Targets that only write a log message and let the packet fall through to
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
@@ -1168,20 +1187,8 @@ class PrintRule(PolicyRuleProcessor):
         return ''
 
     def _print_tcp_flags(self, srv) -> str:
-        """Format TCP flags for iptables ``--tcp-flags MASK COMP``.
-
-        Matches fwbuilder PolicyCompiler_PrintRule::_printTCPFlags(); the
-        service decides which flags go into MASK and COMP.
-        """
-        mask_names, comp_names = srv.tcp_flag_match()
-        if not mask_names:
-            return ''
-        if len(mask_names) == len(srv.TCP_FLAG_ORDER):
-            mask_str = 'ALL'
-        else:
-            mask_str = ','.join(f.upper() for f in mask_names)
-        comp_str = ','.join(f.upper() for f in comp_names) if comp_names else 'NONE'
-        return f'--tcp-flags {mask_str} {comp_str}'
+        """Format TCP flags for iptables ``--tcp-flags MASK COMP``."""
+        return tcp_flags_match(srv)
 
     def _print_modules(self, rule: CompRule, command_line: str = '') -> str | None:
         """Print module matching (state, conntrack, etc.).

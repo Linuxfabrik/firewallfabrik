@@ -48,6 +48,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
+from firewallfabrik.platforms.iptables._print_rule import tcp_flags_match
 from firewallfabrik.platforms.iptables._utils import (
     check_chain_name,
     get_address_table_var_name,
@@ -865,6 +866,17 @@ class NATPrintRule(NATRuleProcessor):
         if len(rule.osrv) == 1:
             if isinstance(srv, (TCPService, UDPService)):
                 ports = self._print_dst_ports(srv)
+                # A TCP service may inspect the flags, and neither fwbuilder's
+                # NAT printer nor this one used to write them out: the rule
+                # then translated every TCP packet between the addresses it
+                # names, not the handshake stage it was written for.  The
+                # match is legal in the nat table, so it is emitted rather
+                # than reported.
+                flags = tcp_flags_match(srv) if isinstance(srv, TCPService) else ''
+                if ports and flags:
+                    return f'--dport {ports} {flags} '
+                if flags:
+                    return f'{flags} '
                 if ports:
                     return f'--dport {ports} '
             elif isinstance(srv, (ICMPService, ICMP6Service)):
@@ -983,6 +995,19 @@ class NATPrintRule(NATRuleProcessor):
         """
         data = srv.data or {}
         parts = []
+        # fwbuilder's NAT printer reads neither the ToS nor the DSCP of an
+        # IP service (NATCompiler_PrintRule.cpp, _printIP), and the policy
+        # printer reads both.  A NAT rule whose service names one and whose
+        # command does not carries a wider condition than the editor shows
+        # and translates traffic the rule was not written for, so it is
+        # reported rather than passed on.
+        if data.get('tos', '') or data.get('dscp', ''):
+            self.compiler.error(
+                rule,
+                'the service of this NAT rule matches on the ToS or DSCP '
+                'field, which a NAT rule cannot express; the rule is left out',
+            )
+            return None
         if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
             if self.compiler.ipv6_policy:
                 # ip6tables refuses -f outright and names the replacement

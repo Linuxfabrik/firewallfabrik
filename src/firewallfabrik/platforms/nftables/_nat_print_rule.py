@@ -59,6 +59,7 @@ from firewallfabrik.platforms.nftables._print_rule import (
     print_ip_option_matches,
     print_mark_match,
     print_pair_clause,
+    tcp_flags_match_nft,
 )
 
 if TYPE_CHECKING:
@@ -518,6 +519,19 @@ class NATPrintRule_nft(NATRuleProcessor):
             if p > 0:
                 ip_parts.append(f'meta l4proto {neg}{p}')
             data = srv.data or {}
+            # The policy printer reads the ToS and the DSCP of an IP
+            # service; neither NAT printer does, and neither does
+            # fwbuilder's (NATCompiler_PrintRule.cpp, _printIP).  A rule
+            # whose command leaves the field out translates traffic the
+            # editor does not show, so it is reported rather than passed on.
+            if data.get('tos', '') or data.get('dscp', ''):
+                self.compiler.error(
+                    rule,
+                    'the service of this NAT rule matches on the ToS or DSCP '
+                    'field, which a NAT rule cannot express; the rule is left '
+                    'out',
+                )
+                return None
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 ip_parts.append(print_fragment_match(self.compiler.ipv6_policy))
             if not self.compiler.ipv6_policy:
@@ -604,6 +618,16 @@ class NATPrintRule_nft(NATRuleProcessor):
             dst_ports = self._format_port_range(dst_start, dst_end)
             if dst_ports:
                 parts.append(f'{proto} dport {neg}{dst_ports}')
+
+        # A TCP service may inspect the flags, and the NAT printer never
+        # wrote them out - neither does fwbuilder's.  The rule then
+        # translated every TCP packet between the addresses it names, not
+        # the handshake stage it was written for.  The match is legal in a
+        # nat chain, so it is emitted rather than reported.
+        if isinstance(srv, TCPService):
+            flags = tcp_flags_match_nft(srv, bool(neg))
+            if flags:
+                parts.append(flags)
 
         if not parts:
             parts.append(f'meta l4proto {neg}{proto}')
