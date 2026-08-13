@@ -1094,15 +1094,22 @@ class PrintRule(PolicyRuleProcessor):
                 parts.append(f'-m tos --tos {tos}')
             elif dscp:
                 if not is_valid_dscp(dscp):
-                    # An unknown DiffServ class (e.g. "AF4") is rejected by
-                    # iptables at load time; report it instead of emitting a
-                    # rule that fails to load.
+                    # An unknown DiffServ class (e.g. "AF4"), or a number
+                    # above XT_DSCP_MAX such as the whole TOS byte 184 that
+                    # EF is often written as, is refused by iptables at load
+                    # time (netfilter extensions/libxt_dscp.c, .max =
+                    # XT_DSCP_MAX).  The rule has to go with it: keeping it
+                    # without the match leaves an "accept only AF41" rule
+                    # accepting every traffic class, which is the opposite of
+                    # what it says.  The nftables printer already answers the
+                    # same input this way.
                     self.compiler.error(
                         rule,
                         f'IP service has an invalid DSCP value "{dscp}"; '
                         'use a DiffServ class (for example AF41) or a numeric '
-                        'code point',
+                        'code point. The rule is left out',
                     )
+                    return None
                 # Symbolic DiffServ class names use --dscp-class
                 # (matches fwbuilder PolicyCompiler_PrintRule::_printIP)
                 elif dscp[:2].upper() in ('AF', 'BE', 'CS', 'EF'):
