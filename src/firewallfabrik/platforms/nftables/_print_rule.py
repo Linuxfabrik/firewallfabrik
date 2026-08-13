@@ -637,6 +637,12 @@ class PrintRule_nft(PolicyRuleProcessor):
         # Logging, mangle statements and verdict
         log_match = self._print_log(rule)
         mangle_stmt = self._print_mangle_statement(rule)
+        if mangle_stmt is None:
+            # The mark, the traffic class or the connection mark cannot be
+            # written and the reason was reported.  Without its statement
+            # the rule lets the packet through unchanged, so everything
+            # keyed on that mark stops working without saying so.
+            return ''
         verdict = self._print_verdict(rule)
         if verdict is None:
             # The verdict cannot be built and the reason was reported.
@@ -2098,32 +2104,45 @@ class PrintRule_nft(PolicyRuleProcessor):
             return ''
         return tag_obj.get_code() if tag_obj else ''
 
-    def _print_mangle_statement(self, rule: CompRule) -> str:
-        """Print the statement of a tagging or classifying rule.
+    def _print_mangle_statement(self, rule: CompRule) -> str | None:
+        """Print the statement of a tagging or classifying rule, or ``None``.
 
         These are the nftables counterparts of the iptables MARK and
         CLASSIFY targets (netfilter ``extensions/libxt_MARK.txlate`` and
         ``libxt_CLASSIFY.txlate``).  Unlike a verdict they let the packet
         carry on to the next rule, so they are printed in front of it.
+
+        ``None`` means the caller has to leave the rule out.  Setting the
+        mark, the traffic class or the connection mark is the whole point
+        of such a rule: without its statement it matches, counts and lets
+        the packet through unchanged, so every rule and every routing
+        decision keyed on that mark sees traffic the policy says is
+        marked and finds it is not.  The iptables ``_print_target`` returns
+        None in the same three cases.
         """
         parts = []
 
         if rule.get_option('tagging', False):
             tag_value = self._get_tag_value(rule)
-            if tag_value:
-                parts.append(print_mark_set(tag_value))
-            else:
+            if not tag_value:
                 self.compiler.error(
-                    rule, 'tagging rule has no Tag Service to take the mark from'
+                    rule,
+                    'tagging rule has no Tag Service to take the mark from; '
+                    'the rule is left out',
                 )
+                return None
+            parts.append(print_mark_set(tag_value))
 
         if rule.get_option('classification', False):
             classify_str = rule.get_option('classify_str', '')
             if not classify_str:
                 self.compiler.error(
-                    rule, 'classification rule has no traffic class to set'
+                    rule,
+                    'classification rule has no traffic class to set; '
+                    'the rule is left out',
                 )
-            elif not is_valid_traffic_class(classify_str):
+                return None
+            if not is_valid_traffic_class(classify_str):
                 # nftables takes a bare number here where the CLASSIFY
                 # target refuses one, and the two then mean different
                 # handles for the same policy, so the rule is reported on
@@ -2132,19 +2151,21 @@ class PrintRule_nft(PolicyRuleProcessor):
                     rule,
                     f'"{classify_str}" is not a traffic class; it takes two '
                     'hexadecimal numbers separated by a colon, such as 1:11. '
-                    'The rule sets no traffic class',
+                    'The rule is left out',
                 )
-            else:
-                parts.append(print_priority_set(classify_str))
+                return None
+            parts.append(print_priority_set(classify_str))
 
         if rule.ipt_target == 'CONNMARK':
             connmark = print_connmark(rule.get_option('CONNMARK_arg', ''))
-            if connmark:
-                parts.append(connmark)
-            else:
+            if not connmark:
                 self.compiler.error(
-                    rule, 'connection mark rule has no operation to perform'
+                    rule,
+                    'a rule marking the connection says nothing about what to '
+                    'do with the mark; the rule is left out',
                 )
+                return None
+            parts.append(connmark)
 
         return ' '.join(parts)
 
