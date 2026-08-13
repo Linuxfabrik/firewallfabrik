@@ -456,7 +456,7 @@ class NATPrintRule(NATRuleProcessor):
         return f' -m mac{neg}'
 
     def _print_nat_placement(
-        self, rule: CompRule, masquerade: bool = False
+        self, rule: CompRule, no_persistent: str = ''
     ) -> list[str]:
         """Print the options that steer how the NAT target picks an address.
 
@@ -488,11 +488,15 @@ class NATPrintRule(NATRuleProcessor):
                     'port; the "Random" option is left out',
                 )
         if rule.get_option('ipt_nat_persistent', False):
-            if masquerade:
+            if no_persistent:
+                # The name is the caller's, not a fixed one: MASQUERADE and
+                # REDIRECT both lack the option and a message naming the
+                # wrong one of them sends the administrator to the wrong
+                # rule (netfilter extensions/libxt_NAT.c option tables).
                 self.compiler.warning(
                     rule,
-                    'the MASQUERADE target has no "Persistent" option; it is '
-                    'left out of this rule',
+                    f'the {no_persistent} target has no "Persistent" option; '
+                    f'it is left out of this rule',
                 )
             elif version_compare(self.version, '1.4.4') >= 0:
                 parts.append('--persistent')
@@ -532,7 +536,7 @@ class NATPrintRule(NATRuleProcessor):
             ports = self._print_snat_ports(tsrv) if tsrv else ''
             if ports:
                 parts.append(f'--to-ports {ports}')
-            parts.extend(self._print_nat_placement(rule, masquerade=True))
+            parts.extend(self._print_nat_placement(rule, no_persistent='MASQUERADE'))
             return ' '.join(parts)
 
         if rt == NATRuleType.SNAT and target == 'SNAT':
@@ -595,7 +599,7 @@ class NATPrintRule(NATRuleProcessor):
             # unlike them no `persistent` (netfilter extensions/libxt_NAT.c),
             # which is the same shape MASQUERADE has.  fwbuilder drops the
             # option here; keeping it is what the rule asks for.
-            parts.extend(self._print_nat_placement(rule, masquerade=True))
+            parts.extend(self._print_nat_placement(rule, no_persistent='REDIRECT'))
             return ' '.join(parts)
 
         return ''
@@ -721,14 +725,22 @@ class NATPrintRule(NATRuleProcessor):
 
         iface_in_name = self._get_interface_name(rule.itf_inb)
         iface_out_name = self._get_interface_name(rule.itf_outb)
-        for name in (iface_in_name, iface_out_name):
-            if not check_interface_name(self.compiler, name, self.reported_long_ifaces):
-                return None
 
+        # "nil" means the rule deliberately carries no interface match, so
+        # the name is never written out and its length cannot break
+        # anything.  Checking first cost the whole rule for a name it was
+        # not going to use - and the negation expansion sets "nil" on the
+        # RETURN half of its pair and not on the other, so the pair came
+        # apart, which changes what the remaining half matches.  The policy
+        # printer returns before its own check for the same reason.
         if rule.nat_iface_in == 'nil':
             iface_in_name = ''
         if rule.nat_iface_out == 'nil':
             iface_out_name = ''
+
+        for name in (iface_in_name, iface_out_name):
+            if not check_interface_name(self.compiler, name, self.reported_long_ifaces):
+                return None
 
         parts.append(self._prefix_chain(rule.ipt_chain))
 
