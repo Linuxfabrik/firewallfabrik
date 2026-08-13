@@ -283,3 +283,32 @@ def test_a_log_level_is_spelled_the_way_iptables_spells_it(stored, wanted):
     from firewallfabrik.platforms.iptables._print_rule import iptables_log_level
 
     assert iptables_log_level(stored) == wanted
+
+
+@pytest.mark.parametrize(
+    ('version', 'wanted'),
+    [
+        # 0f16c725 taught the parser the leading "!" and e0390bee made the
+        # intrapositional one an error, both first in v1.4.3, so no release
+        # accepts both spellings.  connlimit reaches back to 1.2.9, which
+        # puts several releases below the cut-off within reach.
+        ('1.4.2', '-m connlimit --connlimit-above ! 10'),
+        ('1.4.3', '-m connlimit ! --connlimit-above 10'),
+        ('1.8', '-m connlimit ! --connlimit-above 10'),
+    ],
+)
+def test_a_negated_connection_limit_uses_the_spelling_of_its_release(version, wanted):
+    """The block wrote a fixed leading "!", which 1.4.2 refuses outright."""
+    printer = _printer(version=version)
+    out = printer._print_connlimit(
+        _rule(connlimit_value=10, connlimit_above_not=True),
+    )
+    assert out is not None
+    assert out.strip() == wanted
+
+
+def test_a_connection_limit_that_is_not_negated_is_written_plainly():
+    printer = _printer(version='1.4.2')
+    out = printer._print_connlimit(_rule(connlimit_value=10))
+    assert out is not None
+    assert out.strip() == '-m connlimit --connlimit-above 10'

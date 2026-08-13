@@ -453,7 +453,13 @@ class PrintRule(PolicyRuleProcessor):
     def _print_single_option_with_negation(
         self, option: str, rule: CompRule, slot: str, arg: str
     ) -> str:
-        """Print --option with negation, respecting iptables version.
+        """Print --option with the negation the rule element carries."""
+        return self._negated_option(
+            option, arg, bool(getattr(rule, f'{slot}_single_object_negation'))
+        )
+
+    def _negated_option(self, option: str, arg: str, negated: bool) -> str:
+        """Print ``--option arg``, negated in the spelling this release takes.
 
         The two spellings do not overlap: iptables 1.4.3 both taught the
         parser the leading ``!`` and turned the deprecation of the old
@@ -463,10 +469,10 @@ class PrintRule(PolicyRuleProcessor):
         can negate goes through here, including the ones fwbuilder writes
         with a fixed leading ``!``.
         """
+        neg = '! ' if negated else ''
         if version_compare(self.version, '1.4.3') >= 0:
-            return f'{self._print_single_object_negation(rule, slot)}{option} {arg} '
-        else:
-            return f'{option} {self._print_single_object_negation(rule, slot)}{arg} '
+            return f'{neg}{option} {arg} '
+        return f'{option} {neg}{arg} '
 
     # -- Chain management --
 
@@ -1323,9 +1329,20 @@ class PrintRule(PolicyRuleProcessor):
         if not self._match_available(rule, 'connlimit'):
             return None
 
-        negated = bool(rule.get_option('connlimit_above_not', False))
-        neg = '! ' if negated else ''
-        result = f' -m connlimit {neg}--connlimit-above {limit}'
+        # The negation is spelled differently before and after 1.4.3, and
+        # connlimit reaches back to 1.2.9, so it goes through the same
+        # helper as every other negatable option rather than carrying a
+        # fixed leading `!`.  Up to 1.4.2 the module reads an
+        # intrapositional one (`check_inverse` in its parse callback,
+        # netfilter extensions/libxt_connlimit.c).
+        result = (
+            ' -m connlimit '
+            + self._negated_option(
+                '--connlimit-above',
+                str(limit),
+                bool(rule.get_option('connlimit_above_not', False)),
+            ).rstrip()
+        )
         try:
             masklen = int(rule.get_option('connlimit_masklen', 0) or 0)
         except (TypeError, ValueError):
