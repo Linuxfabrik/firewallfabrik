@@ -160,7 +160,7 @@ class CompilerDriver_nft(CompilerDriver):
         # ruleset when a second rule asks the same one for a different key
         # or a different timeout - which a compiler that only sees its own
         # rule set cannot notice.
-        self._meters: dict[str, tuple[str, str]] = {}
+        self._meters: dict[str, tuple[str, str, str]] = {}
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
         # Dynamic sets a per-source connection limit counts in, per table.

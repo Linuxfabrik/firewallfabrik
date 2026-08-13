@@ -10,6 +10,8 @@
 #
 #  two dynamic interfaces in the same policy or NAT rule
 #
+# firewall21:NAT:4: warning: "Use SNAT instead of MASQUERADE" needs the address of "eth0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
+# firewall21:NAT:5: warning: "Use SNAT instead of MASQUERADE" needs the address of "eth0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -447,10 +449,12 @@ table ip fwf_nat {
         #
         # Rule 4 (NAT)
         #
+        # firewall21:NAT:4: warning: "Use SNAT instead of MASQUERADE" needs the address of "eth0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
         oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 5 (NAT)
         #
+        # firewall21:NAT:5: warning: "Use SNAT instead of MASQUERADE" needs the address of "eth0" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
         oifname "eth0" ip saddr 192.168.1.0/24 counter masquerade random
     }
 }

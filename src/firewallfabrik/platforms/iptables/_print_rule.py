@@ -243,7 +243,7 @@ DSTLIMIT_NOTE = (
 # in a 64-byte field (netfilter linux/include/uapi/linux/netfilter/
 # xt_LOG.h and xt_NFLOG.h), so one character of each is the terminator.
 # iptables truncates a longer prefix without a word.  nftables has room
-# for 127 characters and keeps the whole string.
+# for 127 and cuts at that, so both printers report the cut.
 MAX_LOG_PREFIX = 29
 MAX_NFLOG_PREFIX = 63
 # How many seconds one rate unit stands for, keyed by the full name

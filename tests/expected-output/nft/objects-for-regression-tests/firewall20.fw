@@ -17,6 +17,7 @@
 #  converted to dynamic but address object is still there). Compiler
 #  should ignore this address object and issue a warning.
 #
+# firewall20:NAT:4: warning: "Use SNAT instead of MASQUERADE" needs the address of "ppp*" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
@@ -594,6 +595,7 @@ table ip fwf_nat {
         #
         # Rule 4 (NAT)
         #
+        # firewall20:NAT:4: warning: "Use SNAT instead of MASQUERADE" needs the address of "ppp*" in the rule, and it is only known while the firewall runs; nftables loads its ruleset in one piece and a source translation takes no set reference, so the rule masquerades
         oifname "ppp*" ip saddr 192.168.1.0/24 counter masquerade
         #
         # Rule 6 (NAT)

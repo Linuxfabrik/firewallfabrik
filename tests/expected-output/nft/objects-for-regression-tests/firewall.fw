@@ -18,6 +18,10 @@
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2:1-pa' removed from the rule
+# firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
+# firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
+# firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
+# firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -355,7 +359,9 @@ table ip fwf_filter {
         # Rule 14 (eth0,eth1)
         #
         # reject using connlimit
+        # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
         iifname "eth0" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
+        # firewall:Policy:14: warning: The "dstlimit" variant of the rate limit names an iptables match nftables never had; the rule is compiled as the rate limit kept per key that replaced it
         iifname "eth1" meter htable_Policy_14 { ip daddr timeout 1s limit rate 2/second burst 5 packets } counter drop
         #
         # Rule 15 (eth0,eth1)

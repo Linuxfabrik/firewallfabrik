@@ -142,7 +142,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         # The driver replaces this with one dict shared by every rule set and
         # by both table passes: a meter is an object of the table, so two
         # rule sets naming the same one have to agree on its shape.
-        self.meters: dict[str, tuple[str, str]] = {}
+        self.meters: dict[str, tuple[str, str, str]] = {}
 
         # Per-chain rule collection for nftables output assembly.
         # Unlike iptables (where -A CHAIN is part of each command),
@@ -424,7 +424,7 @@ class PolicyCompiler_nft(PolicyCompiler):
         """
         self.dynamic_sets.setdefault(name, addr_type)
 
-    def register_meter(self, name: str, keys: str, timeout: str) -> bool:
+    def register_meter(self, name: str, keys: str, timeout: str, size: str) -> bool:
         """Remember a meter, and report whether it fits the one already there.
 
         A meter is a set, so every rule naming it has to agree on the type
@@ -435,8 +435,8 @@ class PolicyCompiler_nft(PolicyCompiler):
         gave the set, which leaves the later rule counting something other
         than what it says.
         """
-        first = self.meters.setdefault(name, (keys, timeout))
-        return first == (keys, timeout)
+        first = self.meters.setdefault(name, (keys, timeout, size))
+        return first == (keys, timeout, size)
 
     def add_rule_filter(self) -> None:
         """Add the processor that selects the rules of this table.

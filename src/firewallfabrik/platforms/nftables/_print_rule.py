@@ -1601,6 +1601,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         if limit <= 0:
             return ''
 
+        if rule.get_option('hashlimit_dstlimit', False):
+            # The option asks for the "dstlimit" match, which netfilter
+            # dropped from iptables after 1.3.7 and which nftables never
+            # had; the iptables printer says the same about it.  What the
+            # rule means is a rate limit kept per key, which is what a
+            # meter is, so the rule is compiled and the option named.
+            self.compiler.warning(
+                rule,
+                'The "dstlimit" variant of the rate limit names an iptables '
+                'match nftables never had; the rule is compiled as the rate '
+                'limit kept per key that replaced it',
+            )
+
         modes = [
             mode
             for mode in ('srcip', 'dstip', 'srcport', 'dstport')
@@ -1646,6 +1659,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         key = ' . '.join(keys)
         parts = [key]
 
+        # --hashlimit-htable-max bounds how many sources the table holds.
+        # A meter's implicit set takes the same bound as `size`, and
+        # without one it grows until the set is full and stops limiting
+        # anything it has not seen yet.  The sibling option
+        # --hashlimit-htable-size counts hash buckets, which is an
+        # implementation detail of the iptables match and has no meaning
+        # here.
+        try:
+            entries = int(rule.get_option('hashlimit_max', 0) or 0)
+        except (TypeError, ValueError):
+            entries = 0
+        size = f' size {entries}' if entries > 0 else ''
+
         try:
             expire = int(rule.get_option('hashlimit_expire', 0) or 0)
         except (TypeError, ValueError):
@@ -1669,14 +1695,15 @@ class PrintRule_nft(PolicyRuleProcessor):
         parts.append(rate)
 
         name = self._meter_name(rule)
-        if not self.compiler.register_meter(name, key, timeout):
+        if not self.compiler.register_meter(name, key, timeout, size):
             self.compiler.error(
                 rule,
                 f'the rate limit table "{name}" is already in use by another '
-                'rule that keys it differently or expires its entries '
-                'differently; give one of the two its own name',
+                'rule that keys it differently, expires its entries '
+                'differently or holds a different number of them; give one '
+                'of the two its own name',
             )
-        return f'meter {name} {{ {" ".join(parts)} }}'
+        return f'meter {name}{size} {{ {" ".join(parts)} }}'
 
     def _meter_name(self, rule: CompRule) -> str:
         """Return the name of the meter this rule's rate limit counts in.

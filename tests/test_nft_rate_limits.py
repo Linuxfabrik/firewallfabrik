@@ -264,3 +264,26 @@ def test_a_log_prefix_longer_than_nftables_carries_is_reported():
     out = printer._get_log_prefix(rule)
     assert len(out) == MAX_NFT_LOG_PREFIX
     assert any('has been truncated' in message for message in printer.compiler.warnings)
+
+
+def test_the_entry_ceiling_of_a_rate_limit_table_reaches_the_meter():
+    """--hashlimit-htable-max bounds how many sources the table holds.
+
+    A meter's implicit set takes the same bound as `size`, and without one
+    it grows until the set is full and then stops limiting anything it has
+    not seen yet.  The iptables printer has written the option out since
+    the match was added; the nftables one never read it, although the
+    grammar has the slot (netfilter nftables src/parser_bison.y,
+    `METER identifier SIZE NUM`).  Offered to nft 1.1.6, which declares the
+    set with `size 128`.
+    """
+    printer = _printer()
+    printer.compiler.meters = {}
+    printer.compiler.ipv6_policy = False
+    printer.compiler.get_rule_set_name = lambda: 'Policy'
+    printer.compiler.register_meter = lambda *_args: True
+    rule = _Rule(hashlimit_value=10, hashlimit_max=128, hashlimit_mode_srcip=True)
+    rule.position = 0
+    rule.srv = []
+    out = printer._print_hashlimit(rule)
+    assert out.startswith('meter htable_Policy_0 size 128 {')

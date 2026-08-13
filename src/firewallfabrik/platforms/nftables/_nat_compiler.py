@@ -1612,6 +1612,15 @@ class DynamicInterfaceInTSrc(NATRuleProcessor):
 
         tsrc = rule.tsrc[0]
         if isinstance(tsrc, Interface) and not tsrc.is_regular():
+            if rule.get_option('ipt_use_snat_instead_of_masq', False):
+                self.compiler.warning(
+                    rule,
+                    '"Use SNAT instead of MASQUERADE" needs the address of '
+                    f'"{tsrc.name}" in the rule, and it is only known while '
+                    'the firewall runs; nftables loads its ruleset in one '
+                    'piece and a source translation takes no set reference, '
+                    'so the rule masquerades',
+                )
             rule.nat_rule_type = NATRuleType.Masq
             rule.ipt_target = 'masquerade'
 
