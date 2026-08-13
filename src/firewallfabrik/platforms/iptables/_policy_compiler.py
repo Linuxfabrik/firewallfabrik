@@ -3244,7 +3244,15 @@ class CheckForUnnumbered(PolicyRuleProcessor):
             return False
 
         if self._catch_unnumbered(rule, 'src') or self._catch_unnumbered(rule, 'dst'):
-            self.compiler.abort(rule, 'Can not use unnumbered interfaces in rules.')
+            # The interface has no address, so there is nothing to match on.
+            # Keeping the rule would widen it to every address on that side,
+            # which is the opposite of naming an interface.  The C++ throws
+            # here and emits nothing at all.
+            self.compiler.abort(
+                rule,
+                'Can not use unnumbered interfaces in rules. The rule is left out',
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True
@@ -3258,6 +3266,14 @@ class CheckForZeroAddr(PolicyRuleProcessor):
     - An Address object has address 0.0.0.0 with netmask 0.0.0.0
       (equivalent to 'any', likely a mistake).
     - A Network object has non-zero address but /0 netmask (likely typo).
+
+    The rule is kept, unlike the other checks of this kind.  Nothing is
+    lost by compiling it: an object whose netmask is /0 really does mean
+    "any", so the rule matches what it says and the message is about the
+    address probably being a typo rather than about a condition the
+    compiler cannot express.  The C++ regression output, produced in test
+    mode where ``abort()`` returns instead of throwing, carries these rules
+    for the same reason.
 
     Corresponds to C++ ``PolicyCompiler::checkForZeroAddr``.
     """
@@ -4035,10 +4051,15 @@ class CheckForObjectsWithErrors(PolicyRuleProcessor):
                 if data.get('rule_error', False):
                     error_msg = data.get('error_msg', 'Object has errors')
                     name = getattr(obj, 'name', str(obj))
+                    # An object that failed to resolve renders to nothing,
+                    # and an element that renders to nothing is "any".  The
+                    # rule has to go with the message.
                     self.compiler.abort(
                         rule,
-                        f"Object '{name}' has errors: {error_msg}",
+                        f"Object '{name}' has errors: {error_msg}. "
+                        f'The rule is left out',
                     )
+                    return True
 
         self.tmp_queue.append(rule)
         return True

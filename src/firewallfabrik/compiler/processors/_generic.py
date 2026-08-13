@@ -1238,6 +1238,16 @@ class CheckForTCPEstablished(BasicRuleProcessor):
     The 'established' option is not supported by iptables (or nftables).
     Use stateful rules instead.
 
+    The rule goes with the message.  Neither packet filter has a match for
+    that flag, so there is nothing to put in the rule's place: keeping it
+    would compile "accept established connections to these ports" into
+    "accept everything to these ports", which is a hole rather than a
+    stricter reading.  The C++ throws here (fwbuilder
+    libfwbuilder/src/fwcompiler/BaseCompiler.cpp, ``abort()``), so it emits
+    nothing at all; fwf reports and carries on to show the administrator
+    every problem at once, which only works if the offending rule is left
+    out.
+
     Corresponds to C++ ``Compiler::CheckForTCPEstablished``.
     """
 
@@ -1257,8 +1267,9 @@ class CheckForTCPEstablished(BasicRuleProcessor):
                         f'TCPService object with option "established" is not '
                         f'supported by firewall platform '
                         f'"{self.compiler.my_platform_name()}". '
-                        f'Use stateful rule instead.',
+                        f'Use stateful rule instead. The rule is left out',
                     )
+                    return True
 
         self.tmp_queue.append(rule)
         return True

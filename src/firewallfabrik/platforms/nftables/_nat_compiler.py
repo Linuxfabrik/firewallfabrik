@@ -483,7 +483,14 @@ class CheckForObjectsWithErrors(NATRuleProcessor):
                 data = getattr(obj, 'data', None) or {}
                 if data.get('rule_error', False):
                     name = getattr(obj, 'name', str(obj))
-                    self.compiler.abort(rule, f"Object '{name}' has errors")
+                    # An object that failed to resolve renders to nothing,
+                    # and an element that renders to nothing is "any", so a
+                    # translation rule kept here translates traffic it never
+                    # named.
+                    self.compiler.abort(
+                        rule, f"Object '{name}' has errors. The rule is left out"
+                    )
+                    return True
         self.tmp_queue.append(rule)
         return True
 
