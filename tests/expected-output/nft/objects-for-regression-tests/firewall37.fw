@@ -19,6 +19,12 @@
 # firewall37:mangle_rules:7: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 7 (global) because option 'Ignore rules with empty groups' is in effect
 
 FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -1446,6 +1452,7 @@ case "$cmd" in
 
     *)
         echo "Usage $0 [start|stop|status|block|reload|interfaces|test_interfaces]"
+        RETVAL=1
         ;;
 
 esac

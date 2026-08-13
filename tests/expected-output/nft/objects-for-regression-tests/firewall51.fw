@@ -25,6 +25,12 @@
 # Rule 4 (global): Rule branches to "base-ruleset", which is not a rule set nftables can jump to; the rule is left out
 
 FWBDEBUG=""
+# Every branch of the case below is expected to leave an exit code here, and
+# the one that prints the usage says 1.  Without the initialisation the
+# script ends in `exit ""`, which the shell answers with "numeric argument
+# required" and an exit code of its own choosing.  The iptables skeleton has
+# had both lines since fwbuilder wrote it.
+RETVAL=0
 
 PATH="/sbin:/usr/sbin:/bin:/usr/bin:${PATH}"
 export PATH
@@ -249,6 +255,7 @@ case "$cmd" in
 
     *)
         echo "Usage $0 [start|stop|status|block|reload]"
+        RETVAL=1
         ;;
 
 esac

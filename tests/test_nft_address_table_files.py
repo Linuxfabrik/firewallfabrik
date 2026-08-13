@@ -74,3 +74,18 @@ def test_the_loader_no_longer_ends_the_script_from_inside(tmp_path):
     loader = script.split('load_address_table() {', 1)[1].split('\n}', 1)[0]
     assert 'return 1' in loader
     assert 'exit 1' not in loader
+
+
+def test_the_script_answers_an_unknown_command_the_way_iptables_does(tmp_path):
+    """`exit ""` is not an exit code.
+
+    Every branch of the case is expected to leave one in RETVAL, and the
+    usage branch left none: the script ended in `exit ""`, which the shell
+    answers with "numeric argument required" and a code of its own.  The
+    iptables skeleton has had the initialisation and the `RETVAL=1` since
+    fwbuilder wrote it.
+    """
+    script = _compile(tmp_path)
+    assert '\nRETVAL=0\n' in script
+    usage = script.split('        echo "Usage $0 ', 1)[1]
+    assert 'RETVAL=1' in usage.split(';;', 1)[0]
