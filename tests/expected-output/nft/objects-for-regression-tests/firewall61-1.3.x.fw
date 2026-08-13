@@ -10,9 +10,9 @@
 #
 #  testing time litmiting for iptables 1.3.x
 #
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
+# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
 
 FWBDEBUG=""
 
@@ -246,11 +246,6 @@ table inet fwf_filter {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-        meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
-        #
         # Rule Policy_ipv6 0 (global)
         #
         meta nfproto ipv6 counter log prefix "RULE 0 -- DENY " level info drop
@@ -261,11 +256,6 @@ table inet fwf_filter {
         tcp flags syn / syn,rst counter tcp option maxseg size set rt mtu
         ct state established,related counter accept
         #
-        # Rule 0 (global)
-        #
-        # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-        meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
-        #
         # Rule Policy_ipv6 0 (global)
         #
         meta nfproto ipv6 counter log prefix "RULE 0 -- DENY " level info drop
@@ -274,11 +264,6 @@ table inet fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (global)
-        #
-        # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to
-        meta nfproto ipv4 counter log prefix "RULE 0 -- BRANCH " level info
         #
         # Rule Policy_ipv6 0 (global)
         #

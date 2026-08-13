@@ -597,11 +597,6 @@ table ip fwf_filter {
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
         #
-        # Rule 23 (global)
-        #
-        # Rule 23 (global): Custom action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
-        #
         # Rule 24 (global)
         #
         counter log prefix "RULE 24 -- DENY " level info drop
@@ -758,11 +753,6 @@ table ip fwf_filter {
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
         #
-        # Rule 23 (global)
-        #
-        # Rule 23 (global): Custom action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
-        #
         # Rule 24 (global)
         #
         counter log prefix "RULE 24 -- DENY " level info drop
@@ -900,11 +890,6 @@ table ip fwf_filter {
         # should generate branching code
         # in both filter and mangle tables
         meta l4proto tcp counter jump rule27_branch
-        #
-        # Rule 23 (global)
-        #
-        # Rule 23 (global): Custom action not yet supported by nftables compiler
-        ip saddr 192.168.1.0/24 counter
         #
         # Rule 24 (global)
         #

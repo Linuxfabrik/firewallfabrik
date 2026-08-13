@@ -638,6 +638,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         log_match = self._print_log(rule)
         mangle_stmt = self._print_mangle_statement(rule)
         verdict = self._print_verdict(rule)
+        if verdict is None:
+            # The verdict cannot be built and the reason was reported.
+            # Emitting the rule without one leaves a packet counter that
+            # carries out none of the action the rule names.
+            return ''
 
         # Counter: every iptables rule keeps implicit packet/byte counters, so
         # emit `counter` here (before any log or verdict, the order
@@ -2143,8 +2148,19 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         return ' '.join(parts)
 
-    def _print_verdict(self, rule: CompRule) -> str:
-        """Print the nftables verdict."""
+    def _print_verdict(self, rule: CompRule) -> str | None:
+        """Print the nftables verdict, or ``None`` if it cannot be built.
+
+        An empty string is a verdict of its own: ``.CONTINUE``, a LOG rule
+        and a connection-marking rule all deliberately end without one, and
+        the packet goes on to the next rule.  A branch whose chain does not
+        exist, a Custom action and an action nftables has no verdict for
+        therefore have to answer ``None``, or the rule goes out with every
+        one of its matches, a ``counter`` and nothing else - which counts
+        the packets and leaves the decision to whatever rule comes next,
+        while the activation reports success.  The iptables
+        ``_print_target`` answers the same question the same way.
+        """
         target = rule.ipt_target
 
         # LOG target is printed via _print_log, CONNMARK via
@@ -2166,8 +2182,14 @@ class PrintRule_nft(PolicyRuleProcessor):
         }
 
         if target:
-            if target.startswith('.'):
+            if target == '.CONTINUE':
                 return ''
+            if target.startswith('.'):
+                # `.CUSTOM` is the only other pseudo target, and DecideOnTarget
+                # has already reported that its free-form iptables text has no
+                # meaning here.  The rule keeps nothing that would carry out
+                # its action.
+                return None
             verdict = verdict_map.get(target)
             if verdict:
                 if verdict == 'reject':
@@ -2178,15 +2200,15 @@ class PrintRule_nft(PolicyRuleProcessor):
             # part of this ruleset declares - branching back into the top
             # rule set, for one, whose chains are hooked and cannot be
             # jumped to.  nftables refuses the whole ruleset over such a
-            # jump, so the rule is reported and left without a verdict.
+            # jump, so the rule is reported and left out.
             nft_comp = cast('PolicyCompiler_nft', self.compiler)
             if target not in getattr(nft_comp, 'branch_chains', set()):
                 self.compiler.error(
                     rule,
                     f'Rule branches to "{target}", which is not a rule set '
-                    'nftables can jump to',
+                    'nftables can jump to; the rule is left out',
                 )
-                return ''
+                return None
             return f'jump {target}'
 
         # Fall back to action
@@ -2199,8 +2221,13 @@ class PrintRule_nft(PolicyRuleProcessor):
             PolicyAction.Continue: '',
         }
 
+        # An action with no target and no entry here is one DecideOnTarget
+        # has already reported: Branch without a rule set, Modify, Scrub,
+        # Skip.  There is no verdict to fall back on, so the rule goes.
         action = rule.action
-        verdict = action_map.get(action, '') if isinstance(action, PolicyAction) else ''
+        if not isinstance(action, PolicyAction) or action not in action_map:
+            return None
+        verdict = action_map[action]
         if verdict == 'reject':
             return self._print_reject(rule)
         return verdict
