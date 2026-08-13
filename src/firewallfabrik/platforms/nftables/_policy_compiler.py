@@ -1534,6 +1534,12 @@ class FinalizeChain(PolicyRuleProcessor):
                 rule.ipt_chain = 'prerouting'
             elif direction == Direction.Outbound:
                 rule.ipt_chain = 'postrouting'
+            if rule.action == PolicyAction.Accept:
+                # fwbuilder overrides the direction for an accepting mangle
+                # rule and puts it in prerouting whatever it says.
+                # Prerouting is the first mangle hook a packet crosses, so
+                # an accept there covers every path through the box.
+                rule.ipt_chain = 'prerouting'
             self.tmp_queue.append(rule)
             return True
 

@@ -2820,6 +2820,13 @@ class FinalizeChain(PolicyRuleProcessor):
                 ipt_comp.set_chain(rule, 'PREROUTING')
             elif direction == Direction.Outbound:
                 ipt_comp.set_chain(rule, 'POSTROUTING')
+            if rule.action == PolicyAction.Accept:
+                # fwbuilder overrides the direction for an accepting mangle
+                # rule and puts it in prerouting whatever it says
+                # (PolicyCompiler_ipt::finalizeChain).  Prerouting is the
+                # first mangle hook a packet crosses, so an accept there
+                # covers every path through the box.
+                ipt_comp.set_chain(rule, 'PREROUTING')
         else:
             src = rule.src[0] if rule.src else None
             dst = rule.dst[0] if rule.dst else None
