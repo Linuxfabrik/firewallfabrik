@@ -103,6 +103,19 @@ _LOG_LEVEL_MAP = {
 }
 
 
+# The two names the two tools spell differently.  log_names[] in
+# libxtables/xtoptions.c is compared with strcmp and holds `error` and
+# `warning`; nftables' level_type (src/parser_bison.y) holds `err` and
+# `warn` and neither of the long forms.  Both spellings therefore reach
+# the compiler - from an imported .fwb, from a hand-edited file - and each
+# platform has to write the one its own tool knows.  The nftables printer
+# has the mirror of this table in _NFT_LOG_LEVELS.
+_LOG_LEVEL_SPELLING = {
+    'err': 'error',
+    'warn': 'warning',
+}
+
+
 def _is_known_log_level(level) -> bool:
     """Report whether iptables takes *level* after ``--log-level``.
 
@@ -112,6 +125,12 @@ def _is_known_log_level(level) -> bool:
     """
     level = str(level).strip().lower()
     return level in _LOG_LEVEL_MAP or (level.isdigit() and 0 <= int(level) <= 7)
+
+
+def iptables_log_level(level) -> str:
+    """Return *level* spelled the way iptables spells it."""
+    level = str(level).strip().lower()
+    return _LOG_LEVEL_SPELLING.get(level, level)
 
 
 # Targets that only write a log message and let the packet fall through to
@@ -1853,6 +1872,12 @@ class PrintRule(PolicyRuleProcessor):
             use_numeric = bool(self.compiler.fw.get_option('use_numeric_log_levels'))
             if use_numeric:
                 log_level = _LOG_LEVEL_MAP.get(str(log_level), log_level)
+            else:
+                # `err` and `warn` are what nftables calls these two levels;
+                # iptables compares the name with strcmp against log_names[]
+                # and answers either of them with `log level "err" unknown`,
+                # which stops the activation script.
+                log_level = iptables_log_level(log_level)
             parts.append(f'--log-level {log_level}')
 
         log_prefix = self._log_prefix(rule, MAX_LOG_PREFIX)

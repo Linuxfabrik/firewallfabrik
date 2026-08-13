@@ -261,3 +261,25 @@ def test_a_short_rate_unit_is_measured_against_the_right_ceiling():
     )
     assert out is not None
     assert '--hashlimit 500000/minute' in out
+
+
+@pytest.mark.parametrize(
+    ('stored', 'wanted'),
+    [
+        # The two names the two tools spell differently: log_names[] in
+        # libxtables/xtoptions.c holds "error" and "warning" and compares
+        # with strcmp, nftables' level_type holds "err" and "warn".
+        ('err', 'error'),
+        ('warn', 'warning'),
+        ('error', 'error'),
+        ('warning', 'warning'),
+        # Everything else is spelled the same way on both.
+        ('info', 'info'),
+        ('panic', 'panic'),
+        ('debug', 'debug'),
+    ],
+)
+def test_a_log_level_is_spelled_the_way_iptables_spells_it(stored, wanted):
+    from firewallfabrik.platforms.iptables._print_rule import iptables_log_level
+
+    assert iptables_log_level(stored) == wanted
