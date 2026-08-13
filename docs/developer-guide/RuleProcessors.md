@@ -1634,7 +1634,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `checkActionInMangleTable` | `platforms/iptables/_policy_compiler.py:CheckActionInMangleTable` |
 | `checkForUnsupportedCombinationsInMangle` | `platforms/iptables/_policy_compiler.py:CheckForUnsupportedCombinationsInMangle` |
 | `storeAction` | `platforms/iptables/_policy_compiler.py:StoreAction` |
-| `deprecateOptionRoute` | `platforms/iptables/_policy_compiler.py:DeprecateOptionRoute` |
+| `deprecateOptionRoute` | `platforms/iptables/_policy_compiler.py:DeprecateOptionRoute` + `platforms/nftables/_policy_compiler.py:DeprecateOptionRoute` |
 | `Logging1` | `platforms/iptables/_policy_compiler.py:Logging1` |
 | `Logging2` | `platforms/iptables/_policy_compiler.py:Logging2` |
 | `clearLogInMangle` | `platforms/iptables/_policy_compiler.py:ClearLogInMangle` |
@@ -1820,7 +1820,12 @@ Assigns `input`/`output` chain for any-any rules on loopback interface. For dire
 
 #### `FinalizeChain` — Transform
 
-Last-resort chain assignment. Defaults to `forward`, then upgrades to `input`/`output` based on direction and firewall match.
+Last-resort chain assignment. Defaults to `forward`, then upgrades to
+`input`/`output` based on direction and firewall match. In the mangle
+table the direction decides instead, and an accepting rule goes to
+`prerouting` whatever its direction says. A rule that ends up in `forward`
+on a firewall whose packet forwarding is off is reported and left out —
+both platforms do this, the option is read per address family.
 
 #### `DecideOnTarget` — Transform
 
@@ -1990,7 +1995,7 @@ interfaces). The nftables driver reuses the iptables routing compiler.
 ### Policy pipeline order
 
 ```
-Begin → SingleRuleFilter →
+Begin → SingleRuleFilter → DeprecateOptionRoute →
 [DropMangleTableRules (filter run) OR KeepMangleTableRules (mangle run)] →
 ClearTagClassifyInFilter → ClearActionInTagClassifyIfMangle →
 StoreAction → Logging1 →
@@ -2099,4 +2104,4 @@ implement them yet. Rules using a "not yet" feature abort with an error; the
 | Custom chain jump | `jump` / `goto` | ⚠️ Partial | Warning emitted, `jump target` generated |
 | Branch (sub-policy) | `jump` / `goto` | ⚠️ Partial | Both a policy and a NAT branch rule set get a regular chain and are reached by a `jump`. A NAT branch gets one chain per direction, because prerouting and postrouting are separate hooks. Still unsupported and reported: a branch into the firewall's top rule set, whose chains are hooked, and a branch into a rule set of another firewall object ([#90](https://github.com/Linuxfabrik/firewallfabrik/issues/90)) |
 | Dynamic interface addresses | Sets / maps | ✅ | A named set per interface and family, filled by `load_interface_address` from the running interface after the ruleset loads; a wildcard name collects every interface it matches |
-| Policy routing | `fib` + marks | ❌ Not yet | Error emitted for the routing option |
+| Policy routing | `fib` + marks | ❌ Not yet | `DeprecateOptionRoute` reports the rule and leaves it out, the way the iptables pipeline refuses it ([#125](https://github.com/Linuxfabrik/firewallfabrik/issues/125)) |
