@@ -241,3 +241,26 @@ def test_a_connection_limit_groups_by_at_most_the_address_width(ipv6, masklen, r
     else:
         assert out is not None and 'ct count' in out
         assert printer.compiler.errors == []
+
+
+def test_a_log_prefix_longer_than_nftables_carries_is_reported():
+    """Cutting it keeps the ruleset loadable, but a log parser has to know.
+
+    NF_LOG_PREFIXLEN is 128 and holds the terminator (netfilter
+    linux/include/uapi/linux/netfilter/nf_log.h), and nft answers a longer
+    prefix with "log prefix is too long" and refuses the whole ruleset -
+    verified against nft 1.1.6.  So the prefix is cut, and now said so, the
+    way the iptables printer has always said it for its own shorter limits.
+    """
+    from firewallfabrik.platforms.nftables._print_rule import MAX_NFT_LOG_PREFIX
+
+    printer = _printer()
+    printer.compiler.source_ruleset = None
+    rule = _Rule(log_prefix='x' * 200)
+    rule.stored_action = 'ACCEPT'
+    rule.position = 0
+    rule.ipt_chain = 'input'
+    rule.itf = []
+    out = printer._get_log_prefix(rule)
+    assert len(out) == MAX_NFT_LOG_PREFIX
+    assert any('has been truncated' in message for message in printer.compiler.warnings)

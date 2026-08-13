@@ -2073,9 +2073,9 @@ class PrintRule(PolicyRuleProcessor):
         Ports the warning of fwbuilder's
         ``PolicyCompiler_ipt::PrintRule::_printLogPrefix``.  Silently
         cutting the prefix is how a log parser starts missing the fields
-        behind it, and the nftables backend takes the full string, so the
-        same policy would write differently shaped log lines on the two
-        platforms without anyone noticing.
+        behind it.  The nftables printer cuts at its own, longer limit and
+        says so as well, so the same policy writes differently shaped log
+        lines on the two platforms and both of them name the reason.
         """
         if len(prefix) <= limit:
             return prefix

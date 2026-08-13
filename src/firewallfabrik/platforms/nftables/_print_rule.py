@@ -118,6 +118,13 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # the iptables limit match.
 MAX_NFT_LIMIT_BURST = 2**32 - 1
 
+# The longest log prefix the kernel carries, for a netlink group as well as
+# for plain logging: NF_LOG_PREFIXLEN is 128 and holds the terminator
+# (netfilter linux/include/uapi/linux/netfilter/nf_log.h,
+# net/netfilter/nft_log.c).  nft answers a longer one with "log prefix is
+# too long" and refuses the whole ruleset over it.
+MAX_NFT_LOG_PREFIX = 127
+
 
 # IPv4 option flags of an IPService mapped to the nftables option keyword.
 # nftables knows lsrr, rr, ssrr and ra (see the ip_option_type rule in the
@@ -2149,8 +2156,20 @@ class PrintRule_nft(PolicyRuleProcessor):
         # characters, for a netlink group as well as for plain logging
         # (netfilter linux/include/uapi/linux/netfilter/nf_log.h and
         # net/netfilter/nft_log.c). This is not the 29-character limit of
-        # iptables' LOG target nor the 63 of its NFLOG target.
-        return result[:127]
+        # iptables' LOG target nor the 63 of its NFLOG target.  Cutting it
+        # is what keeps the ruleset loadable - nft answers a longer one
+        # with "log prefix is too long" and refuses all of it - but a log
+        # parser reading the fields behind the cut has to be told, the way
+        # the iptables printer says it.
+        if len(result) > MAX_NFT_LOG_PREFIX:
+            self.compiler.warning(
+                rule,
+                f'Log prefix "{result}" is longer than the '
+                f'{MAX_NFT_LOG_PREFIX} characters nftables can carry and has '
+                'been truncated',
+            )
+            result = result[:MAX_NFT_LOG_PREFIX]
+        return result
 
     def _get_tag_value(self, rule: CompRule) -> str:
         """Return the mark of the Tag Service a tagging rule refers to.
