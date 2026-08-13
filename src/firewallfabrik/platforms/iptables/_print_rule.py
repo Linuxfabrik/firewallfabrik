@@ -1713,7 +1713,15 @@ class PrintRule(PolicyRuleProcessor):
         return False
 
     def _print_target(self, rule: CompRule) -> str | None:
-        """Print the ``-j`` part, or ``None`` when the rule cannot be built."""
+        """Print the ``-j`` part, or ``None`` when the rule cannot be built.
+
+        An empty string is a target of its own: ``.CONTINUE`` means the rule
+        deliberately carries no ``-j``.  A branch that cannot build its
+        target therefore has to answer ``None``, or the rule goes out with
+        every one of its matches and no target at all - which iptables
+        accepts as a packet counter, so the activation script does not stop
+        and nothing says the action was lost.
+        """
         # Tagging and classification pick their own target and carry the
         # value with it, so they come before the generic target mapping
         # (fwbuilder PolicyCompiler_PrintRule::_printTarget).
@@ -1722,9 +1730,10 @@ class PrintRule(PolicyRuleProcessor):
             if not tag_value:
                 self.compiler.error(
                     rule,
-                    'tagging rule has no Tag Service to take the mark from',
+                    'tagging rule has no Tag Service to take the mark from; '
+                    'the rule is left out',
                 )
-                return ''
+                return None
             return f' -j MARK --set-mark {tag_value}'
 
         if rule.get_option('classification', False):
@@ -1732,9 +1741,10 @@ class PrintRule(PolicyRuleProcessor):
             if not classify_str:
                 self.compiler.error(
                     rule,
-                    'classification rule has no traffic class to set',
+                    'classification rule has no traffic class to set; '
+                    'the rule is left out',
                 )
-                return ''
+                return None
             if not is_valid_traffic_class(classify_str):
                 # The target reads the class with sscanf("%x:%x") and
                 # answers anything else with `Bad class value`, which stops
@@ -1759,9 +1769,11 @@ class PrintRule(PolicyRuleProcessor):
                 custom_str = rule.get_option('custom_str', '')
                 if not custom_str:
                     self.compiler.error(
-                        rule, 'rule with a custom action has no target to run'
+                        rule,
+                        'rule with a custom action has no target to run; '
+                        'the rule is left out',
                     )
-                    return ''
+                    return None
                 return f' {custom_str}'
             if target.startswith('.'):
                 return ''
