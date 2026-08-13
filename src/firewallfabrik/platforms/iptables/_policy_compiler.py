@@ -89,7 +89,10 @@ from firewallfabrik.platforms.iptables._utils import (
     single_negation_qualifies,
     version_compare,
 )
-from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
+from firewallfabrik.platforms.linux._netfilter import (
+    count_bridge_interfaces,
+    interface_direction_problem,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -247,11 +250,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # PrintRule names the parent bridge next to a wildcard bridge port
         # only when there is more than one bridge to tell apart, so count
         # them here (C++ PolicyCompiler_ipt::prolog).
-        self.bridge_count = sum(
-            1
-            for iface in self.fw.interfaces
-            if (iface.get_option('type', '') or '') == 'bridge'
-        )
+        self.bridge_count = count_bridge_interfaces(self.fw)
 
         return n
 

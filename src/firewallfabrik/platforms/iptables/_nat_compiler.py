@@ -73,7 +73,10 @@ from firewallfabrik.platforms.iptables._utils import (
     single_negation_qualifies,
     version_compare,
 )
-from firewallfabrik.platforms.linux._netfilter import nat_interface_problem
+from firewallfabrik.platforms.linux._netfilter import (
+    count_bridge_interfaces,
+    nat_interface_problem,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -117,6 +120,7 @@ class NATCompiler_ipt(NATCompiler):
         self.oscnf = oscnf
 
         self.have_dynamic_interfaces: bool = False
+        self.bridge_count: int = 0
         self.minus_n_commands: dict[str, bool] | None = minus_n_commands
 
         # Chain management
@@ -213,6 +217,11 @@ class NATCompiler_ipt(NATCompiler):
             for iface in self.fw.interfaces:
                 if iface.is_dynamic():
                     self.have_dynamic_interfaces = True
+
+        # NATPrintRule names the parent bridge next to a wildcard bridge
+        # port for the same reason the policy printer does, and needs the
+        # same count to decide whether it is worth it.
+        self.bridge_count = count_bridge_interfaces(self.fw)
 
         return n
 

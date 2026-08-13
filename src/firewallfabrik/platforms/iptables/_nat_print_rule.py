@@ -771,15 +771,37 @@ class NATPrintRule(NATRuleProcessor):
             return self._print_single_option_with_negation(
                 option, rule, slot, iface_name
             )
+        # Several bridges can share one wildcard port name (`vnet+` on both
+        # br0 and br1, which is what libvirt gives a host with more than one
+        # virtual network), and then the port match alone no longer says
+        # which bridge is meant: a rule written for one of them translates
+        # the other one's guests too.  Naming the bridge next to it settles
+        # that, and is only worth doing when there is more than one bridge.
+        # The policy printer has done this since it was written.
+        parent = getattr(obj, 'parent_interface', None)
+        parent_name = parent.name if parent is not None else ''
+        name_the_bridge = (
+            getattr(self.compiler, 'bridge_count', 0) > 1
+            and iface_name.endswith('+')
+            and parent_name
+        )
+
+        parts = []
         if inbound:
+            if name_the_bridge:
+                parts.append(f'-i {parent_name}')
             option = self._print_single_option_with_negation(
                 '--physdev-in', rule, slot, iface_name
             )
-            return f'-m physdev {option.rstrip()}'
-        option = self._print_single_option_with_negation(
-            '--physdev-out', rule, slot, iface_name
-        )
-        return f'-m physdev --physdev-is-bridged {option.rstrip()}'
+            parts.append(f'-m physdev {option.rstrip()}')
+        else:
+            if name_the_bridge:
+                parts.append(f'-o {parent_name}')
+            option = self._print_single_option_with_negation(
+                '--physdev-out', rule, slot, iface_name
+            )
+            parts.append(f'-m physdev --physdev-is-bridged {option.rstrip()}')
+        return ' '.join(parts)
 
     def _get_interface_name(self, itf_list: list) -> str:
         if not itf_list:

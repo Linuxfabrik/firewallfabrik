@@ -351,6 +351,27 @@ def reject_type_token(value: str, ipv6: bool) -> str:
     return ''
 
 
+def count_bridge_interfaces(fw) -> int:
+    """Return how many bridge interfaces a firewall has.
+
+    A bridge port is matched with ``-m physdev``, which names the port and
+    not the bridge it hangs on.  Several bridges can share one wildcard
+    port name - ``vnet+`` on both br0 and br1 is what libvirt gives every
+    host running more than one virtual network - and then the port match
+    alone no longer tells them apart.  Naming the bridge next to it with
+    ``-i``/``-o`` does, which is worth doing only when there is more than
+    one bridge (fwbuilder PolicyCompiler_ipt::prolog, and the
+    ``bridge_count > 1`` test in PolicyCompiler_PrintRule.cpp).
+
+    Shared by the policy and the NAT compiler: both write bridge-port
+    matches, and a NAT rule that cannot tell two bridges apart translates
+    for the wrong one.
+    """
+    return sum(
+        1 for iface in fw.interfaces if (iface.get_option('type', '') or '') == 'bridge'
+    )
+
+
 def get_mac_only_address(obj) -> str:
     """Return the MAC of an object that has no IP address.
 
