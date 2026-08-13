@@ -385,6 +385,12 @@ class CompilerDriver_ipt(CompilerDriver):
                         routing_compiler.single_rule_compile_mode = True
                         routing_compiler.single_rule_id = single_rule_id
                     routing_compiler.verbose = self.verbose > 0
+                    # --xr, the routing counterpart of --xp and --xn.  The
+                    # two siblings were handed to their compilers and this
+                    # one was not, so the flag did nothing on either
+                    # platform although the developer guide documents it.
+                    routing_compiler.debug_rule = self.debug_rule_routing
+                    routing_compiler.rule_debug_on = self.debug_rule_routing >= 0
                     routing_compiler.source_dir = self.source_dir
 
                     routing_rules_count = routing_compiler.prolog()

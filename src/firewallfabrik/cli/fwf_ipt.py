@@ -164,13 +164,6 @@ def parse_args(argv=None):
         help='debug routing rule number',
     )
 
-    parser.add_argument(
-        '--xt',
-        action='store_true',
-        dest='TEST_MODE',
-        help='test mode (fatal errors treated as warnings)',
-    )
-
     ip_version = parser.add_mutually_exclusive_group()
     ip_version.add_argument(
         '-4',
@@ -324,7 +317,6 @@ def main(argv=None):
         driver.source_dir = str(Path(args.FILE).parent)
         driver.verbose = args.VERBOSE
         driver.prepend_cluster_name = args.DEBUG_CLUSTER_NAME
-        driver.test_mode = args.TEST_MODE
 
         if args.OUTPUT:
             driver.file_name_setting = args.OUTPUT

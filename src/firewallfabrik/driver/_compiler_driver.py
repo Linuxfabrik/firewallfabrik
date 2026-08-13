@@ -57,7 +57,6 @@ class CompilerDriver(BaseCompiler):
         self.ipv6_run: bool = True
         self.single_rule_compile_on: bool = False
         self.single_rule_id: str = ''
-        self.test_mode: bool = False
         self.debug_rule_policy: int = -1
         self.debug_rule_nat: int = -1
         self.debug_rule_routing: int = -1

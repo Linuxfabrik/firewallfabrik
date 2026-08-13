@@ -76,3 +76,20 @@ def test_a_host_counts_across_its_interfaces():
     host.name = 'gw-host'
     host.interfaces = [_interface([_ipv4(), _mac()])]
     assert _count_addresses(host) == 1
+
+
+def test_the_routing_debug_flag_reaches_the_routing_compiler():
+    """--xr is the routing counterpart of --xp and --xn.
+
+    Both siblings are handed to their compilers by the drivers; this one
+    was set on the driver and read by nobody, so the flag did nothing on
+    either platform although the developer guide describes it as working.
+    """
+    import inspect
+
+    from firewallfabrik.platforms.iptables import _compiler_driver as ipt
+    from firewallfabrik.platforms.nftables import _compiler_driver as nft
+
+    for module in (ipt, nft):
+        source = inspect.getsource(module)
+        assert 'routing_compiler.debug_rule = self.debug_rule_routing' in source
