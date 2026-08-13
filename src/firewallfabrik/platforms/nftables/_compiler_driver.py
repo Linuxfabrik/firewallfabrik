@@ -155,6 +155,12 @@ class CompilerDriver_nft(CompilerDriver):
         self._nat_branch_chains: dict[str, list[str]] = {}
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
+        # The shape each meter was given, across every rule set and both
+        # table passes.  A meter is a set, and nftables refuses the whole
+        # ruleset when a second rule asks the same one for a different key
+        # or a different timeout - which a compiler that only sees its own
+        # rule set cannot notice.
+        self._meters: dict[str, tuple[str, str]] = {}
         self.filter_counters: list[str] = []
         self.mangle_counters: list[str] = []
         # Dynamic sets a per-source connection limit counts in, per table.
@@ -564,6 +570,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         policy_compiler = PolicyCompiler_nft(session, fw, ipv6_policy, oscnf)
+        policy_compiler.meters = self._meters
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
         if not self._is_top_ruleset(pol_rs):
@@ -625,6 +632,7 @@ class CompilerDriver_nft(CompilerDriver):
         ipv6_policy = policy_af == AF_INET6
 
         mangle_compiler = MangleCompiler_nft(session, fw, ipv6_policy, oscnf)
+        mangle_compiler.meters = self._meters
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.branch_chains = self._branch_chains
         # A branch rule set has a chain of its own in the mangle table too.

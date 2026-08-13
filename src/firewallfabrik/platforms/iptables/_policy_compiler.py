@@ -191,7 +191,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # Hash tables a rate limit kept per source, destination or port
         # counts in, keyed by table name and holding the settings the first
         # rule gave it. The kernel keeps those for every later rule naming
-        # the same table.
+        # the same table.  The driver replaces this with one dict shared by
+        # every rule set and by both table passes, because the collision it
+        # has to catch happens between compiler instances just as often as
+        # inside one.
         self.hashlimit_tables: dict[str, tuple[int, str, str]] = {}
 
         # Chain management

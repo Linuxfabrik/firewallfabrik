@@ -139,6 +139,9 @@ class PolicyCompiler_nft(PolicyCompiler):
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
         # Meters a rate limit kept per source, destination or port counts in,
         # keyed by meter name and holding the shape the first rule gave it.
+        # The driver replaces this with one dict shared by every rule set and
+        # by both table passes: a meter is an object of the table, so two
+        # rule sets naming the same one have to agree on its shape.
         self.meters: dict[str, tuple[str, str]] = {}
 
         # Per-chain rule collection for nftables output assembly.

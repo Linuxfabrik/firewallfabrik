@@ -91,6 +91,15 @@ class CompilerDriver_ipt(CompilerDriver):
         # branch that belongs to its own chain, instead of being copied into
         # prerouting and postrouting at once.
         self._nat_branch_chains: dict[str, list[str]] = {}
+        # The hash table each rate limit kept per source, destination or
+        # port counts in, and the settings the first rule gave it.  The
+        # kernel looks the table up by its name and family alone
+        # (net/netfilter/xt_hashlimit.c, htable_find_get) and hands the
+        # existing one back, configuration and all, so a name reused by
+        # another rule set or by the mangle pass has to be noticed here -
+        # every rule set and every table is compiled by a compiler of its
+        # own, which cannot see what the others named.
+        self._hashlimit_tables: dict[str, tuple[int, str, str]] = {}
 
         # Prolog/epilog tracking
         self.prolog_done: bool = False
@@ -847,6 +856,8 @@ class CompilerDriver_ipt(CompilerDriver):
             session, fw, ipv6_policy, oscnf, minus_n_commands_mangle
         )
 
+        mangle_compiler.hashlimit_tables = self._hashlimit_tables
+
         if not self._flush_ruleset:
             mangle_compiler.chain_prefix = self._table_name
 
@@ -889,6 +900,8 @@ class CompilerDriver_ipt(CompilerDriver):
         policy_compiler = PolicyCompiler_ipt(
             session, fw, ipv6_policy, oscnf, minus_n_commands_filter
         )
+
+        policy_compiler.hashlimit_tables = self._hashlimit_tables
 
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True
