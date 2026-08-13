@@ -301,7 +301,7 @@ load_address_table() {
 
     test -r "$file" || {
         echo "Can not find file $file referenced by address table object $setname"
-        exit 1
+        return 1
     }
 
     cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \

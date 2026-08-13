@@ -1155,6 +1155,7 @@ class CompilerDriver_nft(CompilerDriver):
             'ip_path': ip_path,
             'nat_table': nat_table,
             'mangle_table': mangle_table,
+            'address_table_file_checks': self._address_table_file_checks(),
             'address_table_code': self._address_table_load_commands(
                 filter_family, filter_table, mangle_table, nat_table
             ),
@@ -1194,6 +1195,35 @@ class CompilerDriver_nft(CompilerDriver):
                 lines.append(
                     f'    {loader} "{fam}" "{nat_table}" "{name}" "{source}" "{af}"'
                 )
+        return '\n'.join(lines)
+
+    def _address_table_file_checks(self) -> str:
+        """Return one readability check per address table data file.
+
+        The elements of such a set come from a file on this machine, and a
+        file that cannot be read leaves the set empty - which is a set no
+        packet is in, so a Deny rule blocks nothing and an Accept rule lets
+        nothing through.  The check belongs before the ruleset is installed:
+        the iptables script has run it ahead of its flush since fwbuilder
+        wrote it (configlet run_time_address_tables,
+        check_run_time_address_table_files), and asking afterwards means the
+        firewall is already running on the empty sets.
+
+        Only a table backed by a file is checked; a DNS name is resolved and
+        a dynamic interface is read from the running system.
+        """
+        seen: set[str] = set()
+        lines: list[str] = []
+        for tables in (
+            self.filter_address_tables,
+            self.mangle_address_tables,
+            *self.nat_address_tables.values(),
+        ):
+            for name, (source, _ipv6, kind) in sorted(tables.items()):
+                if kind != 'file' or source in seen:
+                    continue
+                seen.add(source)
+                lines.append(f'    check_address_table_file "{name}" "{source}"')
         return '\n'.join(lines)
 
     def _get_ip_forward_commands(self, fw: Firewall) -> str:

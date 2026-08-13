@@ -93,7 +93,7 @@ load_address_table() {
 
     test -r "$file" || {
         echo "Can not find file $file referenced by address table object $setname"
-        exit 1
+        return 1
     }
 
     cleaned=$(sed -e 's/[#;].*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "$file" \
@@ -171,6 +171,24 @@ load_address_tables() {
     :
 {{ address_table_code }}
 }
+{% if address_table_file_checks %}
+
+# The elements of an address table set come from a file on this machine, so a
+# file that cannot be read leaves the set empty - a set no packet is in, which
+# turns a Deny rule into one that blocks nothing. Asked before the ruleset is
+# installed, while the running firewall is still in place.
+check_address_table_file() {
+    test -r "$2" || {
+        echo "Can not find file $2 referenced by address table object $1"
+        exit 1
+    }
+}
+
+check_address_table_files() {
+    :
+{{ address_table_file_checks }}
+}
+{% endif %}
 {% endif %}
 
 nft_ruleset() {
@@ -320,6 +338,9 @@ case "$cmd" in
 {% endif %}
 {% if prolog_place == 'after_interfaces' %}
         prolog_commands
+{% endif %}
+{% if address_table_file_checks %}
+        check_address_table_files
 {% endif %}
         check_ruleset || {
             log "Ruleset rejected by nft, keeping the running firewall"
