@@ -661,19 +661,33 @@ class NATPrintRule(NATRuleProcessor):
         return '\n'
 
     def _print_rule_label(self, rule: CompRule) -> str:
+        """Print the rule banner, its comment and anything reported about it.
+
+        The same three parts the policy printer writes.  Single-rule
+        compile mode leaves the banner out there, so that the fragment the
+        editor shows is the rule and nothing else, and a message the
+        compiler recorded against the rule is written into the script so
+        the administrator reading it sees why the rule looks as it does -
+        neither happened here.
+        """
         label = rule.label
-        if label and label != self.current_rule_label:
-            self.current_rule_label = label
-            result = f'# \n# Rule {label}\n# \n'
+        if not label or label == self.current_rule_label:
+            return ''
+        self.current_rule_label = label
+
+        result = ''
+        if not self.compiler.single_rule_compile_mode:
+            result += f'# \n# Rule {label}\n# \n'
             result += f'echo "Rule {label}"\n'
             result += '# \n'
-            comment = rule.comment
-            if comment:
-                for line in comment.split('\n'):
-                    if line.strip():
-                        result += f'# {line}\n'
-            return result
-        return ''
+        comment = rule.comment
+        if comment:
+            for line in comment.split('\n'):
+                if line.strip():
+                    result += f'# {line}\n'
+        if rule.compiler_message:
+            result += f'{rule.compiler_message}\n'
+        return result
 
     def _print_chain_direction_and_interface(self, rule: CompRule) -> str | None:
         parts = []

@@ -189,7 +189,17 @@ class NATPrintRule_nft(NATRuleProcessor):
         parts.append('counter')
         parts.append(nat_action)
 
-        return '        ' + ' '.join(parts) + '\n'
+        line = '        ' + ' '.join(parts) + '\n'
+
+        # Anything reported about this rule goes into the ruleset next to
+        # it, the way the policy printer writes it: a warning that only
+        # reaches the compiler output is gone by the time somebody reads
+        # the generated file.
+        errors = self.compiler.get_errors_for_rule(rule)
+        if errors:
+            line = f'        # {errors}\n' + line
+
+        return line
 
     def _print_addr_match(
         self,
@@ -279,7 +289,11 @@ class NATPrintRule_nft(NATRuleProcessor):
         if not label or label == self._chain_labels.get(chain, ''):
             return ''
         self._chain_labels[chain] = label
-        result = f'        # \n        # Rule {label}\n        # \n'
+        result = ''
+        if not self.compiler.single_rule_compile_mode:
+            # The fragment the editor shows is the rule and nothing else,
+            # which is what the policy printer does with the banner.
+            result = f'        # \n        # Rule {label}\n        # \n'
         comment = rule.comment
         if comment:
             for line in comment.split('\n'):

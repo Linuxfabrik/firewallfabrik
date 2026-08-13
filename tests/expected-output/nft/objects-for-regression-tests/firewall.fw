@@ -1033,6 +1033,7 @@ table ip fwf_nat {
         # Rule 16 (NAT)
         #
         # should match mac and ip addresses
+        # # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2:1-pa' removed from the rule
         oifname "eth1" ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr != { 61.150.47.112, 223.223.223.223 } tcp dport 80 counter snat to 222.222.222.222
         #
         # Rule 20 (NAT)
