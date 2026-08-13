@@ -110,6 +110,14 @@ def print_fragment_match(ipv6: bool) -> str:
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 
+# The largest burst a rate limit can carry.  It travels in a 32-bit netlink
+# attribute in both directions (netfilter nftables src/netlink_linearize.c
+# writes NFTNL_EXPR_LIMIT_BURST with nftnl_expr_set_u32, the kernel reads it
+# with nla_get_be32 in net/netfilter/nft_limit.c), and neither end reports a
+# larger number - it is cut to its low 32 bits.  This is not the 10000 of
+# the iptables limit match.
+MAX_NFT_LIMIT_BURST = 2**32 - 1
+
 
 # IPv4 option flags of an IPService mapped to the nftables option keyword.
 # nftables knows lsrr, rr, ssrr and ra (see the ip_option_type rule in the
@@ -611,6 +619,11 @@ class PrintRule_nft(PolicyRuleProcessor):
 
         # Rate limiting (-m limit on iptables -> native `limit rate` on nftables)
         limit_match = self._print_limit(rule)
+        if limit_match is None:
+            # The rate cannot be expressed and the reason was reported.
+            # Emitting the rule without it turns "drop above 20 per second"
+            # into "drop".
+            return ''
         if limit_match:
             parts.append(limit_match)
 
@@ -624,6 +637,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             parts.append(connlimit_match)
 
         hashlimit_match = self._print_hashlimit(rule)
+        if hashlimit_match is None:
+            # Same again for the limit kept per source, destination or port.
+            return ''
         if hashlimit_match:
             parts.append(hashlimit_match)
 
@@ -1528,14 +1544,16 @@ class PrintRule_nft(PolicyRuleProcessor):
         'day': 24 * 60 * 60,
     }
 
-    def _rate_unit(self, rule: CompRule) -> str:
-        """Return the unit of the rate as nftables spells it.
+    def _rate_unit(self, rule: CompRule) -> str | None:
+        """Return the unit of the rate as nftables spells it, or ``None``.
 
         iptables takes any prefix of a unit name, so an imported file can
         carry `/sec` or `/min`; nftables knows the full word alone and
         answers anything else with a syntax error, which costs the whole
-        ruleset.  A suffix that names no unit at all is reported and the
-        rate falls back to the default both tools have.
+        ruleset.  A suffix that names no unit at all leaves the rule out:
+        falling back to a default would enforce a rate the rule does not
+        say, and per second is sixty times what a rule written per minute
+        asks for.  The iptables printer answers it the same way.
         """
         suffix = str(rule.get_option('hashlimit_suffix', '') or '')
         unit = normalize_rate_unit(suffix)
@@ -1543,12 +1561,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             self.compiler.error(
                 rule,
                 f'"{suffix.strip()}" is not a unit a rate can be given in; '
-                'the rate limit counts per second',
+                'the rule is left out',
             )
-            return 'second'
+            return None
         return unit
 
-    def _print_hashlimit(self, rule: CompRule) -> str:
+    def _print_hashlimit(self, rule: CompRule) -> str | None:
         """Print the rate limit kept per source, destination or port.
 
         The nftables counterpart of ``-m hashlimit``, in the shape
@@ -1564,6 +1582,10 @@ class PrintRule_nft(PolicyRuleProcessor):
         without a key there is nothing to keep the buckets apart, and a
         plain ``limit rate`` would cap the rule as a whole, which is a
         different rule from the one the editor shows.
+
+        ``None`` means the caller has to leave the rule out: a rate the
+        rule cannot carry is a condition it loses, and a rule that keeps
+        its action without its condition says the opposite of what it says.
         """
         try:
             limit = int(rule.get_option('hashlimit_value', 0) or 0)
@@ -1578,6 +1600,9 @@ class PrintRule_nft(PolicyRuleProcessor):
             if mode in self._hashlimit_modes(rule)
         ]
         rate = self._hashlimit_rate(rule, limit)
+        if rate is None:
+            # The rate cannot be written and the reason was reported.
+            return None
 
         if not modes:
             # iptables takes `-m hashlimit` without a mode - only the name
@@ -1626,6 +1651,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             # (net/netfilter/xt_hashlimit.c).  A meter without a timeout
             # never drops an entry, so it grows until the set is full and
             # the rule stops limiting the sources it has not seen yet.
+            # _hashlimit_rate has already read the unit and left the rule
+            # out if it could not, so this call cannot report a second time.
             expire = self._RATE_UNIT_SECONDS.get(self._rate_unit(rule), 1) * 1000
         # iptables counts the idle time of a bucket in milliseconds,
         # nftables in seconds (libxt_hashlimit.txlate rounds the same way).
@@ -1665,7 +1692,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             name += '_v6'
         return nft_object_name(name)
 
-    def _hashlimit_rate(self, rule: CompRule, limit: int) -> str:
+    def _hashlimit_rate(self, rule: CompRule, limit: int) -> str | None:
         """Return the `limit rate ...` half of a hashlimit.
 
         The rate is a ceiling, not a floor.  The iptables side writes
@@ -1679,14 +1706,41 @@ class PrintRule_nft(PolicyRuleProcessor):
         (extensions/libxt_hashlimit.txlate).
         """
         unit = self._rate_unit(rule)
+        if unit is None:
+            return None
         rate = f'limit rate {limit}/{unit}'
         try:
             burst = int(rule.get_option('hashlimit_burst', 0) or 0)
         except (TypeError, ValueError):
             burst = 0
         if burst > 0:
+            if not self._burst_fits(rule, burst):
+                return None
             rate += f' burst {burst} packets'
         return rate
+
+    def _burst_fits(self, rule: CompRule, burst: int) -> bool:
+        """Report whether nftables can carry *burst*, reporting if it cannot.
+
+        The burst travels in a 32-bit netlink attribute
+        (``nftnl_expr_set_u32(NFTNL_EXPR_LIMIT_BURST)`` in netfilter
+        nftables src/netlink_linearize.c, read back with ``nla_get_be32``
+        in the kernel's net/netfilter/nft_limit.c), and neither side
+        complains about a larger number: it is simply cut to its low 32
+        bits.  A burst of exactly 2^32 therefore arrives as zero, which the
+        kernel replaces with ``NFT_LIMIT_PKT_BURST_DEFAULT``, five - the
+        rule then bursts five packets where it was written for four
+        billion.  Verified against nft 1.1.6 in a network namespace.
+        """
+        if burst <= MAX_NFT_LIMIT_BURST:
+            return True
+        self.compiler.error(
+            rule,
+            f'Rate limit burst {burst} is out of range; nftables carries 0 to '
+            f'{MAX_NFT_LIMIT_BURST} and cuts anything larger down without '
+            'saying so; the rule is left out',
+        )
+        return False
 
     def _hashlimit_modes(self, rule: CompRule) -> set[str]:
         """Return the modes the rule asks the rate limit to key on.
@@ -1719,8 +1773,8 @@ class PrintRule_nft(PolicyRuleProcessor):
         """
         return any(isinstance(srv, (TCPService, UDPService)) for srv in rule.srv)
 
-    def _print_limit(self, rule: CompRule) -> str:
-        """Print native nftables rate limiting.
+    def _print_limit(self, rule: CompRule) -> str | None:
+        """Print native nftables rate limiting, or ``None`` on failure.
 
         Mirrors the iptables ``-m limit --limit N/unit --limit-burst B``
         match. iptables-translate maps this to nftables' native
@@ -1731,6 +1785,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         valid there and a syntax error here, which costs the whole ruleset;
         the suffix is therefore written out to the full word nftables
         knows.
+
+        ``None`` means the caller has to leave the rule out.  A rate limit
+        is a condition like any other, and a rule that keeps its action and
+        loses the condition does the opposite of what it says: "drop above
+        20 per second" becomes "drop".  Falling back to a default unit is
+        the same mistake in slower motion - per second is sixty times what
+        a rule written per minute asks for.
         """
         negated = False
         if rule.ipt_target in LOG_TARGETS:
@@ -1758,14 +1819,16 @@ class PrintRule_nft(PolicyRuleProcessor):
             self.compiler.error(
                 rule,
                 f'"{str(limit_suffix).strip()}" is not a unit a rate can be '
-                'given in; the rate limit counts per second',
+                'given in; the rule is left out',
             )
-            unit = 'second'
+            return None
         limit_suffix = f'/{unit}'
         try:
             burst = int(burst)
         except (ValueError, TypeError):
             burst = 0
+        if burst > 0 and not self._burst_fits(rule, burst):
+            return None
 
         # "over" is nftables' inverted rate limit: the statement matches once
         # the rate has been exceeded (netfilter nftables src/parser_bison.y

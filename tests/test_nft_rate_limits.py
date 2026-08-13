@@ -120,14 +120,30 @@ def test_a_short_rate_unit_is_written_out(suffix, expected):
     assert printer.compiler.errors == []
 
 
-def test_a_unit_that_names_nothing_is_reported():
-    """Passing it on would be a syntax error and cost the whole ruleset."""
+def test_a_unit_that_names_nothing_leaves_the_rule_out():
+    """Passing it on would be a syntax error and cost the whole ruleset.
+
+    Falling back to a default unit is not the answer either: per second is
+    sixty times what a rule written per minute asks for, so the firewall
+    would enforce a rate the editor never showed.  The iptables printer
+    leaves the rule out for the same reason.
+    """
     printer = _printer()
-    assert (
-        printer._hashlimit_rate(_Rule(hashlimit_suffix='/fortnight'), 300)
-        == 'limit rate 300/second'
-    )
+    assert printer._hashlimit_rate(_Rule(hashlimit_suffix='/fortnight'), 300) is None
     assert any('not a unit' in message for message in printer.compiler.errors)
+
+
+def test_a_burst_nftables_would_cut_down_leaves_the_rule_out():
+    """The burst travels in 32 bits and a larger one is silently truncated.
+
+    A burst of exactly 2^32 arrives as zero, which the kernel replaces with
+    its default of five: the rule then bursts five packets where it was
+    written for four billion.  Verified against nft 1.1.6 in a network
+    namespace.
+    """
+    printer = _printer()
+    assert printer._hashlimit_rate(_Rule(hashlimit_burst=2**32), 300) is None
+    assert any('out of range' in message for message in printer.compiler.errors)
 
 
 @pytest.mark.parametrize(
