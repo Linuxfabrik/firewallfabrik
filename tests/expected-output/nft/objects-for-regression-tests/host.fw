@@ -10,6 +10,8 @@
 #
 #  firewall protects host it is running on
 #
+# host:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
+# host:Policy:8: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 
 FWBDEBUG=""
 
@@ -83,15 +85,6 @@ table ip fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
-        #
-        # Rule 0 (eth0)
-        #
-        iifname "eth0" ip saddr 22.22.22.22 counter log level debug drop
-        #
-        # Rule 8 (global)
-        #
-        # 'catch all' rule
-        limit rate 10/minute burst 50 packets counter log prefix "CATCH ALL RULE" level debug drop
     }
 
     chain output {

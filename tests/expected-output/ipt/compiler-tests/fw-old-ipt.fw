@@ -512,9 +512,11 @@ script_body() {
  # drop TCP sessions opened prior firewall restart
  $IP6TABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IP6TABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
+ $IP6TABLES -A FORWARD -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  # drop packets that do not match any valid state
  $IP6TABLES -A OUTPUT -m state --state INVALID -j DROP
  $IP6TABLES -A INPUT -m state --state INVALID -j DROP
+ $IP6TABLES -A FORWARD -m state --state INVALID -j DROP
 
  # ================ Table 'filter', rule set Policy
  #

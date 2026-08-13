@@ -28,6 +28,7 @@ from firewallfabrik.driver._interface_properties import (
     LinuxInterfaceProperties,
     get_interface_var_name,
 )
+from firewallfabrik.platforms.linux._netfilter import forwarding_is_off
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -121,12 +122,9 @@ class OSConfigurator_nft(OSConfigurator):
         # kernel setting is then whatever the host already has.  The
         # established/related rule is deliberately not gated: the configlet
         # emits it in the forward chain unconditionally.
-        forwards = str(self.fw.get_option('linux24_ip_forward')) in (
-            '1',
-            'On',
-            'on',
-            '',
-        )
+        # The IPv6 half of a dual-stack firewall has to ask the IPv6
+        # setting: a host may route one family and not the other.
+        forwards = not forwarding_is_off(self.fw, have_ipv6)
         in_forward = chain == 'forward'
 
         # Drop invalid packets

@@ -91,6 +91,7 @@ from firewallfabrik.platforms.iptables._utils import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     count_bridge_interfaces,
+    forwarding_is_off,
     interface_direction_problem,
 )
 
@@ -905,9 +906,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
             1 if (stateful and self.fw.get_option('accept_established')) else 0,
         )
 
-        ipv4_fwd = self.fw.get_option('linux24_ip_forward')
-        ipforw = str(ipv4_fwd) in ('1', 'On', 'on', '')
-        conf.set_variable('ipforw', 1 if ipforw else 0)
+        # The IPv6 pass has to ask the IPv6 setting: a host may route one
+        # family and not the other, and reading the IPv4 switch here decided
+        # the IPv6 automatic rules by something unrelated to them.
+        conf.set_variable('ipforw', 0 if forwarding_is_off(self.fw, ipv6) else 1)
 
         conf.set_variable('mgmt_access', 0)
         conf.set_variable(
@@ -2866,6 +2868,23 @@ class FinalizeChain(PolicyRuleProcessor):
                     ipt_comp.set_chain(rule, 'INPUT')
                 elif src_matches:
                     ipt_comp.set_chain(rule, 'OUTPUT')
+
+        # A rule that ended up in FORWARD only because nothing claimed it
+        # for INPUT or OUTPUT has no traffic to see on a firewall that does
+        # not forward.  fwbuilder drops it here (PolicyCompiler_ipt.cpp,
+        # bug #1040599 "unnecessary FORWARD rules"), reading "no change" as
+        # "on" because the kernel setting is then whatever the host already
+        # has.  The rule is only dropped when this processor chose the
+        # chain: one that was pinned earlier was pinned for a reason.
+        if rule.ipt_chain == 'FORWARD' and forwarding_is_off(
+            self.compiler.fw, bool(ipt_comp.ipv6_policy)
+        ):
+            self.compiler.warning(
+                rule,
+                'the firewall is configured not to forward packets, so the '
+                'rule has no traffic to match and is left out',
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True

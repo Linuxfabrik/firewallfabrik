@@ -290,6 +290,8 @@ table inet fwf_filter {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state established,related counter accept
+        ct state invalid counter drop
+        tcp flags != syn / syn,rst,ack ct state new counter drop
     }
 
     chain output {

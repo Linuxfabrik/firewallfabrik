@@ -74,6 +74,7 @@ from firewallfabrik.core.objects import (
     is_run_time_address_table,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    forwarding_is_off,
     get_mac_only_address,
     interface_direction_problem,
 )
@@ -1577,6 +1578,22 @@ class FinalizeChain(PolicyRuleProcessor):
                 rule.ipt_chain = 'input'
             elif src_matches:
                 rule.ipt_chain = 'output'
+
+        # A rule that ended up in the forward chain only because nothing
+        # claimed it for input or output has no traffic to see on a firewall
+        # that does not forward.  Same reading as the iptables compiler
+        # (fwbuilder PolicyCompiler_ipt::finalizeChain, bug #1040599): only
+        # an explicit "off" counts, "no change" leaves the kernel setting
+        # alone and is read as forwarding.
+        if rule.ipt_chain == 'forward' and forwarding_is_off(
+            nft_comp.fw, bool(nft_comp.ipv6_policy)
+        ):
+            self.compiler.warning(
+                rule,
+                'the firewall is configured not to forward packets, so the '
+                'rule has no traffic to match and is left out',
+            )
+            return True
 
         self.tmp_queue.append(rule)
         return True

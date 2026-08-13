@@ -351,6 +351,25 @@ def reject_type_token(value: str, ipv6: bool) -> str:
     return ''
 
 
+# What the host OS setting "IPv4/IPv6 packet forwarding" can say.  Only an
+# explicit "off" means off: an empty value is "no change", which leaves the
+# kernel setting alone, and a host that already forwards keeps forwarding.
+_FORWARDING_OFF_VALUES = frozenset({'0', 'Off', 'off'})
+
+
+def forwarding_is_off(fw, ipv6: bool) -> bool:
+    """Whether the firewall is configured not to forward this family.
+
+    The two families are separate settings and have to be asked
+    separately - a host may route IPv6 and not IPv4.  fwbuilder reads the
+    matching one per compilation pass
+    (PolicyCompiler_ipt::finalizeChain), and reading only the IPv4 one
+    would decide the IPv6 ruleset by an unrelated switch.
+    """
+    key = 'linux24_ipv6_forward' if ipv6 else 'linux24_ip_forward'
+    return str(fw.get_option(key) or '') in _FORWARDING_OFF_VALUES
+
+
 def count_bridge_interfaces(fw) -> int:
     """Return how many bridge interfaces a firewall has.
 
