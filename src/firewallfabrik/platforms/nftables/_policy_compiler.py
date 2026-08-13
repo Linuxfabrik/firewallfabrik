@@ -223,6 +223,8 @@ class PolicyCompiler_nft(PolicyCompiler):
 
         self.add_rule_filter()
 
+        self.add(DeprecateOptionRoute('deprecate option Route'))
+
         self.add(
             ClearTagClassifyInFilter('clear Tag and Classify options in filter table')
         )
@@ -842,10 +844,9 @@ class Logging_nft(PolicyRuleProcessor):
 
         # For Continue+log, set target to LOG
         if rule.action == PolicyAction.Continue:
-            if rule.get_option('routing', False):
-                self.compiler.error(
-                    rule, 'Policy routing not yet supported by nftables compiler'
-                )
+            # A rule asking for policy routing never gets here: it is
+            # reported and left out by DeprecateOptionRoute, at the head of
+            # the pipeline, for every action rather than for this one.
             if rule.get_option('tagging', False) or rule.get_option(
                 'classification', False
             ):
@@ -2375,6 +2376,45 @@ class ExpandLoopbackInterfaceAddress(PolicyRuleProcessor):
                     new_elements.append(obj)
             if changed:
                 setattr(rule, slot, new_elements)
+        self.tmp_queue.append(rule)
+        return True
+
+
+class DeprecateOptionRoute(PolicyRuleProcessor):
+    """Report a rule that asks for policy routing, and leave it out.
+
+    The "Route" rule option sends matching packets to a gateway of the
+    rule's choosing.  On iptables that was the ROUTE target, which left the
+    mainline kernel long ago, and ``DeprecateOptionRoute`` there refuses
+    the rule.  nftables can express the same thing with ``fib`` plus a
+    mark, but this compiler does not build it yet (issue #125).
+
+    Until it does, the rule has to be reported here.  Without this the rule
+    reached the mangle chains as an ordinary rule carrying nothing but its
+    verdict: the packet was accepted and then followed the ordinary routing
+    table, so the policy route the administrator configured was gone and
+    nothing said so.  The same file compiled for iptables refused the rule,
+    which means one policy behaved differently on the two platforms and
+    only one of them mentioned it.
+
+    ``Logging_nft`` reported the same thing, but only for a rule that is
+    Continue *and* logs - the rare case.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_option('routing', False):
+            self.compiler.error(
+                rule,
+                'Policy routing is not yet supported by the nftables '
+                'compiler; the rule is left out. Use a Custom Action to '
+                'write the nftables statement by hand if you need it',
+            )
+            return True
+
         self.tmp_queue.append(rule)
         return True
 

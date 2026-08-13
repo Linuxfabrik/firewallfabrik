@@ -11,6 +11,8 @@
 
 #  more complex and realistic combination of Tag and Route rules
 #
+# Rule 3 (global): Policy routing is not yet supported by the nftables compiler; the rule is left out. Use a Custom Action to write the nftables statement by hand if you need it
+# Rule 4 (global): Policy routing is not yet supported by the nftables compiler; the rule is left out. Use a Custom Action to write the nftables statement by hand if you need it
 
 FWBDEBUG=""
 
@@ -263,42 +265,6 @@ table ip fwf_mangle {
         # Rule 6 (global)
         #
         ip saddr 192.168.1.0/24 ip daddr { 22.22.22.0/24, 33.33.33.0/24 } ct state new counter meta mark set 8
-    }
-
-    chain input {
-        type filter hook input priority mangle; policy accept;
-        #
-        # Rule 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule 4 (global)
-        #
-        meta mark 2 counter
-    }
-
-    chain forward {
-        type filter hook forward priority mangle; policy accept;
-        #
-        # Rule 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule 4 (global)
-        #
-        meta mark 2 counter
-    }
-
-    chain output {
-        type filter hook output priority mangle; policy accept;
-        #
-        # Rule 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule 4 (global)
-        #
-        meta mark 2 counter
     }
 }
 

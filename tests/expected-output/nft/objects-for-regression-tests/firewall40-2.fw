@@ -11,6 +11,8 @@
 
 #  more complex and realistic combination of Tag and Route rules that are in the separate Policy rule set. Here the top Policy rule set is empty
 #
+# Rule Policy_1 3 (global): Policy routing is not yet supported by the nftables compiler; the rule is left out. Use a Custom Action to write the nftables statement by hand if you need it
+# Rule Policy_1 4 (global): Policy routing is not yet supported by the nftables compiler; the rule is left out. Use a Custom Action to write the nftables statement by hand if you need it
 
 FWBDEBUG=""
 
@@ -262,14 +264,6 @@ table ip fwf_mangle {
         #
         iifname "eth2" ct state new counter meta mark set 2
         iifname "eth2" ct state new counter ct mark set mark
-        #
-        # Rule Policy_1 3 (global)
-        #
-        meta mark 1 counter
-        #
-        # Rule Policy_1 4 (global)
-        #
-        meta mark 2 counter
         #
         # Rule Policy_1 6 (global)
         #
