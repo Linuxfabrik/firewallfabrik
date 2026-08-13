@@ -227,6 +227,13 @@ class NATPrintRule_nft(NATRuleProcessor):
         macs = []
         addrs = []
         pairs = []
+        # Which objects gave nothing, recorded as the loop goes.  Asking
+        # them afterwards is not possible: `get_address` is defined on
+        # Address alone, and an Interface or a Host - the two types whose
+        # branches in `_print_addr` answer with an empty string - derive
+        # from Base, so the question raises AttributeError in the middle of
+        # the diagnostic it was meant to produce.
+        gave_nothing: list[str] = []
         for obj in objects:
             if isinstance(obj, CombinedAddress) and obj.has_phys_address():
                 addr = self._print_addr(obj.address, rule)
@@ -240,6 +247,8 @@ class NATPrintRule_nft(NATRuleProcessor):
             addr = self._print_addr(obj, rule)
             if addr:
                 addrs.append(addr)
+            else:
+                gave_nothing.append(getattr(obj, 'name', '') or str(obj))
 
         parts = []
         if pairs:
@@ -259,14 +268,13 @@ class NATPrintRule_nft(NATRuleProcessor):
                 parts.append(f'{ip_keyword} {neg}{_as_set(plain)}')
         if objects and not parts:
             what = 'source' if 'saddr' in ip_keyword else 'destination'
-            empty = [o.name for o in objects if not (o.get_address() or '')]
-            if len(empty) == len(objects):
+            if len(gave_nothing) == len(objects):
                 # Not a compiler limit: the objects carry no address at all.
                 # fwbuilder leaves them out of the ruleset, and a warning
                 # says so without failing the compile.
                 self.compiler.warning(
                     rule,
-                    f'{", ".join(repr(n) for n in empty)} has no address, '
+                    f'{", ".join(repr(n) for n in gave_nothing)} has no address, '
                     f'so the rule is left out',
                 )
             else:
