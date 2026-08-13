@@ -349,6 +349,33 @@ class NATPrintRule(NATRuleProcessor):
             )
             if rule.ipt_target != 'RETURN':
                 return ''
+        elif isinstance(odst, CombinedAddress) and odst.has_phys_address():
+            # What a host with "MAC address matching" expands to.  The MAC
+            # half cannot be a destination - the mac match knows
+            # `--mac-source` alone - but the IP half is a match like any
+            # other, and the C++ keeps exactly that half
+            # (NATCompiler_ipt.cpp, verifyRuleWithMAC).  Dropping the whole
+            # object instead reported "could not resolve" and left out a
+            # rule that has a perfectly good destination.
+            addr_str = self._print_addr(odst.address)
+            if not addr_str:
+                self.compiler.error(
+                    rule,
+                    f'"{odst.name}" is known by its MAC address only, which '
+                    'cannot be matched as a destination; the rule is left out',
+                )
+                if rule.ipt_target != 'RETURN':
+                    return ''
+            else:
+                self.compiler.warning(
+                    rule,
+                    f'the MAC address of "{odst.name}" is left out: iptables '
+                    'matches the source MAC only, so the rule matches on the '
+                    'destination address alone',
+                )
+                cmd += self._print_single_option_with_negation(
+                    ' -d', rule, 'odst', addr_str
+                )
         elif is_run_time_address_table(odst):
             table_match = self._print_address_table(odst, rule, 'odst')
             if table_match is None:
