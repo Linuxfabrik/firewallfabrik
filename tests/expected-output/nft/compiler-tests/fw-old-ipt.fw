@@ -269,7 +269,7 @@ table inet fwf_filter {
         # Rule 1 (global)
         #
         # Reject type this release does not know yet
-        # # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
+        # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
         meta nfproto ipv4 tcp dport 80 ct state new counter reject
         #
         # Rule 2 (global)

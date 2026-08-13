@@ -182,7 +182,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.oscnf = oscnf
 
-        self.have_dynamic_interfaces: bool = False
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.my_table: str = 'filter'
@@ -198,7 +197,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
         self.upstream_chains: dict[str, list[str]] = defaultdict(list)
-        self.registered_chains: set[str] = set()
         self.tmp_chain_counters: dict[str, int] = {}
 
         # The chain a branch rule set writes into, set by the driver through
@@ -242,11 +240,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
         if self.rule_set_chain:
             for rule in self.rules:
                 rule.ipt_chain = self.rule_set_chain
-
-        if n > 0:
-            for iface in self.fw.interfaces:
-                if iface.is_dynamic():
-                    self.have_dynamic_interfaces = True
 
         # PrintRule names the parent bridge next to a wildcard bridge port
         # only when there is more than one bridge to tell apart, so count
@@ -733,14 +726,10 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
         return ''.join(parts)
 
-    def register_chain(self, chain: str) -> None:
-        self.registered_chains.add(chain)
-
     def insert_upstream_chain(self, parent: str, child: str) -> None:
         self.upstream_chains[parent].append(child)
 
     def register_rule_set_chain(self, chain_name: str) -> None:
-        self.register_chain(chain_name)
         self.chain_usage_counter[chain_name] = 1
         # Every rule of this rule set belongs into that chain, not into a
         # built-in one; `prolog()` puts it there.  Only the first call names
@@ -750,7 +739,6 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def set_chain(self, rule: CompRule, chain: str) -> None:
         rule.ipt_chain = chain
-        self.register_chain(chain)
 
     def is_chain_descendant_of_input(self, chain: str) -> bool:
         if chain == 'INPUT':
@@ -1182,8 +1170,6 @@ class Accounting(PolicyRuleProcessor):
             r.dst = []
             r.srv = []
             r.ipt_chain = new_chain
-            r.upstream_rule_chain = this_chain
-            ipt_comp.register_chain(new_chain)
             ipt_comp.insert_upstream_chain(this_chain, new_chain)
             r.ipt_target = 'RETURN'
             r.set_option('log', False)
@@ -1448,8 +1434,6 @@ class Logging2(PolicyRuleProcessor):
         r2.itf = []
         r2.when = []
         r2.ipt_chain = new_chain
-        r2.upstream_rule_chain = this_chain
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         r2.ipt_target = log_target
         r2.action = PolicyAction.Continue
@@ -1471,8 +1455,6 @@ class Logging2(PolicyRuleProcessor):
         r3.itf = []
         r3.when = []
         r3.ipt_chain = new_chain
-        r3.upstream_rule_chain = this_chain
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         r3.iface_label = 'nil'
         r3.direction = Direction.Both
@@ -1693,7 +1675,6 @@ class SrcNegation(PolicyRuleProcessor):
         r_return.itf = []
         r_return.when = []
         r_return.ipt_chain = new_chain
-        r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
@@ -1704,7 +1685,6 @@ class SrcNegation(PolicyRuleProcessor):
         r_return.set_option('connlimit_value', -1)
         r_return.set_option('hashlimit_value', -1)
         r_return.force_state_check = False
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_return)
 
@@ -1717,11 +1697,9 @@ class SrcNegation(PolicyRuleProcessor):
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
-        r_action.upstream_rule_chain = this_chain
         r_action.set_option('stateless', True)
         r_action.force_state_check = False
         r_action.final = True
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_action)
 
@@ -1781,7 +1759,6 @@ class TimeNegation(PolicyRuleProcessor):
         r_return.srv = []
         r_return.itf = []
         r_return.ipt_chain = new_chain
-        r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
@@ -1792,7 +1769,6 @@ class TimeNegation(PolicyRuleProcessor):
         r_return.set_option('connlimit_value', -1)
         r_return.set_option('hashlimit_value', -1)
         r_return.force_state_check = False
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_return)
 
@@ -1804,11 +1780,9 @@ class TimeNegation(PolicyRuleProcessor):
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
-        r_action.upstream_rule_chain = this_chain
         r_action.set_option('stateless', True)
         r_action.force_state_check = False
         r_action.final = True
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_action)
 
@@ -1854,7 +1828,6 @@ class DstNegation(PolicyRuleProcessor):
         r_return.itf = []
         r_return.when = []
         r_return.ipt_chain = new_chain
-        r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
@@ -1865,7 +1838,6 @@ class DstNegation(PolicyRuleProcessor):
         r_return.set_option('connlimit_value', -1)
         r_return.set_option('hashlimit_value', -1)
         r_return.force_state_check = False
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_return)
 
@@ -1878,11 +1850,9 @@ class DstNegation(PolicyRuleProcessor):
         r_action.itf = []
         r_action.when = []
         r_action.ipt_chain = new_chain
-        r_action.upstream_rule_chain = this_chain
         r_action.set_option('stateless', True)
         r_action.force_state_check = False
         r_action.final = True
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_action)
 
@@ -1928,7 +1898,6 @@ class SrvNegation(PolicyRuleProcessor):
         r_return.itf = []
         r_return.when = []
         r_return.ipt_chain = new_chain
-        r_return.upstream_rule_chain = this_chain
         r_return.action = PolicyAction.Return
         r_return.set_option('classification', False)
         r_return.set_option('routing', False)
@@ -1939,7 +1908,6 @@ class SrvNegation(PolicyRuleProcessor):
         r_return.set_option('connlimit_value', -1)
         r_return.set_option('hashlimit_value', -1)
         r_return.force_state_check = False
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         self.tmp_queue.append(r_return)
 
@@ -1953,13 +1921,11 @@ class SrvNegation(PolicyRuleProcessor):
             r.itf = []
             r.when = []
             r.ipt_chain = new_chain
-            r.upstream_rule_chain = this_chain
             r.set_option('stateless', True)
             r.force_state_check = False
             r.final = True
             return r
 
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
 
         if rule.action == PolicyAction.Reject and ipt_comp.is_action_on_reject_tcp_rst(
@@ -3760,8 +3726,6 @@ class Optimize1(PolicyRuleProcessor):
         rule.set_option('hashlimit_value', -1)
         rule.force_state_check = False
         rule.ipt_chain = new_chain
-        rule.upstream_rule_chain = this_chain
-        ipt_comp.register_chain(new_chain)
         ipt_comp.insert_upstream_chain(this_chain, new_chain)
         rule.direction = Direction.Both
         rule.iface_label = 'nil'
@@ -4748,7 +4712,6 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 r.set_option('routing', False)
                 rule.set_option('tagging', False)
                 r.ipt_chain = new_chain
-                r.upstream_rule_chain = this_chain
                 r.action = PolicyAction.Continue
                 self.tmp_queue.append(r)
 
@@ -4759,7 +4722,6 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 r.set_option('routing', False)
                 r.set_option('tagging', False)
                 r.ipt_chain = new_chain
-                r.upstream_rule_chain = this_chain
                 r.action = PolicyAction.Continue
                 self.tmp_queue.append(r)
 
@@ -4771,7 +4733,6 @@ class SplitIfTagClassifyOrRoute(PolicyRuleProcessor):
                 rule.set_option('classification', False)
                 rule.set_option('tagging', False)
                 rule.ipt_chain = new_chain
-                rule.upstream_rule_chain = this_chain
                 self.tmp_queue.append(rule)
 
         else:

@@ -86,7 +86,6 @@ class CompilerDriver_ipt(CompilerDriver):
         self.have_connmark: bool = False
         self.have_connmark_in_output: bool = False
         self.have_nat: bool = False
-        self.have_dynamic_interfaces: bool = False
         # The chains each NAT rule set used, keyed by rule set name.  A rule
         # with the Branch action reads it to jump into the chain of the
         # branch that belongs to its own chain, instead of being copied into
@@ -862,7 +861,6 @@ class CompilerDriver_ipt(CompilerDriver):
             mangle_compiler.single_rule_id = single_rule_id
         mangle_compiler.verbose = self.verbose > 0
         mangle_compiler.source_dir = self.source_dir
-        mangle_compiler.have_dynamic_interfaces = self.have_dynamic_interfaces
 
         mangle_rules_count = mangle_compiler.prolog()
         if mangle_rules_count > 0:
@@ -899,7 +897,6 @@ class CompilerDriver_ipt(CompilerDriver):
             policy_compiler.chain_prefix = self._table_name
         policy_compiler.verbose = self.verbose > 0
         policy_compiler.source_dir = self.source_dir
-        policy_compiler.have_dynamic_interfaces = self.have_dynamic_interfaces
         policy_compiler.debug_rule = self.debug_rule_policy
         policy_compiler.rule_debug_on = self.debug_rule_policy >= 0
 

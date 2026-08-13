@@ -119,14 +119,12 @@ class NATCompiler_ipt(NATCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.oscnf = oscnf
 
-        self.have_dynamic_interfaces: bool = False
         self.bridge_count: int = 0
         self.minus_n_commands: dict[str, bool] | None = minus_n_commands
 
         # Chain management
         self.chain_usage_counter: dict[str, int] = defaultdict(int)
         self.upstream_chains: dict[str, list[str]] = defaultdict(list)
-        self.registered_chains: set[str] = set()
 
         # Chain prefix for coexistence mode (e.g. 'fwf' → fwf_PREROUTING)
         self.chain_prefix: str = ''
@@ -178,15 +176,11 @@ class NATCompiler_ipt(NATCompiler):
         return name
 
     def register_rule_set_chain(self, chain_name: str) -> None:
-        self.register_chain(chain_name)
         self.chain_usage_counter[chain_name] = 1
         # Only the first call names this compiler's own rule set; the later
         # ones register the chains a branching rule jumps to.
         if not self.rule_set_chain:
             self.rule_set_chain = chain_name
-
-    def register_chain(self, chain: str) -> None:
-        self.registered_chains.add(chain)
 
     def insert_upstream_chain(self, parent: str, child: str) -> None:
         self.upstream_chains[parent].append(child)
@@ -212,11 +206,6 @@ class NATCompiler_ipt(NATCompiler):
         if self.rule_set_chain:
             for rule in self.rules:
                 rule.ipt_chain = self.rule_set_chain
-
-        if n > 0:
-            for iface in self.fw.interfaces:
-                if iface.is_dynamic():
-                    self.have_dynamic_interfaces = True
 
         # NATPrintRule names the parent bridge next to a wildcard bridge
         # port for the same reason the policy printer does, and needs the
@@ -1786,7 +1775,6 @@ class DoOSrcNegation(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('osrc', False)
 
         new_chain = self.compiler.get_new_tmp_chain_name(rule)
@@ -1812,7 +1800,6 @@ class DoOSrcNegation(NATRuleProcessor):
         r_return.nat_iface_in = 'nil'
         r_return.nat_iface_out = 'nil'
         r_return.set_option('rule_added_for_osrc_neg', True)
-        nat_comp.register_chain(new_chain)
         self.tmp_queue.append(r_return)
 
         # Action rule: clear osrc, odst; keep osrv and translated objects
@@ -1851,7 +1838,6 @@ class DoODstNegation(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('odst', False)
 
         new_chain = self.compiler.get_new_tmp_chain_name(rule)
@@ -1877,7 +1863,6 @@ class DoODstNegation(NATRuleProcessor):
         r_return.ipt_chain = new_chain
         r_return.nat_iface_in = 'nil'
         r_return.nat_iface_out = 'nil'
-        nat_comp.register_chain(new_chain)
         self.tmp_queue.append(r_return)
 
         # Action rule: clear osrc, odst; keep osrv
@@ -1916,7 +1901,6 @@ class DoOSrvNegation(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        nat_comp = cast('NATCompiler_ipt', self.compiler)
         rule.set_neg('osrv', False)
 
         new_chain = self.compiler.get_new_tmp_chain_name(rule)
@@ -1942,7 +1926,6 @@ class DoOSrvNegation(NATRuleProcessor):
         r_return.nat_iface_in = 'nil'
         r_return.nat_iface_out = 'nil'
         r_return.set_option('rule_added_for_osrv_neg', True)
-        nat_comp.register_chain(new_chain)
         self.tmp_queue.append(r_return)
 
         # Action rule: clear everything except translated objects

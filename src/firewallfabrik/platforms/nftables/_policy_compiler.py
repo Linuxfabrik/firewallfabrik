@@ -110,7 +110,6 @@ class PolicyCompiler_nft(PolicyCompiler):
     ) -> None:
         super().__init__(session, fw, ipv6_policy)
         self.oscnf = oscnf
-        self.have_dynamic_interfaces: bool = False
 
         # Which of the two tables this run fills.  nftables needs the same
         # split as iptables: a packet mark has to be set in a chain that
@@ -181,11 +180,6 @@ class PolicyCompiler_nft(PolicyCompiler):
         if self.rule_set_chain:
             for rule in self.rules:
                 rule.ipt_chain = self.rule_set_chain
-
-        if n > 0:
-            for iface in self.fw.interfaces:
-                if iface.is_dynamic():
-                    self.have_dynamic_interfaces = True
 
         return n
 

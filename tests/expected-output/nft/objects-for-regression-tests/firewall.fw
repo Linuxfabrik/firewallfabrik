@@ -399,9 +399,9 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
-        # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
+        # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
         ip option rr exists counter drop
-        # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
+        # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
         ip option lsrr exists ip option ssrr exists counter drop
         #
         # Rule 24 (global)
@@ -437,13 +437,13 @@ table ip fwf_filter {
         #
         # Rule 46 (global)
         #
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type echo-reply icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 ct state new counter accept
         #
         # Rule 49 (global)
@@ -582,9 +582,9 @@ table ip fwf_filter {
         #
         # Rule 23 (global)
         #
-        # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
+        # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
         ip option rr exists counter drop
-        # # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
+        # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
         ip option lsrr exists ip option ssrr exists counter drop
         #
         # Rule 24 (global)
@@ -641,16 +641,16 @@ table ip fwf_filter {
         # Rule 42 (global)
         #
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        # # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+        # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Saturday" } counter accept
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        # # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+        # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 0-86340 meta day { "Sunday" } counter accept
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        # # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+        # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 64800-86340 counter accept
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } limit rate 5/second counter log prefix "CUSTOM LOGGING" level debug
-        # # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
+        # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip saddr { 211.11.11.11, 211.22.22.22 } ip daddr 192.168.1.10 ct state new meta hour 3660-7320 meta day { "Sunday", "Monday" } counter accept
         #
         # Rule 43 (global)
@@ -670,23 +670,23 @@ table ip fwf_filter {
         #
         # Rule 46 (global)
         #
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type echo-reply icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 ct state new counter accept
         #
         # Rule 47 (global)
         #
-        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 48 (global)
         #
-        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 50 (global)
@@ -825,23 +825,23 @@ table ip fwf_filter {
         #
         # Rule 46 (global)
         #
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type destination-unreachable ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type echo-reply icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 0 ct state new counter accept
-        # # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.0/24 icmp type time-exceeded icmp code 1 ct state new counter accept
         #
         # Rule 47 (global)
         #
-        # # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr 192.168.1.11-192.168.1.15 tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 48 (global)
         #
-        # # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
+        # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
         ip daddr { 192.168.1.11, 192.168.1.12, 192.168.1.13, 192.168.1.14, 192.168.1.15 } tcp dport { 113, 80, 443, 143, 25, 22, 540 } ct state new counter accept
         #
         # Rule 50 (global)
@@ -1033,7 +1033,7 @@ table ip fwf_nat {
         # Rule 16 (NAT)
         #
         # should match mac and ip addresses
-        # # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2:1-pa' removed from the rule
+        # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2:1-pa' removed from the rule
         oifname "eth1" ether saddr 00:10:4b:de:e9:6f ip saddr 192.168.1.10 ip daddr != { 61.150.47.112, 223.223.223.223 } tcp dport 80 counter snat to 222.222.222.222
         #
         # Rule 20 (NAT)

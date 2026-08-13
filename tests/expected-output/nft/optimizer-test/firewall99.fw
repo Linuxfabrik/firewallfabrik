@@ -250,13 +250,13 @@ table ip fwf_filter {
         # Rule 2 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
-        # # firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
+        # firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 3 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
-        # # firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
+        # firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
     }
 
@@ -280,13 +280,13 @@ table ip fwf_filter {
         # Rule 2 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
-        # # firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
+        # firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 80 counter reject with tcp reset
         #
         # Rule 3 (global)
         #
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } icmp type destination-unreachable counter reject with icmp net-unreachable
-        # # firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
+        # firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
         ip saddr { 192.168.1.0/24, 192.168.2.0/24 } tcp dport 21 counter reject with tcp reset
     }
 }

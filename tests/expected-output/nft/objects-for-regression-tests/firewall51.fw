@@ -72,12 +72,12 @@ table ip fwf_filter {
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+        # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.10 counter
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+        # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.20 counter
         #
         # Rule 5 (global)
@@ -91,22 +91,22 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+        # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.10 counter
         #
         # Rule 1 (global)
         #
-        # # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
+        # Rule 1 (global): Rule branches to "mail_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.10 counter
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+        # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.20 counter
         #
         # Rule 3 (global)
         #
-        # # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
+        # Rule 3 (global): Rule branches to "web_server_outbound", which is not a rule set nftables can jump to
         ip saddr 192.168.1.20 counter
         #
         # Rule 5 (global)
@@ -120,12 +120,12 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
+        # Rule 0 (global): Rule branches to "mail_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.10 counter
         #
         # Rule 2 (global)
         #
-        # # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
+        # Rule 2 (global): Rule branches to "web_server_inbound", which is not a rule set nftables can jump to
         ip daddr 192.168.1.20 counter
         #
         # Rule 5 (global)

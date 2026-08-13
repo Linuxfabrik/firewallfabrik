@@ -334,7 +334,7 @@ table ip fwf_nat {
         #
         # Rule 17 (NAT)
         #
-        # # Rule 17 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
+        # Rule 17 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
         oifname "eth0" ip daddr 222.222.222.40 counter dnat to 192.168.1.10
     }
 

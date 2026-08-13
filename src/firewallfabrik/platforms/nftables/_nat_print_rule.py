@@ -54,6 +54,7 @@ from firewallfabrik.platforms.linux._netfilter import (
 )
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 from firewallfabrik.platforms.nftables._print_rule import (
+    indent_comment_block,
     print_fragment_match,
     print_icmp_service,
     print_ip_option_matches,
@@ -197,7 +198,7 @@ class NATPrintRule_nft(NATRuleProcessor):
         # the generated file.
         errors = self.compiler.get_errors_for_rule(rule)
         if errors:
-            line = f'        # {errors}\n' + line
+            line = indent_comment_block(errors) + line
 
         return line
 

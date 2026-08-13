@@ -457,30 +457,30 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 6 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 7 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 8 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 9 (global)
         #
         meta nfproto ipv6 tcp dport 993 ct state new counter accept
-        # # firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 10 (global)
         #
         meta nfproto ipv6 tcp dport { 3268, 3269, 445, 42, 53, 88, 389, 636, 135, 139 } ct state new counter accept
         meta nfproto ipv6 udp dport { 53, 88, 138, 137 } ct state new counter accept
-        # # firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 11 (global)
@@ -553,7 +553,7 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 8 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 13 (global)
@@ -624,12 +624,12 @@ table inet fwf_filter {
         #
         # Rule Policy_ipv6 6 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
         ip6 daddr fe80::21d:9ff:fe8b:8e94 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 8 (global)
         #
-        # # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
+        # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
         meta nfproto ipv6 meta l4proto ipv6-icmp counter accept
         #
         # Rule Policy_ipv6 11 (global)

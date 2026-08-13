@@ -437,12 +437,12 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
-        # # Rule 15 (global): Custom action not yet supported by nftables compiler
+        # Rule 15 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 16 (global)
         #
-        # # Rule 16 (global): Custom action not yet supported by nftables compiler
+        # Rule 16 (global): Custom action not yet supported by nftables compiler
         ip saddr 222.222.222.0/24 counter log prefix "RULE 16 -- CUSTOM " level info
         #
         # Rule 17 (global)
@@ -529,12 +529,12 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
-        # # Rule 15 (global): Custom action not yet supported by nftables compiler
+        # Rule 15 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 16 (global)
         #
-        # # Rule 16 (global): Custom action not yet supported by nftables compiler
+        # Rule 16 (global): Custom action not yet supported by nftables compiler
         ip saddr 222.222.222.0/24 counter log prefix "RULE 16 -- CUSTOM " level info
         #
         # Rule 17 (global)
@@ -611,7 +611,7 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
-        # # Rule 15 (global): Custom action not yet supported by nftables compiler
+        # Rule 15 (global): Custom action not yet supported by nftables compiler
         ip saddr 192.168.1.0/24 counter
         #
         # Rule 17 (global)

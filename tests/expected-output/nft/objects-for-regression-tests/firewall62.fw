@@ -275,7 +275,7 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         ip saddr { 192.168.1.1, 222.222.222.222 } tcp dport 80 ct state new counter accept
         #
         # Rule 18 (global)
@@ -299,7 +299,7 @@ table ip fwf_filter {
         #
         # Rule 0 (global)
         #
-        # # firewall62:Policy:0: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:0: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 2000 ct state new counter accept
         #
         # Rule 1 (global)
@@ -309,9 +309,9 @@ table ip fwf_filter {
         #
         # Rule 2 (global)
         #
-        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 2000 ct state new counter accept
-        # # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         tcp dport 80 ct state new counter accept
         #
         # Rule 3 (global)
@@ -321,12 +321,12 @@ table ip fwf_filter {
         #
         # Rule 4 (global)
         #
-        # # firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         ip saddr 192.168.1.1 meta skuid 2000 ct state new counter accept
         #
         # Rule 5 (global)
         #
-        # # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         ip saddr 192.168.1.0/24 meta skuid 2000 ct state new counter accept
         #
         # Rule 6 (global)
@@ -336,20 +336,20 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new counter accept
-        # # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         ip saddr != 192.168.1.0/24 meta skuid 2000 ct state new counter accept
         #
         # Rule 9 (global)
         #
-        # # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 2000 ct state new counter accept
         #
         # Rule 10 (global)
         #
         # bug 2186568
-        # # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 2000 ct state new counter accept
-        # # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 500 ct state new counter accept
         #
         # Rule 11 (global)
@@ -361,7 +361,7 @@ table ip fwf_filter {
         # Rule 12 (global)
         #
         # bug 2186568
-        # # firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid != 2000 ct state new counter accept
         #
         # Rule 13 (global)
@@ -372,9 +372,9 @@ table ip fwf_filter {
         # Rule 14 (global)
         #
         # bug 2186568
-        # # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid != 2000 ct state new counter accept
-        # # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid != 500 ct state new counter accept
         #
         # Rule 15 (global)
@@ -386,9 +386,9 @@ table ip fwf_filter {
         # Rule 16 (global)
         #
         # bug 2186568
-        # # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 2000 ct state new counter accept
-        # # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         meta skuid 500 ct state new counter accept
         #
         # Rule 17 (global)

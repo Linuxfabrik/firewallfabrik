@@ -378,6 +378,18 @@ def print_icmp_service(srv, ipv6: bool, negated: bool = False) -> str:
     return f'{proto} type {type_str} {proto} code {icmp_code}'
 
 
+def indent_comment_block(block: str) -> str:
+    """Put a block of ready-made comment lines into a chain block.
+
+    ``get_errors_for_rule`` already prefixes every message with the comment
+    marker, so only the indent is missing - and it is missing on every line
+    but the first, because a rule with more than one message comes back as
+    one string with newlines in it.  Adding the marker again here is what
+    produced the "# #" every reported rule used to carry.
+    """
+    return ''.join(f'        {line}\n' for line in block.splitlines())
+
+
 def tcp_flags_match_nft(srv, negated: bool = False) -> str:
     """Format TCP flag inspection for nftables.
 
@@ -655,9 +667,13 @@ class PrintRule_nft(PolicyRuleProcessor):
         line = '        ' + ' '.join(parts) + '\n'
 
         # Add error comments inline
+        # get_errors_for_rule prefixes every message with the comment
+        # marker already, so only the indent of the chain block is added -
+        # to each line, because a rule with more than one message left all
+        # but the first at column zero.
         errors = self.compiler.get_errors_for_rule(rule) if with_errors else ''
         if errors:
-            line = f'        # {errors}\n' + line
+            line = indent_comment_block(errors) + line
 
         return line
 

@@ -326,7 +326,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 12 (global)
@@ -395,7 +395,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
         ip saddr 1.2.3.0/0 counter drop
     }
 
@@ -470,7 +470,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)
@@ -568,7 +568,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
         ip saddr 1.2.3.0/0 counter drop
     }
 
@@ -618,7 +618,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)
@@ -681,7 +681,7 @@ table ip fwf_filter {
         #
         # 'catch all' rule
         ip saddr 1.2.3.0/0 limit rate 5/second counter log prefix "RULE 29 - DENY **" level debug
-        # # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
+        # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
         ip saddr 1.2.3.0/0 counter drop
     }
 }

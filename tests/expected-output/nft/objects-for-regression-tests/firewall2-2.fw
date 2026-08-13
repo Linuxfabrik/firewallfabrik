@@ -318,7 +318,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 12 (global)
@@ -461,7 +461,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)
@@ -608,7 +608,7 @@ table ip fwf_filter {
         # Rule 10 (global)
         #
         udp dport 161 limit rate 5/second counter log prefix "RULE 10 - REJECT **" level debug
-        # # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # firewall2-2:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         udp dport 161 counter reject with icmp net-unreachable
         #
         # Rule 11 (global)

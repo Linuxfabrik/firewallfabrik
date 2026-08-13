@@ -352,7 +352,7 @@ table ip fwf_filter {
         #
         # Rule 15 (global)
         #
-        # # firewall72-1.4.3:Policy:15: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
+        # firewall72-1.4.3:Policy:15: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
         ip daddr 172.16.1.1 meta skuid != 500 counter drop
     }
 }

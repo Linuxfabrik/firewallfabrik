@@ -79,12 +79,12 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        # # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         ip saddr 203.0.113.42 udp dport 53 counter reject
         #
         # Rule 6 (global)
         #
-        # # fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         ip saddr 192.168.1.0/24 counter reject
         #
         # Rule 7 (global)
@@ -118,12 +118,12 @@ table ip fwf_filter {
         #
         # Rule 5 (global)
         #
-        # # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # fw-test:Policy:5: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         ip saddr 203.0.113.42 udp dport 53 counter reject
         #
         # Rule 6 (global)
         #
-        # # fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
+        # fw-test:Policy:6: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
         ip saddr 192.168.1.0/24 counter reject
         #
         # Rule 7 (global)

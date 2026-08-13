@@ -114,7 +114,6 @@ class CompRule:
     originated_from_a_rule_with_routing: bool = False
     nft_log: bool = False  # nftables inline log + verdict
     force_state_check: bool = False
-    upstream_rule_chain: str = ''  # iptables logging chain tracking
     final: bool = False  # marks terminal logging rule
     parent_rule_num: str = ''  # parent rule position for log prefix
     subrule_suffix: str = ''  # label suffix for subrules

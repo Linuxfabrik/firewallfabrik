@@ -108,7 +108,6 @@ class NATCompiler_nft(NATCompiler):
     ) -> None:
         super().__init__(session, fw, ipv6_policy)
         self.oscnf = oscnf
-        self.have_dynamic_interfaces: bool = False
         # Named sets an address table is rendered as, keyed by set name and
         # holding the file the activation script reads the elements from.
         self.address_tables: dict[str, tuple[str, bool, str]] = {}
@@ -163,11 +162,6 @@ class NATCompiler_nft(NATCompiler):
         if self.rule_set_chain:
             for rule in self.rules:
                 rule.ipt_chain = self.rule_set_chain
-
-        if n > 0:
-            for iface in self.fw.interfaces:
-                if iface.is_dynamic():
-                    self.have_dynamic_interfaces = True
 
         return n
 
