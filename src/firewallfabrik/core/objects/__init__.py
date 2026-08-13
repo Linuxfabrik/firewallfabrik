@@ -83,6 +83,7 @@ from ._services import (
     UDPService,
     UserService,
     is_valid_dscp,
+    is_valid_tos,
 )
 from ._types import (
     Direction,
@@ -161,6 +162,7 @@ __all__ = [
     'group_membership',
     'is_run_time_address_table',
     'is_valid_dscp',
+    'is_valid_tos',
     'range_to_cidr',
     'rule_elements',
 ]

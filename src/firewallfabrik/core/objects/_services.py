@@ -324,11 +324,82 @@ def is_valid_dscp(value: str) -> bool:
     normalized = value.strip().lower()
     if normalized in VALID_DSCP_CLASSES:
         return True
+    code_point = _strtoul(normalized)
+    return code_point is not None and code_point <= MAX_DSCP
+
+
+def _strtoul(text: str) -> int | None:
+    """Read a number the way C's ``strtoul(s, NULL, 0)`` reads it.
+
+    netfilter parses these values with base 0, so ``0x`` is hex and a
+    leading zero is octal.  Python's ``int(s, 0)`` agrees about hex and
+    refuses the octal spelling outright ("invalid literal"), so ``020``
+    would be reported as unusable although both tools take it as 16.
+    """
+    value = text.strip()
+    if not value or value.startswith(('-', '+')):
+        # netfilter's callers all bound the value at zero from below, and a
+        # sign is not part of any spelling they accept.
+        return None
     try:
-        code_point = int(normalized, 0)
+        if value.lower().startswith('0x'):
+            return int(value, 16)
+        if value.startswith('0') and len(value) > 1:
+            return int(value, 8)
+        return int(value, 10)
     except ValueError:
+        return None
+
+
+# The five names the ToS match takes instead of a number, spelled the way
+# netfilter spells them (extensions/tos_values.c, tos_symbol_names).  The
+# comparison is case insensitive there (strcasecmp in xtopt_parse_tosmask).
+VALID_TOS_NAMES = frozenset(
+    {
+        'maximize-reliability',
+        'maximize-throughput',
+        'minimize-cost',
+        'minimize-delay',
+        'normal-service',
+    }
+)
+
+# The whole traffic class byte, which is what --tos reads: xtopt_parse_tosmask
+# hands the argument to tos_parse_numeric with UINT8_MAX as the ceiling.
+MAX_TOS = 0xFF
+
+
+def is_valid_tos(value: str) -> bool:
+    """Return True if ``value`` is a usable ToS match value.
+
+    ``--tos`` takes either a number, optionally followed by ``/`` and a
+    mask, each from 0 to 255 and in any base C reads (decimal, ``0x`` hex,
+    leading-zero octal), or one of five symbolic names.  Anything else is
+    answered with "Symbolic name is unknown" or "Illegal value", which
+    stops the activation script with every built-in policy already set to
+    DROP (netfilter libxtables/xtoptions.c, xtopt_parse_tosmask and
+    tos_parse_numeric).
+
+    Checking it is worth more than the message it saves: the value is free
+    text from the service editor and goes into the generated script
+    unquoted, so a space ends the argument and a dollar sign, a backtick or
+    a semicolon start something else entirely - as root, at the moment
+    every chain is already at DROP.  The rate-limit table name next door is
+    guarded for exactly that reason.
+    """
+    if not value:
         return False
-    return 0 <= code_point <= MAX_DSCP
+    normalized = value.strip().lower()
+    if normalized in VALID_TOS_NAMES:
+        return True
+    parts = normalized.split('/')
+    if len(parts) > 2:
+        return False
+    for part in parts:
+        number = _strtoul(part)
+        if number is None or number > MAX_TOS:
+            return False
+    return True
 
 
 class CustomService(Service):

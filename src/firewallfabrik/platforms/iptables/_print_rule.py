@@ -52,6 +52,7 @@ from firewallfabrik.core.objects import (
     get_address_table_source,
     is_run_time_address_table,
     is_valid_dscp,
+    is_valid_tos,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._utils import (
@@ -1094,6 +1095,23 @@ class PrintRule(PolicyRuleProcessor):
             ):
                 return None
             if tos:
+                if not is_valid_tos(tos):
+                    # Two things at once.  iptables answers an unreadable
+                    # value with "Symbolic name is unknown" or "Illegal
+                    # value" and stops the activation script; and the value
+                    # is free text that reaches the generated script
+                    # unquoted, where a space ends the argument and a dollar
+                    # sign, a backtick or a semicolon start something else -
+                    # as root, at the moment every chain is already at DROP.
+                    self.compiler.error(
+                        rule,
+                        f'IP service has an invalid ToS value "{tos}"; use a '
+                        'number from 0 to 255, optionally followed by "/" and '
+                        'a mask, or one of Minimize-Delay, '
+                        'Maximize-Throughput, Maximize-Reliability, '
+                        'Minimize-Cost, Normal-Service. The rule is left out',
+                    )
+                    return None
                 parts.append(f'-m tos --tos {tos}')
             elif dscp:
                 if not is_valid_dscp(dscp):
