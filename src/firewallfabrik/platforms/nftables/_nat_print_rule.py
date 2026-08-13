@@ -384,7 +384,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
             name = nft_object_name(obj.name) + ('_v6' if ipv6 else '')
             self.compiler.address_tables[name] = (
-                get_address_table_source(obj),
+                get_address_table_source(obj, self.compiler.fw),
                 ipv6,
                 'file',
             )

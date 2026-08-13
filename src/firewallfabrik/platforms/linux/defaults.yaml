@@ -79,11 +79,13 @@ options:
     type: 'str'
     default: ''
     supported: true
-    nftables_supported: false
+    nftables_supported: true
     widget: 'linux24_data_dir'
     description: >-
-      Directory for runtime data files such as address tables
-      on the firewall.
+      Directory the runtime data files live in on the firewall.
+      It replaces %DATADIR% in the file name of an address table
+      that is read on the firewall; a name without that token is
+      used as it stands.
 
   linux24_icmp_echo_ignore_all:
     type: 'tristate'

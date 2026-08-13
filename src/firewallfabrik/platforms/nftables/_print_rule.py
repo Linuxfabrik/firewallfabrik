@@ -921,7 +921,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             ipv6 = bool(getattr(self.compiler, 'ipv6_policy', False))
             name = nft_set_reference_name(obj, ipv6)
             self.compiler.address_tables[name] = (
-                get_address_table_source(obj),
+                get_address_table_source(obj, self.compiler.fw),
                 ipv6,
                 'file',
             )

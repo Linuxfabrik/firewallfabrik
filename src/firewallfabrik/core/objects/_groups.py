@@ -177,9 +177,27 @@ def is_run_time_address_table(obj) -> bool:
     return isinstance(obj, AddressTable) and bool((obj.data or {}).get('run_time'))
 
 
-def get_address_table_source(at: AddressTable) -> str:
-    """Return the file an AddressTable is read from, as the script sees it."""
-    return str((at.data or {}).get('filename', ''))
+def get_address_table_source(at: AddressTable, fw=None) -> str:
+    """Return the file an AddressTable is read from, as the script sees it.
+
+    A file name may hold the token ``%DATADIR%``, which stands for the
+    directory the data files live in.  For a table read *on the firewall*
+    that is the firewall's own "Data directory" setting, because the path
+    goes into the generated script and is opened there - not the directory
+    of the machine that compiled it, which is what the compile-time
+    resolution in ``Compiler._load_address_table`` uses.  fwbuilder makes
+    the same split (AddressTable::getFilename: ``options->getStr(
+    "data_dir")`` when ``isRunTime()``, ``FWObject::getDataDir()``
+    otherwise).
+
+    Without *fw* the token is left as it stands, which is what a caller
+    that has no firewall at hand can say about it.
+    """
+    filename = str((at.data or {}).get('filename', ''))
+    if '%DATADIR%' not in filename or fw is None:
+        return filename
+    data_dir = str(fw.get_option('linux24_data_dir') or '').rstrip('/')
+    return filename.replace('%DATADIR%', data_dir) if data_dir else filename
 
 
 class AttachedNetworks(MultiAddress):

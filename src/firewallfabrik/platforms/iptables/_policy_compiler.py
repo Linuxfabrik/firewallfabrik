@@ -2421,7 +2421,9 @@ class ProcessMultiAddressObjectsInRE(PolicyRuleProcessor):
         that matches nothing.
         """
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        source_name = get_address_table_source(mart) or getattr(mart, 'source_name', '')
+        source_name = get_address_table_source(mart, self.compiler.fw) or getattr(
+            mart, 'source_name', ''
+        )
         if ipt_comp.oscnf is not None and source_name:
             ipt_comp.oscnf.register_multi_address_object(
                 mart.name, source_name, ipt_comp.ipv6_policy

@@ -188,7 +188,7 @@ class NATPrintRule(NATRuleProcessor):
         the caller can leave the rule out.
         """
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
-        source = get_address_table_source(obj)
+        source = get_address_table_source(obj, self.compiler.fw)
         oscnf = getattr(ipt_comp, 'oscnf', None)
         ipv6 = bool(getattr(ipt_comp, 'ipv6_policy', False))
         if oscnf is not None:
