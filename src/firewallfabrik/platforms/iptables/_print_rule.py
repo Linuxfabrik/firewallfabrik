@@ -1081,6 +1081,8 @@ class PrintRule(PolicyRuleProcessor):
             # Fragments
             if _is_true(data.get('fragm')) or _is_true(data.get('short_fragm')):
                 if self.compiler.ipv6_policy:
+                    if not self._match_available(rule, 'frag'):
+                        return None
                     parts.append('-m frag --fragmore')
                 else:
                     parts.append('-f')

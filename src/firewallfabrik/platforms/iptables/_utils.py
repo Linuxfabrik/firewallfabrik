@@ -85,6 +85,9 @@ DEFAULT_IPTABLES_VERSION = '1.8'
 MATCH_FIRST_RELEASE = {
     'connlimit': ('1.2.9', '1.4.0'),
     'dscp': ('1.2.6', '1.4.0'),
+    # `frag` is IPv6 only - the IPv4 fragment test is the built-in `-f`,
+    # which is as old as iptables - so the first column has nothing to say.
+    'frag': ('0', '1.2.7'),
     'hashlimit': ('1.3.0', '1.3.7'),
     'iprange': ('1.2.9', '1.4.1'),
     'set': ('1.3.0', '1.4.9'),

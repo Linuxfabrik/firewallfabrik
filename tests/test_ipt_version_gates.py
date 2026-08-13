@@ -41,9 +41,14 @@ from firewallfabrik.platforms.iptables._utils import (
 # a libip6t_ variant: the IPv6 side only arrived with the family-neutral
 # libxt_ file, which is what makes the second column a real cut-off.
 # hashlimit is the exception, it got a libip6t_ file of its own first.
+#
+# A match that exists for one family only names no file for the other, and
+# its gate says '0' there: the IPv4 fragment test is the built-in `-f`, not
+# an extension, so `frag` has nothing to derive on that side.
 _EXTENSION_FILES = {
     'connlimit': ('libipt_connlimit.c', 'libxt_connlimit.c'),
     'dscp': ('libipt_dscp.c', 'libxt_dscp.c'),
+    'frag': (None, 'libip6t_frag.c'),
     'hashlimit': ('libipt_hashlimit.c', 'libip6t_hashlimit.c'),
     'iprange': ('libipt_iprange.c', 'libxt_iprange.c'),
     'set': ('libipt_set.c', 'libxt_set.c'),
@@ -172,6 +177,12 @@ def test_the_gate_names_the_release_the_match_first_shipped_in(match):
     repo = pathlib.Path(_SOURCE)
     releases = _releases(repo)
     for ipv6 in (False, True):
+        if _EXTENSION_FILES[match][ipv6] is None:
+            # The match does not exist for this family at all, which is what
+            # naming no file for it says.  `frag` is the case: the IPv4
+            # fragment test is the built-in `-f`, not an extension.
+            assert MATCH_FIRST_RELEASE[match][ipv6] == '0', match
+            continue
         offering = [tag for tag in releases if _offers_match(repo, tag, match, ipv6)]
         assert offering, f'{match} is in no release for ipv6={ipv6}'
         gate = MATCH_FIRST_RELEASE[match][ipv6]

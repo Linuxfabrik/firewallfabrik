@@ -1088,7 +1088,10 @@ class NATPrintRule(NATRuleProcessor):
                 # itself: "`-f' is not supported in IPv6, use -m frag
                 # instead" (netfilter iptables/xshared.c:1793).  The option
                 # is not even in ip6tables' option table.  Same split as the
-                # policy print rule.
+                # policy print rule, gate included: extensions/libip6t_frag.c
+                # first ships in v1.2.7.
+                if not match_available(self.compiler, rule, self.version, 'frag'):
+                    return None
                 parts.append('-m frag --fragmore')
             else:
                 parts.append('-f')
