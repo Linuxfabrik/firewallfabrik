@@ -37,6 +37,8 @@ from firewallfabrik.core.objects import (
     Firewall,
     Host,
     Interface,
+    IPv4,
+    IPv6,
     MultiAddress,
     Network,
     NetworkIPv6,
@@ -318,23 +320,34 @@ def _parent_host(iface: Interface):
     return None
 
 
+# The address types that are one address a route can go via.  The C++
+# asks ``getByType("IPv4")`` for this (fwbuilder
+# libfwbuilder/src/fwbuilder/RuleElement.cpp,
+# RuleElementRGtw::checkSingleIPAdress), i.e. it counts inet addresses and
+# nothing else.  A PhysAddress answers ``get_address()`` with a MAC, so
+# counting whatever has an address makes an interface that carries an
+# address *and* a MAC - which is what a host with "MAC address matching"
+# turned on expands to - look like two next hops and costs the rule.
+_INET_ADDRESS_TYPES = (IPv4, IPv6, Network, NetworkIPv6)
+
+
 def _count_addresses(obj) -> int:
-    """Return how many IP addresses an object contributes.
+    """Return how many next hops an object offers.
 
     Mirrors ``Address::countInetAddresses``: only an object that *is* one
-    address answers 1; a host or an interface answers however many it
+    inet address answers 1; a host or an interface answers however many it
     carries.
     """
     if isinstance(obj, Interface):
-        return sum(1 for addr in obj.addresses if addr.get_address())
+        return sum(1 for addr in obj.addresses if _count_addresses(addr))
     if isinstance(obj, Host):
         return sum(
             1
             for iface in obj.interfaces
             for addr in iface.addresses
-            if addr.get_address()
+            if _count_addresses(addr)
         )
-    if isinstance(obj, Address):
+    if isinstance(obj, _INET_ADDRESS_TYPES):
         return 1 if obj.get_address() else 0
     return 0
 
