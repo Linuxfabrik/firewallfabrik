@@ -130,3 +130,61 @@ def test_a_nat_rule_naming_a_tos_or_dscp_service_is_reported(field):
         rule = _rule(srv)
         assert call(printer, rule, srv) is None
         assert any('ToS or DSCP' in m for m in printer.compiler.messages)
+
+
+def _plain_service():
+    """A second TCP service that inspects nothing."""
+    srv = TCPService(id=uuid.uuid4(), name='https')
+    srv.dst_range_start = 443
+    srv.dst_range_end = 443
+    return srv
+
+
+def test_a_service_with_flags_is_given_a_nat_rule_of_its_own():
+    """Both printers write ports alone once a rule names several services.
+
+    So a service that inspects the flags has to be alone in its rule by the
+    time it gets there.  The policy pipelines have split on it since they
+    were written; neither NAT pipeline did, here or in fwbuilder, and the
+    rule then translated every TCP packet on those ports instead of the
+    handshake stage it was written for.
+    """
+    from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
+    from firewallfabrik.compiler.processors._service import SeparateTCPWithFlags
+
+    class _Feeder(BasicRuleProcessor):
+        def __init__(self, rules):
+            super().__init__(name='Feeder')
+            for rule in rules:
+                self.tmp_queue.append(rule)
+
+        def process_next(self) -> bool:
+            return False
+
+    with_flags = _tcp_service()
+    rule = _rule(with_flags)
+    rule.osrv = [with_flags, _plain_service()]
+
+    processor = SeparateTCPWithFlags('split on TCP services with flags')
+    processor.prev_processor = _Feeder([rule])
+    processor.compiler = _Compiler()
+    processor.process_next()
+
+    out = list(processor.tmp_queue)
+    assert [[s.name for s in r.osrv] for r in out] == [['syn only'], ['https']]
+
+
+@pytest.mark.parametrize(
+    ('module', 'compiler_name'),
+    [
+        ('firewallfabrik.platforms.iptables._nat_compiler', 'NATCompiler_ipt'),
+        ('firewallfabrik.platforms.nftables._nat_compiler', 'NATCompiler_nft'),
+    ],
+)
+def test_both_nat_pipelines_split_on_tcp_flags(module, compiler_name):
+    """The processor existed and worked; it was in neither NAT pipeline."""
+    import importlib
+    import inspect
+
+    source = inspect.getsource(getattr(importlib.import_module(module), compiler_name))
+    assert 'SeparateTCPWithFlags(' in source

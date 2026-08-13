@@ -50,6 +50,7 @@ from firewallfabrik.compiler.processors._policy import (
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcAndDstPort,
     SeparateSrcPort,
+    SeparateTCPWithFlags,
     VerifyCustomServices,
 )
 from firewallfabrik.core.objects import (
@@ -371,6 +372,16 @@ class NATCompiler_ipt(NATCompiler):
         )
 
         self.add(GroupServicesByProtocol('group services by protocol'))
+        # A TCP service may inspect the flags, and one nat rule carries one
+        # flag comparison, so a service that names flags needs a rule of its
+        # own before the printer merges the rest into a port set.  The
+        # policy pipelines have split on it since they were written; the NAT
+        # pipelines never did, here or in fwbuilder, and the printer's
+        # multi-service branch writes ports alone - so a rule naming a
+        # SYN-only service next to any second service translated every TCP
+        # packet on those ports instead of the handshake stage it was
+        # written for.
+        self.add(SeparateTCPWithFlags('split on TCP services with flags'))
         # A Custom Service is a fragment of platform text, so a rule using
         # one on a platform it carries no text for cannot be built.  The
         # processor reads a NAT rule's OSrv as well as a policy rule's Srv,
