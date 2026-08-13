@@ -31,6 +31,7 @@ import subprocess  # nosec B404
 import pytest
 
 from firewallfabrik.platforms.iptables._utils import (
+    MARK_MASK_FIRST_RELEASE,
     MATCH_ABSENT_BETWEEN,
     MATCH_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
@@ -201,3 +202,52 @@ def test_target_first_release_matches_the_netfilter_history(target):
     ipv4_file, ipv6_file = _TARGET_FILES[target]
     assert TARGET_FIRST_RELEASE[target][0] == _first_release(repo, ipv4_file)
     assert TARGET_FIRST_RELEASE[target][1] == _first_release(repo, ipv6_file)
+
+
+@pytest.mark.skipif(not _SOURCE, reason='set FWF_IPTABLES_SOURCE to a git clone')
+@pytest.mark.parametrize('ipv6', [False, True], ids=['iptables', 'ip6tables'])
+def test_the_masked_set_mark_gate_matches_the_netfilter_history(ipv6):
+    """`--set-mark value/mask` is younger than the target that carries it.
+
+    Revisions 0 and 1 read the argument as a plain number and answer a "/"
+    with "Bad MARK value"; the revision that takes value/mask arrives with
+    the family-neutral extensions/libxt_MARK.c, whose help text is the
+    thing to grep for.  Both families cross over in the same release for
+    that reason.
+    """
+    repo = pathlib.Path(_SOURCE)
+    releases = _releases(repo)
+    offering = []
+    for tag in releases:
+        files = subprocess.run(  # nosec B603 B607
+            [
+                'git',
+                '-C',
+                str(repo),
+                'ls-tree',
+                '-r',
+                '--name-only',
+                tag,
+                '--',
+                'extensions/',
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
+        prefix = 'libip6t_MARK.c' if ipv6 else 'libipt_MARK.c'
+        candidates = [n for n in files if n.endswith(('libxt_MARK.c', prefix))]
+        for name in candidates:
+            blob = subprocess.run(  # nosec B603 B607
+                ['git', '-C', str(repo), 'show', f'{tag}:{name}'],
+                capture_output=True,
+                check=True,
+            ).stdout
+            if b'set-mark value[/mask]' in blob:
+                offering.append(tag)
+                break
+
+    assert offering, 'no release offers a masked --set-mark'
+    assert MARK_MASK_FIRST_RELEASE[ipv6] == offering[0][1:], (
+        f'a masked --set-mark first ships in {offering[0]}'
+    )

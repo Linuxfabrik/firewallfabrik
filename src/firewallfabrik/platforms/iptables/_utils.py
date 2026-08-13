@@ -152,12 +152,31 @@ def match_available(compiler, rule, version: str, match: str) -> bool:
 #
 # Not listed, and why: TCPMSS is gated where it is emitted (the mangle
 # compiler knows the forwarding option it hangs on), NFLOG in the log
-# printer, the NAT targets through IP6TABLES_NAT_FIRST_RELEASE, and LOG,
-# MARK and REJECT are older than every release Firewall Builder can pin.
+# printer, the NAT targets through IP6TABLES_NAT_FIRST_RELEASE, and LOG
+# and REJECT are older than every release Firewall Builder can pin.
+#
+# MARK is older than that too, but one of its *spellings* is not, which is
+# what MARK_MASK_FIRST_RELEASE below answers.
 TARGET_FIRST_RELEASE = {
     'CLASSIFY': ('1.2.8', '1.4.0'),
     'CONNMARK': ('1.2.6', '1.3.5'),
 }
+
+
+# `--set-mark value/mask` is a different option from `--set-mark value`,
+# and it is younger than the target that carries it.  Revisions 0 and 1
+# declare the argument as a plain number (`string_to_number_l` up to
+# v1.4.4, `XTTYPE_UINT32` after) and answer a `/` with "Bad MARK value";
+# the revision-2 parser that takes value/mask arrives with
+# extensions/libxt_MARK.c in v1.4.1, where the help text gains
+# "--set-mark value[/mask]".  Both families cross over in the same
+# release, because that revision came in as a family-neutral libxt_ file.
+#
+# A Tag Service stores whatever the administrator typed, so the mask is
+# not something the compiler chooses; only a code that carries one has to
+# be gated, or every plain marking rule would be dropped on an old
+# release for no reason.
+MARK_MASK_FIRST_RELEASE = ('1.4.1', '1.4.1')
 
 
 def get_iptables_version(fw) -> str:

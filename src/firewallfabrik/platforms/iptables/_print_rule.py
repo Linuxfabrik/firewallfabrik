@@ -55,6 +55,7 @@ from firewallfabrik.core.objects import (
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._utils import (
+    MARK_MASK_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
     check_chain_name,
     get_address_table_var_name,
@@ -1692,6 +1693,29 @@ class PrintRule(PolicyRuleProcessor):
             return ''
         return tag_obj.get_code() if tag_obj else ''
 
+    def _mark_mask_available(self, rule: CompRule) -> bool:
+        """Whether the pinned iptables takes ``--set-mark value/mask``.
+
+        The MARK target itself is older than anything Firewall Builder can
+        pin, but this spelling of its argument is not: revisions 0 and 1
+        read the argument as a plain number and answer a ``/`` with "Bad
+        MARK value", which stops the activation script with every built-in
+        policy already set to DROP.  The rule is left out instead - writing
+        the value without its mask would clear bits the rule was written to
+        keep.
+        """
+        first = MARK_MASK_FIRST_RELEASE[bool(self.compiler.ipv6_policy)]
+        if version_compare(self.version, first) >= 0:
+            return True
+        tool = 'ip6tables' if self.compiler.ipv6_policy else 'iptables'
+        self.compiler.error(
+            rule,
+            f'{tool} before {first} cannot set a mark with a mask; the rule '
+            f'is left out. Give the Tag Service a plain value instead of '
+            f'"value/mask"',
+        )
+        return False
+
     def _target_available(self, rule: CompRule, target: str) -> bool:
         """Whether the pinned iptables knows a target, for this family.
 
@@ -1733,6 +1757,8 @@ class PrintRule(PolicyRuleProcessor):
                     'tagging rule has no Tag Service to take the mark from; '
                     'the rule is left out',
                 )
+                return None
+            if '/' in tag_value and not self._mark_mask_available(rule):
                 return None
             return f' -j MARK --set-mark {tag_value}'
 
