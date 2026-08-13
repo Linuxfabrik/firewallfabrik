@@ -1228,14 +1228,17 @@ Key helper methods:
 #### `PrintRuleIptRst` (h:1161 / PrintRuleIptRst.cpp:117) — Output
 
 Variant that generates `iptables-restore` format instead of shell commands.
-Outputs rules as raw table entries (e.g. `-A INPUT -s 10.0.0.0/8 -j ACCEPT`)
-grouped by table, with `*filter` / `COMMIT` markers.
+**Not ported**: the choice is binary in fwf, so restore mode always takes
+the echo variant below. The C++ third case — a plain restore stream when
+no rule needs a shell variable — has no Python entry point.
 
 #### `PrintRuleIptRstEcho` (h:1178 / PrintRuleIptRstEcho.cpp:79) — Output
 
-Variant for `iptables-restore` with echo wrappers. Used for dynamic
-interfaces — wraps rules in shell `echo` commands so they can be piped
-to `iptables-restore` at runtime after variable substitution.
+Variant for `iptables-restore` with echo wrappers, and the only one fwf
+selects. Wraps every line in a shell `echo` so a rule can carry a variable
+— a run-time address table, a dynamic interface address — which a plain
+restore file cannot. The `*filter` / `*nat` and `COMMIT` markers come from
+the `script_body_iptables_restore` configlet, not from the printer.
 
 ### iptables NAT Processors
 
@@ -1515,6 +1518,37 @@ CheckForObjectsWithErrors → CountChainUsage →
 NATPrintRule → SimplePrintProgress
 ```
 
+### Routing pipeline order
+
+`platforms/linux/_routing_compiler.py`, shared by both platforms — the
+routing compiler runs once per firewall, not once per address family.
+Ported from `RoutingCompiler_ipt::compile()`; the order is "check what the
+rule names, expand it, then check what the expansion left".
+
+```
+Begin → PrintTotalNumberOfRules → SingleRuleFilter (auto) →
+RecursiveGroupsInRE(rdst) → EmptyGroupsInRE(rdst) →
+EmptyRGtwAndRItf → SingleAddressInRGtw → RItfChildOfFw →
+ExpandGroups → ExpandMultipleAddressesInRouting → DropRuleWithEmptyRE →
+ValidateRoutingDestination → ExpandAddressRangesInRDst →
+EliminateDuplicatesInRDst → ConvertToAtomicForRDst →
+RoutingPrintRule
+```
+
+Not ported from the C++ pass, and what it costs:
+
+| C++ processor | Consequence |
+|---|---|
+| `reachableAddressInRGtw`, `contradictionRGtwAndRItf` | A gateway that is not on a network of the interface is not reported |
+| `FindDefaultRoute`, `createSortedDstIdsLabel`, `competingRules`, `classifyRoutingRules` | Two rules to the same destination stay two `ip route add` commands; the second fails at activation instead of becoming one ECMP route with `nexthop` |
+| `optimize3`, `eliminateDuplicateRules` | Duplicate commands are not folded |
+| `DropIPv6RulesWithWarning` | Deliberate: fwf compiles an IPv6 route as `$IP -6 route add`, which fwbuilder cannot |
+
+The `routing_functions` configlet, which holds the rollback of the previous
+routing table and the `route_command_error` handler the C++ output wraps
+every command in, is still unrendered
+([#125](https://github.com/Linuxfabrik/firewallfabrik/issues/125)).
+
 ---
 
 ## Implementation status
@@ -1671,7 +1705,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `accounting` | `platforms/iptables/_policy_compiler.py:Accounting` |
 | `countChainUsage` | `platforms/iptables/_policy_compiler.py:CountChainUsage` |
 | `PrintRule` | `platforms/iptables/_print_rule.py:PrintRule` |
-| `PrintRuleIptRst` | `platforms/iptables/_print_rule.py:PrintRuleIptRst` |
+| `PrintRuleIptRst` | not ported (restore mode always takes the echo variant) |
 | `PrintRuleIptRstEcho` | `platforms/iptables/_print_rule.py:PrintRuleIptRstEcho` |
 | `SingleObjectNegationItfInb` | `platforms/iptables/_nat_compiler.py:SingleObjectNegationItfInb` |
 | `SingleObjectNegationItfOutb` | `platforms/iptables/_nat_compiler.py:SingleObjectNegationItfOutb` |
