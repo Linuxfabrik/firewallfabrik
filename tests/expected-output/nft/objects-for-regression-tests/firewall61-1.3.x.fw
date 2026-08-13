@@ -11,8 +11,6 @@
 #  testing time litmiting for iptables 1.3.x
 #
 # Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule 0 (global): Rule branches to "fw61-Policy", which is not a rule set nftables can jump to; the rule is left out
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

@@ -18,7 +18,6 @@
 # Rule 12 (NAT): Can not use service object in Translated Service if Original Service is 'Any'.
 # Rule 13 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 14 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
-# Rule 14 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

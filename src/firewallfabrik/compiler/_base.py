@@ -36,6 +36,16 @@ class BaseCompiler:
         self._errors: list[str] = []
         self._warnings: list[str] = []
         self._rule_errors: dict[str, list[str]] = {}
+        # Every (rule label, message) this compiler has already recorded.
+        # A message is a statement about the rule the administrator wrote,
+        # and one such rule reaches the printer as several: the service
+        # split gives an ICMP and a TCP half a rule each, the negation
+        # expansion builds three, the chain decisions split on top of that.
+        # Recording the same sentence once per copy says nothing further
+        # and buries the rest of the report.  This is per compiler, so the
+        # iptables filter and mangle passes still report separately, the
+        # way the Firewall Builder output does.
+        self._reported: set[tuple[str, str]] = set()
         self._aborted: bool = False
         self._muted: int = 0
 
@@ -97,10 +107,12 @@ class BaseCompiler:
         if msg is None:
             self._errors.append(str(rule_or_msg))
         else:
+            label = getattr(rule_or_msg, 'label', '')
             rid = self._format_rule_id(rule_or_msg)
             text = f'Rule {rid}: {msg}'
+            if self._already_reported(label, text):
+                return
             self._errors.append(text)
-            label = getattr(rule_or_msg, 'label', '')
             if label:
                 self._rule_errors.setdefault(label, []).append(text)
         self._status = CompilerStatus.FWCOMPILER_ERROR
@@ -112,14 +124,29 @@ class BaseCompiler:
         if msg is None:
             self._warnings.append(str(rule_or_msg))
         else:
+            label = getattr(rule_or_msg, 'label', '')
             rid = self._format_rule_id(rule_or_msg)
             text = f'Rule {rid}: {msg}'
+            if self._already_reported(label, text):
+                return
             self._warnings.append(text)
-            label = getattr(rule_or_msg, 'label', '')
             if label:
                 self._rule_errors.setdefault(label, []).append(text)
         if self._status == CompilerStatus.FWCOMPILER_SUCCESS:
             self._status = CompilerStatus.FWCOMPILER_WARNING
+
+    def _already_reported(self, label: str, text: str) -> bool:
+        """Whether this exact sentence has been said about this rule before.
+
+        The status is deliberately left alone by the caller when this
+        answers true: it was set by the first occurrence, and a repeat of
+        the same message says nothing that would change it.
+        """
+        key = (label, text)
+        if key in self._reported:
+            return True
+        self._reported.add(key)
+        return False
 
     def info(self, msg: str) -> None:
         """Print an informational message to stderr."""

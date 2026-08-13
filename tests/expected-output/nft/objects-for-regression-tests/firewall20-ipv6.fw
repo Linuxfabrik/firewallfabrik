@@ -14,8 +14,6 @@
 #  dynamic interface ppp0 has an address object attached to it (interface used to be static and had an address, then got converted to dynamic but address object is still there). Compiler should ignore this address object and issue a warning.
 #
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # firewall20-ipv6:Policy:3: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled

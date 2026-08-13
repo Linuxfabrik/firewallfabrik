@@ -11,13 +11,7 @@
 #  this object is used to hold branch rulesets for firewall82
 #
 # Rule Policy_A 0 (global): Rule branches to "Policy_B", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 0 (global): Rule branches to "Policy_B", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 0 (global): Rule branches to "Policy_B", which is not a rule set nftables can jump to; the rule is left out
 # Rule Policy_A 1 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 1 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 1 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 2 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to; the rule is left out
-# Rule Policy_A 2 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to; the rule is left out
 # Rule Policy_A 2 (global): Rule branches to "Policy_A", which is not a rule set nftables can jump to; the rule is left out
 
 FWBDEBUG=""

@@ -11,13 +11,7 @@
 #  testing rules with  action-on-reject "TCP reset"
 #
 # Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 12 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
 # Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 13 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
-# Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
 # Rule 14 (global): Custom service 'reject syn-ack' is not configured for 'nftables'
 # firewall9:Policy:1: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 # firewall9:Policy:2: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.

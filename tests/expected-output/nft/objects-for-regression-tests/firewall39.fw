@@ -14,9 +14,6 @@
 #
 # Rule rule6_branch 0 (global): Rule branches to "Policy", which is not a rule set nftables can jump to; the rule is left out
 # Rule 15 (global): Custom action not yet supported by nftables compiler
-# Rule 15 (global): Custom action not yet supported by nftables compiler
-# Rule 15 (global): Custom action not yet supported by nftables compiler
-# Rule 16 (global): Custom action not yet supported by nftables compiler
 # Rule 16 (global): Custom action not yet supported by nftables compiler
 
 FWBDEBUG=""

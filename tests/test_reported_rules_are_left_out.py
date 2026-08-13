@@ -95,3 +95,35 @@ def test_an_ordinary_rule_passes_through(services):
     proc = _run(_rule(services))
     assert len(proc.tmp_queue) == 1
     assert proc.compiler.messages == []
+
+
+def test_a_message_is_recorded_once_per_rule_not_once_per_copy():
+    """One rule as the administrator wrote it reaches the printer as several.
+
+    The service split gives an ICMP and a TCP half a rule each, the
+    negation expansion builds three, the chain decisions split on top of
+    that.  Saying the same sentence about each copy buries the rest of the
+    report: firewall37-2 named its rules 12 to 15 twice for the same
+    reason.  Two different rules still get one message each, and so does
+    the same rule in another compiler - the iptables filter and mangle
+    passes report separately, the way the Firewall Builder output does.
+    """
+    from firewallfabrik.compiler._base import BaseCompiler
+
+    class _Rule:
+        def __init__(self, label):
+            self.label = label
+            self.position = 0
+
+    compiler = BaseCompiler()
+    compiler.error(_Rule('12 (eth0)'), 'no incoming interface here')
+    compiler.error(_Rule('12 (eth0)'), 'no incoming interface here')
+    compiler.error(_Rule('13 (eth0)'), 'no incoming interface here')
+    compiler.warning(_Rule('12 (eth0)'), 'something else entirely')
+
+    assert len(compiler.get_errors()) == 2
+    assert len(compiler.get_warnings()) == 1
+
+    second = BaseCompiler()
+    second.error(_Rule('12 (eth0)'), 'no incoming interface here')
+    assert len(second.get_errors()) == 1

@@ -11,23 +11,11 @@
 #  this is simple firewall with two interfaces. Test regular policy rules, including IP_fragments rule
 #
 # Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-# Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-# Rule 23 (global): IP service matching the "timestamp" IP option is not supported by nftables, which can only match the lsrr, ssrr, rr and router-alert options
-# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
-# Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
 # Rule 25 (global): IP service has an invalid DSCP value "AF4"; use a DiffServ class (for example af41) or a numeric code point
 # Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
 # Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
-# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 26 (global): Custom service 'test-custom-1' is not configured for 'nftables'
-# Rule 26 (global): Custom service 'test-custom-2' is not configured for 'nftables'
-# Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 46 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 47 (global): Custom service 'talk' is not configured for 'nftables'
-# Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # Rule 48 (global): Custom service 'talk' is not configured for 'nftables'
 # firewall:NAT:16: warning: SNAT rule can not match MAC address. Object 'host-with-mac-2:1-pa' removed from the rule
 # firewall:Policy:42: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees

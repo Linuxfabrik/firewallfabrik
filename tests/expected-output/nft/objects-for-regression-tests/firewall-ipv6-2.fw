@@ -17,8 +17,6 @@
 # DNSName "ny6ix.net (ct)" cannot resolve "ny6ix.net": DNS lookup failed
 # Rule 24 (global): Empty group or address table object 'DNS objects compile time' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
-# Rule 31 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # Rule '3 (global)' shadows rule '4 (global)' below it
 # Rule '5 (global)' shadows rule '6 (global)' below it
 # Rule '8 (global)' shadows rule '9 (global)' below it

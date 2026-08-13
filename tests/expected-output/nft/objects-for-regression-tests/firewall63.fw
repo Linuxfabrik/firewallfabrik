@@ -11,8 +11,6 @@
 #  testing TOS and DSCP matching
 #
 # Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
-# Rule 0 (global): IP service with a ToS value is not supported by nftables; use a DSCP value instead
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

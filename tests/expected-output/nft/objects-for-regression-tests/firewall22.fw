@@ -13,7 +13,6 @@
 # Rule 0 (NAT): Custom service 'string' is not configured for the platform 'nftables'
 # Rule 1 (NAT): Custom service 'string' is not configured for the platform 'nftables'
 # Rule 2 (NAT): Custom service 'string' is not configured for the platform 'nftables'
-# Rule 2 (NAT): Custom service 'string' is not configured for the platform 'nftables'
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

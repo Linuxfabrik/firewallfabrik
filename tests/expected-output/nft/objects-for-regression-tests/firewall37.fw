@@ -13,8 +13,6 @@
 #  normal script mode (not using  iptables-restore)
 #
 # Rule 36 (global): Custom action not yet supported by nftables compiler
-# Rule 36 (global): Custom action not yet supported by nftables compiler
-# Rule 36 (global): Custom action not yet supported by nftables compiler
 # firewall37:mangle_rules:7: warning: Empty group or address table object 'empty Ogroup'
 # firewall37:mangle_rules:7: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule mangle_rules 7 (global) because option 'Ignore rules with empty groups' is in effect
 

@@ -25,12 +25,8 @@
 # Rule 10 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 11 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 12 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 12 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 13 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 13 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 14 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 14 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 15 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 15 (eth0): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 
 FWBDEBUG=""

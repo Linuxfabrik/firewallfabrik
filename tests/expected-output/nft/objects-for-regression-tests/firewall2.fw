@@ -15,8 +15,6 @@
 # Rule 51 (NAT): Translated Service should be either 'Original' or should contain object of the same type as Original Service.
 # Rule 52 (NAT): Custom service 'owner_anonymous udp' is not configured for the platform 'nftables'
 # Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
-# Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
-# Rule 29 (global): Object 'net-err' has netmask 0.0.0.0 (equivalent to 'any')
 # Rule '0 (eth1)' shadows rule '2 ()' below it
 # Rule '0 (eth1)' shadows rule '3 (eth1,eth3)' below it
 # Rule '4 (eth1,eth3)' shadows rule '5 (eth1,eth3)' below it

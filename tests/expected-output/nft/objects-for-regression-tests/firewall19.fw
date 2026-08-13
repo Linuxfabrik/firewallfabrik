@@ -11,8 +11,6 @@
 #  testing different cmbinations of objects in the policy rules on loopback interface
 #
 # Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
-# Rule 10 (global): Custom service 'old AIM session' is not configured for 'nftables'
 # firewall19:Policy:10: warning: Rule action 'Reject' with TCP RST can be used only with TCP services.
 
 FWBDEBUG=""

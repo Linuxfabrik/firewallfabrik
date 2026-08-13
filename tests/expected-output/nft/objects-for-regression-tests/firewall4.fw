@@ -11,7 +11,6 @@
 #  this object is used to test a configuration where firewall has dynamic address
 #
 # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
-# Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
