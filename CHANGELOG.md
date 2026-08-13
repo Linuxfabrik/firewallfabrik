@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a NAT rule that excludes an IP service matching on more than one thing is reported and left out. Only the protocol was inverted and the other conditions were written out unchanged, so the rule translated part of exactly the traffic it excluded.
 * Compiler (nftables): a logging rule that keeps its own connection limit or rate limit stays one rule on a firewall that rate-limits its log messages. It was compiled into a log rule and a verdict rule that both carried the limit, and a limit is counted on every rule a packet crosses, so half the traffic the rule was meant to stop passed it.
 * Compiler (nftables): a rule naming two address tables, DNS names or dynamic interfaces on the same side is compiled as one rule per object. They were written into a single rule, which asks for a packet whose address is in two lists at once: no packet is, so a Deny rule stopped nothing and an Accept rule let nothing through. The compiler reported it and left the rule out since the last release; now the rule is compiled.
 * Compiler (iptables): a log level stored as "err" or "warn" is written out as "error" and "warning". Those are the names nftables uses; iptables answers them with 'log level "err" unknown', which stopped the activation script and left every rule after it uninstalled.

@@ -546,7 +546,7 @@ class NATPrintRule_nft(NATRuleProcessor):
             # Protocol number 0 is iptables' "all" wildcard, not a protocol;
             # `meta l4proto 0` would match IP protocol 0 and nothing else.
             if p > 0:
-                ip_parts.append(f'meta l4proto {neg}{p}')
+                ip_parts.append(f'meta l4proto {p}')
             data = srv.data or {}
             # The policy printer reads the ToS and the DSCP of an IP
             # service; neither NAT printer does, and neither does
@@ -574,7 +574,25 @@ class NATPrintRule_nft(NATRuleProcessor):
                         'lsrr, ssrr, rr and router-alert options',
                     )
                     return None
-            return ' '.join(ip_parts)
+            if not neg:
+                return ' '.join(ip_parts)
+            # A negated element means "not (all of these conditions)".  One
+            # condition inverts by turning its comparison into `!=`; two
+            # would have to be inverted as a disjunction, which one nft rule
+            # cannot say.  Putting the `!=` on the protocol and leaving the
+            # fragment and option matches positive asks for something else
+            # entirely and translates traffic the rule excludes.  The policy
+            # printer refuses the same shape in _negate_single_match.
+            if len(ip_parts) == 1 and ip_parts[0] == f'meta l4proto {p}':
+                return f'meta l4proto != {p}'
+            self.compiler.error(
+                rule,
+                'Negating an IP service with '
+                + ('several conditions' if len(ip_parts) > 1 else 'nothing to match on')
+                + ' is not supported by the nftables compiler; split it into '
+                'one service per condition',
+            )
+            return None
         elif isinstance(srv, CustomService):
             nft_comp = cast('NATCompiler_nft', self.compiler)
             code = (srv.codes or {}).get(nft_comp.my_platform_name(), '')
