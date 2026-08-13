@@ -2072,26 +2072,21 @@ class PrintRule(PolicyRuleProcessor):
         return f'"{s}"'
 
 
-class PrintRuleIptRst(PrintRule):
-    """Generates rules in iptables-restore format."""
+class PrintRuleIptRstEcho(PrintRule):
+    """Generates iptables-restore input with echo commands.
 
-    def __init__(self, name: str = 'generate code for iptables-restore') -> None:
+    The generated script builds the restore stream with ``echo`` so that a
+    rule can carry a shell variable - a run-time address table, a dynamic
+    interface address - which a plain restore file cannot.  fwbuilder has a
+    second, non-echo variant for the case where no rule needs one; this
+    port never selected it, and the class had drifted into emitting shell
+    `echo` lines next to bare `-A` lines, which is valid as neither form.
+    """
+
+    def __init__(
+        self, name: str = 'generate code for iptables-restore using echo'
+    ) -> None:
         super().__init__(name)
-
-    def _chain_declaration(self, chain: str) -> str:
-        # This format writes the restore stream itself, so the declaration
-        # is a plain line, the way its rules are plain `-A` lines and the
-        # way the NAT twin already wrote it.  It used to `echo`, which only
-        # the Echo subclass below wants.
-        return f':{chain} - [0:0]\n'
-
-    def _start_rule_line(self) -> str:
-        # fwbuilder PolicyCompiler_PrintRuleIptRst::_startRuleLine: ``-A ``
-        return '-A '
-
-    def _end_rule_line(self) -> str:
-        # fwbuilder PolicyCompiler_PrintRuleIptRst::_endRuleLine: newline
-        return '\n'
 
     def _print_rule_label(self, rule: CompRule) -> str:
         label = rule.label
@@ -2099,27 +2094,6 @@ class PrintRuleIptRst(PrintRule):
             self.current_rule_label = label
             return f'echo "# Rule {label}"\n'
         return ''
-
-    def _declare_table(self) -> str:
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        my_table = getattr(ipt_comp, 'my_table', 'filter') if ipt_comp else 'filter'
-        return f"echo '*{my_table}'"
-
-    def _commit(self) -> str:
-        return "echo 'COMMIT'"
-
-
-class PrintRuleIptRstEcho(PrintRuleIptRst):
-    """Generates iptables-restore format using echo commands.
-
-    This variant supports dynamic address variable substitution
-    by using shell echo to generate the restore file.
-    """
-
-    def __init__(
-        self, name: str = 'generate code for iptables-restore using echo'
-    ) -> None:
-        super().__init__(name)
 
     def _chain_declaration(self, chain: str) -> str:
         # This format builds the restore stream with `echo`, so the
@@ -2143,11 +2117,3 @@ class PrintRuleIptRstEcho(PrintRuleIptRst):
         # closes the echo argument early and the prefix loses its trailing
         # space (fwbuilder PolicyCompiler_PrintRuleIptRstEcho::_quote).
         return f'\\"{s}\\"'
-
-    def _declare_table(self) -> str:
-        ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
-        my_table = getattr(ipt_comp, 'my_table', 'filter') if ipt_comp else 'filter'
-        return f'echo "*{my_table}"'
-
-    def _commit(self) -> str:
-        return 'echo "COMMIT"'

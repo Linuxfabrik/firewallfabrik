@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import difflib
 import ipaddress
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -29,7 +28,6 @@ from firewallfabrik.core.objects import (
     Cluster,
     Firewall,
 )
-from firewallfabrik.driver._configlet import Configlet
 from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
@@ -174,58 +172,6 @@ class CompilerDriver(BaseCompiler):
                     f'the firewall option "{key}" is not one this compiler '
                     f'reads and looks like "{close[0]}"; it is ignored'
                 )
-
-    # -- Script assembly --
-
-    def assemble_script(
-        self,
-        fw: Firewall,
-        os_family: str,
-        filter_output: str,
-        nat_output: str,
-        routing_output: str,
-        mangle_output: str = '',
-        prolog_output: str = '',
-        epilog_output: str = '',
-    ) -> str:
-        """Assemble the final script from configlets and compiled sections."""
-        if not os_family:
-            os_family = 'linux24'
-
-        skeleton = Configlet(os_family, 'script_skeleton', default_prefix='linux24')
-        skeleton.collapse_empty_strings(True)
-
-        # Set variables
-        skeleton.set_variable('shell_debug', '')
-        skeleton.set_variable('firewall_dir', '/etc/fw')
-        skeleton.set_variable('user', os.environ.get('USER', 'unknown'))
-        skeleton.set_variable('platform', fw.platform)
-        skeleton.set_variable('fw_version', fw.version)
-        skeleton.set_variable('comment', (fw.comment or '').replace('\n', '\n# '))
-
-        # Content sections
-        skeleton.set_variable('have_filter', '1' if filter_output else '0')
-        skeleton.set_variable('have_nat', '1' if nat_output else '0')
-        skeleton.set_variable('have_mangle', '1' if mangle_output else '0')
-        skeleton.set_variable('have_routing', '1' if routing_output else '0')
-
-        skeleton.set_variable('filter_rules', filter_output)
-        skeleton.set_variable('nat_rules', nat_output)
-        skeleton.set_variable('mangle_rules', mangle_output)
-        skeleton.set_variable('routing_rules', routing_output)
-        skeleton.set_variable('prolog_script', prolog_output)
-        skeleton.set_variable('epilog_script', epilog_output)
-
-        # Error/warning section — drop duplicates (e.g. shadow warnings
-        # emitted once per table pass) while preserving insertion order.
-        messages = []
-        for e in dict.fromkeys(self.all_errors):
-            messages.append(f'# Error: {e}')
-        for w in dict.fromkeys(self.all_warnings):
-            messages.append(f'# Warning: {w}')
-        skeleton.set_variable('errors_and_warnings', '\n'.join(messages))
-
-        return skeleton.expand()
 
     def determine_output_file_names(
         self,

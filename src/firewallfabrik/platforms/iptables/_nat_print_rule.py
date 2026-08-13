@@ -1229,44 +1229,26 @@ class NATPrintRule(NATRuleProcessor):
         return f'"{s}"'
 
 
-class NATPrintRuleIptRst(NATPrintRule):
-    """NAT rules in iptables-restore format."""
+class NATPrintRuleIptRstEcho(NATPrintRule):
+    """NAT rules as iptables-restore input, built with echo.
 
-    def _chain_declaration(self, chain: str) -> str:
-        if self.compiler.single_rule_compile_mode:
-            return ''
-        return f':{chain} - [0:0]\n'
-
-    def _start_rule_line(self) -> str:
-        return '-A '
-
-    def _end_rule_line(self) -> str:
-        return '\n'
+    The generated script echoes the restore stream so that a rule can
+    carry a shell variable - a run-time address table, a dynamic interface
+    address - which a plain restore file cannot.  fwbuilder has a second,
+    non-echo variant for the case where no rule needs one; this port never
+    selected it.
+    """
 
     def _print_rule_label(self, rule: CompRule) -> str:
+        # The banner of the shell form ends in `echo "Rule N"`, and in this
+        # form that line lands in the restore stream itself, where
+        # iptables-restore has no idea what to do with it.  A comment is
+        # all the stream takes.
         label = rule.label
         if label and label != self.current_rule_label:
             self.current_rule_label = label
             return f'# Rule {label}\n'
         return ''
-
-    def process_next(self) -> bool:
-        if self.print_once_on_top:
-            self.print_once_on_top = False
-        return super().process_next()
-
-    def _declare_table(self) -> str:
-        return '*nat\n'
-
-    def _commit(self) -> str:
-        return 'COMMIT\n'
-
-    def _quote(self, s: str) -> str:
-        return f'"{s}"'
-
-
-class NATPrintRuleIptRstEcho(NATPrintRuleIptRst):
-    """NAT rules in iptables-restore format using echo (for variables)."""
 
     def _chain_declaration(self, chain: str) -> str:
         if self.compiler.single_rule_compile_mode:
@@ -1284,9 +1266,6 @@ class NATPrintRuleIptRstEcho(NATPrintRuleIptRst):
         if self.print_once_on_top:
             self.print_once_on_top = False
         return super().process_next()
-
-    def _declare_table(self) -> str:
-        return "echo '*nat'\n"
 
     def _commit(self) -> str:
         return 'echo COMMIT\n'
