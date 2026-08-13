@@ -181,8 +181,18 @@ class CompilerDriver(BaseCompiler):
         """Set output file names based on firewall name and options."""
         fw_name = fw.name
 
+        # Three tiers, the way fwbuilder resolves it
+        # (CompilerDriver::getOutputFileNameInternal): the -o given on the
+        # command line wins, then the firewall's own "Compiler > Output file
+        # name", then the name derived from the object.  The middle one used
+        # to be missing, so a compile from the command line or from cron
+        # ignored the setting and wrote a different file than the GUI, which
+        # has always passed the option through as -o.
+        option_name = str(fw.get_option('output_file') or '').strip()
         if self.file_name_setting:
             file_name = self.file_name_setting
+        elif option_name:
+            file_name = option_name
         else:
             base_name = fw_name
             if cluster_name and self.prepend_cluster_name:

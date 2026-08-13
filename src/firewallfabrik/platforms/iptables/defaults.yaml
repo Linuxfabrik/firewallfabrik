@@ -432,12 +432,15 @@ options:
 
   output_file:
     type: 'str'
-    default: 'fwf.sh'
+    default: ''
+    placeholder: '<firewall name>.fw'
     supported: true
     widget: 'outputFileName'
     description: >-
       Name of the generated output file. Leave empty to use
       the default name derived from the firewall object name.
+      A name given here is used by the GUI and by the command
+      line alike; -o overrides both.
 
   prolog_place:
     type: 'enum'
