@@ -313,6 +313,21 @@ class NATPrintRule_nft(NATRuleProcessor):
             obj = element[0]
             if not isinstance(obj, Interface) or not obj.name:
                 continue
+            if obj.is_bridge_port():
+                # A bridged packet reaches the ip/inet hooks with the bridge
+                # device as its in/out device, not the port it came in on.
+                # nftables exposes the port as `meta ibrname` / `meta
+                # obrname` alone, which the kernel registers for the bridge
+                # family (net/bridge/netfilter/nft_meta_bridge.c) and
+                # refuses in an ip table; naming the bridge instead would
+                # widen the rule to every port of it.  The policy printer
+                # reports the same thing.
+                self.compiler.error(
+                    rule,
+                    f'Rule matches on the bridge port "{obj.name}", which '
+                    'nftables cannot see in a NAT table; the rule is left out',
+                )
+                return None
             if not check_interface_name(
                 self.compiler, obj.name, self.reported_long_ifaces
             ):

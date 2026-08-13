@@ -692,20 +692,53 @@ class NATPrintRule(NATRuleProcessor):
         parts.append(self._prefix_chain(rule.ipt_chain))
 
         if iface_in_name:
-            parts.append(
-                self._print_single_option_with_negation(
-                    '-i', rule, 'itf_inb', iface_in_name
-                )
-            )
+            parts.append(self._print_iface_option(rule, 'itf_inb', iface_in_name, True))
         if iface_out_name:
             parts.append(
-                self._print_single_option_with_negation(
-                    '-o', rule, 'itf_outb', iface_out_name
-                )
+                self._print_iface_option(rule, 'itf_outb', iface_out_name, False)
             )
 
         parts.append('')
         return ' '.join(parts)
+
+    def _print_iface_option(
+        self, rule: CompRule, slot: str, iface_name: str, inbound: bool
+    ) -> str:
+        """Print ``-i`` / ``-o``, or the physdev match for a bridge port.
+
+        A bridged packet reaches the nat hooks carrying the bridge device
+        as its in/out device, not the port it came in on - that one lives
+        in the bridge layer and is what ``xt_physdev`` reads
+        (``nf_bridge_get_physindev``).  ``-i <port>`` therefore never
+        matches and the rule translates nothing, with nothing said about
+        it.  The policy printer has used ``-m physdev`` for this since it
+        was written; xt_physdev registers no hook mask at all
+        (net/netfilter/xt_physdev.c), so the nat table takes it too.
+
+        ``--physdev-out`` alone stopped matching non-bridged traffic in
+        iptables 1.2.9, which is why the outbound form adds
+        ``--physdev-is-bridged``.
+        """
+        obj = getattr(rule, slot)[0] if getattr(rule, slot) else None
+        bridged = (
+            isinstance(obj, Interface)
+            and obj.is_bridge_port()
+            and (not self.version or version_compare(self.version, '1.3.0') >= 0)
+        )
+        if not bridged:
+            option = '-i' if inbound else '-o'
+            return self._print_single_option_with_negation(
+                option, rule, slot, iface_name
+            )
+        if inbound:
+            option = self._print_single_option_with_negation(
+                '--physdev-in', rule, slot, iface_name
+            )
+            return f'-m physdev {option.rstrip()}'
+        option = self._print_single_option_with_negation(
+            '--physdev-out', rule, slot, iface_name
+        )
+        return f'-m physdev --physdev-is-bridged {option.rstrip()}'
 
     def _get_interface_name(self, itf_list: list) -> str:
         if not itf_list:

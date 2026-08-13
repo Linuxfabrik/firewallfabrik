@@ -10,6 +10,8 @@
 #
 #  tests for nat rules with inbound and outbound interfaces with complex interface configuration
 #
+# Rule 1 (NAT): Rule matches on the bridge port "eth5", which nftables cannot see in a NAT table; the rule is left out
+# Rule 1 (NAT): Rule matches on the bridge port "eth6", which nftables cannot see in a NAT table; the rule is left out
 
 FWBDEBUG=""
 
@@ -308,8 +310,6 @@ table ip fwf_nat {
         oifname "eth4" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
         oifname "bridge0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
         oifname "vlan101" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
-        oifname "eth5" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
-        oifname "eth6" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
         #
         # Rule 2 (NAT)
         #
