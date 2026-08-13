@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a rule whose connection limit groups by more bits than the address family has is reported and left out, the way iptables already reports it. The grouping was silently dropped and the limit then counted per single address, so the same policy enforced two different limits on the two platforms.
 * Compiler (nftables): a NAT rule naming an interface or a host that carries no address is reported and left out instead of ending the compile with an internal error and no script at all.
 * Compiler (nftables): a NAT rule that excludes an IP service matching on more than one thing is reported and left out. Only the protocol was inverted and the other conditions were written out unchanged, so the rule translated part of exactly the traffic it excluded.
 * Compiler (nftables): a logging rule that keeps its own connection limit or rate limit stays one rule on a firewall that rate-limits its log messages. It was compiled into a log rule and a verdict rule that both carried the limit, and a limit is counted on every rule a packet crosses, so half the traffic the rule was meant to stop passed it.

@@ -603,6 +603,11 @@ class PrintRule_nft(PolicyRuleProcessor):
             parts.append(limit_match)
 
         connlimit_match = self._print_connlimit(rule)
+        if connlimit_match is None:
+            # The limit cannot be expressed and the reason was reported.
+            # Emitting the rule without it would enforce a different limit
+            # than the one the rule carries, without saying so.
+            return ''
         if connlimit_match:
             parts.append(connlimit_match)
 
@@ -1409,7 +1414,7 @@ class PrintRule_nft(PolicyRuleProcessor):
         """Print ICMP type/code matching."""
         return print_icmp_service(srv, self.compiler.ipv6_policy, negated)
 
-    def _print_connlimit(self, rule: CompRule) -> str:
+    def _print_connlimit(self, rule: CompRule) -> str | None:
         """Print the limit on concurrent connections per source.
 
         The nftables counterpart of ``-m connlimit --connlimit-above N
@@ -1423,6 +1428,9 @@ class PrintRule_nft(PolicyRuleProcessor):
         address's connection count.  ``over`` is the plain form and matches
         while the count is above the limit; the editor's "not" asks for the
         opposite, which the same expression says by leaving ``over`` out.
+
+        Returns ``None`` when the limit cannot be expressed, so the caller
+        can leave the rule out rather than enforce a different one.
         """
         try:
             limit = int(rule.get_option('connlimit_value', 0) or 0)
@@ -1439,6 +1447,19 @@ class PrintRule_nft(PolicyRuleProcessor):
         except (TypeError, ValueError):
             masklen = 0
         full = 128 if ipv6 else 32
+        if masklen > full:
+            # There is no such prefix in this family, so there is no group to
+            # count by.  Falling through would count per single address, i.e.
+            # enforce a limit other than the one the rule carries, and say
+            # nothing about it.  iptables answers the same input by leaving
+            # the rule out (`a connection limit groups by at most N bits`),
+            # and one policy must not mean two different limits.
+            self.compiler.error(
+                rule,
+                f'a connection limit groups by at most {full} bits here, '
+                f'not {masklen}; the rule is left out',
+            )
+            return None
         if 0 < masklen < full:
             mask = ipaddress.ip_network(
                 f'::/{masklen}' if ipv6 else f'0.0.0.0/{masklen}'

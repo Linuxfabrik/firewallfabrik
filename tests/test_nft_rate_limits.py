@@ -190,3 +190,38 @@ def test_a_logged_rule_that_keeps_a_rate_stays_on_one_line(options, splits):
     printer.compiler.fw = _FirewallWithLogLimit()
     assert printer._splits_for_log(_LoggedRule(**options)) is splits
     assert bool(printer.compiler.warnings) is not splits
+
+
+@pytest.mark.parametrize(
+    ('ipv6', 'masklen', 'refused'),
+    [
+        (False, 24, False),
+        (False, 32, False),
+        (False, 33, True),
+        (False, 64, True),
+        (True, 64, False),
+        (True, 128, False),
+        (True, 129, True),
+    ],
+)
+def test_a_connection_limit_groups_by_at_most_the_address_width(ipv6, masklen, refused):
+    """The iptables printer has refused this since it was written.
+
+    A prefix wider than the family has no group to count by.  Dropping just
+    the mask counts per single address, which is a different limit from the
+    one the rule carries - and the same policy then means two different
+    things on the two platforms, with only one of them saying so.
+    """
+    printer = _printer()
+    printer.compiler.ipv6_policy = ipv6
+    printer.compiler.get_rule_set_name = lambda: 'Policy'
+    printer.compiler.register_dynamic_set = lambda *args: None
+    rule = _Rule(connlimit_value=2, connlimit_masklen=masklen)
+    rule.position = 0
+    out = printer._print_connlimit(rule)
+    if refused:
+        assert out is None
+        assert any('groups by at most' in m for m in printer.compiler.errors)
+    else:
+        assert out is not None and 'ct count' in out
+        assert printer.compiler.errors == []
