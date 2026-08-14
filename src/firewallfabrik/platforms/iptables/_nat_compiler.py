@@ -2080,10 +2080,19 @@ class SplitNATBranchRule(NATRuleProcessor):
         branch_name = rule.get_option('branch_name', '')
 
         if not branch_name:
+            # The C++ sets `ipt_chain` to PREROUTING and `ipt_target` to
+            # "UNDEFINED" behind its abort() and says why in a comment:
+            # "in case we are in the test mode and abort() does not really
+            # abort.  Both the chain and the target are bogus"
+            # (NATCompiler_ipt.cpp:1886).  In normal operation abort()
+            # throws and no script comes out at all, which is why the gold
+            # for firewall2-4 has neither `-N UNDEFINED` nor the jump.
+            # fwf's abort() only reports, so copying those two lines put a
+            # jump into an empty chain named UNDEFINED into the nat table:
+            # the rule translates nothing, and the activation says it
+            # succeeded.  The nftables compiler reports the same rule and
+            # leaves it out.
             self.compiler.abort(rule, 'NAT branching rule misses branch rule set.')
-            rule.ipt_chain = 'PREROUTING'
-            rule.ipt_target = 'UNDEFINED'
-            self.tmp_queue.append(rule)
             return True
 
         # Check if we have branch chain mapping info

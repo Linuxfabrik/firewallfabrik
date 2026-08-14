@@ -97,6 +97,45 @@ def test_an_ordinary_rule_passes_through(services):
     assert proc.compiler.messages == []
 
 
+def test_a_nat_branch_rule_without_a_rule_set_is_left_out():
+    """The C++ fallback behind its abort() is for test mode only.
+
+    ``NATCompiler_ipt.cpp:1886`` sets the chain to PREROUTING and the target
+    to "UNDEFINED" and says so in a comment - "in case we are in the test
+    mode and abort() does not really abort.  Both the chain and the target
+    are bogus".  In normal operation abort() throws, which is why the gold
+    for firewall2-4 carries neither `-N UNDEFINED` nor the jump.  Copying
+    the two lines put a jump into an empty chain of that name into the nat
+    table: the rule translated nothing and the activation reported success.
+    """
+    from firewallfabrik.core.objects import NATRuleType
+    from firewallfabrik.platforms.iptables._nat_compiler import SplitNATBranchRule
+
+    rule = CompRule(
+        id=uuid.uuid4(),
+        type='NATRule',
+        position=7,
+        label='7 (NAT)',
+        comment='',
+        options={'branch_name': ''},
+        negations={},
+        action=None,
+    )
+    rule.nat_rule_type = NATRuleType.NATBranch
+
+    compiler = _Compiler()
+    compiler.branch_ruleset_to_chain_mapping = None
+    compiler.rule_set_chain = ''
+    proc = SplitNATBranchRule(name='SplitNATBranchRule')
+    proc.set_context(compiler)
+    proc.set_data_source(_Feeder([rule]))
+    proc.process_next()
+
+    assert list(proc.tmp_queue) == []
+    assert compiler.messages
+    assert rule.ipt_target != 'UNDEFINED'
+
+
 def test_a_message_is_recorded_once_per_rule_not_once_per_copy():
     """One rule as the administrator wrote it reaches the printer as several.
 
