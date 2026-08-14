@@ -111,6 +111,27 @@ def test_ipt_no_rule_for_an_address_the_script_cannot_carry():
     assert '# backup ssh access' not in out
 
 
+def test_a_host_name_stays_out_of_the_ruleset():
+    """It is resolved when the ruleset is loaded, not when it is compiled.
+
+    nftables resolves the name while parsing and refuses the whole ruleset
+    when it answers with more than one address, and iptables would turn one
+    rule into one per address at activation time.  The block and stop
+    actions keep taking a name: they build their own small ruleset, so a
+    name that resolves badly costs one command there and not the policy.
+    """
+    name = 'workstation.example.com'
+    assert '# backup ssh access' not in _ipt_automatic_rules(ipv6=False, mgmt_addr=name)
+    assert 'dport 22' not in _nft_automatic_rules(
+        'input', have_ipv6=False, mgmt_addr=name
+    )
+
+
+def test_a_prefix_is_an_address():
+    out = _nft_automatic_rules('input', have_ipv6=False, mgmt_addr='192.0.2.0/24')
+    assert 'ip saddr 192.0.2.0/24' in out
+
+
 def test_nft_input_and_output_carry_the_rule():
     assert (
         f'tcp dport 22 ip saddr {_V4} ct state new,established counter accept'

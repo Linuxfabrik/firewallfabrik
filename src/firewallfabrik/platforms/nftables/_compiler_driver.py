@@ -44,6 +44,7 @@ from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
 from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
+    mgmt_address_family,
     mgmt_address_is_ipv6,
 )
 from firewallfabrik.platforms.nftables import __compiler_version__
@@ -1051,18 +1052,27 @@ class CompilerDriver_nft(CompilerDriver):
         # name its family: `ip saddr` on an IPv6 address is a datatype
         # error, and it happens at the moment the block action has just set
         # every chain to drop, so the firewall stays shut.
-        mgmt_is_v6 = mgmt_address_is_ipv6(ssh_management_address)
-        ssh_management_family = 'ip6' if mgmt_is_v6 else 'ip'
-        # The rule in the ruleset itself needs a table that can hold the
-        # address: without an IPv6 rule set the filter table is `ip`, which
-        # refuses an `ip6` match.  Only the block and stop actions then keep
-        # the way in, and those build their own `inet` table.
-        if mgmt_access and mgmt_is_v6 and not self._any_rs_ipv6:
+        ssh_management_family = (
+            'ip6' if mgmt_address_is_ipv6(ssh_management_address) else 'ip'
+        )
+        # The rule in the ruleset itself needs an address literal, and a
+        # table that can hold it: without an IPv6 rule set the filter table
+        # is `ip`, which refuses an `ip6` match, and a host name would be
+        # resolved while `nft -f` parses the ruleset, which costs the whole
+        # ruleset when it answers with more than one address.  Only the block
+        # and stop actions keep the way in then, and those build their own
+        # small `inet` table.
+        mgmt_family = mgmt_address_family(ssh_management_address)
+        mgmt_reason = ''
+        if mgmt_access and not mgmt_family:
+            mgmt_reason = 'is not an IP address'
+        elif mgmt_access and mgmt_family == 'ip6' and not self._any_rs_ipv6:
+            mgmt_reason = 'is IPv6 and this firewall has no IPv6 rule set'
+        if mgmt_reason:
             self.all_warnings.append(
                 f'The management workstation address "{ssh_management_address}" '
-                'is IPv6 and this firewall has no IPv6 rule set, so the rule '
-                'permitting ssh from it is only in the block and stop actions, '
-                'not in the ruleset'
+                f'{mgmt_reason}, so the rule permitting ssh from it is only in '
+                'the block and stop actions, not in the ruleset'
             )
 
         # IP forwarding commands. Indent every line so multi-line output

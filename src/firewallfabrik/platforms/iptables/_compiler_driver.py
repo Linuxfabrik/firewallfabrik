@@ -48,6 +48,7 @@ from firewallfabrik.platforms.iptables._utils import (
 )
 from firewallfabrik.platforms.linux._netfilter import (
     is_valid_mgmt_address,
+    mgmt_address_family,
     mgmt_address_is_ipv6,
 )
 
@@ -623,20 +624,29 @@ class CompilerDriver_ipt(CompilerDriver):
                 # with "host/network not found", and it does so right after
                 # the block action set every policy to DROP, which is the
                 # one moment the administrator needs this rule.
-                mgmt_is_v6 = mgmt_address_is_ipv6(mgmt_addr)
-                mgmt_tool = '$IP6TABLES' if mgmt_is_v6 else '$IPTABLES'
-                # The rule in the ruleset itself is emitted by the pass whose
-                # family the address has, so a firewall that does not compile
-                # that family gets no such rule at all.  Only the block and
-                # stop actions then keep the way in, which is not what the
-                # option promises.
-                if mgmt_access and (have_ipv6 if mgmt_is_v6 else have_ipv4) is False:
+                mgmt_tool = (
+                    '$IP6TABLES' if mgmt_address_is_ipv6(mgmt_addr) else '$IPTABLES'
+                )
+                # The rule in the ruleset itself needs an address literal of a
+                # family this firewall compiles.  Where that does not hold,
+                # only the block and stop actions keep the way in, which is
+                # not what the option promises - so say it.
+                mgmt_family = mgmt_address_family(mgmt_addr)
+                mgmt_reason = ''
+                if mgmt_access and not mgmt_family:
+                    mgmt_reason = 'is not an IP address'
+                elif mgmt_access and not (
+                    have_ipv6 if mgmt_family == 'ip6' else have_ipv4
+                ):
+                    family = 'IPv6' if mgmt_family == 'ip6' else 'IPv4'
+                    mgmt_reason = (
+                        f'is {family} and this firewall compiles no {family} rule set'
+                    )
+                if mgmt_reason:
                     self.all_warnings.append(
-                        f'The management workstation address "{mgmt_addr}" is '
-                        f'{"IPv6" if mgmt_is_v6 else "IPv4"} and this firewall '
-                        f'compiles no {"IPv6" if mgmt_is_v6 else "IPv4"} rule '
-                        'set, so the rule permitting ssh from it is only in the '
-                        'block and stop actions, not in the ruleset'
+                        f'The management workstation address "{mgmt_addr}" '
+                        f'{mgmt_reason}, so the rule permitting ssh from it is '
+                        'only in the block and stop actions, not in the ruleset'
                     )
                 mgmt_state_option = (
                     'conntrack --ctstate'

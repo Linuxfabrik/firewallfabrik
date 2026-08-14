@@ -95,7 +95,7 @@ from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     interface_direction_problem,
     is_valid_mgmt_address,
-    mgmt_address_is_ipv6,
+    mgmt_address_family,
 )
 
 if TYPE_CHECKING:
@@ -927,7 +927,7 @@ class PolicyCompiler_ipt(PolicyCompiler):
             bool(self.fw.get_option('mgmt_ssh'))
             and bool(mgmt_addr)
             and is_valid_mgmt_address(mgmt_addr)
-            and mgmt_address_is_ipv6(mgmt_addr) == ipv6
+            and mgmt_address_family(mgmt_addr) == ('ip6' if ipv6 else 'ip')
         )
         conf.set_variable('mgmt_access', 1 if mgmt_access else 0)
         conf.set_variable('ssh_management_address', mgmt_addr)

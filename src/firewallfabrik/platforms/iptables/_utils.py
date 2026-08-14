@@ -484,11 +484,15 @@ def check_interface_name_in_script(
 
 
 def _chain_name_problem(chain: str) -> str:
-    """Return why iptables would refuse *chain*, or an empty string.
+    """Return why *chain* cannot be written out, or an empty string.
 
-    Ports ``assert_valid_chain_name`` (netfilter iptables/xshared.c), which
-    iptables applies to every ``-N`` and every ``-j`` naming a chain.  The
-    compiler's own chains never reach the target-name test: the built-in
+    The first four answers port ``assert_valid_chain_name`` (netfilter
+    iptables/xshared.c), which iptables applies to every ``-N`` and every
+    ``-j`` naming a chain.  The last one is the shell's, not iptables':
+    every command in the generated script is a bare word, and iptables
+    itself takes every character the kernel does.
+
+    The compiler's own chains never reach the target-name test: the built-in
     chains, the temporary chains and the rule chains are named by the
     compiler, and a target it emits is recognised before the name is treated
     as a chain.  What does reach it is the name of a rule set or a branch,

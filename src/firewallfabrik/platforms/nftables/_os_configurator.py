@@ -31,7 +31,7 @@ from firewallfabrik.driver._interface_properties import (
 from firewallfabrik.platforms.linux._netfilter import (
     forwarding_is_off,
     is_valid_mgmt_address,
-    mgmt_address_is_ipv6,
+    mgmt_address_family,
 )
 
 if TYPE_CHECKING:
@@ -120,8 +120,11 @@ class OSConfigurator_nft(OSConfigurator):
             # Reported by the driver, which writes the same address into the
             # block and stop actions.
             return []
-        family = 'ip6' if mgmt_address_is_ipv6(address) else 'ip'
-        if family == 'ip6' and not have_ipv6:
+        # A host name is left out: nftables resolves it while parsing and
+        # refuses the whole ruleset when it answers with more than one
+        # address.  The driver reports it.
+        family = mgmt_address_family(address)
+        if not family or (family == 'ip6' and not have_ipv6):
             return []
         if chain == 'input':
             return [

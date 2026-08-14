@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import re
 
 from firewallfabrik.core.objects import Host, Interface, PhysAddress
@@ -202,6 +203,32 @@ def mgmt_address_is_ipv6(value: str) -> bool:
     needs it in.
     """
     return ':' in str(value)
+
+
+def mgmt_address_family(value: str) -> str:
+    """Return ``'ip6'``, ``'ip'`` or ``''`` for the backup SSH address.
+
+    An empty answer means the value is no address literal - a host name, in
+    practice - and then the rule cannot go into the *ruleset*: nftables
+    resolves a name while parsing and refuses the whole ruleset when it
+    answers with more than one address (src/datatype.c), and iptables would
+    turn one rule into one per address at activation time.  fwbuilder asks
+    the same question, by trying to construct an ``InetAddrMask`` /
+    ``Inet6AddrMask`` from the value, and warns when it fails
+    (``_printBackupSSHAccessRules``).
+
+    The block and stop actions keep taking a name: they build their own
+    small ruleset, so a name that resolves badly costs one command there
+    rather than the firewall's whole policy.
+    """
+    text = str(value).strip()
+    if not text:
+        return ''
+    try:
+        network = ipaddress.ip_network(text, strict=False)
+    except ValueError:
+        return ''
+    return 'ip6' if network.version == 6 else 'ip'
 
 
 def is_valid_traffic_class(value: str) -> bool:
