@@ -55,10 +55,12 @@ from firewallfabrik.core.objects import (
     is_valid_tos,
     range_to_cidr,
 )
+from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
 from firewallfabrik.platforms.iptables._utils import (
     MARK_MASK_FIRST_RELEASE,
     TARGET_FIRST_RELEASE,
     check_chain_name,
+    check_interface_name_in_script,
     get_address_table_var_name,
     get_interface_var_name,
     get_iptables_version,
@@ -278,6 +280,7 @@ class PrintRule(PolicyRuleProcessor):
         self.version: str = ''
         self.reported_long_chains: set[str] = set()
         self.reported_long_ifaces: set[str] = set()
+        self.reported_unsafe_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         """Initialize after compiler context is set."""
@@ -326,9 +329,32 @@ class PrintRule(PolicyRuleProcessor):
         """Generate rule string for dedup (used by Optimize3)."""
         return self._build_rule_command(rule)
 
+    def _chain_names_usable(self, rule: CompRule) -> bool:
+        """Whether this rule's chain and target can be written into the script.
+
+        A chain name goes into the ``-N`` that creates it and into every
+        ``-j`` that points at it, so it is not something a rule can be
+        emitted without.  Only the standard chains and the targets the
+        compiler picks itself are exempt: those are not names anybody chose.
+        """
+        names = [self._apply_chain_prefix(rule.ipt_chain or 'UNKNOWN')]
+        target = rule.ipt_target or ''
+        if target and not target.startswith('.') and target not in STANDARD_CHAINS:
+            names.append(self._apply_chain_prefix(target))
+        # Both names are asked before the answer is folded: a generator
+        # would stop at the first bad one and lose the other's message.
+        answers = [
+            check_chain_name(self.compiler, name, self.reported_long_chains)
+            for name in names
+        ]
+        return all(answers)
+
     def _build_rule_command(self, rule: CompRule) -> str:
         """Build the actual iptables command line."""
         command_line = ''
+
+        if not self._chain_names_usable(rule):
+            return ''
 
         command_line += self._start_rule_line()
         command_line += self._print_chain(rule)
@@ -634,6 +660,15 @@ class PrintRule(PolicyRuleProcessor):
         # iptables spells a trailing wildcard '+', fwbuilder stores '*'.
         if iface_name.endswith('*'):
             iface_name = iface_name[:-1] + '+'
+
+        # The name is a bare word in a shell command from here on, and
+        # iptables takes every character the kernel allows in an interface
+        # name.  A wildcard in the middle would be a glob, and a `$` or a
+        # backtick something worse.
+        if not check_interface_name_in_script(
+            self.compiler, iface_name, self.reported_unsafe_ifaces
+        ):
+            return None
 
         if iface_obj.is_bridge_port() and (
             not self.version or version_compare(self.version, '1.3.0') >= 0

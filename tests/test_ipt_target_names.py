@@ -36,6 +36,8 @@ import pytest
 from firewallfabrik.platforms.iptables._utils import (
     IPTABLES_TARGET_NAMES,
     _chain_name_problem,
+    check_chain_name,
+    shell_safe_name,
 )
 from tests.tool_probe import CAN_ASK_IPTABLES, SKIP_REASON_IPTABLES
 
@@ -85,6 +87,89 @@ def test_a_target_name_is_refused_as_a_chain_name(name):
 @pytest.mark.parametrize('name', ['mail_server', 'SecMark', 'branch1', 'Accept'])
 def test_an_ordinary_name_is_accepted(name):
     assert _chain_name_problem(name) == ''
+
+
+@pytest.mark.parametrize(
+    'name',
+    [
+        'a;reboot',
+        'a`id`',
+        'a$HOME',
+        'a|b',
+        'a&b',
+        'a(b)',
+        'a<b',
+        'a*b',
+        'a?b',
+        'a[0]b',
+        "a'b",
+        'a"b',
+        'a\\b',
+    ],
+)
+def test_a_name_the_shell_would_read_is_refused(name):
+    """iptables takes all of these; the script around it does not.
+
+    Every command in the generated script is a bare shell word, so `$`, a
+    backtick, `;`, `&`, `|`, the redirections and the globs are syntax
+    there - and they would run as root at the moment every chain is already
+    set to drop.  `assert_valid_chain_name` refuses none of them.
+    """
+    assert 'cannot pass on' in _chain_name_problem(name)
+    assert not shell_safe_name(name)
+
+
+@pytest.mark.parametrize(
+    'name', ['mail_server', 'C9b7d4795a1e8.0', 'In_RULE_0', 'fwf_INPUT', 'a:b', 'a-b']
+)
+def test_a_name_the_compiler_generates_is_accepted(name):
+    assert shell_safe_name(name)
+    assert _chain_name_problem(name) == ''
+
+
+@pytest.mark.parametrize('name', ['eth0', 'eth0.100', 'br-lan', 'vnet+', 'bond0'])
+def test_an_interface_name_the_kernel_gives_is_accepted(name):
+    # net/core/dev.c:dev_valid_name allows far more than this, which is why
+    # the check exists; these are the shapes a real system produces.
+    assert shell_safe_name(name)
+
+
+@pytest.mark.parametrize('name', ['eth$0', 'eth;0', 'eth*0', 'eth 0'])
+def test_an_interface_name_the_shell_would_read_is_refused(name):
+    assert not shell_safe_name(name)
+
+
+def test_check_chain_name_answers_whether_the_name_can_be_used():
+    """The answer is what makes the print rules leave the rule out.
+
+    A chain name goes into the `-N` that creates it and into every `-j`
+    that points at it, so there is no emitting the rule without it.  The
+    message is recorded once per name.
+    """
+
+    class _Compiler:
+        def __init__(self):
+            self.messages = []
+
+        def error(self, msg=''):
+            self.messages.append(msg)
+
+    compiler = _Compiler()
+    reported = set()
+    assert check_chain_name(compiler, 'mail_server', reported) is True
+    assert compiler.messages == []
+
+    assert check_chain_name(compiler, 'a;reboot', reported) is False
+    assert len(compiler.messages) == 1
+    assert check_chain_name(compiler, 'a;reboot', reported) is False
+    assert len(compiler.messages) == 1
+
+
+@pytest.mark.skipif(not CAN_ASK_IPTABLES, reason=SKIP_REASON_IPTABLES)
+@pytest.mark.parametrize('name', ['a;reboot', 'a$HOME', 'a*b'])
+def test_iptables_itself_takes_the_names_the_shell_cannot(name):
+    """Which is exactly why the check cannot be left to iptables."""
+    assert not _chain_name_refused('iptables', name)
 
 
 @pytest.mark.skipif(not _SOURCE, reason='set FWF_IPTABLES_SOURCE to a git clone')

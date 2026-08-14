@@ -51,6 +51,7 @@ from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
 from firewallfabrik.platforms.iptables._print_rule import tcp_flags_match
 from firewallfabrik.platforms.iptables._utils import (
     check_chain_name,
+    check_interface_name_in_script,
     get_address_table_var_name,
     get_interface_var_name,
     get_iptables_version,
@@ -124,6 +125,7 @@ class NATPrintRule(NATRuleProcessor):
         self.version: str = ''
         self.reported_long_chains: set[str] = set()
         self.reported_long_ifaces: set[str] = set()
+        self.reported_unsafe_ifaces: set[str] = set()
 
     def initialize(self) -> None:
         self.version = get_iptables_version(self.compiler.fw)
@@ -248,12 +250,38 @@ class NATPrintRule(NATRuleProcessor):
         )
         return False
 
+    def _chain_names_usable(self, rule: CompRule) -> bool:
+        """Whether this rule's chain and target can be written into the script.
+
+        Same question as in the policy printer, with the nat table's own list
+        of names the compiler picks itself.
+        """
+        names = [self._apply_chain_prefix(rule.ipt_chain or 'PREROUTING')]
+        target = rule.ipt_target or ''
+        if (
+            target
+            and not target.startswith('.')
+            and target not in STANDARD_NAT_CHAINS
+            and target not in _BUILTIN_NAT_TARGETS
+        ):
+            names.append(self._apply_chain_prefix(target))
+        # Both names are asked before the answer is folded: a generator
+        # would stop at the first bad one and lose the other's message.
+        answers = [
+            check_chain_name(self.compiler, name, self.reported_long_chains)
+            for name in names
+        ]
+        return all(answers)
+
     def _build_nat_command(self, rule: CompRule) -> str:
         """Build NAT iptables command, empty when the rule cannot be expressed."""
         cmd = ''
         ipt_comp = cast('NATCompiler_ipt', self.compiler)
 
         if not self._nat_available(rule):
+            return ''
+
+        if not self._chain_names_usable(rule):
             return ''
 
         cmd += self._start_rule_line()
@@ -741,6 +769,12 @@ class NATPrintRule(NATRuleProcessor):
 
         for name in (iface_in_name, iface_out_name):
             if not check_interface_name(self.compiler, name, self.reported_long_ifaces):
+                return None
+            # From here on the name is a bare word in a shell command, and
+            # iptables takes every character the kernel allows in one.
+            if not check_interface_name_in_script(
+                self.compiler, name, self.reported_unsafe_ifaces
+            ):
                 return None
 
         parts.append(self._prefix_chain(rule.ipt_chain))

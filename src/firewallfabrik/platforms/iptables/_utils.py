@@ -428,6 +428,61 @@ IPTABLES_TARGET_NAMES = frozenset(
 )
 
 
+# What a name may be made of to survive the generated script.  Every
+# iptables command is a bare shell word, so the alphabet is not iptables'
+# question but the shell's: `$`, a backtick and `\` are expansion, command
+# substitution and escape, `;`, `&`, `|`, `(`, `)`, `<` and `>` end the
+# command, and `*`, `?`, `[` are globs the shell replaces with whatever
+# happens to sit in the directory the script runs from.  All of them are
+# legal in an iptables chain name and in a kernel interface name
+# (net/core/dev.c: dev_valid_name refuses only `/`, `:` and whitespace), so
+# only a positive list settles it - the same reasoning as for the rate-limit
+# table name and the ToS value.  A trailing `*` or `+` is the interface
+# wildcard and belongs to the name; the shell never sees it, because the
+# print rules have already turned `*` into `+` by then.
+#
+# nftables needs none of this: a name there is a quoted string in a file the
+# shell does not read, and the shell commands around it are quoted.
+_SHELL_SAFE_NAME_RE = re.compile(r'[0-9A-Za-z_.:-]+[+]?')
+
+_SHELL_SAFE_NAME_PROBLEM = (
+    'contains characters the generated activation script cannot pass on: '
+    'the name is a bare word in a shell command, where "$", a backtick, '
+    '";" and the like are syntax and would run as root at the moment every '
+    'chain is already set to drop'
+)
+
+
+def shell_safe_name(name: str) -> bool:
+    """Whether *name* can be written into the generated script as a word."""
+    return bool(_SHELL_SAFE_NAME_RE.fullmatch(name))
+
+
+def check_interface_name_in_script(
+    compiler, name: str, already_reported: set[str]
+) -> bool:
+    """Whether a rule can name *name* as its interface, reporting once.
+
+    The shared length check answers what the two packet filters can carry;
+    this one answers what the generated script can.  iptables itself takes
+    every character the kernel does, so a name holding shell syntax reaches
+    the command line and the rule cannot be emitted as it stands.
+    """
+    if not name or shell_safe_name(name):
+        return True
+    if getattr(compiler, 'muted_now', False):
+        # See check_interface_name: reporting once must not be spent on a
+        # pass whose messages are thrown away.
+        return False
+    if name not in already_reported:
+        already_reported.add(name)
+        compiler.error(
+            f'Interface name "{name}" {_SHELL_SAFE_NAME_PROBLEM}. The rules '
+            'matching on it are left out; rename the interface.',
+        )
+    return False
+
+
 def _chain_name_problem(chain: str) -> str:
     """Return why iptables would refuse *chain*, or an empty string.
 
@@ -453,25 +508,35 @@ def _chain_name_problem(chain: str) -> str:
         return f'starts with "{chain[0]}", which iptables reads as an option'
     if any(char.isspace() for char in chain):
         return 'contains whitespace, which iptables does not allow in a chain name'
+    if not shell_safe_name(chain):
+        return _SHELL_SAFE_NAME_PROBLEM
     return ''
 
 
-def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
-    """Report chain names iptables would refuse, once per name."""
+def check_chain_name(compiler, chain: str, already_reported: set[str]) -> bool:
+    """Whether *chain* can be written out, reporting the reason once.
+
+    A ``False`` has to take the rule with it.  The name of a chain goes into
+    the ``-N`` that creates it and into every ``-j`` that points at it, so a
+    name the script cannot carry is not something a rule can be emitted
+    without: iptables takes every character the kernel does, and the shell
+    around it does not.
+    """
     if chain in already_reported:
-        return
+        return False
+    problem = _chain_name_problem(chain)
+    if not problem:
+        return True
     if getattr(compiler, 'muted_now', False):
         # See check_interface_name: reporting once must not be spent on a
         # pass whose messages are thrown away.
-        return
-    problem = _chain_name_problem(chain)
-    if not problem:
-        return
+        return False
     already_reported.add(chain)
     compiler.error(
         f'Chain name "{chain}" {problem}. Rename the rule set or branch it '
         'is generated from.',
     )
+    return False
 
 
 def bridge_port_matches_inbound_in_postrouting(compiler, obj) -> bool:
