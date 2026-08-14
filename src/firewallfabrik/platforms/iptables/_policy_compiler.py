@@ -85,6 +85,7 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.platforms.iptables._utils import (
     MATCH_FIRST_RELEASE,
+    bridge_port_matches_inbound_in_postrouting,
     get_iptables_version,
     single_negation_qualifies,
     version_compare,
@@ -228,6 +229,15 @@ class PolicyCompiler_ipt(PolicyCompiler):
 
     def my_platform_name(self) -> str:
         return 'iptables'
+
+    def can_match_inbound_in_postrouting(self, rule) -> bool:
+        """Only a bridge port, which is written as ``-m physdev``.
+
+        See :func:`bridge_port_matches_inbound_in_postrouting` for why, and
+        for the two cases that take the answer away again.
+        """
+        obj = rule.itf[0] if rule.itf else None
+        return bridge_port_matches_inbound_in_postrouting(self, obj)
 
     def prolog(self) -> int:
         """Initialize compiler: verify platform, set up interfaces."""

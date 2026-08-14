@@ -1768,6 +1768,17 @@ Key source files:
 | Mangle table | Separate `-t mangle` compilation pass | Separate pass too: a `<name>_mangle` table whose chains hook in at `priority mangle` |
 | Address family | Separate `iptables`/`ip6tables` binaries | `inet` family for dual-stack |
 | Reject types | `--reject-with icmp-port-unreachable` | `reject with icmp port-unreachable` |
+| Incoming interface in postrouting | Refused by the tool (`option_test_and_reject` in `xshared.c`), except as `-m physdev --physdev-in` for a bridge port | `iifname`, which loads and matches |
+
+The last row is a kernel fact with a tool-specific answer, so
+`DropRuleWithImpossibleInterface` and `nat_interface_problem` ask the
+compiler through `can_match_inbound_in_postrouting()` instead of deciding
+for themselves. Since kernel commit `28f8bfd1ac94` ("netfilter: Support iif
+matches in POSTROUTING", first in v5.5) the hook is entered with the device
+a routed packet came in on. Everything else in that check is unchanged: a
+packet has no outgoing device before the routing decision and a locally
+generated one no incoming device at all, so `-o`/`oifname` stays impossible
+in prerouting and input, and `-i`/`iifname` in output.
 
 ### Error reporting
 

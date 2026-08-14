@@ -166,6 +166,17 @@ class PolicyCompiler_nft(PolicyCompiler):
     def my_platform_name(self) -> str:
         return 'nftables'
 
+    def can_match_inbound_in_postrouting(self, rule) -> bool:
+        """nftables always can, on every kernel it otherwise needs.
+
+        `iifname` in a postrouting chain loads and matches the device a
+        routed packet came in on; the kernel has offered it since v5.5
+        (commit 28f8bfd1ac94), and the constructs this compiler already
+        emits need a newer kernel than that.  Verified by loading such a
+        rule in a network namespace, in a filter and in a nat chain.
+        """
+        return True
+
     def register_rule_set_chain(self, chain_name: str) -> None:
         """Give this branch rule set a regular chain of its own."""
         self.rule_set_chain = chain_name

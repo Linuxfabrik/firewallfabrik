@@ -10,13 +10,6 @@
 #
 #  tests for nat rules with inbound and outbound interfaces
 #
-# Rule 6 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 7 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 8 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 9 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 10 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 11 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
-# Rule 12 (NAT): Rule matches on the incoming interface but a packet in the postrouting chain has no incoming interface; the rule is left out
 # Rule 17 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
 # Rule 18 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
 # Rule 19 (NAT): Rule matches on the outgoing interface but a packet in the prerouting chain has no outgoing interface yet; the rule is left out
@@ -373,6 +366,42 @@ table ip fwf_nat {
         #
         oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
         oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 6 (NAT)
+        #
+        iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 7 (NAT)
+        #
+        iifname != "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 8 (NAT)
+        #
+        # should be -i eth2 -o eth1
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 9 (NAT)
+        #
+        oifname != "eth1" iifname != "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 10 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 11 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth3" iifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth3" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        #
+        # Rule 12 (NAT)
+        #
+        oifname "eth1" iifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth3" iifname "eth0" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth1" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
+        oifname "eth3" iifname "eth2" ip saddr 192.168.1.0/24 counter snat to 222.222.222.40
     }
 }
 

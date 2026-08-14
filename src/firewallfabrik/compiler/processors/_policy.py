@@ -225,12 +225,17 @@ class ExpandMultipleAddresses(PolicyRuleProcessor):
 class DropRuleWithImpossibleInterface(PolicyRuleProcessor):
     """Drop a rule whose chain cannot see the interface it matches on.
 
-    A packet has no incoming device once the routing decision is made and
-    no outgoing one before it, so ``-i`` is impossible in POSTROUTING and
-    OUTPUT and ``-o`` in PREROUTING and INPUT (see
+    A packet has no outgoing device before the routing decision and a
+    locally generated one has no incoming device at all, so ``-o`` is
+    impossible in PREROUTING and INPUT and ``-i`` in OUTPUT (see
     ``platforms/linux/_netfilter.py``).  iptables refuses such a rule
     outright and nftables accepts one that never matches, so neither can
     do what the rule asks for.
+
+    The postrouting chain is not one of those cases any more and the
+    compiler is asked about it, because the answer differs per back end:
+    nftables matches the incoming device there and iptables only does so
+    for a bridge port.
 
     Runs before ``CountChainUsage`` rather than in the print rule: the
     dropped rule may be the only jump to a temporary chain, and counting
@@ -253,7 +258,11 @@ class DropRuleWithImpossibleInterface(PolicyRuleProcessor):
             return True
 
         inbound = rule.direction == Direction.Inbound
-        problem = interface_direction_problem(rule.ipt_chain, inbound)
+        problem = interface_direction_problem(
+            rule.ipt_chain,
+            inbound,
+            iif_in_postrouting=self.compiler.can_match_inbound_in_postrouting(rule),
+        )
         if not problem:
             self.tmp_queue.append(rule)
             return True

@@ -70,6 +70,7 @@ from firewallfabrik.core.objects import (
     UserService,
 )
 from firewallfabrik.platforms.iptables._utils import (
+    bridge_port_matches_inbound_in_postrouting,
     get_iptables_version,
     single_negation_qualifies,
     version_compare,
@@ -2268,6 +2269,9 @@ class VerifyRules3(NATRuleProcessor):
             rule.ipt_chain or '',
             has_itf_inb=bool(rule.itf_inb) and rule.nat_iface_in != 'nil',
             has_itf_outb=bool(rule.itf_outb) and rule.nat_iface_out != 'nil',
+            iif_in_postrouting=bridge_port_matches_inbound_in_postrouting(
+                self.compiler, rule.itf_inb[0] if rule.itf_inb else None
+            ),
         )
         if problem:
             self.compiler.abort(rule, f'Rule {problem}; the rule is left out')

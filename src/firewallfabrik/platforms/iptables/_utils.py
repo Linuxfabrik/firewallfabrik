@@ -35,6 +35,10 @@ from firewallfabrik.core.objects import (
 from firewallfabrik.driver._interface_properties import (
     get_interface_var_name,
 )
+from firewallfabrik.platforms.linux._netfilter import (
+    bridge_port_match_needs_the_bridge,
+    count_bridge_interfaces,
+)
 
 __all__ = ['get_interface_var_name']
 
@@ -467,6 +471,35 @@ def check_chain_name(compiler, chain: str, already_reported: set[str]) -> None:
     compiler.error(
         f'Chain name "{chain}" {problem}. Rename the rule set or branch it '
         'is generated from.',
+    )
+
+
+def bridge_port_matches_inbound_in_postrouting(compiler, obj) -> bool:
+    """Whether iptables can match *obj* as an incoming device in postrouting.
+
+    iptables refuses ``-i`` in the POSTROUTING chain of every table
+    (netfilter iptables/xshared.c, ``option_test_and_reject``), but a bridge
+    port is not written as ``-i``: it is written as
+    ``-m physdev --physdev-in``, and ``xt_physdev`` registers no hook mask at
+    all while ``nf_bridge_get_physindev`` still holds the port there
+    (net/netfilter/xt_physdev.c).  Verified against iptables 1.8.11, which
+    takes the command.
+
+    Two things take that answer away again: an iptables older than 1.3.0 has
+    no physdev match, so the print rules fall back to ``-i``; and a wildcard
+    port name on a firewall with several bridges needs the bridge named next
+    to it, which is an ``-i`` of its own.
+
+    Shared by the policy and the NAT pipeline, which ask about the same
+    objects and write the same match.
+    """
+    if not isinstance(obj, Interface) or not obj.is_bridge_port():
+        return False
+    version = getattr(compiler, 'version', '') or ''
+    if version and version_compare(version, '1.3.0') < 0:
+        return False
+    return not bridge_port_match_needs_the_bridge(
+        obj, count_bridge_interfaces(compiler.fw)
     )
 
 

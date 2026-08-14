@@ -112,6 +112,18 @@ class PolicyCompiler(Compiler):
         """Override in platform-specific subclasses to add processors."""
         pass
 
+    def can_match_inbound_in_postrouting(self, rule) -> bool:
+        """Whether this back end can match *rule*'s incoming device there.
+
+        The kernel offers it: since commit 28f8bfd1ac94 ("netfilter: Support
+        iif matches in POSTROUTING", first in v5.5) the POST_ROUTING hook is
+        entered with the device a routed packet came in on.  What differs is
+        the back end, which is why the shared processor asks the compiler
+        instead of deciding for itself.  The conservative answer belongs
+        here: a back end that has not said it can, cannot.
+        """
+        return False
+
     def run_shadowing_pass(self) -> None:
         """Run a separate shadowing detection pass before the main compilation.
 

@@ -18,32 +18,51 @@ import re
 
 from firewallfabrik.core.objects import Host, Interface, PhysAddress
 
-# A packet only carries the device it came in on until the routing decision
-# is made, and only carries the device it goes out on after it: netfilter
-# passes NULL for the other one.  A locally generated packet never has an
-# incoming device at all.  So the LOCAL_OUT and POST_ROUTING hooks cannot
-# match an incoming interface and the PRE_ROUTING and LOCAL_IN hooks cannot
-# match an outgoing one (the NF_HOOK calls in net/ipv4/ip_input.c and
-# net/ipv4/ip_output.c pass NULL for the missing device).
-#
-# iptables refuses the combination outright ("Can't use --in-interface with
-# POSTROUTING", netfilter iptables/xshared.c: do_parse calls
-# option_test_and_reject), so the generated script stops there.  nftables
-# accepts the rule and silently never matches it.  Either way the rule the
-# user asked for cannot work, so report it.
-NO_INBOUND_DEVICE_CHAINS = frozenset({'output', 'postrouting'})
+# A packet only carries the device it goes out on once the routing decision
+# is made, so the PRE_ROUTING and LOCAL_IN hooks cannot match an outgoing
+# interface: the NF_HOOK calls in net/ipv4/ip_input.c pass NULL for it.
 NO_OUTBOUND_DEVICE_CHAINS = frozenset({'input', 'prerouting'})
 
+# A locally generated packet has no incoming device at all, so LOCAL_OUT
+# cannot match one either (net/ipv4/ip_output.c:__ip_local_out and
+# net/ipv6/ip6_output.c both enter the hook with NULL).
+#
+# POST_ROUTING is the exception, and it did not use to be: since kernel
+# commit 28f8bfd1ac94 "netfilter: Support iif matches in POSTROUTING",
+# first in v5.5, `ip_output()` and `ip6_output()` enter the hook with
+# `skb->dev`, which for a routed packet is the device it came in on.  Its
+# commit message names the consequence: "iptables (both legacy and nft)
+# reject rules with input interface match from being added to POSTROUTING
+# chains, but nftables allows this".  So whether a rule can match there is
+# a question about the back end and not about the packet, which is what
+# the *iif_in_postrouting* argument below answers.
+NO_INBOUND_DEVICE_CHAINS = frozenset({'output'})
 
-def interface_direction_problem(chain: str, inbound: bool) -> str:
+
+def interface_direction_problem(
+    chain: str, inbound: bool, iif_in_postrouting: bool = False
+) -> str:
     """Return why *chain* cannot match this interface, or an empty string.
 
     *chain* is the built-in chain the rule ends up in, in either spelling
     (iptables writes ``POSTROUTING``, nftables ``postrouting``).  A
     user-defined chain is never checked: which hook reaches it is decided
     by the rule that jumps to it.
+
+    *iif_in_postrouting* says whether the caller can write a match on the
+    incoming device into the postrouting chain.  nftables always can (see
+    above); iptables refuses ``-i`` there outright ("Can't use
+    --in-interface with POSTROUTING", netfilter iptables/xshared.c:
+    ``do_parse`` calls ``option_test_and_reject``, for every table) but
+    takes ``-m physdev --physdev-in``, which is what a bridge port is
+    written as anyway.
     """
     name = chain.lower() if chain else ''
+    if inbound and name == 'postrouting' and not iif_in_postrouting:
+        return (
+            'iptables refuses that in the POSTROUTING chain, where only a '
+            'bridge port can be matched'
+        )
     if inbound and name in NO_INBOUND_DEVICE_CHAINS:
         return f'a packet in the {chain} chain has no incoming interface'
     if not inbound and name in NO_OUTBOUND_DEVICE_CHAINS:
@@ -51,7 +70,12 @@ def interface_direction_problem(chain: str, inbound: bool) -> str:
     return ''
 
 
-def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> str:
+def nat_interface_problem(
+    chain: str,
+    has_itf_inb: bool,
+    has_itf_outb: bool,
+    iif_in_postrouting: bool = False,
+) -> str:
     """Return why *chain* cannot match a NAT rule's interfaces, or ``''``.
 
     A NAT rule names its interfaces in two elements of its own instead of
@@ -63,7 +87,9 @@ def nat_interface_problem(chain: str, has_itf_inb: bool, has_itf_outb: bool) -> 
     out.
     """
     if has_itf_inb:
-        problem = interface_direction_problem(chain, inbound=True)
+        problem = interface_direction_problem(
+            chain, inbound=True, iif_in_postrouting=iif_in_postrouting
+        )
         if problem:
             return f'matches on the incoming interface but {problem}'
     if has_itf_outb:
@@ -404,6 +430,27 @@ def count_bridge_interfaces(fw) -> int:
     return sum(
         1 for iface in fw.interfaces if (iface.get_option('type', '') or '') == 'bridge'
     )
+
+
+def bridge_port_match_needs_the_bridge(obj, bridge_count: int) -> bool:
+    """Whether a match on this bridge port has to name its bridge as well.
+
+    Only a wildcard port name on a firewall with more than one bridge is
+    ambiguous, and only then is the extra ``-i``/``-o`` worth its cost -
+    which is what :func:`count_bridge_interfaces` explains.  Both print
+    rules ask this question and one more place has to ask it too: a rule
+    that names the bridge cannot live in the postrouting chain, because
+    iptables refuses ``-i`` there whatever the physdev match says.
+    """
+    if bridge_count <= 1:
+        return False
+    name = getattr(obj, 'name', '') or ''
+    # fwbuilder stores the wildcard as `*`, the print rules rewrite it to
+    # the `+` iptables spells it, and this is asked from both sides.
+    if not name.endswith(('*', '+')):
+        return False
+    parent = getattr(obj, 'parent_interface', None)
+    return bool(parent is not None and parent.name)
 
 
 def get_mac_only_address(obj) -> str:

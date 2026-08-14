@@ -1193,6 +1193,10 @@ class VerifyRules3(NATRuleProcessor):
             rule.ipt_chain or '',
             has_itf_inb=bool(rule.itf_inb),
             has_itf_outb=bool(rule.itf_outb),
+            # `iifname` in a nat postrouting chain loads and matches the
+            # device a routed packet came in on (kernel commit 28f8bfd1ac94,
+            # v5.5); verified by loading such a rule in a namespace.
+            iif_in_postrouting=True,
         )
         if problem:
             self.compiler.error(rule, f'Rule {problem}; the rule is left out')

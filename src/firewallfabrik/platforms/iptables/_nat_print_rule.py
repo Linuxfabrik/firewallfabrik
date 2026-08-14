@@ -61,6 +61,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    bridge_port_match_needs_the_bridge,
     check_interface_name,
     has_ip_options,
 )
@@ -792,10 +793,8 @@ class NATPrintRule(NATRuleProcessor):
         # The policy printer has done this since it was written.
         parent = getattr(obj, 'parent_interface', None)
         parent_name = parent.name if parent is not None else ''
-        name_the_bridge = (
-            getattr(self.compiler, 'bridge_count', 0) > 1
-            and iface_name.endswith('+')
-            and parent_name
+        name_the_bridge = bridge_port_match_needs_the_bridge(
+            obj, getattr(self.compiler, 'bridge_count', 0)
         )
 
         parts = []

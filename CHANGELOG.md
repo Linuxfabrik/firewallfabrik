@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (nftables): a rule matching on the incoming interface is compiled into the postrouting chain instead of being reported and left out. Linux carries the incoming interface into that chain for forwarded traffic and nftables can match on it; only iptables refuses it. So a rule assigning a traffic class to traffic arriving on one interface - which can only live in postrouting - silently did nothing on nftables, and neither did a source translation restricted to an incoming interface. On iptables such a rule is still reported, except where the interface is a bridge port, which is matched by a means iptables does allow there.
+
 * Compiler (iptables, nftables): a firewall with "Always permit SSH access from the management workstation" installs that rule in its ruleset. It only existed in the `block` and `stop` commands, so activating a policy that does not itself permit SSH cut the very session that was activating it and left the firewall unreachable - which is the one thing the option exists to prevent. The rule goes into the ruleset of the address family the management address belongs to, and a firewall that does not compile that family says so.
 
 * Compiler (nftables): a message about a rule is written into the generated ruleset with one comment marker instead of two, and a rule with more than one message keeps every line inside its chain block.

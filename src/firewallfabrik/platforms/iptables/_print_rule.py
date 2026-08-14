@@ -69,6 +69,7 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    bridge_port_match_needs_the_bridge,
     check_interface_name,
     has_ip_options,
     is_valid_traffic_class,
@@ -676,8 +677,8 @@ class PrintRule(PolicyRuleProcessor):
         parent_name = parent.name if parent is not None else ''
 
         parts = []
-        name_the_bridge = (
-            ipt_comp.bridge_count > 1 and iface_name.endswith('+') and parent_name
+        name_the_bridge = bridge_port_match_needs_the_bridge(
+            iface_obj, ipt_comp.bridge_count
         )
         if inbound:
             if name_the_bridge:
