@@ -60,7 +60,6 @@ class RoutingCompilerLinux(RoutingCompiler):
         super().__init__(session, fw, ipv6_policy)
         self.ecmp_rules_buffer: dict[str, str] = {}
         self.ecmp_comments_buffer: dict[str, str] = {}
-        self.have_default_route: bool = False
 
     def compile(self) -> None:
         banner = f" Compiling routing rules for '{self.fw.name}'"

@@ -102,8 +102,6 @@ class CompilerDriver_ipt(CompilerDriver):
         self._hashlimit_tables: dict[str, tuple[int, str, str]] = {}
 
         # Prolog/epilog tracking
-        self.prolog_done: bool = False
-        self.epilog_done: bool = False
 
     def run(
         self,

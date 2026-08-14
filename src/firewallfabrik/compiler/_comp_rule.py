@@ -99,7 +99,6 @@ class CompRule:
     abs_rule_number: int = 0
     ipt_chain: str = ''
     ipt_target: str = ''
-    rule_weight: int = 0
     compiler_message: str = ''
 
     # Interface resolution (set by InterfaceAndDirection, read by PrintRule)
@@ -115,7 +114,6 @@ class CompRule:
     nft_log: bool = False  # nftables inline log + verdict
     force_state_check: bool = False
     final: bool = False  # marks terminal logging rule
-    parent_rule_num: str = ''  # parent rule position for log prefix
     subrule_suffix: str = ''  # label suffix for subrules
 
     # Negation flags

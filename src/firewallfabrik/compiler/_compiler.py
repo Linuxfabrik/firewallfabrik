@@ -156,8 +156,6 @@ class Compiler(BaseCompiler):
         self.verbose: bool = False
         self.source_dir: str = '.'
 
-        self._current_rule_label: str = ''
-        self._rule_counter: int = 0
         self._multi_address_cache: dict = {}
 
     def set_source_ruleset(self, rs: RuleSet) -> None:

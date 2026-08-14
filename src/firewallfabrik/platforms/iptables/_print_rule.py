@@ -2090,9 +2090,12 @@ class PrintRule(PolicyRuleProcessor):
         """Expand log prefix macros (%N, %A, %I, %C, %R)."""
         action = (rule.stored_action or '').upper()
 
-        ppos = rule.parent_rule_num
-        pos = str(rule.position)
-        rule_num = f'{ppos}/{pos}' if ppos else pos
+        # %N is the rule's position.  fwbuilder meant it to become
+        # "<parent>/<position>" inside a branch, but the Branching
+        # processor that would have set the parent is declared in
+        # PolicyCompiler_ipt.h and never implemented or wired, so the macro
+        # has always expanded to the bare position on both compilers.
+        rule_num = str(rule.position)
 
         chain = rule.ipt_chain or ''
 
