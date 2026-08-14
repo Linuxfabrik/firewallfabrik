@@ -129,8 +129,15 @@ SYNONYMS = {
     'mark': 'meta mark',
 }
 
+# Anchored on word boundaries, or a name inside the rule answers for a
+# keyword: a chain called `mymark` contains `mark`, so firewall37 read as
+# four rules missing a `meta mark` the nftables side has.  The chain name is
+# part of the line iptables-translate produces
+# (`add rule ip mangle mymark ...`), which is where it came from.
 KEYWORD_RE = re.compile(
-    '|'.join(re.escape(k) for k in sorted(NFT_KEYWORDS, key=len, reverse=True))
+    r'\b(?:'
+    + '|'.join(re.escape(k) for k in sorted(NFT_KEYWORDS, key=len, reverse=True))
+    + r')\b'
 )
 
 # What a rule does, as opposed to what it matches.  Both compilers write the
