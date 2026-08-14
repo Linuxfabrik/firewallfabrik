@@ -161,7 +161,8 @@ def test_a_nat_rule_with_a_foreign_dynamic_interface_is_left_out():
     own.id = uuid.uuid4()
 
     class _FW:
-        interfaces = [own]
+        def __init__(self, interfaces):
+            self.interfaces = interfaces
 
     def _nat_rule(interface):
         rule = CompRule(
@@ -178,7 +179,7 @@ def test_a_nat_rule_with_a_foreign_dynamic_interface_is_left_out():
         return rule
 
     compiler = _Compiler()
-    compiler.fw = _FW()
+    compiler.fw = _FW([own])
     proc = NATCheckForDynamicInterfacesOfOtherObjects()
     proc.set_context(compiler)
     proc.set_data_source(_Feeder([_nat_rule(other)]))
@@ -189,7 +190,7 @@ def test_a_nat_rule_with_a_foreign_dynamic_interface_is_left_out():
     # The firewall's own dynamic interface is fine: the script asks the
     # host it runs on for that one.
     compiler = _Compiler()
-    compiler.fw = _FW()
+    compiler.fw = _FW([own])
     proc = NATCheckForDynamicInterfacesOfOtherObjects()
     proc.set_context(compiler)
     proc.set_data_source(_Feeder([_nat_rule(own)]))
