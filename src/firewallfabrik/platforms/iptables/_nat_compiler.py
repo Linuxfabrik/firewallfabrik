@@ -38,6 +38,7 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
+    NATCheckForDynamicInterfacesOfOtherObjects,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ReplaceClusterInterfaceInItfRE,
@@ -1568,27 +1569,6 @@ class NATSpecialCaseWithUnnumberedInterface(NATRuleProcessor):
             keep = self._drop_unnumbered(rule, 'odst')
         if keep:
             self.tmp_queue.append(rule)
-        return True
-
-
-class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
-    """Abort if dynamic interfaces of other hosts/firewalls are used in NAT."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        for slot in ('osrc', 'odst'):
-            for obj in getattr(rule, slot):
-                if isinstance(obj, Interface) and obj.is_dynamic():
-                    fw = self.compiler.fw
-                    if not any(iface.id == obj.id for iface in fw.interfaces):
-                        self.compiler.abort(
-                            rule,
-                            f"Can not build rule using dynamic interface '{obj.name}' "
-                            f'of another object',
-                        )
-        self.tmp_queue.append(rule)
         return True
 
 

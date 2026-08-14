@@ -988,9 +988,12 @@ referencing them are meaningless.
 #### `checkForDynamicInterfacesOfOtherObjects` (h:681 / cpp:2998) — Validation
 
 For each dynamic interface in Src/Dst, verifies it belongs to the firewall
-being compiled (or is a failover interface of the correct cluster). Dynamic
-interfaces of other objects can't be resolved at compile time. Sets
-`have_dynamic_interfaces` flag for later use by `PrintRule`.
+being compiled (or is a failover interface of the correct cluster). A
+dynamic interface of another object can never be resolved: the generated
+script asks the host it runs on, which knows only its own interfaces.  The
+rule is reported and left out on both platforms and in both pipelines — the
+NAT counterpart is `compiler/processors/_generic.py:NATCheckForDynamicInterfacesOfOtherObjects`,
+shared by the two NAT compilers.
 
 #### `InterfacePolicyRulesWithOptimization` (h:276 / cpp:702) — Split
 
@@ -1742,6 +1745,7 @@ C++ rule processor to FirewallFabrik class, in pipeline order. Classes under `co
 | `SplitIfOSrcMatchesFw` | `platforms/iptables/_nat_compiler.py:SplitIfOSrcMatchesFw` |
 | `LocalNATRule` | `platforms/iptables/_nat_compiler.py:LocalNATRule` |
 | `ExpandMultipleAddresses` | `compiler/processors/_generic.py:ExpandMultipleAddressesInNAT` (shared by both NAT pipelines) |
+| `NATCompiler_ipt::checkForDynamicInterfacesOfOtherObjects` | `compiler/processors/_generic.py:NATCheckForDynamicInterfacesOfOtherObjects` (shared by both NAT pipelines) |
 | `ClassifyNATRule` | `platforms/iptables/_nat_compiler.py:ClassifyNATRule` |
 
 ---
@@ -2089,6 +2093,7 @@ SplitNONATRule → SplitNATBranchRule → LocalNATRule → DecideOnChain → Dec
 SplitODstForSNAT → ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc →
 ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
+NATCheckForDynamicInterfacesOfOtherObjects →
 VerifyRuleWithMAC → CheckUserServiceInWrongChains →
 GroupServicesByProtocol → SeparateTCPWithFlags → VerifyCustomServices →
 VerifyRules2 → SeparatePortRanges →

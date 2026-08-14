@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a rule naming a dynamic interface of another host or firewall is left out. Such an address can never be resolved - the generated script asks the machine it runs on, which knows only its own interfaces - and the rule was reported and then installed anyway: iptables put an unset shell variable into the command, which stops the activation with every chain already set to drop, and nftables matched against the *local* interface of that name, so a rule written about another cluster member silently became a rule about the firewall itself. The nftables NAT rules were not even reported. All four places now say which object they mean.
+
 * Compiler (iptables): a NAT rule with the Branch action that names no rule set is left out. It was installed as a jump into an empty chain literally called UNDEFINED, so the rule translated nothing while the activation reported success. nftables reported and left out the same rule already.
 
 * Compiler (nftables): a rule matching on the incoming interface is compiled into the postrouting chain instead of being reported and left out. Linux carries the incoming interface into that chain for forwarded traffic and nftables can match on it; only iptables refuses it. So a rule assigning a traffic class to traffic arriving on one interface - which can only live in postrouting - silently did nothing on nftables, and neither did a source translation restricted to an incoming interface. On iptables such a rule is still reported, except where the interface is a bridge port, which is matched by a means iptables does allow there.

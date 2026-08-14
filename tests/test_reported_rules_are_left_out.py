@@ -136,6 +136,68 @@ def test_a_nat_branch_rule_without_a_rule_set_is_left_out():
     assert rule.ipt_target != 'UNDEFINED'
 
 
+def test_a_nat_rule_with_a_foreign_dynamic_interface_is_left_out():
+    """The address it names cannot be resolved by the firewall running it.
+
+    iptables wrote `-d $i_eth0`, a shell variable nothing assigns, so the
+    command lost its argument and the activation stopped with every chain
+    already at DROP.  nftables wrote `@i_eth0`, a set its loader fills from
+    the *local* interface of that name, which translates for the wrong
+    host - and its NAT pipeline had no such check at all.
+    """
+    from firewallfabrik.compiler.processors._generic import (
+        NATCheckForDynamicInterfacesOfOtherObjects,
+    )
+    from firewallfabrik.core.objects import Interface
+
+    other = Interface()
+    other.name = 'eth0'
+    other.data = {'dyn': True}
+    other.id = uuid.uuid4()
+
+    own = Interface()
+    own.name = 'eth1'
+    own.data = {'dyn': True}
+    own.id = uuid.uuid4()
+
+    class _FW:
+        interfaces = [own]
+
+    def _nat_rule(interface):
+        rule = CompRule(
+            id=uuid.uuid4(),
+            type='NATRule',
+            position=4,
+            label='4 (NAT)',
+            comment='',
+            options={},
+            negations={},
+            action=None,
+        )
+        rule.odst = [interface]
+        return rule
+
+    compiler = _Compiler()
+    compiler.fw = _FW()
+    proc = NATCheckForDynamicInterfacesOfOtherObjects()
+    proc.set_context(compiler)
+    proc.set_data_source(_Feeder([_nat_rule(other)]))
+    proc.process_next()
+    assert list(proc.tmp_queue) == []
+    assert compiler.messages
+
+    # The firewall's own dynamic interface is fine: the script asks the
+    # host it runs on for that one.
+    compiler = _Compiler()
+    compiler.fw = _FW()
+    proc = NATCheckForDynamicInterfacesOfOtherObjects()
+    proc.set_context(compiler)
+    proc.set_data_source(_Feeder([_nat_rule(own)]))
+    proc.process_next()
+    assert len(proc.tmp_queue) == 1
+    assert compiler.messages == []
+
+
 def test_a_message_is_recorded_once_per_rule_not_once_per_copy():
     """One rule as the administrator wrote it reaches the printer as several.
 

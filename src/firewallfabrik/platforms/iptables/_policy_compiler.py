@@ -3223,9 +3223,9 @@ class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
                     parent_name = obj.device.name
                 self.compiler.abort(
                     rule,
-                    f'Can not build rule using dynamic interface '
-                    f"'{obj.name}' of the object '{parent_name}' "
-                    f'because its address in unknown.',
+                    f"Can not build rule using dynamic interface '{obj.name}' "
+                    f"of the object '{parent_name}' because its address is "
+                    'unknown. The rule is left out',
                 )
                 return False
         return True

@@ -2233,25 +2233,44 @@ class GroupServicesByProtocol(PolicyRuleProcessor):
 
 
 class CheckForDynamicInterfacesOfOtherObjects(PolicyRuleProcessor):
-    """Abort if dynamic interfaces of other hosts/firewalls are used."""
+    """Leave out a rule naming a dynamic interface of another object.
+
+    A dynamic interface has no address until the firewall runs, and the
+    generated script can only ask the host it runs on.  So an interface of
+    another object cannot be resolved at all: nftables renders it as a
+    named set whose loader reads the *local* interface of that name, which
+    turns "accept from the other cluster member" into "accept from myself".
+
+    The rule therefore goes, the way the iptables policy pipeline has
+    always dropped it (``PolicyCompiler_ipt::checkForDynamicInterfacesOfOtherObjects``,
+    whose C++ abort() throws).  Reporting and compiling it anyway put a
+    rule into the ruleset that matches something else than it says.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
+        fw = self.compiler.fw
         for slot in ('src', 'dst'):
             for obj in getattr(rule, slot):
-                if isinstance(obj, Interface) and obj.is_dynamic():
-                    fw = self.compiler.fw
-                    if not any(iface.id == obj.id for iface in fw.interfaces):
-                        parent_name = getattr(obj, 'parent_name', '') or getattr(
-                            getattr(obj, 'parent', None), 'name', 'unknown'
-                        )
-                        self.compiler.abort(
-                            rule,
-                            f'Can not build rule using dynamic interface'
-                            f" '{obj.name}' of object '{parent_name}'",
-                        )
+                if not isinstance(obj, Interface) or not obj.is_dynamic():
+                    continue
+                if any(iface.id == obj.id for iface in fw.interfaces):
+                    continue
+                # `device` is the host or firewall the interface belongs to;
+                # the iptables half names it the same way.  Asking for a
+                # `parent` or a `parent_name` answered "unknown" for every
+                # interface there is.
+                device = getattr(obj, 'device', None)
+                parent_name = getattr(device, 'name', '') or 'another object'
+                self.compiler.abort(
+                    rule,
+                    f"Can not build rule using dynamic interface '{obj.name}' "
+                    f"of the object '{parent_name}' because its address is "
+                    'unknown. The rule is left out',
+                )
+                return True
         self.tmp_queue.append(rule)
         return True
 

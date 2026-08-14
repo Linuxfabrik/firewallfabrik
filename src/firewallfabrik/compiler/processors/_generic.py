@@ -1470,6 +1470,53 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
         return True
 
 
+class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
+    """Leave out a NAT rule naming a dynamic interface of another object.
+
+    A dynamic interface has no address until the firewall runs, and the
+    generated script can only ask the host it runs on: an interface of
+    another object has none to give.  Both back ends then write something
+    that looks right and is not.  iptables writes ``$i_<name>``, a shell
+    variable nothing assigns - ``getaddr`` only fills the ones for this
+    firewall's own interfaces - so the command loses its argument and the
+    activation stops with every chain already at DROP.  nftables writes
+    ``@i_<name>``, a named set whose loader reads the *local* interface of
+    that name, which silently translates for the wrong host.
+
+    Ported from ``NATCompiler_ipt::checkForDynamicInterfacesOfOtherObjects``,
+    whose C++ abort() throws, and shared by both NAT pipelines: the nftables
+    one had no such check at all, so its version of the rule went out with
+    no message either.  The policy pipelines have the mirror of this.
+    """
+
+    def __init__(self, name: str = 'check dynamic interfaces of other objects') -> None:
+        super().__init__(name)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        fw = self.compiler.fw
+        for slot in ('osrc', 'odst'):
+            for obj in getattr(rule, slot):
+                if not isinstance(obj, Interface) or not obj.is_dynamic():
+                    continue
+                if any(iface.id == obj.id for iface in fw.interfaces):
+                    continue
+                # `device` is the host or firewall the interface belongs to.
+                device = getattr(obj, 'device', None)
+                parent_name = getattr(device, 'name', '') or 'another object'
+                self.compiler.abort(
+                    rule,
+                    f"Can not build rule using dynamic interface '{obj.name}' "
+                    f"of the object '{parent_name}' because its address is "
+                    'unknown. The rule is left out',
+                )
+                return True
+        self.tmp_queue.append(rule)
+        return True
+
+
 class AddVirtualAddress(NATRuleProcessor):
     """Register virtual addresses needed for NAT with the OS configurator.
 

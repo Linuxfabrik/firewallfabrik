@@ -34,6 +34,7 @@ from firewallfabrik.compiler.processors._generic import (
     EmptyGroupsInRE,
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
+    NATCheckForDynamicInterfacesOfOtherObjects,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ResolveMultiAddress,
@@ -262,6 +263,15 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
+        # A dynamic interface of another object resolves to nothing here,
+        # and a set filled from the local interface of that name translates
+        # for the wrong host.  The iptables NAT pipeline has always had this
+        # check; this one had none, so the rule went out without a word.
+        self.add(
+            NATCheckForDynamicInterfacesOfOtherObjects(
+                'check for dynamic interfaces of other objects'
+            )
+        )
         self.add(VerifyRuleWithMAC('verify MAC address usage in NAT rules'))
         self.add(
             CheckUserServiceInWrongChains('check user service against the NAT chain')
