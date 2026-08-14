@@ -1508,8 +1508,8 @@ NATSpecialCaseWithUnnumberedInterface →
 NATCheckForDynamicInterfacesOfOtherObjects →
 VerifyRuleWithMAC → CheckUserServiceInWrongChains →
 NATExpandAddressRanges → SplitMultiSrcAndDst →
-GroupServicesByProtocol → VerifyCustomServices → VerifyRules2 →
-SeparatePortRanges → SeparateSrcPort → SeparateSrcAndDstPort →
+GroupServicesByProtocol → SeparateTCPWithFlags → VerifyCustomServices →
+VerifyRules2 → SeparatePortRanges → SeparateSrcPort → SeparateSrcAndDstPort →
 PrepareForMultiport → SplitMultipleICMP → ConvertToAtomicForAddresses →
 AddVirtualAddress → AssignInterface → VerifyRules3 →
 DynamicInterfaceInODst → DynamicInterfaceInTSrc → AlwaysUseMasquerade →
@@ -1578,6 +1578,28 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 - `SplitIfDstAny` — no PREROUTING copy for mangle+classification
 - `InterfacePolicyRulesWithOptimization` — splits one rule per interface but does not factor the common rule body into a shared user-defined chain
 - `DecideOnTarget` — the Branch action is not yet mapped to the target ruleset name
+
+### Reporting
+
+A message about a rule is recorded once per compiler, not once per copy of
+the rule.  One rule as the editor shows it reaches the print rule as
+several - the service split gives an ICMP and a TCP half a rule each, the
+negation expansion builds three, the chain decisions split on top of that -
+and repeating one sentence per copy buries the rest of the report.  The
+scope is deliberately the compiler and not the driver: the iptables filter
+and mangle passes are separate compilers and report separately, which is
+what the Firewall Builder reference output shows for its shadowing
+warnings.  The inline comments next to the rules are not de-duplicated,
+so every emitted copy still carries its own reason.
+
+A print-rule method that reports something it cannot express answers
+`None`, and its caller leaves the rule out.  An empty string is a valid
+answer of its own in several of them - `.CONTINUE` carries no target,
+a rule that marks nothing carries no mangle statement - which is why the
+failure branches cannot use it.  This holds for `_print_target`,
+`_print_limit`, `_print_connlimit` and `_print_hashlimit` on iptables and
+for `_print_verdict`, `_print_mangle_statement`, `_print_limit` and
+`_print_hashlimit` on nftables.
 
 ### Intentional deviations
 
@@ -2057,7 +2079,8 @@ SplitODstForSNAT → ReplaceFirewallObjectsODst → ReplaceFirewallObjectsTSrc �
 ExpandMultipleAddresses → DropRuleWithEmptyRE →
 [DropIPv4Rules OR DropIPv6Rules] → DropRuleWithEmptyRE →
 VerifyRuleWithMAC → CheckUserServiceInWrongChains →
-GroupServicesByProtocol → VerifyCustomServices → VerifyRules2 → SeparatePortRanges →
+GroupServicesByProtocol → SeparateTCPWithFlags → VerifyCustomServices →
+VerifyRules2 → SeparatePortRanges →
 SeparateSrcPort → SplitMultipleServices → ConvertToAtomicForAddresses → AssignInterface →
 ConvertToAtomicForItfInb → ConvertToAtomicForItfOutb →
 CheckForObjectsWithErrors → NATPrintRule_nft → SimplePrintProgress
