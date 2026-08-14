@@ -163,6 +163,21 @@ def is_valid_mgmt_address(value: str) -> bool:
     return bool(_MGMT_ADDRESS_RE.fullmatch(str(value).strip()))
 
 
+def mgmt_address_is_ipv6(value: str) -> bool:
+    """Whether the backup SSH address belongs to the IPv6 family.
+
+    A colon is the one character an IPv6 literal has and neither an IPv4
+    address nor a host name may carry: the kernel refuses a ``:`` in an
+    interface name and DNS labels are letters, digits and ``-``.  So the
+    test needs nothing more, and it has to give the same answer everywhere
+    the address is written out - the rule in the ruleset, the block action
+    and the stop action all name a family, and one of them disagreeing
+    means the rule is missing from exactly the ruleset the administrator
+    needs it in.
+    """
+    return ':' in str(value)
+
+
 def is_valid_traffic_class(value: str) -> bool:
     """Report whether both packet filters read *value* as the same handle."""
     return bool(_TRAFFIC_CLASS_RE.fullmatch(str(value).strip()))

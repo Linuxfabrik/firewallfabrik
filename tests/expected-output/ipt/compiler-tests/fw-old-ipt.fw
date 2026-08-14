@@ -509,6 +509,9 @@ script_body() {
  $IP6TABLES -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
  $IP6TABLES -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+ # backup ssh access
+ $IP6TABLES -A INPUT -p tcp -m tcp -s 2001:db8:1::9 --dport 22 -m state --state NEW,ESTABLISHED -j ACCEPT
+ $IP6TABLES -A OUTPUT -p tcp -m tcp -d 2001:db8:1::9 --sport 22 -m state --state ESTABLISHED,RELATED -j ACCEPT
  # drop TCP sessions opened prior firewall restart
  $IP6TABLES -A INPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP
  $IP6TABLES -A OUTPUT -p tcp -m tcp ! --tcp-flags SYN,RST,ACK SYN -m state --state NEW -j DROP

@@ -248,6 +248,7 @@ table ip fwf_filter {
     chain input {
         type filter hook input priority filter; policy drop;
         ct state established,related counter accept
+        tcp dport 22 ip saddr 192.168.1.1 ct state new,established counter accept
         ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
     }
@@ -262,6 +263,7 @@ table ip fwf_filter {
     chain output {
         type filter hook output priority filter; policy drop;
         ct state established,related counter accept
+        tcp sport 22 ip daddr 192.168.1.1 ct state established,related counter accept
         ct state invalid counter drop
         tcp flags != syn / syn,rst,ack ct state new counter drop
     }
@@ -339,7 +341,7 @@ block_action() {
     $NFT add chain inet fwf_filter output '{ type filter hook output priority 0; policy drop; }'
     # backup ssh access
     $NFT add rule inet fwf_filter input tcp dport 22 ip saddr 192.168.1.1 ct state new,established accept
-    $NFT add rule inet fwf_filter output tcp sport 22 ip daddr 192.168.1.1 ct state established accept
+    $NFT add rule inet fwf_filter output tcp sport 22 ip daddr 192.168.1.1 ct state established,related accept
 }
 
 stop_action() {

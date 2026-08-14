@@ -42,7 +42,10 @@ from firewallfabrik.core.objects import (
 )
 from firewallfabrik.driver._compiler_driver import CompilerDriver
 from firewallfabrik.driver._jinja2_template import Jinja2Template
-from firewallfabrik.platforms.linux._netfilter import is_valid_mgmt_address
+from firewallfabrik.platforms.linux._netfilter import (
+    is_valid_mgmt_address,
+    mgmt_address_is_ipv6,
+)
 from firewallfabrik.platforms.nftables import __compiler_version__
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
 
@@ -1048,7 +1051,19 @@ class CompilerDriver_nft(CompilerDriver):
         # name its family: `ip saddr` on an IPv6 address is a datatype
         # error, and it happens at the moment the block action has just set
         # every chain to drop, so the firewall stays shut.
-        ssh_management_family = 'ip6' if ':' in ssh_management_address else 'ip'
+        mgmt_is_v6 = mgmt_address_is_ipv6(ssh_management_address)
+        ssh_management_family = 'ip6' if mgmt_is_v6 else 'ip'
+        # The rule in the ruleset itself needs a table that can hold the
+        # address: without an IPv6 rule set the filter table is `ip`, which
+        # refuses an `ip6` match.  Only the block and stop actions then keep
+        # the way in, and those build their own `inet` table.
+        if mgmt_access and mgmt_is_v6 and not self._any_rs_ipv6:
+            self.all_warnings.append(
+                f'The management workstation address "{ssh_management_address}" '
+                'is IPv6 and this firewall has no IPv6 rule set, so the rule '
+                'permitting ssh from it is only in the block and stop actions, '
+                'not in the ruleset'
+            )
 
         # IP forwarding commands. Indent every line so multi-line output
         # (IPv4 plus IPv6) lines up inside the ip_forward() function body.

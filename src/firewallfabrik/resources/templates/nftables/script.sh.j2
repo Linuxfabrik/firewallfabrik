@@ -289,7 +289,7 @@ block_action() {
 {% if mgmt_access %}
     # backup ssh access
     $NFT add rule inet {{ filter_table }} input tcp dport 22 {{ ssh_management_family }} saddr {{ ssh_management_address }} ct state new,established accept
-    $NFT add rule inet {{ filter_table }} output tcp sport 22 {{ ssh_management_family }} daddr {{ ssh_management_address }} ct state established accept
+    $NFT add rule inet {{ filter_table }} output tcp sport 22 {{ ssh_management_family }} daddr {{ ssh_management_address }} ct state established,related accept
 {% endif %}
 }
 

@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+* Compiler (iptables, nftables): a firewall with "Always permit SSH access from the management workstation" installs that rule in its ruleset. It only existed in the `block` and `stop` commands, so activating a policy that does not itself permit SSH cut the very session that was activating it and left the firewall unreachable - which is the one thing the option exists to prevent. The rule goes into the ruleset of the address family the management address belongs to, and a firewall that does not compile that family says so.
+
 * Compiler (nftables): a message about a rule is written into the generated ruleset with one comment marker instead of two, and a rule with more than one message keeps every line inside its chain block.
 * Compiler (nftables): a rule whose rate limit names a unit the compiler cannot read is left out instead of being compiled per second. A rate written per minute was enforced sixty times as often, and iptables left the same rule out already. A burst larger than nftables can carry is reported too: it was cut down without a word, and a burst of exactly 4294967296 became five.
 * Compiler (nftables): a rule whose packet mark, traffic class or connection mark cannot be written out is left out instead of being installed without it. The rule kept its conditions and lost the marking it exists for, so everything keyed on that mark - a routing decision, a traffic class, another rule - saw traffic the policy says is marked and found it was not. iptables left such a rule out already.

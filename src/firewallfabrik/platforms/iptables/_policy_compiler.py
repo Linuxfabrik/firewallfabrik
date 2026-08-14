@@ -93,6 +93,8 @@ from firewallfabrik.platforms.linux._netfilter import (
     count_bridge_interfaces,
     forwarding_is_off,
     interface_direction_problem,
+    is_valid_mgmt_address,
+    mgmt_address_is_ipv6,
 )
 
 if TYPE_CHECKING:
@@ -902,7 +904,23 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # the IPv6 automatic rules by something unrelated to them.
         conf.set_variable('ipforw', 0 if forwarding_is_off(self.fw, ipv6) else 1)
 
-        conf.set_variable('mgmt_access', 0)
+        # The rule that keeps the way in open.  fwbuilder writes it into the
+        # automatic rules of the ruleset itself
+        # (PolicyCompiler_ipt::PrintRule::_printBackupSSHAccessRules, called
+        # from _printAutomaticRules), which is the whole point of the option:
+        # a policy activated over ssh from the management station must not cut
+        # the session that is activating it.  It belongs to the pass whose
+        # family the address has - iptables answers an IPv6 address with
+        # "host/network not found" and stops the script right there.
+        mgmt_addr = str(self.fw.get_option('mgmt_addr') or '')
+        mgmt_access = (
+            bool(self.fw.get_option('mgmt_ssh'))
+            and bool(mgmt_addr)
+            and is_valid_mgmt_address(mgmt_addr)
+            and mgmt_address_is_ipv6(mgmt_addr) == ipv6
+        )
+        conf.set_variable('mgmt_access', 1 if mgmt_access else 0)
+        conf.set_variable('ssh_management_address', mgmt_addr)
         conf.set_variable(
             'bridging_firewall', 1 if self.fw.get_option('bridging_fw') else 0
         )

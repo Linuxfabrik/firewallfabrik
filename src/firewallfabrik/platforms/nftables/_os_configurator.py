@@ -28,7 +28,11 @@ from firewallfabrik.driver._interface_properties import (
     LinuxInterfaceProperties,
     get_interface_var_name,
 )
-from firewallfabrik.platforms.linux._netfilter import forwarding_is_off
+from firewallfabrik.platforms.linux._netfilter import (
+    forwarding_is_off,
+    is_valid_mgmt_address,
+    mgmt_address_is_ipv6,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -96,6 +100,39 @@ class OSConfigurator_nft(OSConfigurator):
             return ' '.join(parts)
         return 'log prefix "INVALID " level debug'
 
+    def _backup_ssh_rules(self, chain: str, have_ipv6: bool) -> list[str]:
+        """Return the backup ssh rules of one filter chain.
+
+        Only the input and the output chain carry one; a packet from the
+        management station to the firewall never crosses forward.  The
+        address has to name its family, because the filter table is ``inet``
+        as soon as the firewall has an IPv6 rule set and a bare address is a
+        datatype error there.  A firewall without one gets an ``ip`` table,
+        which cannot hold an ``ip6`` match at all, so an IPv6 address is left
+        out there - the compiler driver reports that case.
+        """
+        if chain not in ('input', 'output'):
+            return []
+        address = str(self.fw.get_option('mgmt_addr') or '')
+        if not self.fw.get_option('mgmt_ssh') or not address:
+            return []
+        if not is_valid_mgmt_address(address):
+            # Reported by the driver, which writes the same address into the
+            # block and stop actions.
+            return []
+        family = 'ip6' if mgmt_address_is_ipv6(address) else 'ip'
+        if family == 'ip6' and not have_ipv6:
+            return []
+        if chain == 'input':
+            return [
+                f'        tcp dport 22 {family} saddr {address} '
+                'ct state new,established counter accept'
+            ]
+        return [
+            f'        tcp sport 22 {family} daddr {address} '
+            'ct state established,related counter accept'
+        ]
+
     def generate_automatic_rules(
         self, chain: str = 'input', have_ipv6: bool = False
     ) -> str:
@@ -113,6 +150,17 @@ class OSConfigurator_nft(OSConfigurator):
         # implicit per-rule counters of the equivalent iptables rules.
         if self.fw.get_option('accept_established'):
             rules.append('        ct state established,related counter accept')
+
+        # The rule that keeps the way in open, as early as possible and in
+        # the same position the iptables configlet puts it
+        # (resources/configlets/linux24/automatic_rules, right behind the
+        # established accept): a policy activated over ssh from the
+        # management station must not cut the session that is activating it.
+        # fwbuilder writes it into the ruleset itself
+        # (PolicyCompiler_ipt::PrintRule::_printBackupSSHAccessRules); having
+        # it only in the block and stop actions leaves the administrator
+        # locked out by the very activation the option exists to survive.
+        rules.extend(self._backup_ssh_rules(chain, have_ipv6))
 
         # The forward chain only needs the rules below when the firewall
         # forwards at all.  The iptables configlet wraps the same two blocks
