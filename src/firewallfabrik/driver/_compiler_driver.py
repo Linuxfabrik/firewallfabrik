@@ -103,6 +103,31 @@ class CompilerDriver(BaseCompiler):
         self.all_errors: list[str] = []
         self.all_warnings: list[str] = []
 
+    def error(self, rule_or_msg, msg: str | None = None) -> None:
+        """Record an error and put it where the caller reads it.
+
+        `BaseCompiler.error` keeps a message for the compiler that is
+        running, and the driver collects those from every sub-compiler
+        into ``all_errors`` afterwards.  Its own messages have no such
+        collector: a condition found before the first sub-compiler starts
+        - no firewall id, a prolog placement the output format cannot
+        have - wrote no script, and the CLI, which decides on
+        ``all_errors`` and the returned string, counted the firewall as
+        compiled and exited 0.
+        """
+        seen = len(self._errors)
+        super().error(rule_or_msg, msg)
+        self.all_errors.extend(self._errors[seen:])
+
+    def warning(self, rule_or_msg, msg: str | None = None) -> None:
+        """Record a warning and put it where the caller reads it.
+
+        See :meth:`error`.
+        """
+        seen = len(self._warnings)
+        super().warning(rule_or_msg, msg)
+        self.all_warnings.extend(self._warnings[seen:])
+
     def run(
         self,
         cluster_id: str,
