@@ -104,9 +104,6 @@ if TYPE_CHECKING:
 
     from firewallfabrik.compiler._os_configurator import OSConfigurator
 
-# Module-level chain counter
-_chain_no = 0
-
 # Chain names PrintRule must never try to create: the built-in chains and
 # every target the compiler can put into ``ipt_target``.  iptables refuses a
 # chain whose name is one of its targets ("chain name may not clash with

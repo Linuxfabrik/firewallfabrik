@@ -87,9 +87,6 @@ if TYPE_CHECKING:
     from firewallfabrik.compiler._os_configurator import OSConfigurator
 
 
-# Module-level temp chain counter
-_tmp_chain_no: dict[str, int] = {}
-
 STANDARD_NAT_CHAINS = [
     'POSTROUTING',
     'PREROUTING',
@@ -145,6 +142,14 @@ class NATCompiler_ipt(NATCompiler):
         # iptables version
         self.version: str = get_iptables_version(fw)
 
+        # How many temporary chains each rule has been given already.  Per
+        # instance, like `PolicyCompiler_ipt.tmp_chain_counters`: the key
+        # below is derived from the rule set name and the rule position,
+        # which repeat in every firewall of a file, so a counter living
+        # longer than one compile hands the same rule a different name
+        # every time it is compiled.
+        self.tmp_chain_counters: dict[str, int] = {}
+
         # ipset usage flag
         self.using_ipset: bool = False
         if version_compare(self.version, '1.4.1.1') >= 0:
@@ -165,17 +170,22 @@ class NATCompiler_ipt(NATCompiler):
         deterministic across fresh loads of the same `.fwb` / `.fwf`.
         See `PolicyCompiler_ipt.get_new_tmp_chain_name` for the
         rationale.
+
+        fwbuilder keeps the counter in a file-scope map
+        (`NATCompiler_ipt.cpp:87`) and can, because it keys it on the
+        rule's persistent XML id, which no second rule ever repeats.  The
+        key here is not unique that way, so the counter belongs to the
+        compile run.
         """
-        global _tmp_chain_no
         ruleset_name = self.get_rule_set_name()
         stable_key = f'{ruleset_name}:{rule.position}:{rule.subrule_suffix}'
         chain_id = hashlib.md5(  # nosec B324
             stable_key.encode(),
             usedforsecurity=False,
         ).hexdigest()[:12]
-        n = _tmp_chain_no.get(chain_id, 0)
+        n = self.tmp_chain_counters.get(chain_id, 0)
         name = f'C{chain_id}.{n}'
-        _tmp_chain_no[chain_id] = n + 1
+        self.tmp_chain_counters[chain_id] = n + 1
         return name
 
     def register_rule_set_chain(self, chain_name: str) -> None:
