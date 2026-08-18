@@ -722,6 +722,15 @@ class NATPrintRule(NATRuleProcessor):
     def _end_rule_line(self) -> str:
         return '\n'
 
+    def _print_progress_lines(self, label: str) -> list[str]:
+        """The line the activation script prints while it installs this rule.
+
+        See `PrintRule._print_progress_lines`: the restore formats answer
+        with nothing, because their lines go into the stream
+        ``iptables-restore`` reads.
+        """
+        return ['# ', f'echo "Rule {label}"', '# ']
+
     def _print_rule_label(self, rule: CompRule) -> str:
         """Print the rule banner, its comment and anything reported about it.
 
@@ -739,9 +748,8 @@ class NATPrintRule(NATRuleProcessor):
 
         result = ''
         if not self.compiler.single_rule_compile_mode:
-            result += f'# \n# Rule {label}\n# \n'
-            result += f'echo "Rule {label}"\n'
-            result += '# \n'
+            result += f'# \n# Rule {label}\n'
+            result += ''.join(f'{line}\n' for line in self._print_progress_lines(label))
         comment = rule.comment
         if comment:
             for line in comment.split('\n'):
@@ -1328,16 +1336,13 @@ class NATPrintRuleIptRstEcho(NATPrintRule):
     selected it.
     """
 
-    def _print_rule_label(self, rule: CompRule) -> str:
-        # The banner of the shell form ends in `echo "Rule N"`, and in this
-        # form that line lands in the restore stream itself, where
-        # iptables-restore has no idea what to do with it.  A comment is
-        # all the stream takes.
-        label = rule.label
-        if label and label != self.current_rule_label:
-            self.current_rule_label = label
-            return f'# Rule {label}\n'
-        return ''
+    def _print_progress_lines(self, label: str) -> list[str]:
+        # The shell form ends its banner with `echo "Rule N"`.  Here that
+        # line would land in the restore stream itself, where
+        # iptables-restore has no idea what to do with it, so the banner
+        # stops after the label - the same shape the reference output has
+        # (`firewall35.fw.orig:317`).
+        return []
 
     def _chain_declaration(self, chain: str) -> str:
         if self.compiler.single_rule_compile_mode:

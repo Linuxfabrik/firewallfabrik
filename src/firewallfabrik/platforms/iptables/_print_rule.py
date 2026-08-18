@@ -574,8 +574,25 @@ class PrintRule(PolicyRuleProcessor):
 
     # -- Rule components --
 
+    def _print_progress_lines(self, label: str) -> list[str]:
+        """The line the activation script prints while it installs this rule.
+
+        It is the shell form's only output that is not a command, which is
+        why the restore formats have to answer with nothing: their lines go
+        into the stream ``iptables-restore`` reads, and it has no idea what
+        to do with one.
+        """
+        return ['# ', f'echo "Rule {label}"', '# ']
+
     def _print_rule_label(self, rule: CompRule) -> str:
-        """Print rule label as comment block."""
+        """Print the rule banner, its comment and anything reported about it.
+
+        fwbuilder writes the same three parts in every output format
+        (`Compiler::printComment`, Compiler.cpp:1763).  The comment is what
+        the administrator wrote about the rule and the message is why the
+        rule looks the way it does, so neither may be dropped for the sake
+        of the format.
+        """
         label = rule.label
         if not label or label == self.current_rule_label:
             self.current_rule_label = label if label else ''
@@ -585,9 +602,7 @@ class PrintRule(PolicyRuleProcessor):
         if not self.compiler.single_rule_compile_mode:
             res.append('# ')
             res.append(f'# Rule {label}')
-            res.append('# ')
-            res.append(f'echo "Rule {label}"')
-            res.append('# ')
+            res.extend(self._print_progress_lines(label))
 
         comment = rule.comment
         if comment:
@@ -2288,12 +2303,13 @@ class PrintRuleIptRstEcho(PrintRule):
     ) -> None:
         super().__init__(name)
 
-    def _print_rule_label(self, rule: CompRule) -> str:
-        label = rule.label
-        if label and label != self.current_rule_label:
-            self.current_rule_label = label
-            return f'echo "# Rule {label}"\n'
-        return ''
+    def _print_progress_lines(self, label: str) -> list[str]:
+        # The shell form ends its banner with `echo "Rule N"`.  Here that
+        # line would land in the restore stream itself, where
+        # iptables-restore has no idea what to do with it, so the banner
+        # stops after the label - the same shape the reference output has
+        # (`firewall35.fw.orig:317`).
+        return []
 
     def _chain_declaration(self, chain: str) -> str:
         # This format builds the restore stream with `echo`, so the
