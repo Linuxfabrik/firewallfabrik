@@ -761,12 +761,31 @@ class ConvertLoadBalancingRules(NATRuleProcessor):
         if len(rule.tdst) <= 1:
             return True
 
+        # The backends are usually Host objects, and only an Address answers
+        # `get_address`.  fwbuilder gets this for free because its Host
+        # derives from Address; here the expansion the pipeline runs later
+        # has to happen first, exactly as `NATCompiler_ipt` does it.  It is
+        # idempotent, so `ExpandMultipleAddresses` still does the right
+        # thing after.
+        self.compiler.expand_addr(rule, 'tdst')
+
         # Collect backend addresses
         backends: list[str] = []
         for obj in rule.tdst:
             addr_str = getattr(obj, 'get_address', lambda: None)()
             if addr_str:
                 backends.append(addr_str)
+            else:
+                # A backend that contributes no address would silently drop
+                # out of the map and never see a connection.
+                self.compiler.error(
+                    rule,
+                    f'Translated Destination of a load balancing NAT rule '
+                    f'holds "{getattr(obj, "name", obj)}", which has no '
+                    f'address; the rule is left out',
+                )
+                self.tmp_queue.pop()
+                return True
 
         if len(backends) <= 1:
             return True

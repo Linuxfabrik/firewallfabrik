@@ -621,11 +621,7 @@ table ip fwf_nat {
         #
         # Rule 28 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.11
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.12
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to numgen inc mod 5 map { 0 : 192.168.1.11, 1 : 192.168.1.12, 2 : 192.168.1.13, 3 : 192.168.1.14, 4 : 192.168.1.15 }
         #
         # Rule 29 (NAT)
         #
@@ -755,11 +751,7 @@ table ip fwf_nat {
         #
         # Rule 28 (NAT)
         #
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.11
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.12
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.13
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.14
-        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to 192.168.1.15
+        ip daddr 22.22.22.22 tcp dport 8080 counter dnat to numgen inc mod 5 map { 0 : 192.168.1.11, 1 : 192.168.1.12, 2 : 192.168.1.13, 3 : 192.168.1.14, 4 : 192.168.1.15 }
         #
         # Rule 31 (NAT)
         #
