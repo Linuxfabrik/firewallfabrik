@@ -402,6 +402,50 @@ def is_valid_tos(value: str) -> bool:
     return True
 
 
+# A packet mark is a 32 bit word on both back ends: iptables bounds each
+# half of `value[/mask]` at UINT32_MAX (netfilter libxtables/xtables.c,
+# xtables_parse_val_mask) and nftables answers a larger one with "Value
+# ... exceeds valid range 0-4294967295".
+MAX_PACKET_MARK = 0xFFFFFFFF
+
+
+def is_valid_packet_mark(value: str) -> bool:
+    """Return True if ``value`` is a usable packet mark.
+
+    A Tag Service carries the mark as free text from its editor, and the
+    mark reaches both back ends unchecked: ``-j MARK --set-mark`` and
+    ``-m mark --mark`` on iptables, ``meta mark set`` and ``meta mark`` on
+    nftables.  Neither takes a word.  iptables answers "bad integer value
+    for option" or "trailing garbage after value", which stops the
+    activation script with every built-in policy already set to DROP;
+    nftables answers a syntax error and refuses the **whole** ruleset, so
+    the firewall keeps whatever it was running.
+
+    The grammar is ``value[/mask]``, each half read the way C reads a
+    number with base 0 - decimal, ``0x`` hex, leading-zero octal - and
+    bounded at 0 and 4294967295.  Both tools agree on all three bases and
+    on the ceiling; verified against iptables 1.8.11 and nft 1.1.6, which
+    both store ``020`` as 16.
+
+    Checking it is worth more than the message it saves: the value goes
+    into the generated script as a bare shell word, so a space ends the
+    argument and a dollar sign, a backtick or a semicolon start something
+    else entirely - as root, at the moment every chain is already at DROP.
+    The ToS value and the rate-limit table name next door are guarded for
+    exactly that reason.
+    """
+    if not value:
+        return False
+    parts = value.strip().split('/')
+    if len(parts) > 2:
+        return False
+    for part in parts:
+        number = _strtoul(part)
+        if number is None or number > MAX_PACKET_MARK:
+            return False
+    return True
+
+
 class CustomService(Service):
     """Platform-specific custom service code."""
 

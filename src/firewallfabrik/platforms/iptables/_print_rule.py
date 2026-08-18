@@ -54,6 +54,7 @@ from firewallfabrik.core.objects import (
     get_address_table_source,
     is_run_time_address_table,
     is_valid_dscp,
+    is_valid_packet_mark,
     is_valid_tos,
     range_to_cidr,
 )
@@ -1239,6 +1240,15 @@ class PrintRule(PolicyRuleProcessor):
                     rule, f'Tag service "{srv.name}" carries no tag to match on'
                 )
                 return None
+            if not is_valid_packet_mark(tag_code):
+                self.compiler.error(
+                    rule,
+                    f'Tag service "{srv.name}" carries "{tag_code}", which is '
+                    'not a packet mark; it takes a number up to 4294967295, '
+                    'optionally followed by a slash and a mask. The rule is '
+                    'left out',
+                )
+                return None
             option = self._print_single_option_with_negation(
                 '--mark', rule, 'srv', tag_code
             )
@@ -1879,6 +1889,16 @@ class PrintRule(PolicyRuleProcessor):
                     rule,
                     'tagging rule has no Tag Service to take the mark from; '
                     'the rule is left out',
+                )
+                return None
+            if not is_valid_packet_mark(tag_value):
+                # The mark is free text from the Tag Service editor and
+                # reaches the command as a bare shell word.
+                self.compiler.error(
+                    rule,
+                    f'"{tag_value}" is not a packet mark; it takes a number '
+                    'up to 4294967295, optionally followed by a slash and a '
+                    'mask. The rule is left out',
                 )
                 return None
             if '/' in tag_value and not self._mark_mask_available(rule):

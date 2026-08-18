@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     UserService,
     get_address_table_source,
     is_run_time_address_table,
+    is_valid_packet_mark,
     range_to_cidr,
 )
 from firewallfabrik.platforms.linux._netfilter import (
@@ -625,6 +626,15 @@ class NATPrintRule_nft(NATRuleProcessor):
             if not tag_code:
                 self.compiler.error(
                     rule, f'Tag service "{srv.name}" carries no tag to match on'
+                )
+                return None
+            if not is_valid_packet_mark(tag_code):
+                self.compiler.error(
+                    rule,
+                    f'Tag service "{srv.name}" carries "{tag_code}", which is '
+                    'not a packet mark; it takes a number up to 4294967295, '
+                    'optionally followed by a slash and a mask. The rule is '
+                    'left out',
                 )
                 return None
             return print_mark_match(tag_code, bool(neg))
