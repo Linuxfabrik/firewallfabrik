@@ -163,6 +163,40 @@ class Host(Base):
         # get_option_default raises KeyError when the key is unknown.
         return get_option_default(self.platform, self.host_os, key)
 
+    # The key Firewall Builder stores the "MAC address matching" checkbox
+    # under (`HostDialog.cpp:161`, read in `Compiler.cpp:485`).  It is not
+    # part of any platform schema, so it does not go through
+    # :meth:`get_option`, which would raise ``KeyError`` for it.
+    _MAC_FILTER_KEY = 'use_mac_addr_filter'
+    # The key the FirewallFabrik host editor wrote before it learnt the
+    # one above.  Read so a file written by an older release keeps its
+    # setting; never written.
+    _LEGACY_MAC_FILTER_KEY = 'mac_filter_enabled'
+
+    def matches_by_mac(self) -> bool:
+        """Are this host's addresses matched together with its MAC address?"""
+        for source, key in (
+            (self.options, self._MAC_FILTER_KEY),
+            (self.data, self._LEGACY_MAC_FILTER_KEY),
+        ):
+            value = (source or {}).get(key)
+            if value is None:
+                continue
+            if isinstance(value, str):
+                return value.strip().lower() == 'true'
+            return bool(value)
+        return False
+
+    def set_matches_by_mac(self, value: bool) -> None:
+        """Store the "MAC address matching" setting where the compiler reads it."""
+        options = dict(self.options or {})
+        options[self._MAC_FILTER_KEY] = bool(value)
+        self.options = options
+        if (self.data or {}).get(self._LEGACY_MAC_FILTER_KEY) is not None:
+            data = dict(self.data)
+            del data[self._LEGACY_MAC_FILTER_KEY]
+            self.data = data
+
     @property
     def platform(self) -> str:
         if self.data:

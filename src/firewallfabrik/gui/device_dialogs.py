@@ -29,15 +29,6 @@ from firewallfabrik.gui.platform_settings import (
 )
 
 
-def _is_true(val):
-    """Return True for bool True or string 'True'/'true'."""
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.lower() == 'true'
-    return False
-
-
 def _set_data_key(data: dict, key: str, value, default=None) -> None:
     """Set *key* in *data* only if it already exists or *value* differs from *default*.
 
@@ -65,18 +56,15 @@ class HostDialog(BaseObjectDialog):
 
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
-        data = self._obj.data or {}
-        self.MACmatching.setChecked(_is_true(data.get('mac_filter_enabled')))
+        self.MACmatching.setChecked(self._obj.matches_by_mac())
 
     def _apply_changes(self):
         new_name = self.obj_name.text()
         if self._obj.name != new_name:
             self._obj.name = new_name
-        old_data = self._obj.data or {}
-        data = dict(old_data)
-        _set_data_key(data, 'mac_filter_enabled', self.MACmatching.isChecked(), False)
-        if data != old_data:
-            self._obj.data = data
+        checked = self.MACmatching.isChecked()
+        if checked != self._obj.matches_by_mac():
+            self._obj.set_matches_by_mac(checked)
 
 
 class FirewallDialog(BaseObjectDialog):
