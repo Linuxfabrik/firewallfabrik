@@ -1470,6 +1470,66 @@ class ExpandMultipleAddressesInNAT(NATRuleProcessor):
         return True
 
 
+class NATSpecialCaseWithUnnumberedInterface(NATRuleProcessor):
+    """Take an interface that has no address out of a NAT rule.
+
+    An unnumbered interface and a bridge port carry no IP address, so
+    neither can be matched as one.  Firewall Builder removes such an object
+    from the element the rule translates on and keeps the rule if anything
+    else is left, which is what an administrator naming several objects
+    means (``NATCompiler_ipt::specialCaseWithUnnumberedInterface``,
+    NATCompiler_ipt.cpp:970).  The element it looks at follows the rule
+    type: the original source for Masquerade and SNAT, the original
+    destination for DNAT.
+
+    Shared by both NAT pipelines.  The nftables one had nothing here, and
+    its print rule reports an addressless object and leaves out the *whole*
+    rule - so a rule translating "this network and that bridge port"
+    translated the network on one platform and nothing at all on the other.
+    Neither NAT pipeline has the ``CheckForUnnumbered`` that makes this
+    unreachable in the policy pipelines, here or in fwbuilder.
+    """
+
+    def __init__(self, name: str = 'handle unnumbered interfaces in NAT rules') -> None:
+        super().__init__(name)
+
+    @staticmethod
+    def _drop_unnumbered(rule, slot: str) -> bool:
+        """Return whether the rule still has something to match on.
+
+        An element that was "any" to begin with stays "any"; one that this
+        empties has lost everything the rule named, and an empty element
+        reads as "any" downstream - which would translate every packet.
+        """
+        elements = getattr(rule, slot)
+        if not elements:
+            return True
+        remaining = [
+            obj
+            for obj in elements
+            if not (
+                isinstance(obj, Interface)
+                and (obj.is_unnumbered() or obj.is_bridge_port())
+            )
+        ]
+        setattr(rule, slot, remaining)
+        return bool(remaining)
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        keep = True
+        rule_type = rule.nat_rule_type
+        if rule_type in (NATRuleType.Masq, NATRuleType.SNAT):
+            keep = self._drop_unnumbered(rule, 'osrc')
+        elif rule_type == NATRuleType.DNAT:
+            keep = self._drop_unnumbered(rule, 'odst')
+        if keep:
+            self.tmp_queue.append(rule)
+        return True
+
+
 class NATCheckForDynamicInterfacesOfOtherObjects(NATRuleProcessor):
     """Leave out a NAT rule naming a dynamic interface of another object.
 

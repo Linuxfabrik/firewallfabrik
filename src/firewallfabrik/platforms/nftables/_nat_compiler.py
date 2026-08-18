@@ -36,6 +36,7 @@ from firewallfabrik.compiler.processors._generic import (
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
     NATCheckForDynamicInterfacesOfOtherObjects,
+    NATSpecialCaseWithUnnumberedInterface,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ResolveMultiAddress,
@@ -265,6 +266,11 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(DropRuleWithEmptyRE('drop rules with empty rule elements'))
 
+        self.add(
+            NATSpecialCaseWithUnnumberedInterface(
+                'handle unnumbered interfaces in NAT rules'
+            )
+        )
         # A dynamic interface of another object resolves to nothing here,
         # and a set filled from the local interface of that name translates
         # for the wrong host.  The iptables NAT pipeline has always had this

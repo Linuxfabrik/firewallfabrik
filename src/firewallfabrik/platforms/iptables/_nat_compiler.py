@@ -39,6 +39,7 @@ from firewallfabrik.compiler.processors._generic import (
     ExpandGroups,
     ExpandMultipleAddressesInNAT,
     NATCheckForDynamicInterfacesOfOtherObjects,
+    NATSpecialCaseWithUnnumberedInterface,
     PrintTotalNumberOfRules,
     RecursiveGroupsInRE,
     ReplaceClusterInterfaceInItfRE,
@@ -1541,44 +1542,6 @@ class LocalNATRule(NATRuleProcessor):
                     rule.osrc = []
 
         self.tmp_queue.append(rule)
-        return True
-
-
-class NATSpecialCaseWithUnnumberedInterface(NATRuleProcessor):
-    """Handle unnumbered interfaces in NAT rules.
-
-    - SNAT/Masquerade: remove unnumbered from OSrc
-    - DNAT: remove unnumbered from ODst
-    """
-
-    @staticmethod
-    def _drop_unnumbered(rule, slot):
-        elements = getattr(rule, slot)
-        if not elements:
-            return True
-        new_elements = [
-            obj
-            for obj in elements
-            if not (
-                isinstance(obj, Interface)
-                and (obj.is_unnumbered() or obj.is_bridge_port())
-            )
-        ]
-        setattr(rule, slot, new_elements)
-        return bool(new_elements)
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        keep = True
-        rt = rule.nat_rule_type
-        if rt in (NATRuleType.Masq, NATRuleType.SNAT):
-            keep = self._drop_unnumbered(rule, 'osrc')
-        elif rt == NATRuleType.DNAT:
-            keep = self._drop_unnumbered(rule, 'odst')
-        if keep:
-            self.tmp_queue.append(rule)
         return True
 
 
