@@ -198,6 +198,16 @@ def read_ipt(path: Path) -> dict[tuple[str, str], list[tuple[str, bool]]]:
     )
     label = ''
     for line in path.read_text(errors='replace').splitlines():
+        # A shell function boundary ends the label.  `script_body` is the
+        # last thing in the file that carries rule labels, and the commands
+        # of `block_action` and `stop_action` below it install rules too -
+        # without this reset they are all counted against the file's last
+        # labelled rule, which is why every dual-stack firewall read as
+        # "missing ip daddr, tcp dport, tcp sport" for months.  The nft
+        # reader resets on a chain boundary for the same reason.
+        if line.startswith(('}', '#!')) or re.match(r'^\w+\(\)\s*\{', line):
+            label = ''
+            continue
         label_match = LABEL_RE.match(line)
         if label_match:
             label = label_match.group(1)
