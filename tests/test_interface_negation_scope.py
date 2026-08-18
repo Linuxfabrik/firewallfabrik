@@ -38,13 +38,17 @@ from firewallfabrik.compiler.processors._policy import (
 from firewallfabrik.core.objects import Interface
 
 
-def _interface(name: str) -> Interface:
-    return Interface(id=uuid.uuid4(), name=name)
+def _interface(name: str, **kwargs) -> Interface:
+    return Interface(id=uuid.uuid4(), name=name, **kwargs)
 
 
 class _Firewall:
-    def __init__(self, interfaces) -> None:
+    def __init__(self, interfaces, options=None) -> None:
         self.interfaces = interfaces
+        self.options = options or {}
+
+    def get_option(self, key, default=None):
+        return self.options.get(key, default)
 
 
 class _Compiler:
@@ -86,6 +90,45 @@ def test_the_negation_leaves_the_loopback_out():
 
     assert [iface.name for iface in rule.itf] == ['eth0', 'eth2']
     assert rule.get_neg('itf') is False
+
+
+def test_the_negation_leaves_an_unprotected_interface_out():
+    """The administrator asked for no rules on it at all."""
+    unprotected = _interface('eth4', data={'unprotected': True})
+    fw = _Firewall([ETH0, ETH1, ETH2, ETH3, LO, unprotected])
+    rule = _Rule([ETH1, ETH3])
+
+    assert expand_interface_negation(_Compiler(fw), rule, 'itf')
+
+    assert [iface.name for iface in rule.itf] == ['eth0', 'eth2']
+
+
+def test_the_negation_leaves_a_bridge_port_out_unless_the_firewall_bridges():
+    """A routing firewall sees the packet on the bridge, not on the port."""
+    bridge = _interface('br0', options={'type': 'bridge'})
+    port = _interface('eth4', options={'type': 'ethernet'})
+    port.parent_interface = bridge
+    interfaces = [ETH0, ETH1, ETH2, ETH3, LO, bridge, port]
+
+    rule = _Rule([ETH1, ETH3])
+    assert expand_interface_negation(_Compiler(_Firewall(interfaces)), rule, 'itf')
+    assert [iface.name for iface in rule.itf] == ['eth0', 'eth2', 'br0']
+
+    bridging = _Firewall(interfaces, {'bridging_fw': True})
+    rule = _Rule([ETH1, ETH3])
+    assert expand_interface_negation(_Compiler(bridging), rule, 'itf')
+    assert [iface.name for iface in rule.itf] == ['eth0', 'eth2', 'br0', 'eth4']
+
+
+def test_the_negation_leaves_a_cluster_interface_out():
+    """It belongs to the cluster, not to the member being compiled."""
+    cluster_iface = _interface('eth4', options={'cluster_interface': True})
+    fw = _Firewall([ETH0, ETH1, ETH2, ETH3, LO, cluster_iface])
+    rule = _Rule([ETH1, ETH3])
+
+    assert expand_interface_negation(_Compiler(fw), rule, 'itf')
+
+    assert [iface.name for iface in rule.itf] == ['eth0', 'eth2']
 
 
 def _pipeline_of(compiler_class):

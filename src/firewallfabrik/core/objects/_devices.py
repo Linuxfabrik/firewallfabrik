@@ -330,6 +330,16 @@ class Interface(Base):
     def is_unnumbered(self) -> bool:
         return bool((self.data or {}).get('unnum', False))
 
+    def is_unprotected(self) -> bool:
+        """Is this interface marked "unprotected"?
+
+        Mirrors C++ ``Interface::isUnprotected()``.  The administrator
+        says with it that no rules are to be generated for this
+        interface, so anything that answers "every interface of the
+        firewall" has to leave it out.
+        """
+        return bool((self.data or {}).get('unprotected', False))
+
     def is_regular(self) -> bool:
         return (
             not self.is_dynamic()

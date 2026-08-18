@@ -27,8 +27,12 @@ def _interface(name: str) -> Interface:
 
 
 class _Firewall:
-    def __init__(self, interfaces) -> None:
+    def __init__(self, interfaces, options=None) -> None:
         self.interfaces = interfaces
+        self.options = options or {}
+
+    def get_option(self, key, default=None):
+        return self.options.get(key, default)
 
 
 class _Compiler:

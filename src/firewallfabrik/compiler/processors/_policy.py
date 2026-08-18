@@ -131,6 +131,23 @@ class SrvNegation(PolicyRuleProcessor):
 def expand_interface_negation(compiler, rule, slot: str) -> bool:
     """Turn "not these interfaces" into "all the other ones".
 
+    "All the other ones" is not the whole interface list.  fwbuilder
+    builds it in `Compiler::fullInterfaceNegationInRE`
+    (libfwbuilder/fwcompiler/Compiler.cpp:1053) from the interfaces the
+    firewall actually protects, and leaves four kinds out:
+
+    * the loopback interface,
+    * an interface the administrator marked *unprotected*, which says
+      that no rules are to be generated for it (fwbuilder bug #2710034),
+    * a bridge port, unless the firewall bridges - on a routing firewall
+      the packet is seen on the bridge, so a rule naming the port never
+      matches,
+    * a cluster interface, which belongs to the cluster and not to this
+      member.
+
+    Writing those out means "not eth1" produces rules that cannot match,
+    and the traffic the rule was written to cover passes.
+
     Returns whether the rule should stay in the pipeline.  It should not
     when the negated set covers every interface the firewall has: the
     element then holds nothing, and an empty element means "any" here, so
@@ -143,11 +160,16 @@ def expand_interface_negation(compiler, rule, slot: str) -> bool:
     if not rule.get_neg(slot):
         return True
 
+    bridging_fw = bool(compiler.fw.get_option('bridging_fw'))
     negated_ids = {obj.id for obj in getattr(rule, slot) if isinstance(obj, Interface)}
     remaining = [
         iface
         for iface in compiler.fw.interfaces
-        if iface.id not in negated_ids and not iface.is_loopback()
+        if iface.id not in negated_ids
+        and not iface.is_loopback()
+        and not iface.is_unprotected()
+        and not (iface.is_bridge_port() and not bridging_fw)
+        and not iface.get_option('cluster_interface', False)
     ]
     rule.set_neg(slot, False)
     setattr(rule, slot, remaining)
