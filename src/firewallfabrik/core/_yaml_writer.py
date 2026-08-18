@@ -15,12 +15,13 @@
 import logging
 import os
 import pathlib
+import uuid
 
 import sqlalchemy
 import yaml
 
 from . import objects
-from ._util import ENUM_FIELDS, escape_obj_name
+from ._util import ENUM_FIELDS, OPTION_REF_KEY, escape_obj_name
 
 logger = logging.getLogger(__name__)
 
@@ -546,6 +547,27 @@ class YamlWriter:
 
     def _serialize_rule(self, session, rule):
         d = _serialize_obj(rule, extra_skip=frozenset({'sorted_dst_ids', 'negations'}))
+
+        # A rule option that names another object gets the same tree path a
+        # rule element gets.  Written as the raw UUID it is worthless the
+        # moment the file is read back: the ids are assigned per load, so a
+        # tagging rule came back pointing at nothing and was reported and
+        # left out, which is every packet mark of the policy gone.
+        ref = (d.get('options') or {}).get(OPTION_REF_KEY)
+        if ref:
+            try:
+                path = self._ref_path(uuid.UUID(str(ref)))
+            except ValueError:
+                # Not an id at all - a hand-edited file whose path the
+                # reader could not resolve keeps what it says, so the
+                # person who wrote it can see it and correct it.
+                logger.warning(
+                    'Rule option %s is not an object id: %s', OPTION_REF_KEY, ref
+                )
+                path = ref
+            options = dict(d['options'])
+            options[OPTION_REF_KEY] = path
+            d['options'] = options
 
         # Negations — only include slots that are True
         if rule.negations:

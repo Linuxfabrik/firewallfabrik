@@ -23,6 +23,7 @@ from ._util import (
     ADDRESS_CLASSES,
     DEVICE_CLASSES,
     GROUP_CLASSES,
+    OPTION_REF_KEY,
     RULE_CLASSES,
     RULESET_CLASSES,
     SERVICE_CLASSES,
@@ -72,6 +73,7 @@ class YamlReader:
         self._rule_element_rows = []
         self._deferred_memberships = []
         self._deferred_rule_elements = []
+        self._deferred_option_refs = []
 
     def parse(self, input_path):
         input_path = pathlib.Path(input_path)
@@ -81,6 +83,7 @@ class YamlReader:
         self._rule_element_rows.clear()
         self._deferred_memberships.clear()
         self._deferred_rule_elements.clear()
+        self._deferred_option_refs.clear()
 
         # Phase 1: Load YAML file
         with pathlib.Path.open(input_path, encoding='utf-8') as f:
@@ -152,6 +155,22 @@ class YamlReader:
                     'target_id': target_id,
                 }
             )
+
+        # A rule option can name another object too, and the writer stores it
+        # as the same tree path a rule element uses.  Only a value that is
+        # one is rewritten: a file written before the writer learnt this
+        # carries a raw UUID of the run that produced it, which resolves to
+        # nothing here and to nothing in the compiler either, so leaving it
+        # alone changes nothing that was working.
+        for rule, key in self._deferred_option_refs:
+            ref_path = (rule.options or {}).get(key)
+            target_id = self._resolve_ref_path(ref_path)
+            if target_id is None:
+                logger.warning('Unresolved rule option ref: %s', ref_path)
+                continue
+            options = dict(rule.options)
+            options[key] = str(target_id)
+            rule.options = options
 
     def _dispatch_child(self, data, library, parent_path, parent_group=None):
         """Route a child dict by its ``type`` to the correct parse method."""
@@ -436,6 +455,11 @@ class YamlReader:
                         setattr(rule, orm_col, int(value))
                 else:
                     setattr(rule, orm_col, value)
+
+        # A tagging rule names its Tag Service in its options, and the
+        # writer stores that reference as a tree path like every other one.
+        if (rule.options or {}).get(OPTION_REF_KEY):
+            self._deferred_option_refs.append((rule, OPTION_REF_KEY))
 
         # Rule elements (slot references)
         for slot_name in SLOT_VALUES:

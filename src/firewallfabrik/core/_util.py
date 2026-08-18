@@ -106,6 +106,13 @@ SLOT_NAMES = {
 
 SLOT_VALUES = frozenset(SLOT_NAMES.values())
 
+# The rule *option* that names another object rather than carrying a value.
+# It goes into a data file as a tree path, exactly like a rule element, so
+# that it still points at the same object after the file is read back - the
+# UUIDs are assigned per load and mean nothing across one.  The `.fwb`
+# reader resolves it too (`_deferred_option_refs`).
+OPTION_REF_KEY = 'tagobject_id'
+
 ENUM_FIELDS = {
     'policy_action': ('action', objects.PolicyAction),
     'policy_direction': ('direction', objects.Direction),
