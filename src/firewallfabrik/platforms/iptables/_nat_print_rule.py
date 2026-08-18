@@ -46,6 +46,7 @@ from firewallfabrik.core.objects import (
     get_address_table_source,
     is_run_time_address_table,
     is_valid_packet_mark,
+    is_valid_user_id,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._nat_compiler import STANDARD_NAT_CHAINS
@@ -1010,6 +1011,14 @@ class NATPrintRule(NATRuleProcessor):
             if not uid:
                 self.compiler.error(
                     rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            if not is_valid_user_id(uid):
+                self.compiler.error(
+                    rule,
+                    f'User service "{srv.name}" names "{uid}", which is not a '
+                    'user name or id; letters, digits, a dot, a dash and an '
+                    'underscore are. The rule is left out',
                 )
                 return None
             return f'-m owner --uid-owner {uid} '

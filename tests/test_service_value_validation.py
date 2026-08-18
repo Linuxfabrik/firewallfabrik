@@ -10,15 +10,17 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-"""The mark a Tag Service carries, before it reaches either packet filter.
+"""The free-text values a Tag Service and a User Service carry.
 
-The value is free text from the Tag Service editor, and neither back end
-takes a word: iptables answers "bad integer value for option" or "trailing
-garbage after value" and stops the activation script with every built-in
-policy already at DROP, nftables answers a syntax error and refuses the
-whole ruleset.  It also goes into the generated script as a bare shell
-word, which is the reason the ToS value and the rate-limit table name are
-guarded next door.
+Both are typed into their editor and both reach the two back ends
+unchecked - the mark as ``--set-mark`` / ``--mark`` and ``meta mark``, the
+user as ``--uid-owner`` and ``meta skuid``.  Neither tool takes a word
+where it wants a number: iptables answers "bad integer value for option"
+and stops the activation script with every built-in policy already at
+DROP, nftables answers a syntax error and refuses the **whole** ruleset.
+Both values also go into the generated script as a bare shell word, which
+is the reason the ToS value and the rate-limit table name are guarded next
+door.
 
 Every case below was offered to iptables 1.8.11 and nft 1.1.6 first; both
 store ``020`` as 16 and both refuse 4294967296.
@@ -28,7 +30,12 @@ import uuid
 
 import pytest
 
-from firewallfabrik.core.objects import TagService, is_valid_packet_mark
+from firewallfabrik.core.objects import (
+    TagService,
+    UserService,
+    is_valid_packet_mark,
+    is_valid_user_id,
+)
 
 
 @pytest.mark.parametrize(
@@ -223,3 +230,44 @@ def test_the_nftables_statement_leaves_out_a_rule_whose_tag_is_not_a_mark():
 
     assert printer._print_mangle_statement(rule) is None
     assert any('not a packet mark' in message for message in printer.compiler.errors)
+
+
+def _user(uid: str) -> UserService:
+    service = UserService(id=uuid.uuid4(), name='owner')
+    service.userid = uid
+    return service
+
+
+@pytest.mark.parametrize(
+    'value', ['root', 'nobody', 'www-data', 'anonymous', '1000', '1000-1010', 'a.b']
+)
+def test_a_user_both_packet_filters_look_up(value):
+    """A name that does not exist on the firewall is the admin's business."""
+    assert is_valid_user_id(value)
+
+
+@pytest.mark.parametrize(
+    'value', ['', '$(id)', '1;reboot', '`id`', 'a b', '-x', 'a' * 256]
+)
+def test_a_user_neither_packet_filter_reads(value):
+    assert not is_valid_user_id(value)
+
+
+@pytest.mark.parametrize('render', PRINTERS, ids=lambda f: f.__name__)
+def test_every_printer_leaves_out_a_rule_whose_user_is_not_a_user(render):
+    """nftables refuses the whole ruleset over it, iptables runs it as a shell word."""
+    srv = _user('1;reboot')
+    printer, answer = render(srv, _Rule(srv))
+
+    assert answer is None
+    assert any('not a user name' in message for message in printer.compiler.errors)
+
+
+@pytest.mark.parametrize('render', PRINTERS, ids=lambda f: f.__name__)
+def test_every_printer_still_writes_a_user_both_tools_look_up(render):
+    srv = _user('www-data')
+    printer, answer = render(srv, _Rule(srv))
+
+    assert answer is not None
+    assert 'www-data' in answer
+    assert printer.compiler.errors == []

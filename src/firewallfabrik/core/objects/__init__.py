@@ -85,6 +85,7 @@ from ._services import (
     is_valid_dscp,
     is_valid_packet_mark,
     is_valid_tos,
+    is_valid_user_id,
 )
 from ._types import (
     Direction,
@@ -165,6 +166,7 @@ __all__ = [
     'is_valid_dscp',
     'is_valid_packet_mark',
     'is_valid_tos',
+    'is_valid_user_id',
     'range_to_cidr',
     'rule_elements',
 ]

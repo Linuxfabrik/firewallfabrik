@@ -56,6 +56,7 @@ from firewallfabrik.core.objects import (
     is_valid_dscp,
     is_valid_packet_mark,
     is_valid_tos,
+    is_valid_user_id,
     range_to_cidr,
 )
 from firewallfabrik.platforms.iptables._policy_compiler import STANDARD_CHAINS
@@ -1259,6 +1260,14 @@ class PrintRule(PolicyRuleProcessor):
             if not uid:
                 self.compiler.error(
                     rule, f'User service "{srv.name}" names no user to match on'
+                )
+                return None
+            if not is_valid_user_id(uid):
+                self.compiler.error(
+                    rule,
+                    f'User service "{srv.name}" names "{uid}", which is not a '
+                    'user name or id; letters, digits, a dot, a dash and an '
+                    'underscore are. The rule is left out',
                 )
                 return None
             option = self._print_single_option_with_negation(

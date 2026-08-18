@@ -16,6 +16,7 @@ from __future__ import (
     annotations,  # This is needed since SQLAlchemy does not support forward references yet
 )
 
+import re
 import uuid
 from typing import TYPE_CHECKING, ClassVar
 
@@ -444,6 +445,33 @@ def is_valid_packet_mark(value: str) -> bool:
         if number is None or number > MAX_PACKET_MARK:
             return False
     return True
+
+
+# A user name both packet filters hand to getpwnam, or a numeric id, or a
+# range of them.  The alphabet is the portable one plus the dot and the
+# dash a range needs; it deliberately leaves out everything the shell
+# reads as syntax, the same way the ToS value and the rate-limit table
+# name do.  A leading dash would look like an option to iptables.
+_USER_ID_RE = re.compile(r'[0-9A-Za-z_.][0-9A-Za-z._-]{0,254}')
+
+
+def is_valid_user_id(value: str) -> bool:
+    """Return True if ``value`` is a user both packet filters can look up.
+
+    A User Service carries the user as free text from its editor, and the
+    value reaches both back ends unchecked: ``-m owner --uid-owner`` on
+    iptables, ``meta skuid`` on nftables.  Both look the name up with
+    ``getpwnam`` and fall back to a numeric id (netfilter
+    extensions/libxt_owner.c and nftables src/meta.c, ``uid_type_parse``),
+    so a name that does not exist on the firewall is the admin's business
+    and is passed on.  What is not is a value holding characters neither
+    tool can carry: nftables answers a syntax error and refuses the
+    **whole** ruleset, and on iptables the value goes into the generated
+    script as a bare shell word, where a dollar sign, a backtick or a
+    semicolon starts something else entirely - as root, at the moment
+    every chain is already at DROP.
+    """
+    return bool(_USER_ID_RE.fullmatch(str(value).strip()))
 
 
 class CustomService(Service):
