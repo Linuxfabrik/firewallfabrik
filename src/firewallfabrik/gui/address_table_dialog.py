@@ -26,7 +26,7 @@ class AddressTableDialog(BaseObjectDialog):
     def _populate(self):
         self.obj_name.setText(self._obj.name or '')
         data = self._obj.data or {}
-        self.filename.setText(data.get('source_name', ''))
+        self.filename.setText(self._obj.get_source_name())
 
         # Resolve mode: honour the preference for new objects (no
         # run_time key yet), otherwise use the stored value.
@@ -48,8 +48,7 @@ class AddressTableDialog(BaseObjectDialog):
         if self._obj.name != new_name:
             self._obj.name = new_name
         old_data = self._obj.data or {}
-        data = dict(old_data)
-        data['source_name'] = self.filename.text().strip()
+        data = self._obj.set_source_name(self.filename.text().strip())
         data['run_time'] = self.r_runtime.isChecked()
         if data != old_data:
             self._obj.data = data

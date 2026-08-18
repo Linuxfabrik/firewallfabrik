@@ -404,7 +404,7 @@ class Compiler(BaseCompiler):
 
     def _resolve_dns_name(self, obj: DNSName) -> list:
         """Resolve a compile-time DNSName via DNS lookup."""
-        dnsrec = (obj.data or {}).get('dnsrec', obj.name)
+        dnsrec = obj.get_source_name() or obj.name
         if not dnsrec:
             return []
 
@@ -446,7 +446,7 @@ class Compiler(BaseCompiler):
         File format: one address or network (CIDR) per line; lines starting
         with '#' or empty lines are ignored.
         """
-        filename = (obj.data or {}).get('filename', '')
+        filename = obj.get_source_name()
         if not filename:
             return []
 

@@ -1082,7 +1082,7 @@ class PrintRule_nft(PolicyRuleProcessor):
             # resolves it at load time. A bare hostname beginning with a digit
             # (e.g. "6bone.net") is tokenized as a number by the nft parser and
             # rejected, so quote those to force hostname interpretation.
-            dnsrec = (obj.data or {}).get('dnsrec', obj.name)
+            dnsrec = obj.get_source_name() or obj.name
             if dnsrec and dnsrec[:1].isdigit():
                 return nft_quote(dnsrec)
             return dnsrec

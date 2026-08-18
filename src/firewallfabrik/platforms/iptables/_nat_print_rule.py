@@ -1259,7 +1259,7 @@ class NATPrintRule(NATRuleProcessor):
 
         if isinstance(obj, DNSName):
             # Runtime DNSName — use the DNS record directly as address
-            return f'{(obj.data or {}).get("dnsrec", obj.name)} '
+            return f'{obj.get_source_name() or obj.name} '
 
         if not isinstance(obj, Address):
             return ''

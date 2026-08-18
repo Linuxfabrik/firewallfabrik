@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): the generated activation script reports success when the ruleset loaded. A firewall that switches on IPv6 forwarding reported failure on a host without IPv6 or with a read-only `/proc/sys`.
 * Compiler (nftables): a rule written for "any interface except these" no longer matches on the loopback or on an interface the firewall does not know about. iptables read the same rule as the firewall's other interfaces only.
 * Compiler (iptables, nftables): a rule whose User Service names something that is not a user is reported and left out. On nftables it cost the whole ruleset, so the firewall kept its old rules.
+* Compiler (iptables, nftables), Editor: a DNS Name or Address Table object created or edited in FirewallFabrik keeps the host name or file name that was typed. The compilers never saw it, so the object resolved its own name or nothing at all.
 * Compiler (iptables, nftables): a rule whose Tag Service carries something that is not a packet mark is reported and left out. It stopped the activation with every chain already set to drop.
 * Compiler (nftables): a NAT rule that spreads connections over several backend hosts reaches all of them again. Only the first backend ever got traffic.
 * Compiler (nftables): a message about a rule is written into the generated ruleset with one comment marker instead of two, and a rule with more than one message keeps every line inside its chain block.

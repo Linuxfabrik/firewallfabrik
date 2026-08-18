@@ -161,11 +161,40 @@ class MultiAddress(ObjectGroup):
 
     __mapper_args__ = {'polymorphic_identity': 'MultiAddress'}
 
+    #: The key the object's own source is stored under.  Firewall Builder
+    #: writes it as an XML attribute (``AddressTable filename=``,
+    #: ``DNSName dnsrec=``) and the `.fwb` reader copies every attribute it
+    #: does not know by name into ``data``, so this is what an imported
+    #: file carries and what the compilers have always read.
+    SOURCE_KEY = 'source_name'
+
+    def get_source_name(self) -> str:
+        """Return the file or host name this object resolves from.
+
+        Ports ``MultiAddress::getSourceName``.  The editors wrote the value
+        under ``source_name`` for a while, which no compiler reads, so an
+        object created or edited in FirewallFabrik resolved its own object
+        name instead; that spelling is still accepted here so those files
+        keep working.
+        """
+        data = self.data or {}
+        return str(data.get(self.SOURCE_KEY) or data.get('source_name') or '')
+
+    def set_source_name(self, value: str) -> dict:
+        """Return *data* with the source set, cleared of the old spelling."""
+        data = dict(self.data or {})
+        if self.SOURCE_KEY != 'source_name':
+            data.pop('source_name', None)
+        data[self.SOURCE_KEY] = value
+        return data
+
 
 class AddressTable(MultiAddress):
     """Addresses loaded from an external table/file."""
 
     __mapper_args__ = {'polymorphic_identity': 'AddressTable'}
+
+    SOURCE_KEY = 'filename'
 
 
 def is_run_time_address_table(obj) -> bool:
@@ -193,7 +222,7 @@ def get_address_table_source(at: AddressTable, fw=None) -> str:
     Without *fw* the token is left as it stands, which is what a caller
     that has no firewall at hand can say about it.
     """
-    filename = str((at.data or {}).get('filename', ''))
+    filename = at.get_source_name()
     if '%DATADIR%' not in filename or fw is None:
         return filename
     data_dir = str(fw.get_option('linux24_data_dir') or '').rstrip('/')
@@ -216,6 +245,8 @@ class DNSName(MultiAddress):
     """Object resolved via DNS at compile or run time."""
 
     __mapper_args__ = {'polymorphic_identity': 'DNSName'}
+
+    SOURCE_KEY = 'dnsrec'
 
 
 class ClusterGroup(ObjectGroup):
