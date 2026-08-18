@@ -89,9 +89,38 @@ def parse_interval_data(
     if days_str:
         days = sorted(int(d) for d in days_str.split(',') if d.strip())
     else:
-        days = list(range(7))  # all days
+        days = _days_from_weekday_range(
+            _safe_int(data.get('from_weekday', -1)),
+            _safe_int(data.get('to_weekday', -1)),
+        )
 
     return start_h, start_m, end_h, end_m, days
+
+
+def _days_from_weekday_range(from_weekday: int, to_weekday: int) -> list[int]:
+    """Return the day list an Interval without ``days_of_week`` stands for.
+
+    Firewall Builder wrote the weekdays as a first/last pair before it
+    grew the explicit list, and ``Interval::getDaysOfWeek``
+    (fwbuilder libfwbuilder/src/fwbuilder/Interval.cpp) still falls back
+    to ``constructDaysOfWeek(from_weekday, to_weekday)`` whenever the list
+    is empty.  Reading the empty list as "every day" instead drops the
+    restriction from every rule of such a file: a rule written for
+    Monday to Friday then fires at the weekend too.
+
+    The pair is a range that wraps, so Saturday to Sunday is two days and
+    not six.  An unset end means Saturday and an unset start means Sunday,
+    which is what the C++ does with -1; both unset gives the whole week,
+    the same answer as before.
+    """
+    if from_weekday == -1 and to_weekday == -1:
+        return list(range(7))
+    start = min(max(from_weekday, 0), 6)
+    end = 6 if to_weekday < 0 else min(to_weekday, 6)
+    days = [start]
+    while days[-1] != end:
+        days.append((days[-1] + 1) % 7)
+    return sorted(days)
 
 
 def is_any_interval(data: dict) -> bool:
