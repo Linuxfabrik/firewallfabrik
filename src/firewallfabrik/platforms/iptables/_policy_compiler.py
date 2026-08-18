@@ -209,6 +209,12 @@ class PolicyCompiler_ipt(PolicyCompiler):
         # `register_rule_set_chain()`. Empty for the top rule set.
         self.rule_set_chain: str = ''
 
+        # The names of the rule sets a Branch rule can jump to, filled by
+        # the driver.  Every rule set is compiled by a compiler of its own,
+        # so the one holding the branching rule has no other way to tell
+        # whether the target is compiled into this script at all.
+        self.branch_chains: set[str] = set()
+
         # Print rule processor reference
         self.print_rule_processor = None
 
@@ -2924,11 +2930,29 @@ class DecideOnTarget(PolicyRuleProcessor):
             # so branching is a jump to that chain
             # (PolicyCompiler_ipt::decideOnTarget).
             branch_name = rule.get_option('branch_name', '')
-            if branch_name:
-                rule.ipt_target = branch_name
-            else:
+            if not branch_name:
                 self.compiler.error(
                     rule, 'Branching rule refers to a rule set that does not exist'
+                )
+                return True
+            rule.ipt_target = branch_name
+            # Only a rule set of this firewall that is not the top one ends
+            # up as a chain carrying rules.  The top rule set compiles into
+            # the built-in chains, and a rule set of another firewall object
+            # is not compiled into this script at all - Firewall Builder
+            # pulls those in, fwf does not (issue #90).  Either way the
+            # print rule creates the chain and jumps into it, iptables takes
+            # both commands, and the chain stays empty: the packet returns
+            # and the rule does nothing.  Without a word about it the
+            # administrator has a script that activates cleanly and a policy
+            # that is not the one in the file.  nftables has reported this
+            # since branch support landed there.
+            if branch_name not in self.compiler.branch_chains:
+                self.compiler.error(
+                    rule,
+                    f'Rule branches to "{branch_name}", which is not a rule '
+                    'set this firewall compiles; the chain stays empty and '
+                    'the rule has no effect',
                 )
             return True
 

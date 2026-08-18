@@ -95,6 +95,8 @@ class CompilerDriver_ipt(CompilerDriver):
         # branch that belongs to its own chain, instead of being copied into
         # prerouting and postrouting at once.
         self._nat_branch_chains: dict[str, list[str]] = {}
+        # The names of the policy rule sets a Branch rule can jump to.
+        self._branch_chains: set[str] = set()
         # The hash table each rate limit kept per source, destination or
         # port counts in, and the settings the first rule gave it.  The
         # kernel looks the table up by its name and family alone
@@ -214,6 +216,15 @@ class CompilerDriver_ipt(CompilerDriver):
                 any_rs_ipv6 = any(rs.ipv6 for rs in (*all_policies, *all_nat))
                 if not any_rs_ipv6:
                     self.ipv6_run = False
+
+                # Which rule sets a Branch rule can reach.  Each rule set is
+                # compiled by a compiler of its own, so the names have to be
+                # collected here for the one compiling the branching rule.
+                self._branch_chains = {
+                    pol_rs.name
+                    for pol_rs in all_policies
+                    if not self._is_top_ruleset(pol_rs)
+                }
 
                 # Chain trackers per table
                 minus_n_commands_filter: dict[str, bool] = {}
@@ -888,6 +899,7 @@ class CompilerDriver_ipt(CompilerDriver):
         )
 
         mangle_compiler.hashlimit_tables = self._hashlimit_tables
+        mangle_compiler.branch_chains = self._branch_chains
 
         if not self._flush_ruleset:
             mangle_compiler.chain_prefix = self._table_name
@@ -933,6 +945,7 @@ class CompilerDriver_ipt(CompilerDriver):
         )
 
         policy_compiler.hashlimit_tables = self._hashlimit_tables
+        policy_compiler.branch_chains = self._branch_chains
 
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True
