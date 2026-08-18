@@ -68,6 +68,7 @@ from pathlib import Path
 # say what the rule *matches on*; everything else (values, sets, counters)
 # is intentionally invisible to the comparison.
 NFT_KEYWORDS = (
+    'ct count',
     'ct state',
     'ether saddr',
     'icmp code',
@@ -78,6 +79,7 @@ NFT_KEYWORDS = (
     'iifname',
     'ip daddr',
     'ip dscp',
+    'ip6 dscp',
     'ip frag-off',
     'ip protocol',
     'ip saddr',
@@ -92,7 +94,10 @@ NFT_KEYWORDS = (
     'meta l4proto',
     'meta mark',
     'meta skuid',
+    'meta time',
+    'meter',
     'oif',
+    'skuid',
     'oifname',
     'sctp dport',
     'sctp sport',
@@ -122,7 +127,12 @@ SYNONYMS = {
     'ip6 saddr': 'ip saddr',
     'ip6 daddr': 'ip daddr',
     'ip6 nexthdr': 'ip protocol',
+    'ip6 dscp': 'ip dscp',
     'meta l4proto': 'ip protocol',
+    # The short spelling of `meta skuid`, and the one iptables-translate
+    # writes.  Same trap as `mark` below: without it every NAT rule
+    # naming a connection owner read as one condition we invented.
+    'skuid': 'meta skuid',
     # `mark` is the short spelling of `meta mark`, and the one
     # iptables-translate writes.  `ct mark` is a different match and is in
     # the list above only so it wins the longest-match against `mark`.
