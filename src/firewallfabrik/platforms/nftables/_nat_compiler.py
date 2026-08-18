@@ -24,6 +24,7 @@ from __future__ import annotations
 import ipaddress
 from typing import TYPE_CHECKING, cast
 
+from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._nat_compiler import NATCompiler
 from firewallfabrik.compiler._rule_processor import NATRuleProcessor
 from firewallfabrik.compiler.processors._generic import (
@@ -56,6 +57,7 @@ from firewallfabrik.core.objects import (
     NATRuleType,
     Network,
     NetworkIPv6,
+    PhysAddress,
     TCPUDPService,
     UserService,
 )
@@ -1693,52 +1695,81 @@ class AlwaysUseMasquerade(NATRuleProcessor):
 
 
 class VerifyRuleWithMAC(NATRuleProcessor):
-    """Drop a MAC match from a rule whose chain cannot see the MAC.
+    """Take the MAC out of a NAT rule in a chain that cannot see one.
 
-    The link-layer header a MAC match reads is only there on the way in:
-    the kernel offers it in the PRE_ROUTING, LOCAL_IN and FORWARD hooks and
-    nowhere else (the hook mask of xt_mac, net/netfilter/xt_mac.c).
-    nftables takes ``ether saddr`` in a postrouting chain all the same and
-    then never matches the rule, so a source translation carrying one would
-    silently stop translating.  Same behaviour as the iptables
-    ``VerifyRuleWithMAC``.
+    A locally generated packet has no link-layer header, and
+    ``nft_payload_eval`` gives up on any ``NFT_PAYLOAD_LL_HEADER`` read
+    without one (``net/netfilter/nft_payload.c``: ``if
+    (!skb_mac_header_was_set(skb) || skb_mac_header_len(skb) == 0) goto
+    err``).  The rule loads and then never matches, so a translation
+    carrying one would silently stop translating.
+
+    Postrouting is deliberately not on the list, the same answer this
+    platform's ``CheckMACInOUTPUTChain`` gives: a forwarded packet still
+    carries the header it arrived with, so an ``ether saddr`` there is a
+    real match.  iptables has no such distinction - ``xt_mac`` does not
+    register for the hook at all - so its ``VerifyRuleWithMAC`` strips the
+    MAC in postrouting and the two platforms differ there on purpose.
+
+    All three shapes a MAC arrives in are searched, because the print rule
+    renders an ``ether`` match for every one of them: a bare
+    ``PhysAddress``, a ``CombinedAddress`` pairing one with an address, and
+    an interface or host whose only address is a MAC.  A combined address
+    keeps its IP half and loses only the MAC, which is what the iptables
+    sibling and ``NATCompiler_ipt.cpp:2288`` do.
     """
+
+    #: The chains an ethernet address cannot be matched in.
+    FORBIDDEN_CHAINS = ('output',)
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        if not rule.osrc:
+        if not rule.osrc or (rule.ipt_chain or '').lower() not in (
+            self.FORBIDDEN_CHAINS
+        ):
             self.tmp_queue.append(rule)
             return True
 
-        chain = (rule.ipt_chain or '').lower()
-        if chain in ('prerouting', 'forward', 'input'):
+        mac_name = ''
+        kept = []
+        for obj in rule.osrc:
+            if isinstance(obj, PhysAddress):
+                mac_name = mac_name or obj.name
+                continue
+            if isinstance(obj, CombinedAddress) and obj.has_phys_address():
+                mac_name = mac_name or obj.name
+                if not obj.is_address_any():
+                    # The IP half is a match this chain can make, so the
+                    # object is handed on as the plain address it wraps.
+                    kept.append(obj.address)
+                continue
+            if get_mac_only_address(obj):
+                mac_name = mac_name or obj.name
+                continue
+            kept.append(obj)
+
+        if not mac_name:
             self.tmp_queue.append(rule)
             return True
 
-        # Same predicate the print rule uses to decide that an object can
-        # only be matched on the ethernet header: a PhysAddress, or an
-        # interface or host whose only address is a MAC.
-        mac_objs = [obj for obj in rule.osrc if get_mac_only_address(obj)]
-        if mac_objs:
-            remaining = [obj for obj in rule.osrc if not get_mac_only_address(obj)]
-            rule.osrc = remaining
-            mac_name = mac_objs[0].name
-            if not remaining:
-                self.compiler.abort(
-                    rule,
-                    f'SNAT rule can not match MAC address, and after removing '
-                    f"object '{mac_name}' from OSrc it becomes 'Any'",
-                )
-                return True
-            self.compiler.warning(
+        rule.osrc = kept
+
+        if not kept:
+            self.compiler.abort(
                 rule,
-                f"SNAT rule can not match MAC address. Object '{mac_name}' "
-                f'removed from the rule',
+                f'NAT rule can not match MAC address, and after removing '
+                f"object '{mac_name}' from OSrc it becomes 'Any'",
             )
+            return True
 
+        self.compiler.warning(
+            rule,
+            f'NAT rule can not match MAC address in the '
+            f"{rule.ipt_chain} chain. Object '{mac_name}' removed from the rule",
+        )
         self.tmp_queue.append(rule)
         return True
 
