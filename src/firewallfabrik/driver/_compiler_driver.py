@@ -18,7 +18,6 @@ and output file management.
 
 from __future__ import annotations
 
-import difflib
 import ipaddress
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
@@ -32,6 +31,40 @@ from firewallfabrik.platforms._defaults import get_known_keys
 
 if TYPE_CHECKING:
     from firewallfabrik.core._database import DatabaseManager
+
+
+def _one_edit_apart(typed: str, known: str) -> bool:
+    """Is *typed* what *known* looks like after a single slip of the hand?
+
+    One character inserted, dropped or replaced, or two neighbouring ones
+    written in the other order.  That is what a typo is, and it is what
+    separates `log_perfix` from `log_prefix` (a swap) and
+    `acept_established` from `accept_established` (a dropped letter).
+
+    A similarity ratio cannot draw that line.  `install_script`,
+    `log_limit_suffix` and `activation` are option names an imported
+    `.fwb` carries in every firewall, and each of them scores above 0.85
+    against a name this compiler does read - so the whole reference
+    corpus was told twice per firewall that Firewall Builder had made a
+    typo.  None of the three is within one edit.
+    """
+    if typed == known or abs(len(typed) - len(known)) > 1:
+        return False
+    # Strip what the two have in common at either end; the edit is what
+    # is left over, and it is at most one character on each side - two
+    # when they are the same two characters in the other order.
+    shortest = min(len(typed), len(known))
+    head = 0
+    while head < shortest and typed[head] == known[head]:
+        head += 1
+    tail = 0
+    while tail < shortest - head and typed[-1 - tail] == known[-1 - tail]:
+        tail += 1
+    rest_typed = typed[head : len(typed) - tail]
+    rest_known = known[head : len(known) - tail]
+    if len(rest_typed) <= 1 and len(rest_known) <= 1:
+        return True
+    return len(rest_typed) == 2 and rest_typed == rest_known[::-1]
 
 
 class CompilerDriver(BaseCompiler):
@@ -165,12 +198,13 @@ class CompilerDriver(BaseCompiler):
             # for, and then there is nothing to compare against.
             return
         for key in sorted(set(options) - known):
-            close = difflib.get_close_matches(key, known, n=1, cutoff=0.85)
-            if close:
-                self.warning(
-                    f'the firewall option "{key}" is not one this compiler '
-                    f'reads and looks like "{close[0]}"; it is ignored'
-                )
+            for candidate in sorted(known):
+                if _one_edit_apart(key, candidate):
+                    self.warning(
+                        f'the firewall option "{key}" is not one this compiler '
+                        f'reads and looks like "{candidate}"; it is ignored'
+                    )
+                    break
 
     def determine_output_file_names(
         self,

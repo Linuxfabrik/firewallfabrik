@@ -61,3 +61,37 @@ def test_a_key_of_another_platform_says_nothing():
 
 def test_a_key_the_compiler_knows_says_nothing():
     assert _warnings({'accept_established': True, 'log_prefix': 'x'}) == []
+
+
+def test_a_name_firewall_builder_writes_says_nothing():
+    """Every imported `.fwb` carries these, and none of them is a slip.
+
+    `install_script` is close enough to `installScript`, `log_limit_suffix`
+    to `limit_suffix` and `activation` to `activationCmd` for a similarity
+    ratio to call all three a typo - which told 46 of the 47 firewalls of
+    the reference corpus that Firewall Builder had mistyped its own option
+    names.  None of them is within one edit.
+    """
+    assert (
+        _warnings(
+            {
+                'activation': '',
+                'install_script': '',
+                'log_limit_suffix': '/second',
+            }
+        )
+        == []
+    )
+
+
+def test_the_slips_a_hand_makes_are_all_covered():
+    """One letter dropped, added, replaced, or two of them swapped."""
+    for typed in (
+        'acept_established',  # dropped
+        'acccept_established',  # added
+        'accapt_established',  # replaced
+        'accept_estbalished',  # swapped
+    ):
+        said = _warnings({typed: True})
+        assert len(said) == 1, typed
+        assert 'accept_established' in said[0], typed
