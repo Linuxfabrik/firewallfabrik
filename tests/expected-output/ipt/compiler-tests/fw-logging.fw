@@ -13,7 +13,6 @@
 #
 
 # fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' service "
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated script cannot pass on and was written as "SSH 'DENIED' service "
 
 FWBDEBUG=""
 RETVAL=0

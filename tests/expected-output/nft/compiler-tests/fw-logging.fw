@@ -9,7 +9,6 @@
 # files: * fw-logging.fw /etc/fwf.sh
 #
 # fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
-# fw-logging:Policy:0: warning: Log prefix "SSH "DENIED" $service " holds a character the generated ruleset cannot pass on and was written as "SSH 'DENIED' service "
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

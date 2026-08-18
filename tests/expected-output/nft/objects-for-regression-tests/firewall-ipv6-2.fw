@@ -43,19 +43,10 @@
 # Rule '7 (global)' shadows rule '27 (global)' below it
 # Rule '7 (global)' shadows rule '28 (global)' below it
 # firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:16: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:18: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:18: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:18: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:19: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:19: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:19: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:27: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:27: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:28: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-2:Policy:29: warning: Making rule stateless because it matches ICMPv6
 
 FWBDEBUG=""

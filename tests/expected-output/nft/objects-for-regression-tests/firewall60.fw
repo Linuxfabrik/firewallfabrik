@@ -11,28 +11,8 @@
 #  testing time litmiting for iptables < 1.4.0
 #
 # firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall60:Policy:1: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall60:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""

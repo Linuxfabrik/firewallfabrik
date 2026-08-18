@@ -13,8 +13,6 @@
 # firewall99:Policy:0: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 # firewall99:Policy:1: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 # firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
-# firewall99:Policy:2: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
-# firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 # firewall99:Policy:3: warning: the firewall is configured not to forward packets, so the rule has no traffic to match and is left out
 
 FWBDEBUG=""

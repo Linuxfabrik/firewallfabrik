@@ -17,7 +17,6 @@
 # Rule '4 (global)' shadows rule '6 (global)' below it
 # Rule '2 (global)' shadows rule '3 (global)' below it
 # firewall-ipv6-4-1:Policy:8: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
-# firewall-ipv6-4-1:Policy:8: warning: Rule is left out because "6bone.net (ct)" resolves to no address at all
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and

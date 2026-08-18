@@ -16,20 +16,12 @@
 # Rule 18 (global): Custom service 'ipv6 source route' is not configured for 'nftables'
 # firewall20-ipv6:Policy:3: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:7: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:11: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:11: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:12: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:12: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:13: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:13: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:14: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:14: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:15: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:15: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:16: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:16: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
-# firewall20-ipv6:Policy:17: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 # firewall20-ipv6:Policy:17: warning: Rule is left out because none of the addresses it names belong to the address family being compiled
 
 FWBDEBUG=""

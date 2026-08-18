@@ -33,10 +33,7 @@
 # Rule 'Policy_ipv6 4 (global)' shadows rule 'Policy_ipv6 11 (global)' below it
 # Rule 'Policy_ipv6 4 (global)' shadows rule 'Policy_ipv6 12 (global)' below it
 # firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-1:Policy_ipv6:6: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:7: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
-# firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:8: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:9: warning: Making rule stateless because it matches ICMPv6
 # firewall-ipv6-1:Policy_ipv6:10: warning: Making rule stateless because it matches ICMPv6

@@ -245,22 +245,37 @@ class Compiler(BaseCompiler):
     # -- Warning with formatted output --
 
     def warning(self, rule_or_msg, msg: str | None = None) -> None:
-        """Emit a warning formatted as fwname:rsname:pos: warning: msg."""
+        """Emit a warning formatted as fwname:rsname:pos: warning: msg.
+
+        Only the wording differs from ``BaseCompiler.warning``; the two
+        rules that hold for every message hold here as well.  A muted
+        block records nothing, because the dedup pass renders each rule a
+        second time only to compare the result, and a message about a rule
+        is recorded once and not once per copy of it - one rule as the
+        editor shows it reaches the printer as several, and repeating the
+        same sentence per copy buries the rest of the report.  Overriding
+        this method without carrying both over is how half of all warnings
+        came to be repeats.
+        """
         if msg is None:
             super().warning(rule_or_msg)
-        else:
-            fw_name = self.fw.name if self.fw else ''
-            rs_name = self.source_ruleset.name if self.source_ruleset else ''
-            pos = ''
-            if hasattr(rule_or_msg, 'position'):
-                pos = str(rule_or_msg.position)
-            formatted = f'{fw_name}:{rs_name}:{pos}: warning: {msg}'
-            self._warnings.append(formatted)
-            label = getattr(rule_or_msg, 'label', '') or ''
-            if label:
-                self._rule_errors.setdefault(label, []).append(formatted)
-            if self._status == CompilerStatus.FWCOMPILER_SUCCESS:
-                self._status = CompilerStatus.FWCOMPILER_WARNING
+            return
+        if self._muted:
+            return
+        fw_name = self.fw.name if self.fw else ''
+        rs_name = self.source_ruleset.name if self.source_ruleset else ''
+        pos = ''
+        if hasattr(rule_or_msg, 'position'):
+            pos = str(rule_or_msg.position)
+        formatted = f'{fw_name}:{rs_name}:{pos}: warning: {msg}'
+        label = getattr(rule_or_msg, 'label', '') or ''
+        if self._already_reported(label, formatted):
+            return
+        self._warnings.append(formatted)
+        if label:
+            self._rule_errors.setdefault(label, []).append(formatted)
+        if self._status == CompilerStatus.FWCOMPILER_SUCCESS:
+            self._status = CompilerStatus.FWCOMPILER_WARNING
 
     def debug_print_rule(self, rule: CompRule) -> str:
         """Basic debug output for a rule. Override in subclasses for richer output."""

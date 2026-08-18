@@ -19,26 +19,17 @@
 # firewall62:Policy:2: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:4: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:5: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:6: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:7: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:8: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:9: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:10: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:11: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:11: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:12: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:13: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:14: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:15: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:15: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:16: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
-# firewall62:Policy:17: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 # firewall62:Policy:17: warning: nftables matches 'meta skuid' only in the output and postrouting chains, where the packet still has the socket that produced it
 
 FWBDEBUG=""

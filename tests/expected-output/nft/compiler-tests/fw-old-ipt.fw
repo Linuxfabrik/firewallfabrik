@@ -14,7 +14,6 @@
 # Rule 2 (global): IP service matching an IPv4 header option cannot be compiled for IPv6, which has no such field; the rule is left out of the IPv6 ruleset
 # Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 # fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
-# fw-old-ipt:Policy:1: warning: Unknown reject type "reject-route", falling back to generic reject
 # Rule '0 (global)' shadows rule '3 (this-name-is-too-long)' below it
 
 FWBDEBUG=""

@@ -13,37 +13,9 @@
 # Rule 4 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # Rule 5 (global): A negated time that names both a time of day and a weekday needs two rules to say "outside those hours or on another day", which nftables cannot express in one; the rule is left out
 # firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:0: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall31:Policy:2: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:3: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:4: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall31:Policy:5: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""

@@ -15,12 +15,6 @@
 # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:14: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:14: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
-# firewall4:Policy:14: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 # firewall4:Policy:14: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
 
 FWBDEBUG=""
