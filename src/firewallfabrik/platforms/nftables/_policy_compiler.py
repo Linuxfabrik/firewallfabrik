@@ -1049,13 +1049,18 @@ class SplitIfSrcAny(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # C++ also splits when single_object_negation is set, but only if
-        # the single negated object does NOT match the firewall itself.
+        # The C++ splits on `single_object_negation` too, and asks for one
+        # object because that is the only shape it ever sets the flag on:
+        # `SrcNegation` turns several into a temporary chain whose jump rule
+        # has "any" as its source, and that half is caught by `is_src_any`
+        # above.  nftables writes them all as `!=` in one rule, so the count
+        # has to come out of the test - "not one of these two" contains the
+        # firewall exactly as "not this one" does, and asking for a single
+        # object left every such rule without its output copy
+        # (PolicyCompiler_ipt::splitIfSrcAny).
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
-        src_neg_split = (
-            rule.src_single_object_negation
-            and len(rule.src) == 1
-            and not nft_comp.complex_match(rule.src[0], nft_comp.fw)
+        src_neg_split = rule.src_single_object_negation and not any(
+            nft_comp.complex_match(obj, nft_comp.fw) for obj in rule.src
         )
         if rule.direction != Direction.Inbound and (rule.is_src_any() or src_neg_split):
             r = rule.clone()
@@ -1091,13 +1096,11 @@ class SplitIfDstAny(PolicyRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # C++ also splits when single_object_negation is set, but only if
-        # the single negated object does NOT match the firewall itself.
+        # Same as in `SplitIfSrcAny`: the count the C++ asks for is an
+        # artefact of its temporary chains, which nftables does not build.
         nft_comp = cast('PolicyCompiler_nft', self.compiler)
-        dst_neg_split = (
-            rule.dst_single_object_negation
-            and len(rule.dst) == 1
-            and not nft_comp.complex_match(rule.dst[0], nft_comp.fw)
+        dst_neg_split = rule.dst_single_object_negation and not any(
+            nft_comp.complex_match(obj, nft_comp.fw) for obj in rule.dst
         )
         if rule.direction != Direction.Outbound and (
             rule.is_dst_any() or dst_neg_split

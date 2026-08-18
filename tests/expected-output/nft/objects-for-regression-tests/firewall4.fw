@@ -12,6 +12,7 @@
 #
 # Rule 0 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 1 (eth1): Object 'address' has address 0.0.0.0/0.0.0.0
+# Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 15 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # Rule 18 (global): Object 'address' has address 0.0.0.0/0.0.0.0
 # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
@@ -389,6 +390,7 @@ table ip fwf_filter {
         #
         # Rule 11 (global)
         #
+        # Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
         ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
         #
         # Rule 12 (global)
@@ -533,6 +535,16 @@ table ip fwf_filter {
         #
         # OUTPUT + FORWARD
         ip daddr 1.1.1.1 counter accept
+        #
+        # Rule 11 (global)
+        #
+        # Rule 11 (global): Object 'address' has address 0.0.0.0/0.0.0.0
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 0.0.0.0, 192.168.1.1, 192.168.2.1, 222.222.222.222 } icmp type destination-unreachable counter log level debug drop
+        #
+        # Rule 12 (global)
+        #
+        # testing negation in the policy rule
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable counter log level debug drop
         #
         # Rule 13 (global)
         #

@@ -479,6 +479,11 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 50 counter meta mark set 16
         oifname "eth1" meta l4proto 51 counter meta mark set 16
         #
+        # Rule 11 (global)
+        #
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter meta mark set 16
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 12 (eth1)
         #
         oifname "eth1" meta l4proto 50 ct state new counter meta mark set 16
@@ -504,6 +509,14 @@ table ip fwf_mangle {
         meta l4proto 51 ct state new counter meta mark set 10
         meta l4proto 50 ct state new counter ct mark set mark
         meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 17 (global)
+        #
+        # using CONNMARK
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter meta mark set 10
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter meta mark set 10
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter ct mark set mark
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter ct mark set mark
         #
         # Rule 19 (eth1)
         #

@@ -387,6 +387,10 @@ table ip fwf_filter {
         #
         ip saddr != @block_these ip saddr != 61.150.47.112 ct state new counter accept
         #
+        # Rule 9 (global)
+        #
+        ip saddr @i_eth0.100 ip daddr != @block_these ip daddr != 61.150.47.112 ct state new counter accept
+        #
         # Rule 11 (global)
         #
         ip saddr 192.168.1.0/24 ct state new counter accept
@@ -471,6 +475,10 @@ table ip fwf_filter {
         #
         ip saddr @i_eth0.100 ip daddr @block_these tcp dport 25 counter drop
         ip saddr @i_eth0.100 ip daddr 61.150.47.112 tcp dport 25 counter drop
+        #
+        # Rule 8 (global)
+        #
+        ip saddr != @block_these ip saddr != 61.150.47.112 ct state new counter accept
         #
         # Rule 9 (global)
         #

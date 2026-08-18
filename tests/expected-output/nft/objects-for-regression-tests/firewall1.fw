@@ -267,6 +267,16 @@ table ip fwf_filter {
         ct state established,related counter accept
         ct state invalid counter log prefix "INVALID " level debug drop
         #
+        # Rule 0 (eth0)
+        #
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 meter htable_Policy_0 { ip saddr timeout 3600s limit rate 1/hour burst 2 packets } counter log level debug drop
+        #
+        # Rule 1 (eth0)
+        #
+        iifname "eth0" ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto 1 meter htable_Policy_1 { ip daddr timeout 3600s limit rate 1/hour burst 2 packets } counter drop
+        iifname "eth0" ip saddr { 192.168.1.10, 192.168.1.20 } ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto 50 meter htable_Policy_1 { ip daddr timeout 3600s limit rate 1/hour burst 2 packets } counter drop
+        #
         # Rule 2 (eth1)
         #
         # Anti-spoofing rule
@@ -342,6 +352,19 @@ table ip fwf_filter {
         #
         ip saddr != 192.168.2.0/24 ip daddr 192.168.1.0/24 counter log level debug drop
         #
+        # Rule 22 (global)
+        #
+        ip saddr { 222.222.222.40, 222.222.222.40, 222.222.222.41, 222.222.222.41 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
+        #
+        # Rule 23 (global)
+        #
+        ip saddr { 192.168.1.0/24, 192.168.2.0/24 } ip daddr != { 192.168.1.10, 192.168.1.20 } counter log level debug drop
+        #
+        # Rule 28 (global)
+        #
+        # testing negation in service field
+        ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto != icmp ct state new counter accept
+        #
         # Rule 32 (global)
         #
         ip saddr { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } ip daddr != { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } tcp dport 80 ct state new counter accept
@@ -350,6 +373,16 @@ table ip fwf_filter {
         #
         ip saddr { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } ip daddr != { 22.22.22.22, 22.22.23.23, 127.0.0.1, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new counter accept
         ip saddr 192.168.2.0/24 ip daddr != { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } tcp dport 22 ct state new counter accept
+        #
+        # Rule 34 (global)
+        #
+        ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 1 counter log level debug drop
+        ip saddr { 22.22.22.22, 192.168.1.1 } ip daddr != { 22.22.22.22, 192.168.1.1 } meta l4proto 50 counter log level debug drop
+        #
+        # Rule 35 (global)
+        #
+        # double negation rule
+        ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport != { 3128, 8080 } counter log level debug drop
         #
         # Rule 36 (global)
         #
@@ -575,6 +608,25 @@ table ip fwf_filter {
         # Rule 15 (global)
         #
         ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } ct state new counter accept
+        #
+        # Rule 16 (global)
+        #
+        # testing negation in the policy rule
+        ip saddr != { 192.168.1.10, 192.168.1.20 } icmp type destination-unreachable limit rate 10/minute counter log level debug drop
+        #
+        # Rule 17 (global)
+        #
+        # testing negation in the policy rule
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } limit rate 10/minute counter name "RULE_17" log level debug
+        #
+        # Rule 18 (global)
+        #
+        # testing negation in the policy rule
+        ip saddr != { 192.168.1.10, 192.168.1.20 } tcp dport { 80, 443 } ct state new limit rate 10/minute counter log level debug accept
+        #
+        # Rule 19 (global)
+        #
+        ip saddr != { 192.168.1.10, 192.168.1.20 } ip daddr { 22.22.22.22, 22.22.23.23, 192.168.1.1, 192.168.2.1 } icmp type destination-unreachable counter log level debug drop
         #
         # Rule 20 (global)
         #

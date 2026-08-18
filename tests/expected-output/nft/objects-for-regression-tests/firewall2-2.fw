@@ -345,6 +345,12 @@ table ip fwf_filter {
         # iptables version is >= 1.2.11
         ip saddr != 192.168.1.10-192.168.1.100 udp dport 161 ct state new counter accept
         #
+        # Rule 17 (global)
+        #
+        # using module iprange if
+        # iptables version is >= 1.2.11
+        ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        #
         # Rule 18 (global)
         #
         # using module iprange if
@@ -640,6 +646,12 @@ table ip fwf_filter {
         # using module iprange if
         # iptables version is >= 1.2.11
         ip daddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
+        #
+        # Rule 18 (global)
+        #
+        # using module iprange if
+        # iptables version is >= 1.2.11
+        ip saddr != { 192.168.1.0, 192.168.1.10-192.168.1.100 } udp dport 161 ct state new counter accept
         #
         # Rule 20 (global)
         #

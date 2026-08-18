@@ -341,6 +341,12 @@ table ip fwf_mangle {
         meta l4proto 50 ct state new counter meta mark set 16
         meta l4proto 51 ct state new counter meta mark set 16
         #
+        # Rule 2 (global)
+        #
+        # terminating target
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter meta mark set 16
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter meta mark set 16
+        #
         # Rule 4 (eth1)
         #
         # temrinating target
@@ -362,6 +368,14 @@ table ip fwf_mangle {
         meta l4proto 51 ct state new counter meta mark set 10
         meta l4proto 50 ct state new counter ct mark set mark
         meta l4proto 51 ct state new counter ct mark set mark
+        #
+        # Rule 7 (global)
+        #
+        # terminating and  CONNMARK
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter meta mark set 10
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter meta mark set 10
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 50 ct state new counter ct mark set mark
+        ip saddr != { 192.168.1.0/24, 192.168.2.0/24 } meta l4proto 51 ct state new counter ct mark set mark
         #
         # Rule 9 (eth1)
         #
