@@ -18,6 +18,75 @@ and day-of-week constraints from Interval objects.
 
 from __future__ import annotations
 
+import calendar
+import typing
+
+
+class Date(typing.NamedTuple):
+    """One end of an Interval's calendar window, down to the minute."""
+
+    year: int
+    month: int
+    day: int
+    hour: int
+    minute: int
+
+    def iso(self, separator: str = 'T') -> str:
+        """Return the date as ``YYYY-MM-DD<sep>hh:mm:ss``.
+
+        ``T`` is what iptables reads (ISO 8601, netfilter
+        extensions/libxt_time.c: time_parse_date), a blank what nftables
+        reads (netfilter nftables src/meta.c: parse_iso_date).
+        """
+        return (
+            f'{self.year:04d}-{self.month:02d}-{self.day:02d}'
+            f'{separator}{self.hour:02d}:{self.minute:02d}:00'
+        )
+
+    def epoch(self) -> int:
+        """Return the date as seconds since the epoch, read as UTC.
+
+        iptables sets ``TZ=UTC`` before it converts ``--datestart``, and
+        the kernel does whatever offsetting is asked for
+        (extensions/libxt_time.c), so the number stored in the rule is
+        the UTC one.
+        """
+        return calendar.timegm(
+            (self.year, self.month, self.day, self.hour, self.minute, 0, 0, 0, 0)
+        )
+
+
+# The calendar range the packet filters can carry.  iptables refuses a
+# year outside it outright ("Invalid date", netfilter
+# extensions/libxt_time.c: time_parse_date), and nftables answers
+# "Cannot parse date" as soon as timegm() overflows on one
+# (nftables src/meta.c: parse_iso_date), so the narrower of the two
+# limits is what an Interval has to stay inside.  A date the tool
+# refuses is not a rule that matches too much - it stops the activation
+# script with every chain already set to drop.
+DATE_FIRST_YEAR = 1970
+DATE_LAST_YEAR = 2038
+
+
+def date_problem(date: Date) -> str:
+    """Return what is wrong with *date*, or an empty string.
+
+    The checks are the ones ``time_parse_date`` makes.  A ``.fwb`` can
+    carry anything the editor let through - the Firewall Builder
+    regression suite has a time object stored with the year 2935093.
+    """
+    if not DATE_FIRST_YEAR <= date.year <= DATE_LAST_YEAR:
+        return (
+            f'the year {date.year} is outside {DATE_FIRST_YEAR}-{DATE_LAST_YEAR}, '
+            'which is the whole range a packet filter can express'
+        )
+    if not 1 <= date.month <= 12:
+        return f'there is no month {date.month}'
+    if not 1 <= date.day <= 31:
+        return f'there is no day {date.day}'
+    return ''
+
+
 # Day-of-week names following fwbuilder convention (0=Sun).
 DOW_NAMES_FULL = {
     0: 'Sunday',
@@ -123,11 +192,49 @@ def _days_from_weekday_range(from_weekday: int, to_weekday: int) -> list[int]:
     return sorted(days)
 
 
+def parse_interval_dates(data: dict) -> tuple[Date | None, Date | None]:
+    """Extract the calendar window of an Interval, if it has one.
+
+    An Interval carries a first and a last calendar date next to its time
+    of day and its weekdays, and Firewall Builder writes that pair out as
+    ``-m time --datestart`` / ``--datestop``
+    (fwbuilder iptlib/PolicyCompiler_PrintRule.cpp:1387).  A date only
+    counts when day, month and year are all set, which is the same test
+    the C++ makes; an Interval whose calendar part was never filled in
+    stores -1 in all three.
+
+    The time of day belongs to the date: a calendar window runs from
+    ``datestart`` at its start time to ``datestop`` at its stop time, and
+    the daily window is not applied on top of it, which is why the C++
+    drops ``--timestart`` / ``--timestop`` as soon as either date is
+    there.
+
+    Returns ``(start, stop)``, either of which may be ``None``.
+    """
+    start_h, start_m, end_h, end_m, _days = parse_interval_data(data)
+
+    def _date(prefix: str, hour: int, minute: int) -> Date | None:
+        day = _safe_int(data.get(f'{prefix}_day', -1))
+        month = _safe_int(data.get(f'{prefix}_month', -1))
+        year = _safe_int(data.get(f'{prefix}_year', -1))
+        if day <= 0 or month <= 0 or year <= 0:
+            return None
+        return Date(year, month, day, hour, minute)
+
+    return (
+        _date('from', start_h, start_m),
+        _date('to', end_h, end_m),
+    )
+
+
 def is_any_interval(data: dict) -> bool:
     """Return True if the interval data represents "Any" (no constraint).
 
     An interval is "Any" when it covers the full day (00:00-23:59) on
-    all seven days of the week.
+    all seven days of the week and pins no calendar date.  A rule that
+    runs all day every day but only until a given date is not "Any":
+    reading it as such takes the end date off the rule and leaves it
+    matching for good.
     """
     start_h, start_m, end_h, end_m, days = parse_interval_data(data)
     return (
@@ -136,6 +243,7 @@ def is_any_interval(data: dict) -> bool:
         and end_h == 23
         and end_m == 59
         and sorted(days) == list(range(7))
+        and parse_interval_dates(data) == (None, None)
     )
 
 

@@ -23,6 +23,7 @@ separately in _nat_print_rule.py.
 
 from __future__ import annotations
 
+import datetime
 import ipaddress
 import re
 import uuid
@@ -31,8 +32,10 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import (
     DOW_NAMES_FULL,
+    date_problem,
     is_any_interval,
     parse_interval_data,
+    parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
@@ -437,6 +440,13 @@ def tcp_flags_match_nft(srv, negated: bool = False) -> str:
         comp_pipe = ' | '.join(comp_names)
         return f'tcp flags & ({mask_pipe}) == {comp_pipe}'
     return f'tcp flags {",".join(comp_names)} / {",".join(mask_names)}'
+
+
+# The last second a signed 32-bit time stamp can name, 2038-01-19 03:14:07
+# UTC.  iptables-translate fills it in for a rule that names only a start
+# date, because `meta time` is one range and cannot be half open
+# (netfilter extensions/libxt_time.txlate).
+_LAST_SIGNED_32BIT_SECOND = 2147483647
 
 
 class PrintRule_nft(PolicyRuleProcessor):
@@ -1937,6 +1947,57 @@ class PrintRule_nft(PolicyRuleProcessor):
         head, _, rest = value.partition(' ')
         return f'{keyword} {head} != {rest}'
 
+    def _print_time_range(
+        self, rule: CompRule, data: dict, interval, kerneltz: bool
+    ) -> str | None:
+        """Return the ``meta time`` match for an Interval's calendar window.
+
+        An empty string means the Interval pins no date.  ``None`` means a
+        date nftables refuses, which costs the whole ruleset, so the caller
+        leaves the rule out.
+
+        ``meta time`` is one range and iptables lets either end stand
+        alone, so a missing end becomes the end of what a signed 32-bit
+        time stamp can hold - the same bounds ``iptables-translate`` fills
+        in (netfilter extensions/libxt_time.txlate).
+
+        The two spellings the range is written in are the same choice
+        ``_hour_literal`` makes.  Without ``--kerneltz`` iptables compares
+        the packet's UTC stamp against a bound it read as UTC, so the bound
+        goes out as the plain number of seconds nftables reads with
+        ``strtoul``.  With ``--kerneltz`` the comparison is in local time,
+        which is what nftables does with a quoted date: it subtracts the
+        loading host's offset from the literal (netfilter nftables
+        src/meta.c: parse_iso_date).
+        """
+        start, stop = parse_interval_dates(data)
+        if start is None and stop is None:
+            return ''
+
+        bounds = []
+        for date, fallback in ((start, 0), (stop, _LAST_SIGNED_32BIT_SECOND)):
+            if date is None:
+                bounds.append(self._time_literal(fallback, kerneltz))
+                continue
+            problem = date_problem(date)
+            if problem:
+                self.compiler.error(
+                    rule,
+                    f'Time object "{interval.name}" names a date nftables '
+                    f'refuses: {problem}. The rule is left out',
+                )
+                return None
+            bounds.append(date.iso(' ') if kerneltz else str(date.epoch()))
+        return f'meta time {bounds[0]}-{bounds[1]}'
+
+    @staticmethod
+    def _time_literal(epoch: int, kerneltz: bool) -> str:
+        """Render a point in time for ``meta time``, in the spelling in use."""
+        if not kerneltz:
+            return str(epoch)
+        moment = datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC)
+        return f'"{moment.strftime("%Y-%m-%d %H:%M:%S")}"'
+
     def _print_time_interval(self, rule: CompRule) -> str | None:
         """Print nftables time/weekday matching.
 
@@ -1974,13 +2035,25 @@ class PrintRule_nft(PolicyRuleProcessor):
         kerneltz = bool(self.compiler.fw.get_option('use_kerneltz'))
 
         parts = []
-        hour_match = self._print_hour_range(
-            start_h * 3600 + start_m * 60,
-            end_h * 3600 + end_m * 60,
-            kerneltz,
-        )
-        if hour_match:
-            parts.append(hour_match)
+        date_match = self._print_time_range(rule, data, interval, kerneltz)
+        if date_match is None:
+            return None
+        if date_match:
+            # A calendar window carries its own start and stop time, and
+            # iptables drops the daily window as soon as one of the two
+            # dates is there (fwbuilder
+            # iptlib/PolicyCompiler_PrintRule.cpp: use_timestart_timestop).
+            # Writing both would narrow the rule to the hours of the last
+            # day and make the two platforms disagree.
+            parts.append(date_match)
+        else:
+            hour_match = self._print_hour_range(
+                start_h * 3600 + start_m * 60,
+                end_h * 3600 + end_m * 60,
+                kerneltz,
+            )
+            if hour_match:
+                parts.append(hour_match)
 
         if sorted(days) != list(range(7)):
             day_names = ', '.join(f'"{DOW_NAMES_FULL[d]}"' for d in days)

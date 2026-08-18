@@ -26,8 +26,10 @@ from typing import TYPE_CHECKING, ClassVar, cast
 from firewallfabrik.compiler._combined_address import CombinedAddress
 from firewallfabrik.compiler._interval_helpers import (
     DOW_NAMES_SHORT,
+    date_problem,
     is_any_interval,
     parse_interval_data,
+    parse_interval_dates,
 )
 from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
 from firewallfabrik.core.objects import (
@@ -1295,17 +1297,16 @@ class PrintRule(PolicyRuleProcessor):
         """Print ``-m time`` matching for time/weekday constraints.
 
         Ports fwbuilder's ``PolicyCompiler_ipt::PrintRule::_printTimeInterval``
-        (PolicyCompiler_PrintRule.cpp:1387), without the ``--datestart`` /
-        ``--datestop`` branch: an Interval that pins a calendar date is not
-        modelled here.
+        (PolicyCompiler_PrintRule.cpp:1387).
 
         The option names depend on the iptables version. The time module was
         rewritten in 1.4.0: the weekday list is ``--days`` before that and
-        ``--weekdays`` since (netfilter extensions/libxt_time.c), and
-        ``--kerneltz`` only exists from 1.4.11 on.  That rewrite is also
-        when the match reached ip6tables at all, so an older ip6tables gets
-        no time match; returns ``None`` then, so the caller can leave the
-        rule out instead of running it around the clock.
+        ``--weekdays`` since (netfilter extensions/libxt_time.c), the
+        calendar window arrived with the same rewrite, and ``--kerneltz``
+        only exists from 1.4.11 on.  That rewrite is also when the match
+        reached ip6tables at all, so an older ip6tables gets no time match;
+        returns ``None`` then, so the caller can leave the rule out instead
+        of running it around the clock.
         """
         if not rule.when:
             return ''
@@ -1320,10 +1321,30 @@ class PrintRule(PolicyRuleProcessor):
             return None
 
         start_h, start_m, end_h, end_m, days = parse_interval_data(data)
+        have_dates = version_compare(self.version, '1.4.0') >= 0
 
         parts = ['-m time']
-        parts.append(f'--timestart {start_h:02d}:{start_m:02d}')
-        parts.append(f'--timestop {end_h:02d}:{end_m:02d}')
+        dates = self._print_time_dates(rule, data, interval)
+        if dates is None:
+            return None
+        if dates:
+            # A calendar window carries its own start and stop time, and
+            # the C++ drops the daily window as soon as either date is
+            # there (`use_timestart_timestop = false`).  Writing both would
+            # narrow the rule to the hours of the last day.
+            parts.extend(dates)
+        else:
+            parts.append(f'--timestart {start_h:02d}:{start_m:02d}')
+            parts.append(f'--timestop {end_h:02d}:{end_m:02d}')
+            if not have_dates and parse_interval_dates(data) != (None, None):
+                # The 1.2.x time match has no date options at all, so the
+                # window silently becomes "every day, for good".
+                self.compiler.warning(
+                    rule,
+                    f'iptables before 1.4.0 cannot limit a rule to the dates '
+                    f'"{interval.name}" names; only its time of day and its '
+                    'weekdays are matched',
+                )
 
         if sorted(days) != list(range(7)):
             day_names = ','.join(DOW_NAMES_SHORT[d] for d in days)
@@ -1340,6 +1361,35 @@ class PrintRule(PolicyRuleProcessor):
             parts.append('--kerneltz')
 
         return ' '.join(parts) + ' '
+
+    def _print_time_dates(
+        self, rule: CompRule, data: dict, interval
+    ) -> list[str] | None:
+        """Return the ``--datestart`` / ``--datestop`` options, if any.
+
+        An empty list means the Interval pins no date, or the pinned
+        iptables has no options for one.  ``None`` means a date the tool
+        refuses, which would stop the activation script with every chain
+        already set to drop, so the caller leaves the rule out.
+        """
+        if version_compare(self.version, '1.4.0') < 0:
+            return []
+
+        start, stop = parse_interval_dates(data)
+        parts = []
+        for date, option in ((start, '--datestart'), (stop, '--datestop')):
+            if date is None:
+                continue
+            problem = date_problem(date)
+            if problem:
+                self.compiler.error(
+                    rule,
+                    f'Time object "{interval.name}" names a date iptables '
+                    f'refuses: {problem}. The rule is left out',
+                )
+                return None
+            parts.append(f'{option} {date.iso()}')
+        return parts
 
     def _print_connlimit(self, rule: CompRule) -> str | None:
         """Print ``-m connlimit``, the limit on concurrent connections.
