@@ -1221,7 +1221,7 @@ Key helper methods:
 | `_printSrcService()` / `_printDstService()` | `--sport`/`--dport` ports, `--sports`/`--dports` for multiport, `--icmp-type`, `--tcp-flags` |
 | `_printTarget()` | `-j TARGET` with options: `--reject-with`, `--set-mark`, `--set-class`, LOG params |
 | `_printLogParameters()` | `-j LOG --log-level --log-prefix` or `-j ULOG/NFLOG --nflog-group --nflog-prefix` |
-| `_printTimeInterval()` | `-m time --timestart HH:MM --timestop HH:MM --days Mon,Tue,...` |
+| `_printTimeInterval()` | `-m time --timestart HH:MM --timestop HH:MM --days Mon,Tue,...`, or `--datestart`/`--datestop` for an interval that pins a calendar window (iptables 1.4.0 and up) |
 | `_printModules()` | `-m limit --limit N/s`, `-m connlimit --connlimit-above N`, `-m hashlimit ...` |
 | `_printActionOnReject()` | `--reject-with tcp-reset`, `--reject-with icmp-port-unreachable`, etc. |
 | `_printRuleLabel()` | Comment block: `# Rule N (label)\n# description\necho "Rule N ..."\n` |
@@ -1577,6 +1577,12 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
   and a weekday is reported and left out: its negation is a disjunction, which
   one nftables rule cannot hold. iptables expands it into a temporary chain
   like the address negations.
+- Calendar window of an `Interval` — the first and last date are compiled as
+  `--datestart` / `--datestop` on iptables 1.4.0 and up and as `meta time` on
+  nftables, and the daily window is then dropped, the way fwbuilder does it.
+  An older iptables has no date options in its time match, so the rule is
+  compiled without them and says so; a date outside the 1970-2038 range both
+  tools can express is reported and the rule is left out.
 - `SplitIfSrcAny` — no POSTROUTING copy for mangle+classification, no bridging / bridge-port check
 - `SplitIfDstAny` — no PREROUTING copy for mangle+classification
 - `InterfacePolicyRulesWithOptimization` — splits one rule per interface but does not factor the common rule body into a shared user-defined chain
@@ -1585,7 +1591,11 @@ Every processor documented above is ported and behaves like fwbuilder unless it 
 ### Reporting
 
 A message about a rule is recorded once per compiler, not once per copy of
-the rule.  One rule as the editor shows it reaches the print rule as
+the rule.  This holds for a warning as much as for an error: `Compiler`
+overrides `warning()` only to word the message the way the Firewall
+Builder output does, and an override that forgets the record or the
+`muted()` check turns every internal copy of a rule into another line of
+the report.  One rule as the editor shows it reaches the print rule as
 several - the service split gives an ICMP and a TCP half a rule each, the
 negation expansion builds three, the chain decisions split on top of that -
 and repeating one sentence per copy buries the rest of the report.  The
