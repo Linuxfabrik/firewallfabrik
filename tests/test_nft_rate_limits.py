@@ -287,3 +287,76 @@ def test_the_entry_ceiling_of_a_rate_limit_table_reaches_the_meter():
     rule.srv = []
     out = printer._print_hashlimit(rule)
     assert out.startswith('meter htable_Policy_0 size 128 {')
+
+
+def _meter_printer():
+    """A printer wired to the real meter registry of PolicyCompiler_nft."""
+    from firewallfabrik.platforms.nftables._policy_compiler import PolicyCompiler_nft
+
+    printer = _printer()
+    printer.compiler.meters = {}
+    printer.compiler.ipv6_policy = False
+    printer.compiler.muted_now = False
+    printer.compiler.get_rule_set_name = lambda: 'Policy'
+    printer.compiler.register_meter = lambda *args: PolicyCompiler_nft.register_meter(
+        printer.compiler, *args
+    )
+    return printer
+
+
+def _meter_rule(position, **options):
+    """A rule on a TCP service, so a port key is one the kernel can read."""
+    import uuid
+
+    from firewallfabrik.core.objects import TCPService
+
+    rule = _Rule(hashlimit_value=10, hashlimit_name='shared', **options)
+    rule.position = position
+    rule.srv = [TCPService(id=uuid.uuid4(), name='http')]
+    return rule
+
+
+def test_two_rules_may_share_a_rate_limit_table_of_the_same_shape():
+    printer = _meter_printer()
+    first = printer._print_hashlimit(_meter_rule(0, hashlimit_mode_srcip=True))
+    second = printer._print_hashlimit(_meter_rule(1, hashlimit_mode_srcip=True))
+
+    assert first == second
+    assert printer.compiler.errors == []
+
+
+def test_a_rule_keying_a_shared_rate_limit_table_differently_is_left_out():
+    """The kernel takes the second rule and reinterprets its key.
+
+    A meter is a typed set, created with the key type of the first rule
+    that names it.  Loading such a ruleset in a network namespace shows
+    nftables accepting a rule that writes a `tcp dport` into an
+    `ipv4_addr` set without a word, so neither rule limits what it says.
+    """
+    printer = _meter_printer()
+    printer._print_hashlimit(_meter_rule(0, hashlimit_mode_srcip=True))
+    second = printer._print_hashlimit(_meter_rule(1, hashlimit_mode_dstport=True))
+
+    assert second is None
+    assert any('already in use' in message for message in printer.compiler.errors)
+
+
+def test_the_shape_is_not_claimed_while_the_compiler_is_rehearsing():
+    """`Optimize3` renders every rule once more and may then drop it.
+
+    Claiming the name there would report the next rule against a meter no
+    rule in the ruleset declares.  The iptables `_check_hashlimit_table`
+    returns early for the same reason.
+    """
+    printer = _meter_printer()
+    printer.compiler.muted_now = True
+    rehearsed = printer._print_hashlimit(_meter_rule(0, hashlimit_mode_srcip=True))
+    printer.compiler.muted_now = False
+
+    assert rehearsed is not None
+    assert printer.compiler.meters == {}
+    assert (
+        printer._print_hashlimit(_meter_rule(1, hashlimit_mode_dstport=True))
+        is not None
+    )
+    assert printer.compiler.errors == []
