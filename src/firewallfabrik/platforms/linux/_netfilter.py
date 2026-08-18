@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import uuid
 
-from firewallfabrik.core.objects import Host, Interface, PhysAddress
+from firewallfabrik.core.objects import Host, Interface, PhysAddress, TagService
 
 # A packet only carries the device it goes out on once the routing decision
 # is made, so the PRE_ROUTING and LOCAL_IN hooks cannot match an outgoing
@@ -506,3 +507,28 @@ def get_mac_only_address(obj) -> str:
         if isinstance(addr, PhysAddress) and addr.get_address():
             return addr.get_address()
     return ''
+
+
+def get_tag_value(compiler, rule) -> str:
+    """Return the packet mark a tagging rule sets, or an empty string.
+
+    Ports ``PolicyRule::getTagValue()``
+    (libfwbuilder/src/fwbuilder/Rule.cpp:571), which has two sources and
+    asks them in this order: the Tag Service object the rule names carries
+    the mark, and *if there is no such object* the mark is read straight
+    off the rule option ``tagvalue``.
+
+    That second half is how Firewall Builder stored a tag before Tag
+    Service objects existed, and it still reads it - so a policy written
+    with an older release compiles there and had its tagging rules
+    reported and left out here.
+    """
+    tag_id = rule.get_option('tagobject_id', '')
+    if tag_id:
+        try:
+            tag_obj = compiler.session.get(TagService, uuid.UUID(str(tag_id)))
+        except (AttributeError, ValueError):
+            tag_obj = None
+        if tag_obj:
+            return tag_obj.get_code() or ''
+    return str(rule.get_option('tagvalue', '') or '').strip()

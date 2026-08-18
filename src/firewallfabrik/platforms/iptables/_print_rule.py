@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import ipaddress
 import re
-import uuid
 from typing import TYPE_CHECKING, ClassVar, cast
 
 from firewallfabrik.compiler._combined_address import CombinedAddress
@@ -77,6 +76,7 @@ from firewallfabrik.platforms.iptables._utils import (
 from firewallfabrik.platforms.linux._netfilter import (
     bridge_port_match_needs_the_bridge,
     check_interface_name,
+    get_tag_value,
     has_ip_options,
     is_valid_traffic_class,
     normalize_hashlimit_mode,
@@ -1835,21 +1835,6 @@ class PrintRule(PolicyRuleProcessor):
         }
     )
 
-    def _get_tag_value(self, rule: CompRule) -> str:
-        """Return the mark of the Tag Service a tagging rule refers to.
-
-        Ports fwbuilder's ``PolicyRule::getTagValue()``: the rule options
-        name the Tag Service, the service carries the mark.
-        """
-        tag_id = rule.get_option('tagobject_id', '')
-        if not tag_id:
-            return ''
-        try:
-            tag_obj = self.compiler.session.get(TagService, uuid.UUID(str(tag_id)))
-        except (AttributeError, ValueError):
-            return ''
-        return tag_obj.get_code() if tag_obj else ''
-
     def _mark_mask_available(self, rule: CompRule) -> bool:
         """Whether the pinned iptables takes ``--set-mark value/mask``.
 
@@ -1907,7 +1892,7 @@ class PrintRule(PolicyRuleProcessor):
         # value with it, so they come before the generic target mapping
         # (fwbuilder PolicyCompiler_PrintRule::_printTarget).
         if rule.get_option('tagging', False):
-            tag_value = self._get_tag_value(rule)
+            tag_value = get_tag_value(self.compiler, rule)
             if not tag_value:
                 self.compiler.error(
                     rule,
