@@ -95,3 +95,31 @@ def test_the_slips_a_hand_makes_are_all_covered():
         said = _warnings({typed: True})
         assert len(said) == 1, typed
         assert 'accept_established' in said[0], typed
+
+
+def test_a_setting_the_compiler_does_not_implement_is_named():
+    """The option is in the schema, the script does not act on it.
+
+    Both belong to the bonding and VLAN interface configuration
+    (https://github.com/Linuxfabrik/firewallfabrik/issues/95), which
+    Firewall Builder writes into the generated script and this compiler
+    does not.  Without a word the administrator gets a script that comes
+    up without the interfaces the rules are written for.
+    """
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bonding_interfaces': True, 'configure_vlan_interfaces': True}
+    )
+
+    assert len(driver.said) == 2
+    assert any('bonding' in message for message in driver.said)
+    assert any('VLAN' in message for message in driver.said)
+
+
+def test_a_setting_left_at_its_default_says_nothing():
+    driver = _Driver()
+    driver._warn_unsupported_options(
+        {'configure_bonding_interfaces': False, 'configure_vlan_interfaces': False}
+    )
+
+    assert driver.said == []

@@ -191,6 +191,16 @@ class CompilerDriver(BaseCompiler):
     # for each one so nothing is overlooked.
     _UNSUPPORTED_BOOL_OPTIONS: ClassVar[list[tuple[str, str]]] = [
         (
+            'configure_bonding_interfaces',
+            'the generated script does not create or remove bonding interfaces; '
+            'they have to exist on the firewall before it runs',
+        ),
+        (
+            'configure_vlan_interfaces',
+            'the generated script does not create or remove VLAN interfaces; '
+            'they have to exist on the firewall before it runs',
+        ),
+        (
             'use_ULOG',
             'ULOG is deprecated and has been removed from modern Linux kernels; falling back to LOG',
         ),

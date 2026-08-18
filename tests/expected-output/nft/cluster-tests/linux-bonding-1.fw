@@ -10,6 +10,8 @@
 #
 #  VLAN and bonding interface configuration
 #
+# the generated script does not create or remove bonding interfaces; they have to exist on the firewall before it runs
+# the generated script does not create or remove VLAN interfaces; they have to exist on the firewall before it runs
 
 FWBDEBUG=""
 # Every branch of the case below is expected to leave an exit code here, and
