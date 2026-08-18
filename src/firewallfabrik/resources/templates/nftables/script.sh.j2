@@ -363,8 +363,16 @@ case "$cmd" in
 {% if routing_output %}
         routing_script
 {% endif %}
+{# The exit code of the last /proc/sys write is not the exit code of the
+   activation.  A firewall that switches on IPv6 forwarding ends `ip_forward`
+   with a write to /proc/sys/net/ipv6/conf/all/forwarding, which does not
+   exist on a kernel built without IPv6 or booted with ipv6.disable=1, and
+   /proc/sys is read-only in a container and under systemd's
+   ProtectKernelTunables.  Taking that status here reported a failed
+   activation for a ruleset that had just loaded and was filtering; the
+   iptables skeleton leaves RETVAL at 0 for the whole start branch, and so
+   does fwbuilder. #}
         ip_forward
-        RETVAL=$?
         epilog_commands
         log "Firewall script is done"
         ;;

@@ -337,7 +337,6 @@ case "$cmd" in
         script_body || run_epilog_and_exit 1
         routing_script
         ip_forward
-        RETVAL=$?
         epilog_commands
         log "Firewall script is done"
         ;;

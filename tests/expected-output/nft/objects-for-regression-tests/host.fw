@@ -234,7 +234,6 @@ case "$cmd" in
         set_kernel_variables
         script_body || run_epilog_and_exit 1
         ip_forward
-        RETVAL=$?
         epilog_commands
         log "Firewall script is done"
         ;;
