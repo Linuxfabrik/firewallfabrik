@@ -47,6 +47,8 @@ from firewallfabrik.compiler.processors._generic import (
 )
 from firewallfabrik.compiler.processors._policy import (
     DropRuleWithImpossibleInterface,
+    ItfNegation,
+    SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
 )
@@ -250,6 +252,15 @@ class PolicyCompiler_nft(PolicyCompiler):
         # Interface and direction
         self.add(ExpandGroupsInItf('expand groups in Itf'))
         self.add(ReplaceClusterInterfaceInItfRE('replace cluster interfaces', 'itf'))
+        # "Not these interfaces" is the firewall's *other* protected
+        # interfaces, not every interface there is: `iifname != { ... }`
+        # would also match the loopback, an interface the object tree does
+        # not know and one the admin marked unprotected.  Same two steps,
+        # in the same order, as the iptables pipeline and as this
+        # platform's own NAT pipeline (fwbuilder
+        # Compiler::fullInterfaceNegationInRE, bug #2710034).
+        self.add(SingleObjectNegationItf('single object negation in Itf'))
+        self.add(ItfNegation('process negation in Itf'))
         self.add(DecideOnChainForClassify('set chain for action is Classify'))
 
         self.add(InterfaceAndDirection('interface+dir'))
@@ -881,9 +892,12 @@ class NftNegation(PolicyRuleProcessor):
 
     nftables has native != support for both single and multi-object,
     so we just convert all negation flags directly — no temp chains needed.
-    The interface element is included: iptables has to replace a negated
-    interface with the set of all the other ones, nftables matches
-    ``iifname != { ... }`` directly.
+
+    The interface element is *not* one of them.  It is handled far
+    upstream by `SingleObjectNegationItf` and `ItfNegation`, because "not
+    these interfaces" means the firewall's other protected interfaces and
+    not every interface there is - `iifname != { ... }` would also match
+    the loopback and whatever the object tree does not know about.
     """
 
     def process_next(self) -> bool:
@@ -899,9 +913,6 @@ class NftNegation(PolicyRuleProcessor):
         if rule.get_neg('srv'):
             rule.srv_single_object_negation = True
             rule.set_neg('srv', False)
-        if rule.get_neg('itf'):
-            rule.itf_single_object_negation = True
-            rule.set_neg('itf', False)
         self.tmp_queue.append(rule)
         return True
 

@@ -52,6 +52,7 @@ from firewallfabrik.compiler.processors._policy import (
     AddressRangesInSrc,
     DropRuleWithImpossibleInterface,
     ItfNegation,
+    SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
 )
@@ -1098,20 +1099,6 @@ class InterfacePolicyRulesWithOptimization(PolicyRuleProcessor):
             r.subrule_suffix = 'i1'
             self.tmp_queue.append(r)
 
-        return True
-
-
-class SingleObjectNegationItf(PolicyRuleProcessor):
-    """Handle single-object interface negation."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-        if rule.get_neg('itf') and len(rule.itf) == 1:
-            rule.itf_single_object_negation = True
-            rule.set_neg('itf', False)
-        self.tmp_queue.append(rule)
         return True
 
 

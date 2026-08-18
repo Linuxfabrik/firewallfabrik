@@ -162,6 +162,27 @@ def expand_interface_negation(compiler, rule, slot: str) -> bool:
     return True
 
 
+class SingleObjectNegationItf(PolicyRuleProcessor):
+    """Carry a single negated interface through as an inline negation.
+
+    Ports ``Compiler::singleObjectNegation`` for the Itf element, which
+    takes the interface elements without asking anything else of them
+    (Compiler.cpp).  Both back ends can say "not this one" in a rule:
+    ``! -i eth0`` and ``iifname != "eth0"``.  Several of them cannot be
+    said that way and go to `ItfNegation` instead.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        if rule.get_neg('itf') and len(rule.itf) == 1:
+            rule.itf_single_object_negation = True
+            rule.set_neg('itf', False)
+        self.tmp_queue.append(rule)
+        return True
+
+
 class ItfNegation(PolicyRuleProcessor):
     """Process negation in interface rule element.
 

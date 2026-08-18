@@ -282,7 +282,8 @@ table ip fwf_filter {
         #
         # Rule 7 (eth1,eth3)
         #
-        iifname != { "eth1", "eth3" } ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
+        iifname "eth2" ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
         #
         # Rule 8 (lo)
         #
@@ -412,7 +413,8 @@ table ip fwf_filter {
         #
         # Rule 7 (eth1,eth3)
         #
-        iifname != { "eth1", "eth3" } ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
+        iifname "eth0" ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
+        iifname "eth2" ip saddr { 22.22.23.128/25, 33.33.33.0/24 } counter log level debug drop
         #
         # Rule 9 (eth0,eth2)
         #
