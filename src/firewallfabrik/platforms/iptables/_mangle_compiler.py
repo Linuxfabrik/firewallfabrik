@@ -20,8 +20,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from firewallfabrik.compiler._rule_processor import PolicyRuleProcessor
-from firewallfabrik.core.objects import PolicyAction
+from firewallfabrik.compiler.processors._policy import (
+    KeepMangleTableRules as SharedKeepMangleTableRules,
+)
 from firewallfabrik.platforms.iptables._policy_compiler import PolicyCompiler_ipt
 from firewallfabrik.platforms.iptables._utils import (
     TARGET_FIRST_RELEASE,
@@ -145,52 +146,11 @@ class MangleTableCompiler_ipt(PolicyCompiler_ipt):
         return self.have_connmark_in_output
 
 
-class KeepMangleTableRules(PolicyRuleProcessor):
-    """Filter that keeps only rules destined for the mangle table.
+class KeepMangleTableRules(SharedKeepMangleTableRules):
+    """Keep only the rules that require the mangle table.
 
-    Keeps rules with tagging, routing, classification, CONNMARK,
-    or rules from mangle-only rulesets.
+    The iptables spelling of the built-in chains, and the one hook the
+    CLASSIFY target does not register for.
     """
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        # Keep rules with tagging, routing, or classification options
-        if (
-            rule.get_option('tagging', False)
-            or rule.get_option('routing', False)
-            or rule.get_option('classification', False)
-        ):
-            self.tmp_queue.append(rule)
-            return True
-
-        # Keep rules with put_in_mangle_table option
-        if rule.get_option('put_in_mangle_table', False):
-            self.tmp_queue.append(rule)
-            return True
-
-        # Handle branch rules that need mangle table
-        if rule.action == PolicyAction.Branch and rule.get_option(
-            'ipt_branch_in_mangle', False
-        ):
-            self.tmp_queue.append(rule)
-            return True
-
-        # Check if rule belongs to a mangle-only ruleset
-        if (
-            self.compiler
-            and self.compiler.source_ruleset
-            and hasattr(self.compiler.source_ruleset, 'options')
-        ):
-            rs_opts = self.compiler.source_ruleset.options or {}
-            mangle_only = rs_opts.get('mangle_only_rule_set', False)
-            if isinstance(mangle_only, str):
-                mangle_only = mangle_only.lower() == 'true'
-            if mangle_only:
-                self.tmp_queue.append(rule)
-                return True
-
-        # Drop all other rules (they go to filter table)
-        return True
+    CLASSIFY_FORBIDDEN_CHAINS = ('PREROUTING',)

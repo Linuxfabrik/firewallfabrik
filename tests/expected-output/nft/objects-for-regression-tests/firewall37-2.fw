@@ -309,6 +309,46 @@ table ip fwf_mangle {
         #
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter meta mark set 2
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta mark set 2
+        #
+        # Rule 16 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        counter jump classify_2
+        #
+        # Rule 17 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        # Should create branch in OUTPUT instead of
+        # enumerating all ip addresses of the fw in PREROUTING
+        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter jump classify_2
+    }
+
+    chain forward {
+        type filter hook forward priority mangle; policy accept;
+        #
+        # Rule 16 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        counter jump classify_2
+        #
+        # Rule 17 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        # Should create branch in OUTPUT instead of
+        # enumerating all ip addresses of the fw in PREROUTING
+        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter jump classify_2
     }
 
     chain postrouting {
@@ -381,6 +421,24 @@ table ip fwf_mangle {
         #
         iifname "eth0" ip saddr 192.168.1.0/24 icmp type echo-request icmp code 0 counter meta priority set 1:2
         iifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter meta priority set 1:2
+        #
+        # Rule 16 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        counter jump classify_2
+        #
+        # Rule 17 (global)
+        #
+        # test for #2405
+        # branching in mangle; branch rule set
+        # uses CLASSIFY that is ivalid in PREROUTING
+        # "Assume fw is part of any" is off for this rule
+        # Should create branch in OUTPUT instead of
+        # enumerating all ip addresses of the fw in PREROUTING
+        ip saddr { 22.22.23.22, 192.168.1.22, 192.168.2.1 } counter jump classify_2
     }
 
     chain classify_2 {

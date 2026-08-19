@@ -398,18 +398,14 @@ table ip fwf_mangle {
         iifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         iifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
         #
+        # Rule 37 (global)
+        #
+        counter jump mymark
+        #
         # Rule mangle_rules 1 (global)
         #
         tcp dport 80 ct state new counter meta mark set 1
         tcp dport 80 ct state new counter ct mark set mark
-    }
-
-    chain input {
-        type filter hook input priority mangle; policy accept;
-        #
-        # Rule 37 (global)
-        #
-        counter jump mymark
     }
 
     chain forward {
@@ -526,10 +522,6 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         oifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
         #
-        # Rule 37 (global)
-        #
-        counter jump mymark
-        #
         # Rule mangle_rules 1 (global)
         #
         tcp dport 80 ct state new counter meta mark set 1
@@ -624,6 +616,10 @@ table ip fwf_mangle {
         # of that
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter meta priority set 1:11
         oifname "eth0" udp dport { 53, 161 } counter meta priority set 1:11
+        #
+        # Rule 37 (global)
+        #
+        counter jump mymark
         #
         # Rule mangle_rules 2 (global)
         #

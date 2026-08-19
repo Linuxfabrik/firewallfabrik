@@ -31,6 +31,7 @@ from firewallfabrik.core.objects import (
     Network,
     NetworkIPv6,
     PhysAddress,
+    PolicyAction,
 )
 from firewallfabrik.platforms.linux._netfilter import interface_direction_problem
 
@@ -541,3 +542,157 @@ class AddressRangesInDst(AddressRangesInRE):
 
     def __init__(self, name: str) -> None:
         super().__init__(name, 'dst')
+
+
+def is_mangle_only_rule_set(rule_set) -> bool:
+    """Return whether *rule_set* carries mangle rules only."""
+    if rule_set is None:
+        return False
+    options = rule_set.options or {}
+    value = options.get('mangle_only_rule_set', False)
+    if isinstance(value, str):
+        return value.lower() == 'true'
+    return bool(value)
+
+
+def _rule_option(rule, key) -> bool:
+    value = (rule.options or {}).get(key, False)
+    if isinstance(value, str):
+        return value.lower() == 'true'
+    return bool(value)
+
+
+def rule_set_has_mangle_rules(rule_set) -> bool:
+    """Whether *rule_set* holds a rule that tags or classifies.
+
+    That is what makes a branch into it a branch into the mangle table
+    (``CompilerDriver_ipt::findBranchesInMangleTable``).
+    """
+    return any(
+        _rule_option(rule, 'tagging') or _rule_option(rule, 'classification')
+        for rule in rule_set.rules
+    )
+
+
+def rule_set_classifies(rule_set) -> bool:
+    """Whether *rule_set* holds a rule that assigns a traffic class.
+
+    The iptables CLASSIFY target registers for LOCAL_OUT, FORWARD and
+    POST_ROUTING alone (``net/netfilter/xt_CLASSIFY.c``, ``.hooks``), so a
+    jump into such a rule set from prerouting is a command iptables
+    refuses - which stops the activation script.  nftables has no such
+    restriction on ``meta priority set`` (``nft_meta_set_validate`` checks
+    the hook for ``meta pkttype set`` only).
+    """
+    return any(_rule_option(rule, 'classification') for rule in rule_set.rules)
+
+
+def branch_target_has_mangle_rules(rule, compiler) -> bool:
+    """Whether *rule* branches into a rule set with rules for the mangle table.
+
+    The administrator can say so with the rule's own "branch in mangle
+    table" option, and `CompilerDriver_ipt::findBranchesInMangleTable` sets
+    that option for them whenever the target rule set holds a rule that
+    tags or classifies - which is the common case, because a mangle rule
+    set is normally reached by an ordinary branch.  The driver collects the
+    names, because each rule set is compiled by a compiler of its own.
+    """
+    if rule.action != PolicyAction.Branch:
+        return False
+    if rule.get_option('ipt_branch_in_mangle', False):
+        return True
+    return rule.get_option('branch_name', '') in getattr(
+        compiler, 'mangle_branch_chains', ()
+    )
+
+
+def branches_into_mangle_only(rule, compiler) -> bool:
+    """Whether *rule* branches into a rule set that has no filter half.
+
+    Such a rule has nothing left to do in the filter table
+    (``PolicyCompiler_ipt::dropMangleTableRules``).
+    """
+    if not branch_target_has_mangle_rules(rule, compiler):
+        return False
+    return rule.get_option('branch_name', '') in getattr(
+        compiler, 'mangle_only_branch_chains', ()
+    )
+
+
+class KeepMangleTableRules(PolicyRuleProcessor):
+    """Keep only the rules the mangle run installs.
+
+    A rule branching into a mangle rule set is turned into one jump per
+    built-in chain the branch may need.  The rules in the branch are the
+    administrator's, so the compiler does not know which hook their targets
+    require - CLASSIFY, for one, is refused in prerouting - and
+    ``MangleTableCompiler_ipt::keepMangleTableRules`` therefore jumps from
+    prerouting, postrouting and forward alike.  Forward is on the list
+    because only a forwarded packet can match an incoming and an outgoing
+    interface at once (fwbuilder ticket #1415).
+
+    Subclasses name the chains the way their back end spells them, and say
+    which of them a rule set that assigns a traffic class may not be
+    reached from.
+    """
+
+    PREROUTING = 'PREROUTING'
+    POSTROUTING = 'POSTROUTING'
+    FORWARD = 'FORWARD'
+    #: Chains from which a branch that classifies must not be entered.
+    CLASSIFY_FORBIDDEN_CHAINS: tuple[str, ...] = ()
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if is_mangle_only_rule_set(self.compiler.source_ruleset):
+            self.tmp_queue.append(rule)
+            return True
+
+        if branch_target_has_mangle_rules(rule, self.compiler):
+            inbound = rule.direction in (
+                Direction.Undefined,
+                Direction.Both,
+                Direction.Inbound,
+            )
+            outbound = rule.direction in (
+                Direction.Undefined,
+                Direction.Both,
+                Direction.Outbound,
+            )
+            chains = []
+            if inbound:
+                chains.append(self.PREROUTING)
+            if outbound:
+                chains.append(self.POSTROUTING)
+            chains.append(self.FORWARD)
+
+            branch_name = rule.get_option('branch_name', '')
+            if branch_name in getattr(self.compiler, 'classifying_branch_chains', ()):
+                refused = [c for c in chains if c in self.CLASSIFY_FORBIDDEN_CHAINS]
+                if refused:
+                    chains = [c for c in chains if c not in refused]
+                    self.compiler.warning(
+                        rule,
+                        f'Rule set "{branch_name}" assigns a traffic class, '
+                        f'which the {"/".join(refused).lower()} chain cannot '
+                        f'carry, so the branch is not taken there',
+                    )
+
+            for chain in chains:
+                copy = rule.clone()
+                copy.ipt_chain = chain
+                self.tmp_queue.append(copy)
+            return True
+
+        if (
+            rule.get_option('tagging', False)
+            or rule.get_option('routing', False)
+            or rule.get_option('classification', False)
+            or rule.get_option('put_in_mangle_table', False)
+        ):
+            self.tmp_queue.append(rule)
+
+        return True

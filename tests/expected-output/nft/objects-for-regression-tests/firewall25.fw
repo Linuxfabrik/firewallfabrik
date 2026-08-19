@@ -357,18 +357,6 @@ table ip fwf_mangle {
         # mangle table end up with one COMMIT
         ct state new counter meta mark set 10
         #
-        # Rule 20 (eth0)
-        #
-        iifname "eth0" counter jump policy_2
-        #
-        # Rule 21 (eth0)
-        #
-        iifname "eth0" counter jump policy_2_mangle
-    }
-
-    chain input {
-        type filter hook input priority mangle; policy accept;
-        #
         # Rule 18 (global)
         #
         counter jump policy_2
@@ -376,6 +364,14 @@ table ip fwf_mangle {
         # Rule 19 (global)
         #
         counter jump policy_2_mangle
+        #
+        # Rule 20 (eth0)
+        #
+        iifname "eth0" counter jump policy_2
+        #
+        # Rule 21 (eth0)
+        #
+        iifname "eth0" counter jump policy_2_mangle
     }
 
     chain forward {
@@ -388,6 +384,14 @@ table ip fwf_mangle {
         # Rule 19 (global)
         #
         counter jump policy_2_mangle
+        #
+        # Rule 20 (eth0)
+        #
+        iifname "eth0" counter jump policy_2
+        #
+        # Rule 21 (eth0)
+        #
+        iifname "eth0" counter jump policy_2_mangle
     }
 
     chain output {
@@ -400,6 +404,10 @@ table ip fwf_mangle {
         # and pure mangle ruleset, making sure all rules for
         # mangle table end up with one COMMIT
         ct state new counter meta mark set 10
+    }
+
+    chain postrouting {
+        type filter hook postrouting priority mangle; policy accept;
         #
         # Rule 18 (global)
         #
@@ -501,17 +509,9 @@ table ip fwf_filter {
         #
         counter jump policy_2
         #
-        # Rule 19 (global)
-        #
-        counter jump policy_2_mangle
-        #
         # Rule 20 (eth0)
         #
         iifname "eth0" counter jump policy_2
-        #
-        # Rule 21 (eth0)
-        #
-        iifname "eth0" counter jump policy_2_mangle
         #
         # Rule 22 (global)
         #
@@ -606,17 +606,9 @@ table ip fwf_filter {
         #
         counter jump policy_2
         #
-        # Rule 19 (global)
-        #
-        counter jump policy_2_mangle
-        #
         # Rule 20 (eth0)
         #
         iifname "eth0" counter jump policy_2
-        #
-        # Rule 21 (eth0)
-        #
-        iifname "eth0" counter jump policy_2_mangle
         #
         # Rule 22 (global)
         #
@@ -682,10 +674,6 @@ table ip fwf_filter {
         # Rule 18 (global)
         #
         counter jump policy_2
-        #
-        # Rule 19 (global)
-        #
-        counter jump policy_2_mangle
         #
         # Rule 22 (global)
         #

@@ -31,6 +31,11 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import CompilerStatus
+from firewallfabrik.compiler.processors._policy import (
+    is_mangle_only_rule_set,
+    rule_set_classifies,
+    rule_set_has_mangle_rules,
+)
 from firewallfabrik.core.objects import (
     NAT,
     Firewall,
@@ -97,6 +102,9 @@ class CompilerDriver_ipt(CompilerDriver):
         self._nat_branch_chains: dict[str, list[str]] = {}
         # The names of the policy rule sets a Branch rule can jump to.
         self._branch_chains: set[str] = set()
+        self._mangle_only_branch_chains: set[str] = set()
+        self._mangle_branch_chains: set[str] = set()
+        self._classifying_branch_chains: set[str] = set()
         # The hash table each rate limit kept per source, destination or
         # port counts in, and the settings the first rule gave it.  The
         # kernel looks the table up by its name and family alone
@@ -224,6 +232,33 @@ class CompilerDriver_ipt(CompilerDriver):
                     pol_rs.name
                     for pol_rs in all_policies
                     if not self._is_top_ruleset(pol_rs)
+                }
+                # Of those, the ones that compile into the mangle table
+                # alone: a rule branching into one has nothing to jump to in
+                # the filter table.
+                self._mangle_only_branch_chains = {
+                    pol_rs.name
+                    for pol_rs in all_policies
+                    if not self._is_top_ruleset(pol_rs)
+                    and is_mangle_only_rule_set(pol_rs)
+                }
+                # And the ones holding a rule that tags or classifies: a
+                # rule branching into one has to be compiled into the mangle
+                # table as well, or nothing ever reaches those rules
+                # (CompilerDriver_ipt::findBranchesInMangleTable, which sets
+                # the rule's own "branch in mangle table" option for it).
+                self._mangle_branch_chains = {
+                    pol_rs.name
+                    for pol_rs in all_policies
+                    if not self._is_top_ruleset(pol_rs)
+                    and rule_set_has_mangle_rules(pol_rs)
+                }
+                # Of those, the ones that assign a traffic class: iptables
+                # refuses a jump into them from prerouting.
+                self._classifying_branch_chains = {
+                    pol_rs.name
+                    for pol_rs in all_policies
+                    if not self._is_top_ruleset(pol_rs) and rule_set_classifies(pol_rs)
                 }
 
                 # Chain trackers per table
@@ -900,6 +935,9 @@ class CompilerDriver_ipt(CompilerDriver):
 
         mangle_compiler.hashlimit_tables = self._hashlimit_tables
         mangle_compiler.branch_chains = self._branch_chains
+        mangle_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
+        mangle_compiler.mangle_branch_chains = self._mangle_branch_chains
+        mangle_compiler.classifying_branch_chains = self._classifying_branch_chains
 
         if not self._flush_ruleset:
             mangle_compiler.chain_prefix = self._table_name
@@ -946,6 +984,9 @@ class CompilerDriver_ipt(CompilerDriver):
 
         policy_compiler.hashlimit_tables = self._hashlimit_tables
         policy_compiler.branch_chains = self._branch_chains
+        policy_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
+        policy_compiler.mangle_branch_chains = self._mangle_branch_chains
+        policy_compiler.classifying_branch_chains = self._classifying_branch_chains
 
         if single_rule_id:
             policy_compiler.single_rule_compile_mode = True

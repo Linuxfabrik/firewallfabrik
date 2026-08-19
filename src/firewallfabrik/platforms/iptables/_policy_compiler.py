@@ -55,6 +55,8 @@ from firewallfabrik.compiler.processors._policy import (
     SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
+    branches_into_mangle_only,
+    is_mangle_only_rule_set,
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateSrcPort,
@@ -1329,22 +1331,25 @@ class BridgingFw(PolicyRuleProcessor):
 
 
 class DropMangleTableRules(PolicyRuleProcessor):
-    """Drop rules that belong in the mangle table."""
+    """Drop rules that belong in the mangle table.
+
+    Corresponds to C++ ``PolicyCompiler_ipt::dropMangleTableRules``.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
         if rule is None:
             return False
 
-        rs = self.compiler.source_ruleset
-        if rs is not None:
-            mangle_only = (
-                rs.options.get('mangle_only_rule_set', False) if rs.options else False
-            )
-            if isinstance(mangle_only, str):
-                mangle_only = mangle_only.lower() == 'true'
-            if mangle_only:
-                return True  # drop
+        if is_mangle_only_rule_set(self.compiler.source_ruleset):
+            return True  # drop
+
+        # A branch into a mangle-only rule set has nothing to jump to here:
+        # that rule set's chain lives in the mangle table.  Left in, the
+        # jump goes into an empty chain of the same name in the filter table
+        # and the branch does nothing at all.
+        if branches_into_mangle_only(rule, self.compiler):
+            return True  # drop
 
         if (
             rule.action == PolicyAction.Continue

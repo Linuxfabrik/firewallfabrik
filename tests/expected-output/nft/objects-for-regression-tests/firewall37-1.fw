@@ -301,10 +301,6 @@ table ip fwf_mangle {
         iifname "eth1" meta l4proto 51 ct state new counter meta mark set 8
         iifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         iifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
-    }
-
-    chain input {
-        type filter hook input priority mangle; policy accept;
         #
         # Rule 22 (global)
         #
@@ -384,13 +380,6 @@ table ip fwf_mangle {
         oifname "eth1" meta l4proto 51 ct state new counter meta mark set 9
         oifname "eth1" meta l4proto 50 ct state new counter ct mark set mark
         oifname "eth1" meta l4proto 51 ct state new counter ct mark set mark
-        #
-        # Rule 22 (global)
-        #
-        # bug #1618381
-        # should generate branching code
-        # in both filter and mangle tables
-        meta l4proto tcp counter jump rule27_branch
     }
 
     chain postrouting {
@@ -479,6 +468,13 @@ table ip fwf_mangle {
         # of that
         oifname "eth0" tcp dport { 113, 13, 53, 2105, 21, 70, 80, 443, 6667, 119, 25, 3128, 22, 23, 10000-11000, 540 } counter meta priority set 1:11
         oifname "eth0" udp dport { 53, 161 } counter meta priority set 1:11
+        #
+        # Rule 22 (global)
+        #
+        # bug #1618381
+        # should generate branching code
+        # in both filter and mangle tables
+        meta l4proto tcp counter jump rule27_branch
     }
 
     chain rule27_branch {

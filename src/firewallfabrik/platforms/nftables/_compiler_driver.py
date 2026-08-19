@@ -33,6 +33,11 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 
 from firewallfabrik.compiler._base import CompilerStatus
+from firewallfabrik.compiler.processors._policy import (
+    is_mangle_only_rule_set,
+    rule_set_classifies,
+    rule_set_has_mangle_rules,
+)
 from firewallfabrik.core.objects import (
     NAT,
     Firewall,
@@ -153,6 +158,9 @@ class CompilerDriver_nft(CompilerDriver):
         # and, through that, whether a rule has to name its family itself.
         self._any_rs_ipv6: bool = False
         self._branch_chains: set[str] = set()
+        self._mangle_only_branch_chains: set[str] = set()
+        self._mangle_branch_chains: set[str] = set()
+        self._classifying_branch_chains: set[str] = set()
         # Which chains each NAT branch rule set filled, per address family.
         # A NAT table is per family, so a branch that only has IPv4 rules
         # must not be jumped to from the IPv6 table.
@@ -266,6 +274,31 @@ class CompilerDriver_nft(CompilerDriver):
                     nft_object_name(rs.name)
                     for rs in all_policies
                     if not self._is_top_ruleset(rs)
+                }
+                # Of those, the ones that compile into the mangle table
+                # alone: a rule branching into one has nothing to jump to in
+                # the filter table.
+                self._mangle_only_branch_chains = {
+                    nft_object_name(rs.name)
+                    for rs in all_policies
+                    if not self._is_top_ruleset(rs) and is_mangle_only_rule_set(rs)
+                }
+                # And the ones holding a rule that tags or classifies: a
+                # rule branching into one has to be compiled into the mangle
+                # table as well, or nothing ever reaches those rules
+                # (CompilerDriver_ipt::findBranchesInMangleTable, which sets
+                # the rule's own "branch in mangle table" option for it).
+                self._mangle_branch_chains = {
+                    nft_object_name(rs.name)
+                    for rs in all_policies
+                    if not self._is_top_ruleset(rs) and rule_set_has_mangle_rules(rs)
+                }
+                # Of those, the ones that assign a traffic class: iptables
+                # refuses a jump into them from prerouting.
+                self._classifying_branch_chains = {
+                    nft_object_name(rs.name)
+                    for rs in all_policies
+                    if not self._is_top_ruleset(rs) and rule_set_classifies(rs)
                 }
 
                 # Determine IPv4/IPv6 run order (based on GUI option)
@@ -583,6 +616,9 @@ class CompilerDriver_nft(CompilerDriver):
         policy_compiler.meters = self._meters
         policy_compiler.shared_inet_table = self._any_rs_ipv6
         policy_compiler.branch_chains = self._branch_chains
+        policy_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
+        policy_compiler.mangle_branch_chains = self._mangle_branch_chains
+        policy_compiler.classifying_branch_chains = self._classifying_branch_chains
         if not self._is_top_ruleset(pol_rs):
             policy_compiler.register_rule_set_chain(nft_object_name(pol_rs.name))
         policy_compiler.set_source_ruleset(pol_rs)
@@ -645,6 +681,9 @@ class CompilerDriver_nft(CompilerDriver):
         mangle_compiler.meters = self._meters
         mangle_compiler.shared_inet_table = self._any_rs_ipv6
         mangle_compiler.branch_chains = self._branch_chains
+        mangle_compiler.mangle_only_branch_chains = self._mangle_only_branch_chains
+        mangle_compiler.mangle_branch_chains = self._mangle_branch_chains
+        mangle_compiler.classifying_branch_chains = self._classifying_branch_chains
         # A branch rule set has a chain of its own in the mangle table too.
         # Without this the chain of its rules is never pinned, and
         # SetChainPreroutingForTag, SetChainPostroutingForTag and

@@ -51,6 +51,11 @@ from firewallfabrik.compiler.processors._policy import (
     SingleObjectNegationItf,
     SpecialCaseAddressRangeInDst,
     SpecialCaseAddressRangeInSrc,
+    branches_into_mangle_only,
+    is_mangle_only_rule_set,
+)
+from firewallfabrik.compiler.processors._policy import (
+    KeepMangleTableRules as SharedKeepMangleTableRules,
 )
 from firewallfabrik.compiler.processors._service import (
     SeparateTCPWithFlags,
@@ -1738,17 +1743,6 @@ def _names_a_port(srv) -> bool:
     )
 
 
-def _is_mangle_only_rule_set(compiler) -> bool:
-    """Return whether the rule set being compiled is mangle-only."""
-    rs = compiler.source_ruleset
-    if rs is None:
-        return False
-    mangle_only = rs.options.get('mangle_only_rule_set', False) if rs.options else False
-    if isinstance(mangle_only, str):
-        return mangle_only.lower() == 'true'
-    return bool(mangle_only)
-
-
 class DropMangleTableRules(PolicyRuleProcessor):
     """Drop the rules the mangle run takes care of.
 
@@ -1764,7 +1758,14 @@ class DropMangleTableRules(PolicyRuleProcessor):
         if rule is None:
             return False
 
-        if _is_mangle_only_rule_set(self.compiler):
+        if is_mangle_only_rule_set(self.compiler.source_ruleset):
+            return True
+
+        # A branch into a mangle-only rule set has nothing to jump to here:
+        # that rule set's chain lives in the mangle table.  Left in, the
+        # jump goes into an empty chain of the same name in this table and
+        # the branch does nothing at all.
+        if branches_into_mangle_only(rule, self.compiler):
             return True
 
         if (
@@ -1782,35 +1783,15 @@ class DropMangleTableRules(PolicyRuleProcessor):
         return True
 
 
-class KeepMangleTableRules(PolicyRuleProcessor):
+class KeepMangleTableRules(SharedKeepMangleTableRules):
     """Keep only the rules that set a mark or a traffic class.
 
-    Corresponds to C++ ``MangleTableCompiler_ipt::keepMangleTableRules``.
+    nftables spells its built-in chains in lower case.
     """
 
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        if (
-            rule.get_option('tagging', False)
-            or rule.get_option('routing', False)
-            or rule.get_option('classification', False)
-            or rule.get_option('put_in_mangle_table', False)
-            # A rule branching into a rule set that carries mangle rules has
-            # to survive this pass, or nothing would ever jump into that
-            # rule set's mangle chain (MangleTableCompiler_ipt does the
-            # same).  Despite its name the option is platform neutral.
-            or (
-                rule.action == PolicyAction.Branch
-                and rule.get_option('ipt_branch_in_mangle', False)
-            )
-            or _is_mangle_only_rule_set(self.compiler)
-        ):
-            self.tmp_queue.append(rule)
-
-        return True
+    PREROUTING = 'prerouting'
+    POSTROUTING = 'postrouting'
+    FORWARD = 'forward'
 
 
 class ClearTagClassifyInFilter(PolicyRuleProcessor):
@@ -1875,7 +1856,9 @@ class ClearLogInMangle(PolicyRuleProcessor):
 
         if cast(
             'PolicyCompiler_nft', self.compiler
-        ).my_table == 'mangle' and not _is_mangle_only_rule_set(self.compiler):
+        ).my_table == 'mangle' and not is_mangle_only_rule_set(
+            self.compiler.source_ruleset
+        ):
             rule.set_option('log', False)
 
         self.tmp_queue.append(rule)
