@@ -289,6 +289,9 @@ class ObjectTree(QWidget):
         self._tree.customContextMenuRequested.connect(self._on_context_menu)
 
         self._db_manager = None
+        # Remembered by populate() so reload() can rebuild the tree with the
+        # same expand/collapse state without the caller passing it again.
+        self._file_key = ''
         self._ops = TreeOperations()
         self._actions = TreeActionHandler(self, self._clipboard_store)
 
@@ -327,6 +330,7 @@ class ObjectTree(QWidget):
         if no in-memory state exists (i.e. first open of this file in
         the current session).
         """
+        self._file_key = file_key
         had_tree = self._tree.topLevelItemCount() > 0
         expanded = self._save_expanded_state()
         # Let cached-item holders (find/where-used panels) release their
@@ -414,6 +418,20 @@ class ObjectTree(QWidget):
         # Defer column setup so Qt has finished layout/painting first;
         # otherwise ResizeToContents computes zero width for column 1.
         QTimer.singleShot(0, self._apply_column_setup)
+
+    def reload(self):
+        """Rebuild the tree from the database, keeping the current state.
+
+        Callers that changed the object tree outside of an open session -
+        importing a library, importing objects from a file - have no
+        session to hand to :meth:`populate` and no reason to know the file
+        key it needs.  This opens the session itself and reuses the key
+        the last populate ran with.
+        """
+        if self._db_manager is None:
+            return
+        with self._db_manager.session() as session:
+            self.populate(session, file_key=self._file_key)
 
     # ------------------------------------------------------------------
     # Tree state persistence

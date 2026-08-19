@@ -331,6 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Compiler (nftables): time-restricted rules fire at the same hours as on iptables, and the "use kernel timezone" setting is honoured. The weekday is always matched in UTC, which a rule restricting both now warns about.
 * Compiler (nftables): translating a whole network maps the addresses one to one, as on iptables, instead of picking an arbitrary one per connection.
 * Compiler (nftables): translating the source to a PPP or DHCP interface masquerades, as on iptables, instead of using an address the traffic never leaves by.
+* GUI: File > Import Library works again. It failed with an error message and imported nothing ([#150](https://github.com/Linuxfabrik/firewallfabrik/issues/150)).
 * GUI: the "Logging limit:" label in the nftables firewall settings is no longer greyed out, which suggested the setting had no effect.
 * GUI: the "Use kernel timezone instead of UTC" tooltip in the nftables firewall settings describes what nftables does instead of naming an iptables version requirement.
 * GUI: the firewall settings offer the same "Default action on Reject" choices as the per-rule action editor, so a firewall imported with "ICMP admin prohibited" or "ICMP protocol unreachable" keeps it.
