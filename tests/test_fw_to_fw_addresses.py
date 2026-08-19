@@ -22,6 +22,15 @@ the rule makes it match packets that never reach the firewall as their
 destination.
 
 Both compilers have to answer the same, which is what this pins.
+
+The second question is *when* a rule is a firewall-to-firewall rule at all.
+A negated element does not name the firewall, it names everything else.
+iptables never has to ask: `SrcNegation` / `DstNegation` have moved the
+negated objects into a temporary chain long before `specialCaseWithFW*`
+runs.  `NftNegation` leaves them in the element and only sets a flag, so
+on nftables the test has to be made explicitly - without it a rule reading
+"from the firewall to anywhere but the firewall" was compiled as if both
+ends were the firewall.
 """
 
 import uuid
@@ -50,6 +59,10 @@ class _Compiler:
 
     def __init__(self, fw) -> None:
         self.fw = fw
+
+    @staticmethod
+    def complex_match(obj, other) -> bool:
+        return obj.id == other.id
 
 
 def _address(addr: str) -> IPv4:
@@ -121,3 +134,42 @@ def test_bridge_port_and_unnumbered_are_left_out(platform):
     addresses = sorted(obj.get_address() for obj in out.src)
     assert addresses == ['192.0.2.1', '198.51.100.1']
     assert sorted(obj.get_address() for obj in out.dst) == addresses
+
+
+def test_negated_destination_is_not_the_firewall():
+    """ "To anywhere but the firewall" is not a firewall-to-firewall rule."""
+    from firewallfabrik.platforms.nftables._policy_compiler import SpecialCaseWithFW2
+
+    fw = _firewall()
+    rule = _rule(fw)
+    rule.dst_single_object_negation = True
+    processor = SpecialCaseWithFW2(name='SpecialCaseWithFW2')
+    processor.compiler = _Compiler(fw)
+    processor.set_data_source(_Feeder([rule]))
+
+    assert processor.process_next() is True
+    out = processor.tmp_queue[0]
+
+    # Both ends are left for the ordinary expansion, which knows that the
+    # loopback address is not one of the firewall's addresses in a rule
+    # that is not attached to the loopback.
+    assert out.src == [fw]
+    assert out.dst == [fw]
+
+
+def test_negated_source_is_not_split_into_both_directions():
+    """The same question for the processor that splits by direction."""
+    from firewallfabrik.core.objects import Direction
+    from firewallfabrik.platforms.nftables._policy_compiler import SpecialCaseWithFW1
+
+    fw = _firewall()
+    rule = _rule(fw)
+    rule.direction = Direction.Both
+    rule.src_single_object_negation = True
+    processor = SpecialCaseWithFW1(name='SpecialCaseWithFW1')
+    processor.compiler = _Compiler(fw)
+    processor.set_data_source(_Feeder([rule]))
+
+    assert processor.process_next() is True
+    assert len(processor.tmp_queue) == 1
+    assert processor.tmp_queue[0].direction == Direction.Both

@@ -535,7 +535,15 @@ class ExpandGroupsInItf(PolicyRuleProcessor):
 
 
 class SpecialCaseWithFW1(PolicyRuleProcessor):
-    """Split fw-to-fw rules into Inbound + Outbound."""
+    """Split fw-to-fw rules into Inbound + Outbound.
+
+    A negated element does not name the firewall, it names everything
+    else, so such a rule is not a firewall-to-firewall rule.  The
+    iptables sibling needs no such test because ``SrcNegation`` /
+    ``DstNegation`` have already moved the negated objects into a
+    temporary chain by the time it runs; ``NftNegation`` leaves them in
+    the element and only sets a flag, so the test has to be made here.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -547,6 +555,8 @@ class SpecialCaseWithFW1(PolicyRuleProcessor):
         if (
             src is not None
             and dst is not None
+            and not rule.src_single_object_negation
+            and not rule.dst_single_object_negation
             and nft_comp.complex_match(src, nft_comp.fw)
             and nft_comp.complex_match(dst, nft_comp.fw)
             and rule.direction == Direction.Both
@@ -1465,6 +1475,9 @@ class SpecialCaseWithFW2(PolicyRuleProcessor):
     port of a bridge carries the bridge's traffic, not its own; an address
     configured on it belongs to the bridge, and taking it in here would
     make the rule match packets the port never terminates.
+
+    A negated element does not name the firewall either, for the reason
+    spelled out in :class:`SpecialCaseWithFW1`.
     """
 
     def process_next(self) -> bool:
@@ -1479,6 +1492,8 @@ class SpecialCaseWithFW2(PolicyRuleProcessor):
         if (
             src_obj is not None
             and dst_obj is not None
+            and not rule.src_single_object_negation
+            and not rule.dst_single_object_negation
             and isinstance(src_obj, Firewall)
             and src_obj.id == nft_comp.fw.id
             and isinstance(dst_obj, Firewall)
