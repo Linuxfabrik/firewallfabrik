@@ -19,6 +19,8 @@ not.
 | `replay-iptables.sh` | does real iptables accept every command? | a command that stops the activation, with the rules behind it never installed |
 | `check-iptables-restore.sh` | does `iptables-restore --test` accept the restore form? | the same, for firewalls that activate through restore |
 | `compare-reference.sh` | do we produce the rules the C++ compiler produced? | rules we get wrong or leave out |
+| `parity.py` | do our nftables rules check what `iptables-translate` says they should? | a condition one platform checks and the other does not |
+| `parity.py --values` | and do they check it against the same value? | a wrong port, a wrong mask, an inverted operator |
 | `compare-output.py` | which firewalls does this change actually affect? | the blast radius of a fix, before a release |
 
 ## Running them

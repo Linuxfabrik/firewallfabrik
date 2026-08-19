@@ -30,13 +30,41 @@ and it does not is a condition we invented.
     python tools/compiler-audit/parity.py /tmp/audit
     python tools/compiler-audit/parity.py /tmp/audit --fixture compiler-tests
     python tools/compiler-audit/parity.py /tmp/audit --show
+    python tools/compiler-audit/parity.py /tmp/audit --values
 
-The comparison is deliberately coarse.  It looks at *which* conditions a
-rule carries, not at their values or their order, because the two compilers
-legitimately differ in how they spell a condition (`iif` vs `iifname`,
-`th dport` vs `tcp dport`) and in how many rules they spread it over.  What
-it does catch is a condition that is present on one side and absent on the
-other, which is the failure mode that silently opens or closes a firewall.
+The default comparison is deliberately coarse.  It looks at *which*
+conditions a rule carries, not at their values or their order, because the
+two compilers legitimately differ in how they spell a condition (`iif` vs
+`iifname`, `th dport` vs `tcp dport`) and in how many rules they spread it
+over.  What it does catch is a condition that is present on one side and
+absent on the other, which is the failure mode that silently opens or
+closes a firewall.
+
+`--values` asks the other half of the question: a condition that is on
+both sides but compares against something else - a wrong port, a wrong
+mask, an inverted operator, a wrong ICMP type.  It is noisier, because the
+two sides may say the same thing in different words, and the words it
+already folds together are: hexadecimal against decimal, a protocol name
+against its number, the flag list of a `tcp flags` match in any order, a
+set against its elements one by one, the iptables spelling of a negation
+(a temporary chain that RETURNs on the positive match) against `!=`, and
+an address range against the CIDR blocks covering it.  What is left over
+is worth reading: three findings of the 2026-08-19 round came out of it.
+
+What that round left standing, all of it checked and none of it a bug:
+
+  * an address table, a DNS name or a dynamic interface, which nftables
+    matches through a named set (`ip saddr @cnn__rt_`) and iptables writes
+    out address by address;
+  * `meta day 1` against `meta day "Monday"` and `meta hour 32400-61200`
+    against `meta hour "09:00:00"-"17:00:00"` - nftables takes both
+    spellings and means the same by them;
+  * `limit rate 10/minute burst 5 packets` against `limit rate 10/minute`
+    - five is the default burst of both tools;
+  * the name of a rate-limit table or a connection-limit set, which the
+    two compilers derive differently;
+  * `ip saddr timeout 1s` and `ct state new add @connlimit0 {`, which is
+    the keyword scan cutting into a set definition rather than a match.
 
 Blocks it skips, with the reason:
 
@@ -58,8 +86,10 @@ from __future__ import annotations
 import argparse
 import collections
 import functools
+import ipaddress
 import re
 import shutil
+import socket
 import subprocess  # nosec B404
 import sys
 from pathlib import Path
@@ -302,6 +332,171 @@ def keywords(text: str) -> collections.Counter:
     return found
 
 
+# The six TCP flags, in the order the header carries them, so a numeric
+# value can be read back as the names nftables prints.
+TCP_FLAG_NAMES = ('fin', 'syn', 'rst', 'psh', 'ack', 'urg')
+
+
+@functools.cache
+def protocol_number(name: str) -> str | None:
+    """Return the IP protocol number of *name*, or None if it is not one."""
+    try:
+        return str(socket.getprotobyname(name))
+    except OSError:
+        return None
+
+
+def norm_token(token: str) -> str:
+    """Fold one value into the spelling both sides can be compared in."""
+    token = token.strip().strip(',')
+    if not token:
+        return token
+    number = protocol_number(token.lower())
+    if number is not None:
+        return number
+    if re.fullmatch(r'0x[0-9a-fA-F]+|\d+', token):
+        return str(int(token, 0))
+    match = re.fullmatch(r'([0-9a-fA-F:.]+)/([0-9.]+)', token)
+    if match:
+        try:
+            network = ipaddress.ip_network(f'{match[1]}/{match[2]}', strict=False)
+        except ValueError:
+            return token
+        if network.prefixlen == network.max_prefixlen:
+            return str(network.network_address)
+        return str(network)
+    try:
+        return str(ipaddress.ip_address(token))
+    except ValueError:
+        return token
+
+
+def norm_flags(value: str) -> str | None:
+    """Fold a `tcp flags` value, or return None if this is not one.
+
+    nftables prints the mask as `& (a | b)` and the value as a number or a
+    name list, iptables-translate as `value / mask`.  Both become
+    `<op> <sorted value> / <sorted mask>`.
+    """
+    value = value.strip()
+
+    def flag_names(raw: str) -> str:
+        """Return the flags of one side, sorted, whether named or a number."""
+        if re.fullmatch(r'0x[0-9a-fA-F]+|\d+', raw):
+            bits = int(raw, 0)
+            names = [n for i, n in enumerate(TCP_FLAG_NAMES) if bits & (1 << i)]
+        else:
+            names = [part.strip() for part in raw.split(',')]
+        return ','.join(sorted(name for name in names if name))
+
+    match = re.fullmatch(r'&\s*\(([^)]*)\)\s*(==|!=)\s*(\S+)', value)
+    if match:
+        mask = ','.join(sorted(part.strip() for part in match[1].split('|')))
+        return f'{match[2]} {flag_names(match[3])} / {mask}'
+    match = re.fullmatch(r'([0-9a-zx,]*)\s*/\s*([0-9a-zx,]+)', value)
+    if match:
+        return f'== {flag_names(match[1])} / {flag_names(match[2])}'
+    return None
+
+
+def value_items(value: str):
+    """Yield one comparable item per value, a set as its elements."""
+    value = re.sub(r'\s+', ' ', value.strip())
+    flags = norm_flags(value)
+    if flags is not None:
+        yield flags
+        return
+    negation = ''
+    match = re.fullmatch(r'(!=)\s*(.*)', value)
+    if match:
+        negation, value = '!= ', match[2]
+    match = re.fullmatch(r'\{(.*)\}', value)
+    if match:
+        for token in match[1].split(','):
+            if token.strip():
+                yield negation + norm_token(token)
+        return
+    if value:
+        yield negation + ' '.join(norm_token(part) for part in value.split())
+
+
+def value_pairs(text: str) -> collections.Counter:
+    """Return the (keyword, value) pairs of one rule."""
+    part = match_part(text)
+    found: collections.Counter = collections.Counter()
+    hits = list(KEYWORD_RE.finditer(part))
+    for index, hit in enumerate(hits):
+        end = hits[index + 1].start() if index + 1 < len(hits) else len(part)
+        keyword = SYNONYMS.get(hit.group(0), hit.group(0))
+        for item in value_items(part[hit.end() : end]):
+            found[(keyword, item)] += 1
+    return found
+
+
+def fold_spellings(want: set, have: set) -> tuple[set, set]:
+    """Drop the pairs whose two sides say the same thing in different words."""
+    # iptables spells a negation as a temporary chain that RETURNs on the
+    # positive match; nftables writes `!=`.
+    for keyword, value in list(have):
+        if value.startswith('!= ') and (keyword, value[3:]) in want:
+            have.discard((keyword, value))
+            want.discard((keyword, value[3:]))
+    # The iptables NAT pipeline writes an address range out as the CIDR
+    # blocks covering it; nftables matches the range natively.
+    for keyword, value in list(have):
+        if '-' not in value or keyword not in ('ip saddr', 'ip daddr'):
+            continue
+        try:
+            low, high = (ipaddress.ip_address(end) for end in value.split('-'))
+        except ValueError:
+            continue
+        blocks = {str(net) for net in ipaddress.summarize_address_range(low, high)}
+        blocks |= {str(ipaddress.ip_network(b).network_address) for b in blocks}
+        same = {other for other in want if other[0] == keyword}
+        if blocks >= {other[1] for other in same}:
+            have.discard((keyword, value))
+            want -= same
+    return want, have
+
+
+def compare_values(
+    script_ipt: Path, script_nft: Path
+) -> list[tuple[str, str, list[str], list[str]]]:
+    """Return (table, label, ipt-only, nft-only) per label whose values differ."""
+    report = []
+    ipt_groups = read_ipt(script_ipt)
+    nft_groups = read_nft(script_nft)
+
+    for key, commands in sorted(ipt_groups.items()):
+        if any(RUNTIME_RE.search(args) for args, _ in commands):
+            continue
+        expected: collections.Counter | None = collections.Counter()
+        for args, ipv6 in commands:
+            translated = translate(re.sub(r'-w\s+\d+\s*', '', args), ipv6)
+            if translated is None:
+                expected = None
+                break
+            for line in translated.splitlines():
+                expected += value_pairs(line)
+        if expected is None:
+            continue
+
+        actual: collections.Counter = collections.Counter()
+        for rule in nft_groups.get(key, []):
+            actual += value_pairs(rule)
+
+        want, have = fold_spellings(set(expected), set(actual))
+        # A keyword only one side carries at all is what the default
+        # comparison reports; here only a *differing value* counts.
+        keywords_want = {keyword for keyword, _ in want}
+        keywords_have = {keyword for keyword, _ in have}
+        ipt_only = sorted(f'{k} {v}' for k, v in want - have if k in keywords_have)
+        nft_only = sorted(f'{k} {v}' for k, v in have - want if k in keywords_want)
+        if ipt_only or nft_only:
+            report.append((key[0], key[1], ipt_only, nft_only))
+    return report
+
+
 def fold_implied_protocol(found: collections.Counter) -> set[str]:
     """Return the keywords of one side with the implied ones taken out.
 
@@ -353,6 +548,14 @@ def compare(
         have = fold_implied_protocol(actual)
         missing = sorted(want - have)
         extra = sorted(have - want)
+        # "Every protocol this negated element does not name" is a condition
+        # nftables has to write down (`meta l4proto != tcp`) and iptables
+        # says by leaving `-p` off the action rule of its temporary chain.
+        # Same rule, and only one side has a keyword for it.
+        if 'ip protocol' in extra and any(
+            'meta l4proto !=' in rule for rule in nft_groups.get(key, [])
+        ):
+            extra.remove('ip protocol')
         if missing or extra:
             report.append((section, label, missing, extra))
     return report
@@ -366,6 +569,11 @@ def main() -> int:
     parser.add_argument('--fixture', help='only firewalls of this fixture')
     parser.add_argument(
         '--show', action='store_true', help='print the two sides of every difference'
+    )
+    parser.add_argument(
+        '--values',
+        action='store_true',
+        help='compare what each condition matches, not only which conditions',
     )
     args = parser.parse_args()
 
@@ -390,19 +598,33 @@ def main() -> int:
         if not script_nft.exists():
             continue
         checked += 1
-        report = compare(script_ipt, script_nft)
-        if report:
-            differing += 1
-            print(f'=== {relative}')
-            for section, label, missing, extra in report:
-                print(
-                    f'  {section}/{label}: '
-                    f'missing=[{", ".join(missing)}] extra=[{", ".join(extra)}]'
-                )
-                for keyword in missing:
-                    counter[f'missing {keyword}'] += 1
-                for keyword in extra:
-                    counter[f'extra {keyword}'] += 1
+        report = (
+            compare_values(script_ipt, script_nft)
+            if args.values
+            else compare(script_ipt, script_nft)
+        )
+        if not report:
+            continue
+        differing += 1
+        print(f'=== {relative}')
+        for section, label, missing, extra in report:
+            if args.values:
+                print(f'  {section}/{label}')
+                for item in missing:
+                    print(f'      ipt-only: {item}')
+                    counter[f'ipt-only {item.split(" ")[0]}'] += 1
+                for item in extra:
+                    print(f'      nft-only: {item}')
+                    counter[f'nft-only {item.split(" ")[0]}'] += 1
+                continue
+            print(
+                f'  {section}/{label}: '
+                f'missing=[{", ".join(missing)}] extra=[{", ".join(extra)}]'
+            )
+            for keyword in missing:
+                counter[f'missing {keyword}'] += 1
+            for keyword in extra:
+                counter[f'extra {keyword}'] += 1
 
     print('---')
     for name, count in counter.most_common():
