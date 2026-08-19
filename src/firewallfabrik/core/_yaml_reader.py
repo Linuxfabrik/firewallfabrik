@@ -74,6 +74,11 @@ class YamlReader:
         self._deferred_memberships = []
         self._deferred_rule_elements = []
         self._deferred_option_refs = []
+        #: Reference paths nothing in the tree answered.  Reading a whole
+        #: file, that means a broken file and the log line is the whole
+        #: story; merging one tree into another it means an object that
+        #: stayed behind, and the caller has to be able to say so.
+        self.unresolved_refs = []
 
     def parse(self, input_path):
         input_path = pathlib.Path(input_path)
@@ -84,6 +89,7 @@ class YamlReader:
         self._deferred_memberships.clear()
         self._deferred_rule_elements.clear()
         self._deferred_option_refs.clear()
+        self.unresolved_refs.clear()
 
         # Phase 1: Load YAML file
         with pathlib.Path.open(input_path, encoding='utf-8') as f:
@@ -135,6 +141,7 @@ class YamlReader:
             target_id = self._resolve_ref_path(ref_path)
             if target_id is None:
                 logger.warning('Unresolved group member ref: %s', ref_path)
+                self.unresolved_refs.append(ref_path)
                 continue
             self._memberships.append(
                 {
@@ -147,6 +154,7 @@ class YamlReader:
             target_id = self._resolve_ref_path(ref_path)
             if target_id is None:
                 logger.warning('Unresolved rule element ref: %s', ref_path)
+                self.unresolved_refs.append(ref_path)
                 continue
             self._rule_element_rows.append(
                 {
@@ -167,6 +175,7 @@ class YamlReader:
             target_id = self._resolve_ref_path(ref_path)
             if target_id is None:
                 logger.warning('Unresolved rule option ref: %s', ref_path)
+                self.unresolved_refs.append(ref_path)
                 continue
             options = dict(rule.options)
             options[key] = str(target_id)

@@ -335,14 +335,19 @@ def import_library(parent_widget, db_manager, reload_callback):
 
     QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
     try:
-        count = _do_import_library(db_manager, file_path)
-    except Exception:
+        count, unresolved = _do_import_library(db_manager, file_path)
+    except Exception as exc:
         QApplication.restoreOverrideCursor()
         logger.exception('Library import failed')
+        # Naming the file alone leaves the administrator with a dialog that
+        # says nothing and a traceback only in the terminal.
         QMessageBox.critical(
             parent_widget,
             parent_widget.tr('Import Library'),
-            parent_widget.tr(f'Failed to import library from:\n{file_path}'),
+            parent_widget.tr(
+                f'Failed to import library from:\n{file_path}\n\n'
+                f'{type(exc).__name__}: {exc}'
+            ),
         )
         return
     finally:
@@ -358,64 +363,133 @@ def import_library(parent_widget, db_manager, reload_callback):
 
     reload_callback()
 
+    text = f'Successfully imported {count} library/libraries from:\n{file_path}'
+    if unresolved:
+        shown = '\n'.join(unresolved[:15])
+        if len(unresolved) > 15:
+            shown += f'\n... and {len(unresolved) - 15} more'
+        text += (
+            f'\n\n{len(unresolved)} reference(s) could not be resolved, because '
+            'the objects they name are not in this file. The rules using them '
+            'match everything on that side until the objects are added:\n'
+            f'{shown}'
+        )
     QMessageBox.information(
         parent_widget,
         parent_widget.tr('Import Library'),
-        parent_widget.tr(
-            f'Successfully imported {count} library/libraries from:\n{file_path}'
-        ),
+        parent_widget.tr(text),
     )
+
+
+def _unique_library_name(name, taken):
+    """Return *name*, or the first free ``name-1``, ``name-2``, ... .
+
+    Same shape as ``ObjectManipulator::makeNameUnique``, which is what
+    Firewall Builder applies to every library it imports.
+    """
+    if name not in taken:
+        return name
+    suffix = 1
+    while f'{name}-{suffix}' in taken:
+        suffix += 1
+    return f'{name}-{suffix}'
 
 
 def _do_import_library(db_manager, file_path):
     """Read *file_path* and merge its libraries into the current database.
 
-    Returns the number of libraries imported.
-    """
-    from firewallfabrik.core._database import DatabaseManager
+    The file is opened in a database of its own and every library that is
+    not already there is carried across by the same writer and reader the
+    ``.fwf`` format uses, so nested objects, group memberships and rule
+    elements come with it.
 
-    # Open the import file in a temporary in-memory database
-    import_mgr = DatabaseManager(':memory:')
-    import_mgr.open_file(file_path)
+    Returns the number of libraries imported and the reference paths that
+    named an object this database has not got - an object of the file's own
+    Standard library, most of the time, which stays behind.  A rule element
+    that loses its object matches everything instead, so the caller has to
+    be able to say so.
+    """
+    from firewallfabrik.core import objects
+    from firewallfabrik.core._database import DatabaseManager
+    from firewallfabrik.core._yaml_reader import YamlReader
+
+    import_mgr = DatabaseManager()
+    import_mgr.load(file_path)
 
     imported = 0
-    with import_mgr.session() as imp_session, db_manager.session() as cur_session:
-        cur_db = cur_session.scalars(sqlalchemy.select(FWObjectDatabase)).first()
-        if cur_db is None:
-            return 0
+    unresolved = []
+    try:
+        with import_mgr.session() as imp_session, db_manager.session() as cur_session:
+            cur_db = cur_session.scalars(sqlalchemy.select(FWObjectDatabase)).first()
+            if cur_db is None:
+                return 0, []
 
-        existing_names = {
-            lib.name
-            for lib in cur_session.scalars(
-                sqlalchemy.select(Library).where(
-                    Library.database_id == cur_db.id,
-                ),
-            ).all()
-        }
+            existing_names = {
+                lib.name
+                for lib in cur_session.scalars(
+                    sqlalchemy.select(Library).where(
+                        Library.database_id == cur_db.id,
+                    ),
+                ).all()
+            }
 
-        imp_libs = imp_session.scalars(sqlalchemy.select(Library)).all()
+            imp_libs = imp_session.scalars(sqlalchemy.select(Library)).all()
 
-        for lib in imp_libs:
-            if lib.name == 'Standard':
-                continue
-            if lib.name in existing_names:
-                logger.info('Skipping library %r (already exists)', lib.name)
-                continue
+            # A name that is taken is renamed, not skipped: two data files
+            # of the same house both call their library "User", and
+            # skipping meant File > Import Library did nothing at all.
+            # Firewall Builder renames too (`makeNameUnique` in
+            # ProjectPanel::loadLibrary).  This has to happen before the
+            # index below, or every reference inside the library still
+            # carries the old name and resolves to the library that was
+            # already there.
+            to_import = []
+            for lib in imp_libs:
+                if lib.name == 'Standard':
+                    continue
+                lib.name = _unique_library_name(lib.name, existing_names)
+                existing_names.add(lib.name)
+                to_import.append(lib)
+            imp_session.flush()
 
-            # Use the YAML writer/reader round-trip to copy the library
-            # into the current database. This handles all nested objects.
-            from firewallfabrik.core._yaml_writer import YamlWriter
-
+            # Over every library of the file, not only the ones being
+            # imported: an object of the library we take may reference one
+            # in Standard, and without a path for it the reference is
+            # written out as a raw UUID that resolves to nothing.
             writer = YamlWriter()
-            writer._build_ref_index(imp_session, [lib])
-            lib_dict = writer._serialize_library(imp_session, lib)
+            writer._build_ref_index(imp_session, imp_libs)
 
-            from firewallfabrik.core._yaml_reader import YamlReader
+            for lib in to_import:
+                lib_dict = writer._serialize_library(imp_session, lib)
 
-            reader = YamlReader()
-            reader._load_library(cur_session, cur_db, lib_dict)
-            cur_session.commit()
-            imported += 1
+                reader = YamlReader()
+                # A reference into a library that stays behind - Standard,
+                # most of the time - has to land on the object this
+                # database already has, so the reader starts from the paths
+                # of the current tree and adds the new library's own.
+                reader._ref_index.update(db_manager.ref_index)
+                new_lib = reader._parse_library(lib_dict, cur_db)
+                reader._resolve_deferred()
 
-    import_mgr.close()
-    return imported
+                cur_session.add(new_lib)
+                cur_session.flush()
+                if reader._memberships:
+                    cur_session.execute(
+                        objects.group_membership.insert(),
+                        reader._memberships,
+                    )
+                if reader._rule_element_rows:
+                    cur_session.execute(
+                        objects.rule_elements.insert(),
+                        reader._rule_element_rows,
+                    )
+
+                # So that a later save, and a second import, can resolve a
+                # reference into what was just added.
+                db_manager.ref_index.update(reader._ref_index)
+                unresolved.extend(reader.unresolved_refs)
+                imported += 1
+    finally:
+        import_mgr.engine.dispose()
+
+    return imported, sorted(set(unresolved))
