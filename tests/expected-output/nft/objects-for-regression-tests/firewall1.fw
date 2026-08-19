@@ -320,6 +320,7 @@ table ip fwf_filter {
         # Rule 13 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter log level debug drop
+        meta l4proto != tcp counter log level debug drop
         #
         # Rule 15 (global)
         #
@@ -382,6 +383,7 @@ table ip fwf_filter {
         #
         # double negation rule
         ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport != { 3128, 8080 } counter log level debug drop
+        ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp counter log level debug drop
         #
         # Rule 36 (global)
         #
@@ -469,6 +471,7 @@ table ip fwf_filter {
         # Rule 13 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter log level debug drop
+        meta l4proto != tcp counter log level debug drop
         #
         # Rule 14 (global)
         #
@@ -514,16 +517,19 @@ table ip fwf_filter {
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } counter log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp counter log level debug drop
         #
         # Rule 25 (global)
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } ct state new counter log level debug accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new counter log level debug accept
         #
         # Rule 26 (global)
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 25 ct state new counter log level debug accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new counter log level debug accept
         #
         # Rule 27 (global)
         #
@@ -540,6 +546,7 @@ table ip fwf_filter {
         # testing negation in service field
         # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 33 (global)
         #
@@ -554,6 +561,7 @@ table ip fwf_filter {
         #
         # double negation rule
         ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport != { 3128, 8080 } counter log level debug drop
+        ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp counter log level debug drop
         #
         # Rule 36 (global)
         #
@@ -598,6 +606,7 @@ table ip fwf_filter {
         # Rule 13 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter log level debug drop
+        meta l4proto != tcp counter log level debug drop
         #
         # Rule 14 (global)
         #
@@ -643,16 +652,19 @@ table ip fwf_filter {
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } counter log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp counter log level debug drop
         #
         # Rule 25 (global)
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } ct state new counter log level debug accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new counter log level debug accept
         #
         # Rule 26 (global)
         #
         # testing negation in service field
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 25 ct state new counter log level debug accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new counter log level debug accept
         #
         # Rule 27 (global)
         #
@@ -669,6 +681,7 @@ table ip fwf_filter {
         # testing negation in service field
         # firewall1:Policy:29: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != 80 ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp ct state new meta hour 32400-61200 meta day { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" } counter accept
         #
         # Rule 32 (global)
         #
@@ -683,6 +696,7 @@ table ip fwf_filter {
         #
         # double negation rule
         ip daddr != { 192.168.1.10, 192.168.1.20 } tcp dport != { 3128, 8080 } counter log level debug drop
+        ip daddr != { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp counter log level debug drop
         #
         # Rule 36 (global)
         #

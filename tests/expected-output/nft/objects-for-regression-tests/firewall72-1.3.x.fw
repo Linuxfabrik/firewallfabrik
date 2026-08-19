@@ -255,18 +255,22 @@ table ip fwf_filter {
         # Rule 3 (global)
         #
         ip daddr 172.16.1.1 tcp dport != 80 counter drop
+        ip daddr 172.16.1.1 meta l4proto != tcp counter drop
         #
         # Rule 4 (global)
         #
         ip daddr 172.16.1.1 tcp flags & (syn | rst | ack) != syn counter drop
+        ip daddr 172.16.1.1 meta l4proto != tcp counter drop
         #
         # Rule 5 (global)
         #
         ip daddr 172.16.1.1 icmp type . icmp code != { destination-unreachable . 1 } counter drop
+        ip daddr 172.16.1.1 meta l4proto != icmp counter drop
         #
         # Rule 6 (global)
         #
         ip daddr 172.16.1.1 icmp type . icmp code != { destination-unreachable . 1 } counter drop
+        ip daddr 172.16.1.1 meta l4proto != icmp counter drop
         #
         # Rule 7 (global)
         #
@@ -275,6 +279,7 @@ table ip fwf_filter {
         # Rule 8 (global)
         #
         ip daddr 172.16.1.1 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
+        ip daddr 172.16.1.1 meta l4proto != tcp counter drop
         #
         # Rule 9 (global)
         #
@@ -306,6 +311,7 @@ table ip fwf_filter {
         #
         # Should use ! -i eth1 eventually
         iifname != "eth1" ip daddr 192.168.1.0/24 tcp flags & (urg | ack | psh | rst | syn | fin) != 0x0 counter drop
+        iifname != "eth1" ip daddr 192.168.1.0/24 meta l4proto != tcp counter drop
         #
         # Rule 12 (eth1)
         #

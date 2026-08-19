@@ -482,6 +482,7 @@ table ip fwf_filter {
         # testing negation in service field
         # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log level debug drop
         #
         # Rule 14 (global)
         #
@@ -551,6 +552,7 @@ table ip fwf_filter {
         # testing negation in service field
         # firewall4:Policy:13: warning: nftables always matches the weekday in the kernel timezone; turn on "use kernel timezone" so iptables agrees
         ip daddr { 192.168.1.10, 192.168.1.20 } tcp dport != { 25, 22 } meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log level debug drop
+        ip daddr { 192.168.1.10, 192.168.1.20 } meta l4proto != tcp meta hour 3660-7320 meta day { "Sunday", "Monday" } counter log level debug drop
         #
         # Rule 14 (global)
         #

@@ -259,6 +259,7 @@ table ip fwf_filter {
         # Rule 2 (global)
         #
         tcp dport != 22 counter drop
+        meta l4proto != tcp counter drop
         #
         # Rule 3 (global)
         #

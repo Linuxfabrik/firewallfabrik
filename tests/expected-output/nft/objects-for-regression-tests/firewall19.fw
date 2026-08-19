@@ -383,6 +383,7 @@ table ip fwf_filter {
         # Rule 6 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter accept
+        meta l4proto != tcp counter accept
         #
         # Rule 7 (global)
         #
@@ -395,6 +396,7 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
+        meta l4proto != tcp counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #
@@ -420,6 +422,7 @@ table ip fwf_filter {
         # Rule 6 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter accept
+        meta l4proto != tcp counter accept
         #
         # Rule 7 (global)
         #
@@ -432,6 +435,7 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
+        meta l4proto != tcp counter reject with icmp host-prohibited
         #
         # Rule 12 (global)
         #
@@ -470,6 +474,7 @@ table ip fwf_filter {
         # Rule 6 (global)
         #
         tcp flags & (syn | rst | ack) != syn counter accept
+        meta l4proto != tcp counter accept
         #
         # Rule 7 (global)
         #
@@ -482,6 +487,7 @@ table ip fwf_filter {
         # Rule 9 (global)
         #
         tcp dport != 5190 tcp flags & (syn | rst | ack) != syn counter reject with icmp host-prohibited
+        meta l4proto != tcp counter reject with icmp host-prohibited
         #
         # Rule 11 (global)
         #

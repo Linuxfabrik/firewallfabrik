@@ -23,14 +23,35 @@ belongs on `meta l4proto`.  Without it the rule reads exactly like the one
 it is the negation of, and a Deny written for "anything but TCP" drops
 nothing but TCP.  `print_icmp_service` has always put the negation there
 for an ICMP service that names no type; the TCP/UDP printer did not.
+
+A service that names a port, a TCP flag or an ICMP type says more, and
+nftables compiles that into a payload match that carries a protocol
+dependency: `tcp dport != 80` becomes `meta l4proto tcp` followed by the
+port comparison, so a UDP packet - which is not TCP port 80 either - never
+reaches the rule.  iptables' temporary chain does see it.  The other half
+therefore needs a rule of its own, and that is what
+`AddOtherProtocolsForNegatedService` adds.
 """
 
 import uuid
 
 import pytest
 
-from firewallfabrik.core.objects import TCPService, UDPService
-from firewallfabrik.platforms.nftables._print_rule import PrintRule_nft
+from firewallfabrik.compiler._comp_rule import CompRule
+from firewallfabrik.compiler._rule_processor import BasicRuleProcessor
+from firewallfabrik.core.objects import (
+    ICMPService,
+    PolicyAction,
+    TCPService,
+    UDPService,
+)
+from firewallfabrik.platforms.nftables._policy_compiler import (
+    AddOtherProtocolsForNegatedService,
+)
+from firewallfabrik.platforms.nftables._print_rule import (
+    OTHER_PROTOCOLS_OPTION,
+    PrintRule_nft,
+)
 
 
 class _Rule:
@@ -62,3 +83,121 @@ def test_a_service_with_a_port_still_negates_the_port(cls, proto):
     srv = cls(id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80)
     assert _print(srv, proto, negated=False) == f'{proto} dport 80'
     assert _print(srv, proto, negated=True) == f'{proto} dport != 80'
+
+
+class _Feeder(BasicRuleProcessor):
+    def __init__(self, rules: list[CompRule]) -> None:
+        super().__init__(name='Feeder')
+        for rule in rules:
+            self.tmp_queue.append(rule)
+
+    def process_next(self) -> bool:
+        return False
+
+
+class _Compiler:
+    def __init__(self, ipv6: bool = False) -> None:
+        self.ipv6_policy = ipv6
+
+    @staticmethod
+    def is_action_on_reject_tcp_rst(rule) -> bool:
+        return rule.get_option('action_on_reject', '') == 'TCP RST'
+
+    @staticmethod
+    def reset_action_on_reject(rule) -> None:
+        rule.set_option('action_on_reject', '')
+
+
+def _comp_rule(services: list, negated: bool = True, **options) -> CompRule:
+    rule = CompRule(
+        id=uuid.uuid4(),
+        type='PolicyRule',
+        position=0,
+        label='0',
+        comment='',
+        options=dict(options),
+        negations={'srv': negated},
+        action=PolicyAction.Deny,
+    )
+    rule.srv = services
+    return rule
+
+
+def _run(rule: CompRule, ipv6: bool = False) -> list[CompRule]:
+    processor = AddOtherProtocolsForNegatedService(name='p')
+    processor.compiler = _Compiler(ipv6)
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return list(processor.tmp_queue)
+
+
+def test_a_negated_port_gets_a_rule_for_the_other_protocols():
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    out = _run(_comp_rule([http]))
+    assert len(out) == 2
+    assert out[0].srv == [http]
+    assert out[1].srv == []
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['tcp']
+    assert out[1].get_neg('srv') is False
+
+
+def test_two_protocols_are_both_excluded():
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    dns = UDPService(id=uuid.uuid4(), name='dns', dst_range_start=53, dst_range_end=53)
+    out = _run(_comp_rule([http, dns]))
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['tcp', 'udp']
+
+
+def test_an_icmp_type_is_excluded_by_the_family_s_own_name():
+    ping = ICMPService(id=uuid.uuid4(), name='ping', data={'type': 8, 'code': 0})
+    assert _run(_comp_rule([ping]))[1].get_option(OTHER_PROTOCOLS_OPTION, None) == [
+        'icmp'
+    ]
+    ping6 = ICMPService(id=uuid.uuid4(), name='ping6', data={'type': 128, 'code': 0})
+    out = _run(_comp_rule([ping6]), ipv6=True)
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['ipv6-icmp']
+
+
+@pytest.mark.parametrize(
+    'services',
+    [
+        # "All TCP" already negates to `meta l4proto != tcp`, which is
+        # complete.
+        [TCPService(id=uuid.uuid4(), name='All TCP')],
+        # An ICMP service that names no type says only its protocol.
+        [ICMPService(id=uuid.uuid4(), name='All ICMP', data={'type': -1})],
+    ],
+)
+def test_a_whole_protocol_service_needs_no_second_rule(services):
+    assert len(_run(_comp_rule(services))) == 1
+
+
+def test_a_rule_that_is_not_negated_is_left_alone():
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    assert len(_run(_comp_rule([http], negated=False))) == 1
+
+
+def test_the_other_half_of_a_tcp_reset_rule_loses_the_reset():
+    """A TCP reset needs a TCP packet, and this rule matches everything else."""
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    rule = _comp_rule([http], action_on_reject='TCP RST')
+    rule.action = PolicyAction.Reject
+    out = _run(rule)
+    assert out[0].get_option('action_on_reject', '') == 'TCP RST'
+    assert out[1].get_option('action_on_reject', '') == ''
+
+
+def test_the_printer_writes_the_exclusion():
+    printer = PrintRule_nft.__new__(PrintRule_nft)
+    one = _comp_rule([], negated=False, **{OTHER_PROTOCOLS_OPTION: ['tcp']})
+    two = _comp_rule([], negated=False, **{OTHER_PROTOCOLS_OPTION: ['tcp', 'udp']})
+    assert printer._print_service(one, None) == 'meta l4proto != tcp'
+    assert printer._print_service(two, None) == 'meta l4proto != { tcp, udp }'

@@ -63,6 +63,7 @@ from firewallfabrik.core.objects import (
     Firewall,
     Host,
     ICMP6Service,
+    ICMPService,
     Interface,
     IPv4,
     IPv6,
@@ -85,6 +86,7 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_object_name,
     nft_set_reference_name,
 )
+from firewallfabrik.platforms.nftables._print_rule import OTHER_PROTOCOLS_OPTION
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -305,6 +307,13 @@ class PolicyCompiler_nft(PolicyCompiler):
                 'split if action on reject is TCP reset (pass 2)'
             )
         )
+
+        # "Not this service" also covers every protocol the service does
+        # not name, which nftables needs a second rule for.  It runs behind
+        # the reject block, whose processors read the service element as
+        # "any" when it is empty, and ahead of everything else, so the
+        # extra rule is an ordinary rule from here on.
+        self.add(AddOtherProtocolsForNegatedService('negated service: other protocols'))
 
         # Logging — inline in nftables, no temp chain needed
         self.add(ClearLogInMangle('clear logging in rules in mangle table'))
@@ -908,6 +917,9 @@ class NftNegation(PolicyRuleProcessor):
     these interfaces" means the firewall's other protected interfaces and
     not every interface there is - `iifname != { ... }` would also match
     the loopback and whatever the object tree does not know about.
+
+    The service element needs a second rule on top of the ``!=``, which
+    :class:`AddOtherProtocolsForNegatedService` adds.
     """
 
     def process_next(self) -> bool:
@@ -943,6 +955,85 @@ class TimeNegation(PolicyRuleProcessor):
             return False
         self.tmp_queue.append(rule)
         return True
+
+
+class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
+    """Give a negated service the protocols it does not name.
+
+    "Not this service" covers every packet the service does not describe,
+    and a UDP packet is not TCP port 80.  iptables says exactly that: the
+    rule jumps into a temporary chain, a rule matching the service returns,
+    and the action follows, so a packet of any other protocol reaches the
+    action (``PolicyCompiler_ipt::SrvNegation``).
+
+    nftables writes the negation into the rule, and a port, a TCP flag or
+    an ICMP type is a payload match that carries a protocol dependency with
+    it: ``tcp dport != 80`` compiles to ``meta l4proto tcp`` followed by
+    the port comparison (verified with ``nft --debug=netlink``), so it
+    never sees a UDP packet at all.  Half the traffic the rule is written
+    for is therefore missing, and on a Deny rule that is a hole.
+
+    nftables cannot say "or" inside a rule, so the other half becomes a
+    rule of its own, matching every protocol the element does not name.
+    The two are disjoint - one asks for a protocol, the other asks for
+    anything but - so a packet is still seen by exactly one of them.
+
+    Left alone, deliberately:
+
+    * a service that names nothing but its protocol ("All TCP"), whose
+      negation is already ``meta l4proto != tcp`` and complete;
+    * a Tag, User or Custom service, which either constrains no protocol
+      at all (and whose ``!=`` therefore already applies to every packet)
+      or carries platform text this compiler cannot read;
+    * an IP service, which ``_negate_single_match`` inverts as a whole.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.tmp_queue.append(rule)
+
+        protocols = self._other_protocols(rule)
+        if not protocols:
+            return True
+
+        other = rule.clone()
+        other.srv = []
+        other.set_neg('srv', False)
+        other.set_option(OTHER_PROTOCOLS_OPTION, protocols)
+        nft_comp = cast('PolicyCompiler_nft', self.compiler)
+        if 'tcp' in protocols and nft_comp.is_action_on_reject_tcp_rst(other):
+            # This rule is the one for everything that is *not* TCP, and a
+            # TCP reset needs a TCP packet: nftables narrows such a rule to
+            # `meta l4proto tcp` on its own (netfilter nftables
+            # src/evaluate.c), which contradicts the match and leaves a rule
+            # no packet can reach.  `SplitServicesIfRejectWithTCPReset`
+            # answers the same question the same way for a rule that names
+            # only non-TCP services.
+            nft_comp.reset_action_on_reject(other)
+        self.tmp_queue.append(other)
+        return True
+
+    def _other_protocols(self, rule) -> list[str]:
+        """Return the protocols to exclude, or an empty list to do nothing."""
+        if not rule.get_neg('srv') or not rule.srv:
+            return []
+
+        names: set[str] = set()
+        for srv in rule.srv:
+            if isinstance(srv, (TCPService, UDPService)):
+                if srv.is_any():
+                    return []
+                names.add(srv.get_protocol_name())
+            elif isinstance(srv, (ICMPService, ICMP6Service)):
+                codes = getattr(srv, 'codes', None) or srv.data or {}
+                if int(codes.get('type', -1) or -1) < 0:
+                    return []
+                names.add('ipv6-icmp' if self.compiler.ipv6_policy else 'icmp')
+            else:
+                return []
+        return sorted(name for name in names if name)
 
 
 class SplitIfSrcNegAndFw(PolicyRuleProcessor):

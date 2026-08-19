@@ -115,6 +115,11 @@ def print_fragment_match(ipv6: bool) -> str:
 # the next rule.
 LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 
+# Rule option holding the protocols a negated service element does *not*
+# name, set by `AddOtherProtocolsForNegatedService` on the extra rule it
+# adds.  See that processor for why the extra rule exists.
+OTHER_PROTOCOLS_OPTION = 'nft_other_protocols'
+
 # The largest burst a rate limit can carry.  It travels in a 32-bit netlink
 # attribute in both directions (netfilter nftables src/netlink_linearize.c
 # writes NFTNL_EXPR_LIMIT_BURST with nftnl_expr_set_u32, the kernel reads it
@@ -521,6 +526,11 @@ class PrintRule_nft(PolicyRuleProcessor):
         because the match sits on the rule that jumps into the pair's chain
         and is evaluated once.
         """
+        # The second rule of a negated service element says nothing about
+        # the rule the first has not already said, so the message block
+        # stays on the first one - the same answer the log split below
+        # gives for its own pair of lines.
+        with_errors = not rule.get_option(OTHER_PROTOCOLS_OPTION, None)
         if self._splits_for_log(rule):
             log_rule = rule.clone()
             log_rule.ipt_target = 'LOG'
@@ -528,8 +538,8 @@ class PrintRule_nft(PolicyRuleProcessor):
             action_rule.nft_log = False
             return self._build_rule_line(
                 log_rule, with_errors=False
-            ) + self._build_rule_line(action_rule)
-        return self._build_rule_line(rule)
+            ) + self._build_rule_line(action_rule, with_errors=with_errors)
+        return self._build_rule_line(rule, with_errors=with_errors)
 
     def _splits_for_log(self, rule: CompRule) -> bool:
         """Return whether this rule becomes a log line and a verdict line."""
@@ -1127,6 +1137,15 @@ class PrintRule_nft(PolicyRuleProcessor):
         reported before returning.
         """
         negated = bool(rule.srv_single_object_negation)
+
+        others = rule.get_option(OTHER_PROTOCOLS_OPTION, None)
+        if others:
+            # The second half of a negated service element: every protocol
+            # the element does not name.  See
+            # `AddOtherProtocolsForNegatedService`.
+            if len(others) == 1:
+                return f'meta l4proto != {others[0]}'
+            return f'meta l4proto != {{ {", ".join(others)} }}'
 
         if rule.merged_tcp_udp:
             return self._print_merged_tcp_udp_service(rule, negated)
