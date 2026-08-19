@@ -1381,8 +1381,12 @@ class PrintRule_nft(PolicyRuleProcessor):
             if flags:
                 parts.append(flags)
             if not parts:
-                # Just the protocol, no ports, no flags
-                parts.append(f'meta l4proto {proto}')
+                # Just the protocol, no ports, no flags.  The negation
+                # belongs on the protocol here: it is the only thing the
+                # service says, so leaving it off turns "anything but all
+                # TCP" into "all TCP".  `print_icmp_service` puts it on
+                # `meta l4proto` for the same reason.
+                parts.append(f'meta l4proto {neg}{proto}')
 
         return ' '.join(parts)
 
