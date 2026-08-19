@@ -63,7 +63,6 @@ from firewallfabrik.core.objects import (
     Firewall,
     Host,
     ICMP6Service,
-    ICMPService,
     Interface,
     IPv4,
     IPv6,
@@ -86,7 +85,10 @@ from firewallfabrik.platforms.nftables._identifiers import (
     nft_object_name,
     nft_set_reference_name,
 )
-from firewallfabrik.platforms.nftables._print_rule import OTHER_PROTOCOLS_OPTION
+from firewallfabrik.platforms.nftables._print_rule import (
+    OTHER_PROTOCOLS_OPTION,
+    other_protocols_for,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -978,14 +980,7 @@ class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
     The two are disjoint - one asks for a protocol, the other asks for
     anything but - so a packet is still seen by exactly one of them.
 
-    Left alone, deliberately:
-
-    * a service that names nothing but its protocol ("All TCP"), whose
-      negation is already ``meta l4proto != tcp`` and complete;
-    * a Tag, User or Custom service, which either constrains no protocol
-      at all (and whose ``!=`` therefore already applies to every packet)
-      or carries platform text this compiler cannot read;
-    * an IP service, which ``_negate_single_match`` inverts as a whole.
+    What is left alone, and why, is in :func:`other_protocols_for`.
     """
 
     def process_next(self) -> bool:
@@ -1017,23 +1012,9 @@ class AddOtherProtocolsForNegatedService(PolicyRuleProcessor):
 
     def _other_protocols(self, rule) -> list[str]:
         """Return the protocols to exclude, or an empty list to do nothing."""
-        if not rule.get_neg('srv') or not rule.srv:
+        if not rule.get_neg('srv'):
             return []
-
-        names: set[str] = set()
-        for srv in rule.srv:
-            if isinstance(srv, (TCPService, UDPService)):
-                if srv.is_any():
-                    return []
-                names.add(srv.get_protocol_name())
-            elif isinstance(srv, (ICMPService, ICMP6Service)):
-                codes = getattr(srv, 'codes', None) or srv.data or {}
-                if int(codes.get('type', -1) or -1) < 0:
-                    return []
-                names.add('ipv6-icmp' if self.compiler.ipv6_policy else 'icmp')
-            else:
-                return []
-        return sorted(name for name in names if name)
+        return other_protocols_for(rule.srv, self.compiler.ipv6_policy)
 
 
 class SplitIfSrcNegAndFw(PolicyRuleProcessor):

@@ -201,3 +201,65 @@ def test_the_printer_writes_the_exclusion():
     two = _comp_rule([], negated=False, **{OTHER_PROTOCOLS_OPTION: ['tcp', 'udp']})
     assert printer._print_service(one, None) == 'meta l4proto != tcp'
     assert printer._print_service(two, None) == 'meta l4proto != { tcp, udp }'
+
+
+class _NATCompiler(_Compiler):
+    def __init__(self, ipv6: bool = False) -> None:
+        super().__init__(ipv6)
+        self.warnings: list[str] = []
+
+    def warning(self, _rule, message: str) -> None:
+        self.warnings.append(message)
+
+
+def _nat_rule(services: list, translated: list | None = None) -> CompRule:
+    rule = CompRule(
+        id=uuid.uuid4(),
+        type='NATRule',
+        position=0,
+        label='0 (NAT)',
+        comment='',
+        options={},
+        negations={'osrv': True},
+        action=None,
+    )
+    rule.osrv = services
+    rule.tsrv = translated or []
+    return rule
+
+
+def _run_nat(rule: CompRule) -> tuple[list[CompRule], list[str]]:
+    from firewallfabrik.platforms.nftables._nat_compiler import (
+        AddOtherProtocolsForNegatedServiceInNAT,
+    )
+
+    processor = AddOtherProtocolsForNegatedServiceInNAT(name='p')
+    processor.compiler = _NATCompiler()
+    processor.set_data_source(_Feeder([rule]))
+    assert processor.process_next() is True
+    return list(processor.tmp_queue), processor.compiler.warnings
+
+
+def test_a_nat_rule_translates_the_other_protocols_too():
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    out, warnings = _run_nat(_nat_rule([http]))
+    assert len(out) == 2
+    assert out[1].osrv == []
+    assert out[1].get_option(OTHER_PROTOCOLS_OPTION, None) == ['tcp']
+    assert warnings == []
+
+
+def test_a_translated_port_gets_a_warning_instead_of_a_second_rule():
+    """A port belongs to a protocol, and both tools refuse the rule without one."""
+    http = TCPService(
+        id=uuid.uuid4(), name='http', dst_range_start=80, dst_range_end=80
+    )
+    new = TCPService(
+        id=uuid.uuid4(), name='8080', dst_range_start=8080, dst_range_end=8080
+    )
+    out, warnings = _run_nat(_nat_rule([http], translated=[new]))
+    assert len(out) == 1
+    assert len(warnings) == 1
+    assert 'untranslated' in warnings[0]

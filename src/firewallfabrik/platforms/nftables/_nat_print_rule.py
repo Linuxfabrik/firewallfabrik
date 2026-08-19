@@ -56,6 +56,7 @@ from firewallfabrik.platforms.linux._netfilter import (
 )
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name, nft_quote
 from firewallfabrik.platforms.nftables._print_rule import (
+    OTHER_PROTOCOLS_OPTION,
     indent_comment_block,
     print_fragment_match,
     print_icmp_service,
@@ -166,8 +167,17 @@ class NATPrintRule_nft(NATRuleProcessor):
         parts.extend(odst_match)
 
         # Original service
+        others = rule.get_option(OTHER_PROTOCOLS_OPTION, None)
         osrv = nft_comp.get_first_osrv(rule)
-        if osrv:
+        if others:
+            # The second half of a negated service element: every protocol
+            # the element does not name.  See
+            # `AddOtherProtocolsForNegatedServiceInNAT`.
+            if len(others) == 1:
+                parts.append(f'meta l4proto != {others[0]}')
+            else:
+                parts.append(f'meta l4proto != {{ {", ".join(others)} }}')
+        elif osrv:
             srv_match = self._print_service(osrv, rule)
             if srv_match is None:
                 # The service cannot be expressed and the reason was

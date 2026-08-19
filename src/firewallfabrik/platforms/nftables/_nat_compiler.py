@@ -67,6 +67,10 @@ from firewallfabrik.platforms.linux._netfilter import (
     nat_interface_problem,
 )
 from firewallfabrik.platforms.nftables._identifiers import nft_object_name
+from firewallfabrik.platforms.nftables._print_rule import (
+    OTHER_PROTOCOLS_OPTION,
+    other_protocols_for,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy.orm
@@ -232,6 +236,9 @@ class NATCompiler_nft(NATCompiler):
 
         self.add(NftNegationOSrc('process negation in OSrc'))
         self.add(NftNegationODst('process negation in ODst'))
+        self.add(
+            AddOtherProtocolsForNegatedServiceInNAT('negated service: other protocols')
+        )
         self.add(NftNegationOSrv('process negation in OSrv'))
 
         self.add(SplitOnODst('split on ODst'))
@@ -882,6 +889,57 @@ class NftNegationOSrc(NATRuleProcessor):
             rule.osrc_single_object_negation = True
             rule.set_neg('osrc', False)
         self.tmp_queue.append(rule)
+        return True
+
+
+class AddOtherProtocolsForNegatedServiceInNAT(NATRuleProcessor):
+    """The NAT twin of ``AddOtherProtocolsForNegatedService``.
+
+    A NAT rule whose original service is negated translates everything the
+    service does not describe, other protocols included.  iptables builds
+    the same temporary chain here as it does for a policy rule
+    (``NATCompiler_ipt::doOSrvNegation``), so a UDP packet reaches the
+    translation of a rule written as "not TCP port 80".  nftables writes
+    ``!=`` into the rule, which carries a protocol dependency with it and
+    therefore never sees that packet, so the connection crossed the
+    firewall untranslated.
+
+    A rule that also translates a **port** gets no such second rule.  A
+    port belongs to a protocol, and both tools say so: nftables answers
+    "transport protocol mapping is only valid after transport protocol
+    match" and refuses the whole ruleset, iptables answers "Need TCP, UDP,
+    SCTP or DCCP with port specification" and stops the activation.  The
+    rule is reported instead, because the protocols it does not name keep
+    crossing the firewall untranslated.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+        self.tmp_queue.append(rule)
+
+        if not rule.get_neg('osrv'):
+            return True
+        protocols = other_protocols_for(rule.osrv, self.compiler.ipv6_policy)
+        if not protocols:
+            return True
+
+        if rule.tsrv:
+            self.compiler.warning(
+                rule,
+                'the original service is negated and the rule translates a '
+                'port, so nftables cannot cover the protocols the service '
+                'does not name; traffic of those protocols passes '
+                'untranslated',
+            )
+            return True
+
+        other = rule.clone()
+        other.osrv = []
+        other.set_neg('osrv', False)
+        other.set_option(OTHER_PROTOCOLS_OPTION, protocols)
+        self.tmp_queue.append(other)
         return True
 
 

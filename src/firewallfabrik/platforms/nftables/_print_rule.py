@@ -120,6 +120,42 @@ LOG_TARGETS = frozenset({'LOG', 'NFLOG', 'ULOG'})
 # adds.  See that processor for why the extra rule exists.
 OTHER_PROTOCOLS_OPTION = 'nft_other_protocols'
 
+
+def other_protocols_for(services: list, ipv6: bool) -> list[str]:
+    """Return the protocols a negated service element does *not* name.
+
+    An empty list means the element needs no second rule, either because
+    its negation already applies to every packet or because this compiler
+    cannot say what the element leaves out.  See
+    ``AddOtherProtocolsForNegatedService`` for the whole reasoning; the
+    cases are:
+
+    * a service naming nothing but its protocol ("All TCP"), whose
+      negation is already ``meta l4proto != tcp`` and complete;
+    * a Tag, User or Custom service, which constrains no protocol at all
+      (and whose ``!=`` therefore already applies to every packet) or
+      carries platform text this compiler cannot read;
+    * an IP service, which the printers invert as a whole.
+    """
+    if not services:
+        return []
+
+    names: set[str] = set()
+    for srv in services:
+        if isinstance(srv, (TCPService, UDPService)):
+            if srv.is_any():
+                return []
+            names.add(srv.get_protocol_name())
+        elif isinstance(srv, (ICMPService, ICMP6Service)):
+            codes = getattr(srv, 'codes', None) or srv.data or {}
+            if int(codes.get('type', -1) or -1) < 0:
+                return []
+            names.add('ipv6-icmp' if ipv6 else 'icmp')
+        else:
+            return []
+    return sorted(name for name in names if name)
+
+
 # The largest burst a rate limit can carry.  It travels in a 32-bit netlink
 # attribute in both directions (netfilter nftables src/netlink_linearize.c
 # writes NFTNL_EXPR_LIMIT_BURST with nftnl_expr_set_u32, the kernel reads it
