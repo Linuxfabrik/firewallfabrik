@@ -2628,7 +2628,15 @@ class SplitIfDstFWNetwork(PolicyRuleProcessor):
 
 
 class SpecialCaseWithFW2(PolicyRuleProcessor):
-    """Replace fw with its interface addresses when src==dst==fw."""
+    """Replace fw with its interface addresses when src==dst==fw.
+
+    A bridge port is left out along with an unnumbered interface
+    (``PolicyCompiler_ipt::specialCaseWithFW2``,
+    ``if (iface->isUnnumbered() || iface->isBridgePort()) continue``).  A
+    port of a bridge carries the bridge's traffic, not its own; an address
+    configured on it belongs to the bridge, and taking it in here would
+    make the rule match packets the port never terminates.
+    """
 
     def process_next(self) -> bool:
         rule = self.get_next()
@@ -2649,7 +2657,7 @@ class SpecialCaseWithFW2(PolicyRuleProcessor):
         ):
             all_addrs = []
             for iface in ipt_comp.fw.interfaces:
-                if iface.is_unnumbered():
+                if iface.is_unnumbered() or iface.is_bridge_port():
                     continue
                 for addr in iface.addresses:
                     if (ipt_comp.ipv6_policy and isinstance(addr, IPv6)) or (
