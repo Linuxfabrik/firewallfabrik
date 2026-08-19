@@ -79,7 +79,9 @@ from firewallfabrik.platforms.iptables._utils import (
     version_compare,
 )
 from firewallfabrik.platforms.linux._netfilter import (
+    build_interface_groups,
     count_bridge_interfaces,
+    interface_group_object,
     nat_interface_problem,
 )
 
@@ -1370,10 +1372,11 @@ class AssignInterface(NATRuleProcessor):
             return True
 
         # Get the TSrc address and find its parent interface
+        # "Original" leaves the element empty, and such a rule still has
+        # to name the interfaces it can leave by: the C++ reads the Any
+        # object here, fails the Interface cast and falls through to the
+        # interface groups below.
         tsrc = rule.tsrc[0] if rule.tsrc else None
-        if tsrc is None:
-            self.tmp_queue.append(rule)
-            return True
 
         iface = None
         if isinstance(tsrc, Interface):
@@ -1386,14 +1389,20 @@ class AssignInterface(NATRuleProcessor):
             self.tmp_queue.append(rule)
             return True
 
-        # TSrc not tied to a firewall interface — assign to each
-        # regular (non-loopback) interface
+        # TSrc is not tied to an interface of this firewall, so the rule
+        # has to name every interface the translated traffic could leave
+        # by - one rule per interface *group*, the way fwbuilder's
+        # `regular_interfaces` map does it, so eth0..eth3 become one
+        # `-o eth+` instead of four rules.
+        groups = build_interface_groups(
+            self.compiler.fw, bool(getattr(self.compiler, 'ipv6', False))
+        )
         n = 0
-        for iface in self.compiler.fw.interfaces:
-            if iface.is_loopback():
+        for group_name, members in sorted(groups.items()):
+            if group_name == '*' or not members:
                 continue
             r = rule.clone()
-            r.itf_outb = [iface]
+            r.itf_outb = [interface_group_object(self.compiler.fw, group_name)]
             self.tmp_queue.append(r)
             n += 1
 

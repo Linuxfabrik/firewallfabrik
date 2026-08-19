@@ -319,14 +319,8 @@ table ip fwf_nat {
         #
         # Rule 6 (NAT)
         #
-        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.168.1.10
-        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 192.168.1.10
-        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 192.168.1.10
-        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.1.10
-        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
-        oifname "eth1" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
-        oifname "eth3" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
-        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
+        oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 192.168.1.10
+        oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 192.168.1.20
         #
         # Rule 8 (NAT)
         #

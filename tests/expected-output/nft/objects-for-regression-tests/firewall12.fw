@@ -355,7 +355,7 @@ table ip fwf_nat {
         # Rule 7 (NAT)
         #
         # port-only translation
-        udp sport 6767 counter snat to :67
+        oifname "eth*" udp sport 6767 counter snat to :67
         #
         # Rule 8 (NAT)
         #
@@ -365,40 +365,32 @@ table ip fwf_nat {
         # Rule 11 (NAT)
         #
         # SDNAT
-        oifname "eth0" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.0.2.1
-        oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.0.2.1
-        oifname "eth0" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
-        oifname "eth1" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
+        oifname "eth*" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.0.2.1
+        oifname "eth*" ip daddr 192.168.1.10 tcp dport 22 counter snat to 192.168.1.1
         #
         # Rule 12 (NAT)
         #
         # SDNAT with source port
-        oifname "eth0" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.0.2.1:5050
-        oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.0.2.1:5050
-        oifname "eth0" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
-        oifname "eth1" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
+        oifname "eth*" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.0.2.1:5050
+        oifname "eth*" ip daddr 192.168.1.10 udp sport 123 counter snat to 192.168.1.1:5050
         #
         # Rule 13 (NAT)
         #
         # SDNAT with dest port
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.0.2.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.0.2.1
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.168.1.1
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.168.1.1
+        oifname "eth*" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.0.2.1
+        oifname "eth*" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp dport 1053 counter snat to 192.168.1.1
         #
         # Rule 14 (NAT)
         #
         # SDNAT
         # translate src and dst addresses
         # and src and dst ports
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.0.2.1:32767-65535
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.0.2.1:32767-65535
-        oifname "eth0" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.168.1.1:32767-65535
-        oifname "eth1" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.168.1.1:32767-65535
+        oifname "eth*" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.0.2.1:32767-65535
+        oifname "eth*" ip saddr 192.168.1.0/24 ip daddr 192.168.1.10 udp sport 32767-65535 udp dport 1053 counter snat to 192.168.1.1:32767-65535
         #
         # Rule 15 (NAT)
         #
-        ip saddr 192.168.1.0/24 udp dport 53 counter snat to :5050
+        oifname "eth*" ip saddr 192.168.1.0/24 udp dport 53 counter snat to :5050
     }
 }
 

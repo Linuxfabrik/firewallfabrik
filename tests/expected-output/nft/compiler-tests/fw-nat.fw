@@ -365,9 +365,7 @@ table ip fwf_nat {
         # Rule 7 (NAT)
         #
         # Translated source is a range covering a whole prefix, plus a port range
-        oifname "eth0" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 203.0.113.0-203.0.113.255:1024-2048
-        oifname "eth1" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 203.0.113.0-203.0.113.255:1024-2048
-        oifname "eth2" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 203.0.113.0-203.0.113.255:1024-2048
+        oifname "eth*" ip saddr 192.168.1.0/24 tcp dport 80 counter snat to 203.0.113.0-203.0.113.255:1024-2048
         #
         # Rule 8 (NAT)
         #

@@ -532,3 +532,74 @@ def get_tag_value(compiler, rule) -> str:
         if tag_obj:
             return tag_obj.get_code() or ''
     return str(rule.get_option('tagvalue', '') or '').strip()
+
+
+# Interfaces whose names differ only in a trailing number are one group,
+# named after the pattern that matches them all: eth0, eth1 and eth2
+# become `eth+`.  fwbuilder builds that map once per compiler
+# (`build_interface_groups`, iptlib/ipt_utils.cpp) and uses it wherever a
+# rule has to name "the firewall's interfaces" without naming one:
+# a source translation whose translated address belongs to none of them,
+# and a rule that says inbound or outbound and no interface.  One `-o eth+`
+# is not only shorter than one rule per interface, it also covers the
+# interface that gets added next.
+_INTERFACE_INDEX = re.compile(r'[0-9]+$')
+
+
+def interface_group_name(name: str) -> str:
+    """Return the pattern that matches *name* and its siblings.
+
+    Spelled with the trailing ``*`` Firewall Builder stores for a wildcard
+    interface; the iptables printer turns that into the ``+`` iptables
+    wants and nftables takes the glob as it is.
+    """
+    return _INTERFACE_INDEX.sub('*', name)
+
+
+def build_interface_groups(fw, ipv6: bool) -> dict[str, list]:
+    """Group the firewall's regular interfaces by name pattern.
+
+    Left out, the way fwbuilder leaves them out: the loopback, an
+    unnumbered interface and a bridge port, none of which a rule about
+    "the firewall's interfaces" can mean.  An interface is also left out
+    when it carries an address of the *other* family only - the rule being
+    compiled could never match on it.  An interface with no address at all
+    stays: a dynamic one gets its address at run time.
+
+    The key ``'*'`` holds every interface that survived, which is what a
+    rule naming a direction and no interface means.
+    """
+    from firewallfabrik.core.objects import IPv4, IPv6
+
+    groups: dict[str, list] = {'*': []}
+    for iface in fw.interfaces:
+        if iface.is_loopback() or iface.is_unnumbered() or iface.is_bridge_port():
+            continue
+        addresses = iface.addresses or []
+        has_v4 = any(isinstance(address, IPv4) for address in addresses)
+        has_v6 = any(isinstance(address, IPv6) for address in addresses)
+        if (has_v4 or has_v6) and not (has_v6 if ipv6 else has_v4):
+            continue
+        groups.setdefault(interface_group_name(iface.name), []).append(iface)
+        groups['*'].append(iface)
+    return groups
+
+
+def interface_group_object(fw, group_name: str):
+    """Return a stand-in Interface object named after an interface group.
+
+    A rule element holds objects and the printer writes their names, so
+    the group needs an object of its own.  fwbuilder puts an ObjectGroup
+    there; here a detached Interface carrying the pattern as its name is
+    the smaller answer, and it answers the predicates the printers ask
+    (it is no loopback, no bridge port and no sub-interface).
+    """
+    from firewallfabrik.core.objects import Interface
+
+    return Interface(
+        id=uuid.uuid4(),
+        name=group_name,
+        device_id=fw.id,
+        data={},
+        options={},
+    )

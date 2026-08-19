@@ -533,9 +533,7 @@ script_body() {
  echo "Rule 7 (NAT)"
  #
  # Translated source is a range covering a whole prefix, plus a port range
- $IPTABLES -w 5 -t nat -A POSTROUTING -o eth0 -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j SNAT --to-source 203.0.113.0-203.0.113.255:1024-2048
- $IPTABLES -w 5 -t nat -A POSTROUTING -o eth1 -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j SNAT --to-source 203.0.113.0-203.0.113.255:1024-2048
- $IPTABLES -w 5 -t nat -A POSTROUTING -o eth2 -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j SNAT --to-source 203.0.113.0-203.0.113.255:1024-2048
+ $IPTABLES -w 5 -t nat -A POSTROUTING -o eth+ -p tcp -m tcp -s 192.168.1.0/24 --dport 80 -j SNAT --to-source 203.0.113.0-203.0.113.255:1024-2048
  #
  # Rule 8 (NAT)
  #

@@ -558,29 +558,17 @@ table ip fwf_nat {
         #
         # Rule 1 (NAT)
         #
-        oifname "ppp0" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
-        oifname "eth0" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
-        oifname "ppp1" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
-        oifname "sixxs0" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
+        oifname "eth*" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
+        oifname "ppp*" ip saddr 192.168.1.0/24 counter snat to 22.22.22.23
         #
         # Rule 2 (NAT)
         #
-        oifname "ppp0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
-        oifname "eth0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
-        oifname "eth2" ip saddr 77.77.77.77 counter snat to 22.22.22.23
-        oifname "ppp1" ip saddr 77.77.77.77 counter snat to 22.22.22.23
-        oifname "sixxs0" ip saddr 77.77.77.77 counter snat to 22.22.22.23
-        oifname "ppp0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
-        oifname "eth0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.1.1 counter snat to 22.22.22.23
-        oifname "ppp1" ip saddr 192.168.1.1 counter snat to 22.22.22.23
-        oifname "sixxs0" ip saddr 192.168.1.1 counter snat to 22.22.22.23
-        oifname "ppp0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
-        oifname "eth0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
-        oifname "eth2" ip saddr 192.168.2.1 counter snat to 22.22.22.23
-        oifname "ppp1" ip saddr 192.168.2.1 counter snat to 22.22.22.23
-        oifname "sixxs0" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "eth*" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "ppp*" ip saddr 77.77.77.77 counter snat to 22.22.22.23
+        oifname "eth*" ip saddr 192.168.1.1 counter snat to 22.22.22.23
+        oifname "ppp*" ip saddr 192.168.1.1 counter snat to 22.22.22.23
+        oifname "eth*" ip saddr 192.168.2.1 counter snat to 22.22.22.23
+        oifname "ppp*" ip saddr 192.168.2.1 counter snat to 22.22.22.23
     }
 }
 
