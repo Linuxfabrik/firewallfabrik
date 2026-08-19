@@ -1646,3 +1646,112 @@ class AddVirtualAddress(NATRuleProcessor):
             return True
 
         return True
+
+
+def _prefix_length(obj) -> int | None:
+    """Return the prefix length of a network object, or None.
+
+    A netmask is stored as written, dotted for IPv4 and as a length for
+    IPv6, so both spellings have to answer the same question.
+    """
+    if not isinstance(obj, (Network, NetworkIPv6)):
+        return None
+    netmask = obj.get_netmask()
+    if netmask in (None, ''):
+        return None
+    try:
+        if isinstance(netmask, int) or str(netmask).isdigit():
+            return int(netmask)
+        return _ipa.ip_network(f'0.0.0.0/{netmask}', strict=False).prefixlen
+    except ValueError:
+        return None
+
+
+class VerifyRules(NATRuleProcessor):
+    """Verify correctness of NAT rules.
+
+    Corresponds to C++ ``NATCompiler_ipt::VerifyRules``, whose own
+    regression firewall (`firewall2-4`, "tests for error conditions in
+    NATCompiler_ipt::VerifyRules") is what the messages are worded after.
+    """
+
+    def process_next(self) -> bool:
+        rule = self.get_next()
+        if rule is None:
+            return False
+
+        if rule.get_neg('tsrc'):
+            self.compiler.abort(rule, 'Can not use negation in translated source')
+            return True
+
+        if rule.get_neg('tdst'):
+            self.compiler.abort(rule, 'Can not use negation in translated destination')
+            return True
+
+        if rule.get_neg('tsrv'):
+            self.compiler.abort(rule, 'Can not use negation in translated service')
+            return True
+
+        # A translated service is one service or "Original".  Several of
+        # them cannot be written out at all: the printer takes the first
+        # and the rest of the translation is silently lost.
+        if len(rule.tsrv) > 1:
+            self.compiler.abort(
+                rule,
+                "Translated service should be 'Original' or should contain "
+                'single object.',
+            )
+            return True
+
+        if rule.tsrv and isinstance(rule.tsrv[0], Group):
+            self.compiler.abort(rule, 'Can not use group in translated service.')
+            return True
+
+        if rule.nat_rule_type == NATRuleType.SNAT and rule.tsrc:
+            tsrc = rule.tsrc[0]
+            # A source translation writes one address, so a network object
+            # would go out as its network address - every connection
+            # translated to the `.0` of the network.
+            if isinstance(tsrc, (Network, NetworkIPv6)):
+                self.compiler.abort(
+                    rule, 'Can not use network object in translated source.'
+                )
+                return True
+            # An unnumbered interface never carries an address, so there is
+            # nothing to translate the source to.  Corresponds to C++
+            # NATCompiler_ipt::VerifyRules.
+            if isinstance(tsrc, Interface) and tsrc.is_unnumbered():
+                self.compiler.abort(
+                    rule,
+                    'Can not use unnumbered interface in Translated Source '
+                    'of a Source translation rule.',
+                )
+                return True
+
+        # A one-to-one network map needs the two networks to be the same
+        # size.  NETMAP copies the host part across, so mapping a /24 onto
+        # a /25 puts two source addresses on one translated address and
+        # nothing says so.
+        #
+        # The C++ guards the destination case with `!tsrc->isAny()`, which
+        # is never true for a destination map, so that half of its check
+        # has never run; fwf asks about the element the rule translates.
+        for kind, original, translated in (
+            (NATRuleType.SNetnat, rule.osrc, rule.tsrc),
+            (NATRuleType.DNetnat, rule.odst, rule.tdst),
+        ):
+            if rule.nat_rule_type != kind or not translated:
+                continue
+            first = _prefix_length(original[0]) if original else None
+            second = _prefix_length(translated[0])
+            if first is None or second is None or first != second:
+                side = 'source' if kind == NATRuleType.SNetnat else 'destination'
+                self.compiler.abort(
+                    rule,
+                    f'Original and translated {side} should both be networks '
+                    'of the same size.',
+                )
+                return True
+
+        self.tmp_queue.append(rule)
+        return True

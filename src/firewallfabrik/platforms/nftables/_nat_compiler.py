@@ -41,6 +41,7 @@ from firewallfabrik.compiler.processors._generic import (
     RecursiveGroupsInRE,
     ResolveMultiAddress,
     SimplePrintProgress,
+    VerifyRules,
 )
 from firewallfabrik.compiler.processors._policy import (
     expand_interface_negation,
@@ -816,43 +817,6 @@ class ConvertLoadBalancingRules(NATRuleProcessor):
         # does not split this into N separate rules
         rule.tdst = [rule.tdst[0]]
 
-        return True
-
-
-class VerifyRules(NATRuleProcessor):
-    """Verify correctness of NAT rules."""
-
-    def process_next(self) -> bool:
-        rule = self.get_next()
-        if rule is None:
-            return False
-
-        if rule.get_neg('tsrc'):
-            self.compiler.abort('Can not use negation in translated source')
-            return True
-
-        if rule.get_neg('tdst'):
-            self.compiler.abort('Can not use negation in translated destination')
-            return True
-
-        if rule.get_neg('tsrv'):
-            self.compiler.abort('Can not use negation in translated service')
-            return True
-
-        if rule.nat_rule_type == NATRuleType.SNAT and rule.tsrc:
-            tsrc = rule.tsrc[0]
-            # An unnumbered interface never carries an address, so there is
-            # nothing to translate the source to.  Corresponds to C++
-            # NATCompiler_ipt::VerifyRules.
-            if isinstance(tsrc, Interface) and tsrc.is_unnumbered():
-                self.compiler.abort(
-                    rule,
-                    'Can not use unnumbered interface in Translated Source '
-                    'of a Source translation rule.',
-                )
-                return True
-
-        self.tmp_queue.append(rule)
         return True
 
 
