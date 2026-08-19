@@ -1437,15 +1437,27 @@ class Logging2(PolicyRuleProcessor):
         this_chain = rule.ipt_chain
         new_chain = ipt_comp.get_new_chain_name(rule, None)
 
-        # 1) Jump rule: from current chain to new_chain
-        r = rule.clone()
-        r.ipt_target = new_chain
-        r.set_option('classification', False)
-        r.set_option('routing', False)
-        r.set_option('tagging', False)
-        r.set_option('log', False)
-        r.action = PolicyAction.Continue
-        self.tmp_queue.append(r)
+        # 1) Jump rule: from current chain to new_chain.  A rule that is
+        # already in that chain and matches on nothing would jump to
+        # itself, which the kernel refuses with "Loop found in table" and
+        # which stops the activation with every chain at DROP
+        # (PolicyCompiler_ipt::Logging2 calls that `need_new_chain`).
+        needs_jump_rule = not (
+            this_chain == new_chain
+            and not rule.src
+            and not rule.dst
+            and not rule.srv
+            and not rule.when
+        )
+        if needs_jump_rule:
+            r = rule.clone()
+            r.ipt_target = new_chain
+            r.set_option('classification', False)
+            r.set_option('routing', False)
+            r.set_option('tagging', False)
+            r.set_option('log', False)
+            r.action = PolicyAction.Continue
+            self.tmp_queue.append(r)
 
         # 2) LOG/NFLOG rule in new_chain: all elements reset to any
         r2 = rule.clone()
@@ -1464,7 +1476,14 @@ class Logging2(PolicyRuleProcessor):
         r2.set_option('routing', False)
         r2.set_option('tagging', False)
         r2.set_option('stateless', True)
+        # A packet crosses the log rule and the action rule below it, so a
+        # rate limit left on both is a second bucket the same packet has to
+        # pay: only half the packets a "20 per second" rule admits reach
+        # its action.  The jump rule keeps the limits
+        # (PolicyCompiler_ipt::Logging2 clears all three here).
         r2.set_option('limit_value', -1)
+        r2.set_option('connlimit_value', -1)
+        r2.set_option('hashlimit_value', -1)
         r2.force_state_check = False
         self.tmp_queue.append(r2)
 
@@ -1483,6 +1502,8 @@ class Logging2(PolicyRuleProcessor):
         r3.final = True
         r3.set_option('stateless', True)
         r3.set_option('limit_value', -1)
+        r3.set_option('connlimit_value', -1)
+        r3.set_option('hashlimit_value', -1)
         r3.force_state_check = False
         self.tmp_queue.append(r3)
 
