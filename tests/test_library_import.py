@@ -22,7 +22,15 @@ It also skipped a library whose name is already taken, which meant
 importing one data file into another did nothing at all - two files of
 the same house both call their library "User".  Firewall Builder renames
 instead (`makeNameUnique` in `ProjectPanel::loadLibrary`).
+
+The file's own Standard library comes across the same way, under a free
+name and editable.  Two data files can carry two generations of it - one
+with `HTTP 80` where the other has `http` - and leaving it behind means
+every rule of the imported firewalls that names one of its services loses
+that service and matches every service instead.
 """
+
+import pathlib
 
 import pytest
 import sqlalchemy
@@ -73,10 +81,24 @@ def test_a_library_is_imported_under_a_free_name():
         target, FIXTURES_DIR / 'reject_actions.fwf'
     )
 
-    assert imported == 1
+    assert imported == 2
     assert unresolved == []
-    assert _libraries(target) == ['Standard', 'User', 'User-1']
+    assert _libraries(target) == ['Standard', 'Standard-1', 'User', 'User-1']
     assert len(_firewalls(target)) > len(before)
+
+
+def test_the_imported_standard_library_is_editable():
+    """It is no longer the Standard library of anything, only a copy."""
+    target = _open('compiler-tests.fwf')
+    _do_import_library(target, FIXTURES_DIR / 'reject_actions.fwf')
+
+    with target.session() as session:
+        libraries = {
+            lib.name: lib for lib in session.scalars(sqlalchemy.select(Library))
+        }
+        assert libraries['Standard'].ro is True
+        assert libraries['Standard-1'].ro is False
+        assert libraries['Standard-1'].services, 'and it brought its objects'
 
 
 def test_the_imported_firewalls_keep_their_rules():
@@ -114,17 +136,51 @@ def test_the_result_survives_a_save_and_a_reload(tmp_path):
     again = firewallfabrik.core.DatabaseManager()
     again.load(str(out))
     assert _firewalls(again) == expected
-    assert _libraries(again) == ['Standard', 'User', 'User-1']
+    assert _libraries(again) == ['Standard', 'Standard-1', 'User', 'User-1']
 
 
-def test_a_reference_that_stays_behind_is_reported():
-    """A rule that loses its service matches every service instead."""
+def test_a_target_without_a_standard_library_resolves_too():
+    """The one the file brings answers for the one this tree has not got."""
     target = _open('basic_accept_deny.fwf')
     imported, unresolved = _do_import_library(
         target, FIXTURES_DIR / 'reject_actions.fwf'
     )
-    assert imported == 1
-    # basic_accept_deny.fwf has no Standard library at all, so everything
-    # the imported rules name there stays behind.
-    assert unresolved
-    assert all(ref.startswith('Library:Standard/') for ref in unresolved)
+    assert imported == 2
+    assert unresolved == []
+    assert _libraries(target) == ['Standard', 'Test Objects', 'User']
+
+
+def test_an_imported_firewall_compiles_to_the_same_rules(tmp_path):
+    """The strongest check there is: same rules as in the file it came from."""
+    from firewallfabrik.platforms.iptables._compiler_driver import CompilerDriver_ipt
+
+    def _compile(db, fw_name, wdir):
+        with db.session() as session:
+            fw = session.scalars(
+                sqlalchemy.select(Firewall).where(Firewall.name == fw_name)
+            ).one()
+            fw_id = str(fw.id)
+        driver = CompilerDriver_ipt(db)
+        wdir.mkdir(parents=True, exist_ok=True)
+        driver.wdir = str(wdir)
+        driver.source_dir = str(FIXTURES_DIR)
+        driver.file_name_setting = f'{fw_name}.fw'
+        driver.run(cluster_id='', fw_id=fw_id, single_rule_id='')
+        text = pathlib.Path(driver.file_names[fw_id]).read_text(encoding='utf-8')
+        return [
+            line.strip()
+            for line in text.splitlines()
+            if '$IPTABLES' in line and ' -A ' in line
+        ]
+
+    source = _open('reject_actions.fwf')
+    with source.session() as session:
+        fw_name = sorted(
+            fw.name for fw in session.scalars(sqlalchemy.select(Firewall))
+        )[0]
+    expected = _compile(source, fw_name, tmp_path / 'source')
+    assert expected
+
+    target = _open('compiler-tests.fwf')
+    _do_import_library(target, FIXTURES_DIR / 'reject_actions.fwf')
+    assert _compile(target, fw_name, tmp_path / 'imported') == expected

@@ -403,11 +403,18 @@ def _do_import_library(db_manager, file_path):
     ``.fwf`` format uses, so nested objects, group memberships and rule
     elements come with it.
 
+    The file's own Standard library comes across too, under a free name and
+    editable: two data files can carry two generations of it - one with
+    ``HTTP 80`` where the other has ``http`` - and leaving it behind means
+    every rule of the imported firewalls that names one of its services
+    loses that service and matches every service instead.  It arrives as an
+    ordinary library the administrator can edit and delete once the rules
+    have been pointed at the objects of the Standard library in use.
+
     Returns the number of libraries imported and the reference paths that
-    named an object this database has not got - an object of the file's own
-    Standard library, most of the time, which stays behind.  A rule element
-    that loses its object matches everything instead, so the caller has to
-    be able to say so.
+    named an object this database has not got.  A rule element that loses
+    its object matches everything instead, so the caller has to be able to
+    say so.
     """
     from firewallfabrik.core import objects
     from firewallfabrik.core._database import DatabaseManager
@@ -443,18 +450,24 @@ def _do_import_library(db_manager, file_path):
             # index below, or every reference inside the library still
             # carries the old name and resolves to the library that was
             # already there.
+            #
+            # The file's own Standard library is imported first, so that the
+            # libraries behind it resolve their references into it rather
+            # than into the Standard library of this file, which may be a
+            # different generation.  It arrives editable: it is no longer
+            # the Standard library of anything, it is a copy the
+            # administrator is meant to work through and then delete.
             to_import = []
-            for lib in imp_libs:
+            for lib in sorted(imp_libs, key=lambda lib: lib.name != 'Standard'):
                 if lib.name == 'Standard':
-                    continue
+                    lib.ro = False
                 lib.name = _unique_library_name(lib.name, existing_names)
                 existing_names.add(lib.name)
                 to_import.append(lib)
             imp_session.flush()
 
-            # Over every library of the file, not only the ones being
-            # imported: an object of the library we take may reference one
-            # in Standard, and without a path for it the reference is
+            # One index over the whole file, so that a reference from one
+            # library into another has a path at all: without one it is
             # written out as a raw UUID that resolves to nothing.
             writer = YamlWriter()
             writer._build_ref_index(imp_session, imp_libs)
@@ -463,10 +476,11 @@ def _do_import_library(db_manager, file_path):
                 lib_dict = writer._serialize_library(imp_session, lib)
 
                 reader = YamlReader()
-                # A reference into a library that stays behind - Standard,
-                # most of the time - has to land on the object this
-                # database already has, so the reader starts from the paths
-                # of the current tree and adds the new library's own.
+                # A reference into a library that is already here - or into
+                # one imported a moment ago, which is why the index is
+                # updated as we go - has to land on that object, so the
+                # reader starts from the paths of the current tree and adds
+                # the new library's own.
                 reader._ref_index.update(db_manager.ref_index)
                 new_lib = reader._parse_library(lib_dict, cur_db)
                 reader._resolve_deferred()
