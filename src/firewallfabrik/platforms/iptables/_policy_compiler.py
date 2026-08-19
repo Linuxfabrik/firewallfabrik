@@ -3644,8 +3644,16 @@ class Optimize1(PolicyRuleProcessor):
     Creates a temporary chain with a jump rule that matches on the element
     being optimized. The original rule moves to the temp chain with that
     element cleared. This reduces the total number of iptables rules from
-    the Cartesian product (Src x Dst x Srv) by factoring out common
-    elements.
+    the Cartesian product (Src x Dst x Srv x Interval) by factoring out
+    common elements.
+
+    The time interval counts as a fourth element, the way
+    ``PolicyCompiler_ipt::optimize1`` counts it: a rule naming several
+    intervals is factored into one chain reached by one jump per interval,
+    and an interval that is not being factored leaves the rule that moves
+    into the temporary chain.  Otherwise every level of the cascade repeats
+    the same ``-m time``, and `ConvertToAtomicForIntervals` further down
+    multiplies every level by the number of intervals.
     """
 
     def process_next(self) -> bool:
@@ -3656,9 +3664,11 @@ class Optimize1(PolicyRuleProcessor):
         srcn = len(rule.src)
         dstn = len(rule.dst)
         srvn = len(rule.srv)
+        intn = len(rule.when)
         srcany = srcn == 0
         dstany = dstn == 0
         srvany = srvn == 0
+        intany = intn == 0
 
         # If all services are TCP or UDP, multiport can collapse them
         if srvn > 0 and not srvany:
@@ -3669,12 +3679,15 @@ class Optimize1(PolicyRuleProcessor):
                 srvn = 1
 
         # Guard: can't optimize if all elements have <=1 objects or
-        # two+ elements are "any"
+        # three of the four are "any".  A rule with no time restriction has
+        # an "any" interval, which is why two "any" elements are enough to
+        # stop there in the common case.
         if (
-            (srcn <= 1 and dstn <= 1 and srvn <= 1)
-            or (srcany and dstany)
-            or (srcany and srvany)
-            or (dstany and srvany)
+            (srcn <= 1 and dstn <= 1 and srvn <= 1 and intn <= 1)
+            or (srcany and dstany and srvany)
+            or (srcany and dstany and intany)
+            or (srcany and srvany and intany)
+            or (dstany and srvany and intany)
         ):
             self.tmp_queue.append(rule)
             return True
@@ -3687,6 +3700,8 @@ class Optimize1(PolicyRuleProcessor):
             dstn = _MAXSIZE
         if srvany:
             srvn = _MAXSIZE
+        if intany:
+            intn = _MAXSIZE
 
         ipt_comp = cast('PolicyCompiler_ipt', self.compiler)
 
@@ -3695,17 +3710,22 @@ class Optimize1(PolicyRuleProcessor):
             not srvany
             and srvn <= dstn
             and srvn <= srcn
+            and srvn <= intn
             and not rule.get_option('do_not_optimize_by_srv', False)
         ):
             self._optimize(rule, 'srv', ipt_comp)
             return True
 
-        if not srcany and srcn <= dstn and srcn <= srvn:
+        if not srcany and srcn <= dstn and srcn <= srvn and srcn <= intn:
             self._optimize(rule, 'src', ipt_comp)
             return True
 
-        if not dstany and dstn <= srcn and dstn <= srvn:
+        if not dstany and dstn <= srcn and dstn <= srvn and dstn <= intn:
             self._optimize(rule, 'dst', ipt_comp)
+            return True
+
+        if not intany and intn <= srcn and intn <= dstn and intn <= srvn:
+            self._optimize(rule, 'when', ipt_comp)
             return True
 
         self.tmp_queue.append(rule)
@@ -3723,7 +3743,7 @@ class Optimize1(PolicyRuleProcessor):
         this_chain = rule.ipt_chain
 
         r = rule.clone()
-        for attr in ('src', 'dst', 'srv'):
+        for attr in ('src', 'dst', 'srv', 'when'):
             items = getattr(r, attr)
             if attr != element and len(items) > 1:
                 # Multi-element non-optimized: clear in jump rule
