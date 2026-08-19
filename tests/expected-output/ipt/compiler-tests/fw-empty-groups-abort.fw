@@ -14,7 +14,6 @@
 
 # Rule 0 (global): Empty group or address table object 'empty-group' is used in the rule but option 'Ignore rules with empty groups' is off
 # Rule '0 (global)' shadows rule '1 (global)' below it
-# Rule '0 (global)' shadows rule '1 (global)' below it
 
 FWBDEBUG=""
 RETVAL=0

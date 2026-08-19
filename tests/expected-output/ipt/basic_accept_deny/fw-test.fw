@@ -13,7 +13,6 @@
 #
 
 # Rule '2 (global)' shadows rule '3 (global)' below it
-# Rule '2 (global)' shadows rule '3 (global)' below it
 
 FWBDEBUG=""
 RETVAL=0

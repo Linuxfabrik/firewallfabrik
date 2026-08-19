@@ -13,7 +13,6 @@
 #
 
 # Rule '0 (global)' shadows rule '1 (global)' below it
-# Rule '0 (global)' shadows rule '1 (global)' below it
 # fw-empty-groups:Policy:0: warning: Empty group or address table object 'empty-group'
 # fw-empty-groups:Policy:0: warning: After removal of all empty groups rule element src becomes 'any'; dropping rule 0 (global) because option 'Ignore rules with empty groups' is in effect
 

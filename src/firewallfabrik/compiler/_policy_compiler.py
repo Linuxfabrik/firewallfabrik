@@ -112,6 +112,16 @@ class PolicyCompiler(Compiler):
         """Override in platform-specific subclasses to add processors."""
         pass
 
+    def add_rule_filter(self) -> None:
+        """Add the processor that selects the rules this pass compiles.
+
+        Override in platform-specific subclasses.  Every pipeline that
+        reads the firewall's rules has to start with it, the shadowing
+        pass included: the filter run and the mangle run see different
+        rules, and a pass that skips the filter reasons about rules its
+        own table never installs.
+        """
+
     def can_match_inbound_in_postrouting(self, rule) -> bool:
         """Whether this back end can match *rule*'s incoming device there.
 
@@ -157,6 +167,13 @@ class PolicyCompiler(Compiler):
         # On copies: the processors below expand groups and host objects in
         # place, and the main pass compiles the same rule objects afterwards.
         self.add(Begin('Detecting rule shadowing', clone=True))
+        # The filter pass and the mangle pass compile different rules, so
+        # they have to detect shadowing among different rules too
+        # (PolicyCompiler_ipt::compile calls addRuleFilter() here as well).
+        # Without it the mangle pass compares rules it never installs, and
+        # the filter pass compares the rules of a mangle-only rule set,
+        # which it drops right afterwards.
+        self.add_rule_filter()
         # One rule per interface, or two rules naming different interfaces,
         # which can never see the same packet, are compared as if they could.
         self.add(InterfacePolicyRules('process interface policy rules'))

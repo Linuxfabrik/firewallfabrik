@@ -1600,10 +1600,15 @@ several - the service split gives an ICMP and a TCP half a rule each, the
 negation expansion builds three, the chain decisions split on top of that -
 and repeating one sentence per copy buries the rest of the report.  The
 scope is deliberately the compiler and not the driver: the iptables filter
-and mangle passes are separate compilers and report separately, which is
-what the Firewall Builder reference output shows for its shadowing
-warnings.  The inline comments next to the rules are not de-duplicated,
-so every emitted copy still carries its own reason.
+and mangle passes are separate compilers and report separately, because
+they compile different rules.  `add_rule_filter()` is what makes that
+true, and every pipeline reading the firewall's rules has to start with
+it - `run_shadowing_pass()` included, the way
+`PolicyCompiler_ipt::compile` calls `addRuleFilter()` in both passes.
+A pass that skips it reports the same finding once per table and reasons
+about rules its own table never installs.  The inline comments next to
+the rules are not de-duplicated, so every emitted copy still carries its
+own reason.
 
 A print-rule method that reports something it cannot express answers
 `None`, and its caller leaves the rule out.  An empty string is a valid
